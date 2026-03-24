@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
-import { useAuth } from '../context/AuthContext';
-import AdminNav from '../components/AdminNav';
-import Icon from '../components/Icon';
+import { useAuth } from '../../context/AuthContext';
+import AdminNav from '../../components/AdminNav/AdminNav';
+import Icon from '../../components/Icon/Icon';
 import styles from './AdminDashboard.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';

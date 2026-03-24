@@ -1,10 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Login from './pages/Login';
-import Signup from './pages/Signup';
-import Dashboard from './pages/Dashboard';
-import AdminDashboard from './pages/AdminDashboard';
-import AuthCallback from './pages/AuthCallback';
+import Login from './pages/Auth/Login';
+import Signup from './pages/Auth/Signup';
+import Dashboard from './pages/Dashboard/Dashboard';
+import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
+import AuthCallback from './pages/AuthCallback/AuthCallback';
 
 function PrivateRoute({ children }) {
   const { user, loading } = useAuth();
