@@ -1,7 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
+import AdminNav from '../components/AdminNav';
+import Icon from '../components/Icon';
 import styles from './AdminDashboard.module.css';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -13,7 +14,6 @@ function authHeaders() {
 
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -61,13 +61,9 @@ export default function AdminDashboard() {
 
   return (
     <div className={styles.page}>
-      <div className={styles.container}>
-        <div className={styles.header}>
-          <h1 className={styles.title}>🛡️ Admin Dashboard</h1>
-          <button className={styles.backBtn} onClick={() => navigate('/dashboard')}>
-            ← Back to Dashboard
-          </button>
-        </div>
+      <AdminNav />
+      <main className={styles.main}>
+        <h2 className={styles.sectionTitle}>Users</h2>
 
         <div className={styles.card}>
           {error && <p className={styles.error}>{error}</p>}
@@ -107,7 +103,12 @@ export default function AdminDashboard() {
                           {u.role}
                         </span>
                       </td>
-                      <td>{u.is_google ? '🔵 Google' : '📧 Email'}</td>
+                      <td>
+                        {u.is_google
+                          ? <><Icon name="account_circle" size="1rem" style={{ color: '#4285F4', verticalAlign: '-0.2em' }} /> Google</>
+                          : <><Icon name="mail" size="1rem" style={{ color: '#64748b', verticalAlign: '-0.2em' }} /> Email</>
+                        }
+                      </td>
                       <td>{new Date(u.created_at).toLocaleDateString()}</td>
                       <td>
                         <div className={styles.actions}>
@@ -146,11 +147,10 @@ export default function AdminDashboard() {
                 })}
               </tbody>
             </table>
-            </table>
             )}
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

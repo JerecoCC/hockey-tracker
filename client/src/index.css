@@ -25,3 +25,10 @@ body {
 button {
   font-family: inherit;
 }
+
+.material-icons {
+  font-size: 1em;
+  line-height: 1;
+  vertical-align: -0.15em;
+  user-select: none;
+}

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import GoogleButton from '../components/GoogleButton';
+import Icon from '../components/Icon';
 import styles from './Auth.module.css';
 
 export default function Login() {
@@ -33,7 +34,7 @@ export default function Login() {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}>🏒 Hockey Tracker</h1>
+        <h1 className={styles.title}><Icon name="sports_hockey" size="1.1em" /> Hockey Tracker</h1>
         <h2 className={styles.subtitle}>Sign in to your account</h2>
 
         {error && <p className={styles.error}>{error}</p>}
