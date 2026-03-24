@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
@@ -11,7 +12,6 @@ const Signup = () => {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,14 +20,13 @@ const Signup = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
 
     if (form.password !== form.confirm) {
-      setError('Passwords do not match.');
+      toast.error('Passwords do not match.');
       return;
     }
     if (form.password.length < 6) {
-      setError('Password must be at least 6 characters.');
+      toast.error('Password must be at least 6 characters.');
       return;
     }
 
@@ -37,7 +36,7 @@ const Signup = () => {
       navigate('/dashboard');
     } catch (err) {
       const e = err as { response?: { data?: { error?: string } } };
-      setError(e?.response?.data?.error || 'Signup failed. Please try again.');
+      toast.error(e?.response?.data?.error || 'Signup failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -48,8 +47,6 @@ const Signup = () => {
       <div className={styles.card}>
         <h1 className={styles.title}><Icon name="sports_hockey" size="1.1em" /> Hockey Tracker</h1>
         <h2 className={styles.subtitle}>Create an account</h2>
-
-        {error && <p className={styles.error}>{error}</p>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.label}>

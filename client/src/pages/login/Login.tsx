@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
 import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
@@ -11,7 +12,6 @@ const Login = () => {
   const navigate = useNavigate();
 
   const [form, setForm] = useState({ email: '', password: '' });
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -20,14 +20,13 @@ const Login = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
     try {
       await login(form);
       navigate('/dashboard');
     } catch (err) {
       const e = err as { response?: { data?: { error?: string } } };
-      setError(e?.response?.data?.error || 'Login failed. Please try again.');
+      toast.error(e?.response?.data?.error || 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -38,8 +37,6 @@ const Login = () => {
       <div className={styles.card}>
         <h1 className={styles.title}><Icon name="sports_hockey" size="1.1em" /> Hockey Tracker</h1>
         <h2 className={styles.subtitle}>Sign in to your account</h2>
-
-        {error && <p className={styles.error}>{error}</p>}
 
         <form onSubmit={handleSubmit} className={styles.form}>
           <label className={styles.label}>

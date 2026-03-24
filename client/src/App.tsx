@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ReactNode } from 'react';
+import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/login/Login';
 import Signup from './pages/signup/Signup';
@@ -29,6 +30,7 @@ const AdminRoute = ({ children }: { children: ReactNode }) => {
 
 const App = () => (
     <AuthProvider>
+      <ToastContainer position="top-right" autoClose={4000} theme="colored" />
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Navigate to="/login" replace />} />

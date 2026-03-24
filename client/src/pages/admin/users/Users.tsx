@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import axios, { AxiosError } from 'axios';
+import { toast } from 'react-toastify';
 import { useAuth } from '../../../context/AuthContext';
 import AdminNav from '../../../components/AdminNav/AdminNav';
 import Icon from '../../../components/Icon/Icon';
@@ -28,7 +29,6 @@ const Users = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
@@ -36,7 +36,7 @@ const Users = () => {
       const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, { headers: authHeaders() });
       setUsers(data);
     } catch (err) {
-      setError(apiError(err, 'Failed to load users'));
+      toast.error(apiError(err, 'Failed to load users'));
     } finally {
       setLoading(false);
     }
@@ -46,12 +46,11 @@ const Users = () => {
 
   const changeRole = async (id: string, role: 'admin' | 'user') => {
     setBusy(id);
-    setError('');
     try {
       await axios.patch(`${API}/admin/users/${id}/role`, { role }, { headers: authHeaders() });
       await fetchUsers();
     } catch (err) {
-      setError(apiError(err, 'Failed to update role'));
+      toast.error(apiError(err, 'Failed to update role'));
     } finally {
       setBusy(null);
     }
@@ -60,12 +59,11 @@ const Users = () => {
   const deleteUser = async (id: string, name: string) => {
     if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
     setBusy(id);
-    setError('');
     try {
       await axios.delete(`${API}/admin/users/${id}`, { headers: authHeaders() });
       await fetchUsers();
     } catch (err) {
-      setError(apiError(err, 'Failed to delete user'));
+      toast.error(apiError(err, 'Failed to delete user'));
     } finally {
       setBusy(null);
     }
@@ -78,7 +76,6 @@ const Users = () => {
         <h2 className={styles.sectionTitle}>Users</h2>
 
         <div className={styles.card}>
-          {error && <p className={styles.error}>{error}</p>}
           <div className={styles.tableWrapper}>
             {loading ? (
               <div className={styles.loaderWrapper}>
