@@ -1,0 +1,160 @@
+.page {
+  min-height: 100vh;
+  background: #0f172a;
+  padding: 2rem 1rem;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.backBtn {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+}
+
+.backBtn:hover {
+  border-color: #60a5fa;
+  color: #60a5fa;
+}
+
+.card {
+  background: #1e293b;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid #334155;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+thead th {
+  text-align: left;
+  padding: 0.75rem 1rem;
+  color: #64748b;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid #334155;
+}
+
+tbody tr {
+  border-bottom: 1px solid #1e293b;
+  transition: background 0.15s;
+}
+
+tbody tr:hover {
+  background: #0f172a;
+}
+
+tbody td {
+  padding: 0.875rem 1rem;
+  color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeAdmin {
+  background: #7c3aed22;
+  color: #a78bfa;
+  border: 1px solid #7c3aed55;
+}
+
+.badgeUser {
+  background: #0369a122;
+  color: #60a5fa;
+  border: 1px solid #0369a155;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.promoteBtn,
+.demoteBtn,
+.deleteBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.promoteBtn {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.demoteBtn {
+  background: #0369a1;
+  color: #fff;
+}
+
+.deleteBtn {
+  background: #be123c22;
+  color: #fb7185;
+  border: 1px solid #be123c55;
+}
+
+.promoteBtn:hover,
+.demoteBtn:hover,
+.deleteBtn:hover {
+  opacity: 0.8;
+}
+
+.promoteBtn:disabled,
+.demoteBtn:disabled,
+.deleteBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.emptyMsg {
+  color: #64748b;
+  text-align: center;
+  padding: 2rem;
+}
+
+.error {
+  color: #fb7185;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+

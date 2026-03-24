@@ -1,0 +1,125 @@
+import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import GoogleButton from '../components/GoogleButton';
+import styles from './Auth.module.css';
+
+export default function Signup() {
+  const { signup } = useAuth();
+  const navigate = useNavigate();
+
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  function handleChange(e) {
+    setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError('');
+
+    if (form.password !== form.confirm) {
+      setError('Passwords do not match.');
+      return;
+    }
+    if (form.password.length < 6) {
+      setError('Password must be at least 6 characters.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await signup({ name: form.name, email: form.email, password: form.password });
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err?.response?.data?.error || 'Signup failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <h1 className={styles.title}>🏒 Hockey Tracker</h1>
+        <h2 className={styles.subtitle}>Create an account</h2>
+
+        {error && <p className={styles.error}>{error}</p>}
+
+        <form onSubmit={handleSubmit} className={styles.form}>
+          <label className={styles.label}>
+            Name
+            <input
+              className={styles.input}
+              type="text"
+              name="name"
+              value={form.name}
+              onChange={handleChange}
+              placeholder="Wayne Gretzky"
+              required
+            />
+          </label>
+
+          <label className={styles.label}>
+            Email
+            <input
+              className={styles.input}
+              type="email"
+              name="email"
+              value={form.email}
+              onChange={handleChange}
+              placeholder="you@example.com"
+              required
+            />
+          </label>
+
+          <label className={styles.label}>
+            Password
+            <input
+              className={styles.input}
+              type="password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              placeholder="Min. 6 characters"
+              required
+            />
+          </label>
+
+          <label className={styles.label}>
+            Confirm password
+            <input
+              className={styles.input}
+              type="password"
+              name="confirm"
+              value={form.confirm}
+              onChange={handleChange}
+              placeholder="••••••••"
+              required
+            />
+          </label>
+
+          <button className={styles.primaryBtn} type="submit" disabled={loading}>
+            {loading ? 'Creating account…' : 'Create account'}
+          </button>
+        </form>
+
+        <div className={styles.divider}>
+          <span>or</span>
+        </div>
+
+        <GoogleButton label="Sign up with Google" />
+
+        <p className={styles.footer}>
+          Already have an account?{' '}
+          <Link className={styles.link} to="/login">
+            Sign in
+          </Link>
+        </p>
+      </div>
+    </div>
+  );
+}
+
