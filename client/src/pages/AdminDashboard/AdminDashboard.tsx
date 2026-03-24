@@ -16,14 +16,13 @@ interface UserRecord {
   created_at: string;
 }
 
-function authHeaders() {
+const authHeaders = () => {
   const token = localStorage.getItem('token');
   return { Authorization: `Bearer ${token}` };
-}
+};
 
-function apiError(err: unknown, fallback: string): string {
-  return (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
-}
+const apiError = (err: unknown, fallback: string): string =>
+  (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const AdminDashboard = () => {
   const { user } = useAuth();
@@ -45,7 +44,7 @@ const AdminDashboard = () => {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  async function changeRole(id: string, role: 'admin' | 'user') {
+  const changeRole = async (id: string, role: 'admin' | 'user') => {
     setBusy(id);
     setError('');
     try {
@@ -56,9 +55,9 @@ const AdminDashboard = () => {
     } finally {
       setBusy(null);
     }
-  }
+  };
 
-  async function deleteUser(id: string, name: string) {
+  const deleteUser = async (id: string, name: string) => {
     if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
     setBusy(id);
     setError('');
@@ -70,7 +69,7 @@ const AdminDashboard = () => {
     } finally {
       setBusy(null);
     }
-  }
+  };
 
   return (
     <div className={styles.page}>

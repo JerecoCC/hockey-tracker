@@ -7,10 +7,10 @@ const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  async function handleLogout() {
+  const handleLogout = async () => {
     await logout();
     navigate('/login');
-  }
+  };
 
   return (
     <div className={styles.page}>
