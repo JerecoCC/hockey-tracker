@@ -1,0 +1,148 @@
+// ── Variables ──────────────────────────────────────────────────────────
+$bg-gradient:  linear-gradient(135deg, #0d1b2a 0%, #1b3a5c 100%);
+$text-dark:    #0d1b2a;
+$text-muted:   #6b7280;
+$text-label:   #374151;
+$border-light: #d1d5db;
+$blue:         #2563eb;
+$blue-dark:    #1d4ed8;
+
+// ── Page ───────────────────────────────────────────────────────────────
+.page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: $bg-gradient;
+  padding: 16px;
+}
+
+// ── Card ───────────────────────────────────────────────────────────────
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 420px;
+}
+
+// ── Headings ───────────────────────────────────────────────────────────
+.title {
+  margin: 0 0 4px;
+  font-size: 26px;
+  font-weight: 700;
+  color: $text-dark;
+  text-align: center;
+}
+
+.subtitle {
+  margin: 0 0 24px;
+  font-size: 15px;
+  font-weight: 400;
+  color: $text-muted;
+  text-align: center;
+}
+
+// ── Form ───────────────────────────────────────────────────────────────
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: $text-label;
+}
+
+.input {
+  padding: 10px 14px;
+  border: 1.5px solid $border-light;
+  border-radius: 8px;
+  font-size: 15px;
+  color: #111827;
+  outline: none;
+  transition: border-color 0.15s;
+
+  &:focus {
+    border-color: $blue;
+    box-shadow: 0 0 0 3px rgba($blue, 0.15);
+  }
+}
+
+// ── Primary button ─────────────────────────────────────────────────────
+.primaryBtn {
+  width: 100%;
+  padding: 11px;
+  background: $blue;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-top: 4px;
+
+  &:hover:not(:disabled) {
+    background: $blue-dark;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// ── Divider ────────────────────────────────────────────────────────────
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 20px 0;
+  color: #9ca3af;
+  font-size: 13px;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+  }
+}
+
+// ── Error ──────────────────────────────────────────────────────────────
+.error {
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+// ── Footer ─────────────────────────────────────────────────────────────
+.footer {
+  margin: 20px 0 0;
+  text-align: center;
+  font-size: 14px;
+  color: $text-muted;
+}
+
+.link {
+  color: $blue;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
