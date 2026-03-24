@@ -15,6 +15,7 @@ export default function AdminDashboard() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(null); // id of row being mutated
 
@@ -24,6 +25,8 @@ export default function AdminDashboard() {
       setUsers(data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to load users');
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -69,6 +72,12 @@ export default function AdminDashboard() {
         <div className={styles.card}>
           {error && <p className={styles.error}>{error}</p>}
           <div className={styles.tableWrapper}>
+            {loading ? (
+              <div className={styles.loaderWrapper}>
+                <span className={styles.spinner} />
+                <p className={styles.loaderText}>Loading users…</p>
+              </div>
+            ) : (
             <table>
               <thead>
                 <tr>
@@ -137,6 +146,8 @@ export default function AdminDashboard() {
                 })}
               </tbody>
             </table>
+            </table>
+            )}
           </div>
         </div>
       </div>
