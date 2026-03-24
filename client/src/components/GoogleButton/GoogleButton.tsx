@@ -1,7 +1,11 @@
 import { useAuth } from '../../context/AuthContext';
 import styles from './GoogleButton.module.scss';
 
-export default function GoogleButton({ label = 'Continue with Google' }) {
+interface GoogleButtonProps {
+  label?: string;
+}
+
+export default function GoogleButton({ label = 'Continue with Google' }: GoogleButtonProps) {
   const { loginWithGoogle } = useAuth();
 
   return (

@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import AdminNav from '../../components/AdminNav/AdminNav';
 import Icon from '../../components/Icon/Icon';
@@ -7,24 +7,37 @@ import styles from './AdminDashboard.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
+interface UserRecord {
+  id: string;
+  display_name: string;
+  email: string;
+  role: 'admin' | 'user';
+  is_google: boolean;
+  created_at: string;
+}
+
 function authHeaders() {
   const token = localStorage.getItem('token');
   return { Authorization: `Bearer ${token}` };
 }
 
+function apiError(err: unknown, fallback: string): string {
+  return (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth();
-  const [users, setUsers] = useState([]);
+  const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [busy, setBusy] = useState(null); // id of row being mutated
+  const [busy, setBusy] = useState<string | null>(null);
 
   const fetchUsers = useCallback(async () => {
     try {
-      const { data } = await axios.get(`${API}/admin/users`, { headers: authHeaders() });
+      const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, { headers: authHeaders() });
       setUsers(data);
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to load users');
+      setError(apiError(err, 'Failed to load users'));
     } finally {
       setLoading(false);
     }
@@ -32,20 +45,20 @@ export default function AdminDashboard() {
 
   useEffect(() => { fetchUsers(); }, [fetchUsers]);
 
-  async function changeRole(id, role) {
+  async function changeRole(id: string, role: 'admin' | 'user') {
     setBusy(id);
     setError('');
     try {
       await axios.patch(`${API}/admin/users/${id}/role`, { role }, { headers: authHeaders() });
       await fetchUsers();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to update role');
+      setError(apiError(err, 'Failed to update role'));
     } finally {
       setBusy(null);
     }
   }
 
-  async function deleteUser(id, name) {
+  async function deleteUser(id: string, name: string) {
     if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
     setBusy(id);
     setError('');
@@ -53,7 +66,7 @@ export default function AdminDashboard() {
       await axios.delete(`${API}/admin/users/${id}`, { headers: authHeaders() });
       await fetchUsers();
     } catch (err) {
-      setError(err.response?.data?.error || 'Failed to delete user');
+      setError(apiError(err, 'Failed to delete user'));
     } finally {
       setBusy(null);
     }

@@ -3,7 +3,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import Icon from '../Icon/Icon';
 import styles from './AdminNav.module.scss';
 
-const NAV_ITEMS = [
+interface NavItem {
+  label: string;
+  path: string;
+  icon: string;
+}
+
+const NAV_ITEMS: NavItem[] = [
   { label: 'Users', path: '/admin/users', icon: 'group' },
 ];
 
