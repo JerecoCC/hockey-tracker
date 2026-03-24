@@ -1,0 +1,44 @@
+// ── Typography ─────────────────────────────────────────────────────────
+$font-stack: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
+  Arial, sans-serif;
+
+// ── Colors ─────────────────────────────────────────────────────────────
+$color-text: #111827;
+$color-bg: #fff;
+
+// ── Reset / base ───────────────────────────────────────────────────────
+:root {
+  font-family: $font-stack;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: $color-text;
+  background-color: $color-bg;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+}
+
+button {
+  font-family: inherit;
+}
+
+// ── Material Icons baseline fix ────────────────────────────────────────
+.material-icons {
+  font-size: 1em;
+  line-height: 1;
+  vertical-align: -0.15em;
+  user-select: none;
+}
+

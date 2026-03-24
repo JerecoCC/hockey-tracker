@@ -1,0 +1,182 @@
+// ── Variables ──────────────────────────────────────────────────────────
+$bg-dark:            #1e293b;
+$bg-darker:          #0f172a;
+$border:             #334155;
+$text-muted:         #64748b;
+$text-light:         #94a3b8;
+$text-bright:        #f8fafc;
+$accent:             #7c3aed;
+$accent-light:       #a78bfa;
+$blue:               #60a5fa;
+$nav-width:          220px;
+$nav-collapsed-width: 56px;
+$transition-speed:   0.22s;
+
+// ── Shell ──────────────────────────────────────────────────────────────
+.nav {
+  width: $nav-width;
+  min-height: 100vh;
+  background: $bg-dark;
+  border-right: 1px solid $border;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 1.5rem 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width $transition-speed ease;
+}
+
+// ── Collapsed state ────────────────────────────────────────────────────
+.collapsed {
+  width: $nav-collapsed-width;
+
+  .brandRow {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: 0.75rem 0;
+
+    &.active {
+      border-left: 3px solid $accent;
+      padding-left: 0;
+    }
+  }
+
+  .backBtn {
+    justify-content: center;
+    padding: 0.625rem 0;
+  }
+}
+
+// ── Top section ────────────────────────────────────────────────────────
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+// ── Brand row ──────────────────────────────────────────────────────────
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0.75rem 0 1.25rem;
+  min-height: 1.75rem;
+}
+
+.brand {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: $text-bright;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+// ── Toggle button ──────────────────────────────────────────────────────
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  background: transparent;
+  border: 1px solid $border;
+  border-radius: 6px;
+  color: $text-muted;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: $blue;
+    color: $blue;
+  }
+}
+
+// ── Nav list ───────────────────────────────────────────────────────────
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.625rem 1.25rem;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: $text-light;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: $bg-darker;
+    color: #e2e8f0;
+  }
+
+  &.active {
+    background: rgba($accent, 0.13);
+    color: $accent-light;
+    border-left: 3px solid $accent;
+    padding-left: calc(1.25rem - 3px);
+  }
+}
+
+.icon {
+  font-size: 1.1rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.label {
+  overflow: hidden;
+}
+
+// ── Bottom / back button ───────────────────────────────────────────────
+.bottom {
+  padding: 0 0.75rem;
+}
+
+.backBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.625rem 0.75rem;
+  background: transparent;
+  border: 1px solid $border;
+  border-radius: 8px;
+  color: $text-muted;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s, color 0.15s;
+
+  &:hover {
+    border-color: $blue;
+    color: $blue;
+  }
+}
+
+.backIcon {
+  flex-shrink: 0;
+}
+

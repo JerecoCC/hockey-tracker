@@ -1,7 +1,7 @@
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Icon from '../components/Icon';
-import styles from './Dashboard.module.css';
+import styles from './Dashboard.module.scss';
 
 export default function Dashboard() {
   const { user, logout } = useAuth();

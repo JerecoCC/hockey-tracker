@@ -1,0 +1,115 @@
+// ── Variables ──────────────────────────────────────────────────────────
+$bg-gradient:  linear-gradient(135deg, #0d1b2a 0%, #1b3a5c 100%);
+$text-dark:    #0d1b2a;
+$text-body:    #111827;
+$text-muted:   #6b7280;
+$border-light: #d1d5db;
+$accent:       #7c3aed;
+$accent-alt:   #4f46e5;
+
+// ── Page ───────────────────────────────────────────────────────────────
+.page {
+  min-height: 100vh;
+  background: $bg-gradient;
+  padding: 24px 16px;
+}
+
+// ── Card ───────────────────────────────────────────────────────────────
+.card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  padding: 32px 36px;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+// ── Header ─────────────────────────────────────────────────────────────
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+}
+
+.title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: $text-dark;
+}
+
+.logoutBtn {
+  padding: 8px 18px;
+  background: transparent;
+  border: 1.5px solid $border-light;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: #f3f4f6;
+  }
+}
+
+// ── Welcome ────────────────────────────────────────────────────────────
+.welcome {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e5e7eb;
+}
+
+.name {
+  margin: 0 0 4px;
+  font-size: 20px;
+  font-weight: 600;
+  color: $text-body;
+}
+
+.email {
+  margin: 0;
+  font-size: 14px;
+  color: $text-muted;
+}
+
+// ── Placeholder ────────────────────────────────────────────────────────
+.placeholder {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 10px;
+  padding: 20px;
+  color: #0369a1;
+  font-size: 15px;
+  text-align: center;
+}
+
+// ── Admin button ───────────────────────────────────────────────────────
+.adminBtn {
+  display: block;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, $accent, $accent-alt);
+  color: #fff;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:hover {
+    opacity: 0.85;
+  }
+}
+

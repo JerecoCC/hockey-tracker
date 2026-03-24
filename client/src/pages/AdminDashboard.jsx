@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../context/AuthContext';
 import AdminNav from '../components/AdminNav';
 import Icon from '../components/Icon';
-import styles from './AdminDashboard.module.css';
+import styles from './AdminDashboard.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 

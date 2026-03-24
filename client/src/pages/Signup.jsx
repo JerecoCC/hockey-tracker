@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import GoogleButton from '../components/GoogleButton';
 import Icon from '../components/Icon';
-import styles from './Auth.module.css';
+import styles from './Auth.module.scss';
 
 export default function Signup() {
   const { signup } = useAuth();

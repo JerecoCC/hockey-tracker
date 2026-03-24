@@ -1,0 +1,181 @@
+// ── Variables ──────────────────────────────────────────────────────────
+$bg-page:       #0f172a;
+$bg-card:       #1e293b;
+$border:        #334155;
+$text-dim:      #64748b;
+$text-body:     #e2e8f0;
+$text-bright:   #f8fafc;
+$accent:        #7c3aed;
+$accent-light:  #a78bfa;
+$blue:          #0369a1;
+$blue-light:    #60a5fa;
+$danger:        #be123c;
+$danger-light:  #fb7185;
+
+// ── Layout ─────────────────────────────────────────────────────────────
+.page {
+  min-height: 100vh;
+  background: $bg-page;
+  display: flex;
+}
+
+.main {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+}
+
+.sectionTitle {
+  font-size: 1.375rem;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0 0 1.25rem;
+}
+
+// ── Card ───────────────────────────────────────────────────────────────
+.card {
+  background: $bg-card;
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid $border;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+}
+
+// ── Table ──────────────────────────────────────────────────────────────
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+
+  thead th {
+    text-align: left;
+    padding: 0.75rem 1rem;
+    color: $text-dim;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid $border;
+  }
+
+  tbody {
+    tr {
+      border-bottom: 1px solid $bg-card;
+      transition: background 0.15s;
+
+      &:hover {
+        background: $bg-page;
+      }
+    }
+
+    td {
+      padding: 0.875rem 1rem;
+      color: $text-body;
+      vertical-align: middle;
+    }
+  }
+}
+
+// ── Badges ─────────────────────────────────────────────────────────────
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.625rem;
+  border-radius: 99px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badgeAdmin {
+  background: rgba($accent, 0.13);
+  color: $accent-light;
+  border: 1px solid rgba($accent, 0.33);
+}
+
+.badgeUser {
+  background: rgba($blue, 0.13);
+  color: $blue-light;
+  border: 1px solid rgba($blue, 0.33);
+}
+
+// ── Action buttons ─────────────────────────────────────────────────────
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+%actionBtn {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: none;
+  font-size: 0.8rem;
+  cursor: pointer;
+  font-weight: 500;
+  transition: opacity 0.2s;
+
+  &:hover    { opacity: 0.8; }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.promoteBtn {
+  @extend %actionBtn;
+  background: $accent;
+  color: #fff;
+}
+
+.demoteBtn {
+  @extend %actionBtn;
+  background: $blue;
+  color: #fff;
+}
+
+.deleteBtn {
+  @extend %actionBtn;
+  background: rgba($danger, 0.13);
+  color: $danger-light;
+  border: 1px solid rgba($danger, 0.33);
+}
+
+// ── Loader ─────────────────────────────────────────────────────────────
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loaderText {
+  color: $text-dim;
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+// ── Empty / error states ───────────────────────────────────────────────
+.emptyMsg {
+  color: $text-dim;
+  text-align: center;
+  padding: 2rem;
+}
+
+.error {
+  color: $danger-light;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
+}
+

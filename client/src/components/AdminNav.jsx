@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Icon from './Icon';
-import styles from './AdminNav.module.css';
+import styles from './AdminNav.module.scss';
 
 const NAV_ITEMS = [
   { label: 'Users', path: '/admin/users', icon: 'group' },
