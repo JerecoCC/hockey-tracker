@@ -4,7 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
-import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
+import Users from './pages/Users/Users';
 import AuthCallback from './pages/AuthCallback/AuthCallback';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => {
@@ -61,7 +61,7 @@ const App = () => (
             path="/admin/users"
             element={
               <AdminRoute>
-                <AdminDashboard />
+                <Users />
               </AdminRoute>
             }
           />

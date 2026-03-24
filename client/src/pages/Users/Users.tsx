@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { useAuth } from '../../context/AuthContext';
 import AdminNav from '../../components/AdminNav/AdminNav';
 import Icon from '../../components/Icon/Icon';
-import styles from './AdminDashboard.module.scss';
+import styles from './Users.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -24,7 +24,7 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const AdminDashboard = () => {
+const Users = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,5 +167,5 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard;
+export default Users;
 
