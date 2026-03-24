@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/Icon/Icon';
 import styles from './Dashboard.module.scss';
 
-export default function Dashboard() {
+const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -53,5 +53,7 @@ export default function Dashboard() {
       </div>
     </div>
   );
-}
+};
+
+export default Dashboard;
 

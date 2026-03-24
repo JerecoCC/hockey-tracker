@@ -7,28 +7,27 @@ import Dashboard from './pages/Dashboard/Dashboard';
 import AdminDashboard from './pages/AdminDashboard/AdminDashboard';
 import AuthCallback from './pages/AuthCallback/AuthCallback';
 
-function PrivateRoute({ children }: { children: ReactNode }) {
+const PrivateRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
   return user ? <>{children}</> : <Navigate to="/login" replace />;
-}
+};
 
-function PublicRoute({ children }: { children: ReactNode }) {
+const PublicRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
   return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
-}
+};
 
-function AdminRoute({ children }: { children: ReactNode }) {
+const AdminRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user) return <Navigate to="/login" replace />;
   if (user.role !== 'admin') return <Navigate to="/dashboard" replace />;
   return <>{children}</>;
-}
+};
 
-export default function App() {
-  return (
+const App = () => (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
@@ -70,5 +69,6 @@ export default function App() {
         </Routes>
       </BrowserRouter>
     </AuthProvider>
-  );
-}
+);
+
+export default App;

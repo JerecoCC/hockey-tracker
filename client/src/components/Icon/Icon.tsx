@@ -16,7 +16,7 @@ interface IconProps {
   style?: CSSProperties;
 }
 
-export default function Icon({ name, size, className = '', style = {} }: IconProps) {
+const Icon = ({ name, size, className = '', style = {} }: IconProps) => {
   return (
     <span
       className={`material-icons ${className}`}
@@ -26,5 +26,7 @@ export default function Icon({ name, size, className = '', style = {} }: IconPro
       {name}
     </span>
   );
-}
+};
+
+export default Icon;
 

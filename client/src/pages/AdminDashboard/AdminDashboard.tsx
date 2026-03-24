@@ -25,7 +25,7 @@ function apiError(err: unknown, fallback: string): string {
   return (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 }
 
-export default function AdminDashboard() {
+const AdminDashboard = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,5 +166,7 @@ export default function AdminDashboard() {
       </main>
     </div>
   );
-}
+};
+
+export default AdminDashboard;
 

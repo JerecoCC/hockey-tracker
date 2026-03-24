@@ -13,7 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Users', path: '/admin/users', icon: 'group' },
 ];
 
-export default function AdminNav() {
+const AdminNav = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
@@ -64,5 +64,7 @@ export default function AdminNav() {
       </div>
     </nav>
   );
-}
+};
+
+export default AdminNav;
 

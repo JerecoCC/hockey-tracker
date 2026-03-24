@@ -6,7 +6,7 @@ import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
 import styles from './Auth.module.scss';
 
-export default function Signup() {
+const Signup = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -124,5 +124,7 @@ export default function Signup() {
       </div>
     </div>
   );
-}
+};
+
+export default Signup;
 
