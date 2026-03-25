@@ -29,6 +29,17 @@ async function initSchema() {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'user'
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS leagues (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name        TEXT NOT NULL,
+      code        TEXT UNIQUE NOT NULL,
+      description TEXT,
+      logo        TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
   console.log('Database schema ready');
 }
 

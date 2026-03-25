@@ -1,8 +1,13 @@
 // ── Variables ──────────────────────────────────────────────────────────
+$bg-page:     #0f172a;
 $bg-card:     #1e293b;
+$bg-input:    #0f172a;
 $border:      #334155;
 $text-dim:    #64748b;
+$text-body:   #e2e8f0;
 $text-bright: #f8fafc;
+$accent:      #7c3aed;
+$accent-hover:#6d28d9;
 
 // ── Layout ─────────────────────────────────────────────────────────────
 .main {
@@ -11,11 +16,37 @@ $text-bright: #f8fafc;
   overflow-y: auto;
 }
 
+// ── Title row ──────────────────────────────────────────────────────────
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
 .sectionTitle {
   font-size: 1.375rem;
   font-weight: 700;
   color: $text-bright;
-  margin: 0 0 1.25rem;
+  margin: 0;
+}
+
+// ── Add button ─────────────────────────────────────────────────────────
+.addBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: $accent;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover { background: $accent-hover; }
 }
 
 // ── Card ───────────────────────────────────────────────────────────────
@@ -26,11 +57,135 @@ $text-bright: #f8fafc;
   border: 1px solid $border;
 }
 
-// ── Empty state ────────────────────────────────────────────────────────
-.emptyMsg {
-  color: $text-dim;
-  text-align: center;
-  padding: 2rem;
+// ── Logo thumbnail ─────────────────────────────────────────────────────
+.logoThumb {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: 4px;
+}
+
+.noLogo { color: $text-dim; }
+
+// ── Modal overlay ──────────────────────────────────────────────────────
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: 16px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.modalTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: $text-bright;
   margin: 0;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: $text-dim;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.2s;
+
+  &:hover { color: $text-bright; }
+}
+
+// ── Form ───────────────────────────────────────────────────────────────
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.required { color: #f87171; }
+
+%field {
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: 8px;
+  color: $text-body;
+  font-size: 0.875rem;
+  padding: 0.625rem 0.875rem;
+  outline: none;
+  transition: border-color 0.2s;
+
+  &:focus       { border-color: $accent; }
+  &::placeholder { color: $text-dim; }
+}
+
+.input    { @extend %field; }
+.textarea  { @extend %field; resize: vertical; font-family: inherit; min-height: 80px; }
+
+// ── Form actions ───────────────────────────────────────────────────────
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+%actionBtn {
+  padding: 0.5rem 1.125rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.cancelBtn {
+  @extend %actionBtn;
+  background: transparent;
+  color: $text-dim;
+  border: 1px solid $border;
+
+  &:hover:not(:disabled) { color: $text-bright; border-color: $text-dim; }
+}
+
+.submitBtn {
+  @extend %actionBtn;
+  background: $accent;
+  color: #fff;
+
+  &:hover:not(:disabled) { opacity: 0.85; }
 }
 
