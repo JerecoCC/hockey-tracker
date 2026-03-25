@@ -3,6 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../../context/AuthContext';
 import Icon from '../../../components/Icon/Icon';
+import Table, { Column } from '../../../components/Table/Table';
 import styles from './Users.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -73,94 +74,66 @@ const UsersPage = () => {
     }
   };
 
+  const columns: Column<UserRecord>[] = [
+    { header: 'Name',   render: (u) => u.display_name },
+    { header: 'Email',  render: (u) => u.email },
+    {
+      header: 'Role',
+      render: (u) => (
+        <span className={`${styles.badge} ${u.role === 'admin' ? styles.badgeAdmin : styles.badgeUser}`}>
+          {u.role}
+        </span>
+      ),
+    },
+    {
+      header: 'Auth',
+      render: (u) =>
+        u.is_google
+          ? <><Icon name="account_circle" size="1rem" style={{ color: '#4285F4', verticalAlign: '-0.2em' }} /> Google</>
+          : <><Icon name="mail" size="1rem" style={{ color: '#64748b', verticalAlign: '-0.2em' }} /> Email</>,
+    },
+    { header: 'Joined', render: (u) => new Date(u.created_at).toLocaleDateString() },
+    {
+      header: 'Actions',
+      render: (u) => {
+        const isMe = u.id === user?.id;
+        const isBusy = busy === u.id;
+        return (
+          <div className={styles.actions}>
+            {u.role !== 'admin' && (
+              <button className={styles.promoteBtn} disabled={isBusy} onClick={() => changeRole(u.id, 'admin')}>
+                Make Admin
+              </button>
+            )}
+            {u.role === 'admin' && !isMe && (
+              <button className={styles.demoteBtn} disabled={isBusy} onClick={() => changeRole(u.id, 'user')}>
+                Remove Admin
+              </button>
+            )}
+            {!isMe && (
+              <button className={styles.deleteBtn} disabled={isBusy} onClick={() => deleteUser(u.id, u.display_name)}>
+                Delete
+              </button>
+            )}
+            {isMe && <span style={{ color: '#64748b', fontSize: '0.8rem' }}>You</span>}
+          </div>
+        );
+      },
+    },
+  ];
+
   return (
     <main className={styles.main}>
-        <h2 className={styles.sectionTitle}>Users</h2>
-
-        <div className={styles.card}>
-          <div className={styles.tableWrapper}>
-            {loading ? (
-              <div className={styles.loaderWrapper}>
-                <span className={styles.spinner} />
-                <p className={styles.loaderText}>Loading users…</p>
-              </div>
-            ) : (
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Auth</th>
-                  <th>Joined</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className={styles.emptyMsg}>No users found.</td>
-                  </tr>
-                )}
-                {users.map((u) => {
-                  const isMe = u.id === user?.id;
-                  const isBusy = busy === u.id;
-                  return (
-                    <tr key={u.id}>
-                      <td>{u.display_name}</td>
-                      <td>{u.email}</td>
-                      <td>
-                        <span className={`${styles.badge} ${u.role === 'admin' ? styles.badgeAdmin : styles.badgeUser}`}>
-                          {u.role}
-                        </span>
-                      </td>
-                      <td>
-                        {u.is_google
-                          ? <><Icon name="account_circle" size="1rem" style={{ color: '#4285F4', verticalAlign: '-0.2em' }} /> Google</>
-                          : <><Icon name="mail" size="1rem" style={{ color: '#64748b', verticalAlign: '-0.2em' }} /> Email</>
-                        }
-                      </td>
-                      <td>{new Date(u.created_at).toLocaleDateString()}</td>
-                      <td>
-                        <div className={styles.actions}>
-                          {u.role !== 'admin' && (
-                            <button
-                              className={styles.promoteBtn}
-                              disabled={isBusy}
-                              onClick={() => changeRole(u.id, 'admin')}
-                            >
-                              Make Admin
-                            </button>
-                          )}
-                          {u.role === 'admin' && !isMe && (
-                            <button
-                              className={styles.demoteBtn}
-                              disabled={isBusy}
-                              onClick={() => changeRole(u.id, 'user')}
-                            >
-                              Remove Admin
-                            </button>
-                          )}
-                          {!isMe && (
-                            <button
-                              className={styles.deleteBtn}
-                              disabled={isBusy}
-                              onClick={() => deleteUser(u.id, u.display_name)}
-                            >
-                              Delete
-                            </button>
-                          )}
-                          {isMe && <span style={{ color: '#64748b', fontSize: '0.8rem' }}>You</span>}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            )}
-          </div>
-        </div>
+      <h2 className={styles.sectionTitle}>Users</h2>
+      <div className={styles.card}>
+        <Table
+          columns={columns}
+          rows={users}
+          rowKey={(u) => u.id}
+          loading={loading}
+          emptyMessage="No users found."
+        />
+      </div>
     </main>
   );
 };
