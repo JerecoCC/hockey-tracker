@@ -12,10 +12,11 @@ interface FormState extends Omit<CreateLeagueData, 'logo'> {
 const emptyForm = (): FormState => ({ name: '', code: '', description: '', logoFile: null, logoPreview: '' });
 
 const LeaguesPage = () => {
-  const { leagues, loading, uploadLogo, addLeague } = useLeagues();
+  const { leagues, loading, busy, uploadLogo, addLeague, deleteLeague } = useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
+  const [confirmDelete, setConfirmDelete] = useState<LeagueRecord | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const columns: Column<LeagueRecord>[] = [
@@ -31,6 +32,22 @@ const LeaguesPage = () => {
     { header: 'Code', key: 'code' },
     { header: 'Description', key: 'description' },
     { type: 'date', header: 'Created', key: 'created_at' },
+    {
+      type: 'custom',
+      header: 'Actions',
+      render: (l) => (
+        <div className={styles.actions}>
+          <button
+            className={styles.deleteBtn}
+            title="Delete"
+            disabled={busy === l.id}
+            onClick={() => setConfirmDelete(l)}
+          >
+            <Icon name="delete" size="1.1em" />
+          </button>
+        </div>
+      ),
+    },
   ];
 
   const openModal = () => {
@@ -95,6 +112,39 @@ const LeaguesPage = () => {
           emptyMessage="No leagues yet. Add one to get started."
         />
       </div>
+
+      {confirmDelete && (
+        <div className={styles.overlay} onClick={() => setConfirmDelete(null)}>
+          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3 className={styles.modalTitle}>Delete League</h3>
+              <button className={styles.closeBtn} onClick={() => setConfirmDelete(null)} type="button">
+                <Icon name="close" size="1.2em" />
+              </button>
+            </div>
+            <p className={styles.confirmBody}>
+              Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.
+            </p>
+            <div className={styles.formActions}>
+              <button className={styles.cancelBtn} onClick={() => setConfirmDelete(null)} type="button">
+                Cancel
+              </button>
+              <button
+                className={styles.confirmDeleteBtn}
+                disabled={busy === confirmDelete.id}
+                onClick={async () => {
+                  await deleteLeague(confirmDelete.id);
+                  setConfirmDelete(null);
+                }}
+                type="button"
+              >
+                <Icon name="delete" size="1em" />
+                {busy === confirmDelete.id ? 'Deleting…' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modalOpen && (
         <div className={styles.overlay} onClick={closeModal}>

@@ -31,6 +31,7 @@ const apiError = (err: unknown, fallback: string): string =>
 const useLeagues = () => {
   const [leagues, setLeagues] = useState<LeagueRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState<string | null>(null);
 
   const fetchLeagues = useCallback(async (signal?: AbortSignal) => {
     try {
@@ -78,7 +79,20 @@ const useLeagues = () => {
     }
   };
 
-  return { leagues, loading, uploadLogo, addLeague };
+  const deleteLeague = async (id: string) => {
+    setBusy(id);
+    try {
+      await axios.delete(`${API}/admin/leagues/${id}`, { headers: authHeaders() });
+      toast.success('League deleted');
+      await fetchLeagues();
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete league'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { leagues, loading, busy, uploadLogo, addLeague, deleteLeague };
 };
 
 export default useLeagues;

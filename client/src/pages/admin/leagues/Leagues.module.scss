@@ -65,7 +65,32 @@ $accent-hover:#6d28d9;
   border-radius: 4px;
 }
 
+$danger:       #be123c;
+$danger-light: #fb7185;
+
 .noLogo { color: $text-dim; }
+
+// ── Table actions ───────────────────────────────────────────────────────
+.actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  background: transparent;
+  border: 1px solid rgba($danger, 0.33);
+  border-radius: 6px;
+  color: $danger-light;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover:not(:disabled) { background: rgba($danger, 0.15); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
 
 // ── Modal overlay ──────────────────────────────────────────────────────
 .overlay {
@@ -190,6 +215,26 @@ $accent-hover:#6d28d9;
 .submitBtn {
   @extend %actionBtn;
   background: $accent;
+  color: #fff;
+
+  &:hover:not(:disabled) { opacity: 0.85; }
+}
+
+.confirmBody {
+  color: $text-body;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+
+  strong { color: $text-bright; }
+}
+
+.confirmDeleteBtn {
+  @extend %actionBtn;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: $danger;
   color: #fff;
 
   &:hover:not(:disabled) { opacity: 0.85; }
