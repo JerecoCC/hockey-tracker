@@ -77,6 +77,25 @@ $danger-light: #fb7185;
   gap: 0.5rem;
 }
 
+$edit:       #1d4ed8;
+$edit-light: #93c5fd;
+
+.editBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  background: transparent;
+  border: 1px solid rgba($edit, 0.33);
+  border-radius: 6px;
+  color: $edit-light;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+
+  &:hover:not(:disabled) { background: rgba($edit, 0.15); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
 .deleteBtn {
   display: inline-flex;
   align-items: center;

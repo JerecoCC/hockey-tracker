@@ -79,6 +79,21 @@ const useLeagues = () => {
     }
   };
 
+  const updateLeague = async (id: string, payload: Partial<CreateLeagueData>): Promise<boolean> => {
+    setBusy(id);
+    try {
+      await axios.patch(`${API}/admin/leagues/${id}`, payload, { headers: authHeaders() });
+      toast.success('League updated!');
+      await fetchLeagues();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update league'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deleteLeague = async (id: string) => {
     setBusy(id);
     try {
@@ -92,7 +107,7 @@ const useLeagues = () => {
     }
   };
 
-  return { leagues, loading, busy, uploadLogo, addLeague, deleteLeague };
+  return { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague };
 };
 
 export default useLeagues;

@@ -6,14 +6,16 @@ import styles from './Leagues.module.scss';
 
 interface FormState extends Omit<CreateLeagueData, 'logo'> {
   logoFile: File | null;
-  logoPreview: string;
+  logoPreview: string;      // blob URL for newly picked file
+  existingLogoUrl: string;  // current saved URL (populated in edit mode)
 }
 
-const emptyForm = (): FormState => ({ name: '', code: '', description: '', logoFile: null, logoPreview: '' });
+const emptyForm = (): FormState => ({ name: '', code: '', description: '', logoFile: null, logoPreview: '', existingLogoUrl: '' });
 
 const LeaguesPage = () => {
-  const { leagues, loading, busy, uploadLogo, addLeague, deleteLeague } = useLeagues();
+  const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } = useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<LeagueRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [confirmDelete, setConfirmDelete] = useState<LeagueRecord | null>(null);
@@ -31,13 +33,20 @@ const LeaguesPage = () => {
     },
     { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },
-    { type: 'date', header: 'Created', key: 'created_at' },
     {
       type: 'custom',
       header: 'Actions',
       align: 'center',
       render: (l) => (
         <div className={styles.actions}>
+          <button
+            className={styles.editBtn}
+            title="Edit"
+            disabled={busy === l.id}
+            onClick={() => openEditModal(l)}
+          >
+            <Icon name="edit" size="1.1em" />
+          </button>
           <button
             className={styles.deleteBtn}
             title="Delete"
@@ -52,13 +61,28 @@ const LeaguesPage = () => {
   ];
 
   const openModal = () => {
+    setEditTarget(null);
     setForm(emptyForm());
+    setModalOpen(true);
+  };
+
+  const openEditModal = (league: LeagueRecord) => {
+    setEditTarget(league);
+    setForm({
+      name: league.name,
+      code: league.code,
+      description: league.description ?? '',
+      logoFile: null,
+      logoPreview: '',
+      existingLogoUrl: league.logo ?? '',
+    });
     setModalOpen(true);
   };
 
   const closeModal = () => {
     if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
     setModalOpen(false);
+    setEditTarget(null);
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -70,25 +94,28 @@ const LeaguesPage = () => {
 
   const clearFile = () => {
     if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
-    setForm({ ...form, logoFile: null, logoPreview: '' });
+    setForm({ ...form, logoFile: null, logoPreview: '', existingLogoUrl: '' });
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    let logoUrl: string | undefined;
+    let logoUrl: string | undefined = form.existingLogoUrl || undefined;
     if (form.logoFile) {
       const url = await uploadLogo(form.logoFile);
       if (!url) { setSubmitting(false); return; }
       logoUrl = url;
     }
-    const ok = await addLeague({
+    const payload = {
       name: form.name,
       code: form.code,
       description: form.description || undefined,
       logo: logoUrl,
-    });
+    };
+    const ok = editTarget
+      ? await updateLeague(editTarget.id, payload)
+      : await addLeague(payload);
     setSubmitting(false);
     if (ok) closeModal();
   };
@@ -151,7 +178,7 @@ const LeaguesPage = () => {
         <div className={styles.overlay} onClick={closeModal}>
           <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Add League</h3>
+              <h3 className={styles.modalTitle}>{editTarget ? 'Edit League' : 'Add League'}</h3>
               <button className={styles.closeBtn} onClick={closeModal} type="button">
                 <Icon name="close" size="1.2em" />
               </button>
@@ -193,9 +220,9 @@ const LeaguesPage = () => {
               <div className={styles.label}>
                 Logo
                 <div className={styles.fileRow}>
-                  {form.logoPreview && (
+                  {(form.logoPreview || form.existingLogoUrl) && (
                     <div className={styles.previewWrapper}>
-                      <img src={form.logoPreview} alt="Preview" className={styles.logoPreview} />
+                      <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
                       <button type="button" className={styles.clearBtn} onClick={clearFile}>
                         <Icon name="close" size="0.9em" />
                       </button>
@@ -219,7 +246,7 @@ const LeaguesPage = () => {
                   Cancel
                 </button>
                 <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                  {submitting ? 'Saving…' : 'Add League'}
+                  {submitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add League'}
                 </button>
               </div>
             </form>
