@@ -73,6 +73,7 @@ $danger-light: #fb7185;
 // ── Table actions ───────────────────────────────────────────────────────
 .actions {
   display: flex;
+  justify-content: center;
   gap: 0.5rem;
 }
 

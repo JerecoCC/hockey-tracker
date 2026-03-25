@@ -2,9 +2,9 @@ import { ReactNode } from 'react';
 import styles from './Table.module.scss';
 
 export type Column<T> =
-  | { type?: 'text';   header: string; key: keyof T }
-  | { type: 'date';    header: string; key: keyof T }
-  | { type: 'custom';  header: string; render: (row: T) => ReactNode };
+  | { type?: 'text';   header: string; key: keyof T;                    align?: 'left' | 'center' | 'right' }
+  | { type: 'date';    header: string; key: keyof T;                    align?: 'left' | 'center' | 'right' }
+  | { type: 'custom';  header: string; render: (row: T) => ReactNode;   align?: 'left' | 'center' | 'right' };
 
 const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
   if (col.type === 'custom') return col.render(row);
@@ -42,7 +42,7 @@ const Table = <T,>({
         <thead>
           <tr>
             {columns.map((col) => (
-              <th key={col.header}>{col.header}</th>
+              <th key={col.header} style={col.align ? { textAlign: col.align } : undefined}>{col.header}</th>
             ))}
           </tr>
         </thead>
@@ -57,7 +57,7 @@ const Table = <T,>({
             data.map((row) => (
               <tr key={rowKey(row)}>
                 {columns.map((col) => (
-                  <td key={col.header}>{renderCell(col, row)}</td>
+                  <td key={col.header} style={col.align ? { textAlign: col.align } : undefined}>{renderCell(col, row)}</td>
                 ))}
               </tr>
             ))

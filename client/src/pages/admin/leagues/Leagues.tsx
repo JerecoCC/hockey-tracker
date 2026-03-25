@@ -23,6 +23,7 @@ const LeaguesPage = () => {
     {
       type: 'custom',
       header: 'Logo',
+      align: 'center',
       render: (l) =>
         l.logo
           ? <img src={l.logo} alt={l.name} className={styles.logoThumb} />
@@ -30,11 +31,11 @@ const LeaguesPage = () => {
     },
     { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },
-    { header: 'Description', key: 'description' },
     { type: 'date', header: 'Created', key: 'created_at' },
     {
       type: 'custom',
       header: 'Actions',
+      align: 'center',
       render: (l) => (
         <div className={styles.actions}>
           <button
