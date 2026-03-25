@@ -24,7 +24,7 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const Users = () => {
+const UsersPage = () => {
   const { user } = useAuth();
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -165,5 +165,5 @@ const Users = () => {
   );
 };
 
-export default Users;
+export default UsersPage;
 

@@ -1,7 +1,7 @@
 import Icon from '../../../components/Icon/Icon';
 import styles from './Leagues.module.scss';
 
-const Leagues = () => (
+const LeaguesPage = () => (
   <main className={styles.main}>
     <h1 className={styles.sectionTitle}>
       <Icon name="emoji_events" size="1em" /> Leagues
@@ -15,5 +15,5 @@ const Leagues = () => (
   </main>
 );
 
-export default Leagues;
+export default LeaguesPage;
 

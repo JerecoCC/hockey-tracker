@@ -10,7 +10,7 @@ import { useAuth } from '../../../context/AuthContext';
 
 const API = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const AuthCallback = () => {
+const AuthCallbackPage = () => {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   // We need the setUser function exposed via context
@@ -52,5 +52,5 @@ const AuthCallback = () => {
   );
 };
 
-export default AuthCallback;
+export default AuthCallbackPage;
 

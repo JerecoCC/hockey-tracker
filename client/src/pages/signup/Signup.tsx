@@ -7,7 +7,7 @@ import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
 import styles from './Signup.module.scss';
 
-const Signup = () => {
+const SignupPage = () => {
   const { signup } = useAuth();
   const navigate = useNavigate();
 
@@ -123,5 +123,5 @@ const Signup = () => {
   );
 };
 
-export default Signup;
+export default SignupPage;
 

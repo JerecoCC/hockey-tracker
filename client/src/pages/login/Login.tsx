@@ -7,7 +7,7 @@ import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
 import styles from './Login.module.scss';
 
-const Login = () => {
+const LoginPage = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -87,5 +87,5 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default LoginPage;
 

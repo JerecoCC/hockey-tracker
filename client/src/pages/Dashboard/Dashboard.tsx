@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Icon from '../../components/Icon/Icon';
 import styles from './Dashboard.module.scss';
 
-const Dashboard = () => {
+const DashboardPage = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
@@ -55,5 +55,5 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default DashboardPage;
 

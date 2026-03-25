@@ -2,13 +2,13 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ReactNode } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Login from './pages/login/Login';
-import Signup from './pages/signup/Signup';
-import Dashboard from './pages/dashboard/Dashboard';
+import LoginPage from './pages/login/Login';
+import SignupPage from './pages/signup/Signup';
+import DashboardPage from './pages/dashboard/Dashboard';
 import AdminLayout from './components/AdminLayout/AdminLayout';
-import Leagues from './pages/admin/leagues/Leagues';
-import Users from './pages/admin/users/Users';
-import AuthCallback from './pages/auth/callback/AuthCallback';
+import LeaguesPage from './pages/admin/leagues/Leagues';
+import UsersPage from './pages/admin/users/Users';
+import AuthCallbackPage from './pages/auth/callback/AuthCallback';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -40,7 +40,7 @@ const App = () => (
             path="/login"
             element={
               <PublicRoute>
-                <Login />
+                <LoginPage />
               </PublicRoute>
             }
           />
@@ -48,16 +48,16 @@ const App = () => (
             path="/signup"
             element={
               <PublicRoute>
-                <Signup />
+                <SignupPage />
               </PublicRoute>
             }
           />
-          <Route path="/auth/callback" element={<AuthCallback />} />
+          <Route path="/auth/callback" element={<AuthCallbackPage />} />
           <Route
             path="/dashboard"
             element={
               <PrivateRoute>
-                <Dashboard />
+                <DashboardPage />
               </PrivateRoute>
             }
           />
@@ -68,8 +68,8 @@ const App = () => (
               </AdminRoute>
             }
           >
-            <Route path="/admin/users" element={<Users />} />
-            <Route path="/admin/leagues" element={<Leagues />} />
+            <Route path="/admin/users" element={<UsersPage />} />
+            <Route path="/admin/leagues" element={<LeaguesPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
