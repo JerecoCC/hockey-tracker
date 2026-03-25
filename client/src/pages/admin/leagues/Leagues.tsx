@@ -1,14 +1,22 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import useLeagues, { LeagueRecord, CreateLeagueData } from '../../../hooks/useLeagues';
 import styles from './Leagues.module.scss';
 
+interface FormState extends Omit<CreateLeagueData, 'logo'> {
+  logoFile: File | null;
+  logoPreview: string;
+}
+
+const emptyForm = (): FormState => ({ name: '', code: '', description: '', logoFile: null, logoPreview: '' });
+
 const LeaguesPage = () => {
-  const { leagues, loading, addLeague } = useLeagues();
+  const { leagues, loading, uploadLogo, addLeague } = useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<CreateLeagueData>({ name: '', code: '', description: '', logo: '' });
+  const [form, setForm] = useState<FormState>(emptyForm());
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const columns: Column<LeagueRecord>[] = [
     {
@@ -26,20 +34,42 @@ const LeaguesPage = () => {
   ];
 
   const openModal = () => {
-    setForm({ name: '', code: '', description: '', logo: '' });
+    setForm(emptyForm());
     setModalOpen(true);
   };
 
-  const closeModal = () => setModalOpen(false);
+  const closeModal = () => {
+    if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
+    setModalOpen(false);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (!file) return;
+    if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
+    setForm({ ...form, logoFile: file, logoPreview: URL.createObjectURL(file) });
+  };
+
+  const clearFile = () => {
+    if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
+    setForm({ ...form, logoFile: null, logoPreview: '' });
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+    let logoUrl: string | undefined;
+    if (form.logoFile) {
+      const url = await uploadLogo(form.logoFile);
+      if (!url) { setSubmitting(false); return; }
+      logoUrl = url;
+    }
     const ok = await addLeague({
       name: form.name,
       code: form.code,
       description: form.description || undefined,
-      logo: form.logo || undefined,
+      logo: logoUrl,
     });
     setSubmitting(false);
     if (ok) closeModal();
@@ -77,7 +107,7 @@ const LeaguesPage = () => {
             </div>
             <form className={styles.form} onSubmit={handleSubmit}>
               <label className={styles.label}>
-                Name <span className={styles.required}>*</span>
+                <span className={styles.labelText}>Name <span className={styles.required}>*</span></span>
                 <input
                   className={styles.input}
                   type="text"
@@ -89,7 +119,7 @@ const LeaguesPage = () => {
                 />
               </label>
               <label className={styles.label}>
-                Code <span className={styles.required}>*</span>
+                <span className={styles.labelText}>Code <span className={styles.required}>*</span></span>
                 <input
                   className={styles.input}
                   type="text"
@@ -109,16 +139,30 @@ const LeaguesPage = () => {
                   rows={3}
                 />
               </label>
-              <label className={styles.label}>
-                Logo URL
-                <input
-                  className={styles.input}
-                  type="url"
-                  value={form.logo}
-                  onChange={(e) => setForm({ ...form, logo: e.target.value })}
-                  placeholder="https://..."
-                />
-              </label>
+              <div className={styles.label}>
+                Logo
+                <div className={styles.fileRow}>
+                  {form.logoPreview && (
+                    <div className={styles.previewWrapper}>
+                      <img src={form.logoPreview} alt="Preview" className={styles.logoPreview} />
+                      <button type="button" className={styles.clearBtn} onClick={clearFile}>
+                        <Icon name="close" size="0.9em" />
+                      </button>
+                    </div>
+                  )}
+                  <label className={styles.fileLabel}>
+                    <Icon name="upload" size="1em" />
+                    {form.logoFile ? form.logoFile.name : 'Choose image…'}
+                    <input
+                      ref={fileInputRef}
+                      className={styles.fileInput}
+                      type="file"
+                      accept="image/*,image/svg+xml,.svg"
+                      onChange={handleFileChange}
+                    />
+                  </label>
+                </div>
+              </div>
               <div className={styles.formActions}>
                 <button type="button" className={styles.cancelBtn} onClick={closeModal}>
                   Cancel

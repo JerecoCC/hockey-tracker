@@ -50,6 +50,22 @@ const useLeagues = () => {
     return () => controller.abort();
   }, [fetchLeagues]);
 
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    try {
+      const { data } = await axios.post<{ url: string }>(
+        `${API}/admin/leagues/upload`,
+        formData,
+        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
+      );
+      return data.url;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to upload logo'));
+      return null;
+    }
+  };
+
   const addLeague = async (payload: CreateLeagueData): Promise<boolean> => {
     try {
       await axios.post(`${API}/admin/leagues`, payload, { headers: authHeaders() });
@@ -62,7 +78,7 @@ const useLeagues = () => {
     }
   };
 
-  return { leagues, loading, addLeague };
+  return { leagues, loading, uploadLogo, addLeague };
 };
 
 export default useLeagues;

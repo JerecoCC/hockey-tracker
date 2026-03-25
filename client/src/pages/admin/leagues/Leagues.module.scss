@@ -133,6 +133,12 @@ $accent-hover:#6d28d9;
   letter-spacing: 0.05em;
 }
 
+.labelText {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .required { color: #f87171; }
 
 %field {
@@ -187,5 +193,72 @@ $accent-hover:#6d28d9;
   color: #fff;
 
   &:hover:not(:disabled) { opacity: 0.85; }
+}
+
+// ── File upload ────────────────────────────────────────────────────────────
+.fileRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.fileLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 0.875rem;
+  background: $bg-input;
+  border: 1px dashed $border;
+  border-radius: 8px;
+  color: $text-dim;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  &:hover { border-color: $accent; color: $text-bright; }
+}
+
+.fileInput {
+  display: none;
+}
+
+.previewWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.logoPreview {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid $border;
+  background: $bg-input;
+}
+
+.clearBtn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  border: none;
+  border-radius: 50%;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+
+  &:hover { background: #dc2626; }
 }
 

@@ -1,9 +1,42 @@
+const path = require('path');
 const router = require('express').Router();
+const multer = require('multer');
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
 
+// ---------------------------------------------------------------------------
+// Multer – store uploads in server/uploads/ with original extension
+// ---------------------------------------------------------------------------
+const storage = multer.diskStorage({
+  destination: path.join(__dirname, '../../uploads'),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const upload = multer({
+  storage,
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+  fileFilter: (_req, file, cb) => {
+    const isSvg = file.mimetype === 'image/svg+xml'
+      || /\.(svg)$/i.test(file.originalname)
+      || file.mimetype === 'text/xml'
+      || file.mimetype === 'application/xml';
+    if (file.mimetype.startsWith('image/') || isSvg) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  },
+});
+
 // All league routes require the admin role
 router.use(requireAdmin);
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/leagues/upload  – upload a logo image, return its URL
+// ---------------------------------------------------------------------------
+router.post('/upload', upload.single('logo'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  return res.json({ url: `/uploads/${req.file.filename}` });
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/leagues  – list all leagues
