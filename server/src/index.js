@@ -1,5 +1,4 @@
 require('dotenv').config();
-const path = require('path');
 const express = require('express');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
@@ -40,11 +39,6 @@ app.use(
 );
 app.use(passport.initialize());
 app.use(passport.session());
-
-// ---------------------------------------------------------------------------
-// Static uploads
-// ---------------------------------------------------------------------------
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 
 // ---------------------------------------------------------------------------
 // Routes

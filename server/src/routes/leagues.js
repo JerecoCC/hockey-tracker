@@ -1,21 +1,15 @@
 const path = require('path');
 const router = require('express').Router();
 const multer = require('multer');
+const { put } = require('@vercel/blob');
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
 
 // ---------------------------------------------------------------------------
-// Multer – store uploads in server/uploads/ with original extension
+// Multer – memory storage only (buffer passed to Vercel Blob)
 // ---------------------------------------------------------------------------
-const storage = multer.diskStorage({
-  destination: path.join(__dirname, '../../uploads'),
-  filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
-  },
-});
 const upload = multer({
-  storage,
+  storage: multer.memoryStorage(),
   limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
   fileFilter: (_req, file, cb) => {
     const isSvg = file.mimetype === 'image/svg+xml'
@@ -31,11 +25,22 @@ const upload = multer({
 router.use(requireAdmin);
 
 // ---------------------------------------------------------------------------
-// POST /api/admin/leagues/upload  – upload a logo image, return its URL
+// POST /api/admin/leagues/upload  – upload a logo image to Vercel Blob
 // ---------------------------------------------------------------------------
-router.post('/upload', upload.single('logo'), (req, res) => {
+router.post('/upload', upload.single('logo'), async (req, res) => {
   if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-  return res.json({ url: `/uploads/${req.file.filename}` });
+  try {
+    const ext = path.extname(req.file.originalname);
+    const filename = `leagues/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    const blob = await put(filename, req.file.buffer, {
+      access: 'public',
+      contentType: req.file.mimetype,
+    });
+    return res.json({ url: blob.url });
+  } catch (err) {
+    console.error('blob upload error:', err);
+    return res.status(500).json({ error: 'Failed to upload image' });
+  }
 });
 
 // ---------------------------------------------------------------------------
