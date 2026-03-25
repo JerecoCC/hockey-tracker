@@ -31,18 +31,23 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(async () => {
+  const fetchUsers = useCallback(async (signal?: AbortSignal) => {
     try {
-      const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, { headers: authHeaders() });
+      const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, { headers: authHeaders(), signal });
       setUsers(data);
     } catch (err) {
+      if (axios.isCancel(err)) return;
       toast.error(apiError(err, 'Failed to load users'));
     } finally {
       setLoading(false);
     }
   }, []);
 
-  useEffect(() => { fetchUsers(); }, [fetchUsers]);
+  useEffect(() => {
+    const controller = new AbortController();
+    fetchUsers(controller.signal);
+    return () => controller.abort();
+  }, [fetchUsers]);
 
   const changeRole = async (id: string, role: 'admin' | 'user') => {
     setBusy(id);
