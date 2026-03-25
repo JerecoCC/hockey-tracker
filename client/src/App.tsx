@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/login/Login';
 import Signup from './pages/signup/Signup';
 import Dashboard from './pages/dashboard/Dashboard';
+import Leagues from './pages/admin/leagues/Leagues';
 import Users from './pages/admin/users/Users';
 import AuthCallback from './pages/auth/callback/AuthCallback';
 
@@ -57,6 +58,14 @@ const App = () => (
               <PrivateRoute>
                 <Dashboard />
               </PrivateRoute>
+            }
+          />
+          <Route
+            path="/leagues"
+            element={
+              <AdminRoute>
+                <Leagues />
+              </AdminRoute>
             }
           />
           <Route
