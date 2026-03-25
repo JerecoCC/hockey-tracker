@@ -13,12 +13,6 @@ $danger:        #be123c;
 $danger-light:  #fb7185;
 
 // ── Layout ─────────────────────────────────────────────────────────────
-.page {
-  min-height: 100vh;
-  background: $bg-page;
-  display: flex;
-}
-
 .main {
   flex: 1;
   padding: 2rem;

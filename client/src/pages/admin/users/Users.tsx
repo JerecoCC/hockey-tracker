@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from 'react';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../../context/AuthContext';
-import AdminNav from '../../../components/AdminNav/AdminNav';
 import Icon from '../../../components/Icon/Icon';
 import styles from './Users.module.scss';
 
@@ -75,9 +74,7 @@ const Users = () => {
   };
 
   return (
-    <div className={styles.page}>
-      <AdminNav />
-      <main className={styles.main}>
+    <main className={styles.main}>
         <h2 className={styles.sectionTitle}>Users</h2>
 
         <div className={styles.card}>
@@ -164,8 +161,7 @@ const Users = () => {
             )}
           </div>
         </div>
-      </main>
-    </div>
+    </main>
   );
 };
 

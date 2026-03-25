@@ -1,17 +1,10 @@
 // ── Variables ──────────────────────────────────────────────────────────
-$bg-page:     #0f172a;
 $bg-card:     #1e293b;
 $border:      #334155;
 $text-dim:    #64748b;
 $text-bright: #f8fafc;
 
 // ── Layout ─────────────────────────────────────────────────────────────
-.page {
-  min-height: 100vh;
-  background: $bg-page;
-  display: flex;
-}
-
 .main {
   flex: 1;
   padding: 2rem;
