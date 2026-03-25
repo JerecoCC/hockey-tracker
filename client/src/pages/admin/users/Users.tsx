@@ -75,9 +75,10 @@ const UsersPage = () => {
   };
 
   const columns: Column<UserRecord>[] = [
-    { header: 'Name',   render: (u) => u.display_name },
-    { header: 'Email',  render: (u) => u.email },
+    { header: 'Name',  key: 'display_name' },
+    { header: 'Email', key: 'email' },
     {
+      type: 'custom',
       header: 'Role',
       render: (u) => (
         <span className={`${styles.badge} ${u.role === 'admin' ? styles.badgeAdmin : styles.badgeUser}`}>
@@ -86,14 +87,16 @@ const UsersPage = () => {
       ),
     },
     {
+      type: 'custom',
       header: 'Auth',
       render: (u) =>
         u.is_google
           ? <><Icon name="account_circle" size="1rem" style={{ color: '#4285F4', verticalAlign: '-0.2em' }} /> Google</>
           : <><Icon name="mail" size="1rem" style={{ color: '#64748b', verticalAlign: '-0.2em' }} /> Email</>,
     },
-    { header: 'Joined', render: (u) => new Date(u.created_at).toLocaleDateString() },
+    { type: 'date', header: 'Joined', key: 'created_at' },
     {
+      type: 'custom',
       header: 'Actions',
       render: (u) => {
         const isMe = u.id === user?.id;
@@ -128,7 +131,7 @@ const UsersPage = () => {
       <div className={styles.card}>
         <Table
           columns={columns}
-          rows={users}
+          data={users}
           rowKey={(u) => u.id}
           loading={loading}
           emptyMessage="No users found."

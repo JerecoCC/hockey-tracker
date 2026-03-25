@@ -1,14 +1,20 @@
 import { ReactNode } from 'react';
 import styles from './Table.module.scss';
 
-export interface Column<T> {
-  header: string;
-  render: (row: T) => ReactNode;
-}
+export type Column<T> =
+  | { type?: 'text';   header: string; key: keyof T }
+  | { type: 'date';    header: string; key: keyof T }
+  | { type: 'custom';  header: string; render: (row: T) => ReactNode };
+
+const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
+  if (col.type === 'custom') return col.render(row);
+  if (col.type === 'date')   return new Date(row[col.key] as string).toLocaleDateString();
+  return String(row[col.key] ?? '');
+};
 
 interface TableProps<T> {
   columns: Column<T>[];
-  rows: T[];
+  data: T[];
   rowKey: (row: T) => string;
   loading?: boolean;
   emptyMessage?: string;
@@ -16,7 +22,7 @@ interface TableProps<T> {
 
 const Table = <T,>({
   columns,
-  rows,
+  data,
   rowKey,
   loading = false,
   emptyMessage = 'No results found.',
@@ -41,17 +47,17 @@ const Table = <T,>({
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 ? (
+          {data.length === 0 ? (
             <tr>
               <td colSpan={columns.length} className={styles.emptyMsg}>
                 {emptyMessage}
               </td>
             </tr>
           ) : (
-            rows.map((row) => (
+            data.map((row) => (
               <tr key={rowKey(row)}>
                 {columns.map((col) => (
-                  <td key={col.header}>{col.render(row)}</td>
+                  <td key={col.header}>{renderCell(col, row)}</td>
                 ))}
               </tr>
             ))
