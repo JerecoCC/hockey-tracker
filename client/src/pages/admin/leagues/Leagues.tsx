@@ -1,18 +1,10 @@
 import { useState, useRef } from 'react';
 import Icon from '../../../components/Icon/Icon';
-import Modal from '../../../components/Modal/Modal';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Table, { Column } from '../../../components/Table/Table';
-import useLeagues, { LeagueRecord, CreateLeagueData } from '../../../hooks/useLeagues';
+import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
+import LeagueDeleteModal from './LeagueDeleteModal';
+import LeagueFormModal, { FormState, emptyForm } from './LeagueFormModal';
 import styles from './Leagues.module.scss';
-
-interface FormState extends Omit<CreateLeagueData, 'logo'> {
-  logoFile: File | null;
-  logoPreview: string;      // blob URL for newly picked file
-  existingLogoUrl: string;  // current saved URL (populated in edit mode)
-}
-
-const emptyForm = (): FormState => ({ name: '', code: '', description: '', logoFile: null, logoPreview: '', existingLogoUrl: '' });
 
 const LeaguesPage = () => {
   const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } = useLeagues();
@@ -32,7 +24,7 @@ const LeaguesPage = () => {
       render: (l) =>
         l.logo
           ? <img src={l.logo} alt={l.name} className={styles.logoThumb} />
-          : <span className={styles.logoPlaceholder}>{l.code[0]}</span>,
+          : <span className={styles.logoPlaceholder}>{l.code.slice(0, 3)}</span>,
     },
     { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },
@@ -144,87 +136,26 @@ const LeaguesPage = () => {
         />
       </div>
 
-      <ConfirmModal
+      <LeagueDeleteModal
         open={confirmDeleteOpen}
-        title="Delete League"
-        body={<>Are you sure you want to delete <strong>{confirmDelete?.name}</strong>? This cannot be undone.</>}
-        confirmLabel={busy === confirmDelete?.id ? 'Deleting…' : 'Delete'}
-        confirmIcon="delete"
-        variant="danger"
-        busy={busy === confirmDelete?.id}
+        busy={busy}
+        target={confirmDelete}
         onCancel={() => { setConfirmDeleteOpen(false); setConfirmDelete(null); }}
         onConfirm={async () => { await deleteLeague(confirmDelete!.id); setConfirmDeleteOpen(false); setConfirmDelete(null); }}
       />
 
-      <Modal open={modalOpen} title={editTarget ? 'Edit League' : 'Add League'} onClose={closeModal}>
-            <form className={styles.form} onSubmit={handleSubmit}>
-              <label className={styles.label}>
-                <span className={styles.labelText}>Name <span className={styles.required}>*</span></span>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={form.name}
-                  onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="e.g. National Hockey League"
-                  required
-                  autoFocus
-                />
-              </label>
-              <label className={styles.label}>
-                <span className={styles.labelText}>Code <span className={styles.required}>*</span></span>
-                <input
-                  className={styles.input}
-                  type="text"
-                  value={form.code}
-                  onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-                  placeholder="e.g. NHL"
-                  required
-                />
-              </label>
-              <label className={styles.label}>
-                Description
-                <textarea
-                  className={styles.textarea}
-                  value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })}
-                  placeholder="Optional description"
-                  rows={3}
-                />
-              </label>
-              <div className={styles.label}>
-                Logo
-                <div className={styles.fileRow}>
-                  {(form.logoPreview || form.existingLogoUrl) && (
-                    <div className={styles.previewWrapper}>
-                      <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
-                      <button type="button" className={styles.clearBtn} onClick={clearFile}>
-                        <Icon name="close" size="0.9em" />
-                      </button>
-                    </div>
-                  )}
-                  <label className={styles.fileLabel}>
-                    <Icon name="upload" size="1em" />
-                    {form.logoFile ? form.logoFile.name : 'Choose image…'}
-                    <input
-                      ref={fileInputRef}
-                      className={styles.fileInput}
-                      type="file"
-                      accept="image/*,image/svg+xml,.svg"
-                      onChange={handleFileChange}
-                    />
-                  </label>
-                </div>
-              </div>
-              <div className={styles.formActions}>
-                <button type="button" className={styles.cancelBtn} onClick={closeModal}>
-                  Cancel
-                </button>
-                <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                  {submitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add League'}
-                </button>
-              </div>
-            </form>
-        </Modal>
+      <LeagueFormModal
+        open={modalOpen}
+        editTarget={editTarget}
+        form={form}
+        setForm={setForm}
+        submitting={submitting}
+        fileInputRef={fileInputRef}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+        onFileChange={handleFileChange}
+        onClearFile={clearFile}
+      />
     </main>
   );
 };

@@ -1,22 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
 import Icon from '../../../components/Icon/Icon';
-import Modal from '../../../components/Modal/Modal';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Table, { Column } from '../../../components/Table/Table';
 import useTeams, { TeamRecord, CreateTeamData } from '../../../hooks/useTeams';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
+import TeamDeleteModal from './TeamDeleteModal';
+import TeamFormModal, { FormState, emptyForm } from './TeamFormModal';
 import styles from './Teams.module.scss';
-
-interface FormState extends Omit<CreateTeamData, 'logo'> {
-  logoFile: File | null;
-  logoPreview: string;
-  existingLogoUrl: string;
-}
-
-const emptyForm = (): FormState => ({
-  name: '', code: '', description: '', location: '', league_id: null,
-  logoFile: null, logoPreview: '', existingLogoUrl: '',
-});
 
 const TeamsPage = () => {
   const { teams, loading, busy, uploadLogo, addTeam, updateTeam, deleteTeam } = useTeams();
@@ -155,100 +144,31 @@ const TeamsPage = () => {
         <Table columns={columns} data={teams} rowKey={(t) => t.id} loading={loading} emptyMessage="No teams yet. Add one to get started." />
       </div>
 
-      <ConfirmModal
+      <TeamDeleteModal
         open={confirmDeleteOpen}
-        title="Delete Team"
-        body={<>Are you sure you want to delete <strong>{confirmDelete?.name}</strong>? This cannot be undone.</>}
-        confirmLabel={busy === confirmDelete?.id ? 'Deleting…' : 'Delete'}
-        confirmIcon="delete"
-        variant="danger"
-        busy={busy === confirmDelete?.id}
+        busy={busy}
+        target={confirmDelete}
         onCancel={() => { setConfirmDeleteOpen(false); setConfirmDelete(null); }}
         onConfirm={async () => { await deleteTeam(confirmDelete!.id); setConfirmDeleteOpen(false); setConfirmDelete(null); }}
       />
 
-      <Modal open={modalOpen} title={editTarget ? 'Edit Team' : 'Add Team'} onClose={closeModal}>
-            <form className={styles.form} onSubmit={handleSubmit}>
-              <label className={styles.label}>
-                <span className={styles.labelText}>Name <span className={styles.required}>*</span></span>
-                <input className={styles.input} type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Toronto Maple Leafs" required autoFocus />
-              </label>
-              <label className={styles.label}>
-                <span className={styles.labelText}>Code <span className={styles.required}>*</span></span>
-                <input className={styles.input} type="text" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })} placeholder="e.g. TOR" required />
-              </label>
-              <label className={styles.label}>
-                Location
-                <input className={styles.input} type="text" value={form.location ?? ''} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="e.g. Toronto, ON" />
-              </label>
-              <div className={styles.label}>
-                <span className={styles.labelText}>League <span className={styles.required}>*</span></span>
-                <div className={styles.leagueDropdown} ref={leagueDropdownRef}>
-                  <button
-                    type="button"
-                    className={`${styles.leagueTrigger} ${leagueDropdownOpen ? styles.leagueTriggerOpen : ''}`}
-                    onClick={() => setLeagueDropdownOpen((o) => !o)}
-                  >
-                    {form.league_id && leagueMap[form.league_id] ? (
-                      <span className={styles.leagueOptionInner}>
-                        {leagueMap[form.league_id].logo
-                          ? <img src={leagueMap[form.league_id].logo!} alt="" className={styles.leagueOptionLogo} />
-                          : <span className={styles.leagueOptionNoLogo}>{leagueMap[form.league_id].code[0]}</span>}
-                        {leagueMap[form.league_id].name}
-                      </span>
-                    ) : (
-                      <span className={styles.leaguePlaceholder}>— Select a league —</span>
-                    )}
-                    <Icon name="expand_more" size="1em" className={`${styles.leagueCaret} ${leagueDropdownOpen ? styles.leagueCaretOpen : ''}`} />
-                  </button>
-                  {leagueDropdownOpen && (
-                    <ul className={styles.leagueMenu}>
-                      {leagues.map((l) => (
-                        <li key={l.id}>
-                          <button
-                            type="button"
-                            className={`${styles.leagueOption} ${form.league_id === l.id ? styles.leagueOptionActive : ''}`}
-                            onClick={() => { setForm({ ...form, league_id: l.id }); setLeagueDropdownOpen(false); }}
-                          >
-                            {l.logo
-                              ? <img src={l.logo} alt="" className={styles.leagueOptionLogo} />
-                              : <span className={styles.leagueOptionNoLogo}>{l.code[0]}</span>}
-                            {l.name}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              </div>
-              <label className={styles.label}>
-                Description
-                <textarea className={styles.textarea} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Optional description" rows={3} />
-              </label>
-              <div className={styles.label}>
-                Logo
-                <div className={styles.fileRow}>
-                  {(form.logoPreview || form.existingLogoUrl) && (
-                    <div className={styles.previewWrapper}>
-                      <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
-                      <button type="button" className={styles.clearBtn} onClick={clearFile}><Icon name="close" size="0.9em" /></button>
-                    </div>
-                  )}
-                  <label className={styles.fileLabel}>
-                    <Icon name="upload" size="1em" />
-                    {form.logoFile ? form.logoFile.name : 'Choose image…'}
-                    <input ref={fileInputRef} className={styles.fileInput} type="file" accept="image/*,image/svg+xml,.svg" onChange={handleFileChange} />
-                  </label>
-                </div>
-              </div>
-              <div className={styles.formActions}>
-                <button type="button" className={styles.cancelBtn} onClick={closeModal}>Cancel</button>
-                <button type="submit" className={styles.submitBtn} disabled={submitting}>
-                  {submitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add Team'}
-                </button>
-              </div>
-            </form>
-        </Modal>
+      <TeamFormModal
+        open={modalOpen}
+        editTarget={editTarget}
+        form={form}
+        setForm={setForm}
+        submitting={submitting}
+        leagues={leagues}
+        leagueMap={leagueMap}
+        leagueDropdownOpen={leagueDropdownOpen}
+        setLeagueDropdownOpen={setLeagueDropdownOpen}
+        leagueDropdownRef={leagueDropdownRef}
+        fileInputRef={fileInputRef}
+        onClose={closeModal}
+        onSubmit={handleSubmit}
+        onFileChange={handleFileChange}
+        onClearFile={clearFile}
+      />
     </main>
   );
 };
