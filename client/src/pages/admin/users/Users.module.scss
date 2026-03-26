@@ -46,39 +46,152 @@
 // ── Action buttons ─────────────────────────────────────────────────────
 .actions {
   display: flex;
+  justify-content: center;
   gap: 0.5rem;
 }
 
-%actionBtn {
-  padding: 0.35rem 0.75rem;
+%iconBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  background: transparent;
   border-radius: 6px;
-  border: none;
-  font-size: 0.8rem;
   cursor: pointer;
-  font-weight: 500;
-  transition: opacity 0.2s;
+  transition: background 0.2s, color 0.2s;
 
-  &:hover    { opacity: 0.8; }
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 
 .promoteBtn {
-  @extend %actionBtn;
-  background: $accent;
-  color: #fff;
+  @extend %iconBtn;
+  border: 1px solid rgba($accent, 0.33);
+  color: $accent-light;
+
+  &:hover:not(:disabled) { background: rgba($accent, 0.15); }
 }
 
 .demoteBtn {
-  @extend %actionBtn;
-  background: $info;
-  color: #fff;
+  @extend %iconBtn;
+  border: 1px solid rgba($info, 0.33);
+  color: $info-light;
+
+  &:hover:not(:disabled) { background: rgba($info, 0.15); }
 }
 
 .deleteBtn {
-  @extend %actionBtn;
-  background: rgba($danger, 0.13);
-  color: $danger-light;
+  @extend %iconBtn;
   border: 1px solid rgba($danger, 0.33);
+  color: $danger-light;
+
+  &:hover:not(:disabled) { background: rgba($danger, 0.15); }
+}
+
+// ── Confirmation modal ─────────────────────────────────────────────────
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: 16px;
+  padding: 1.75rem;
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.modalTitle {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: $text-dim;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  border-radius: 4px;
+  transition: color 0.2s;
+
+  &:hover { color: $text-bright; }
+}
+
+.confirmBody {
+  color: $text-body;
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  margin: 0 0 1.5rem;
+
+  strong { color: $text-bright; }
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+%actionBtn {
+  padding: 0.5rem 1.125rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.2s;
+
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.cancelBtn {
+  @extend %actionBtn;
+  background: transparent;
+  color: $text-dim;
+  border: 1px solid $border;
+
+  &:hover:not(:disabled) { color: $text-bright; border-color: $text-dim; }
+}
+
+.confirmPromoteBtn {
+  @extend %actionBtn;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: $accent;
+  color: #fff;
+
+  &:hover:not(:disabled) { opacity: 0.85; }
+}
+
+.confirmDemoteBtn {
+  @extend %actionBtn;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: $info;
+  color: #fff;
+
+  &:hover:not(:disabled) { opacity: 0.85; }
 }
 
 

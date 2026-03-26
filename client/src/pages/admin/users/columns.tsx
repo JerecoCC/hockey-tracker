@@ -14,11 +14,11 @@ export interface UserRecord {
 interface ColumnDeps {
   currentUserId: string | undefined;
   busy: string | null;
-  changeRole: (id: string, role: 'admin' | 'user') => void;
+  confirmRole: (user: UserRecord, role: 'admin' | 'user') => void;
   deleteUser: (id: string, name: string) => void;
 }
 
-export const getUserColumns = ({ currentUserId, busy, changeRole, deleteUser }: ColumnDeps): Column<UserRecord>[] => [
+export const getUserColumns = ({ currentUserId, busy, confirmRole, deleteUser }: ColumnDeps): Column<UserRecord>[] => [
   { header: 'Name', key: 'display_name' },
   { header: 'Email', key: 'email' },
   {
@@ -42,24 +42,25 @@ export const getUserColumns = ({ currentUserId, busy, changeRole, deleteUser }: 
   {
     type: 'custom',
     header: 'Actions',
+    align: 'center',
     render: (u) => {
       const isMe = u.id === currentUserId;
       const isBusy = busy === u.id;
       return (
         <div className={styles.actions}>
           {u.role !== 'admin' && (
-            <button className={styles.promoteBtn} disabled={isBusy} onClick={() => changeRole(u.id, 'admin')}>
-              Make Admin
+            <button className={styles.promoteBtn} title="Make Admin" disabled={isBusy} onClick={() => confirmRole(u, 'admin')}>
+              <Icon name="manage_accounts" size="1.1em" />
             </button>
           )}
           {u.role === 'admin' && !isMe && (
-            <button className={styles.demoteBtn} disabled={isBusy} onClick={() => changeRole(u.id, 'user')}>
-              Remove Admin
+            <button className={styles.demoteBtn} title="Remove Admin" disabled={isBusy} onClick={() => confirmRole(u, 'user')}>
+              <Icon name="person_remove" size="1.1em" />
             </button>
           )}
           {!isMe && (
-            <button className={styles.deleteBtn} disabled={isBusy} onClick={() => deleteUser(u.id, u.display_name)}>
-              Delete
+            <button className={styles.deleteBtn} title="Delete" disabled={isBusy} onClick={() => deleteUser(u.id, u.display_name)}>
+              <Icon name="delete" size="1.1em" />
             </button>
           )}
           {isMe && <span style={{ color: '#64748b', fontSize: '0.8rem' }}>You</span>}
