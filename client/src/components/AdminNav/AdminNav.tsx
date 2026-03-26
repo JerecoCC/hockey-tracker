@@ -10,9 +10,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { label: 'Users', path: '/admin/users', icon: 'group' },
-  { label: 'Leagues', path: '/admin/leagues', icon: 'emoji_events' },
   { label: 'Teams', path: '/admin/teams', icon: 'groups' },
+  { label: 'Leagues', path: '/admin/leagues', icon: 'emoji_events' },
+  { label: 'Users', path: '/admin/users', icon: 'group' },
 ];
 
 const AdminNav = () => {
