@@ -34,7 +34,7 @@ const AdminNav = () => {
             onClick={() => setCollapsed(c => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
-            <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="1.25rem" />
+            <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="0.65rem" />
           </button>
         </div>
 

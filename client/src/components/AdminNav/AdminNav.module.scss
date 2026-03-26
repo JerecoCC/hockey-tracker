@@ -31,7 +31,7 @@ $transition-speed:   0.22s;
 
   .navItem {
     justify-content: center;
-    padding: 0.75rem 0;
+    padding: 0.625rem 0;
 
     &.active {
       border-left: 3px solid $accent;
@@ -74,13 +74,12 @@ $transition-speed:   0.22s;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  padding: 0.5rem;
   background: transparent;
   border: 1px solid $border;
-  border-radius: 6px;
+  border-radius: 4px;
   color: $text-dim;
-  font-size: 1rem;
+  font-size: 0.7rem;
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
@@ -106,7 +105,7 @@ $transition-speed:   0.22s;
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.625rem;
+  gap: 1rem;
   width: 100%;
   padding: 0.625rem 1.25rem;
   background: transparent;
@@ -139,10 +138,6 @@ $transition-speed:   0.22s;
   flex-shrink: 0;
 }
 
-.label {
-  overflow: hidden;
-}
-
 // ── Bottom / back button ───────────────────────────────────────────────
 .bottom {
   padding: 0 0.75rem;
@@ -154,7 +149,7 @@ $transition-speed:   0.22s;
   justify-content: flex-start;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.625rem 0.75rem;
+  padding: 0.5rem 1rem;
   background: transparent;
   border: 1px solid $border;
   border-radius: 8px;
