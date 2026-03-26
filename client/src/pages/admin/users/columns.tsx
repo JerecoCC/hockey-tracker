@@ -15,10 +15,10 @@ interface ColumnDeps {
   currentUserId: string | undefined;
   busy: string | null;
   confirmRole: (user: UserRecord, role: 'admin' | 'user') => void;
-  deleteUser: (id: string, name: string) => void;
+  confirmDelete: (user: UserRecord) => void;
 }
 
-export const getUserColumns = ({ currentUserId, busy, confirmRole, deleteUser }: ColumnDeps): Column<UserRecord>[] => [
+export const getUserColumns = ({ currentUserId, busy, confirmRole, confirmDelete }: ColumnDeps): Column<UserRecord>[] => [
   { header: 'Name', key: 'display_name' },
   { header: 'Email', key: 'email' },
   {
@@ -59,7 +59,7 @@ export const getUserColumns = ({ currentUserId, busy, confirmRole, deleteUser }:
             </button>
           )}
           {!isMe && (
-            <button className={styles.deleteBtn} title="Delete" disabled={isBusy} onClick={() => deleteUser(u.id, u.display_name)}>
+            <button className={styles.deleteBtn} title="Delete" disabled={isBusy} onClick={() => confirmDelete(u)}>
               <Icon name="delete" size="1.1em" />
             </button>
           )}

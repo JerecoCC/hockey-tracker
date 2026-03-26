@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Icon from '../../../components/Icon/Icon';
+import Modal from '../../../components/Modal/Modal';
+import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Table, { Column } from '../../../components/Table/Table';
 import useTeams, { TeamRecord, CreateTeamData } from '../../../hooks/useTeams';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
@@ -153,42 +155,20 @@ const TeamsPage = () => {
       </div>
 
       {confirmDelete && (
-        <div className={styles.overlay} onClick={() => setConfirmDelete(null)}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Delete Team</h3>
-              <button className={styles.closeBtn} onClick={() => setConfirmDelete(null)} type="button">
-                <Icon name="close" size="1.2em" />
-              </button>
-            </div>
-            <p className={styles.confirmBody}>
-              Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.
-            </p>
-            <div className={styles.formActions}>
-              <button className={styles.cancelBtn} onClick={() => setConfirmDelete(null)} type="button">Cancel</button>
-              <button
-                className={styles.confirmDeleteBtn}
-                disabled={busy === confirmDelete.id}
-                onClick={async () => { await deleteTeam(confirmDelete.id); setConfirmDelete(null); }}
-                type="button"
-              >
-                <Icon name="delete" size="1em" />
-                {busy === confirmDelete.id ? 'Deleting…' : 'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmModal
+          title="Delete Team"
+          body={<>Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.</>}
+          confirmLabel={busy === confirmDelete.id ? 'Deleting…' : 'Delete'}
+          confirmIcon="delete"
+          variant="danger"
+          busy={busy === confirmDelete.id}
+          onCancel={() => setConfirmDelete(null)}
+          onConfirm={async () => { await deleteTeam(confirmDelete.id); setConfirmDelete(null); }}
+        />
       )}
 
       {modalOpen && (
-        <div className={styles.overlay} onClick={closeModal}>
-          <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>{editTarget ? 'Edit Team' : 'Add Team'}</h3>
-              <button className={styles.closeBtn} onClick={closeModal} type="button">
-                <Icon name="close" size="1.2em" />
-              </button>
-            </div>
+        <Modal title={editTarget ? 'Edit Team' : 'Add Team'} onClose={closeModal}>
             <form className={styles.form} onSubmit={handleSubmit}>
               <label className={styles.label}>
                 <span className={styles.labelText}>Name <span className={styles.required}>*</span></span>
@@ -269,8 +249,7 @@ const TeamsPage = () => {
                 </button>
               </div>
             </form>
-          </div>
-        </div>
+        </Modal>
       )}
     </main>
   );

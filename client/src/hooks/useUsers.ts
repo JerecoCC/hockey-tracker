@@ -48,8 +48,7 @@ const useUsers = () => {
     }
   };
 
-  const deleteUser = async (id: string, name: string) => {
-    if (!window.confirm(`Delete user "${name}"? This cannot be undone.`)) return;
+  const deleteUser = async (id: string) => {
     setBusy(id);
     try {
       await axios.delete(`${API}/admin/users/${id}`, { headers: authHeaders() });

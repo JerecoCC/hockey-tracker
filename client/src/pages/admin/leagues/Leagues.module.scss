@@ -109,54 +109,6 @@
   &:disabled { opacity: 0.4; cursor: not-allowed; }
 }
 
-// ── Modal overlay ──────────────────────────────────────────────────────
-.overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 100;
-}
-
-.modal {
-  background: $bg-card;
-  border: 1px solid $border;
-  border-radius: 16px;
-  padding: 1.75rem;
-  width: 100%;
-  max-width: 480px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
-}
-
-.modalHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-}
-
-.modalTitle {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
-}
-
-.closeBtn {
-  background: none;
-  border: none;
-  color: $text-dim;
-  cursor: pointer;
-  padding: 0.25rem;
-  line-height: 1;
-  border-radius: 4px;
-  transition: color 0.2s;
-
-  &:hover { color: $text-bright; }
-}
-
 // ── Form ───────────────────────────────────────────────────────────────
 .form {
   display: flex;
@@ -232,26 +184,6 @@
 .submitBtn {
   @extend %actionBtn;
   background: $accent;
-  color: #fff;
-
-  &:hover:not(:disabled) { opacity: 0.85; }
-}
-
-.confirmBody {
-  color: $text-body;
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  margin: 0 0 1.5rem;
-
-  strong { color: $text-bright; }
-}
-
-.confirmDeleteBtn {
-  @extend %actionBtn;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: $danger;
   color: #fff;
 
   &:hover:not(:disabled) { opacity: 0.85; }
