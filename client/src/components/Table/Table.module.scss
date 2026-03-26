@@ -25,7 +25,7 @@ table {
   tbody {
     tr {
       border-bottom: 1px solid $bg-card;
-      transition: background 0.15s;
+      transition: background $transition-fast;
 
       &:hover {
         background: $bg-page;
@@ -46,8 +46,8 @@ table {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 3rem 1rem;
-  gap: 1rem;
+  padding: 3rem $space-4;
+  gap: $space-4;
 }
 
 .spinner {
@@ -65,7 +65,7 @@ table {
 
 .loaderText {
   color: $text-dim;
-  font-size: 0.875rem;
+  font-size: $font-base;
   margin: 0;
 }
 
@@ -73,7 +73,7 @@ table {
 .emptyMsg {
   color: $text-dim;
   text-align: center;
-  padding: 2rem;
+  padding: $space-8;
 }
 
 // ── Logo column ────────────────────────────────────────────────────────
@@ -81,7 +81,7 @@ table {
   width: 32px;
   height: 32px;
   object-fit: contain;
-  border-radius: 4px;
+  border-radius: $radius-sm;
 }
 
 .logoPlaceholder {
@@ -90,9 +90,9 @@ table {
   justify-content: center;
   width: 32px;
   height: 32px;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   background: $border;
-  font-size: 0.75rem;
+  font-size: $font-xs;
   font-weight: 700;
   color: $text-body;
   text-transform: uppercase;

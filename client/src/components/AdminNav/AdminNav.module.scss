@@ -31,7 +31,7 @@ $nav-collapsed-width: 56px;
 
   .navItem {
     justify-content: center;
-    padding: 0.625rem 0;
+    padding: $space-3 0;
 
     &.active {
       border-left: 3px solid $accent;
@@ -41,7 +41,7 @@ $nav-collapsed-width: 56px;
 
   .backBtn {
     justify-content: center;
-    padding: 0.625rem 0;
+    padding: $space-3 0;
   }
 }
 
@@ -74,12 +74,12 @@ $nav-collapsed-width: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem;
+  padding: $space-2;
   background: transparent;
   border: 1px solid $border;
   border-radius: $radius-sm;
   color: $text-dim;
-  font-size: 0.7rem;
+  font-size: $font-xs;
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
@@ -107,7 +107,7 @@ $nav-collapsed-width: 56px;
   justify-content: flex-start;
   gap: $space-4;
   width: 100%;
-  padding: 0.625rem $space-5;
+  padding: $space-3 $space-5;
   background: transparent;
   border: none;
   border-radius: 0;
