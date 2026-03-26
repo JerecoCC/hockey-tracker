@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import type { ChangeEvent, FormEvent } from 'react';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import useTeams, { TeamRecord, CreateTeamData } from '../../../hooks/useTeams';
@@ -89,7 +90,7 @@ const TeamsPage = () => {
     setLeagueDropdownOpen(false);
   };
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
     if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
@@ -102,7 +103,7 @@ const TeamsPage = () => {
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     let logoUrl: string | undefined = form.existingLogoUrl || undefined;

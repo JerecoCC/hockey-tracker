@@ -1,3 +1,4 @@
+import type { ChangeEvent, FormEvent, RefObject } from 'react';
 import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
 import { LeagueRecord } from '../../../hooks/useLeagues';
@@ -12,6 +13,7 @@ export interface FormState {
   existingLogoUrl: string;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const emptyForm = (): FormState => ({
   name: '', code: '', description: '',
   logoFile: null, logoPreview: '', existingLogoUrl: '',
@@ -23,10 +25,10 @@ interface Props {
   form: FormState;
   setForm: (form: FormState) => void;
   submitting: boolean;
-  fileInputRef: React.RefObject<HTMLInputElement>;
+  fileInputRef: RefObject<HTMLInputElement>;
   onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
-  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onSubmit: (e: FormEvent) => void;
+  onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
   onClearFile: () => void;
 }
 
