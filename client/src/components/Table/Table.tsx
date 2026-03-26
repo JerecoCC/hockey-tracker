@@ -2,10 +2,32 @@ import { ReactNode } from 'react';
 import styles from './Table.module.scss';
 
 export type Column<T> =
-  | { type?: 'text';   header: string; key: keyof T;                                                        align?: 'left' | 'center' | 'right' }
-  | { type: 'date';    header: string; key: keyof T;                                                        align?: 'left' | 'center' | 'right' }
-  | { type: 'logo';    header: string; getLogo: (row: T) => string | null | undefined; getName: (row: T) => string; getCode: (row: T) => string; align?: 'left' | 'center' | 'right' }
-  | { type: 'custom';  header: string; render: (row: T) => ReactNode;                                      align?: 'left' | 'center' | 'right' };
+  | {
+      type?: 'text';
+      header: string;
+      key: keyof T;
+      align?: 'left' | 'center' | 'right';
+    }
+  | {
+      type: 'date';
+      header: string;
+      key: keyof T;
+      align?: 'left' | 'center' | 'right';
+    }
+  | {
+      type: 'logo';
+      header: string;
+      getLogo: (row: T) => string | null | undefined;
+      getName: (row: T) => string;
+      getCode: (row: T) => string;
+      align?: 'left' | 'center' | 'right';
+    }
+  | {
+      type: 'custom';
+      header: string;
+      render: (row: T) => ReactNode;
+      align?: 'left' | 'center' | 'right';
+    };
 
 const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
   if (col.type === 'custom') return col.render(row);

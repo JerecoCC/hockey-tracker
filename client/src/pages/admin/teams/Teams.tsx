@@ -39,19 +39,16 @@ const TeamsPage = () => {
 
   const columns: Column<TeamRecord>[] = [
     { type: 'logo', header: 'Logo', getLogo: (t) => t.logo, getName: (t) => t.name, getCode: (t) => t.code, align: 'center' },
-    { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },
-    {
-      type: 'custom',
-      header: 'Location',
-      render: (t) => <span>{t.location ?? '—'}</span>,
-    },
+    { header: 'Name', key: 'name' },
+
     {
       type: 'logo',
       header: 'League',
       getLogo: (t) => t.league_id ? leagueMap[t.league_id]?.logo ?? null : null,
       getName: (t) => t.league_id ? leagueMap[t.league_id]?.name ?? '—' : '—',
       getCode: (t) => t.league_id ? leagueMap[t.league_id]?.code ?? '—' : '—',
+      align: 'center',
     },
     {
       type: 'custom',
