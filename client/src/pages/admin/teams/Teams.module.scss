@@ -1,40 +1,41 @@
 @use '../../../styles/colors' as *;
+@use '../../../styles/mixins' as *;
 
 // ── Layout ─────────────────────────────────────────────────────────────
-.main { flex: 1; padding: 2rem; overflow-y: auto; }
+.main { flex: 1; padding: $space-8; overflow-y: auto; }
 
 // ── Title row ──────────────────────────────────────────────────────────
 .titleRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
+  margin-bottom: $space-5;
 }
 
-.sectionTitle { font-size: 1.375rem; font-weight: 700; color: $text-bright; margin: 0; }
+.sectionTitle { font-size: $font-2xl; font-weight: 700; color: $text-bright; margin: 0; }
 
 // ── Card ───────────────────────────────────────────────────────────────
-.card { background: $bg-card; border-radius: 16px; padding: 1.5rem; border: 1px solid $border; }
+.card { background: $bg-card; border-radius: $radius-xl; padding: $space-6; border: 1px solid $border; }
 
 // ── Table actions ───────────────────────────────────────────────────────
-.actions { display: flex; justify-content: center; gap: 0.5rem; }
+.actions { display: flex; justify-content: center; gap: $space-2; }
 
 // ── Form ───────────────────────────────────────────────────────────────
-.form { display: flex; flex-direction: column; gap: 1rem; }
+.form { display: flex; flex-direction: column; gap: $space-4; }
 
 .label {
   display: flex; flex-direction: column; gap: 0.4rem;
-  font-size: 0.8125rem; font-weight: 600; color: $text-dim;
+  font-size: $font-sm; font-weight: 600; color: $text-dim;
   text-transform: uppercase; letter-spacing: 0.05em;
 }
 
-.labelText { display: flex; align-items: center; gap: 0.25rem; }
+.labelText { display: flex; align-items: center; gap: $space-1; }
 .required { color: #f87171; }
 
 %field {
-  background: $bg-input; border: 1px solid $border; border-radius: 8px;
-  color: $text-body; font-size: 0.875rem; padding: 0.625rem 0.875rem;
-  outline: none; transition: border-color 0.2s;
+  background: $bg-input; border: 1px solid $border; border-radius: $radius-md;
+  color: $text-body; font-size: $font-base; padding: 0.625rem 0.875rem;
+  outline: none; transition: border-color $transition-base;
   &:focus { border-color: $accent; }
   &::placeholder { color: $text-dim; }
 }
@@ -51,7 +52,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
+  gap: $space-2;
   text-align: left;
   cursor: pointer;
   font-weight: 400;
@@ -63,12 +64,12 @@
   &.leagueTriggerOpen { border-color: $accent; }
 }
 
-.leaguePlaceholder { color: $text-dim; font-size: 0.875rem; }
+.leaguePlaceholder { color: $text-dim; font-size: $font-base; }
 
 .leagueCaret {
   color: $text-dim;
   flex-shrink: 0;
-  transition: transform 0.2s ease;
+  transition: transform $transition-base ease;
 
   &.leagueCaretOpen { transform: rotate(180deg); }
 }
@@ -80,10 +81,10 @@
   right: 0;
   background: $bg-card;
   border: 1px solid $accent;
-  border-radius: 8px;
+  border-radius: $radius-md;
   list-style: none;
   margin: 0;
-  padding: 0.25rem;
+  padding: $space-1;
   z-index: 200;
   max-height: 220px;
   overflow-y: auto;
@@ -95,16 +96,16 @@
   align-items: center;
   gap: 0.625rem;
   width: 100%;
-  padding: 0.5rem 0.625rem;
+  padding: $space-2 0.625rem;
   background: transparent;
   border: none;
-  border-radius: 6px;
+  border-radius: $radius-sm;
   color: $text-body;
-  font-size: 0.875rem;
+  font-size: $font-base;
   font-weight: 400;
   text-align: left;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background $transition-fast;
 
   &:hover { background: rgba($accent, 0.12); }
 
@@ -119,7 +120,7 @@
   display: flex;
   align-items: center;
   gap: 0.625rem;
-  font-size: 0.875rem;
+  font-size: $font-base;
   font-weight: 400;
   color: $text-body;
   text-transform: none;
@@ -151,16 +152,16 @@
 }
 
 // ── Form actions ───────────────────────────────────────────────────────
-.formActions { display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 0.5rem; }
+.formActions { display: flex; justify-content: flex-end; gap: $space-3; margin-top: $space-2; }
 
 // ── File upload ────────────────────────────────────────────────────────────
-.fileRow { display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap; }
+.fileRow { display: flex; align-items: center; gap: $space-3; flex-wrap: wrap; }
 
 .fileLabel {
   display: inline-flex; align-items: center; gap: 0.4rem;
-  padding: 0.5rem 0.875rem; background: $bg-input; border: 1px dashed $border;
-  border-radius: 8px; color: $text-dim; font-size: 0.8125rem; font-weight: 500;
-  cursor: pointer; transition: border-color 0.2s, color 0.2s;
+  padding: $space-2 0.875rem; background: $bg-input; border: 1px dashed $border;
+  border-radius: $radius-md; color: $text-dim; font-size: $font-sm; font-weight: 500;
+  cursor: pointer; transition: border-color $transition-base, color $transition-base;
   max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   &:hover { border-color: $accent; color: $text-bright; }
 }

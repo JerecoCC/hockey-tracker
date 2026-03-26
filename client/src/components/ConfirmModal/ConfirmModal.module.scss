@@ -1,10 +1,11 @@
 @use '../../styles/colors' as *;
+@use '../../styles/mixins' as *;
 
 .body {
   color: $text-body;
-  font-size: 0.9375rem;
+  font-size: $font-body;
   line-height: 1.6;
-  margin: 0 0 1.5rem;
+  margin: 0 0 $space-6;
 
   strong { color: $text-bright; }
 }
@@ -12,8 +13,8 @@
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+  gap: $space-3;
+  margin-top: $space-2;
 }
 
 

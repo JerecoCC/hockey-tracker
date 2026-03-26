@@ -1,9 +1,10 @@
 @use '../../../styles/colors' as *;
+@use '../../../styles/mixins' as *;
 
 // ── Layout ─────────────────────────────────────────────────────────────
 .main {
   flex: 1;
-  padding: 2rem;
+  padding: $space-8;
   overflow-y: auto;
 }
 
@@ -12,11 +13,11 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.25rem;
+  margin-bottom: $space-5;
 }
 
 .sectionTitle {
-  font-size: 1.375rem;
+  font-size: $font-2xl;
   font-weight: 700;
   color: $text-bright;
   margin: 0;
@@ -25,8 +26,8 @@
 // ── Card ───────────────────────────────────────────────────────────────
 .card {
   background: $bg-card;
-  border-radius: 16px;
-  padding: 1.5rem;
+  border-radius: $radius-xl;
+  padding: $space-6;
   border: 1px solid $border;
 }
 
@@ -34,7 +35,7 @@
 .actions {
   display: flex;
   justify-content: center;
-  gap: 0.5rem;
+  gap: $space-2;
 }
 
 // ── Form ───────────────────────────────────────────────────────────────

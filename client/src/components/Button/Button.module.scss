@@ -1,33 +1,34 @@
 @use '../../styles/colors' as *;
+@use '../../styles/mixins' as *;
 
 // ── Base ───────────────────────────────────────────────────────────────
 .btn {
-  border-radius: 8px;
-  font-size: 0.875rem;
+  border-radius: $radius-md;
+  font-size: $font-base;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.2s, color 0.2s, border-color 0.2s, opacity 0.2s;
+  transition: background $transition-base, color $transition-base, border-color $transition-base, opacity $transition-base;
 
   &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 // ── Sizes ──────────────────────────────────────────────────────────────
 .sm {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.8125rem;
-  &.iconOnly { padding: 0.3rem; }
+  padding: $space-2 $space-3;
+  font-size: $font-sm;
+  &.iconOnly { padding: $space-2; }
 }
 
 .md {
-  padding: 0.5rem 1rem;
-  &.iconOnly { padding: 0.45rem; }
+  padding: $space-2 $space-4;
+  &.iconOnly { padding: $space-2; }
 }
 
 .lg {
-  padding: 0.625rem 1.375rem;
-  font-size: 1rem;
-  &.iconOnly { padding: 0.6rem; }
+  padding: $space-2 1.375rem;
+  font-size: $font-lg;
+  &.iconOnly { padding: $space-2; }
 }
 
 // ── Icon-only: tighter radius ──────────────────────────────────────────

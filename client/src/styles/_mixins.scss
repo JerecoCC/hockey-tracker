@@ -1,0 +1,94 @@
+// ════════════════════════════════════════════════════════════════════════
+// Design tokens — spacing & typography
+// Import in every SCSS module via:
+//   @use '../../styles/mixins' as *;   (adjust path depth as needed)
+// ════════════════════════════════════════════════════════════════════════
+
+// ── Spacing scale ─────────────────────────────────────────────────────
+//   $space-1  →  4px   badge padding, list gap
+//   $space-2  →  8px   button padding, action gaps
+//   $space-3  →  12px  table header padding, modal action gap
+//   $space-4  →  16px  table cell padding, button horizontal
+//   $space-5  →  20px  nav item horizontal, section margin
+//   $space-6  →  24px  card padding, section gaps
+//   $space-7  →  28px  modal padding
+//   $space-8  →  32px  page padding
+
+$space-1: 0.25rem;
+$space-2: 0.5rem;
+$space-3: 0.75rem;
+$space-4: 1rem;
+$space-5: 1.25rem;
+$space-6: 1.5rem;
+$space-7: 1.75rem;
+$space-8: 2rem;
+
+// ── Font size scale ───────────────────────────────────────────────────
+//   $font-xs    →  12px   badges, labels
+//   $font-sm    →  13px   button sm
+//   $font-base  →  14px   button default, table rows
+//   $font-nav   →  14.4px nav items, back button
+//   $font-body  →  15px   body copy, confirm modal text
+//   $font-lg    →  16px   button lg, base inputs
+//   $font-xl    →  18px   brand, modal titles
+//   $font-2xl   →  22px   section headings
+//   $font-3xl   →  26px   page titles
+
+$font-xs:   0.75rem;
+$font-sm:   0.8125rem;
+$font-base: 0.875rem;
+$font-nav:  0.9rem;
+$font-body: 0.9375rem;
+$font-lg:   1rem;
+$font-xl:   1.125rem;
+$font-2xl:  1.375rem;
+$font-3xl:  1.625rem;
+
+// ── Border radius scale ───────────────────────────────────────────────
+//   $radius-sm  →  4px    small controls (toggle button)
+//   $radius-md  →  8px    buttons, back button
+//   $radius-lg  →  12px   cards, modals, badges
+//   $radius-xl  →  16px   large cards
+//   $radius-pill → 99px   pill badges
+
+$radius-sm:   4px;
+$radius-md:   8px;
+$radius-lg:   12px;
+$radius-xl:   16px;
+$radius-pill: 99px;
+
+// ── Transition speeds ─────────────────────────────────────────────────
+$transition-fast:   0.15s;
+$transition-base:   0.2s;
+$transition-layout: 0.22s;
+
+// ── Mixins ────────────────────────────────────────────────────────────
+
+/// Flex row with centred items
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/// Flex row with space-between and centred items
+@mixin flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/// Truncate text with ellipsis
+@mixin truncate {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/// Section heading style
+@mixin section-title {
+  font-size: $font-2xl;
+  font-weight: 700;
+  margin: 0;
+}
+

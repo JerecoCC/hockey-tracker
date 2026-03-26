@@ -1,4 +1,5 @@
 @use '../../styles/colors' as *;
+@use '../../styles/mixins' as *;
 
 // ── Table wrapper ──────────────────────────────────────────────────────
 .tableWrapper {
@@ -9,11 +10,11 @@
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: $font-base;
 
   thead th {
     text-align: left;
-    padding: 0.75rem 1rem;
+    padding: $space-3 $space-4;
     color: $text-dim;
     font-weight: 600;
     text-transform: uppercase;
@@ -32,7 +33,7 @@ table {
     }
 
     td {
-      padding: 0.875rem 1rem;
+      padding: 0.875rem $space-4;
       color: $text-body;
       vertical-align: middle;
     }

@@ -1,4 +1,5 @@
 @use '../../styles/colors' as *;
+@use '../../styles/mixins' as *;
 
 // ── Page ───────────────────────────────────────────────────────────────
 .page {
@@ -7,31 +8,31 @@
   align-items: center;
   justify-content: center;
   background: $bg-gradient;
-  padding: 16px;
+  padding: $space-4;
 }
 
 // ── Card ───────────────────────────────────────────────────────────────
 .card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: $radius-xl;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: 40px 36px;
+  padding: 2.5rem 2.25rem;
   width: 100%;
   max-width: 420px;
 }
 
 // ── Headings ───────────────────────────────────────────────────────────
 .title {
-  margin: 0 0 4px;
-  font-size: 26px;
+  margin: 0 0 $space-1;
+  font-size: $font-3xl;
   font-weight: 700;
   color: $text-dark;
   text-align: center;
 }
 
 .subtitle {
-  margin: 0 0 24px;
-  font-size: 15px;
+  margin: 0 0 $space-6;
+  font-size: $font-body;
   font-weight: 400;
   color: $text-muted;
   text-align: center;
@@ -41,14 +42,14 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: $space-4;
 }
 
 .label {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  font-size: 14px;
+  font-size: $font-base;
   font-weight: 500;
   color: $text-label;
 }
@@ -56,11 +57,11 @@
 .input {
   padding: 10px 14px;
   border: 1.5px solid $border-light;
-  border-radius: 8px;
-  font-size: 15px;
+  border-radius: $radius-md;
+  font-size: $font-body;
   color: #111827;
   outline: none;
-  transition: border-color 0.15s;
+  transition: border-color $transition-fast;
 
   &:focus {
     border-color: $accent;
@@ -74,13 +75,13 @@
   padding: 11px;
   background: $accent;
   color: #fff;
-  font-size: 15px;
+  font-size: $font-body;
   font-weight: 600;
   border: none;
-  border-radius: 8px;
+  border-radius: $radius-md;
   cursor: pointer;
-  transition: background 0.15s;
-  margin-top: 4px;
+  transition: background $transition-fast;
+  margin-top: $space-1;
 
   &:hover:not(:disabled) {
     background: $accent-hover;
@@ -96,10 +97,10 @@
 .divider {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin: 20px 0;
+  gap: $space-3;
+  margin: $space-5 0;
   color: #9ca3af;
-  font-size: 13px;
+  font-size: $font-sm;
 
   &::before,
   &::after {
@@ -112,9 +113,9 @@
 
 // ── Footer ─────────────────────────────────────────────────────────────
 .footer {
-  margin: 20px 0 0;
+  margin: $space-5 0 0;
   text-align: center;
-  font-size: 14px;
+  font-size: $font-base;
   color: $text-muted;
 }
 

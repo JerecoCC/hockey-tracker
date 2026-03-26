@@ -1,9 +1,9 @@
 @use '../../styles/colors' as *;
+@use '../../styles/mixins' as *;
 
 // ── Layout tokens ──────────────────────────────────────────────────────
 $nav-width:          220px;
 $nav-collapsed-width: 56px;
-$transition-speed:   0.22s;
 
 // ── Shell ──────────────────────────────────────────────────────────────
 .nav {
@@ -14,10 +14,10 @@ $transition-speed:   0.22s;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: 1.5rem 0;
+  padding: $space-6 0;
   flex-shrink: 0;
   overflow: hidden;
-  transition: width $transition-speed ease;
+  transition: width $transition-layout ease;
 }
 
 // ── Collapsed state ────────────────────────────────────────────────────
@@ -49,7 +49,7 @@ $transition-speed:   0.22s;
 .top {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: $space-6;
 }
 
 // ── Brand row ──────────────────────────────────────────────────────────
@@ -57,12 +57,12 @@ $transition-speed:   0.22s;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 0.75rem 0 1.25rem;
-  min-height: 1.75rem;
+  padding: 0 $space-3 0 $space-5;
+  min-height: $space-7;
 }
 
 .brand {
-  font-size: 1.125rem;
+  font-size: $font-xl;
   font-weight: 700;
   color: $text-bright;
   white-space: nowrap;
@@ -77,13 +77,13 @@ $transition-speed:   0.22s;
   padding: 0.5rem;
   background: transparent;
   border: 1px solid $border;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   color: $text-dim;
   font-size: 0.7rem;
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color $transition-fast, color $transition-fast;
 
   &:hover {
     border-color: $info-light;
@@ -98,26 +98,26 @@ $transition-speed:   0.22s;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: $space-1;
 }
 
 .navItem {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 1rem;
+  gap: $space-4;
   width: 100%;
-  padding: 0.625rem 1.25rem;
+  padding: 0.625rem $space-5;
   background: transparent;
   border: none;
   border-radius: 0;
   color: $text-light;
-  font-size: 0.9rem;
+  font-size: $font-nav;
   font-weight: 500;
   cursor: pointer;
   text-align: left;
   white-space: nowrap;
-  transition: background 0.15s, color 0.15s;
+  transition: background $transition-fast, color $transition-fast;
 
   &:hover {
     background: $bg-page;
@@ -128,7 +128,7 @@ $transition-speed:   0.22s;
     background: rgba($accent, 0.13);
     color: $accent-light;
     border-left: 3px solid $accent;
-    padding-left: calc(1.25rem - 3px);
+    padding-left: calc(#{$space-5} - 3px);
   }
 }
 
@@ -140,25 +140,25 @@ $transition-speed:   0.22s;
 
 // ── Bottom / back button ───────────────────────────────────────────────
 .bottom {
-  padding: 0 0.75rem;
+  padding: 0 $space-3;
 }
 
 .backBtn {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: 0.5rem;
+  gap: $space-2;
   width: 100%;
-  padding: 0.5rem 1rem;
+  padding: $space-2 $space-4;
   background: transparent;
   border: 1px solid $border;
-  border-radius: 8px;
+  border-radius: $radius-md;
   color: $text-dim;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.15s, color 0.15s;
+  transition: border-color $transition-fast, color $transition-fast;
 
   &:hover {
     border-color: $info-light;
