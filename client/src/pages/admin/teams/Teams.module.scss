@@ -25,10 +25,6 @@
 // ── Card ───────────────────────────────────────────────────────────────
 .card { background: $bg-card; border-radius: 16px; padding: 1.5rem; border: 1px solid $border; }
 
-// ── Logo thumbnail ─────────────────────────────────────────────────────
-.logoThumb { width: 32px; height: 32px; object-fit: contain; border-radius: 4px; }
-.noLogo { color: $text-dim; }
-
 // ── Table actions ───────────────────────────────────────────────────────
 .actions { display: flex; justify-content: center; gap: 0.5rem; }
 

@@ -37,15 +37,7 @@ const TeamsPage = () => {
   }, {});
 
   const columns: Column<TeamRecord>[] = [
-    {
-      type: 'custom',
-      header: 'Logo',
-      align: 'center',
-      render: (t) =>
-        t.logo
-          ? <img src={t.logo} alt={t.name} className={styles.logoThumb} />
-          : <span className={styles.noLogo}>—</span>,
-    },
+    { type: 'logo', header: 'Logo', logoKey: 'logo', nameKey: 'name', codeKey: 'code', align: 'center' },
     { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },
     {

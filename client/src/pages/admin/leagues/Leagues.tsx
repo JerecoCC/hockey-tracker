@@ -17,15 +17,7 @@ const LeaguesPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const columns: Column<LeagueRecord>[] = [
-    {
-      type: 'custom',
-      header: 'Logo',
-      align: 'center',
-      render: (l) =>
-        l.logo
-          ? <img src={l.logo} alt={l.name} className={styles.logoThumb} />
-          : <span className={styles.logoPlaceholder}>{l.code.slice(0, 3)}</span>,
-    },
+    { type: 'logo', header: 'Logo', logoKey: 'logo', nameKey: 'name', codeKey: 'code', align: 'center' },
     { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },
     {

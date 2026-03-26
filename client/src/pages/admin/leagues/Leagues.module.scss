@@ -48,28 +48,6 @@
   border: 1px solid $border;
 }
 
-// ── Logo thumbnail ─────────────────────────────────────────────────────
-.logoThumb {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: 4px;
-}
-
-.logoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  background: $border;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-}
-
 // ── Table actions ───────────────────────────────────────────────────────
 .actions {
   display: flex;
