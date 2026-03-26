@@ -40,6 +40,19 @@ async function initSchema() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS teams (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name        TEXT NOT NULL,
+      code        TEXT UNIQUE NOT NULL,
+      description TEXT,
+      location    TEXT,
+      logo        TEXT,
+      league_id   UUID UNIQUE REFERENCES leagues(id) ON DELETE SET NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
   console.log('Database schema ready');
 }
 

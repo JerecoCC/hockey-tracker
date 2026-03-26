@@ -11,6 +11,7 @@ require('./config/passport');
 const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const leaguesRoutes = require('./routes/leagues');
+const teamsRoutes = require('./routes/teams');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -46,6 +47,7 @@ app.use(passport.session());
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/leagues', leaguesRoutes);
+app.use('/api/admin/teams', teamsRoutes);
 
 app.get('/api/health', async (_req, res) => {
   try {
