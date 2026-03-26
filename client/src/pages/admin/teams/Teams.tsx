@@ -26,6 +26,7 @@ const TeamsPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [confirmDelete, setConfirmDelete] = useState<TeamRecord | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const [leagueDropdownOpen, setLeagueDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const leagueDropdownRef = useRef<HTMLDivElement>(null);
@@ -77,7 +78,7 @@ const TeamsPage = () => {
           <button className={styles.editBtn} title="Edit" disabled={busy === t.id} onClick={() => openEditModal(t)}>
             <Icon name="edit" size="1.1em" />
           </button>
-          <button className={styles.deleteBtn} title="Delete" disabled={busy === t.id} onClick={() => setConfirmDelete(t)}>
+          <button className={styles.deleteBtn} title="Delete" disabled={busy === t.id} onClick={() => { setConfirmDelete(t); setConfirmDeleteOpen(true); }}>
             <Icon name="delete" size="1.1em" />
           </button>
         </div>
@@ -154,21 +155,19 @@ const TeamsPage = () => {
         <Table columns={columns} data={teams} rowKey={(t) => t.id} loading={loading} emptyMessage="No teams yet. Add one to get started." />
       </div>
 
-      {confirmDelete && (
-        <ConfirmModal
-          title="Delete Team"
-          body={<>Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.</>}
-          confirmLabel={busy === confirmDelete.id ? 'Deleting…' : 'Delete'}
-          confirmIcon="delete"
-          variant="danger"
-          busy={busy === confirmDelete.id}
-          onCancel={() => setConfirmDelete(null)}
-          onConfirm={async () => { await deleteTeam(confirmDelete.id); setConfirmDelete(null); }}
-        />
-      )}
+      <ConfirmModal
+        open={confirmDeleteOpen}
+        title="Delete Team"
+        body={<>Are you sure you want to delete <strong>{confirmDelete?.name}</strong>? This cannot be undone.</>}
+        confirmLabel={busy === confirmDelete?.id ? 'Deleting…' : 'Delete'}
+        confirmIcon="delete"
+        variant="danger"
+        busy={busy === confirmDelete?.id}
+        onCancel={() => { setConfirmDeleteOpen(false); setConfirmDelete(null); }}
+        onConfirm={async () => { await deleteTeam(confirmDelete!.id); setConfirmDeleteOpen(false); setConfirmDelete(null); }}
+      />
 
-      {modalOpen && (
-        <Modal title={editTarget ? 'Edit Team' : 'Add Team'} onClose={closeModal}>
+      <Modal open={modalOpen} title={editTarget ? 'Edit Team' : 'Add Team'} onClose={closeModal}>
             <form className={styles.form} onSubmit={handleSubmit}>
               <label className={styles.label}>
                 <span className={styles.labelText}>Name <span className={styles.required}>*</span></span>
@@ -250,7 +249,6 @@ const TeamsPage = () => {
               </div>
             </form>
         </Modal>
-      )}
     </main>
   );
 };

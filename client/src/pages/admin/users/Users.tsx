@@ -15,10 +15,12 @@ const UsersPage = () => {
   const { user } = useAuth();
   const { users, loading, busy, changeRole, deleteUser } = useUsers();
   const [roleConfirm, setRoleConfirm] = useState<RoleConfirm | null>(null);
+  const [roleConfirmOpen, setRoleConfirmOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<UserRecord | null>(null);
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  const confirmRole = (u: UserRecord, role: 'admin' | 'user') => setRoleConfirm({ user: u, role });
-  const confirmDelete = (u: UserRecord) => setDeleteConfirm(u);
+  const confirmRole = (u: UserRecord, role: 'admin' | 'user') => { setRoleConfirm({ user: u, role }); setRoleConfirmOpen(true); };
+  const confirmDelete = (u: UserRecord) => { setDeleteConfirm(u); setDeleteConfirmOpen(true); };
 
   const columns = getUserColumns({ currentUserId: user?.id, busy, confirmRole, confirmDelete });
 
@@ -38,33 +40,31 @@ const UsersPage = () => {
         />
       </div>
 
-      {roleConfirm && (
-        <ConfirmModal
-          title={actionLabel}
-          body={isPromote
-            ? <>Grant admin access to <strong>{roleConfirm.user.display_name}</strong>?</>
-            : <>Remove admin access from <strong>{roleConfirm.user.display_name}</strong>?</>}
-          confirmLabel={busy === roleConfirm.user.id ? 'Saving…' : actionLabel}
-          confirmIcon={isPromote ? 'manage_accounts' : 'person_remove'}
-          variant={isPromote ? 'accent' : 'info'}
-          busy={busy === roleConfirm.user.id}
-          onCancel={() => setRoleConfirm(null)}
-          onConfirm={async () => { await changeRole(roleConfirm.user.id, roleConfirm.role); setRoleConfirm(null); }}
-        />
-      )}
+      <ConfirmModal
+        open={roleConfirmOpen}
+        title={actionLabel}
+        body={isPromote
+          ? <>Grant admin access to <strong>{roleConfirm?.user.display_name}</strong>?</>
+          : <>Remove admin access from <strong>{roleConfirm?.user.display_name}</strong>?</>}
+        confirmLabel={busy === roleConfirm?.user.id ? 'Saving…' : actionLabel}
+        confirmIcon={isPromote ? 'manage_accounts' : 'person_remove'}
+        variant={isPromote ? 'accent' : 'info'}
+        busy={busy === roleConfirm?.user.id}
+        onCancel={() => { setRoleConfirmOpen(false); setRoleConfirm(null); }}
+        onConfirm={async () => { await changeRole(roleConfirm!.user.id, roleConfirm!.role); setRoleConfirmOpen(false); setRoleConfirm(null); }}
+      />
 
-      {deleteConfirm && (
-        <ConfirmModal
-          title="Delete User"
-          body={<>Are you sure you want to delete <strong>{deleteConfirm.display_name}</strong>? This cannot be undone.</>}
-          confirmLabel={busy === deleteConfirm.id ? 'Deleting…' : 'Delete'}
-          confirmIcon="delete"
-          variant="danger"
-          busy={busy === deleteConfirm.id}
-          onCancel={() => setDeleteConfirm(null)}
-          onConfirm={async () => { await deleteUser(deleteConfirm.id); setDeleteConfirm(null); }}
-        />
-      )}
+      <ConfirmModal
+        open={deleteConfirmOpen}
+        title="Delete User"
+        body={<>Are you sure you want to delete <strong>{deleteConfirm?.display_name}</strong>? This cannot be undone.</>}
+        confirmLabel={busy === deleteConfirm?.id ? 'Deleting…' : 'Delete'}
+        confirmIcon="delete"
+        variant="danger"
+        busy={busy === deleteConfirm?.id}
+        onCancel={() => { setDeleteConfirmOpen(false); setDeleteConfirm(null); }}
+        onConfirm={async () => { await deleteUser(deleteConfirm!.id); setDeleteConfirmOpen(false); setDeleteConfirm(null); }}
+      />
     </main>
   );
 };

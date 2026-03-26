@@ -3,12 +3,15 @@ import Icon from '../Icon/Icon';
 import styles from './Modal.module.scss';
 
 interface Props {
+  open: boolean;
   title: string;
   onClose: () => void;
   children: ReactNode;
 }
 
-const Modal = ({ title, onClose, children }: Props) => (
+const Modal = ({ open, title, onClose, children }: Props) => {
+  if (!open) return null;
+  return (
   <div className={styles.overlay} onClick={onClose}>
     <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
       <div className={styles.header}>
@@ -20,7 +23,8 @@ const Modal = ({ title, onClose, children }: Props) => (
       {children}
     </div>
   </div>
-);
+  );
+};
 
 export default Modal;
 

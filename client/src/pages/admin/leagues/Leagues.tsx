@@ -21,6 +21,7 @@ const LeaguesPage = () => {
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm());
   const [confirmDelete, setConfirmDelete] = useState<LeagueRecord | null>(null);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const columns: Column<LeagueRecord>[] = [
@@ -53,7 +54,7 @@ const LeaguesPage = () => {
             className={styles.deleteBtn}
             title="Delete"
             disabled={busy === l.id}
-            onClick={() => setConfirmDelete(l)}
+            onClick={() => { setConfirmDelete(l); setConfirmDeleteOpen(true); }}
           >
             <Icon name="delete" size="1.1em" />
           </button>
@@ -143,21 +144,19 @@ const LeaguesPage = () => {
         />
       </div>
 
-      {confirmDelete && (
-        <ConfirmModal
-          title="Delete League"
-          body={<>Are you sure you want to delete <strong>{confirmDelete.name}</strong>? This cannot be undone.</>}
-          confirmLabel={busy === confirmDelete.id ? 'Deleting…' : 'Delete'}
-          confirmIcon="delete"
-          variant="danger"
-          busy={busy === confirmDelete.id}
-          onCancel={() => setConfirmDelete(null)}
-          onConfirm={async () => { await deleteLeague(confirmDelete.id); setConfirmDelete(null); }}
-        />
-      )}
+      <ConfirmModal
+        open={confirmDeleteOpen}
+        title="Delete League"
+        body={<>Are you sure you want to delete <strong>{confirmDelete?.name}</strong>? This cannot be undone.</>}
+        confirmLabel={busy === confirmDelete?.id ? 'Deleting…' : 'Delete'}
+        confirmIcon="delete"
+        variant="danger"
+        busy={busy === confirmDelete?.id}
+        onCancel={() => { setConfirmDeleteOpen(false); setConfirmDelete(null); }}
+        onConfirm={async () => { await deleteLeague(confirmDelete!.id); setConfirmDeleteOpen(false); setConfirmDelete(null); }}
+      />
 
-      {modalOpen && (
-        <Modal title={editTarget ? 'Edit League' : 'Add League'} onClose={closeModal}>
+      <Modal open={modalOpen} title={editTarget ? 'Edit League' : 'Add League'} onClose={closeModal}>
             <form className={styles.form} onSubmit={handleSubmit}>
               <label className={styles.label}>
                 <span className={styles.labelText}>Name <span className={styles.required}>*</span></span>
@@ -226,7 +225,6 @@ const LeaguesPage = () => {
               </div>
             </form>
         </Modal>
-      )}
     </main>
   );
 };

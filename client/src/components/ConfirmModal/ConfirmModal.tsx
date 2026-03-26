@@ -6,6 +6,7 @@ import styles from './ConfirmModal.module.scss';
 export type ConfirmVariant = 'danger' | 'accent' | 'info';
 
 interface Props {
+  open: boolean;
   title: string;
   body: ReactNode;
   confirmLabel: string;
@@ -23,6 +24,7 @@ const variantClass: Record<ConfirmVariant, string> = {
 };
 
 const ConfirmModal = ({
+  open,
   title,
   body,
   confirmLabel,
@@ -32,7 +34,7 @@ const ConfirmModal = ({
   onCancel,
   onConfirm,
 }: Props) => (
-  <Modal title={title} onClose={onCancel}>
+  <Modal open={open} title={title} onClose={onCancel}>
     <p className={styles.body}>{body}</p>
     <div className={styles.actions}>
       <button className={styles.cancelBtn} onClick={onCancel} type="button" disabled={busy}>
