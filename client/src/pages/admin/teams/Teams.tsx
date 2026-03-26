@@ -37,7 +37,7 @@ const TeamsPage = () => {
   }, {});
 
   const columns: Column<TeamRecord>[] = [
-    { type: 'logo', header: 'Logo', logoKey: 'logo', nameKey: 'name', codeKey: 'code', align: 'center' },
+    { type: 'logo', header: 'Logo', getLogo: (t) => t.logo, getName: (t) => t.name, getCode: (t) => t.code, align: 'center' },
     { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },
     {
@@ -46,9 +46,11 @@ const TeamsPage = () => {
       render: (t) => <span>{t.location ?? '—'}</span>,
     },
     {
-      type: 'custom',
+      type: 'logo',
       header: 'League',
-      render: (t) => <span>{t.league_id ? (leagueMap[t.league_id]?.name ?? '—') : '—'}</span>,
+      getLogo: (t) => t.league_id ? leagueMap[t.league_id]?.logo ?? null : null,
+      getName: (t) => t.league_id ? leagueMap[t.league_id]?.name ?? '—' : '—',
+      getCode: (t) => t.league_id ? leagueMap[t.league_id]?.code ?? '—' : '—',
     },
     {
       type: 'custom',

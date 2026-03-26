@@ -95,5 +95,7 @@ table {
   font-weight: 700;
   color: $text-body;
   text-transform: uppercase;
+  cursor: auto;
+  user-select: none;
 }
 

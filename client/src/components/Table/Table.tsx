@@ -4,19 +4,19 @@ import styles from './Table.module.scss';
 export type Column<T> =
   | { type?: 'text';   header: string; key: keyof T;                                                        align?: 'left' | 'center' | 'right' }
   | { type: 'date';    header: string; key: keyof T;                                                        align?: 'left' | 'center' | 'right' }
-  | { type: 'logo';    header: string; logoKey: keyof T; nameKey: keyof T; codeKey: keyof T;               align?: 'left' | 'center' | 'right' }
+  | { type: 'logo';    header: string; getLogo: (row: T) => string | null | undefined; getName: (row: T) => string; getCode: (row: T) => string; align?: 'left' | 'center' | 'right' }
   | { type: 'custom';  header: string; render: (row: T) => ReactNode;                                      align?: 'left' | 'center' | 'right' };
 
 const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
   if (col.type === 'custom') return col.render(row);
   if (col.type === 'date')   return new Date(row[col.key] as string).toLocaleDateString();
   if (col.type === 'logo') {
-    const src  = row[col.logoKey] as string | null | undefined;
-    const name = row[col.nameKey] as string;
-    const code = row[col.codeKey] as string;
+    const src  = col.getLogo(row);
+    const name = col.getName(row);
+    const code = col.getCode(row);
     return src
-      ? <img src={src} alt={name} className={styles.logoThumb} />
-      : <span className={styles.logoPlaceholder}>{code.slice(0, 3)}</span>;
+      ? <img src={src} alt={name} title={name} className={styles.logoThumb} />
+      : <span className={styles.logoPlaceholder} title={name}>{code.slice(0, 3)}</span>;
   }
   return String(row[col.key] ?? '');
 };
