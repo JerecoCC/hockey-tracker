@@ -1,0 +1,47 @@
+// ════════════════════════════════════════════════════════════════════════
+// Shared design tokens — import this file in every SCSS module via:
+//   @use '../../styles/colors' as *;   (adjust path depth as needed)
+// ════════════════════════════════════════════════════════════════════════
+
+// ── Primary accent (blue) ─────────────────────────────────────────────
+$accent:        #2563eb;   // blue-600  — primary CTA, active states
+$accent-hover:  #1d4ed8;   // blue-700  — hover / pressed
+$accent-light:  #93c5fd;   // blue-300  — badges, active text
+
+// ── Info / secondary blue ─────────────────────────────────────────────
+$info:          #0369a1;   // sky-700   — demote badge background
+$info-light:    #60a5fa;   // blue-400  — badge text, nav hover tint
+
+// ── Danger / destructive ──────────────────────────────────────────────
+$danger:        #be123c;   // rose-700
+$danger-light:  #fb7185;   // rose-400
+
+// ── Edit / action blue (icon buttons) ────────────────────────────────
+$edit:          #1d4ed8;   // blue-700
+$edit-light:    #93c5fd;   // blue-300
+
+// ── Dark admin — backgrounds ──────────────────────────────────────────
+$bg-page:       #0f172a;   // slate-900 — outermost page background
+$bg-card:       #1e293b;   // slate-800 — cards, nav sidebar
+$bg-input:      #0f172a;   // same as page, used for form fields
+
+// ── Dark admin — borders ──────────────────────────────────────────────
+$border:        #334155;   // slate-700
+
+// ── Dark admin — text ─────────────────────────────────────────────────
+$text-dim:      #64748b;   // slate-500 — muted / placeholder
+$text-light:    #94a3b8;   // slate-400 — nav items default
+$text-body:     #e2e8f0;   // slate-200 — primary body text
+$text-bright:   #f8fafc;   // slate-50  — headings / emphasis
+
+// ── Light pages — background ──────────────────────────────────────────
+$bg-gradient:   linear-gradient(135deg, #0d1b2a 0%, #1b3a5c 100%);
+
+// ── Light pages — text ────────────────────────────────────────────────
+$text-dark:     #0d1b2a;   // darkest — headings on white cards
+$text-muted:    #6b7280;   // gray-500 — secondary on white cards
+$text-label:    #374151;   // gray-700 — form labels on white cards
+
+// ── Light pages — borders ─────────────────────────────────────────────
+$border-light:  #d1d5db;   // gray-300
+

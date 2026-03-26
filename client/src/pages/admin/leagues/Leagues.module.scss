@@ -1,13 +1,4 @@
-// ── Variables ──────────────────────────────────────────────────────────
-$bg-page:     #0f172a;
-$bg-card:     #1e293b;
-$bg-input:    #0f172a;
-$border:      #334155;
-$text-dim:    #64748b;
-$text-body:   #e2e8f0;
-$text-bright: #f8fafc;
-$accent:      #7c3aed;
-$accent-hover:#6d28d9;
+@use '../../../styles/colors' as *;
 
 // ── Layout ─────────────────────────────────────────────────────────────
 .main {
@@ -65,10 +56,19 @@ $accent-hover:#6d28d9;
   border-radius: 4px;
 }
 
-$danger:       #be123c;
-$danger-light: #fb7185;
-
-.noLogo { color: $text-dim; }
+.logoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  background: $border;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+}
 
 // ── Table actions ───────────────────────────────────────────────────────
 .actions {
@@ -76,9 +76,6 @@ $danger-light: #fb7185;
   justify-content: center;
   gap: 0.5rem;
 }
-
-$edit:       #1d4ed8;
-$edit-light: #93c5fd;
 
 .editBtn {
   display: inline-flex;

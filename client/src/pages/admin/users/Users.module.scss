@@ -1,16 +1,4 @@
-// ── Variables ──────────────────────────────────────────────────────────
-$bg-page:       #0f172a;
-$bg-card:       #1e293b;
-$border:        #334155;
-$text-dim:      #64748b;
-$text-body:     #e2e8f0;
-$text-bright:   #f8fafc;
-$accent:        #7c3aed;
-$accent-light:  #a78bfa;
-$blue:          #0369a1;
-$blue-light:    #60a5fa;
-$danger:        #be123c;
-$danger-light:  #fb7185;
+@use '../../../styles/colors' as *;
 
 // ── Layout ─────────────────────────────────────────────────────────────
 .main {
@@ -50,9 +38,9 @@ $danger-light:  #fb7185;
 }
 
 .badgeUser {
-  background: rgba($blue, 0.13);
-  color: $blue-light;
-  border: 1px solid rgba($blue, 0.33);
+  background: rgba($info, 0.13);
+  color: $info-light;
+  border: 1px solid rgba($info, 0.33);
 }
 
 // ── Action buttons ─────────────────────────────────────────────────────
@@ -82,7 +70,7 @@ $danger-light:  #fb7185;
 
 .demoteBtn {
   @extend %actionBtn;
-  background: $blue;
+  background: $info;
   color: #fff;
 }
 

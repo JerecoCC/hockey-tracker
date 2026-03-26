@@ -1,10 +1,4 @@
-// ── Variables ──────────────────────────────────────────────────────────
-$bg-page:     #0f172a;
-$bg-card:     #1e293b;
-$border:      #334155;
-$text-dim:    #64748b;
-$text-body:   #e2e8f0;
-$accent:      #7c3aed;
+@use '../../styles/colors' as *;
 
 // ── Table wrapper ──────────────────────────────────────────────────────
 .tableWrapper {

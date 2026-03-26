@@ -1,11 +1,4 @@
-// ── Variables ──────────────────────────────────────────────────────────
-$bg-gradient:  linear-gradient(135deg, #0d1b2a 0%, #1b3a5c 100%);
-$text-dark:    #0d1b2a;
-$text-muted:   #6b7280;
-$text-label:   #374151;
-$border-light: #d1d5db;
-$blue:         #2563eb;
-$blue-dark:    #1d4ed8;
+@use '../../styles/colors' as *;
 
 // ── Page ───────────────────────────────────────────────────────────────
 .page {
@@ -70,8 +63,8 @@ $blue-dark:    #1d4ed8;
   transition: border-color 0.15s;
 
   &:focus {
-    border-color: $blue;
-    box-shadow: 0 0 0 3px rgba($blue, 0.15);
+    border-color: $accent;
+    box-shadow: 0 0 0 3px rgba($accent, 0.15);
   }
 }
 
@@ -79,7 +72,7 @@ $blue-dark:    #1d4ed8;
 .primaryBtn {
   width: 100%;
   padding: 11px;
-  background: $blue;
+  background: $accent;
   color: #fff;
   font-size: 15px;
   font-weight: 600;
@@ -90,7 +83,7 @@ $blue-dark:    #1d4ed8;
   margin-top: 4px;
 
   &:hover:not(:disabled) {
-    background: $blue-dark;
+    background: $accent-hover;
   }
 
   &:disabled {
@@ -126,7 +119,7 @@ $blue-dark:    #1d4ed8;
 }
 
 .link {
-  color: $blue;
+  color: $accent;
   font-weight: 500;
   text-decoration: none;
 

@@ -1,13 +1,6 @@
-// ── Variables ──────────────────────────────────────────────────────────
-$bg-dark:            #1e293b;
-$bg-darker:          #0f172a;
-$border:             #334155;
-$text-muted:         #64748b;
-$text-light:         #94a3b8;
-$text-bright:        #f8fafc;
-$accent:             #7c3aed;
-$accent-light:       #a78bfa;
-$blue:               #60a5fa;
+@use '../../styles/colors' as *;
+
+// ── Layout tokens ──────────────────────────────────────────────────────
 $nav-width:          220px;
 $nav-collapsed-width: 56px;
 $transition-speed:   0.22s;
@@ -16,7 +9,7 @@ $transition-speed:   0.22s;
 .nav {
   width: $nav-width;
   min-height: 100vh;
-  background: $bg-dark;
+  background: $bg-card;
   border-right: 1px solid $border;
   display: flex;
   flex-direction: column;
@@ -86,7 +79,7 @@ $transition-speed:   0.22s;
   background: transparent;
   border: 1px solid $border;
   border-radius: 6px;
-  color: $text-muted;
+  color: $text-dim;
   font-size: 1rem;
   line-height: 1;
   cursor: pointer;
@@ -94,8 +87,8 @@ $transition-speed:   0.22s;
   transition: border-color 0.15s, color 0.15s;
 
   &:hover {
-    border-color: $blue;
-    color: $blue;
+    border-color: $info-light;
+    color: $info-light;
   }
 }
 
@@ -127,7 +120,7 @@ $transition-speed:   0.22s;
   transition: background 0.15s, color 0.15s;
 
   &:hover {
-    background: $bg-darker;
+    background: $bg-page;
     color: #e2e8f0;
   }
 
@@ -163,7 +156,7 @@ $transition-speed:   0.22s;
   background: transparent;
   border: 1px solid $border;
   border-radius: 8px;
-  color: $text-muted;
+  color: $text-dim;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -171,8 +164,8 @@ $transition-speed:   0.22s;
   transition: border-color 0.15s, color 0.15s;
 
   &:hover {
-    border-color: $blue;
-    color: $blue;
+    border-color: $info-light;
+    color: $info-light;
   }
 }
 

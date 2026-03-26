@@ -8,6 +8,7 @@ import DashboardPage from './pages/dashboard/Dashboard';
 import AdminLayout from './components/AdminLayout/AdminLayout';
 import LeaguesPage from './pages/admin/leagues/Leagues';
 import UsersPage from './pages/admin/users/Users';
+import TeamsPage from './pages/admin/teams/Teams';
 import AuthCallbackPage from './pages/auth/callback/AuthCallback';
 
 const PrivateRoute = ({ children }: { children: ReactNode }) => {
@@ -70,6 +71,7 @@ const App = () => (
           >
             <Route path="/admin/users" element={<UsersPage />} />
             <Route path="/admin/leagues" element={<LeaguesPage />} />
+            <Route path="/admin/teams" element={<TeamsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>

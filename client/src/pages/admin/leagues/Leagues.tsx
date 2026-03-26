@@ -29,7 +29,7 @@ const LeaguesPage = () => {
       render: (l) =>
         l.logo
           ? <img src={l.logo} alt={l.name} className={styles.logoThumb} />
-          : <span className={styles.noLogo}>—</span>,
+          : <span className={styles.logoPlaceholder}>{l.code[0]}</span>,
     },
     { header: 'Name', key: 'name' },
     { header: 'Code', key: 'code' },

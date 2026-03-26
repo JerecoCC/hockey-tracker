@@ -1,11 +1,7 @@
-// ── Variables ──────────────────────────────────────────────────────────
-$bg-gradient:  linear-gradient(135deg, #0d1b2a 0%, #1b3a5c 100%);
-$text-dark:    #0d1b2a;
-$text-body:    #111827;
-$text-muted:   #6b7280;
-$border-light: #d1d5db;
-$accent:       #7c3aed;
-$accent-alt:   #4f46e5;
+@use '../../styles/colors' as *;
+
+// local override — dark text on the white card (distinct from $text-body which is for dark-theme pages)
+$text-body-light: #111827;
 
 // ── Page ───────────────────────────────────────────────────────────────
 .page {
@@ -75,7 +71,7 @@ $accent-alt:   #4f46e5;
   margin: 0 0 4px;
   font-size: 20px;
   font-weight: 600;
-  color: $text-body;
+  color: $text-body-light;
 }
 
 .email {
@@ -99,7 +95,7 @@ $accent-alt:   #4f46e5;
 .adminBtn {
   display: block;
   padding: 12px 20px;
-  background: linear-gradient(135deg, $accent, $accent-alt);
+  background: linear-gradient(135deg, $accent, $accent-hover);
   color: #fff;
   border: none;
   border-radius: 10px;
