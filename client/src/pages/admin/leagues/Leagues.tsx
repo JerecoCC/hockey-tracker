@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
@@ -27,22 +28,8 @@ const LeaguesPage = () => {
       align: 'center',
       render: (l) => (
         <div className={styles.actions}>
-          <button
-            className={styles.editBtn}
-            title="Edit"
-            disabled={busy === l.id}
-            onClick={() => openEditModal(l)}
-          >
-            <Icon name="edit" size="1.1em" />
-          </button>
-          <button
-            className={styles.deleteBtn}
-            title="Delete"
-            disabled={busy === l.id}
-            onClick={() => { setConfirmDelete(l); setConfirmDeleteOpen(true); }}
-          >
-            <Icon name="delete" size="1.1em" />
-          </button>
+          <Button variant="outlined" intent="accent" icon="edit" size="sm" title="Edit" disabled={busy === l.id} onClick={() => openEditModal(l)} />
+          <Button variant="outlined" intent="danger" icon="delete" size="sm" title="Delete" disabled={busy === l.id} onClick={() => { setConfirmDelete(l); setConfirmDeleteOpen(true); }} />
         </div>
       ),
     },
@@ -114,9 +101,7 @@ const LeaguesPage = () => {
         <h2 className={styles.sectionTitle}>
           <Icon name="emoji_events" size="1em" /> Leagues
         </h2>
-        <button className={styles.addBtn} onClick={openModal}>
-          <Icon name="add" size="1.1em" /> Add League
-        </button>
+        <Button icon="add" onClick={openModal}>Add League</Button>
       </div>
 
       <div className={styles.card}>

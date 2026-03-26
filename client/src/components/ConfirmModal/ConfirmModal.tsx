@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import Icon from '../Icon/Icon';
+import Button from '../Button/Button';
+import type { ButtonIntent } from '../Button/Button';
 import Modal from '../Modal/Modal';
 import styles from './ConfirmModal.module.scss';
 
@@ -17,10 +18,10 @@ interface Props {
   onConfirm: () => void;
 }
 
-const variantClass: Record<ConfirmVariant, string> = {
-  danger: styles.confirmDanger,
-  accent: styles.confirmAccent,
-  info:   styles.confirmInfo,
+const variantIntent: Record<ConfirmVariant, ButtonIntent> = {
+  danger: 'danger',
+  accent: 'accent',
+  info:   'info',
 };
 
 const ConfirmModal = ({
@@ -37,13 +38,12 @@ const ConfirmModal = ({
   <Modal open={open} title={title} onClose={onCancel}>
     <p className={styles.body}>{body}</p>
     <div className={styles.actions}>
-      <button className={styles.cancelBtn} onClick={onCancel} type="button" disabled={busy}>
+      <Button variant="outlined" intent="neutral" onClick={onCancel} type="button" disabled={busy}>
         Cancel
-      </button>
-      <button className={variantClass[variant]} onClick={onConfirm} type="button" disabled={busy}>
-        {confirmIcon && <Icon name={confirmIcon} size="1em" />}
+      </Button>
+      <Button intent={variantIntent[variant]} icon={confirmIcon} onClick={onConfirm} type="button" disabled={busy}>
         {confirmLabel}
-      </button>
+      </Button>
     </div>
   </Modal>
 );

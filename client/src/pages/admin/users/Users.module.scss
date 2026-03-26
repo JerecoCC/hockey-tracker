@@ -50,43 +50,6 @@
   gap: 0.5rem;
 }
 
-%iconBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.35rem;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-
-  &:disabled { opacity: 0.4; cursor: not-allowed; }
-}
-
-.promoteBtn {
-  @extend %iconBtn;
-  border: 1px solid rgba($accent, 0.33);
-  color: $accent-light;
-
-  &:hover:not(:disabled) { background: rgba($accent, 0.15); }
-}
-
-.demoteBtn {
-  @extend %iconBtn;
-  border: 1px solid rgba($info, 0.33);
-  color: $info-light;
-
-  &:hover:not(:disabled) { background: rgba($info, 0.15); }
-}
-
-.deleteBtn {
-  @extend %iconBtn;
-  border: 1px solid rgba($danger, 0.33);
-  color: $danger-light;
-
-  &:hover:not(:disabled) { background: rgba($danger, 0.15); }
-}
-
 
 
 

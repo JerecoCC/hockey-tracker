@@ -1,4 +1,5 @@
 import type { ChangeEvent, FormEvent, RefObject } from 'react';
+import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
 import { LeagueRecord } from '../../../hooks/useLeagues';
@@ -96,12 +97,10 @@ const LeagueFormModal = ({
         </div>
       </div>
       <div className={styles.formActions}>
-        <button type="button" className={styles.cancelBtn} onClick={onClose}>
-          Cancel
-        </button>
-        <button type="submit" className={styles.submitBtn} disabled={submitting}>
+        <Button type="button" variant="outlined" intent="neutral" onClick={onClose}>Cancel</Button>
+        <Button type="submit" disabled={submitting}>
           {submitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add League'}
-        </button>
+        </Button>
       </div>
     </form>
   </Modal>

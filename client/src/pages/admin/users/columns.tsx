@@ -1,4 +1,5 @@
 ﻿import { Column } from '../../../components/Table/Table';
+import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import styles from './Users.module.scss';
 
@@ -49,19 +50,13 @@ export const getUserColumns = ({ currentUserId, busy, confirmRole, confirmDelete
       return (
         <div className={styles.actions}>
           {u.role !== 'admin' && (
-            <button className={styles.promoteBtn} title="Make Admin" disabled={isBusy} onClick={() => confirmRole(u, 'admin')}>
-              <Icon name="manage_accounts" size="1.1em" />
-            </button>
+            <Button variant="outlined" intent="accent" icon="manage_accounts" size="sm" title="Make Admin" disabled={isBusy} onClick={() => confirmRole(u, 'admin')} />
           )}
           {u.role === 'admin' && !isMe && (
-            <button className={styles.demoteBtn} title="Remove Admin" disabled={isBusy} onClick={() => confirmRole(u, 'user')}>
-              <Icon name="person_remove" size="1.1em" />
-            </button>
+            <Button variant="outlined" intent="info" icon="person_remove" size="sm" title="Remove Admin" disabled={isBusy} onClick={() => confirmRole(u, 'user')} />
           )}
           {!isMe && (
-            <button className={styles.deleteBtn} title="Delete" disabled={isBusy} onClick={() => confirmDelete(u)}>
-              <Icon name="delete" size="1.1em" />
-            </button>
+            <Button variant="outlined" intent="danger" icon="delete" size="sm" title="Delete" disabled={isBusy} onClick={() => confirmDelete(u)} />
           )}
           {isMe && <span style={{ color: '#64748b', fontSize: '0.8rem' }}>You</span>}
         </div>

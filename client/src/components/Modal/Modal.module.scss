@@ -35,15 +35,6 @@
 }
 
 .closeBtn {
-  background: none;
-  border: none;
-  color: $text-dim;
-  cursor: pointer;
   padding: 0.25rem;
-  line-height: 1;
-  border-radius: 4px;
-  transition: color 0.2s;
-
-  &:hover { color: $text-bright; }
 }
 

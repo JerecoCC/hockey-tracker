@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
+import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import useTeams, { TeamRecord, CreateTeamData } from '../../../hooks/useTeams';
@@ -56,12 +57,8 @@ const TeamsPage = () => {
       align: 'center',
       render: (t) => (
         <div className={styles.actions}>
-          <button className={styles.editBtn} title="Edit" disabled={busy === t.id} onClick={() => openEditModal(t)}>
-            <Icon name="edit" size="1.1em" />
-          </button>
-          <button className={styles.deleteBtn} title="Delete" disabled={busy === t.id} onClick={() => { setConfirmDelete(t); setConfirmDeleteOpen(true); }}>
-            <Icon name="delete" size="1.1em" />
-          </button>
+          <Button variant="outlined" intent="accent" icon="edit" size="sm" title="Edit" disabled={busy === t.id} onClick={() => openEditModal(t)} />
+          <Button variant="outlined" intent="danger" icon="delete" size="sm" title="Delete" disabled={busy === t.id} onClick={() => { setConfirmDelete(t); setConfirmDeleteOpen(true); }} />
         </div>
       ),
     },
@@ -127,9 +124,7 @@ const TeamsPage = () => {
         <h2 className={styles.sectionTitle}>
           <Icon name="groups" size="1em" /> Teams
         </h2>
-        <button className={styles.addBtn} onClick={openModal}>
-          <Icon name="add" size="1.1em" /> Add Team
-        </button>
+        <Button icon="add" onClick={openModal}>Add Team</Button>
       </div>
 
       <div className={styles.card}>

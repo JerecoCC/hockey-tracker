@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import Icon from '../Icon/Icon';
+import Button from '../Button/Button';
 import styles from './Modal.module.scss';
 
 interface Props {
@@ -16,9 +16,7 @@ const Modal = ({ open, title, onClose, children }: Props) => {
     <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
       <div className={styles.header}>
         <h3 className={styles.title}>{title}</h3>
-        <button className={styles.closeBtn} onClick={onClose} type="button">
-          <Icon name="close" size="1.2em" />
-        </button>
+        <Button variant="ghost" intent="neutral" icon="close" iconSize="1.2em" onClick={onClose} type="button" className={styles.closeBtn} />
       </div>
       {children}
     </div>
