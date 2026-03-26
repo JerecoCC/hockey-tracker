@@ -39,10 +39,8 @@ button {
   line-height: 1;
 }
 
-// ── Material Icons baseline fix ────────────────────────────────────────
-.material-icons {
-  font-size: 1em;
-  line-height: 1;
+// ── Font Awesome icon baseline fix ─────────────────────────────────────
+svg[aria-hidden] {
   vertical-align: -0.15em;
   user-select: none;
 }

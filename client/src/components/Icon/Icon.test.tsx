@@ -2,49 +2,48 @@ import { render, screen } from '@testing-library/react';
 import Icon from './Icon';
 
 describe('Icon', () => {
-  it('renders the icon name as text content', () => {
-    render(<Icon name="sports_hockey" />);
-    expect(screen.getByText('sports_hockey')).toBeInTheDocument();
+  it('renders an SVG for a known icon name', () => {
+    const { container } = render(<Icon name="sports_hockey" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
   });
 
-  it('has aria-hidden="true"', () => {
-    render(<Icon name="star" />);
-    expect(screen.getByText('star')).toHaveAttribute('aria-hidden', 'true');
+  it('returns null for an unknown icon name', () => {
+    const { container } = render(<Icon name="__unknown__" />);
+    expect(container.firstChild).toBeNull();
   });
 
-  it('always includes material-icons class', () => {
-    render(<Icon name="star" />);
-    expect(screen.getByText('star')).toHaveClass('material-icons');
+  it('has aria-hidden on the SVG', () => {
+    const { container } = render(<Icon name="add" />);
+    expect(container.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('appends a custom className', () => {
-    render(<Icon name="star" className="my-icon" />);
-    const el = screen.getByText('star');
-    expect(el).toHaveClass('material-icons');
-    expect(el).toHaveClass('my-icon');
+  it('appends a custom className to the SVG', () => {
+    const { container } = render(<Icon name="add" className="my-icon" />);
+    expect(container.querySelector('svg')).toHaveClass('my-icon');
   });
 
   it('sets fontSize via inline style when size prop is provided', () => {
-    render(<Icon name="star" size="2rem" />);
-    expect(screen.getByText('star')).toHaveStyle({ fontSize: '2rem' });
+    const { container } = render(<Icon name="add" size="2rem" />);
+    expect(container.querySelector('svg')).toHaveStyle({ fontSize: '2rem' });
   });
 
-  it('does not set fontSize when size prop is omitted', () => {
-    render(<Icon name="star" />);
-    expect(screen.getByText('star').style.fontSize).toBe('');
+  it('does not set inline style when size prop is omitted', () => {
+    const { container } = render(<Icon name="add" />);
+    const svg = container.querySelector('svg') as HTMLElement;
+    expect(svg.style.fontSize).toBe('');
   });
 
   it('merges extra inline styles', () => {
-    // jsdom normalises colour keywords → rgb(), so check the attribute directly
-    render(<Icon name="star" style={{ color: 'red' }} />);
-    expect(screen.getByText('star').style.color).toBeTruthy();
+    const { container } = render(<Icon name="add" style={{ color: 'red' }} />);
+    const svg = container.querySelector('svg') as HTMLElement;
+    expect(svg.style.color).toBeTruthy();
   });
 
   it('merges size and extra inline styles together', () => {
-    render(<Icon name="star" size="1.5rem" style={{ color: 'blue' }} />);
-    const el = screen.getByText('star');
-    expect(el).toHaveStyle({ fontSize: '1.5rem' });
-    expect(el.style.color).toBeTruthy();
+    const { container } = render(<Icon name="add" size="1.5rem" style={{ color: 'blue' }} />);
+    const svg = container.querySelector('svg') as HTMLElement;
+    expect(svg).toHaveStyle({ fontSize: '1.5rem' });
+    expect(svg.style.color).toBeTruthy();
   });
 });
 
