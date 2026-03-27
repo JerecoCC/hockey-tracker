@@ -39,7 +39,10 @@ const useTeams = () => {
 
   const fetchTeams = useCallback(async (signal?: AbortSignal) => {
     try {
-      const { data } = await axios.get<TeamRecord[]>(`${API}/admin/teams`, { headers: authHeaders(), signal });
+      const { data } = await axios.get<TeamRecord[]>(`${API}/admin/teams`, {
+        headers: authHeaders(),
+        signal,
+      });
       setTeams(data);
     } catch (err) {
       if (axios.isCancel(err)) return;
@@ -59,11 +62,9 @@ const useTeams = () => {
     const formData = new FormData();
     formData.append('logo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/teams/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/teams/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload logo'));
@@ -115,4 +116,3 @@ const useTeams = () => {
 };
 
 export default useTeams;
-

@@ -13,7 +13,11 @@ const TeamDeleteModal = ({ open, busy, target, onCancel, onConfirm }: Props) => 
   <ConfirmModal
     open={open}
     title="Delete Team"
-    body={<>Are you sure you want to delete <strong>{target?.name}</strong>? This cannot be undone.</>}
+    body={
+      <>
+        Are you sure you want to delete <strong>{target?.name}</strong>? This cannot be undone.
+      </>
+    }
     confirmLabel={busy === target?.id ? 'Deleting…' : 'Delete'}
     confirmIcon="delete"
     variant="danger"
@@ -24,4 +28,3 @@ const TeamDeleteModal = ({ open, busy, target, onCancel, onConfirm }: Props) => 
 );
 
 export default TeamDeleteModal;
-

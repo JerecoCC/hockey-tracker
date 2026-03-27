@@ -12,7 +12,9 @@
   font-size: 15px;
   font-weight: 500;
   cursor: pointer;
-  transition: background 0.15s, box-shadow 0.15s;
+  transition:
+    background 0.15s,
+    box-shadow 0.15s;
 
   &:hover {
     background: #f8f9fa;
@@ -29,4 +31,3 @@
   height: 20px;
   flex-shrink: 0;
 }
-

@@ -2,7 +2,7 @@
 @use '../../styles/mixins' as *;
 
 // ── Layout tokens ──────────────────────────────────────────────────────
-$nav-width:          220px;
+$nav-width: 220px;
 $nav-collapsed-width: 56px;
 
 // ── Shell ──────────────────────────────────────────────────────────────
@@ -38,8 +38,6 @@ $nav-collapsed-width: 56px;
       padding-left: 0;
     }
   }
-
-
 }
 
 // ── Top section ────────────────────────────────────────────────────────
@@ -81,7 +79,9 @@ $nav-collapsed-width: 56px;
   aspect-ratio: 1 / 1;
   cursor: pointer;
   flex-shrink: 0;
-  transition: border-color $transition-fast, color $transition-fast;
+  transition:
+    border-color $transition-fast,
+    color $transition-fast;
 
   &:hover {
     border-color: $info-light;
@@ -115,7 +115,9 @@ $nav-collapsed-width: 56px;
   cursor: pointer;
   text-align: left;
   white-space: nowrap;
-  transition: background $transition-fast, color $transition-fast;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
 
   &:hover {
     background: $bg-page;
@@ -144,4 +146,3 @@ $nav-collapsed-width: 56px;
 .backBtn {
   width: 100%;
 }
-

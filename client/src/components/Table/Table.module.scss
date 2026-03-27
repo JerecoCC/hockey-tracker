@@ -60,7 +60,9 @@ table {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loaderText {
@@ -99,4 +101,3 @@ table {
   cursor: auto;
   user-select: none;
 }
-

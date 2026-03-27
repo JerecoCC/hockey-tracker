@@ -8,31 +8,46 @@
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
-  transition: background $transition-base, color $transition-base, border-color $transition-base, opacity $transition-base;
+  transition:
+    background $transition-base,
+    color $transition-base,
+    border-color $transition-base,
+    opacity $transition-base;
 
-  &:disabled { opacity: 0.5; cursor: not-allowed; }
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 // ── Sizes ──────────────────────────────────────────────────────────────
 .sm {
   padding: $space-md $space-md;
   font-size: $font-sm;
-  &.iconOnly { padding: $space-sm; }
+  &.iconOnly {
+    padding: $space-sm;
+  }
 }
 
 .md {
   padding: $space-md $space-lg;
-  &.iconOnly { padding: $space-sm; }
+  &.iconOnly {
+    padding: $space-sm;
+  }
 }
 
 .lg {
   padding: $space-md $space-xl;
   font-size: $font-lg;
-  &.iconOnly { padding: $space-sm; }
+  &.iconOnly {
+    padding: $space-sm;
+  }
 }
 
 // ── Icon size ──────────────────────────────────────────────────────────
-.btn svg { font-size: $font-xs; }
+.btn svg {
+  font-size: $font-xs;
+}
 
 // ── Icon-only: tighter radius + square shape ───────────────────────────
 .iconOnly {
@@ -43,64 +58,113 @@
 
 // ── Filled ────────────────────────────────────────────────────────────
 .filledAccent {
-  background: $accent; color: #fff; border: none;
-  &:hover:not(:disabled) { background: $accent-hover; }
+  background: $accent;
+  color: #fff;
+  border: none;
+  &:hover:not(:disabled) {
+    background: $accent-hover;
+  }
 }
 
 .filledDanger {
-  background: $danger; color: #fff; border: none;
-  &:hover:not(:disabled) { opacity: 0.85; }
+  background: $danger;
+  color: #fff;
+  border: none;
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
 }
 
 .filledInfo {
-  background: $info; color: #fff; border: none;
-  &:hover:not(:disabled) { opacity: 0.85; }
+  background: $info;
+  color: #fff;
+  border: none;
+  &:hover:not(:disabled) {
+    opacity: 0.85;
+  }
 }
 
 .filledNeutral {
-  background: $border; color: $text-body; border: none;
-  &:hover:not(:disabled) { background: $text-dim; }
+  background: $border;
+  color: $text-body;
+  border: none;
+  &:hover:not(:disabled) {
+    background: $text-dim;
+  }
 }
 
 // ── Outlined ──────────────────────────────────────────────────────────
 .outlinedAccent {
-  background: transparent; color: $accent-light; border: 1px solid rgba($accent, 0.33);
-  &:hover:not(:disabled) { background: rgba($accent, 0.15); }
+  background: transparent;
+  color: $accent-light;
+  border: 1px solid rgba($accent, 0.33);
+  &:hover:not(:disabled) {
+    background: rgba($accent, 0.15);
+  }
 }
 
 .outlinedDanger {
-  background: transparent; color: $danger-light; border: 1px solid rgba($danger, 0.33);
-  &:hover:not(:disabled) { background: rgba($danger, 0.15); }
+  background: transparent;
+  color: $danger-light;
+  border: 1px solid rgba($danger, 0.33);
+  &:hover:not(:disabled) {
+    background: rgba($danger, 0.15);
+  }
 }
 
 .outlinedInfo {
-  background: transparent; color: $info-light; border: 1px solid rgba($info, 0.33);
-  &:hover:not(:disabled) { background: rgba($info, 0.15); }
+  background: transparent;
+  color: $info-light;
+  border: 1px solid rgba($info, 0.33);
+  &:hover:not(:disabled) {
+    background: rgba($info, 0.15);
+  }
 }
 
 .outlinedNeutral {
-  background: transparent; color: $text-dim; border: 1px solid $border;
-  &:hover:not(:disabled) { color: $text-bright; border-color: $text-dim; }
+  background: transparent;
+  color: $text-dim;
+  border: 1px solid $border;
+  &:hover:not(:disabled) {
+    color: $text-bright;
+    border-color: $text-dim;
+  }
 }
 
 // ── Ghost (no border, no background) ──────────────────────────────────
 .ghostAccent {
-  background: transparent; color: $accent-light; border: none;
-  &:hover:not(:disabled) { background: rgba($accent, 0.12); }
+  background: transparent;
+  color: $accent-light;
+  border: none;
+  &:hover:not(:disabled) {
+    background: rgba($accent, 0.12);
+  }
 }
 
 .ghostDanger {
-  background: transparent; color: $danger-light; border: none;
-  &:hover:not(:disabled) { background: rgba($danger, 0.12); }
+  background: transparent;
+  color: $danger-light;
+  border: none;
+  &:hover:not(:disabled) {
+    background: rgba($danger, 0.12);
+  }
 }
 
 .ghostInfo {
-  background: transparent; color: $info-light; border: none;
-  &:hover:not(:disabled) { background: rgba($info, 0.12); }
+  background: transparent;
+  color: $info-light;
+  border: none;
+  &:hover:not(:disabled) {
+    background: rgba($info, 0.12);
+  }
 }
 
 .ghostNeutral {
-  background: transparent; color: $text-dim; border: none;
-  &:hover:not(:disabled) { color: $text-bright; background: rgba($border, 0.4); }
+  background: transparent;
+  color: $text-dim;
+  border: none;
+  &:hover:not(:disabled) {
+    color: $text-bright;
+    background: rgba($border, 0.4);
+  }
 }
-

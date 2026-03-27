@@ -5,6 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tsParser from '@typescript-eslint/parser'
 import tsPlugin from '@typescript-eslint/eslint-plugin'
+import prettierConfig from 'eslint-config-prettier'
 
 const sharedRules = {
   ...js.configs.recommended.rules,
@@ -16,6 +17,11 @@ const sharedRules = {
     'warn',
     { allowConstantExport: true },
   ],
+  // Formatting enforced by Prettier — kept here as documentation only;
+  // eslint-config-prettier disables the ESLint versions to avoid conflicts.
+  'react/jsx-first-prop-new-line': 'off',
+  'react/jsx-max-props-per-line': 'off',
+  'react/jsx-closing-bracket-location': 'off',
 }
 
 const sharedPlugins = {
@@ -48,7 +54,7 @@ export default [
     },
     settings: { react: { version: '18.3' } },
     plugins: sharedPlugins,
-    rules: sharedRules,
+    rules: { ...sharedRules, ...prettierConfig.rules },
   },
   {
     files: ['**/*.{ts,tsx}'],
@@ -69,6 +75,7 @@ export default [
     rules: {
       ...sharedRules,
       ...tsPlugin.configs.recommended.rules,
+      ...prettierConfig.rules,
     },
   },
 ]

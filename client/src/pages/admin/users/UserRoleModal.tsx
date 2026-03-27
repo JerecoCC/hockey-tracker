@@ -22,9 +22,17 @@ const UserRoleModal = ({ open, busy, roleConfirm, onCancel, onConfirm }: Props) 
     <ConfirmModal
       open={open}
       title={actionLabel}
-      body={isPromote
-        ? <>Grant admin access to <strong>{roleConfirm?.user.display_name}</strong>?</>
-        : <>Remove admin access from <strong>{roleConfirm?.user.display_name}</strong>?</>}
+      body={
+        isPromote ? (
+          <>
+            Grant admin access to <strong>{roleConfirm?.user.display_name}</strong>?
+          </>
+        ) : (
+          <>
+            Remove admin access from <strong>{roleConfirm?.user.display_name}</strong>?
+          </>
+        )
+      }
       confirmLabel={busy === roleConfirm?.user.id ? 'Saving…' : actionLabel}
       confirmIcon={isPromote ? 'manage_accounts' : 'person_remove'}
       variant={isPromote ? 'accent' : 'info'}
@@ -36,4 +44,3 @@ const UserRoleModal = ({ open, busy, roleConfirm, onCancel, onConfirm }: Props) 
 };
 
 export default UserRoleModal;
-

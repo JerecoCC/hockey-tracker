@@ -15,8 +15,11 @@ export interface FormState {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const emptyForm = (): FormState => ({
-  name: '', code: '',
-  logoFile: null, logoPreview: '', existingLogoUrl: '',
+  name: '',
+  code: '',
+  logoFile: null,
+  logoPreview: '',
+  existingLogoUrl: '',
 });
 
 interface Props {
@@ -33,13 +36,30 @@ interface Props {
 }
 
 const LeagueFormModal = ({
-  open, editTarget, form, setForm, submitting,
-  fileInputRef, onClose, onSubmit, onFileChange, onClearFile,
+  open,
+  editTarget,
+  form,
+  setForm,
+  submitting,
+  fileInputRef,
+  onClose,
+  onSubmit,
+  onFileChange,
+  onClearFile,
 }: Props) => (
-  <Modal open={open} title={editTarget ? 'Edit League' : 'Add League'} onClose={onClose}>
-    <form className={styles.form} onSubmit={onSubmit}>
+  <Modal
+    open={open}
+    title={editTarget ? 'Edit League' : 'Add League'}
+    onClose={onClose}
+  >
+    <form
+      className={styles.form}
+      onSubmit={onSubmit}
+    >
       <label className={styles.label}>
-        <span className={styles.labelText}>Name <span className={styles.required}>*</span></span>
+        <span className={styles.labelText}>
+          Name <span className={styles.required}>*</span>
+        </span>
         <input
           className={styles.input}
           type="text"
@@ -51,7 +71,9 @@ const LeagueFormModal = ({
         />
       </label>
       <label className={styles.label}>
-        <span className={styles.labelText}>Code <span className={styles.required}>*</span></span>
+        <span className={styles.labelText}>
+          Code <span className={styles.required}>*</span>
+        </span>
         <input
           className={styles.input}
           type="text"
@@ -62,14 +84,29 @@ const LeagueFormModal = ({
         />
       </label>
       <div className={styles.logoSection}>
-        {(form.logoPreview || form.existingLogoUrl) ? (
+        {form.logoPreview || form.existingLogoUrl ? (
           <div className={styles.previewWrapper}>
-            <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
-            <Button type="button" variant="ghost" intent="neutral" icon="close" iconSize="0.9em" className={styles.clearBtn} onClick={onClearFile} />
+            <img
+              src={form.logoPreview || form.existingLogoUrl}
+              alt="Preview"
+              className={styles.logoPreview}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              intent="neutral"
+              icon="close"
+              iconSize="0.9em"
+              className={styles.clearBtn}
+              onClick={onClearFile}
+            />
           </div>
         ) : (
           <label className={styles.fileLabel}>
-            <Icon name="upload" size="1.5em" />
+            <Icon
+              name="upload"
+              size="1.5em"
+            />
             Add League Logo
             <input
               ref={fileInputRef}
@@ -82,8 +119,18 @@ const LeagueFormModal = ({
         )}
       </div>
       <div className={styles.formActions}>
-        <Button type="button" variant="outlined" intent="neutral" onClick={onClose}>Cancel</Button>
-        <Button type="submit" disabled={submitting}>
+        <Button
+          type="button"
+          variant="outlined"
+          intent="neutral"
+          onClick={onClose}
+        >
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          disabled={submitting}
+        >
           {submitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add League'}
         </Button>
       </div>
@@ -92,4 +139,3 @@ const LeagueFormModal = ({
 );
 
 export default LeagueFormModal;
-

@@ -18,12 +18,22 @@ describe('Icon', () => {
   });
 
   it('appends a custom className to the SVG', () => {
-    const { container } = render(<Icon name="add" className="my-icon" />);
+    const { container } = render(
+      <Icon
+        name="add"
+        className="my-icon"
+      />,
+    );
     expect(container.querySelector('svg')).toHaveClass('my-icon');
   });
 
   it('sets fontSize via inline style when size prop is provided', () => {
-    const { container } = render(<Icon name="add" size="2rem" />);
+    const { container } = render(
+      <Icon
+        name="add"
+        size="2rem"
+      />,
+    );
     expect(container.querySelector('svg')).toHaveStyle({ fontSize: '2rem' });
   });
 
@@ -34,16 +44,26 @@ describe('Icon', () => {
   });
 
   it('merges extra inline styles', () => {
-    const { container } = render(<Icon name="add" style={{ color: 'red' }} />);
+    const { container } = render(
+      <Icon
+        name="add"
+        style={{ color: 'red' }}
+      />,
+    );
     const svg = container.querySelector('svg') as HTMLElement;
     expect(svg.style.color).toBeTruthy();
   });
 
   it('merges size and extra inline styles together', () => {
-    const { container } = render(<Icon name="add" size="1.5rem" style={{ color: 'blue' }} />);
+    const { container } = render(
+      <Icon
+        name="add"
+        size="1.5rem"
+        style={{ color: 'blue' }}
+      />,
+    );
     const svg = container.querySelector('svg') as HTMLElement;
     expect(svg).toHaveStyle({ fontSize: '1.5rem' });
     expect(svg.style.color).toBeTruthy();
   });
 });
-

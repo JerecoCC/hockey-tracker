@@ -13,9 +13,7 @@ beforeEach(() => {
 describe('useAuth', () => {
   it('throws when used outside AuthProvider', () => {
     const spy = jest.spyOn(console, 'error').mockImplementation(() => {});
-    expect(() => renderHook(() => useAuth())).toThrow(
-      'useAuth must be used inside <AuthProvider>',
-    );
+    expect(() => renderHook(() => useAuth())).toThrow('useAuth must be used inside <AuthProvider>');
     spy.mockRestore();
   });
 
@@ -77,4 +75,3 @@ describe('useAuth', () => {
     expect(result.current.user).toBeNull();
   });
 });
-

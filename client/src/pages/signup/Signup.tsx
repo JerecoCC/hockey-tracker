@@ -46,10 +46,19 @@ const SignupPage = () => {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}><Icon name="sports_hockey" size="1.1em" /> Hockey Tracker</h1>
+        <h1 className={styles.title}>
+          <Icon
+            name="sports_hockey"
+            size="1.1em"
+          />{' '}
+          Hockey Tracker
+        </h1>
         <h2 className={styles.subtitle}>Create an account</h2>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form
+          onSubmit={handleSubmit}
+          className={styles.form}
+        >
           <label className={styles.label}>
             Name
             <input
@@ -102,7 +111,11 @@ const SignupPage = () => {
             />
           </label>
 
-          <Button className={styles.primaryBtn} type="submit" disabled={loading}>
+          <Button
+            className={styles.primaryBtn}
+            type="submit"
+            disabled={loading}
+          >
             {loading ? 'Creating account…' : 'Create account'}
           </Button>
         </form>
@@ -115,7 +128,10 @@ const SignupPage = () => {
 
         <p className={styles.footer}>
           Already have an account?{' '}
-          <Link className={styles.link} to="/login">
+          <Link
+            className={styles.link}
+            to="/login"
+          >
             Sign in
           </Link>
         </p>
@@ -125,4 +141,3 @@ const SignupPage = () => {
 };
 
 export default SignupPage;
-

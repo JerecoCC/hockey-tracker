@@ -3,8 +3,8 @@ import Icon from '../Icon/Icon';
 import styles from './Button.module.scss';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'ghost';
-export type ButtonIntent  = 'accent' | 'danger' | 'info' | 'neutral';
-export type ButtonSize    = 'sm' | 'md' | 'lg';
+export type ButtonIntent = 'accent' | 'danger' | 'info' | 'neutral';
+export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   /** Visual style: filled solid, outlined border, or ghost (no border/bg). Default: 'filled'. */
@@ -21,21 +21,21 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 
 const VARIANT_INTENT: Record<ButtonVariant, Record<ButtonIntent, string>> = {
   filled: {
-    accent:  styles.filledAccent,
-    danger:  styles.filledDanger,
-    info:    styles.filledInfo,
+    accent: styles.filledAccent,
+    danger: styles.filledDanger,
+    info: styles.filledInfo,
     neutral: styles.filledNeutral,
   },
   outlined: {
-    accent:  styles.outlinedAccent,
-    danger:  styles.outlinedDanger,
-    info:    styles.outlinedInfo,
+    accent: styles.outlinedAccent,
+    danger: styles.outlinedDanger,
+    info: styles.outlinedInfo,
     neutral: styles.outlinedNeutral,
   },
   ghost: {
-    accent:  styles.ghostAccent,
-    danger:  styles.ghostDanger,
-    info:    styles.ghostInfo,
+    accent: styles.ghostAccent,
+    danger: styles.ghostDanger,
+    info: styles.ghostInfo,
     neutral: styles.ghostNeutral,
   },
 };
@@ -56,9 +56,9 @@ const SIZE: Record<ButtonSize, string> = {
  *   <Button variant="filled" intent="danger" icon="delete" size="sm" /> // small icon-only
  */
 const Button = ({
-  variant  = 'filled',
-  intent   = 'accent',
-  size     = 'md',
+  variant = 'filled',
+  intent = 'accent',
+  size = 'md',
   icon,
   iconSize,
   children,
@@ -73,15 +73,24 @@ const Button = ({
     VARIANT_INTENT[variant][intent],
     isIconOnly ? styles.iconOnly : '',
     className,
-  ].filter(Boolean).join(' ');
+  ]
+    .filter(Boolean)
+    .join(' ');
 
   return (
-    <button className={cls} {...rest}>
-      {icon && <Icon name={icon} size={iconSize} />}
+    <button
+      className={cls}
+      {...rest}
+    >
+      {icon && (
+        <Icon
+          name={icon}
+          size={iconSize}
+        />
+      )}
       {children}
     </button>
   );
 };
 
 export default Button;
-

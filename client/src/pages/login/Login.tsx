@@ -36,10 +36,19 @@ const LoginPage = () => {
   return (
     <div className={styles.page}>
       <div className={styles.card}>
-        <h1 className={styles.title}><Icon name="sports_hockey" size="1.1em" /> Hockey Tracker</h1>
+        <h1 className={styles.title}>
+          <Icon
+            name="sports_hockey"
+            size="1.1em"
+          />{' '}
+          Hockey Tracker
+        </h1>
         <h2 className={styles.subtitle}>Sign in to your account</h2>
 
-        <form onSubmit={handleSubmit} className={styles.form}>
+        <form
+          onSubmit={handleSubmit}
+          className={styles.form}
+        >
           <label className={styles.label}>
             Email
             <input
@@ -66,7 +75,11 @@ const LoginPage = () => {
             />
           </label>
 
-          <Button className={styles.primaryBtn} type="submit" disabled={loading}>
+          <Button
+            className={styles.primaryBtn}
+            type="submit"
+            disabled={loading}
+          >
             {loading ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
@@ -79,7 +92,10 @@ const LoginPage = () => {
 
         <p className={styles.footer}>
           Don&apos;t have an account?{' '}
-          <Link className={styles.link} to="/signup">
+          <Link
+            className={styles.link}
+            to="/signup"
+          >
             Sign up
           </Link>
         </p>
@@ -89,4 +105,3 @@ const LoginPage = () => {
 };
 
 export default LoginPage;
-

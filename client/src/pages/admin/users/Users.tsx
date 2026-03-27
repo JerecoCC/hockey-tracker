@@ -15,8 +15,14 @@ const UsersPage = () => {
   const [deleteConfirm, setDeleteConfirm] = useState<UserRecord | null>(null);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
-  const confirmRole = (u: UserRecord, role: 'admin' | 'user') => { setRoleConfirm({ user: u, role }); setRoleConfirmOpen(true); };
-  const confirmDelete = (u: UserRecord) => { setDeleteConfirm(u); setDeleteConfirmOpen(true); };
+  const confirmRole = (u: UserRecord, role: 'admin' | 'user') => {
+    setRoleConfirm({ user: u, role });
+    setRoleConfirmOpen(true);
+  };
+  const confirmDelete = (u: UserRecord) => {
+    setDeleteConfirm(u);
+    setDeleteConfirmOpen(true);
+  };
 
   const columns = getUserColumns({ currentUserId: user?.id, busy, confirmRole, confirmDelete });
 
@@ -37,20 +43,33 @@ const UsersPage = () => {
         open={roleConfirmOpen}
         busy={busy}
         roleConfirm={roleConfirm}
-        onCancel={() => { setRoleConfirmOpen(false); setRoleConfirm(null); }}
-        onConfirm={async () => { await changeRole(roleConfirm!.user.id, roleConfirm!.role); setRoleConfirmOpen(false); setRoleConfirm(null); }}
+        onCancel={() => {
+          setRoleConfirmOpen(false);
+          setRoleConfirm(null);
+        }}
+        onConfirm={async () => {
+          await changeRole(roleConfirm!.user.id, roleConfirm!.role);
+          setRoleConfirmOpen(false);
+          setRoleConfirm(null);
+        }}
       />
 
       <UserDeleteModal
         open={deleteConfirmOpen}
         busy={busy}
         target={deleteConfirm}
-        onCancel={() => { setDeleteConfirmOpen(false); setDeleteConfirm(null); }}
-        onConfirm={async () => { await deleteUser(deleteConfirm!.id); setDeleteConfirmOpen(false); setDeleteConfirm(null); }}
+        onCancel={() => {
+          setDeleteConfirmOpen(false);
+          setDeleteConfirm(null);
+        }}
+        onConfirm={async () => {
+          await deleteUser(deleteConfirm!.id);
+          setDeleteConfirmOpen(false);
+          setDeleteConfirm(null);
+        }}
       />
     </main>
   );
 };
 
 export default UsersPage;
-

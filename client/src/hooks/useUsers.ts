@@ -20,7 +20,10 @@ const useUsers = () => {
 
   const fetchUsers = useCallback(async (signal?: AbortSignal) => {
     try {
-      const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, { headers: authHeaders(), signal });
+      const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, {
+        headers: authHeaders(),
+        signal,
+      });
       setUsers(data);
     } catch (err) {
       if (axios.isCancel(err)) return;

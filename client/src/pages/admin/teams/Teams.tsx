@@ -39,16 +39,23 @@ const TeamsPage = () => {
   }, {});
 
   const columns: Column<TeamRecord>[] = [
-    { type: 'logo', header: 'Logo', getLogo: (t) => t.logo, getName: (t) => t.name, getCode: (t) => t.code, align: 'center' },
+    {
+      type: 'logo',
+      header: 'Logo',
+      getLogo: (t) => t.logo,
+      getName: (t) => t.name,
+      getCode: (t) => t.code,
+      align: 'center',
+    },
     { header: 'Code', key: 'code' },
     { header: 'Team', key: 'name' },
 
     {
       type: 'logo',
       header: 'League',
-      getLogo: (t) => t.league_id ? leagueMap[t.league_id]?.logo ?? null : null,
-      getName: (t) => t.league_id ? leagueMap[t.league_id]?.name ?? '—' : '—',
-      getCode: (t) => t.league_id ? leagueMap[t.league_id]?.code ?? '—' : '—',
+      getLogo: (t) => (t.league_id ? (leagueMap[t.league_id]?.logo ?? null) : null),
+      getName: (t) => (t.league_id ? (leagueMap[t.league_id]?.name ?? '—') : '—'),
+      getCode: (t) => (t.league_id ? (leagueMap[t.league_id]?.code ?? '—') : '—'),
       align: 'center',
     },
     {
@@ -57,22 +64,49 @@ const TeamsPage = () => {
       align: 'center',
       render: (t) => (
         <div className={styles.actions}>
-          <Button variant="outlined" intent="accent" icon="edit" size="sm" title="Edit" disabled={busy === t.id} onClick={() => openEditModal(t)} />
-          <Button variant="outlined" intent="danger" icon="delete" size="sm" title="Delete" disabled={busy === t.id} onClick={() => { setConfirmDelete(t); setConfirmDeleteOpen(true); }} />
+          <Button
+            variant="outlined"
+            intent="accent"
+            icon="edit"
+            size="sm"
+            title="Edit"
+            disabled={busy === t.id}
+            onClick={() => openEditModal(t)}
+          />
+          <Button
+            variant="outlined"
+            intent="danger"
+            icon="delete"
+            size="sm"
+            title="Delete"
+            disabled={busy === t.id}
+            onClick={() => {
+              setConfirmDelete(t);
+              setConfirmDeleteOpen(true);
+            }}
+          />
         </div>
       ),
     },
   ];
 
-  const openModal = () => { setEditTarget(null); setForm(emptyForm()); setModalOpen(true); };
+  const openModal = () => {
+    setEditTarget(null);
+    setForm(emptyForm());
+    setModalOpen(true);
+  };
 
   const openEditModal = (team: TeamRecord) => {
     setEditTarget(team);
     setForm({
-      name: team.name, code: team.code,
-      description: team.description ?? '', location: team.location ?? '',
+      name: team.name,
+      code: team.code,
+      description: team.description ?? '',
+      location: team.location ?? '',
       league_id: team.league_id ?? null,
-      logoFile: null, logoPreview: '', existingLogoUrl: team.logo ?? '',
+      logoFile: null,
+      logoPreview: '',
+      existingLogoUrl: team.logo ?? '',
     });
     setModalOpen(true);
   };
@@ -103,11 +137,15 @@ const TeamsPage = () => {
     let logoUrl: string | undefined = form.existingLogoUrl || undefined;
     if (form.logoFile) {
       const url = await uploadLogo(form.logoFile);
-      if (!url) { setSubmitting(false); return; }
+      if (!url) {
+        setSubmitting(false);
+        return;
+      }
       logoUrl = url;
     }
     const payload: CreateTeamData = {
-      name: form.name, code: form.code,
+      name: form.name,
+      code: form.code,
       description: form.description || undefined,
       location: form.location || undefined,
       logo: logoUrl,
@@ -122,21 +160,43 @@ const TeamsPage = () => {
     <main className={styles.main}>
       <div className={styles.titleRow}>
         <h2 className={styles.sectionTitle}>
-          <Icon name="groups" size="1em" /> Teams
+          <Icon
+            name="groups"
+            size="1em"
+          />{' '}
+          Teams
         </h2>
-        <Button icon="add" onClick={openModal}>Add Team</Button>
+        <Button
+          icon="add"
+          onClick={openModal}
+        >
+          Add Team
+        </Button>
       </div>
 
       <div className={styles.card}>
-        <Table columns={columns} data={teams} rowKey={(t) => t.id} loading={loading} emptyMessage="No teams yet. Add one to get started." />
+        <Table
+          columns={columns}
+          data={teams}
+          rowKey={(t) => t.id}
+          loading={loading}
+          emptyMessage="No teams yet. Add one to get started."
+        />
       </div>
 
       <TeamDeleteModal
         open={confirmDeleteOpen}
         busy={busy}
         target={confirmDelete}
-        onCancel={() => { setConfirmDeleteOpen(false); setConfirmDelete(null); }}
-        onConfirm={async () => { await deleteTeam(confirmDelete!.id); setConfirmDeleteOpen(false); setConfirmDelete(null); }}
+        onCancel={() => {
+          setConfirmDeleteOpen(false);
+          setConfirmDelete(null);
+        }}
+        onConfirm={async () => {
+          await deleteTeam(confirmDelete!.id);
+          setConfirmDeleteOpen(false);
+          setConfirmDelete(null);
+        }}
       />
 
       <TeamFormModal
@@ -161,4 +221,3 @@ const TeamsPage = () => {
 };
 
 export default TeamsPage;
-

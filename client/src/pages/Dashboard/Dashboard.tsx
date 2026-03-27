@@ -17,8 +17,19 @@ const DashboardPage = () => {
     <div className={styles.page}>
       <div className={styles.card}>
         <header className={styles.header}>
-          <h1 className={styles.title}><Icon name="sports_hockey" size="1.1em" /> Hockey Tracker</h1>
-          <Button variant="ghost" intent="neutral" className={styles.logoutBtn} onClick={handleLogout}>
+          <h1 className={styles.title}>
+            <Icon
+              name="sports_hockey"
+              size="1.1em"
+            />{' '}
+            Hockey Tracker
+          </h1>
+          <Button
+            variant="ghost"
+            intent="neutral"
+            className={styles.logoutBtn}
+            onClick={handleLogout}
+          >
             Sign out
           </Button>
         </header>
@@ -39,7 +50,11 @@ const DashboardPage = () => {
         </div>
 
         <p className={styles.placeholder}>
-          <Icon name="celebration" size="1.1em" /> You&apos;re signed in. Start tracking your hockey stats here.
+          <Icon
+            name="celebration"
+            size="1.1em"
+          />{' '}
+          You&apos;re signed in. Start tracking your hockey stats here.
         </p>
 
         {user?.role === 'admin' && (
@@ -59,4 +74,3 @@ const DashboardPage = () => {
 };
 
 export default DashboardPage;
-

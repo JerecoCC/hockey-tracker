@@ -136,4 +136,3 @@ describe('useLeagues', () => {
     expect(toast.error).toHaveBeenCalledWith('Upload failed');
   });
 });
-

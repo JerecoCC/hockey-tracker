@@ -27,14 +27,18 @@ const AdminNav = () => {
         <div className={styles.brandRow}>
           {!collapsed && (
             <span className={styles.brand}>
-              <Icon name="shield" className={styles.brandIcon} /> Admin
+              <Icon
+                name="shield"
+                className={styles.brandIcon}
+              />{' '}
+              Admin
             </span>
           )}
           <Button
             variant="ghost"
             intent="neutral"
             className={styles.toggleBtn}
-            onClick={() => setCollapsed(c => !c)}
+            onClick={() => setCollapsed((c) => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             icon={collapsed ? 'chevron_right' : 'chevron_left'}
             iconSize="0.65rem"
@@ -51,7 +55,10 @@ const AdminNav = () => {
                 onClick={() => navigate(path)}
                 title={collapsed ? label : undefined}
               >
-                <Icon name={icon} className={styles.icon} />
+                <Icon
+                  name={icon}
+                  className={styles.icon}
+                />
                 {!collapsed && <span className={styles.label}>{label}</span>}
               </Button>
             </li>
@@ -76,4 +83,3 @@ const AdminNav = () => {
 };
 
 export default AdminNav;
-

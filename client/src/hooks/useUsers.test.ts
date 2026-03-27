@@ -106,4 +106,3 @@ describe('useUsers', () => {
     expect(toast.error).toHaveBeenCalledWith('Not found');
   });
 });
-

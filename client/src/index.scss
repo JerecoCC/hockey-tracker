@@ -1,6 +1,14 @@
 // ── Typography ─────────────────────────────────────────────────────────
-$font-stack: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica,
-  Arial, sans-serif;
+$font-stack:
+  Inter,
+  system-ui,
+  -apple-system,
+  BlinkMacSystemFont,
+  'Segoe UI',
+  Roboto,
+  Helvetica,
+  Arial,
+  sans-serif;
 
 // ── Colors ─────────────────────────────────────────────────────────────
 $color-text: #111827;
@@ -44,4 +52,3 @@ svg[aria-hidden] {
   vertical-align: -0.15em;
   user-select: none;
 }
-

@@ -35,7 +35,10 @@ const useLeagues = () => {
 
   const fetchLeagues = useCallback(async (signal?: AbortSignal) => {
     try {
-      const { data } = await axios.get<LeagueRecord[]>(`${API}/admin/leagues`, { headers: authHeaders(), signal });
+      const { data } = await axios.get<LeagueRecord[]>(`${API}/admin/leagues`, {
+        headers: authHeaders(),
+        signal,
+      });
       setLeagues(data);
     } catch (err) {
       if (axios.isCancel(err)) return;
@@ -55,11 +58,9 @@ const useLeagues = () => {
     const formData = new FormData();
     formData.append('logo', file);
     try {
-      const { data } = await axios.post<{ url: string }>(
-        `${API}/admin/leagues/upload`,
-        formData,
-        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
-      );
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/leagues/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
       return data.url;
     } catch (err) {
       toast.error(apiError(err, 'Failed to upload logo'));

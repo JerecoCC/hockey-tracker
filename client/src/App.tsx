@@ -14,69 +14,127 @@ import AuthCallbackPage from './pages/auth/callback/AuthCallback';
 const PrivateRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <>{children}</> : <Navigate to="/login" replace />;
+  return user ? (
+    <>{children}</>
+  ) : (
+    <Navigate
+      to="/login"
+      replace
+    />
+  );
 };
 
 const PublicRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  return user ? <Navigate to="/dashboard" replace /> : <>{children}</>;
+  return user ? (
+    <Navigate
+      to="/dashboard"
+      replace
+    />
+  ) : (
+    <>{children}</>
+  );
 };
 
 const AdminRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   if (loading) return null;
-  if (!user) return <Navigate to="/login" replace />;
-  if (user.role !== 'admin') return <Navigate to="/dashboard" replace />;
+  if (!user)
+    return (
+      <Navigate
+        to="/login"
+        replace
+      />
+    );
+  if (user.role !== 'admin')
+    return (
+      <Navigate
+        to="/dashboard"
+        replace
+      />
+    );
   return <>{children}</>;
 };
 
 const App = () => (
-    <AuthProvider>
-      <ToastContainer position="top-right" autoClose={4000} theme="colored" />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Navigate to="/login" replace />} />
+  <AuthProvider>
+    <ToastContainer
+      position="top-right"
+      autoClose={4000}
+      theme="colored"
+    />
+    <BrowserRouter>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
+        <Route
+          path="/login"
+          element={
+            <PublicRoute>
+              <LoginPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/signup"
+          element={
+            <PublicRoute>
+              <SignupPage />
+            </PublicRoute>
+          }
+        />
+        <Route
+          path="/auth/callback"
+          element={<AuthCallbackPage />}
+        />
+        <Route
+          path="/dashboard"
+          element={
+            <PrivateRoute>
+              <DashboardPage />
+            </PrivateRoute>
+          }
+        />
+        <Route
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
           <Route
-            path="/login"
-            element={
-              <PublicRoute>
-                <LoginPage />
-              </PublicRoute>
-            }
+            path="/admin/users"
+            element={<UsersPage />}
           />
           <Route
-            path="/signup"
-            element={
-              <PublicRoute>
-                <SignupPage />
-              </PublicRoute>
-            }
-          />
-          <Route path="/auth/callback" element={<AuthCallbackPage />} />
-          <Route
-            path="/dashboard"
-            element={
-              <PrivateRoute>
-                <DashboardPage />
-              </PrivateRoute>
-            }
+            path="/admin/leagues"
+            element={<LeaguesPage />}
           />
           <Route
-            element={
-              <AdminRoute>
-                <AdminLayout />
-              </AdminRoute>
-            }
-          >
-            <Route path="/admin/users" element={<UsersPage />} />
-            <Route path="/admin/leagues" element={<LeaguesPage />} />
-            <Route path="/admin/teams" element={<TeamsPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            path="/admin/teams"
+            element={<TeamsPage />}
+          />
+        </Route>
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
+      </Routes>
+    </BrowserRouter>
+  </AuthProvider>
 );
 
 export default App;

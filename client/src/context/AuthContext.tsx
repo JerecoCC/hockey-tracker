@@ -54,18 +54,28 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const login = useCallback(async ({ email, password }: LoginCredentials): Promise<User> => {
-    const { data } = await axios.post<{ token: string; user: User }>(`${API}/auth/login`, { email, password });
+    const { data } = await axios.post<{ token: string; user: User }>(`${API}/auth/login`, {
+      email,
+      password,
+    });
     localStorage.setItem('token', data.token);
     setUser(data.user);
     return data.user;
   }, []);
 
-  const signup = useCallback(async ({ name, email, password }: SignupCredentials): Promise<User> => {
-    const { data } = await axios.post<{ token: string; user: User }>(`${API}/auth/signup`, { name, email, password });
-    localStorage.setItem('token', data.token);
-    setUser(data.user);
-    return data.user;
-  }, []);
+  const signup = useCallback(
+    async ({ name, email, password }: SignupCredentials): Promise<User> => {
+      const { data } = await axios.post<{ token: string; user: User }>(`${API}/auth/signup`, {
+        name,
+        email,
+        password,
+      });
+      localStorage.setItem('token', data.token);
+      setUser(data.user);
+      return data.user;
+    },
+    [],
+  );
 
   const loginWithGoogle = useCallback(() => {
     window.location.href = `${API}/auth/google`;
@@ -93,4 +103,3 @@ export const useAuth = (): AuthContextType => {
   if (!ctx) throw new Error('useAuth must be used inside <AuthProvider>');
   return ctx;
 };
-

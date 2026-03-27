@@ -1,5 +1,5 @@
-@use '../../styles/colors' as *;
-@use '../../styles/mixins' as *;
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
 
 .body {
   color: $text-body;
@@ -7,7 +7,9 @@
   line-height: 1.6;
   margin: 0 0 $space-2xl;
 
-  strong { color: $text-bright; }
+  strong {
+    color: $text-bright;
+  }
 }
 
 .actions {
@@ -16,5 +18,3 @@
   gap: $space-md;
   margin-top: $space-sm;
 }
-
-

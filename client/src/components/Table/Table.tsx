@@ -31,14 +31,26 @@ export type Column<T> =
 
 const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
   if (col.type === 'custom') return col.render(row);
-  if (col.type === 'date')   return new Date(row[col.key] as string).toLocaleDateString();
+  if (col.type === 'date') return new Date(row[col.key] as string).toLocaleDateString();
   if (col.type === 'logo') {
-    const src  = col.getLogo(row);
+    const src = col.getLogo(row);
     const name = col.getName(row);
     const code = col.getCode(row);
-    return src
-      ? <img src={src} alt={name} title={name} className={styles.logoThumb} />
-      : <span className={styles.logoPlaceholder} title={name}>{code.slice(0, 3)}</span>;
+    return src ? (
+      <img
+        src={src}
+        alt={name}
+        title={name}
+        className={styles.logoThumb}
+      />
+    ) : (
+      <span
+        className={styles.logoPlaceholder}
+        title={name}
+      >
+        {code.slice(0, 3)}
+      </span>
+    );
   }
   return String(row[col.key] ?? '');
 };
@@ -73,14 +85,22 @@ const Table = <T,>({
         <thead>
           <tr>
             {columns.map((col) => (
-              <th key={col.header} style={col.align ? { textAlign: col.align } : undefined}>{col.header}</th>
+              <th
+                key={col.header}
+                style={col.align ? { textAlign: col.align } : undefined}
+              >
+                {col.header}
+              </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {data.length === 0 ? (
             <tr>
-              <td colSpan={columns.length} className={styles.emptyMsg}>
+              <td
+                colSpan={columns.length}
+                className={styles.emptyMsg}
+              >
                 {emptyMessage}
               </td>
             </tr>
@@ -88,7 +108,12 @@ const Table = <T,>({
             data.map((row) => (
               <tr key={rowKey(row)}>
                 {columns.map((col) => (
-                  <td key={col.header} style={col.align ? { textAlign: col.align } : undefined}>{renderCell(col, row)}</td>
+                  <td
+                    key={col.header}
+                    style={col.align ? { textAlign: col.align } : undefined}
+                  >
+                    {renderCell(col, row)}
+                  </td>
                 ))}
               </tr>
             ))
@@ -100,4 +125,3 @@ const Table = <T,>({
 };
 
 export default Table;
-

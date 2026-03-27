@@ -62,7 +62,9 @@
   gap: $space-xs;
 }
 
-.required { color: #f87171; }
+.required {
+  color: #f87171;
+}
 
 %field {
   background: $bg-input;
@@ -74,12 +76,23 @@
   outline: none;
   transition: border-color $transition-base;
 
-  &:focus       { border-color: $accent; }
-  &::placeholder { color: $text-dim; }
+  &:focus {
+    border-color: $accent;
+  }
+  &::placeholder {
+    color: $text-dim;
+  }
 }
 
-.input    { @extend %field; }
-.textarea  { @extend %field; resize: vertical; font-family: inherit; min-height: 80px; }
+.input {
+  @extend %field;
+}
+.textarea {
+  @extend %field;
+  resize: vertical;
+  font-family: inherit;
+  min-height: 80px;
+}
 
 // ── Form actions ───────────────────────────────────────────────────────
 .formActions {
@@ -111,9 +124,14 @@
   font-weight: 500;
   text-align: center;
   cursor: pointer;
-  transition: border-color $transition-base, color $transition-base;
+  transition:
+    border-color $transition-base,
+    color $transition-base;
 
-  &:hover { border-color: $accent; color: $text-bright; }
+  &:hover {
+    border-color: $accent;
+    color: $text-bright;
+  }
 }
 
 .fileInput {
@@ -149,6 +167,7 @@
   padding: $space-xs !important;
   line-height: 1;
 
-  &:hover { background: #dc2626; }
+  &:hover {
+    background: #dc2626;
+  }
 }
-

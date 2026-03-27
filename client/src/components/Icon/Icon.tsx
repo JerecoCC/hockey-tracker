@@ -36,31 +36,31 @@ import {
 
 const ICON_MAP: Record<string, IconDefinition> = {
   // navigation / admin
-  arrow_back:     faArrowLeft,
-  chevron_left:   faChevronLeft,
-  chevron_right:  faChevronRight,
-  shield:         faShield,
+  arrow_back: faArrowLeft,
+  chevron_left: faChevronLeft,
+  chevron_right: faChevronRight,
+  shield: faShield,
 
   // nav items
-  groups:         faPeopleGroup,
-  group:          faUsers,
-  emoji_events:   faTrophy,
+  groups: faPeopleGroup,
+  group: faUsers,
+  emoji_events: faTrophy,
 
   // actions
-  add:            faPlus,
-  close:          faXmark,
-  delete:         faTrash,
-  edit:           faPen,
+  add: faPlus,
+  close: faXmark,
+  delete: faTrash,
+  edit: faPen,
   manage_accounts: faUserGear,
-  person_remove:  faUserMinus,
+  person_remove: faUserMinus,
 
   // auth
   account_circle: faCircleUser,
-  mail:           faEnvelope,
+  mail: faEnvelope,
 
   // decorative
-  sports_hockey:  faHockeyPuck,
-  celebration:    faStar,
+  sports_hockey: faHockeyPuck,
+  celebration: faStar,
 };
 
 interface IconProps {
@@ -74,9 +74,7 @@ const Icon = ({ name, size, className = '', style = {} }: IconProps) => {
   const icon = ICON_MAP[name];
   if (!icon) return null;
 
-  const inlineStyle: CSSProperties = size
-    ? { fontSize: size, height: size, ...style }
-    : style;
+  const inlineStyle: CSSProperties = size ? { fontSize: size, height: size, ...style } : style;
 
   return (
     <FontAwesomeIcon
@@ -89,4 +87,3 @@ const Icon = ({ name, size, className = '', style = {} }: IconProps) => {
 };
 
 export default Icon;
-

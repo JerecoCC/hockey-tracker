@@ -9,7 +9,8 @@ import LeagueFormModal, { FormState, emptyForm } from './LeagueFormModal';
 import styles from './Leagues.module.scss';
 
 const LeaguesPage = () => {
-  const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } = useLeagues();
+  const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } =
+    useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<LeagueRecord | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -19,7 +20,14 @@ const LeaguesPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const columns: Column<LeagueRecord>[] = [
-    { type: 'logo', header: 'Logo', getLogo: (l) => l.logo, getName: (l) => l.name, getCode: (l) => l.code, align: 'center' },
+    {
+      type: 'logo',
+      header: 'Logo',
+      getLogo: (l) => l.logo,
+      getName: (l) => l.name,
+      getCode: (l) => l.code,
+      align: 'center',
+    },
     { header: 'Code', key: 'code' },
     { header: 'League', key: 'name' },
     {
@@ -28,8 +36,27 @@ const LeaguesPage = () => {
       align: 'center',
       render: (l) => (
         <div className={styles.actions}>
-          <Button variant="outlined" intent="accent" icon="edit" size="sm" title="Edit" disabled={busy === l.id} onClick={() => openEditModal(l)} />
-          <Button variant="outlined" intent="danger" icon="delete" size="sm" title="Delete" disabled={busy === l.id} onClick={() => { setConfirmDelete(l); setConfirmDeleteOpen(true); }} />
+          <Button
+            variant="outlined"
+            intent="accent"
+            icon="edit"
+            size="sm"
+            title="Edit"
+            disabled={busy === l.id}
+            onClick={() => openEditModal(l)}
+          />
+          <Button
+            variant="outlined"
+            intent="danger"
+            icon="delete"
+            size="sm"
+            title="Delete"
+            disabled={busy === l.id}
+            onClick={() => {
+              setConfirmDelete(l);
+              setConfirmDeleteOpen(true);
+            }}
+          />
         </div>
       ),
     },
@@ -78,7 +105,10 @@ const LeaguesPage = () => {
     let logoUrl: string | undefined = form.existingLogoUrl || undefined;
     if (form.logoFile) {
       const url = await uploadLogo(form.logoFile);
-      if (!url) { setSubmitting(false); return; }
+      if (!url) {
+        setSubmitting(false);
+        return;
+      }
       logoUrl = url;
     }
     const payload = {
@@ -86,9 +116,7 @@ const LeaguesPage = () => {
       code: form.code,
       logo: logoUrl,
     };
-    const ok = editTarget
-      ? await updateLeague(editTarget.id, payload)
-      : await addLeague(payload);
+    const ok = editTarget ? await updateLeague(editTarget.id, payload) : await addLeague(payload);
     setSubmitting(false);
     if (ok) closeModal();
   };
@@ -97,9 +125,18 @@ const LeaguesPage = () => {
     <main className={styles.main}>
       <div className={styles.titleRow}>
         <h2 className={styles.sectionTitle}>
-          <Icon name="emoji_events" size="1em" /> Leagues
+          <Icon
+            name="emoji_events"
+            size="1em"
+          />{' '}
+          Leagues
         </h2>
-        <Button icon="add" onClick={openModal}>Add League</Button>
+        <Button
+          icon="add"
+          onClick={openModal}
+        >
+          Add League
+        </Button>
       </div>
 
       <div className={styles.card}>
@@ -116,8 +153,15 @@ const LeaguesPage = () => {
         open={confirmDeleteOpen}
         busy={busy}
         target={confirmDelete}
-        onCancel={() => { setConfirmDeleteOpen(false); setConfirmDelete(null); }}
-        onConfirm={async () => { await deleteLeague(confirmDelete!.id); setConfirmDeleteOpen(false); setConfirmDelete(null); }}
+        onCancel={() => {
+          setConfirmDeleteOpen(false);
+          setConfirmDelete(null);
+        }}
+        onConfirm={async () => {
+          await deleteLeague(confirmDelete!.id);
+          setConfirmDeleteOpen(false);
+          setConfirmDelete(null);
+        }}
       />
 
       <LeagueFormModal
@@ -137,4 +181,3 @@ const LeaguesPage = () => {
 };
 
 export default LeaguesPage;
-

@@ -21,7 +21,7 @@ interface Props {
 const variantIntent: Record<ConfirmVariant, ButtonIntent> = {
   danger: 'danger',
   accent: 'accent',
-  info:   'info',
+  info: 'info',
 };
 
 const ConfirmModal = ({
@@ -35,13 +35,29 @@ const ConfirmModal = ({
   onCancel,
   onConfirm,
 }: Props) => (
-  <Modal open={open} title={title} onClose={onCancel}>
+  <Modal
+    open={open}
+    title={title}
+    onClose={onCancel}
+  >
     <p className={styles.body}>{body}</p>
     <div className={styles.actions}>
-      <Button variant="outlined" intent="neutral" onClick={onCancel} type="button" disabled={busy}>
+      <Button
+        variant="outlined"
+        intent="neutral"
+        onClick={onCancel}
+        type="button"
+        disabled={busy}
+      >
         Cancel
       </Button>
-      <Button intent={variantIntent[variant]} icon={confirmIcon} onClick={onConfirm} type="button" disabled={busy}>
+      <Button
+        intent={variantIntent[variant]}
+        icon={confirmIcon}
+        onClick={onConfirm}
+        type="button"
+        disabled={busy}
+      >
         {confirmLabel}
       </Button>
     </div>
@@ -49,4 +65,3 @@ const ConfirmModal = ({
 );
 
 export default ConfirmModal;
-
