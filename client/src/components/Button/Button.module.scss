@@ -15,24 +15,27 @@
 
 // ── Sizes ──────────────────────────────────────────────────────────────
 .sm {
-  padding: $space-2 $space-3;
+  padding: $space-3 $space-3;
   font-size: $font-sm;
   &.iconOnly { padding: $space-2; }
 }
 
 .md {
-  padding: $space-2 $space-4;
+  padding: $space-3 $space-4;
   &.iconOnly { padding: $space-2; }
 }
 
 .lg {
-  padding: $space-2 1.375rem;
+  padding: $space-3 $space-5;
   font-size: $font-lg;
   &.iconOnly { padding: $space-2; }
 }
 
+// ── Icon size ──────────────────────────────────────────────────────────
+.btn svg { font-size: $font-xs; }
+
 // ── Icon-only: tighter radius ──────────────────────────────────────────
-.iconOnly { border-radius: 6px; }
+.iconOnly { border-radius: $radius-sm; }
 
 // ── Filled ────────────────────────────────────────────────────────────
 .filledAccent {

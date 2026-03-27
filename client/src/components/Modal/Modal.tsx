@@ -16,7 +16,7 @@ const Modal = ({ open, title, onClose, children }: Props) => {
     <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
       <div className={styles.header}>
         <h3 className={styles.title}>{title}</h3>
-        <Button variant="ghost" intent="neutral" icon="close" iconSize="1.2em" onClick={onClose} type="button" className={styles.closeBtn} />
+        <Button variant="ghost" intent="neutral" icon="close" iconSize="0.8rem" onClick={onClose} type="button" className={styles.closeBtn} />
       </div>
       {children}
     </div>

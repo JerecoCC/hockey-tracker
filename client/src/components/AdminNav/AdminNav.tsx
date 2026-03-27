@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
+import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './AdminNav.module.scss';
 
@@ -55,14 +56,16 @@ const AdminNav = () => {
       </div>
 
       <div className={styles.bottom}>
-        <button
+        <Button
+          variant="outlined"
+          intent="neutral"
+          icon="arrow_back"
           className={styles.backBtn}
           onClick={() => navigate('/dashboard')}
           title={collapsed ? 'Back to Dashboard' : undefined}
         >
-          <Icon name="arrow_back" className={styles.backIcon} />
-          {!collapsed && <span className={styles.backText}>Back to Dashboard</span>}
-        </button>
+          {!collapsed && 'Back to Dashboard'}
+        </Button>
       </div>
     </nav>
   );

@@ -39,10 +39,7 @@ $nav-collapsed-width: 56px;
     }
   }
 
-  .backBtn {
-    justify-content: center;
-    padding: $space-3 0;
-  }
+
 }
 
 // ── Top section ────────────────────────────────────────────────────────
@@ -144,29 +141,6 @@ $nav-collapsed-width: 56px;
 }
 
 .backBtn {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: $space-2;
   width: 100%;
-  padding: $space-2 $space-4;
-  background: transparent;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  color: $text-dim;
-  font-size: $font-base;
-  font-weight: 500;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: border-color $transition-fast, color $transition-fast;
-
-  &:hover {
-    border-color: $info-light;
-    color: $info-light;
-  }
-}
-
-.backIcon {
-  flex-shrink: 0;
 }
 
