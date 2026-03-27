@@ -46,7 +46,6 @@ const LeaguesPage = () => {
     setForm({
       name: league.name,
       code: league.code,
-      description: league.description ?? '',
       logoFile: null,
       logoPreview: '',
       existingLogoUrl: league.logo ?? '',
@@ -85,7 +84,6 @@ const LeaguesPage = () => {
     const payload = {
       name: form.name,
       code: form.code,
-      description: form.description || undefined,
       logo: logoUrl,
     };
     const ok = editTarget

@@ -8,7 +8,6 @@ import styles from './Leagues.module.scss';
 export interface FormState {
   name: string;
   code: string;
-  description: string;
   logoFile: File | null;
   logoPreview: string;
   existingLogoUrl: string;
@@ -16,7 +15,7 @@ export interface FormState {
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const emptyForm = (): FormState => ({
-  name: '', code: '', description: '',
+  name: '', code: '',
   logoFile: null, logoPreview: '', existingLogoUrl: '',
 });
 
@@ -62,28 +61,16 @@ const LeagueFormModal = ({
           required
         />
       </label>
-      <label className={styles.label}>
-        Description
-        <textarea
-          className={styles.textarea}
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Optional description"
-          rows={3}
-        />
-      </label>
-      <div className={styles.label}>
-        Logo
-        <div className={styles.fileRow}>
-          {(form.logoPreview || form.existingLogoUrl) && (
-            <div className={styles.previewWrapper}>
-              <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
-              <Button type="button" variant="ghost" intent="neutral" icon="close" iconSize="0.9em" className={styles.clearBtn} onClick={onClearFile} />
-            </div>
-          )}
+      <div className={styles.logoSection}>
+        {(form.logoPreview || form.existingLogoUrl) ? (
+          <div className={styles.previewWrapper}>
+            <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
+            <Button type="button" variant="ghost" intent="neutral" icon="close" iconSize="0.9em" className={styles.clearBtn} onClick={onClearFile} />
+          </div>
+        ) : (
           <label className={styles.fileLabel}>
-            <Icon name="upload" size="1em" />
-            {form.logoFile ? form.logoFile.name : 'Choose image…'}
+            <Icon name="upload" size="1.5em" />
+            Add League Logo
             <input
               ref={fileInputRef}
               className={styles.fileInput}
@@ -92,7 +79,7 @@ const LeagueFormModal = ({
               onChange={onFileChange}
             />
           </label>
-        </div>
+        )}
       </div>
       <div className={styles.formActions}>
         <Button type="button" variant="outlined" intent="neutral" onClick={onClose}>Cancel</Button>
