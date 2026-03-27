@@ -133,7 +133,7 @@ $nav-collapsed-width: 56px;
 }
 
 .icon {
-  font-size: 1.1rem;
+  font-size: $font-xl;
   line-height: 1;
   flex-shrink: 0;
 }
@@ -154,7 +154,7 @@ $nav-collapsed-width: 56px;
   border: 1px solid $border;
   border-radius: $radius-md;
   color: $text-dim;
-  font-size: 0.85rem;
+  font-size: $font-base;
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;

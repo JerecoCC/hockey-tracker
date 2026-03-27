@@ -24,7 +24,7 @@
 .form { display: flex; flex-direction: column; gap: $space-4; }
 
 .label {
-  display: flex; flex-direction: column; gap: 0.4rem;
+  display: flex; flex-direction: column; gap: $space-2;
   font-size: $font-sm; font-weight: 600; color: $text-dim;
   text-transform: uppercase; letter-spacing: 0.05em;
 }
@@ -34,7 +34,7 @@
 
 %field {
   background: $bg-input; border: 1px solid $border; border-radius: $radius-md;
-  color: $text-body; font-size: $font-base; padding: 0.625rem 0.875rem;
+  color: $text-body; font-size: $font-base; padding: $space-3 $space-4;
   outline: none; transition: border-color $transition-base;
   &:focus { border-color: $accent; }
   &::placeholder { color: $text-dim; }
@@ -94,9 +94,9 @@
 .leagueOption {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: $space-3;
   width: 100%;
-  padding: $space-2 0.625rem;
+  padding: $space-2 $space-3;
   background: transparent;
   border: none;
   border-radius: $radius-sm;
@@ -119,7 +119,7 @@
 .leagueOptionInner {
   display: flex;
   align-items: center;
-  gap: 0.625rem;
+  gap: $space-3;
   font-size: $font-base;
   font-weight: 400;
   color: $text-body;
@@ -131,7 +131,7 @@
   width: 20px;
   height: 20px;
   object-fit: contain;
-  border-radius: 3px;
+  border-radius: $radius-sm;
   flex-shrink: 0;
 }
 
@@ -141,10 +141,10 @@
   justify-content: center;
   width: 20px;
   height: 20px;
-  border-radius: 3px;
+  border-radius: $radius-sm;
   background: $border;
   flex-shrink: 0;
-  font-size: 0.6875rem;
+  font-size: $font-xs;
   font-weight: 700;
   color: $text-body;
   text-transform: uppercase;
@@ -158,7 +158,7 @@
 .fileRow { display: flex; align-items: center; gap: $space-3; flex-wrap: wrap; }
 
 .fileLabel {
-  display: inline-flex; align-items: center; gap: 0.4rem;
+  display: inline-flex; align-items: center; gap: $space-2;
   padding: $space-2 0.875rem; background: $bg-input; border: 1px dashed $border;
   border-radius: $radius-md; color: $text-dim; font-size: $font-sm; font-weight: 500;
   cursor: pointer; transition: border-color $transition-base, color $transition-base;
@@ -172,7 +172,7 @@
 
 .logoPreview {
   width: 48px; height: 48px; object-fit: contain;
-  border-radius: 6px; border: 1px solid $border; background: $bg-input;
+  border-radius: $radius-md; border: 1px solid $border; background: $bg-input;
 }
 
 .clearBtn {

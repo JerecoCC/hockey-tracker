@@ -16,7 +16,7 @@
   background: #fff;
   border-radius: $radius-xl;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: 2.5rem 2.25rem;
+  padding: $space-8;
   width: 100%;
   max-width: 420px;
 }
@@ -48,14 +48,14 @@
 .label {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: $space-2;
   font-size: $font-base;
   font-weight: 500;
   color: $text-label;
 }
 
 .input {
-  padding: 10px 14px;
+  padding: $space-3 $space-4;
   border: 1.5px solid $border-light;
   border-radius: $radius-md;
   font-size: $font-body;
@@ -72,7 +72,7 @@
 // ── Primary button ─────────────────────────────────────────────────────
 .primaryBtn {
   width: 100%;
-  padding: 11px;
+  padding: $space-3;
   background: $accent;
   color: #fff;
   font-size: $font-body;

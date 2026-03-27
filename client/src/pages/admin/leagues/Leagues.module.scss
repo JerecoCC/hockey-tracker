@@ -48,7 +48,7 @@
 .label {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: $space-2;
   font-size: $font-sm;
   font-weight: 600;
   color: $text-dim;
@@ -70,7 +70,7 @@
   border-radius: $radius-md;
   color: $text-body;
   font-size: $font-base;
-  padding: 0.625rem 0.875rem;
+  padding: $space-3 $space-4;
   outline: none;
   transition: border-color $transition-base;
 
@@ -100,8 +100,8 @@
 .fileLabel {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: $space-2 0.875rem;
+  gap: $space-2;
+  padding: $space-2 $space-4;
   background: $bg-input;
   border: 1px dashed $border;
   border-radius: $radius-md;
@@ -131,7 +131,7 @@
   width: 48px;
   height: 48px;
   object-fit: contain;
-  border-radius: 6px;
+  border-radius: $radius-md;
   border: 1px solid $border;
   background: $bg-input;
 }
