@@ -14,7 +14,7 @@ $nav-collapsed-width: 56px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  padding: $space-6 0;
+  padding: $space-2xl 0;
   flex-shrink: 0;
   overflow: hidden;
   transition: width $transition-layout ease;
@@ -31,7 +31,7 @@ $nav-collapsed-width: 56px;
 
   .navItem {
     justify-content: center;
-    padding: $space-3 0;
+    padding: $space-md 0;
 
     &.active {
       border-left: 3px solid $accent;
@@ -46,7 +46,7 @@ $nav-collapsed-width: 56px;
 .top {
   display: flex;
   flex-direction: column;
-  gap: $space-6;
+  gap: $space-2xl;
 }
 
 // ── Brand row ──────────────────────────────────────────────────────────
@@ -54,8 +54,8 @@ $nav-collapsed-width: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 $space-3 0 $space-5;
-  min-height: $space-7;
+  padding: 0 $space-md 0 $space-xl;
+  min-height: $space-3xl;
 }
 
 .brand {
@@ -71,7 +71,7 @@ $nav-collapsed-width: 56px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: $space-2;
+  padding: $space-sm;
   background: transparent;
   border: 1px solid $border;
   border-radius: $radius-sm;
@@ -96,16 +96,16 @@ $nav-collapsed-width: 56px;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-1;
+  gap: $space-xs;
 }
 
 .navItem {
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  gap: $space-4;
+  gap: $space-lg;
   width: 100%;
-  padding: $space-3 $space-5;
+  padding: $space-md $space-xl;
   background: transparent;
   border: none;
   border-radius: 0;
@@ -126,7 +126,7 @@ $nav-collapsed-width: 56px;
     background: rgba($accent, 0.13);
     color: $accent-light;
     border-left: 3px solid $accent;
-    padding-left: calc(#{$space-5} - 3px);
+    padding-left: calc(#{$space-xl} - 3px);
   }
 }
 
@@ -138,7 +138,7 @@ $nav-collapsed-width: 56px;
 
 // ── Bottom / back button ───────────────────────────────────────────────
 .bottom {
-  padding: 0 $space-3;
+  padding: 0 $space-md;
 }
 
 .backBtn {

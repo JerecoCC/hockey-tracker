@@ -8,7 +8,7 @@
   align-items: center;
   justify-content: center;
   background: $bg-gradient;
-  padding: $space-4;
+  padding: $space-lg;
 }
 
 // ── Card ───────────────────────────────────────────────────────────────
@@ -16,14 +16,14 @@
   background: #fff;
   border-radius: $radius-xl;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: $space-8;
+  padding: $space-4xl;
   width: 100%;
   max-width: 420px;
 }
 
 // ── Headings ───────────────────────────────────────────────────────────
 .title {
-  margin: 0 0 $space-1;
+  margin: 0 0 $space-xs;
   font-size: $font-3xl;
   font-weight: 700;
   color: $text-dark;
@@ -31,7 +31,7 @@
 }
 
 .subtitle {
-  margin: 0 0 $space-6;
+  margin: 0 0 $space-2xl;
   font-size: $font-body;
   font-weight: 400;
   color: $text-muted;
@@ -42,20 +42,20 @@
 .form {
   display: flex;
   flex-direction: column;
-  gap: $space-4;
+  gap: $space-lg;
 }
 
 .label {
   display: flex;
   flex-direction: column;
-  gap: $space-2;
+  gap: $space-sm;
   font-size: $font-base;
   font-weight: 500;
   color: $text-label;
 }
 
 .input {
-  padding: $space-3 $space-4;
+  padding: $space-md $space-lg;
   border: 1.5px solid $border-light;
   border-radius: $radius-md;
   font-size: $font-body;
@@ -72,7 +72,7 @@
 // ── Primary button ─────────────────────────────────────────────────────
 .primaryBtn {
   width: 100%;
-  padding: $space-3;
+  padding: $space-md;
   background: $accent;
   color: #fff;
   font-size: $font-body;
@@ -81,7 +81,7 @@
   border-radius: $radius-md;
   cursor: pointer;
   transition: background $transition-fast;
-  margin-top: $space-1;
+  margin-top: $space-xs;
 
   &:hover:not(:disabled) {
     background: $accent-hover;
@@ -97,8 +97,8 @@
 .divider {
   display: flex;
   align-items: center;
-  gap: $space-3;
-  margin: $space-5 0;
+  gap: $space-md;
+  margin: $space-xl 0;
   color: #9ca3af;
   font-size: $font-sm;
 
@@ -113,7 +113,7 @@
 
 // ── Footer ─────────────────────────────────────────────────────────────
 .footer {
-  margin: $space-5 0 0;
+  margin: $space-xl 0 0;
   text-align: center;
   font-size: $font-base;
   color: $text-muted;

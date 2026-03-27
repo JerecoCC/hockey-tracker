@@ -15,20 +15,20 @@
 
 // ── Sizes ──────────────────────────────────────────────────────────────
 .sm {
-  padding: $space-3 $space-3;
+  padding: $space-md $space-md;
   font-size: $font-sm;
-  &.iconOnly { padding: $space-2; }
+  &.iconOnly { padding: $space-sm; }
 }
 
 .md {
-  padding: $space-3 $space-4;
-  &.iconOnly { padding: $space-2; }
+  padding: $space-md $space-lg;
+  &.iconOnly { padding: $space-sm; }
 }
 
 .lg {
-  padding: $space-3 $space-5;
+  padding: $space-md $space-xl;
   font-size: $font-lg;
-  &.iconOnly { padding: $space-2; }
+  &.iconOnly { padding: $space-sm; }
 }
 
 // ── Icon size ──────────────────────────────────────────────────────────

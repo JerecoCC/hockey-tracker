@@ -5,7 +5,7 @@
   color: $text-body;
   font-size: $font-body;
   line-height: 1.6;
-  margin: 0 0 $space-6;
+  margin: 0 0 $space-2xl;
 
   strong { color: $text-bright; }
 }
@@ -13,8 +13,8 @@
 .actions {
   display: flex;
   justify-content: flex-end;
-  gap: $space-3;
-  margin-top: $space-2;
+  gap: $space-md;
+  margin-top: $space-sm;
 }
 
 

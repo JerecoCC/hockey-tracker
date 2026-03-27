@@ -4,7 +4,7 @@
 // ── Layout ─────────────────────────────────────────────────────────────
 .main {
   flex: 1;
-  padding: $space-8;
+  padding: $space-4xl;
   overflow-y: auto;
 }
 
@@ -12,21 +12,21 @@
   font-size: $font-2xl;
   font-weight: 700;
   color: $text-bright;
-  margin: 0 0 $space-5;
+  margin: 0 0 $space-xl;
 }
 
 // ── Card ───────────────────────────────────────────────────────────────
 .card {
   background: $bg-card;
   border-radius: $radius-xl;
-  padding: $space-6;
+  padding: $space-2xl;
   border: 1px solid $border;
 }
 
 // ── Badges ─────────────────────────────────────────────────────────────
 .badge {
   display: inline-block;
-  padding: $space-1 0.625rem;
+  padding: $space-xs 0.625rem;
   border-radius: $radius-pill;
   font-size: $font-xs;
   font-weight: 600;
@@ -48,7 +48,7 @@
 .actions {
   display: flex;
   justify-content: center;
-  gap: $space-2;
+  gap: $space-sm;
 }
 
 

@@ -4,7 +4,7 @@
 // ── Layout ─────────────────────────────────────────────────────────────
 .main {
   flex: 1;
-  padding: $space-8;
+  padding: $space-4xl;
   overflow-y: auto;
 }
 
@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: $space-5;
+  margin-bottom: $space-xl;
 }
 
 .sectionTitle {
@@ -27,7 +27,7 @@
 .card {
   background: $bg-card;
   border-radius: $radius-xl;
-  padding: $space-6;
+  padding: $space-2xl;
   border: 1px solid $border;
 }
 
@@ -35,20 +35,20 @@
 .actions {
   display: flex;
   justify-content: center;
-  gap: $space-2;
+  gap: $space-sm;
 }
 
 // ── Form ───────────────────────────────────────────────────────────────
 .form {
   display: flex;
   flex-direction: column;
-  gap: $space-4;
+  gap: $space-lg;
 }
 
 .label {
   display: flex;
   flex-direction: column;
-  gap: $space-2;
+  gap: $space-sm;
   font-size: $font-sm;
   font-weight: 600;
   color: $text-dim;
@@ -59,7 +59,7 @@
 .labelText {
   display: flex;
   align-items: center;
-  gap: $space-1;
+  gap: $space-xs;
 }
 
 .required { color: #f87171; }
@@ -70,7 +70,7 @@
   border-radius: $radius-md;
   color: $text-body;
   font-size: $font-base;
-  padding: $space-3 $space-4;
+  padding: $space-md $space-lg;
   outline: none;
   transition: border-color $transition-base;
 
@@ -85,35 +85,33 @@
 .formActions {
   display: flex;
   justify-content: flex-end;
-  gap: $space-3;
-  margin-top: $space-2;
+  gap: $space-md;
+  margin-top: $space-sm;
 }
 
 // ── File upload ────────────────────────────────────────────────────────────
-.fileRow {
+.logoSection {
   display: flex;
-  align-items: center;
-  gap: $space-3;
-  flex-wrap: wrap;
+  justify-content: center;
 }
 
 .fileLabel {
-  display: inline-flex;
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: $space-2;
-  padding: $space-2 $space-4;
+  justify-content: center;
+  gap: $space-sm;
+  width: 96px;
+  height: 96px;
   background: $bg-input;
   border: 1px dashed $border;
   border-radius: $radius-md;
   color: $text-dim;
-  font-size: $font-sm;
+  font-size: $font-xs;
   font-weight: 500;
+  text-align: center;
   cursor: pointer;
   transition: border-color $transition-base, color $transition-base;
-  max-width: 260px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 
   &:hover { border-color: $accent; color: $text-bright; }
 }
@@ -128,8 +126,8 @@
 }
 
 .logoPreview {
-  width: 48px;
-  height: 48px;
+  width: 96px;
+  height: 96px;
   object-fit: contain;
   border-radius: $radius-md;
   border: 1px solid $border;
@@ -143,14 +141,12 @@
   background: #ef4444;
   border: none;
   border-radius: 50%;
-  width: 18px;
-  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
   cursor: pointer;
-  padding: 0;
+  padding: $space-xs;
   line-height: 1;
 
   &:hover { background: #dc2626; }

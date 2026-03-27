@@ -5,23 +5,23 @@
 // ════════════════════════════════════════════════════════════════════════
 
 // ── Spacing scale ─────────────────────────────────────────────────────
-//   $space-1  →  4px   badge padding, list gap
-//   $space-2  →  8px   button padding, action gaps
-//   $space-3  →  12px  table header padding, modal action gap
-//   $space-4  →  16px  table cell padding, button horizontal
-//   $space-5  →  20px  nav item horizontal, section margin
-//   $space-6  →  24px  card padding, section gaps
-//   $space-7  →  28px  modal padding
-//   $space-8  →  32px  page padding
+//   $space-xs  →  4px   badge padding, list gap
+//   $space-sm  →  8px   button padding, action gaps
+//   $space-md  →  12px  table header padding, modal action gap
+//   $space-lg  →  16px  table cell padding, button horizontal
+//   $space-xl  →  20px  nav item horizontal, section margin
+//   $space-2xl  →  24px  card padding, section gaps, modal padding
+//   $space-3xl  →  28px
+//   $space-4xl  →  32px  page padding
 
-$space-1: 0.25rem;
-$space-2: 0.5rem;
-$space-3: 0.75rem;
-$space-4: 1rem;
-$space-5: 1.25rem;
-$space-6: 1.5rem;
-$space-7: 1.75rem;
-$space-8: 2rem;
+$space-xs: 0.25rem;
+$space-sm: 0.5rem;
+$space-md: 0.75rem;
+$space-lg: 1rem;
+$space-xl: 1.25rem;
+$space-2xl: 1.5rem;
+$space-3xl: 1.75rem;
+$space-4xl: 2rem;
 
 // ── Font size scale ───────────────────────────────────────────────────
 //   $font-xs    →  12px   badges, labels
