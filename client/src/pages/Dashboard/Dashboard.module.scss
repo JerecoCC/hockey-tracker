@@ -1,4 +1,5 @@
 @use '../../styles/colors' as *;
+@use '../../styles/mixins' as *;
 
 // local override — dark text on the white card (distinct from $text-body which is for dark-theme pages)
 $text-body-light: #111827;
@@ -7,15 +8,15 @@ $text-body-light: #111827;
 .page {
   min-height: 100vh;
   background: $bg-gradient;
-  padding: 24px 16px;
+  padding: $space-6 $space-4;
 }
 
 // ── Card ───────────────────────────────────────────────────────────────
 .card {
   background: #fff;
-  border-radius: 16px;
+  border-radius: $radius-xl;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: 32px 36px;
+  padding: $space-8 2.25rem;
   max-width: 680px;
   margin: 0 auto;
 }
@@ -25,26 +26,26 @@ $text-body-light: #111827;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 28px;
+  margin-bottom: $space-7;
 }
 
 .title {
   margin: 0;
-  font-size: 24px;
+  font-size: $font-3xl;
   font-weight: 700;
   color: $text-dark;
 }
 
 .logoutBtn {
-  padding: 8px 18px;
+  padding: $space-2 1.125rem;
   background: transparent;
   border: 1.5px solid $border-light;
-  border-radius: 8px;
-  font-size: 14px;
+  border-radius: $radius-md;
+  font-size: $font-base;
   font-weight: 500;
   color: #374151;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background $transition-fast;
 
   &:hover {
     background: #f3f4f6;
@@ -55,8 +56,8 @@ $text-body-light: #111827;
 .welcome {
   display: flex;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 28px;
+  gap: $space-4;
+  margin-bottom: $space-7;
 }
 
 .avatar {
@@ -68,15 +69,15 @@ $text-body-light: #111827;
 }
 
 .name {
-  margin: 0 0 4px;
-  font-size: 20px;
+  margin: 0 0 $space-1;
+  font-size: $font-2xl;
   font-weight: 600;
   color: $text-body-light;
 }
 
 .email {
   margin: 0;
-  font-size: 14px;
+  font-size: $font-base;
   color: $text-muted;
 }
 
@@ -84,25 +85,25 @@ $text-body-light: #111827;
 .placeholder {
   background: #f0f9ff;
   border: 1px solid #bae6fd;
-  border-radius: 10px;
-  padding: 20px;
+  border-radius: $radius-lg;
+  padding: $space-5;
   color: #0369a1;
-  font-size: 15px;
+  font-size: $font-body;
   text-align: center;
 }
 
 // ── Admin button ───────────────────────────────────────────────────────
 .adminBtn {
   display: block;
-  padding: 12px 20px;
+  padding: $space-3 $space-5;
   background: linear-gradient(135deg, $accent, $accent-hover);
   color: #fff;
   border: none;
-  border-radius: 10px;
-  font-size: 15px;
+  border-radius: $radius-lg;
+  font-size: $font-body;
   font-weight: 600;
   cursor: pointer;
-  transition: opacity 0.2s;
+  transition: opacity $transition-base;
 
   &:hover {
     opacity: 0.85;

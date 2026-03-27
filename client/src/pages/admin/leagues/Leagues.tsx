@@ -21,7 +21,7 @@ const LeaguesPage = () => {
   const columns: Column<LeagueRecord>[] = [
     { type: 'logo', header: 'Logo', getLogo: (l) => l.logo, getName: (l) => l.name, getCode: (l) => l.code, align: 'center' },
     { header: 'Code', key: 'code' },
-    { header: 'Name', key: 'name' },
+    { header: 'League', key: 'name' },
     {
       type: 'custom',
       header: 'Actions',

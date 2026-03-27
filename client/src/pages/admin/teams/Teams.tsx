@@ -41,7 +41,7 @@ const TeamsPage = () => {
   const columns: Column<TeamRecord>[] = [
     { type: 'logo', header: 'Logo', getLogo: (t) => t.logo, getName: (t) => t.name, getCode: (t) => t.code, align: 'center' },
     { header: 'Code', key: 'code' },
-    { header: 'Name', key: 'name' },
+    { header: 'Team', key: 'name' },
 
     {
       type: 'logo',

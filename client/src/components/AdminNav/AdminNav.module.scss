@@ -78,6 +78,7 @@ $nav-collapsed-width: 56px;
   color: $text-dim;
   font-size: $font-xs;
   line-height: 1;
+  aspect-ratio: 1 / 1;
   cursor: pointer;
   flex-shrink: 0;
   transition: border-color $transition-fast, color $transition-fast;

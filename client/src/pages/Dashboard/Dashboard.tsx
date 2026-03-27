@@ -1,5 +1,6 @@
 import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Button from '../../components/Button/Button';
 import Icon from '../../components/Icon/Icon';
 import styles from './Dashboard.module.scss';
 
@@ -17,9 +18,9 @@ const DashboardPage = () => {
       <div className={styles.card}>
         <header className={styles.header}>
           <h1 className={styles.title}><Icon name="sports_hockey" size="1.1em" /> Hockey Tracker</h1>
-          <button className={styles.logoutBtn} onClick={handleLogout}>
+          <Button variant="ghost" intent="neutral" className={styles.logoutBtn} onClick={handleLogout}>
             Sign out
-          </button>
+          </Button>
         </header>
 
         <div className={styles.welcome}>
@@ -42,13 +43,15 @@ const DashboardPage = () => {
         </p>
 
         {user?.role === 'admin' && (
-          <button
+          <Button
             className={styles.adminBtn}
+            icon="admin_panel_settings"
+            iconSize="1.1em"
             onClick={() => navigate('/admin/users')}
             style={{ marginTop: '1.25rem', width: '100%' }}
           >
-            <Icon name="admin_panel_settings" size="1.1em" /> Go to Admin Panel
-          </button>
+            Go to Admin Panel
+          </Button>
         )}
       </div>
     </div>

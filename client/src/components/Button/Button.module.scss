@@ -34,8 +34,12 @@
 // ── Icon size ──────────────────────────────────────────────────────────
 .btn svg { font-size: $font-xs; }
 
-// ── Icon-only: tighter radius ──────────────────────────────────────────
-.iconOnly { border-radius: $radius-sm; }
+// ── Icon-only: tighter radius + square shape ───────────────────────────
+.iconOnly {
+  border-radius: $radius-sm;
+  aspect-ratio: 1 / 1;
+  line-height: 1;
+}
 
 // ── Filled ────────────────────────────────────────────────────────────
 .filledAccent {
