@@ -1,3 +1,4 @@
+import Button from '../Button/Button';
 import { useAuth } from '../../context/AuthContext';
 import styles from './GoogleButton.module.scss';
 
@@ -9,7 +10,7 @@ const GoogleButton = ({ label = 'Continue with Google' }: GoogleButtonProps) => 
   const { loginWithGoogle } = useAuth();
 
   return (
-    <button className={styles.googleBtn} onClick={loginWithGoogle} type="button">
+    <Button variant="ghost" intent="neutral" className={styles.googleBtn} onClick={loginWithGoogle} type="button">
       {/* Google "G" SVG logo */}
       <svg className={styles.icon} viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
         <path
@@ -30,7 +31,7 @@ const GoogleButton = ({ label = 'Continue with Google' }: GoogleButtonProps) => 
         />
       </svg>
       {label}
-    </button>
+    </Button>
   );
 };
 

@@ -63,8 +63,10 @@ const TeamFormModal = ({
       <div className={styles.label}>
         <span className={styles.labelText}>League <span className={styles.required}>*</span></span>
         <div className={styles.leagueDropdown} ref={leagueDropdownRef}>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            intent="neutral"
             className={`${styles.leagueTrigger} ${leagueDropdownOpen ? styles.leagueTriggerOpen : ''}`}
             onClick={() => setLeagueDropdownOpen((o) => !o)}
           >
@@ -79,13 +81,15 @@ const TeamFormModal = ({
               <span className={styles.leaguePlaceholder}>— Select a league —</span>
             )}
             <Icon name="expand_more" size="1em" className={`${styles.leagueCaret} ${leagueDropdownOpen ? styles.leagueCaretOpen : ''}`} />
-          </button>
+          </Button>
           {leagueDropdownOpen && (
             <ul className={styles.leagueMenu}>
               {leagues.map((l) => (
                 <li key={l.id}>
-                  <button
+                  <Button
                     type="button"
+                    variant="ghost"
+                    intent="neutral"
                     className={`${styles.leagueOption} ${form.league_id === l.id ? styles.leagueOptionActive : ''}`}
                     onClick={() => { setForm({ ...form, league_id: l.id }); setLeagueDropdownOpen(false); }}
                   >
@@ -93,7 +97,7 @@ const TeamFormModal = ({
                       ? <img src={l.logo} alt="" className={styles.leagueOptionLogo} />
                       : <span className={styles.leagueOptionNoLogo}>{l.code[0]}</span>}
                     {l.name}
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
@@ -110,7 +114,7 @@ const TeamFormModal = ({
           {(form.logoPreview || form.existingLogoUrl) && (
             <div className={styles.previewWrapper}>
               <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
-              <button type="button" className={styles.clearBtn} onClick={onClearFile}><Icon name="close" size="0.9em" /></button>
+              <Button type="button" variant="ghost" intent="neutral" icon="close" iconSize="0.9em" className={styles.clearBtn} onClick={onClearFile} />
             </div>
           )}
           <label className={styles.fileLabel}>

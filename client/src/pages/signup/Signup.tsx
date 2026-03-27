@@ -3,6 +3,7 @@ import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../context/AuthContext';
+import Button from '../../components/Button/Button';
 import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
 import styles from './Signup.module.scss';
@@ -101,9 +102,9 @@ const SignupPage = () => {
             />
           </label>
 
-          <button className={styles.primaryBtn} type="submit" disabled={loading}>
+          <Button className={styles.primaryBtn} type="submit" disabled={loading}>
             {loading ? 'Creating account…' : 'Create account'}
-          </button>
+          </Button>
         </form>
 
         <div className={styles.divider}>

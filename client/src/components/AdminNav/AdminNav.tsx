@@ -30,26 +30,30 @@ const AdminNav = () => {
               <Icon name="shield" className={styles.brandIcon} /> Admin
             </span>
           )}
-          <button
+          <Button
+            variant="ghost"
+            intent="neutral"
             className={styles.toggleBtn}
             onClick={() => setCollapsed(c => !c)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <Icon name={collapsed ? 'chevron_right' : 'chevron_left'} size="0.65rem" />
-          </button>
+            icon={collapsed ? 'chevron_right' : 'chevron_left'}
+            iconSize="0.65rem"
+          />
         </div>
 
         <ul className={styles.list}>
           {NAV_ITEMS.map(({ label, path, icon }) => (
             <li key={path}>
-              <button
+              <Button
+                variant="ghost"
+                intent="neutral"
                 className={`${styles.navItem} ${pathname === path ? styles.active : ''}`}
                 onClick={() => navigate(path)}
                 title={collapsed ? label : undefined}
               >
                 <Icon name={icon} className={styles.icon} />
                 {!collapsed && <span className={styles.label}>{label}</span>}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

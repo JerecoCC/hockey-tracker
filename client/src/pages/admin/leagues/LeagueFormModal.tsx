@@ -78,9 +78,7 @@ const LeagueFormModal = ({
           {(form.logoPreview || form.existingLogoUrl) && (
             <div className={styles.previewWrapper}>
               <img src={form.logoPreview || form.existingLogoUrl} alt="Preview" className={styles.logoPreview} />
-              <button type="button" className={styles.clearBtn} onClick={onClearFile}>
-                <Icon name="close" size="0.9em" />
-              </button>
+              <Button type="button" variant="ghost" intent="neutral" icon="close" iconSize="0.9em" className={styles.clearBtn} onClick={onClearFile} />
             </div>
           )}
           <label className={styles.fileLabel}>
