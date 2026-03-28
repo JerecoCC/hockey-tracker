@@ -1,7 +1,6 @@
 import type { ChangeEvent, FormEvent, RefObject } from 'react';
-import cn from 'classnames';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
+import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
 import { LeagueRecord } from '../../../hooks/useLeagues';
 import styles from './Leagues.module.scss';
@@ -54,7 +53,7 @@ const LeagueFormModal = ({
     onClose={onClose}
   >
     <form
-      className={cn(styles.form)}
+      className={styles.form}
       onSubmit={onSubmit}
     >
       <label className={styles.label}>
@@ -84,41 +83,14 @@ const LeagueFormModal = ({
           required
         />
       </label>
-      <div className={styles.logoSection}>
-        {form.logoPreview || form.existingLogoUrl ? (
-          <div className={styles.previewWrapper}>
-            <img
-              src={form.logoPreview || form.existingLogoUrl}
-              alt="Preview"
-              className={styles.logoPreview}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              intent="neutral"
-              icon="close"
-              iconSize="0.9em"
-              className={styles.clearBtn}
-              onClick={onClearFile}
-            />
-          </div>
-        ) : (
-          <label className={styles.fileLabel}>
-            <Icon
-              name="upload"
-              size="1.5em"
-            />
-            Add League Logo
-            <input
-              ref={fileInputRef}
-              className={styles.fileInput}
-              type="file"
-              accept="image/*,image/svg+xml,.svg"
-              onChange={onFileChange}
-            />
-          </label>
-        )}
-      </div>
+      <LogoUpload
+        preview={form.logoPreview}
+        existingUrl={form.existingLogoUrl}
+        label="Add League Logo"
+        fileInputRef={fileInputRef}
+        onFileChange={onFileChange}
+        onClearFile={onClearFile}
+      />
       <div className={styles.formActions}>
         <Button
           type="button"

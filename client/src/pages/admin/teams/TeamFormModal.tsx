@@ -2,6 +2,7 @@ import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from
 import cn from 'classnames';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
+import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
 import { TeamRecord } from '../../../hooks/useTeams';
 import { LeagueRecord } from '../../../hooks/useLeagues';
@@ -194,43 +195,14 @@ const TeamFormModal = ({
           rows={3}
         />
       </label>
-      <div className={styles.label}>
-        Logo
-        <div className={styles.fileRow}>
-          {(form.logoPreview || form.existingLogoUrl) && (
-            <div className={styles.previewWrapper}>
-              <img
-                src={form.logoPreview || form.existingLogoUrl}
-                alt="Preview"
-                className={styles.logoPreview}
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                intent="neutral"
-                icon="close"
-                iconSize="0.9em"
-                className={styles.clearBtn}
-                onClick={onClearFile}
-              />
-            </div>
-          )}
-          <label className={styles.fileLabel}>
-            <Icon
-              name="upload"
-              size="1em"
-            />
-            {form.logoFile ? form.logoFile.name : 'Choose image…'}
-            <input
-              ref={fileInputRef}
-              className={styles.fileInput}
-              type="file"
-              accept="image/*,image/svg+xml,.svg"
-              onChange={onFileChange}
-            />
-          </label>
-        </div>
-      </div>
+      <LogoUpload
+        preview={form.logoPreview}
+        existingUrl={form.existingLogoUrl}
+        label="Add Team Logo"
+        fileInputRef={fileInputRef}
+        onFileChange={onFileChange}
+        onClearFile={onClearFile}
+      />
       <div className={styles.formActions}>
         <Button
           type="button"

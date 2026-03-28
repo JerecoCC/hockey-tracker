@@ -1,0 +1,73 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Logo upload ─────────────────────────────────────────────────────────────
+.logoSection {
+  display: flex;
+  justify-content: center;
+}
+
+.fileLabel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
+  width: 96px;
+  height: 96px;
+  padding: 0 $space-sm;
+  background: $bg-input;
+  border: 1px dashed $border;
+  border-radius: $radius-md;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 500;
+  text-align: center;
+  cursor: pointer;
+  transition:
+    border-color $transition-base,
+    color $transition-base;
+
+  &:hover {
+    border-color: $accent;
+    color: $text-bright;
+  }
+}
+
+.fileInput {
+  display: none;
+}
+
+.previewWrapper {
+  position: relative;
+  display: inline-flex;
+}
+
+.logoPreview {
+  width: 96px;
+  height: 96px;
+  object-fit: contain;
+  border-radius: $radius-md;
+  border: 1px solid $border;
+  background: $bg-input;
+}
+
+.clearBtn {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  border: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  padding: $space-xs !important;
+  line-height: 1;
+
+  &:hover {
+    background: #dc2626;
+  }
+}
