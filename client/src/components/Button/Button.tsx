@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes } from 'react';
+import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import styles from './Button.module.scss';
 
@@ -67,15 +68,13 @@ const Button = ({
 }: ButtonProps) => {
   const isIconOnly = !!icon && !children;
 
-  const cls = [
+  const cls = cn(
     styles.btn,
     SIZE[size],
     VARIANT_INTENT[variant][intent],
-    isIconOnly ? styles.iconOnly : '',
+    isIconOnly && styles.iconOnly,
     className,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  );
 
   return (
     <button

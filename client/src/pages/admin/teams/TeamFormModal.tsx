@@ -1,4 +1,5 @@
 import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
+import cn from 'classnames';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
@@ -122,7 +123,7 @@ const TeamFormModal = ({
             type="button"
             variant="ghost"
             intent="neutral"
-            className={`${styles.leagueTrigger} ${leagueDropdownOpen ? styles.leagueTriggerOpen : ''}`}
+            className={cn(styles.leagueTrigger, leagueDropdownOpen && styles.leagueTriggerOpen)}
             onClick={() => setLeagueDropdownOpen((o) => !o)}
           >
             {form.league_id && leagueMap[form.league_id] ? (
@@ -146,7 +147,7 @@ const TeamFormModal = ({
             <Icon
               name="expand_more"
               size="1em"
-              className={`${styles.leagueCaret} ${leagueDropdownOpen ? styles.leagueCaretOpen : ''}`}
+              className={cn(styles.leagueCaret, leagueDropdownOpen && styles.leagueCaretOpen)}
             />
           </Button>
           {leagueDropdownOpen && (
@@ -157,7 +158,10 @@ const TeamFormModal = ({
                     type="button"
                     variant="ghost"
                     intent="neutral"
-                    className={`${styles.leagueOption} ${form.league_id === l.id ? styles.leagueOptionActive : ''}`}
+                    className={cn(
+                      styles.leagueOption,
+                      form.league_id === l.id && styles.leagueOptionActive,
+                    )}
                     onClick={() => {
                       setForm({ ...form, league_id: l.id });
                       setLeagueDropdownOpen(false);

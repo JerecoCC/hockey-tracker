@@ -1,4 +1,5 @@
 import type { ChangeEvent, FormEvent, RefObject } from 'react';
+import cn from 'classnames';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
@@ -53,7 +54,7 @@ const LeagueFormModal = ({
     onClose={onClose}
   >
     <form
-      className={styles.form}
+      className={cn(styles.form)}
       onSubmit={onSubmit}
     >
       <label className={styles.label}>
