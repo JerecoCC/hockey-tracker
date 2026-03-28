@@ -4,7 +4,7 @@ const bcrypt = require('bcryptjs');
 const { signToken, requireAuth } = require('../middleware/auth');
 const { sql } = require('../db');
 
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
+const CLIENT_URL = (process.env.CLIENT_URL || 'http://localhost:5173').trim();
 
 /** Shared safe user shape returned to the client */
 function toPublicUser(row) {
