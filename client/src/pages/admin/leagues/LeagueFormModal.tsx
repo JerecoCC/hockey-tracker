@@ -68,6 +68,11 @@ const LeagueFormModal = ({
         className={styles.form}
         onSubmit={onSubmit}
       >
+        <LogoUpload
+          control={control}
+          name="logo"
+          label="Add League Logo"
+        />
         <Field
           label="Name"
           required
@@ -85,11 +90,6 @@ const LeagueFormModal = ({
           rules={{ required: true }}
           transform={(v) => v.toUpperCase()}
           placeholder="e.g. NHL"
-        />
-        <LogoUpload
-          control={control}
-          name="logo"
-          label="Add League Logo"
         />
         <div className={styles.formActions}>
           <Button

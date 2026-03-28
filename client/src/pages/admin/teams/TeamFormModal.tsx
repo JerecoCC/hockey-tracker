@@ -78,6 +78,11 @@ const TeamFormModal = ({
         className={styles.form}
         onSubmit={onSubmit}
       >
+        <LogoUpload
+          control={control}
+          name="logo"
+          label="Add Team Logo"
+        />
         <Field
           label="Name"
           required
@@ -105,11 +110,6 @@ const TeamFormModal = ({
           rules={{ required: true }}
           options={leagueOptions}
           placeholder="— Select a league —"
-        />
-        <LogoUpload
-          control={control}
-          name="logo"
-          label="Add Team Logo"
         />
         <div className={styles.formActions}>
           <Button
