@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
@@ -10,6 +10,7 @@ import styles from './Leagues.module.scss';
 interface FormValues {
   name: string;
   code: string;
+  logo: File | string | null;
 }
 
 interface Props {
@@ -34,48 +35,21 @@ const LeagueFormModal = ({
     handleSubmit,
     reset,
     formState: { isSubmitting },
-  } = useForm<FormValues>({ defaultValues: { name: '', code: '' } });
-
-  const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState('');
-  const [existingLogoUrl, setExistingLogoUrl] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  } = useForm<FormValues>({ defaultValues: { name: '', code: '', logo: null } });
 
   useEffect(() => {
     if (!open) return;
-    reset({ name: editTarget?.name ?? '', code: editTarget?.code ?? '' });
-    setLogoFile(null);
-    setLogoPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return '';
+    reset({
+      name: editTarget?.name ?? '',
+      code: editTarget?.code ?? '',
+      logo: editTarget?.logo ?? null,
     });
-    setExistingLogoUrl(editTarget?.logo ?? '');
   }, [open, editTarget, reset]);
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
-    setLogoPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return URL.createObjectURL(file);
-    });
-    setLogoFile(file);
-  };
-
-  const clearFile = () => {
-    setLogoPreview((prev) => {
-      if (prev) URL.revokeObjectURL(prev);
-      return '';
-    });
-    setLogoFile(null);
-    setExistingLogoUrl('');
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
   const onSubmit = handleSubmit(async (data) => {
-    let logoUrl: string | null = existingLogoUrl || null;
-    if (logoFile) {
-      const url = await uploadLogo(logoFile);
+    let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
+    if (data.logo instanceof File) {
+      const url = await uploadLogo(data.logo);
       if (!url) return;
       logoUrl = url;
     }
@@ -113,12 +87,9 @@ const LeagueFormModal = ({
           placeholder="e.g. NHL"
         />
         <LogoUpload
-          preview={logoPreview}
-          existingUrl={existingLogoUrl}
+          control={control}
+          name="logo"
           label="Add League Logo"
-          fileInputRef={fileInputRef}
-          onFileChange={handleFileChange}
-          onClearFile={clearFile}
         />
         <div className={styles.formActions}>
           <Button
