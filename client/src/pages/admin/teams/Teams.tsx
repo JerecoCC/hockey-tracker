@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
@@ -18,20 +18,7 @@ const TeamsPage = () => {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [confirmDelete, setConfirmDelete] = useState<TeamRecord | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const [leagueDropdownOpen, setLeagueDropdownOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const leagueDropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!leagueDropdownOpen) return;
-    const handler = (e: MouseEvent) => {
-      if (leagueDropdownRef.current && !leagueDropdownRef.current.contains(e.target as Node)) {
-        setLeagueDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [leagueDropdownOpen]);
 
   const leagueMap = leagues.reduce<Record<string, LeagueRecord>>((acc, l) => {
     acc[l.id] = l;
@@ -115,7 +102,6 @@ const TeamsPage = () => {
     if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
     setModalOpen(false);
     setEditTarget(null);
-    setLeagueDropdownOpen(false);
   };
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -205,11 +191,12 @@ const TeamsPage = () => {
         form={form}
         setForm={setForm}
         submitting={submitting}
-        leagues={leagues}
-        leagueMap={leagueMap}
-        leagueDropdownOpen={leagueDropdownOpen}
-        setLeagueDropdownOpen={setLeagueDropdownOpen}
-        leagueDropdownRef={leagueDropdownRef}
+        leagueOptions={leagues.map((l) => ({
+          value: l.id,
+          label: l.name,
+          logo: l.logo,
+          code: l.code,
+        }))}
         fileInputRef={fileInputRef}
         onClose={closeModal}
         onSubmit={handleSubmit}

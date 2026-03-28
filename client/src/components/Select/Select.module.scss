@@ -1,0 +1,131 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+.wrapper {
+  position: relative;
+}
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-body;
+  font-size: $font-base;
+  padding: $space-md $space-md $space-md $space-lg;
+  outline: none;
+  cursor: pointer;
+  font-weight: 400;
+  text-align: left;
+  text-transform: none;
+  letter-spacing: 0;
+  transition: border-color $transition-base;
+
+  &:focus {
+    border-color: $accent;
+  }
+
+  &.triggerOpen {
+    border-color: $accent;
+  }
+}
+
+.placeholder {
+  color: $text-dim;
+  font-size: $font-base;
+}
+
+.caret {
+  color: $text-dim;
+  flex-shrink: 0;
+  transition: transform $transition-base ease;
+
+  &.caretOpen {
+    transform: rotate(180deg);
+  }
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: $bg-card;
+  border: 1px solid $accent;
+  border-radius: $radius-md;
+  list-style: none;
+  margin: 0;
+  padding: $space-xs;
+  z-index: 200;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $space-md;
+  width: 100%;
+  padding: $space-sm $space-md;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-base;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba($accent, 0.12);
+  }
+
+  &.optionActive {
+    background: rgba($accent, 0.2);
+    color: $text-bright;
+    font-weight: 600;
+  }
+}
+
+.optionInner {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  font-size: $font-base;
+  font-weight: 400;
+  color: $text-body;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.optionLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.optionNoLogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  background: $border;
+  flex-shrink: 0;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}
+

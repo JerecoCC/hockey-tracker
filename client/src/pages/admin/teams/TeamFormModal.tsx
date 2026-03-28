@@ -1,11 +1,9 @@
-import type { ChangeEvent, Dispatch, FormEvent, RefObject, SetStateAction } from 'react';
-import cn from 'classnames';
+import type { ChangeEvent, FormEvent, RefObject } from 'react';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
+import Select, { SelectOption } from '../../../components/Select/Select';
 import { TeamRecord } from '../../../hooks/useTeams';
-import { LeagueRecord } from '../../../hooks/useLeagues';
 import styles from './Teams.module.scss';
 
 export interface FormState {
@@ -37,11 +35,7 @@ interface Props {
   form: FormState;
   setForm: (form: FormState) => void;
   submitting: boolean;
-  leagues: LeagueRecord[];
-  leagueMap: Record<string, LeagueRecord>;
-  leagueDropdownOpen: boolean;
-  setLeagueDropdownOpen: Dispatch<SetStateAction<boolean>>;
-  leagueDropdownRef: RefObject<HTMLDivElement>;
+  leagueOptions: SelectOption[];
   fileInputRef: RefObject<HTMLInputElement>;
   onClose: () => void;
   onSubmit: (e: FormEvent) => void;
@@ -55,11 +49,7 @@ const TeamFormModal = ({
   form,
   setForm,
   submitting,
-  leagues,
-  leagueMap,
-  leagueDropdownOpen,
-  setLeagueDropdownOpen,
-  leagueDropdownRef,
+  leagueOptions,
   fileInputRef,
   onClose,
   onSubmit,
@@ -116,74 +106,12 @@ const TeamFormModal = ({
         <span className={styles.labelText}>
           League <span className={styles.required}>*</span>
         </span>
-        <div
-          className={styles.leagueDropdown}
-          ref={leagueDropdownRef}
-        >
-          <Button
-            type="button"
-            variant="ghost"
-            intent="neutral"
-            className={cn(styles.leagueTrigger, leagueDropdownOpen && styles.leagueTriggerOpen)}
-            onClick={() => setLeagueDropdownOpen((o) => !o)}
-          >
-            {form.league_id && leagueMap[form.league_id] ? (
-              <span className={styles.leagueOptionInner}>
-                {leagueMap[form.league_id].logo ? (
-                  <img
-                    src={leagueMap[form.league_id].logo!}
-                    alt=""
-                    className={styles.leagueOptionLogo}
-                  />
-                ) : (
-                  <span className={styles.leagueOptionNoLogo}>
-                    {leagueMap[form.league_id].code[0]}
-                  </span>
-                )}
-                {leagueMap[form.league_id].name}
-              </span>
-            ) : (
-              <span className={styles.leaguePlaceholder}>— Select a league —</span>
-            )}
-            <Icon
-              name="expand_more"
-              size="1em"
-              className={cn(styles.leagueCaret, leagueDropdownOpen && styles.leagueCaretOpen)}
-            />
-          </Button>
-          {leagueDropdownOpen && (
-            <ul className={styles.leagueMenu}>
-              {leagues.map((l) => (
-                <li key={l.id}>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    intent="neutral"
-                    className={cn(
-                      styles.leagueOption,
-                      form.league_id === l.id && styles.leagueOptionActive,
-                    )}
-                    onClick={() => {
-                      setForm({ ...form, league_id: l.id });
-                      setLeagueDropdownOpen(false);
-                    }}
-                  >
-                    {l.logo ? (
-                      <img
-                        src={l.logo}
-                        alt=""
-                        className={styles.leagueOptionLogo}
-                      />
-                    ) : (
-                      <span className={styles.leagueOptionNoLogo}>{l.code[0]}</span>
-                    )}
-                    {l.name}
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <Select
+          value={form.league_id}
+          options={leagueOptions}
+          placeholder="— Select a league —"
+          onChange={(id) => setForm({ ...form, league_id: id })}
+        />
       </div>
       <label className={styles.label}>
         Description

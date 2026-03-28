@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faChevronDown,
   faChevronLeft,
   faChevronRight,
   faCircleUser,
@@ -39,6 +40,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   arrow_back: faArrowLeft,
   chevron_left: faChevronLeft,
   chevron_right: faChevronRight,
+  expand_more: faChevronDown,
   shield: faShield,
 
   // nav items
