@@ -1,11 +1,10 @@
-import { useState, useRef } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
+import { useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import LeagueDeleteModal from './LeagueDeleteModal';
-import LeagueFormModal, { FormState, emptyForm } from './LeagueFormModal';
+import LeagueFormModal from './LeagueFormModal';
 import styles from './Leagues.module.scss';
 
 const LeaguesPage = () => {
@@ -13,11 +12,8 @@ const LeaguesPage = () => {
     useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<LeagueRecord | null>(null);
-  const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm());
   const [confirmDelete, setConfirmDelete] = useState<LeagueRecord | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const columns: Column<LeagueRecord>[] = [
     {
@@ -64,61 +60,17 @@ const LeaguesPage = () => {
 
   const openModal = () => {
     setEditTarget(null);
-    setForm(emptyForm());
     setModalOpen(true);
   };
 
   const openEditModal = (league: LeagueRecord) => {
     setEditTarget(league);
-    setForm({
-      name: league.name,
-      code: league.code,
-      logoFile: null,
-      logoPreview: '',
-      existingLogoUrl: league.logo ?? '',
-    });
     setModalOpen(true);
   };
 
   const closeModal = () => {
-    if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
     setModalOpen(false);
     setEditTarget(null);
-  };
-
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
-    if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
-    setForm({ ...form, logoFile: file, logoPreview: URL.createObjectURL(file) });
-  };
-
-  const clearFile = () => {
-    if (form.logoPreview) URL.revokeObjectURL(form.logoPreview);
-    setForm({ ...form, logoFile: null, logoPreview: '', existingLogoUrl: '' });
-    if (fileInputRef.current) fileInputRef.current.value = '';
-  };
-
-  const handleSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    setSubmitting(true);
-    let logoUrl: string | null = form.existingLogoUrl || null;
-    if (form.logoFile) {
-      const url = await uploadLogo(form.logoFile);
-      if (!url) {
-        setSubmitting(false);
-        return;
-      }
-      logoUrl = url;
-    }
-    const payload = {
-      name: form.name,
-      code: form.code,
-      logo: logoUrl,
-    };
-    const ok = editTarget ? await updateLeague(editTarget.id, payload) : await addLeague(payload);
-    setSubmitting(false);
-    if (ok) closeModal();
   };
 
   return (
@@ -167,14 +119,10 @@ const LeaguesPage = () => {
       <LeagueFormModal
         open={modalOpen}
         editTarget={editTarget}
-        form={form}
-        setForm={setForm}
-        submitting={submitting}
-        fileInputRef={fileInputRef}
         onClose={closeModal}
-        onSubmit={handleSubmit}
-        onFileChange={handleFileChange}
-        onClearFile={clearFile}
+        addLeague={addLeague}
+        updateLeague={updateLeague}
+        uploadLogo={uploadLogo}
       />
     </main>
   );
