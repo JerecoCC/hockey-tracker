@@ -40,10 +40,10 @@ const useLeagues = () => {
         signal,
       });
       setLeagues(data);
+      setLoading(false);
     } catch (err) {
       if (axios.isCancel(err)) return;
       toast.error(apiError(err, 'Failed to load leagues'));
-    } finally {
       setLoading(false);
     }
   }, []);

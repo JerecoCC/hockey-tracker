@@ -44,10 +44,10 @@ const useTeams = () => {
         signal,
       });
       setTeams(data);
+      setLoading(false);
     } catch (err) {
       if (axios.isCancel(err)) return;
       toast.error(apiError(err, 'Failed to load teams'));
-    } finally {
       setLoading(false);
     }
   }, []);

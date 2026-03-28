@@ -25,10 +25,10 @@ const useUsers = () => {
         signal,
       });
       setUsers(data);
+      setLoading(false);
     } catch (err) {
       if (axios.isCancel(err)) return;
       toast.error(apiError(err, 'Failed to load users'));
-    } finally {
       setLoading(false);
     }
   }, []);
