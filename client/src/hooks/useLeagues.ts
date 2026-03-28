@@ -17,7 +17,7 @@ export interface CreateLeagueData {
   name: string;
   code: string;
   description?: string;
-  logo?: string;
+  logo?: string | null;
 }
 
 const authHeaders = () => {

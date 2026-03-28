@@ -102,7 +102,7 @@ const LeaguesPage = () => {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
-    let logoUrl: string | undefined = form.existingLogoUrl || undefined;
+    let logoUrl: string | null = form.existingLogoUrl || null;
     if (form.logoFile) {
       const url = await uploadLogo(form.logoFile);
       if (!url) {

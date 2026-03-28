@@ -20,7 +20,7 @@ export interface CreateTeamData {
   code: string;
   description?: string;
   location?: string;
-  logo?: string;
+  logo?: string | null;
   league_id?: string | null;
 }
 
