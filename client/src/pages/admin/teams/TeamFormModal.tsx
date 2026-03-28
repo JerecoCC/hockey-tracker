@@ -82,12 +82,6 @@ const TeamFormModal = ({
         placeholder="e.g. TOR"
       />
       <Field
-        label="Location"
-        value={form.location ?? ''}
-        onChange={(e) => setForm({ ...form, location: e.target.value })}
-        placeholder="e.g. Toronto, ON"
-      />
-      <Field
         label="League"
         required
         type="select"
@@ -95,14 +89,6 @@ const TeamFormModal = ({
         options={leagueOptions}
         placeholder="— Select a league —"
         onChange={(id) => setForm({ ...form, league_id: id })}
-      />
-      <Field
-        label="Description"
-        type="textarea"
-        value={form.description}
-        onChange={(e) => setForm({ ...form, description: e.target.value })}
-        placeholder="Optional description"
-        rows={3}
       />
       <LogoUpload
         preview={form.logoPreview}
