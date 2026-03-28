@@ -1,5 +1,5 @@
-@use '../../styles/colors' as *;
-@use '../../styles/mixins' as *;
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
 
 // ── Table wrapper ──────────────────────────────────────────────────────
 .tableWrapper {
@@ -84,6 +84,7 @@ table {
   height: 32px;
   object-fit: contain;
   border-radius: $radius-sm;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
 }
 
 .logoPlaceholder {
