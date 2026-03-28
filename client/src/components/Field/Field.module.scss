@@ -1,0 +1,53 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Wrapper ─────────────────────────────────────────────────────────────
+.label {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+// ── Label text row ───────────────────────────────────────────────────────
+.labelText {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.required {
+  color: #f87171;
+}
+
+// ── Field base ──────────────────────────────────────────────────────────
+.field {
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-body;
+  font-size: $font-base;
+  padding: $space-md $space-lg;
+  outline: none;
+  transition: border-color $transition-base;
+
+  &:focus {
+    border-color: $accent;
+  }
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+// ── Textarea extras ─────────────────────────────────────────────────────
+.textarea {
+  resize: vertical;
+  font-family: inherit;
+  min-height: 80px;
+}
+

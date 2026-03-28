@@ -1,8 +1,9 @@
 import type { ChangeEvent, FormEvent, RefObject } from 'react';
 import Button from '../../../components/Button/Button';
+import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
-import Select, { SelectOption } from '../../../components/Select/Select';
+import { SelectOption } from '../../../components/Select/Select';
 import { TeamRecord } from '../../../hooks/useTeams';
 import styles from './Teams.module.scss';
 
@@ -65,64 +66,44 @@ const TeamFormModal = ({
       className={styles.form}
       onSubmit={onSubmit}
     >
-      <label className={styles.label}>
-        <span className={styles.labelText}>
-          Name <span className={styles.required}>*</span>
-        </span>
-        <input
-          className={styles.input}
-          type="text"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="e.g. Toronto Maple Leafs"
-          required
-          autoFocus
-        />
-      </label>
-      <label className={styles.label}>
-        <span className={styles.labelText}>
-          Code <span className={styles.required}>*</span>
-        </span>
-        <input
-          className={styles.input}
-          type="text"
-          value={form.code}
-          onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-          placeholder="e.g. TOR"
-          required
-        />
-      </label>
-      <label className={styles.label}>
-        Location
-        <input
-          className={styles.input}
-          type="text"
-          value={form.location ?? ''}
-          onChange={(e) => setForm({ ...form, location: e.target.value })}
-          placeholder="e.g. Toronto, ON"
-        />
-      </label>
-      <div className={styles.label}>
-        <span className={styles.labelText}>
-          League <span className={styles.required}>*</span>
-        </span>
-        <Select
-          value={form.league_id}
-          options={leagueOptions}
-          placeholder="— Select a league —"
-          onChange={(id) => setForm({ ...form, league_id: id })}
-        />
-      </div>
-      <label className={styles.label}>
-        Description
-        <textarea
-          className={styles.textarea}
-          value={form.description}
-          onChange={(e) => setForm({ ...form, description: e.target.value })}
-          placeholder="Optional description"
-          rows={3}
-        />
-      </label>
+      <Field
+        label="Name"
+        required
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        placeholder="e.g. Toronto Maple Leafs"
+        autoFocus
+      />
+      <Field
+        label="Code"
+        required
+        value={form.code}
+        onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+        placeholder="e.g. TOR"
+      />
+      <Field
+        label="Location"
+        value={form.location ?? ''}
+        onChange={(e) => setForm({ ...form, location: e.target.value })}
+        placeholder="e.g. Toronto, ON"
+      />
+      <Field
+        label="League"
+        required
+        type="select"
+        value={form.league_id}
+        options={leagueOptions}
+        placeholder="— Select a league —"
+        onChange={(id) => setForm({ ...form, league_id: id })}
+      />
+      <Field
+        label="Description"
+        type="textarea"
+        value={form.description}
+        onChange={(e) => setForm({ ...form, description: e.target.value })}
+        placeholder="Optional description"
+        rows={3}
+      />
       <LogoUpload
         preview={form.logoPreview}
         existingUrl={form.existingLogoUrl}

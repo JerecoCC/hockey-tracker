@@ -1,5 +1,6 @@
 import type { ChangeEvent, FormEvent, RefObject } from 'react';
 import Button from '../../../components/Button/Button';
+import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
 import { LeagueRecord } from '../../../hooks/useLeagues';
@@ -56,33 +57,21 @@ const LeagueFormModal = ({
       className={styles.form}
       onSubmit={onSubmit}
     >
-      <label className={styles.label}>
-        <span className={styles.labelText}>
-          Name <span className={styles.required}>*</span>
-        </span>
-        <input
-          className={styles.input}
-          type="text"
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="e.g. National Hockey League"
-          required
-          autoFocus
-        />
-      </label>
-      <label className={styles.label}>
-        <span className={styles.labelText}>
-          Code <span className={styles.required}>*</span>
-        </span>
-        <input
-          className={styles.input}
-          type="text"
-          value={form.code}
-          onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-          placeholder="e.g. NHL"
-          required
-        />
-      </label>
+      <Field
+        label="Name"
+        required
+        value={form.name}
+        onChange={(e) => setForm({ ...form, name: e.target.value })}
+        placeholder="e.g. National Hockey League"
+        autoFocus
+      />
+      <Field
+        label="Code"
+        required
+        value={form.code}
+        onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+        placeholder="e.g. NHL"
+      />
       <LogoUpload
         preview={form.logoPreview}
         existingUrl={form.existingLogoUrl}
