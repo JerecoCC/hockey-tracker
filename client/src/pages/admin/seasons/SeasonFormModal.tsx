@@ -23,7 +23,14 @@ interface Props {
   updateSeason: (id: string, data: Partial<CreateSeasonData>) => Promise<boolean>;
 }
 
-const SeasonFormModal = ({ open, editTarget, leagueOptions, onClose, addSeason, updateSeason }: Props) => {
+const SeasonFormModal = ({
+  open,
+  editTarget,
+  leagueOptions,
+  onClose,
+  addSeason,
+  updateSeason,
+}: Props) => {
   const {
     control,
     handleSubmit,
@@ -50,9 +57,7 @@ const SeasonFormModal = ({ open, editTarget, leagueOptions, onClose, addSeason, 
       start_date: data.start_date || null,
       end_date: data.end_date || null,
     };
-    const ok = editTarget
-      ? await updateSeason(editTarget.id, payload)
-      : await addSeason(payload);
+    const ok = editTarget ? await updateSeason(editTarget.id, payload) : await addSeason(payload);
     if (ok) onClose();
   });
 
@@ -88,15 +93,17 @@ const SeasonFormModal = ({ open, editTarget, leagueOptions, onClose, addSeason, 
         <div className={styles.dateRow}>
           <Field
             label="Start Date"
-            type="date"
+            type="datepicker"
             control={control}
             name="start_date"
+            placeholder="Select start date…"
           />
           <Field
             label="End Date"
-            type="date"
+            type="datepicker"
             control={control}
             name="end_date"
+            placeholder="Select end date…"
           />
         </div>
         <div className={styles.formActions}>
@@ -121,4 +128,3 @@ const SeasonFormModal = ({ open, editTarget, leagueOptions, onClose, addSeason, 
 };
 
 export default SeasonFormModal;
-

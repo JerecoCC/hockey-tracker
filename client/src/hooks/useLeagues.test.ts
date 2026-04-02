@@ -21,7 +21,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   localStorage.setItem('token', 'test-token');
   mockedAxios.get.mockResolvedValue({ data: [mockLeague] });
-  (axios.isCancel as jest.Mock).mockReturnValue(false);
+  (axios.isCancel as unknown as jest.Mock).mockReturnValue(false);
 });
 
 afterEach(() => localStorage.clear());

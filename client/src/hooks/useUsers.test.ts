@@ -21,7 +21,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   localStorage.setItem('token', 'test-token');
   mockedAxios.get.mockResolvedValue({ data: [mockUser] });
-  (axios.isCancel as jest.Mock).mockReturnValue(false);
+  (axios.isCancel as unknown as jest.Mock).mockReturnValue(false);
 });
 
 afterEach(() => localStorage.clear());
@@ -71,7 +71,7 @@ describe('useUsers', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
-      await result.current.deleteUser('1', 'Alice');
+      await result.current.deleteUser('1');
     });
 
     expect(mockedAxios.delete).not.toHaveBeenCalled();
@@ -84,7 +84,7 @@ describe('useUsers', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
-      await result.current.deleteUser('1', 'Alice');
+      await result.current.deleteUser('1');
     });
 
     expect(mockedAxios.delete).toHaveBeenCalledWith(
@@ -100,7 +100,7 @@ describe('useUsers', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
-      await result.current.deleteUser('1', 'Alice');
+      await result.current.deleteUser('1');
     });
 
     expect(toast.error).toHaveBeenCalledWith('Not found');

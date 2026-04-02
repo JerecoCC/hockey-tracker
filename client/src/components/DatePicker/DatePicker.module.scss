@@ -1,0 +1,277 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Wrapper ─────────────────────────────────────────────────────────────
+.wrapper {
+  position: relative;
+  width: 100%;
+}
+
+// ── Trigger button ───────────────────────────────────────────────────────
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  width: 100%;
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-body;
+  font-size: $font-base;
+  font-family: inherit;
+  padding: $space-md $space-lg;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color $transition-base;
+
+  &:focus {
+    outline: none;
+    border-color: $accent;
+  }
+
+  &:hover {
+    border-color: lighten($border, 10%);
+  }
+}
+
+.calIcon {
+  color: $text-dim;
+  flex-shrink: 0;
+}
+
+.value {
+  flex: 1;
+  color: $text-body;
+}
+
+.placeholder {
+  flex: 1;
+  color: $text-dim;
+}
+
+.clear {
+  color: $text-dim;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: $radius-sm;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $text-body;
+  }
+}
+
+// ── Dropdown calendar ────────────────────────────────────────────────────
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 200;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  padding: $space-lg;
+  min-width: 268px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+// ── Calendar header (prev / month-year / next) ────────────────────────────
+.calHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-lg;
+}
+
+// Clickable month/year label in header (replaces static .monthYear)
+.headerLabel {
+  background: none;
+  border: none;
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-bright;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 2px $space-sm;
+  border-radius: $radius-sm;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $accent-light;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: $text-dim;
+  cursor: pointer;
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-sm;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $text-body;
+    background: rgba(255, 255, 255, 0.07);
+  }
+}
+
+// ── Day grid ─────────────────────────────────────────────────────────────
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+}
+
+.dayName {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-align: center;
+  padding: $space-xs 0 $space-sm;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.day {
+  background: none;
+  border: 1px solid transparent;
+  color: $text-body;
+  font-size: $font-base;
+  font-family: inherit;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  padding: $space-xs 0;
+  text-align: center;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: $text-bright;
+  }
+}
+
+// Today — outlined with accent colour
+.today {
+  border-color: $accent;
+  color: $accent-light;
+}
+
+// Selected — filled accent
+.selected {
+  background: $accent;
+  color: #fff;
+  font-weight: 600;
+
+  &:hover {
+    background: $accent-hover;
+  }
+}
+
+// ── Month grid ────────────────────────────────────────────────────────────
+.monthGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-sm;
+}
+
+.monthBtn {
+  background: none;
+  border: 1px solid transparent;
+  color: $text-body;
+  font-size: $font-sm;
+  font-family: inherit;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  padding: $space-sm 0;
+  text-align: center;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: $text-bright;
+  }
+}
+
+// ── Year grid ─────────────────────────────────────────────────────────────
+.yearGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: $space-sm;
+}
+
+.yearBtn {
+  background: none;
+  border: 1px solid transparent;
+  color: $text-body;
+  font-size: $font-sm;
+  font-family: inherit;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  padding: $space-sm 0;
+  text-align: center;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: $text-bright;
+  }
+}
+
+// ── Footer (Today / Clear) ────────────────────────────────────────────────
+.footer {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin-top: $space-md;
+  padding-top: $space-md;
+  border-top: 1px solid $border;
+}
+
+.footerBtn {
+  background: none;
+  border: 1px solid $border;
+  color: $text-dim;
+  font-size: $font-sm;
+  font-family: inherit;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  padding: $space-xs $space-md;
+  transition:
+    color $transition-fast,
+    border-color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $text-bright;
+    border-color: $accent;
+    background: rgba(37, 99, 235, 0.12);
+  }
+}
+
+.footerBtnClear {
+  margin-left: auto;
+
+  &:hover {
+    color: #f87171;
+    border-color: #f87171;
+    background: rgba(248, 113, 113, 0.1);
+  }
+}
