@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
 import Icon from '../Icon/Icon';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './Table.module.scss';
 
 export type Column<T> =
@@ -43,20 +44,18 @@ const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
     const src = col.getLogo(row);
     const name = col.getName(row);
     const code = col.getCode(row);
-    return src ? (
-      <img
-        src={src}
-        alt={name}
-        title={name}
-        className={styles.logoThumb}
-      />
-    ) : (
-      <span
-        className={styles.logoPlaceholder}
-        title={name}
-      >
-        {code.slice(0, 3)}
-      </span>
+    return (
+      <Tooltip text={name}>
+        {src ? (
+          <img
+            src={src}
+            alt={name}
+            className={styles.logoThumb}
+          />
+        ) : (
+          <span className={styles.logoPlaceholder}>{code.slice(0, 3)}</span>
+        )}
+      </Tooltip>
     );
   }
   return String(row[col.key] ?? '');

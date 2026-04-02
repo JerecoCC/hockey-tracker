@@ -1,0 +1,49 @@
+@use '../../styles/colors' as *;
+@use '../../styles/mixins' as *;
+
+// ── Wrapper ─────────────────────────────────────────────────────────────────
+.wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover .tip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+// ── Tip bubble ───────────────────────────────────────────────────────────────
+.tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%) translateY(4px);
+  background: $border; // slate-700 — sits above card without being jarring
+  color: $text-bright;
+  font-size: $font-xs;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transition:
+    opacity $transition-fast,
+    transform $transition-fast;
+  z-index: 100;
+
+  // ── Arrow ──────────────────────────────────────────────────────────────
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: $border;
+  }
+}
+

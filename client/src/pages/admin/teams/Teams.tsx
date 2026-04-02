@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
+import Tooltip from '../../../components/Tooltip/Tooltip';
 import useTeams, { TeamRecord } from '../../../hooks/useTeams';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import TeamDeleteModal from './TeamDeleteModal';
@@ -67,20 +68,18 @@ const TeamsPage = () => {
       render: (t) => {
         const league = t.league_id ? leagueMap[t.league_id] : null;
         if (!league) return <span className={styles.noLeague}>—</span>;
-        return league.logo ? (
-          <img
-            src={league.logo}
-            alt={league.name}
-            title={league.name}
-            className={styles.logoThumb}
-          />
-        ) : (
-          <span
-            className={styles.logoPlaceholder}
-            title={league.name}
-          >
-            {league.code.slice(0, 3)}
-          </span>
+        return (
+          <Tooltip text={league.name}>
+            {league.logo ? (
+              <img
+                src={league.logo}
+                alt={league.name}
+                className={styles.logoThumb}
+              />
+            ) : (
+              <span className={styles.logoPlaceholder}>{league.code.slice(0, 3)}</span>
+            )}
+          </Tooltip>
         );
       },
     },

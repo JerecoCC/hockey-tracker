@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
+import Tooltip from '../../../components/Tooltip/Tooltip';
 import useSeasons, { SeasonRecord } from '../../../hooks/useSeasons';
 import useLeagues from '../../../hooks/useLeagues';
 import SeasonDeleteModal from './SeasonDeleteModal';
@@ -58,22 +59,19 @@ const SeasonsPage = () => {
       type: 'custom',
       header: 'League',
       align: 'center',
-      render: (s) =>
-        s.league_logo ? (
-          <img
-            src={s.league_logo}
-            alt={s.league_name}
-            title={s.league_name}
-            className={styles.logoThumb}
-          />
-        ) : (
-          <span
-            className={styles.logoPlaceholder}
-            title={s.league_name}
-          >
-            {s.league_code.slice(0, 3)}
-          </span>
-        ),
+      render: (s) => (
+        <Tooltip text={s.league_name}>
+          {s.league_logo ? (
+            <img
+              src={s.league_logo}
+              alt={s.league_name}
+              className={styles.logoThumb}
+            />
+          ) : (
+            <span className={styles.logoPlaceholder}>{s.league_code.slice(0, 3)}</span>
+          )}
+        </Tooltip>
+      ),
     },
     {
       type: 'custom',
