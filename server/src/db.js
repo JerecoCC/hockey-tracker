@@ -53,6 +53,17 @@ async function initSchema() {
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS seasons (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name        TEXT NOT NULL,
+      league_id   UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      start_date  DATE,
+      end_date    DATE,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
   console.log('Database schema ready');
 }
 
