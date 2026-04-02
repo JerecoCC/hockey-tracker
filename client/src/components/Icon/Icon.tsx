@@ -14,6 +14,9 @@ import {
   faPeopleGroup,
   faPlus,
   faShield,
+  faSort,
+  faSortDown,
+  faSortUp,
   faStar,
   faTrash,
   faTrophy,
@@ -50,6 +53,11 @@ const ICON_MAP: Record<string, IconDefinition> = {
   groups: faPeopleGroup,
   group: faUsers,
   emoji_events: faTrophy,
+
+  // sort
+  sort: faSort,
+  sort_asc: faSortUp,
+  sort_desc: faSortDown,
 
   // actions
   add: faPlus,

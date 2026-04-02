@@ -25,11 +25,13 @@ export const getUserColumns = ({
   confirmRole,
   confirmDelete,
 }: ColumnDeps): Column<UserRecord>[] => [
-  { header: 'Name', key: 'display_name' },
-  { header: 'Email', key: 'email' },
+  { header: 'Name', key: 'display_name', sortable: true },
+  { header: 'Email', key: 'email', sortable: true },
   {
     type: 'custom',
     header: 'Role',
+    sortable: true,
+    sortKey: 'role',
     render: (u) => (
       <span
         className={`${styles.badge} ${u.role === 'admin' ? styles.badgeAdmin : styles.badgeUser}`}
@@ -41,6 +43,8 @@ export const getUserColumns = ({
   {
     type: 'custom',
     header: 'Auth',
+    sortable: true,
+    sortKey: 'is_google',
     render: (u) =>
       u.is_google ? (
         <>
@@ -62,7 +66,7 @@ export const getUserColumns = ({
         </>
       ),
   },
-  { type: 'date', header: 'Joined', key: 'created_at' },
+  { type: 'date', header: 'Joined', key: 'created_at', sortable: true },
   {
     type: 'custom',
     header: 'Actions',

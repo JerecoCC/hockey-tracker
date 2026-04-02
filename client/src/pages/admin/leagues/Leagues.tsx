@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
@@ -7,6 +7,14 @@ import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
 import styles from './Leagues.module.scss';
 
+const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
+  [...data].sort((a, b) => {
+    const av = String((a as Record<string, unknown>)[key] ?? '');
+    const bv = String((b as Record<string, unknown>)[key] ?? '');
+    const cmp = av.localeCompare(bv, undefined, { numeric: true, sensitivity: 'base' });
+    return dir === 'asc' ? cmp : -cmp;
+  });
+
 const LeaguesPage = () => {
   const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } =
     useLeagues();
@@ -14,11 +22,25 @@ const LeaguesPage = () => {
   const [editTarget, setEditTarget] = useState<LeagueRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LeagueRecord | null>(null);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [sortKey, setSortKey] = useState('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  const handleSort = (key: string, dir: 'asc' | 'desc') => {
+    setSortKey(key);
+    setSortDir(dir);
+  };
+
+  const sortedLeagues = useMemo(
+    () => sortRows(leagues, sortKey, sortDir),
+    [leagues, sortKey, sortDir],
+  );
 
   const columns: Column<LeagueRecord>[] = [
     {
       type: 'custom',
       header: 'League',
+      sortable: true,
+      sortKey: 'name',
       render: (l) => (
         <div className={styles.logoWithName}>
           {l.logo ? (
@@ -34,7 +56,7 @@ const LeaguesPage = () => {
         </div>
       ),
     },
-    { header: 'Code', key: 'code' },
+    { header: 'Code', key: 'code', sortable: true },
     {
       type: 'custom',
       header: 'Actions',
@@ -103,10 +125,13 @@ const LeaguesPage = () => {
       <div className={styles.card}>
         <Table
           columns={columns}
-          data={leagues}
+          data={sortedLeagues}
           rowKey={(l) => l.id}
           loading={loading}
           emptyMessage="No leagues yet. Add one to get started."
+          activeSortKey={sortKey}
+          sortDir={sortDir}
+          onSort={handleSort}
         />
       </div>
 
