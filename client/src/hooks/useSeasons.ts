@@ -4,9 +4,12 @@ import { toast } from 'react-toastify';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
+export type SeasonType = 'regular' | 'playoffs';
+
 export interface SeasonRecord {
   id: string;
   name: string;
+  type: SeasonType;
   league_id: string;
   league_name: string;
   league_code: string;
@@ -17,7 +20,7 @@ export interface SeasonRecord {
 }
 
 export interface CreateSeasonData {
-  name: string;
+  type: SeasonType;
   league_id: string;
   start_date?: string | null;
   end_date?: string | null;

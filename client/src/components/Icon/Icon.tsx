@@ -45,6 +45,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   shield: faShield,
 
   // nav items
+  calendar_month: faCalendarDays,
   calendar_today: faCalendarDays,
   groups: faPeopleGroup,
   group: faUsers,

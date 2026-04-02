@@ -4,11 +4,20 @@ import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import { type SelectOption } from '../../../components/Select/Select';
-import { type CreateSeasonData, type SeasonRecord } from '../../../hooks/useSeasons';
+import {
+  type CreateSeasonData,
+  type SeasonRecord,
+  type SeasonType,
+} from '../../../hooks/useSeasons';
 import styles from './Seasons.module.scss';
 
+const SEASON_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'regular', label: 'Regular Season' },
+  { value: 'playoffs', label: 'Playoffs' },
+];
+
 interface FormValues {
-  name: string;
+  type: SeasonType;
   league_id: string | null;
   start_date: string;
   end_date: string;
@@ -37,13 +46,13 @@ const SeasonFormModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { name: '', league_id: null, start_date: '', end_date: '' },
+    defaultValues: { type: 'regular', league_id: null, start_date: '', end_date: '' },
   });
 
   useEffect(() => {
     if (!open) return;
     reset({
-      name: editTarget?.name ?? '',
+      type: editTarget?.type ?? 'regular',
       league_id: editTarget?.league_id ?? null,
       start_date: editTarget?.start_date?.slice(0, 10) ?? '',
       end_date: editTarget?.end_date?.slice(0, 10) ?? '',
@@ -52,7 +61,7 @@ const SeasonFormModal = ({
 
   const onSubmit = handleSubmit(async (data) => {
     const payload: CreateSeasonData = {
-      name: data.name,
+      type: data.type,
       league_id: data.league_id!,
       start_date: data.start_date || null,
       end_date: data.end_date || null,
@@ -72,13 +81,14 @@ const SeasonFormModal = ({
         onSubmit={onSubmit}
       >
         <Field
-          label="Name"
+          label="Season Type"
           required
+          type="select"
           control={control}
-          name="name"
+          name="type"
           rules={{ required: true }}
-          placeholder="e.g. 2024–25 Regular Season"
-          autoFocus
+          options={SEASON_TYPE_OPTIONS}
+          placeholder="— Select type —"
         />
         <Field
           label="League"
