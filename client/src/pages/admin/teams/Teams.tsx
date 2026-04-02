@@ -23,23 +23,47 @@ const TeamsPage = () => {
 
   const columns: Column<TeamRecord>[] = [
     {
-      type: 'logo',
-      header: 'Logo',
-      getLogo: (t) => t.logo,
-      getName: (t) => t.name,
-      getCode: (t) => t.code,
-      align: 'center',
+      type: 'custom',
+      header: 'Team',
+      render: (t) => (
+        <div className={styles.logoWithName}>
+          {t.logo ? (
+            <img
+              src={t.logo}
+              alt=""
+              className={styles.logoThumb}
+            />
+          ) : (
+            <span className={styles.logoPlaceholder}>{t.code.slice(0, 3)}</span>
+          )}
+          {t.name}
+        </div>
+      ),
     },
     { header: 'Code', key: 'code' },
-    { header: 'Team', key: 'name' },
-
     {
-      type: 'logo',
+      type: 'custom',
       header: 'League',
-      getLogo: (t) => (t.league_id ? (leagueMap[t.league_id]?.logo ?? null) : null),
-      getName: (t) => (t.league_id ? (leagueMap[t.league_id]?.name ?? '—') : '—'),
-      getCode: (t) => (t.league_id ? (leagueMap[t.league_id]?.code ?? '—') : '—'),
       align: 'center',
+      render: (t) => {
+        const league = t.league_id ? leagueMap[t.league_id] : null;
+        if (!league) return <span className={styles.noLeague}>—</span>;
+        return league.logo ? (
+          <img
+            src={league.logo}
+            alt={league.name}
+            title={league.name}
+            className={styles.logoThumb}
+          />
+        ) : (
+          <span
+            className={styles.logoPlaceholder}
+            title={league.name}
+          >
+            {league.code.slice(0, 3)}
+          </span>
+        );
+      },
     },
     {
       type: 'custom',

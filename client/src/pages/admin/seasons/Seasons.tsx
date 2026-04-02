@@ -10,11 +10,14 @@ import styles from './Seasons.module.scss';
 
 const formatDate = (dateStr: string | null) => {
   if (!dateStr) return '—';
-  return new Date(dateStr).toLocaleDateString(undefined, {
+  // Parse the date parts directly from the ISO string to avoid timezone
+  // shifts: new Date("YYYY-MM-DD") is UTC midnight which in UTC+ locales
+  // falls on the previous calendar day.
+  const [y, m, d] = dateStr.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString(undefined, {
     year: 'numeric',
     month: 'short',
     day: 'numeric',
-    timeZone: 'UTC',
   });
 };
 
@@ -27,16 +30,28 @@ const SeasonsPage = () => {
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   const columns: Column<SeasonRecord>[] = [
-    {
-      type: 'logo',
-      header: 'League',
-      getLogo: (s) => s.league_logo,
-      getName: (s) => s.league_name,
-      getCode: (s) => s.league_code,
-      align: 'center',
-    },
-    { header: 'League', key: 'league_name' },
     { header: 'Season', key: 'name' },
+    {
+      type: 'custom',
+      header: 'League',
+      align: 'center',
+      render: (s) =>
+        s.league_logo ? (
+          <img
+            src={s.league_logo}
+            alt={s.league_name}
+            title={s.league_name}
+            className={styles.logoThumb}
+          />
+        ) : (
+          <span
+            className={styles.logoPlaceholder}
+            title={s.league_name}
+          >
+            {s.league_code.slice(0, 3)}
+          </span>
+        ),
+    },
     {
       type: 'custom',
       header: 'Start Date',
@@ -157,4 +172,3 @@ const SeasonsPage = () => {
 };
 
 export default SeasonsPage;
-

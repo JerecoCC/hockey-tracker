@@ -81,16 +81,6 @@ const SeasonFormModal = ({
         onSubmit={onSubmit}
       >
         <Field
-          label="Season Type"
-          required
-          type="select"
-          control={control}
-          name="type"
-          rules={{ required: true }}
-          options={SEASON_TYPE_OPTIONS}
-          placeholder="— Select type —"
-        />
-        <Field
           label="League"
           required
           type="select"
@@ -99,6 +89,16 @@ const SeasonFormModal = ({
           rules={{ required: true }}
           options={leagueOptions}
           placeholder="— Select a league —"
+        />
+        <Field
+          label="Season Type"
+          required
+          type="select"
+          control={control}
+          name="type"
+          rules={{ required: true }}
+          options={SEASON_TYPE_OPTIONS}
+          placeholder="— Select type —"
         />
         <div className={styles.dateRow}>
           <Field

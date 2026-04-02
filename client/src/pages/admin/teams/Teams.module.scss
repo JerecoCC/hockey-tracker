@@ -31,6 +31,41 @@
   border: 1px solid $border;
 }
 
+// ── Logo + name cell ───────────────────────────────────────────────────
+.logoWithName {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.logoThumb {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+}
+
+.logoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.noLeague {
+  color: $text-dim;
+}
+
 // ── Table actions ───────────────────────────────────────────────────────
 .actions {
   display: flex;

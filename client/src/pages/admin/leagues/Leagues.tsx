@@ -17,15 +17,24 @@ const LeaguesPage = () => {
 
   const columns: Column<LeagueRecord>[] = [
     {
-      type: 'logo',
-      header: 'Logo',
-      getLogo: (l) => l.logo,
-      getName: (l) => l.name,
-      getCode: (l) => l.code,
-      align: 'center',
+      type: 'custom',
+      header: 'League',
+      render: (l) => (
+        <div className={styles.logoWithName}>
+          {l.logo ? (
+            <img
+              src={l.logo}
+              alt=""
+              className={styles.logoThumb}
+            />
+          ) : (
+            <span className={styles.logoPlaceholder}>{l.code.slice(0, 3)}</span>
+          )}
+          {l.name}
+        </div>
+      ),
     },
     { header: 'Code', key: 'code' },
-    { header: 'League', key: 'name' },
     {
       type: 'custom',
       header: 'Actions',

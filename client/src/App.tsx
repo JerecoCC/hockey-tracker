@@ -61,7 +61,7 @@ const AdminRoute = ({ children }: { children: ReactNode }) => {
 const App = () => (
   <AuthProvider>
     <ToastContainer
-      position="top-right"
+      position="bottom-right"
       autoClose={4000}
       theme="colored"
     />
