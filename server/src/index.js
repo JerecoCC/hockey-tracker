@@ -12,9 +12,18 @@ const authRoutes = require('./routes/auth');
 const adminRoutes = require('./routes/admin');
 const leaguesRoutes = require('./routes/leagues');
 const teamsRoutes = require('./routes/teams');
+const seasonsRoutes = require('./routes/seasons');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// ---------------------------------------------------------------------------
+// Schema init – run immediately so the promise is ready before any request
+// arrives, regardless of whether we're in local dev or Vercel serverless.
+// ---------------------------------------------------------------------------
+const schemaReady = initSchema().catch((err) => {
+  console.error('Failed to initialise database schema:', err);
+});
 
 // ---------------------------------------------------------------------------
 // Middleware
@@ -41,6 +50,11 @@ app.use(
 app.use(passport.initialize());
 app.use(passport.session());
 
+// Ensure schema is ready before any route handler runs
+app.use((_req, _res, next) => {
+  schemaReady.then(() => next()).catch(next);
+});
+
 // ---------------------------------------------------------------------------
 // Routes
 // ---------------------------------------------------------------------------
@@ -48,6 +62,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/leagues', leaguesRoutes);
 app.use('/api/admin/teams', teamsRoutes);
+app.use('/api/admin/seasons', seasonsRoutes);
 
 app.get('/api/health', async (_req, res) => {
   try {
@@ -71,19 +86,15 @@ app.get('/api/health', async (_req, res) => {
 // ---------------------------------------------------------------------------
 if (require.main === module) {
   // Running directly: `node src/index.js` or `npm run dev:server`
-  initSchema()
-    .then(() => {
-      app.listen(PORT, () => {
-        console.log(`Server running on http://localhost:${PORT}`);
-      });
-    })
-    .catch((err) => {
-      console.error('Failed to initialise database schema:', err);
-      process.exit(1);
+  // schemaReady is already in flight; wait for it before accepting connections.
+  schemaReady.then(() => {
+    app.listen(PORT, () => {
+      console.log(`Server running on http://localhost:${PORT}`);
     });
-} else {
-  // Imported as a module (Vercel serverless) – init schema in the background
-  initSchema().catch(console.error);
+  }).catch((err) => {
+    console.error('Failed to initialise database schema:', err);
+    process.exit(1);
+  });
 }
 
 // Export for Vercel serverless

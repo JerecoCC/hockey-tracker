@@ -15,7 +15,7 @@ type BaseProps = {
 
 type TextProps = BaseProps &
   Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'name'> & {
-    type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url' | 'tel';
+    type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url' | 'tel' | 'date';
     transform?: (value: string) => string;
   };
 
