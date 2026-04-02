@@ -4,20 +4,10 @@ import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import { type SelectOption } from '../../../components/Select/Select';
-import {
-  type CreateSeasonData,
-  type SeasonRecord,
-  type SeasonType,
-} from '../../../hooks/useSeasons';
+import { type CreateSeasonData, type SeasonRecord } from '../../../hooks/useSeasons';
 import styles from './Seasons.module.scss';
 
-const SEASON_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'regular', label: 'Regular Season' },
-  { value: 'playoffs', label: 'Playoffs' },
-];
-
 interface FormValues {
-  type: SeasonType;
   league_id: string | null;
   start_date: string;
   end_date: string;
@@ -46,13 +36,12 @@ const SeasonFormModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { type: 'regular', league_id: null, start_date: '', end_date: '' },
+    defaultValues: { league_id: null, start_date: '', end_date: '' },
   });
 
   useEffect(() => {
     if (!open) return;
     reset({
-      type: editTarget?.type ?? 'regular',
       league_id: editTarget?.league_id ?? null,
       start_date: editTarget?.start_date?.slice(0, 10) ?? '',
       end_date: editTarget?.end_date?.slice(0, 10) ?? '',
@@ -61,7 +50,6 @@ const SeasonFormModal = ({
 
   const onSubmit = handleSubmit(async (data) => {
     const payload: CreateSeasonData = {
-      type: data.type,
       league_id: data.league_id!,
       start_date: data.start_date || null,
       end_date: data.end_date || null,
@@ -89,16 +77,6 @@ const SeasonFormModal = ({
           rules={{ required: true }}
           options={leagueOptions}
           placeholder="— Select a league —"
-        />
-        <Field
-          label="Season Type"
-          required
-          type="select"
-          control={control}
-          name="type"
-          rules={{ required: true }}
-          options={SEASON_TYPE_OPTIONS}
-          placeholder="— Select type —"
         />
         <div className={styles.dateRow}>
           <Field

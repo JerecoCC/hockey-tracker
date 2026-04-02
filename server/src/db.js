@@ -58,25 +58,27 @@ async function initSchema() {
     CREATE TABLE IF NOT EXISTS seasons (
       id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name       TEXT NOT NULL,
-      type       TEXT NOT NULL DEFAULT 'regular',
       league_id  UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
       start_date DATE,
       end_date   DATE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
-  await sql`
-    ALTER TABLE seasons ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'regular'
-  `;
-  // Rename season_type → type on databases created before this migration
+  // Drop type column from databases created before this migration
   await sql`
     DO $$
     BEGIN
       IF EXISTS (
         SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'seasons' AND column_name = 'type'
+      ) THEN
+        ALTER TABLE seasons DROP COLUMN type;
+      END IF;
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
         WHERE table_name = 'seasons' AND column_name = 'season_type'
       ) THEN
-        ALTER TABLE seasons RENAME COLUMN season_type TO type;
+        ALTER TABLE seasons DROP COLUMN season_type;
       END IF;
     END $$
   `;
