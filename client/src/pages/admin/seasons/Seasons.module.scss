@@ -76,6 +76,13 @@
   gap: $space-lg;
 }
 
+// ── Date row (side-by-side date fields) ────────────────────────────────
+.dateRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-lg;
+}
+
 // ── Form actions ───────────────────────────────────────────────────────
 .formActions {
   display: flex;

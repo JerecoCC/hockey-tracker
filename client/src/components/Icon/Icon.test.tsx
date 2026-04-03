@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import Icon from './Icon';
 
 describe('Icon', () => {
@@ -39,7 +39,7 @@ describe('Icon', () => {
 
   it('does not set inline style when size prop is omitted', () => {
     const { container } = render(<Icon name="add" />);
-    const svg = container.querySelector('svg') as HTMLElement;
+    const svg = container.querySelector('svg') as unknown as HTMLElement;
     expect(svg.style.fontSize).toBe('');
   });
 
@@ -50,7 +50,7 @@ describe('Icon', () => {
         style={{ color: 'red' }}
       />,
     );
-    const svg = container.querySelector('svg') as HTMLElement;
+    const svg = container.querySelector('svg') as unknown as HTMLElement;
     expect(svg.style.color).toBeTruthy();
   });
 
@@ -62,7 +62,7 @@ describe('Icon', () => {
         style={{ color: 'blue' }}
       />,
     );
-    const svg = container.querySelector('svg') as HTMLElement;
+    const svg = container.querySelector('svg') as unknown as HTMLElement;
     expect(svg).toHaveStyle({ fontSize: '1.5rem' });
     expect(svg.style.color).toBeTruthy();
   });

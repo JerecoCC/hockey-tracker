@@ -78,11 +78,9 @@ const Select = ({ value, options, placeholder = '— Select —', onChange }: Pr
                 alt=""
                 className={styles.optionLogo}
               />
-            ) : (
-              <span className={styles.optionNoLogo}>
-                {(selected.code ?? selected.label).slice(0, 1)}
-              </span>
-            )}
+            ) : selected.code ? (
+              <span className={styles.optionNoLogo}>{selected.code.slice(0, 1)}</span>
+            ) : null}
             {selected.label}
           </span>
         ) : (
@@ -122,9 +120,9 @@ const Select = ({ value, options, placeholder = '— Select —', onChange }: Pr
                     alt=""
                     className={styles.optionLogo}
                   />
-                ) : (
-                  <span className={styles.optionNoLogo}>{(opt.code ?? opt.label).slice(0, 1)}</span>
-                )}
+                ) : opt.code ? (
+                  <span className={styles.optionNoLogo}>{opt.code.slice(0, 1)}</span>
+                ) : null}
                 {opt.label}
               </button>
             </li>

@@ -72,6 +72,45 @@ table {
   padding: $space-4xl;
 }
 
+// ── Sortable header ────────────────────────────────────────────────────
+.thSortable {
+  padding: 0 !important; // button inside provides padding
+}
+
+.sortBtn {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  width: 100%;
+  padding: $space-md $space-lg;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $text-dim;
+  font-weight: 600;
+  font-size: inherit;
+  font-family: inherit;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $text-body;
+  }
+}
+
+.sortIcon {
+  font-size: 0.8em;
+  opacity: 0.35;
+  flex-shrink: 0;
+
+  &.sortActive {
+    opacity: 1;
+    color: $accent-light;
+  }
+}
+
 // ── Logo column ────────────────────────────────────────────────────────
 .logoThumb {
   width: 32px;

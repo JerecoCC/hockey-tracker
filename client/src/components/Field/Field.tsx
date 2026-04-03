@@ -1,6 +1,7 @@
 import type { ChangeEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
 import { Controller, type Control, type RegisterOptions } from 'react-hook-form';
 import cn from 'classnames';
+import DatePicker from '../DatePicker/DatePicker';
 import Select, { SelectOption } from '../Select/Select';
 import styles from './Field.module.scss';
 
@@ -15,7 +16,7 @@ type BaseProps = {
 
 type TextProps = BaseProps &
   Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'name'> & {
-    type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url' | 'tel';
+    type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url' | 'tel' | 'date';
     transform?: (value: string) => string;
   };
 
@@ -36,7 +37,12 @@ type CustomProps = BaseProps & {
   children: ReactNode;
 };
 
-export type FieldProps = TextProps | TextareaProps | SelectProps | CustomProps;
+type DatePickerProps = BaseProps & {
+  type: 'datepicker';
+  placeholder?: string;
+};
+
+export type FieldProps = TextProps | TextareaProps | SelectProps | CustomProps | DatePickerProps;
 
 const Field = (props: FieldProps) => {
   const { label, required, control, name, rules } = props;
@@ -88,6 +94,14 @@ const Field = (props: FieldProps) => {
             );
           } else if (props.type === 'custom') {
             return props.children;
+          } else if (props.type === 'datepicker') {
+            return (
+              <DatePicker
+                value={(field.value as string) ?? ''}
+                onChange={field.onChange}
+                placeholder={props.placeholder}
+              />
+            );
           } else {
             /* eslint-disable @typescript-eslint/no-unused-vars */
             const {

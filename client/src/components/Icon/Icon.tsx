@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faCalendarDays,
   faChevronDown,
   faChevronLeft,
   faChevronRight,
@@ -13,6 +14,9 @@ import {
   faPeopleGroup,
   faPlus,
   faShield,
+  faSort,
+  faSortDown,
+  faSortUp,
   faStar,
   faTrash,
   faTrophy,
@@ -44,9 +48,16 @@ const ICON_MAP: Record<string, IconDefinition> = {
   shield: faShield,
 
   // nav items
+  calendar_month: faCalendarDays,
+  calendar_today: faCalendarDays,
   groups: faPeopleGroup,
   group: faUsers,
   emoji_events: faTrophy,
+
+  // sort
+  sort: faSort,
+  sort_asc: faSortUp,
+  sort_desc: faSortDown,
 
   // actions
   add: faPlus,
@@ -82,7 +93,11 @@ const Icon = ({ name, size, className = '', style = {} }: IconProps) => {
     <FontAwesomeIcon
       icon={icon}
       className={className || undefined}
-      style={Object.keys(inlineStyle).length ? inlineStyle : undefined}
+      style={
+        Object.keys(inlineStyle).length
+          ? (inlineStyle as CSSProperties & Record<`--fa-font-${string}`, string>)
+          : undefined
+      }
       aria-hidden
     />
   );
