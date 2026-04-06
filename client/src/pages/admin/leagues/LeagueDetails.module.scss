@@ -1,0 +1,108 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Layout ─────────────────────────────────────────────────────────────
+.main {
+  flex: 1;
+  padding: $space-4xl;
+  overflow-y: auto;
+}
+
+// ── Section title ──────────────────────────────────────────────────────
+.sectionTitle {
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0 0 $space-xl;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+// ── Card ───────────────────────────────────────────────────────────────
+.card {
+  background: $bg-card;
+  border-radius: $radius-xl;
+  padding: $space-2xl;
+  border: 1px solid $border;
+}
+
+// ── Header (logo + name) ───────────────────────────────────────────────
+.leagueHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-2xl;
+  margin-bottom: $space-2xl;
+  padding-bottom: $space-2xl;
+  border-bottom: 1px solid $border;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: $radius-lg;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
+  flex-shrink: 0;
+}
+
+.logoPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: $radius-lg;
+  background: $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.leagueName {
+  font-size: $font-3xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0 0 $space-xs;
+}
+
+.leagueCode {
+  font-size: $font-base;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+// ── Info grid ──────────────────────────────────────────────────────────
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: $space-2xl;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+.infoValueMuted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+}

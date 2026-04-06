@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
@@ -16,6 +17,7 @@ const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   });
 
 const LeaguesPage = () => {
+  const navigate = useNavigate();
   const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } =
     useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
@@ -132,6 +134,7 @@ const LeaguesPage = () => {
           activeSortKey={sortKey}
           sortDir={sortDir}
           onSort={handleSort}
+          onRowDoubleClick={(l) => navigate(`/admin/leagues/${l.id}`)}
         />
       </div>
 

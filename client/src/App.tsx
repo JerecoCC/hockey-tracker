@@ -7,6 +7,7 @@ import SignupPage from './pages/signup/Signup';
 import DashboardPage from './pages/dashboard/Dashboard';
 import AdminLayout from './components/AdminLayout/AdminLayout';
 import LeaguesPage from './pages/admin/leagues/Leagues';
+import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
 import TeamsPage from './pages/admin/teams/Teams';
 import SeasonsPage from './pages/admin/seasons/Seasons';
@@ -118,6 +119,10 @@ const App = () => (
           <Route
             path="/admin/leagues"
             element={<LeaguesPage />}
+          />
+          <Route
+            path="/admin/leagues/:id"
+            element={<LeagueDetailsPage />}
           />
           <Route
             path="/admin/seasons"
