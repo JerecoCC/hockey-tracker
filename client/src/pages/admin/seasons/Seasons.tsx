@@ -95,27 +95,29 @@ const SeasonsPage = () => {
       align: 'center',
       render: (s) => (
         <div className={styles.actions}>
-          <Button
-            variant="outlined"
-            intent="accent"
-            icon="edit"
-            size="sm"
-            title="Edit"
-            disabled={busy === s.id}
-            onClick={() => openEditModal(s)}
-          />
-          <Button
-            variant="outlined"
-            intent="danger"
-            icon="delete"
-            size="sm"
-            title="Delete"
-            disabled={busy === s.id}
-            onClick={() => {
-              setConfirmDelete(s);
-              setConfirmDeleteOpen(true);
-            }}
-          />
+          <Tooltip text="Edit">
+            <Button
+              variant="outlined"
+              intent="accent"
+              icon="edit"
+              size="sm"
+              disabled={busy === s.id}
+              onClick={() => openEditModal(s)}
+            />
+          </Tooltip>
+          <Tooltip text="Delete">
+            <Button
+              variant="outlined"
+              intent="danger"
+              icon="delete"
+              size="sm"
+              disabled={busy === s.id}
+              onClick={() => {
+                setConfirmDelete(s);
+                setConfirmDeleteOpen(true);
+              }}
+            />
+          </Tooltip>
         </div>
       ),
     },

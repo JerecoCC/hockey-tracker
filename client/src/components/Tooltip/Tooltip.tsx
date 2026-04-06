@@ -4,10 +4,11 @@ import styles from './Tooltip.module.scss';
 interface TooltipProps {
   text: string;
   children: ReactNode;
+  className?: string;
 }
 
-const Tooltip = ({ text, children }: TooltipProps) => (
-  <span className={styles.wrapper}>
+const Tooltip = ({ text, children, className = '' }: TooltipProps) => (
+  <span className={`${styles.wrapper} ${className}`.trim()}>
     {children}
     <span
       className={styles.tip}
@@ -19,4 +20,3 @@ const Tooltip = ({ text, children }: TooltipProps) => (
 );
 
 export default Tooltip;
-

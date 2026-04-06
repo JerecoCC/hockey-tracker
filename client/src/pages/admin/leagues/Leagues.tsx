@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
+import Tooltip from '../../../components/Tooltip/Tooltip';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
@@ -69,16 +70,18 @@ const LeaguesPage = () => {
       header: 'Colors',
       render: (l) => (
         <div className={styles.colorSwatches}>
-          <span
-            className={styles.swatch}
-            style={{ background: l.primary_color }}
-            title={`Primary: ${l.primary_color}`}
-          />
-          <span
-            className={styles.swatch}
-            style={{ background: l.text_color }}
-            title={`Text: ${l.text_color}`}
-          />
+          <Tooltip text={`Primary: ${l.primary_color}`}>
+            <span
+              className={styles.swatch}
+              style={{ background: l.primary_color }}
+            />
+          </Tooltip>
+          <Tooltip text={`Text: ${l.text_color}`}>
+            <span
+              className={styles.swatch}
+              style={{ background: l.text_color }}
+            />
+          </Tooltip>
         </div>
       ),
     },
@@ -88,27 +91,29 @@ const LeaguesPage = () => {
       align: 'center',
       render: (l) => (
         <div className={styles.actions}>
-          <Button
-            variant="outlined"
-            intent="accent"
-            icon="edit"
-            size="sm"
-            title="Edit"
-            disabled={busy === l.id}
-            onClick={() => openEditModal(l)}
-          />
-          <Button
-            variant="outlined"
-            intent="danger"
-            icon="delete"
-            size="sm"
-            title="Delete"
-            disabled={busy === l.id}
-            onClick={() => {
-              setConfirmDelete(l);
-              setConfirmDeleteOpen(true);
-            }}
-          />
+          <Tooltip text="Edit">
+            <Button
+              variant="outlined"
+              intent="accent"
+              icon="edit"
+              size="sm"
+              disabled={busy === l.id}
+              onClick={() => openEditModal(l)}
+            />
+          </Tooltip>
+          <Tooltip text="Delete">
+            <Button
+              variant="outlined"
+              intent="danger"
+              icon="delete"
+              size="sm"
+              disabled={busy === l.id}
+              onClick={() => {
+                setConfirmDelete(l);
+                setConfirmDeleteOpen(true);
+              }}
+            />
+          </Tooltip>
         </div>
       ),
     },

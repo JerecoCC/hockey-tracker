@@ -74,17 +74,22 @@ const LeagueDetailsPage = () => {
                   {league.code.slice(0, 3)}
                 </span>
               )}
-              <button
-                className={styles.logoEditOverlay}
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isBusy}
-              >
-                <Icon
-                  name="edit"
-                  size="1.25em"
-                />
-                <span className={styles.logoEditTooltip}>Edit League Icon</span>
-              </button>
+              {isBusy ? (
+                <div className={styles.logoSpinnerOverlay}>
+                  <span className={styles.logoSpinner} />
+                </div>
+              ) : (
+                <button
+                  className={styles.logoEditOverlay}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Icon
+                    name="edit"
+                    size="1.25em"
+                  />
+                  <span className={styles.logoEditTooltip}>Edit League Icon</span>
+                </button>
+              )}
               <input
                 ref={fileInputRef}
                 type="file"

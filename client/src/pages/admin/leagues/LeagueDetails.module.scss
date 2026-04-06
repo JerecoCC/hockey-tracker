@@ -72,6 +72,25 @@
   display: none;
 }
 
+.logoSpinnerOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-lg;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.logoSpinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
 .logoEditTooltip {
   position: absolute;
   bottom: calc(100% + 8px);

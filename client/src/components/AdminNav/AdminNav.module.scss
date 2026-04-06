@@ -1,5 +1,5 @@
-@use '../../styles/colors' as *;
-@use '../../styles/mixins' as *;
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
 
 // ── Layout tokens ──────────────────────────────────────────────────────
 $nav-width: 220px;
@@ -136,6 +136,12 @@ $nav-collapsed-width: 56px;
   font-size: $font-xl;
   line-height: 1;
   flex-shrink: 0;
+}
+
+// ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
+.navTooltipWrapper {
+  display: block;
+  width: 100%;
 }
 
 // ── Bottom / back button ───────────────────────────────────────────────
