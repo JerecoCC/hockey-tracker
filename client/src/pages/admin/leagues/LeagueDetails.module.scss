@@ -126,6 +126,72 @@
   text-transform: uppercase;
 }
 
+.leagueNameRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+
+  &:hover .nameEditBtn {
+    opacity: 1;
+  }
+}
+
+.nameEditBtn {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $text-dim;
+  padding: $space-xs;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition:
+    opacity $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    color: $text-bright;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  &:hover .nameEditTooltip {
+    opacity: 1;
+  }
+}
+
+.nameEditTooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: $border;
+  color: $text-bright;
+  font-size: $font-xs;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: $border;
+  }
+}
+
 .leagueName {
   font-size: $font-3xl;
   font-weight: 700;

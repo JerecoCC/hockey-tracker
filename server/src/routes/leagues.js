@@ -49,7 +49,7 @@ router.post('/upload', upload.single('logo'), async (req, res) => {
 router.get('/', async (_req, res) => {
   try {
     const leagues = await sql`
-      SELECT id, name, code, description, logo, created_at
+      SELECT id, name, code, description, logo, primary_color, text_color, created_at
       FROM leagues
       ORDER BY name ASC
     `;
@@ -67,7 +67,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT id, name, code, description, logo, created_at
+      SELECT id, name, code, description, logo, primary_color, text_color, created_at
       FROM leagues
       WHERE id = ${id}
     `;
@@ -83,7 +83,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/leagues  – create a league
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { name, code, description, logo } = req.body;
+  const { name, code, description, logo, primary_color, text_color } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -94,9 +94,16 @@ router.post('/', async (req, res) => {
 
   try {
     const rows = await sql`
-      INSERT INTO leagues (name, code, description, logo)
-      VALUES (${name.trim()}, ${code.trim().toUpperCase()}, ${description ?? null}, ${logo ?? null})
-      RETURNING id, name, code, description, logo, created_at
+      INSERT INTO leagues (name, code, description, logo, primary_color, text_color)
+      VALUES (
+        ${name.trim()},
+        ${code.trim().toUpperCase()},
+        ${description ?? null},
+        ${logo ?? null},
+        ${primary_color ?? '#334155'},
+        ${text_color ?? '#ffffff'}
+      )
+      RETURNING id, name, code, description, logo, primary_color, text_color, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -113,7 +120,7 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, logo } = req.body;
+  const { name, code, description, logo, primary_color, text_color } = req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -126,12 +133,14 @@ router.patch('/:id', async (req, res) => {
     const rows = await sql`
       UPDATE leagues
       SET
-        name        = COALESCE(${name?.trim() ?? null}, name),
-        code        = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
-        description = COALESCE(${description ?? null}, description),
-        logo        = COALESCE(${logo ?? null}, logo)
+        name          = COALESCE(${name?.trim() ?? null}, name),
+        code          = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
+        description   = COALESCE(${description ?? null}, description),
+        logo          = COALESCE(${logo ?? null}, logo),
+        primary_color = COALESCE(${primary_color ?? null}, primary_color),
+        text_color    = COALESCE(${text_color ?? null}, text_color)
       WHERE id = ${id}
-      RETURNING id, name, code, description, logo, created_at
+      RETURNING id, name, code, description, logo, primary_color, text_color, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
     return res.json(rows[0]);

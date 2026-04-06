@@ -10,6 +10,8 @@ export interface LeagueRecord {
   code: string;
   description: string | null;
   logo: string | null;
+  primary_color: string;
+  text_color: string;
   created_at: string;
 }
 
@@ -18,6 +20,8 @@ export interface CreateLeagueData {
   code: string;
   description?: string;
   logo?: string | null;
+  primary_color?: string;
+  text_color?: string;
 }
 
 const authHeaders = () => {

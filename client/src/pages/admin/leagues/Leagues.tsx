@@ -61,6 +61,24 @@ const LeaguesPage = () => {
     { header: 'Code', key: 'code', sortable: true },
     {
       type: 'custom',
+      header: 'Colors',
+      render: (l) => (
+        <div className={styles.colorSwatches}>
+          <span
+            className={styles.swatch}
+            style={{ background: l.primary_color }}
+            title={`Primary: ${l.primary_color}`}
+          />
+          <span
+            className={styles.swatch}
+            style={{ background: l.text_color }}
+            title={`Text: ${l.text_color}`}
+          />
+        </div>
+      ),
+    },
+    {
+      type: 'custom',
       header: 'Actions',
       align: 'center',
       render: (l) => (
