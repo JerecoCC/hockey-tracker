@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
@@ -34,8 +34,23 @@ const LeagueFormModal = ({
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({ defaultValues: { name: '', code: '', logo: null } });
+
+  const nameValue = useWatch({ control, name: 'name' });
+
+  // Always auto-derive code from name initials whenever name changes
+  useEffect(() => {
+    const auto = nameValue
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean)
+      .map((w) => w[0])
+      .join('')
+      .toUpperCase();
+    setValue('code', auto);
+  }, [nameValue, setValue]);
 
   useEffect(() => {
     if (!open) return;
