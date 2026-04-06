@@ -1,7 +1,9 @@
 import { useRef, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
+import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
+import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import useLeagues from '../../../hooks/useLeagues';
 import LeagueFormModal from './LeagueFormModal';
 import styles from './LeagueDetails.module.scss';
@@ -11,6 +13,9 @@ const LeagueDetailsPage = () => {
   const { leagues, loading, busy, uploadLogo, addLeague, updateLeague } = useLeagues();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [descriptionHtml, setDescriptionHtml] = useState<string>('');
+  const [savingDescription, setSavingDescription] = useState(false);
 
   const league = leagues.find((l) => l.id === id);
   const isBusy = busy === id;
@@ -118,12 +123,76 @@ const LeagueDetailsPage = () => {
           </div>
 
           <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
+            <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
               <span className={styles.infoLabel}>Description</span>
-              {league.description ? (
-                <span className={styles.infoValue}>{league.description}</span>
+              {editingDescription ? (
+                <div className={styles.descriptionEditor}>
+                  <RichTextEditor
+                    content={descriptionHtml}
+                    onChange={setDescriptionHtml}
+                    editable={!savingDescription}
+                  />
+                  <div className={styles.descriptionActions}>
+                    <Button
+                      size="sm"
+                      intent="accent"
+                      disabled={
+                        savingDescription ||
+                        (descriptionHtml.trim() === '<p></p>' ? '' : descriptionHtml) ===
+                          (league.description ?? '')
+                      }
+                      onClick={async () => {
+                        setSavingDescription(true);
+                        const normalized =
+                          descriptionHtml.trim() === '<p></p>' ? '' : descriptionHtml;
+                        const ok = await updateLeague(league.id, { description: normalized });
+                        setSavingDescription(false);
+                        if (ok) setEditingDescription(false);
+                      }}
+                    >
+                      {savingDescription ? 'Saving…' : 'Save'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outlined"
+                      intent="neutral"
+                      disabled={savingDescription}
+                      onClick={() => setEditingDescription(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
               ) : (
-                <span className={styles.infoValueMuted}>No description provided.</span>
+                <div
+                  className={styles.descriptionReadArea}
+                  onClick={() => {
+                    setDescriptionHtml(league.description ?? '');
+                    setEditingDescription(true);
+                  }}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      setDescriptionHtml(league.description ?? '');
+                      setEditingDescription(true);
+                    }
+                  }}
+                >
+                  {league.description && league.description !== '<p></p>' ? (
+                    <div
+                      className={styles.infoValue}
+                      dangerouslySetInnerHTML={{ __html: league.description }}
+                    />
+                  ) : (
+                    <span className={styles.infoValueMuted}>Click to add a description…</span>
+                  )}
+                  <Icon
+                    name="edit"
+                    className={styles.descriptionEditIcon}
+                    size="0.85em"
+                  />
+                </div>
               )}
             </div>
           </div>

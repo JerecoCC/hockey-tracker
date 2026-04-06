@@ -225,6 +225,45 @@
   letter-spacing: 0.08em;
 }
 
+// ── Description editor ─────────────────────────────────────────────────
+.descriptionReadArea {
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: $space-sm;
+  padding: $space-sm;
+  margin: -$space-sm;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .descriptionEditIcon {
+      opacity: 1;
+    }
+  }
+}
+
+.descriptionEditIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: $text-dim;
+  opacity: 0;
+  transition: opacity $transition-fast;
+}
+
+.descriptionEditor {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.descriptionActions {
+  display: flex;
+  gap: $space-sm;
+}
+
 // ── Info grid ──────────────────────────────────────────────────────────
 .infoGrid {
   display: grid;
@@ -236,6 +275,10 @@
   display: flex;
   flex-direction: column;
   gap: $space-xs;
+}
+
+.infoItemFull {
+  grid-column: 1 / -1;
 }
 
 .infoLabel {
