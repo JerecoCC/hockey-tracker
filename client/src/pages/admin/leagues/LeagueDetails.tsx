@@ -1,3 +1,4 @@
+import { useRef, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Icon from '../../../components/Icon/Icon';
@@ -6,9 +7,19 @@ import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { leagues, loading } = useLeagues();
+  const { leagues, loading, busy, uploadLogo, updateLeague } = useLeagues();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const league = leagues.find((l) => l.id === id);
+  const isBusy = busy === id;
+
+  const handleLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !league) return;
+    e.target.value = '';
+    const url = await uploadLogo(file);
+    if (url) await updateLeague(league.id, { logo: url });
+  };
 
   if (loading) {
     return (
@@ -43,15 +54,35 @@ const LeagueDetailsPage = () => {
 
       <div className={styles.card}>
         <div className={styles.leagueHeader}>
-          {league.logo ? (
-            <img
-              src={league.logo}
-              alt={league.name}
-              className={styles.logo}
+          <div className={styles.logoWrapper}>
+            {league.logo ? (
+              <img
+                src={league.logo}
+                alt={league.name}
+                className={styles.logo}
+              />
+            ) : (
+              <span className={styles.logoPlaceholder}>{league.code.slice(0, 3)}</span>
+            )}
+            <button
+              className={styles.logoEditOverlay}
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isBusy}
+            >
+              <Icon
+                name="edit"
+                size="1.25em"
+              />
+              <span className={styles.logoEditTooltip}>Edit League Icon</span>
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,image/svg+xml,.svg"
+              className={styles.fileInput}
+              onChange={handleLogoChange}
             />
-          ) : (
-            <span className={styles.logoPlaceholder}>{league.code.slice(0, 3)}</span>
-          )}
+          </div>
           <div>
             <h3 className={styles.leagueName}>{league.name}</h3>
             <span className={styles.leagueCode}>{league.code}</span>

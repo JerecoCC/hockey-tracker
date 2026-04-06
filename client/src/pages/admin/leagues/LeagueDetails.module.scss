@@ -29,6 +29,7 @@
 
 // ── Header (logo + name) ───────────────────────────────────────────────
 .leagueHeader {
+  align-items: flex-start;
   display: flex;
   align-items: center;
   gap: $space-2xl;
@@ -37,13 +38,78 @@
   border-bottom: 1px solid $border;
 }
 
+.logoWrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+
+  &:hover .logoEditOverlay {
+    opacity: 1;
+  }
+}
+
+.logoEditOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-lg;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  cursor: pointer;
+  color: $text-bright;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.fileInput {
+  display: none;
+}
+
+.logoEditTooltip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: $border;
+  color: $text-bright;
+  font-size: $font-xs;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: $border;
+  }
+}
+
+.logoWrapper:hover .logoEditTooltip {
+  opacity: 1;
+}
+
 .logo {
   width: 80px;
   height: 80px;
   object-fit: contain;
   border-radius: $radius-lg;
   filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
-  flex-shrink: 0;
 }
 
 .logoPlaceholder {
@@ -58,7 +124,6 @@
   font-weight: 700;
   color: $text-body;
   text-transform: uppercase;
-  flex-shrink: 0;
 }
 
 .leagueName {
