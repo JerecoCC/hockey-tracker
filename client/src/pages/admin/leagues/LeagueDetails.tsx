@@ -67,7 +67,12 @@ const LeagueDetailsPage = () => {
                   className={styles.logo}
                 />
               ) : (
-                <span className={styles.logoPlaceholder}>{league.code.slice(0, 3)}</span>
+                <span
+                  className={styles.logoPlaceholder}
+                  style={{ background: league.primary_color, color: league.text_color }}
+                >
+                  {league.code.slice(0, 3)}
+                </span>
               )}
               <button
                 className={styles.logoEditOverlay}

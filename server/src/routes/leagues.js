@@ -121,6 +121,7 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, code, description, logo, primary_color, text_color } = req.body;
+  const logoInBody = 'logo' in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -136,7 +137,7 @@ router.patch('/:id', async (req, res) => {
         name          = COALESCE(${name?.trim() ?? null}, name),
         code          = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
         description   = COALESCE(${description ?? null}, description),
-        logo          = COALESCE(${logo ?? null}, logo),
+        logo          = CASE WHEN ${logoInBody} THEN ${logo ?? null} ELSE logo END,
         primary_color = COALESCE(${primary_color ?? null}, primary_color),
         text_color    = COALESCE(${text_color ?? null}, text_color)
       WHERE id = ${id}

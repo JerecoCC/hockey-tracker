@@ -52,7 +52,12 @@ const LeaguesPage = () => {
               className={styles.logoThumb}
             />
           ) : (
-            <span className={styles.logoPlaceholder}>{l.code.slice(0, 3)}</span>
+            <span
+              className={styles.logoPlaceholder}
+              style={{ background: l.primary_color, color: l.text_color }}
+            >
+              {l.code.slice(0, 3)}
+            </span>
           )}
           {l.name}
         </div>
