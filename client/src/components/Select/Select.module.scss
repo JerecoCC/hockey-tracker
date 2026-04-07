@@ -33,6 +33,11 @@
   &.triggerOpen {
     border-color: $accent;
   }
+
+  &.triggerDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 .placeholder {

@@ -25,6 +25,10 @@
   border-radius: $radius-xl;
   padding: $space-2xl;
   border: 1px solid $border;
+
+  & + & {
+    margin-top: $space-2xl;
+  }
 }
 
 // ── Header (logo + name) ───────────────────────────────────────────────
@@ -335,4 +339,77 @@
   font-size: $font-body;
   color: $text-dim;
   font-style: italic;
+}
+
+// ── Teams card ─────────────────────────────────────────────────────────
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-xl;
+}
+
+.cardTitle {
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+}
+
+.teamList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.teamListItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.teamListName {
+  font-size: $font-lg;
+  color: $text-body;
+}
+
+.teamLogoThumb {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+}
+
+.teamLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-base;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.teamsEmpty {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
 }

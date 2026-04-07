@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
@@ -6,20 +6,26 @@ import Icon from '../../../components/Icon/Icon';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import useLeagues from '../../../hooks/useLeagues';
+import useTeams from '../../../hooks/useTeams';
 import LeagueFormModal from './LeagueFormModal';
+import TeamFormModal from '../teams/TeamFormModal';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { leagues, loading, busy, uploadLogo, addLeague, updateLeague } = useLeagues();
+  const { teams, loading: teamsLoading, addTeam, uploadLogo: uploadTeamLogo } = useTeams();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionHtml, setDescriptionHtml] = useState<string>('');
   const [savingDescription, setSavingDescription] = useState(false);
 
   const league = leagues.find((l) => l.id === id);
   const isBusy = busy === id;
+
+  const leagueTeams = useMemo(() => teams.filter((t) => t.league_id === id), [teams, id]);
 
   const handleLogoChange = async (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -219,6 +225,44 @@ const LeagueDetailsPage = () => {
             </div>
           </div>
         </div>
+
+        <div className={styles.card}>
+          <div className={styles.cardHeader}>
+            <h3 className={styles.cardTitle}>Teams</h3>
+            <Button
+              icon="add"
+              size="sm"
+              onClick={() => setTeamModalOpen(true)}
+            >
+              Add Team
+            </Button>
+          </div>
+          {teamsLoading ? (
+            <p className={styles.teamsEmpty}>Loading…</p>
+          ) : leagueTeams.length === 0 ? (
+            <p className={styles.teamsEmpty}>No teams assigned to this league yet.</p>
+          ) : (
+            <ul className={styles.teamList}>
+              {leagueTeams.map((t) => (
+                <li
+                  key={t.id}
+                  className={styles.teamListItem}
+                >
+                  {t.logo ? (
+                    <img
+                      src={t.logo}
+                      alt=""
+                      className={styles.teamLogoThumb}
+                    />
+                  ) : (
+                    <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
+                  )}
+                  <span className={styles.teamListName}>{t.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </main>
 
       <LeagueFormModal
@@ -228,6 +272,21 @@ const LeagueDetailsPage = () => {
         addLeague={addLeague}
         updateLeague={updateLeague}
         uploadLogo={uploadLogo}
+      />
+
+      <TeamFormModal
+        open={teamModalOpen}
+        editTarget={null}
+        leagueOptions={
+          league
+            ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
+            : []
+        }
+        lockedLeagueId={id}
+        onClose={() => setTeamModalOpen(false)}
+        addTeam={addTeam}
+        updateTeam={async () => false}
+        uploadLogo={uploadTeamLogo}
       />
     </>
   );
