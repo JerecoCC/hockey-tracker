@@ -3,6 +3,7 @@ import { useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
+import Tooltip from '../../../components/Tooltip/Tooltip';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import useLeagues from '../../../hooks/useLeagues';
 import LeagueFormModal from './LeagueFormModal';
@@ -103,7 +104,7 @@ const LeagueDetailsPage = () => {
                 onChange={handleLogoChange}
               />
             </div>
-            <div>
+            <div className={styles.leagueNameBlock}>
               <div className={styles.leagueNameRow}>
                 <h3 className={styles.leagueName}>{league.name}</h3>
                 <button
@@ -119,6 +120,27 @@ const LeagueDetailsPage = () => {
                 </button>
               </div>
               <span className={styles.leagueCode}>{league.code}</span>
+            </div>
+
+            <div className={styles.headerColors}>
+              <div className={styles.headerColorItem}>
+                <span className={styles.headerColorLabel}>Primary</span>
+                <Tooltip text={league.primary_color}>
+                  <span
+                    className={styles.headerColorDot}
+                    style={{ background: league.primary_color }}
+                  />
+                </Tooltip>
+              </div>
+              <div className={styles.headerColorItem}>
+                <span className={styles.headerColorLabel}>Text</span>
+                <Tooltip text={league.text_color}>
+                  <span
+                    className={styles.headerColorDot}
+                    style={{ background: league.text_color }}
+                  />
+                </Tooltip>
+              </div>
             </div>
           </div>
 
