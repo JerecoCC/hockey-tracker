@@ -373,11 +373,15 @@
   display: flex;
   flex-direction: column;
   gap: $space-xs;
+}
+
+// Applied only when teams.length > 5 — caps height and enables scrolling
+.teamListLimited {
   max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-xs});
   overflow-y: auto;
-  scrollbar-gutter: stable; // always reserves 4px so content never shifts
+  scrollbar-gutter: stable;
 
-  // Firefox — keep gutter stable by always using thin, but hide thumb
+  // Firefox
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
 
@@ -480,6 +484,10 @@
   display: flex;
   flex-direction: column;
   gap: $space-xs;
+}
+
+// Applied only when seasons.length > 5 — caps height and enables scrolling
+.seasonListLimited {
   max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$space-xs});
   overflow-y: auto;
   scrollbar-gutter: stable;

@@ -8,7 +8,7 @@ $nav-collapsed-width: 56px;
 // ── Shell ──────────────────────────────────────────────────────────────
 .nav {
   width: $nav-width;
-  min-height: 100vh;
+  height: 100%;
   background: $bg-card;
   border-right: 1px solid $border;
   display: flex;

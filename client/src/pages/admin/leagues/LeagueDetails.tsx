@@ -268,7 +268,9 @@ const LeagueDetailsPage = () => {
             ) : teams.length === 0 ? (
               <p className={styles.teamsEmpty}>No teams assigned to this league yet.</p>
             ) : (
-              <ul className={styles.teamList}>
+              <ul
+                className={`${styles.teamList} ${teams.length > 5 ? styles.teamListLimited : ''}`}
+              >
                 {teams.map((t) => (
                   <li
                     key={t.id}
@@ -337,7 +339,9 @@ const LeagueDetailsPage = () => {
             ) : seasons.length === 0 ? (
               <p className={styles.teamsEmpty}>No seasons for this league yet.</p>
             ) : (
-              <ul className={styles.seasonList}>
+              <ul
+                className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}
+              >
                 {seasons.map((s) => (
                   <li
                     key={s.id}
