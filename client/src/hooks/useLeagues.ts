@@ -8,11 +8,9 @@ export interface LeagueRecord {
   id: string;
   name: string;
   code: string;
-  description: string | null;
   logo: string | null;
   primary_color: string;
   text_color: string;
-  created_at: string;
 }
 
 export interface CreateLeagueData {

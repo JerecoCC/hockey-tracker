@@ -6,7 +6,13 @@ import { type TeamRecord, type CreateTeamData } from './useTeams';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
-export interface LeagueDetailsRecord extends LeagueRecord {
+/** Full league shape returned by the details endpoint (superset of the list record). */
+export interface LeagueFullRecord extends LeagueRecord {
+  description: string | null;
+  created_at: string;
+}
+
+export interface LeagueDetailsRecord extends LeagueFullRecord {
   teams: TeamRecord[];
 }
 
@@ -19,7 +25,7 @@ const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const useLeagueDetails = (id: string | undefined) => {
-  const [league, setLeague] = useState<LeagueRecord | null>(null);
+  const [league, setLeague] = useState<LeagueFullRecord | null>(null);
   const [teams, setTeams] = useState<TeamRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
@@ -29,7 +35,7 @@ const useLeagueDetails = (id: string | undefined) => {
       if (!id) return;
       try {
         const { data } = await axios.get<LeagueDetailsRecord>(
-          `${API}/admin/leagues/${id}/details`,
+          `${API}/admin/leagues/${id}`,
           { headers: authHeaders(), signal },
         );
         const { teams: t, ...leagueData } = data;

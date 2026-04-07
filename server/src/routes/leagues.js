@@ -49,7 +49,7 @@ router.post('/upload', upload.single('logo'), async (req, res) => {
 router.get('/', async (_req, res) => {
   try {
     const leagues = await sql`
-      SELECT id, name, code, description, logo, primary_color, text_color, created_at
+      SELECT id, name, code, logo, primary_color, text_color
       FROM leagues
       ORDER BY name ASC
     `;
@@ -61,9 +61,9 @@ router.get('/', async (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/leagues/:id/details  – league + associated teams
+// GET /api/admin/leagues/:id  – league + associated teams
 // ---------------------------------------------------------------------------
-router.get('/:id/details', async (req, res) => {
+router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
@@ -83,25 +83,6 @@ router.get('/:id/details', async (req, res) => {
     return res.json({ ...rows[0], teams });
   } catch (err) {
     console.error('league details error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// GET /api/admin/leagues/:id  – get a single league
-// ---------------------------------------------------------------------------
-router.get('/:id', async (req, res) => {
-  const { id } = req.params;
-  try {
-    const rows = await sql`
-      SELECT id, name, code, description, logo, primary_color, text_color, created_at
-      FROM leagues
-      WHERE id = ${id}
-    `;
-    if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
-    return res.json(rows[0]);
-  } catch (err) {
-    console.error('leagues get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
