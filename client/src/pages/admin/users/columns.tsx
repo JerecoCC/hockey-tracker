@@ -1,7 +1,6 @@
 ﻿import { Column } from '../../../components/Table/Table';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
-import Tooltip from '../../../components/Tooltip/Tooltip';
 import styles from './Users.module.scss';
 
 export interface UserRecord {
@@ -78,40 +77,37 @@ export const getUserColumns = ({
       return (
         <div className={styles.actions}>
           {u.role !== 'admin' && (
-            <Tooltip text="Make Admin">
-              <Button
-                variant="outlined"
-                intent="accent"
-                icon="manage_accounts"
-                size="sm"
-                disabled={isBusy}
-                onClick={() => confirmRole(u, 'admin')}
-              />
-            </Tooltip>
+            <Button
+              variant="outlined"
+              intent="accent"
+              icon="manage_accounts"
+              size="sm"
+              disabled={isBusy}
+              tooltip="Make Admin"
+              onClick={() => confirmRole(u, 'admin')}
+            />
           )}
           {u.role === 'admin' && !isMe && (
-            <Tooltip text="Remove Admin">
-              <Button
-                variant="outlined"
-                intent="info"
-                icon="person_remove"
-                size="sm"
-                disabled={isBusy}
-                onClick={() => confirmRole(u, 'user')}
-              />
-            </Tooltip>
+            <Button
+              variant="outlined"
+              intent="info"
+              icon="person_remove"
+              size="sm"
+              disabled={isBusy}
+              tooltip="Remove Admin"
+              onClick={() => confirmRole(u, 'user')}
+            />
           )}
           {!isMe && (
-            <Tooltip text="Delete">
-              <Button
-                variant="outlined"
-                intent="danger"
-                icon="delete"
-                size="sm"
-                disabled={isBusy}
-                onClick={() => confirmDelete(u)}
-              />
-            </Tooltip>
+            <Button
+              variant="outlined"
+              intent="danger"
+              icon="delete"
+              size="sm"
+              disabled={isBusy}
+              tooltip="Delete"
+              onClick={() => confirmDelete(u)}
+            />
           )}
           {isMe && <span style={{ color: '#64748b', fontSize: '0.8rem' }}>You</span>}
         </div>

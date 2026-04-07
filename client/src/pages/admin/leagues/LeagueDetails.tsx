@@ -287,32 +287,30 @@ const LeagueDetailsPage = () => {
                     )}
                     <span className={styles.teamListName}>{t.name}</span>
                     <span className={styles.teamActions}>
-                      <Tooltip text="Edit">
-                        <Button
-                          variant="outlined"
-                          intent="accent"
-                          icon="edit"
-                          size="sm"
-                          disabled={busy === t.id}
-                          onClick={() => {
-                            setEditTargetTeam(t);
-                            setTeamModalOpen(true);
-                          }}
-                        />
-                      </Tooltip>
-                      <Tooltip text="Delete">
-                        <Button
-                          variant="outlined"
-                          intent="danger"
-                          icon="delete"
-                          size="sm"
-                          disabled={busy === t.id}
-                          onClick={() => {
-                            setConfirmDeleteTeam(t);
-                            setConfirmDeleteTeamOpen(true);
-                          }}
-                        />
-                      </Tooltip>
+                      <Button
+                        variant="outlined"
+                        intent="accent"
+                        icon="edit"
+                        size="sm"
+                        disabled={busy === t.id}
+                        tooltip="Edit"
+                        onClick={() => {
+                          setEditTargetTeam(t);
+                          setTeamModalOpen(true);
+                        }}
+                      />
+                      <Button
+                        variant="outlined"
+                        intent="danger"
+                        icon="delete"
+                        size="sm"
+                        disabled={busy === t.id}
+                        tooltip="Delete"
+                        onClick={() => {
+                          setConfirmDeleteTeam(t);
+                          setConfirmDeleteTeamOpen(true);
+                        }}
+                      />
                     </span>
                   </li>
                 ))}
@@ -365,32 +363,30 @@ const LeagueDetailsPage = () => {
                         : 'No dates'}
                     </span>
                     <span className={styles.seasonActions}>
-                      <Tooltip text="Edit">
-                        <Button
-                          variant="outlined"
-                          intent="accent"
-                          icon="edit"
-                          size="sm"
-                          disabled={busy === s.id}
-                          onClick={() => {
-                            setEditTargetSeason(s);
-                            setSeasonModalOpen(true);
-                          }}
-                        />
-                      </Tooltip>
-                      <Tooltip text="Delete">
-                        <Button
-                          variant="outlined"
-                          intent="danger"
-                          icon="delete"
-                          size="sm"
-                          disabled={busy === s.id}
-                          onClick={() => {
-                            setConfirmDeleteSeason(s);
-                            setConfirmDeleteSeasonOpen(true);
-                          }}
-                        />
-                      </Tooltip>
+                      <Button
+                        variant="outlined"
+                        intent="accent"
+                        icon="edit"
+                        size="sm"
+                        disabled={busy === s.id}
+                        tooltip="Edit"
+                        onClick={() => {
+                          setEditTargetSeason(s);
+                          setSeasonModalOpen(true);
+                        }}
+                      />
+                      <Button
+                        variant="outlined"
+                        intent="danger"
+                        icon="delete"
+                        size="sm"
+                        disabled={busy === s.id}
+                        tooltip="Delete"
+                        onClick={() => {
+                          setConfirmDeleteSeason(s);
+                          setConfirmDeleteSeasonOpen(true);
+                        }}
+                      />
                     </span>
                   </li>
                 ))}

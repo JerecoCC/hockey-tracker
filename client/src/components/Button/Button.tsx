@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './Button.module.scss';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'ghost';
@@ -18,6 +19,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: string;
   /** Overrides the icon font-size (e.g. "1.25rem"). Defaults to inheriting from button. */
   iconSize?: string;
+  /** When provided, wraps the button in a Tooltip. */
+  tooltip?: string;
+  /** Optional className forwarded to the Tooltip wrapper span. */
+  tooltipClassName?: string;
 }
 
 const VARIANT_INTENT: Record<ButtonVariant, Record<ButtonIntent, string>> = {
@@ -62,6 +67,8 @@ const Button = ({
   size = 'md',
   icon,
   iconSize,
+  tooltip,
+  tooltipClassName,
   children,
   className = '',
   ...rest
@@ -76,7 +83,7 @@ const Button = ({
     className,
   );
 
-  return (
+  const btn = (
     <button
       className={cls}
       {...rest}
@@ -90,6 +97,19 @@ const Button = ({
       {children}
     </button>
   );
+
+  if (tooltip) {
+    return (
+      <Tooltip
+        text={tooltip}
+        className={tooltipClassName}
+      >
+        {btn}
+      </Tooltip>
+    );
+  }
+
+  return btn;
 };
 
 export default Button;

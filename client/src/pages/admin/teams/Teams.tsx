@@ -89,29 +89,27 @@ const TeamsPage = () => {
       align: 'center',
       render: (t) => (
         <div className={styles.actions}>
-          <Tooltip text="Edit">
-            <Button
-              variant="outlined"
-              intent="accent"
-              icon="edit"
-              size="sm"
-              disabled={busy === t.id}
-              onClick={() => openEditModal(t)}
-            />
-          </Tooltip>
-          <Tooltip text="Delete">
-            <Button
-              variant="outlined"
-              intent="danger"
-              icon="delete"
-              size="sm"
-              disabled={busy === t.id}
-              onClick={() => {
-                setConfirmDelete(t);
-                setConfirmDeleteOpen(true);
-              }}
-            />
-          </Tooltip>
+          <Button
+            variant="outlined"
+            intent="accent"
+            icon="edit"
+            size="sm"
+            disabled={busy === t.id}
+            tooltip="Edit"
+            onClick={() => openEditModal(t)}
+          />
+          <Button
+            variant="outlined"
+            intent="danger"
+            icon="delete"
+            size="sm"
+            disabled={busy === t.id}
+            tooltip="Delete"
+            onClick={() => {
+              setConfirmDelete(t);
+              setConfirmDeleteOpen(true);
+            }}
+          />
         </div>
       ),
     },

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
-import Tooltip from '../Tooltip/Tooltip';
 import styles from './AdminNav.module.scss';
 
 interface NavItem {
@@ -38,82 +37,51 @@ const AdminNav = () => {
               Admin
             </span>
           )}
-          <Tooltip text={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}>
-            <Button
-              variant="ghost"
-              intent="neutral"
-              className={styles.toggleBtn}
-              onClick={() => setCollapsed((c) => !c)}
-              icon={collapsed ? 'chevron_right' : 'chevron_left'}
-              iconSize="0.65rem"
-            />
-          </Tooltip>
+          <Button
+            variant="ghost"
+            intent="neutral"
+            className={styles.toggleBtn}
+            onClick={() => setCollapsed((c) => !c)}
+            icon={collapsed ? 'chevron_right' : 'chevron_left'}
+            iconSize="0.65rem"
+            tooltip={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          />
         </div>
 
         <ul className={styles.list}>
           {NAV_ITEMS.map(({ label, path, icon }) => (
             <li key={path}>
-              {collapsed ? (
-                <Tooltip
-                  text={label}
-                  className={styles.navTooltipWrapper}
-                >
-                  <Button
-                    variant="ghost"
-                    intent="neutral"
-                    className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
-                    onClick={() => navigate(path)}
-                  >
-                    <Icon
-                      name={icon}
-                      className={styles.icon}
-                    />
-                  </Button>
-                </Tooltip>
-              ) : (
-                <Button
-                  variant="ghost"
-                  intent="neutral"
-                  className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
-                  onClick={() => navigate(path)}
-                >
-                  <Icon
-                    name={icon}
-                    className={styles.icon}
-                  />
-                  <span className={styles.label}>{label}</span>
-                </Button>
-              )}
+              <Button
+                variant="ghost"
+                intent="neutral"
+                className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
+                onClick={() => navigate(path)}
+                tooltip={collapsed ? label : undefined}
+                tooltipClassName={collapsed ? styles.navTooltipWrapper : undefined}
+              >
+                <Icon
+                  name={icon}
+                  className={styles.icon}
+                />
+                {!collapsed && <span className={styles.label}>{label}</span>}
+              </Button>
             </li>
           ))}
         </ul>
       </div>
 
       <div className={styles.bottom}>
-        {collapsed ? (
-          <Tooltip
-            text="Back to Dashboard"
-            className={styles.navTooltipWrapper}
-          >
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="arrow_back"
-              className={styles.backBtn}
-              onClick={() => navigate('/dashboard')}
-            />
-          </Tooltip>
-        ) : (
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            className={styles.backBtn}
-            onClick={() => navigate('/dashboard')}
-          >
-            Back to Dashboard
-          </Button>
-        )}
+        <Button
+          variant="outlined"
+          intent="neutral"
+          icon="arrow_back"
+          className={styles.backBtn}
+          onClick={() => navigate('/dashboard')}
+          tooltip={collapsed ? 'Back to Dashboard' : undefined}
+          tooltipClassName={collapsed ? styles.navTooltipWrapper : undefined}
+        >
+          {!collapsed && 'Back to Dashboard'}
+        </Button>
       </div>
     </nav>
   );

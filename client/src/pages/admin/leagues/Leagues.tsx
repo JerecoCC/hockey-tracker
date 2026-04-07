@@ -91,33 +91,31 @@ const LeaguesPage = () => {
       align: 'center',
       render: (l) => (
         <div className={styles.actions}>
-          <Tooltip text="Edit">
-            <Button
-              variant="outlined"
-              intent="accent"
-              icon="edit"
-              size="sm"
-              disabled={busy === l.id}
-              onClick={(e) => {
-                e.stopPropagation();
-                openEditModal(l);
-              }}
-            />
-          </Tooltip>
-          <Tooltip text="Delete">
-            <Button
-              variant="outlined"
-              intent="danger"
-              icon="delete"
-              size="sm"
-              disabled={busy === l.id}
-              onClick={(e) => {
-                e.stopPropagation();
-                setConfirmDelete(l);
-                setConfirmDeleteOpen(true);
-              }}
-            />
-          </Tooltip>
+          <Button
+            variant="outlined"
+            intent="accent"
+            icon="edit"
+            size="sm"
+            disabled={busy === l.id}
+            tooltip="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(l);
+            }}
+          />
+          <Button
+            variant="outlined"
+            intent="danger"
+            icon="delete"
+            size="sm"
+            disabled={busy === l.id}
+            tooltip="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
+              setConfirmDelete(l);
+              setConfirmDeleteOpen(true);
+            }}
+          />
         </div>
       ),
     },
