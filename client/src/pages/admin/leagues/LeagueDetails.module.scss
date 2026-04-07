@@ -374,13 +374,14 @@
   flex-direction: column;
   gap: $space-xs;
   max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-xs});
-  overflow-y: overlay;
+  overflow-y: auto;
+  scrollbar-gutter: stable; // always reserves 4px so content never shifts
 
-  // Firefox
-  scrollbar-width: none;
+  // Firefox — keep gutter stable by always using thin, but hide thumb
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 
   &:hover {
-    scrollbar-width: thin;
     scrollbar-color: $border transparent;
   }
 
@@ -418,15 +419,18 @@
   &:hover {
     background: rgba(255, 255, 255, 0.04);
 
-    .teamDeleteBtn {
+    .teamActions {
       opacity: 1;
       pointer-events: auto;
     }
   }
 }
 
-.teamDeleteBtn {
+.teamActions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
   opacity: 0;
   pointer-events: none;
   transition: opacity $transition-fast;
@@ -477,13 +481,14 @@
   flex-direction: column;
   gap: $space-xs;
   max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$space-xs});
-  overflow-y: overlay;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
 
   // Firefox
-  scrollbar-width: none;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 
   &:hover {
-    scrollbar-width: thin;
     scrollbar-color: $border transparent;
   }
 
@@ -513,7 +518,6 @@
 .seasonListItem {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: $space-md;
   padding: $space-sm $space-md;
   border-radius: $radius-md;
@@ -521,6 +525,11 @@
 
   &:hover {
     background: rgba(255, 255, 255, 0.04);
+
+    .seasonActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
@@ -534,5 +543,15 @@
   font-size: $font-xs;
   color: $text-dim;
   white-space: nowrap;
+}
+
+.seasonActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
   flex-shrink: 0;
 }

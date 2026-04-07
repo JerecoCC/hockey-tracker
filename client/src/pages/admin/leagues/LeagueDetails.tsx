@@ -5,11 +5,14 @@ import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
-import useLeagueDetails from '../../../hooks/useLeagueDetails';
+import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
 import { type TeamRecord } from '../../../hooks/useTeams';
+import { type SeasonRecord } from '../../../hooks/useSeasons';
 import LeagueFormModal from './LeagueFormModal';
 import TeamDeleteModal from '../teams/TeamDeleteModal';
 import TeamFormModal from '../teams/TeamFormModal';
+import SeasonFormModal from '../seasons/SeasonFormModal';
+import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
@@ -24,13 +27,25 @@ const LeagueDetailsPage = () => {
     uploadTeamLogo,
     updateLeague,
     addTeam,
+    updateTeam,
     deleteTeam,
+    addSeason,
+    updateSeason,
+    deleteSeason,
   } = useLeagueDetails(id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  // Team modal state
   const [teamModalOpen, setTeamModalOpen] = useState(false);
+  const [editTargetTeam, setEditTargetTeam] = useState<TeamRecord | null>(null);
   const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<TeamRecord | null>(null);
   const [confirmDeleteTeamOpen, setConfirmDeleteTeamOpen] = useState(false);
+  // Season modal state
+  const [seasonModalOpen, setSeasonModalOpen] = useState(false);
+  const [editTargetSeason, setEditTargetSeason] = useState<LeagueSeasonRecord | null>(null);
+  const [confirmDeleteSeason, setConfirmDeleteSeason] = useState<LeagueSeasonRecord | null>(null);
+  const [confirmDeleteSeasonOpen, setConfirmDeleteSeasonOpen] = useState(false);
+  // Description state
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionHtml, setDescriptionHtml] = useState<string>('');
   const [savingDescription, setSavingDescription] = useState(false);
@@ -269,7 +284,20 @@ const LeagueDetailsPage = () => {
                       <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
                     )}
                     <span className={styles.teamListName}>{t.name}</span>
-                    <span className={styles.teamDeleteBtn}>
+                    <span className={styles.teamActions}>
+                      <Tooltip text="Edit">
+                        <Button
+                          variant="outlined"
+                          intent="accent"
+                          icon="edit"
+                          size="sm"
+                          disabled={busy === t.id}
+                          onClick={() => {
+                            setEditTargetTeam(t);
+                            setTeamModalOpen(true);
+                          }}
+                        />
+                      </Tooltip>
                       <Tooltip text="Delete">
                         <Button
                           variant="outlined"
@@ -293,6 +321,16 @@ const LeagueDetailsPage = () => {
           <div className={`${styles.card} ${styles.col6}`}>
             <div className={styles.cardHeader}>
               <h3 className={styles.cardTitle}>Seasons</h3>
+              <Button
+                icon="add"
+                size="sm"
+                onClick={() => {
+                  setEditTargetSeason(null);
+                  setSeasonModalOpen(true);
+                }}
+              >
+                Add Season
+              </Button>
             </div>
             {loading ? (
               <p className={styles.teamsEmpty}>Loading…</p>
@@ -321,6 +359,34 @@ const LeagueDetailsPage = () => {
                             )
                             .join(' – ')
                         : 'No dates'}
+                    </span>
+                    <span className={styles.seasonActions}>
+                      <Tooltip text="Edit">
+                        <Button
+                          variant="outlined"
+                          intent="accent"
+                          icon="edit"
+                          size="sm"
+                          disabled={busy === s.id}
+                          onClick={() => {
+                            setEditTargetSeason(s);
+                            setSeasonModalOpen(true);
+                          }}
+                        />
+                      </Tooltip>
+                      <Tooltip text="Delete">
+                        <Button
+                          variant="outlined"
+                          intent="danger"
+                          icon="delete"
+                          size="sm"
+                          disabled={busy === s.id}
+                          onClick={() => {
+                            setConfirmDeleteSeason(s);
+                            setConfirmDeleteSeasonOpen(true);
+                          }}
+                        />
+                      </Tooltip>
                     </span>
                   </li>
                 ))}
@@ -356,17 +422,52 @@ const LeagueDetailsPage = () => {
 
       <TeamFormModal
         open={teamModalOpen}
-        editTarget={null}
+        editTarget={editTargetTeam}
         leagueOptions={
           league
             ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
             : []
         }
         lockedLeagueId={id}
-        onClose={() => setTeamModalOpen(false)}
+        onClose={() => {
+          setTeamModalOpen(false);
+          setEditTargetTeam(null);
+        }}
         addTeam={addTeam}
-        updateTeam={async () => false}
+        updateTeam={updateTeam}
         uploadLogo={uploadTeamLogo}
+      />
+
+      <SeasonDeleteModal
+        open={confirmDeleteSeasonOpen}
+        busy={busy}
+        target={confirmDeleteSeason as SeasonRecord | null}
+        onCancel={() => {
+          setConfirmDeleteSeasonOpen(false);
+          setConfirmDeleteSeason(null);
+        }}
+        onConfirm={async () => {
+          await deleteSeason(confirmDeleteSeason!.id);
+          setConfirmDeleteSeasonOpen(false);
+          setConfirmDeleteSeason(null);
+        }}
+      />
+
+      <SeasonFormModal
+        open={seasonModalOpen}
+        editTarget={editTargetSeason as SeasonRecord | null}
+        leagueOptions={
+          league
+            ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
+            : []
+        }
+        lockedLeagueId={id}
+        onClose={() => {
+          setSeasonModalOpen(false);
+          setEditTargetSeason(null);
+        }}
+        addSeason={addSeason}
+        updateSeason={updateSeason}
       />
     </>
   );

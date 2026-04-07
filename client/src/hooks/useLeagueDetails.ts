@@ -3,6 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import { type LeagueRecord, type CreateLeagueData } from './useLeagues';
 import { type TeamRecord, type CreateTeamData } from './useTeams';
+import { type CreateSeasonData } from './useSeasons';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -15,6 +16,7 @@ export interface LeagueFullRecord extends LeagueRecord {
 export interface LeagueSeasonRecord {
   id: string;
   name: string;
+  league_id: string;
   start_date: string | null;
   end_date: string | null;
   created_at: string;
@@ -131,6 +133,21 @@ const useLeagueDetails = (id: string | undefined) => {
     }
   };
 
+  const updateTeam = async (teamId: string, payload: Partial<CreateTeamData>): Promise<boolean> => {
+    setBusy(teamId);
+    try {
+      await axios.patch(`${API}/admin/teams/${teamId}`, payload, { headers: authHeaders() });
+      toast.success('Team updated!');
+      await fetchDetails();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update team'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deleteTeam = async (teamId: string): Promise<void> => {
     setBusy(teamId);
     try {
@@ -144,7 +161,47 @@ const useLeagueDetails = (id: string | undefined) => {
     }
   };
 
-  return { league, teams, seasons, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam, deleteTeam };
+  const addSeason = async (payload: CreateSeasonData): Promise<boolean> => {
+    try {
+      await axios.post(`${API}/admin/seasons`, payload, { headers: authHeaders() });
+      toast.success('Season created!');
+      await fetchDetails();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to create season'));
+      return false;
+    }
+  };
+
+  const updateSeason = async (seasonId: string, payload: Partial<CreateSeasonData>): Promise<boolean> => {
+    setBusy(seasonId);
+    try {
+      await axios.patch(`${API}/admin/seasons/${seasonId}`, payload, { headers: authHeaders() });
+      toast.success('Season updated!');
+      await fetchDetails();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update season'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteSeason = async (seasonId: string): Promise<void> => {
+    setBusy(seasonId);
+    try {
+      await axios.delete(`${API}/admin/seasons/${seasonId}`, { headers: authHeaders() });
+      toast.success('Season deleted');
+      await fetchDetails();
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete season'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { league, teams, seasons, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam, updateTeam, deleteTeam, addSeason, updateSeason, deleteSeason };
 };
 
 export default useLeagueDetails;
