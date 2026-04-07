@@ -80,7 +80,7 @@ interface TableProps<T> {
   activeSortKey?: string;
   sortDir?: 'asc' | 'desc';
   onSort?: (key: string, dir: 'asc' | 'desc') => void;
-  onRowDoubleClick?: (row: T) => void;
+  onRowClick?: (row: T) => void;
 }
 
 const Table = <T,>({
@@ -92,7 +92,7 @@ const Table = <T,>({
   activeSortKey,
   sortDir = 'asc',
   onSort,
-  onRowDoubleClick,
+  onRowClick,
 }: TableProps<T>) => {
   if (loading) {
     return (
@@ -159,8 +159,8 @@ const Table = <T,>({
             data.map((row) => (
               <tr
                 key={rowKey(row)}
-                onDoubleClick={onRowDoubleClick ? () => onRowDoubleClick(row) : undefined}
-                className={onRowDoubleClick ? styles.clickableRow : undefined}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                className={onRowClick ? styles.clickableRow : undefined}
               >
                 {columns.map((col) => (
                   <td

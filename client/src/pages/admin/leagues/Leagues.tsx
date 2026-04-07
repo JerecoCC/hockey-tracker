@@ -98,7 +98,10 @@ const LeaguesPage = () => {
               icon="edit"
               size="sm"
               disabled={busy === l.id}
-              onClick={() => openEditModal(l)}
+              onClick={(e) => {
+                e.stopPropagation();
+                openEditModal(l);
+              }}
             />
           </Tooltip>
           <Tooltip text="Delete">
@@ -108,7 +111,8 @@ const LeaguesPage = () => {
               icon="delete"
               size="sm"
               disabled={busy === l.id}
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setConfirmDelete(l);
                 setConfirmDeleteOpen(true);
               }}
@@ -162,7 +166,7 @@ const LeaguesPage = () => {
           activeSortKey={sortKey}
           sortDir={sortDir}
           onSort={handleSort}
-          onRowDoubleClick={(l) => navigate(`/admin/leagues/${l.id}`)}
+          onRowClick={(l) => navigate(`/admin/leagues/${l.id}`)}
         />
       </div>
 

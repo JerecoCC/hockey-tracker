@@ -61,6 +61,33 @@ router.get('/', async (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/leagues/:id/details  – league + associated teams
+// ---------------------------------------------------------------------------
+router.get('/:id/details', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT id, name, code, description, logo, primary_color, text_color, created_at
+      FROM leagues
+      WHERE id = ${id}
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
+
+    const teams = await sql`
+      SELECT id, name, code, description, location, logo, league_id, created_at
+      FROM teams
+      WHERE league_id = ${id}
+      ORDER BY name ASC
+    `;
+
+    return res.json({ ...rows[0], teams });
+  } catch (err) {
+    console.error('league details error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/leagues/:id  – get a single league
 // ---------------------------------------------------------------------------
 router.get('/:id', async (req, res) => {
