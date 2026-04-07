@@ -23,6 +23,8 @@ const AdminNav = () => {
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
+
   return (
     <nav className={`${styles.nav} ${collapsed ? styles.collapsed : ''}`}>
       <div className={styles.top}>
@@ -59,7 +61,7 @@ const AdminNav = () => {
                   <Button
                     variant="ghost"
                     intent="neutral"
-                    className={`${styles.navItem} ${pathname === path ? styles.active : ''}`}
+                    className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
                     onClick={() => navigate(path)}
                   >
                     <Icon
@@ -72,7 +74,7 @@ const AdminNav = () => {
                 <Button
                   variant="ghost"
                   intent="neutral"
-                  className={`${styles.navItem} ${pathname === path ? styles.active : ''}`}
+                  className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
                   onClick={() => navigate(path)}
                 >
                   <Icon
