@@ -6,17 +6,30 @@ import Icon from '../../../components/Icon/Icon';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import useLeagueDetails from '../../../hooks/useLeagueDetails';
+import { type TeamRecord } from '../../../hooks/useTeams';
 import LeagueFormModal from './LeagueFormModal';
+import TeamDeleteModal from '../teams/TeamDeleteModal';
 import TeamFormModal from '../teams/TeamFormModal';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
-  const { league, teams, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam } =
-    useLeagueDetails(id);
+  const {
+    league,
+    teams,
+    loading,
+    busy,
+    uploadLogo,
+    uploadTeamLogo,
+    updateLeague,
+    addTeam,
+    deleteTeam,
+  } = useLeagueDetails(id);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [teamModalOpen, setTeamModalOpen] = useState(false);
+  const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<TeamRecord | null>(null);
+  const [confirmDeleteTeamOpen, setConfirmDeleteTeamOpen] = useState(false);
   const [editingDescription, setEditingDescription] = useState(false);
   const [descriptionHtml, setDescriptionHtml] = useState<string>('');
   const [savingDescription, setSavingDescription] = useState(false);
@@ -255,6 +268,21 @@ const LeagueDetailsPage = () => {
                       <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
                     )}
                     <span className={styles.teamListName}>{t.name}</span>
+                    <span className={styles.teamDeleteBtn}>
+                      <Tooltip text="Delete">
+                        <Button
+                          variant="outlined"
+                          intent="danger"
+                          icon="delete"
+                          size="sm"
+                          disabled={busy === t.id}
+                          onClick={() => {
+                            setConfirmDeleteTeam(t);
+                            setConfirmDeleteTeamOpen(true);
+                          }}
+                        />
+                      </Tooltip>
+                    </span>
                   </li>
                 ))}
               </ul>
@@ -262,6 +290,21 @@ const LeagueDetailsPage = () => {
           </div>
         </div>
       </main>
+
+      <TeamDeleteModal
+        open={confirmDeleteTeamOpen}
+        busy={busy}
+        target={confirmDeleteTeam}
+        onCancel={() => {
+          setConfirmDeleteTeamOpen(false);
+          setConfirmDeleteTeam(null);
+        }}
+        onConfirm={async () => {
+          await deleteTeam(confirmDeleteTeam!.id);
+          setConfirmDeleteTeamOpen(false);
+          setConfirmDeleteTeam(null);
+        }}
+      />
 
       <LeagueFormModal
         open={editModalOpen}

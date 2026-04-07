@@ -374,7 +374,7 @@
   flex-direction: column;
   gap: $space-xs;
   max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-xs});
-  overflow-y: auto;
+  overflow-y: overlay;
 
   // Firefox
   scrollbar-width: none;
@@ -417,7 +417,19 @@
 
   &:hover {
     background: rgba(255, 255, 255, 0.04);
+
+    .teamDeleteBtn {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
+}
+
+.teamDeleteBtn {
+  margin-left: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
 }
 
 .teamListName {

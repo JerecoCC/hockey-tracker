@@ -120,7 +120,20 @@ const useLeagueDetails = (id: string | undefined) => {
     }
   };
 
-  return { league, teams, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam };
+  const deleteTeam = async (teamId: string): Promise<void> => {
+    setBusy(teamId);
+    try {
+      await axios.delete(`${API}/admin/teams/${teamId}`, { headers: authHeaders() });
+      toast.success('Team deleted');
+      await fetchDetails();
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete team'));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { league, teams, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam, deleteTeam };
 };
 
 export default useLeagueDetails;
