@@ -12,8 +12,17 @@ export interface LeagueFullRecord extends LeagueRecord {
   created_at: string;
 }
 
+export interface LeagueSeasonRecord {
+  id: string;
+  name: string;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+}
+
 export interface LeagueDetailsRecord extends LeagueFullRecord {
   teams: TeamRecord[];
+  seasons: LeagueSeasonRecord[];
 }
 
 const authHeaders = () => {
@@ -27,6 +36,7 @@ const apiError = (err: unknown, fallback: string): string =>
 const useLeagueDetails = (id: string | undefined) => {
   const [league, setLeague] = useState<LeagueFullRecord | null>(null);
   const [teams, setTeams] = useState<TeamRecord[]>([]);
+  const [seasons, setSeasons] = useState<LeagueSeasonRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -38,9 +48,10 @@ const useLeagueDetails = (id: string | undefined) => {
           `${API}/admin/leagues/${id}`,
           { headers: authHeaders(), signal },
         );
-        const { teams: t, ...leagueData } = data;
+        const { teams: t, seasons: s, ...leagueData } = data;
         setLeague(leagueData);
         setTeams(t);
+        setSeasons(s);
         setLoading(false);
       } catch (err) {
         if (axios.isCancel(err)) return;
@@ -133,7 +144,7 @@ const useLeagueDetails = (id: string | undefined) => {
     }
   };
 
-  return { league, teams, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam, deleteTeam };
+  return { league, teams, seasons, loading, busy, uploadLogo, uploadTeamLogo, updateLeague, addTeam, deleteTeam };
 };
 
 export default useLeagueDetails;

@@ -61,7 +61,7 @@ router.get('/', async (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/leagues/:id  – league + associated teams
+// GET /api/admin/leagues/:id  – league + associated teams + seasons
 // ---------------------------------------------------------------------------
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
@@ -73,14 +73,22 @@ router.get('/:id', async (req, res) => {
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
 
-    const teams = await sql`
-      SELECT id, name, code, description, location, logo, league_id, created_at
-      FROM teams
-      WHERE league_id = ${id}
-      ORDER BY name ASC
-    `;
+    const [teams, seasons] = await Promise.all([
+      sql`
+        SELECT id, name, code, description, location, logo, league_id, created_at
+        FROM teams
+        WHERE league_id = ${id}
+        ORDER BY name ASC
+      `,
+      sql`
+        SELECT id, name, start_date, end_date, created_at
+        FROM seasons
+        WHERE league_id = ${id}
+        ORDER BY start_date DESC NULLS LAST, name ASC
+      `,
+    ]);
 
-    return res.json({ ...rows[0], teams });
+    return res.json({ ...rows[0], teams, seasons });
   } catch (err) {
     console.error('league details error:', err);
     return res.status(500).json({ error: 'Internal server error' });

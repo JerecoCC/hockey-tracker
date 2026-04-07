@@ -467,3 +467,72 @@
   font-style: italic;
   margin: 0;
 }
+
+// ── Seasons list ──────────────────────────────────────────────────────────
+.seasonList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$space-xs});
+  overflow-y: overlay;
+
+  // Firefox
+  scrollbar-width: none;
+
+  &:hover {
+    scrollbar-width: thin;
+    scrollbar-color: $border transparent;
+  }
+
+  // Webkit
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: $radius-md;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: $border;
+
+    &:hover {
+      background: $text-dim;
+    }
+  }
+}
+
+.seasonListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.seasonListName {
+  font-size: $font-lg;
+  color: $text-body;
+  font-weight: 500;
+}
+
+.seasonListDates {
+  font-size: $font-xs;
+  color: $text-dim;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

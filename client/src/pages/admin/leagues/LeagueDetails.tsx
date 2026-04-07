@@ -17,6 +17,7 @@ const LeagueDetailsPage = () => {
   const {
     league,
     teams,
+    seasons,
     loading,
     busy,
     uploadLogo,
@@ -282,6 +283,44 @@ const LeagueDetailsPage = () => {
                           }}
                         />
                       </Tooltip>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div className={`${styles.card} ${styles.col6}`}>
+            <div className={styles.cardHeader}>
+              <h3 className={styles.cardTitle}>Seasons</h3>
+            </div>
+            {loading ? (
+              <p className={styles.teamsEmpty}>Loading…</p>
+            ) : seasons.length === 0 ? (
+              <p className={styles.teamsEmpty}>No seasons for this league yet.</p>
+            ) : (
+              <ul className={styles.seasonList}>
+                {seasons.map((s) => (
+                  <li
+                    key={s.id}
+                    className={styles.seasonListItem}
+                  >
+                    <span className={styles.seasonListName}>{s.name}</span>
+                    <span className={styles.seasonListDates}>
+                      {s.start_date || s.end_date
+                        ? [s.start_date, s.end_date]
+                            .map((d) =>
+                              d
+                                ? new Intl.DateTimeFormat('en-US', {
+                                    timeZone: 'UTC',
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric',
+                                  }).format(new Date(d))
+                                : '?',
+                            )
+                            .join(' – ')
+                        : 'No dates'}
                     </span>
                   </li>
                 ))}
