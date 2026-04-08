@@ -23,6 +23,8 @@ interface Props {
   addTeam: (data: CreateTeamData) => Promise<boolean>;
   updateTeam: (id: string, data: Partial<CreateTeamData>) => Promise<boolean>;
   uploadLogo: (file: File) => Promise<string | null>;
+  /** When set, the league field is pre-filled with this ID and locked. */
+  lockedLeagueId?: string;
 }
 
 const TeamFormModal = ({
@@ -33,6 +35,7 @@ const TeamFormModal = ({
   addTeam,
   updateTeam,
   uploadLogo,
+  lockedLeagueId,
 }: Props) => {
   const {
     control,
@@ -46,10 +49,10 @@ const TeamFormModal = ({
     reset({
       name: editTarget?.name ?? '',
       code: editTarget?.code ?? '',
-      league_id: editTarget?.league_id ?? null,
+      league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       logo: editTarget?.logo ?? null,
     });
-  }, [open, editTarget, reset]);
+  }, [open, editTarget, lockedLeagueId, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -82,6 +85,7 @@ const TeamFormModal = ({
           control={control}
           name="logo"
           label="Add Team Logo"
+          disabled={isSubmitting}
         />
         <Field
           label="Name"
@@ -91,6 +95,7 @@ const TeamFormModal = ({
           rules={{ required: true }}
           placeholder="e.g. Toronto Maple Leafs"
           autoFocus
+          disabled={isSubmitting}
         />
         <Field
           label="Code"
@@ -100,6 +105,7 @@ const TeamFormModal = ({
           rules={{ required: true }}
           transform={(v) => v.toUpperCase()}
           placeholder="e.g. TOR"
+          disabled={isSubmitting}
         />
         <Field
           label="League"
@@ -110,12 +116,14 @@ const TeamFormModal = ({
           rules={{ required: true }}
           options={leagueOptions}
           placeholder="— Select a league —"
+          disabled={!!lockedLeagueId || isSubmitting}
         />
         <div className={styles.formActions}>
           <Button
             type="button"
             variant="outlined"
             intent="neutral"
+            disabled={isSubmitting}
             onClick={onClose}
           >
             Cancel

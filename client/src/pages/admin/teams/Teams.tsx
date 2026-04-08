@@ -94,8 +94,8 @@ const TeamsPage = () => {
             intent="accent"
             icon="edit"
             size="sm"
-            title="Edit"
             disabled={busy === t.id}
+            tooltip="Edit"
             onClick={() => openEditModal(t)}
           />
           <Button
@@ -103,8 +103,8 @@ const TeamsPage = () => {
             intent="danger"
             icon="delete"
             size="sm"
-            title="Delete"
             disabled={busy === t.id}
+            tooltip="Delete"
             onClick={() => {
               setConfirmDelete(t);
               setConfirmDeleteOpen(true);

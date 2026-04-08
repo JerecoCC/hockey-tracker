@@ -8,9 +8,9 @@ export interface LeagueRecord {
   id: string;
   name: string;
   code: string;
-  description: string | null;
   logo: string | null;
-  created_at: string;
+  primary_color: string;
+  text_color: string;
 }
 
 export interface CreateLeagueData {
@@ -18,6 +18,8 @@ export interface CreateLeagueData {
   code: string;
   description?: string;
   logo?: string | null;
+  primary_color?: string;
+  text_color?: string;
 }
 
 const authHeaders = () => {

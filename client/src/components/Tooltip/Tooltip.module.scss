@@ -1,5 +1,5 @@
-@use '../../styles/colors' as *;
-@use '../../styles/mixins' as *;
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
 
 // ── Wrapper ─────────────────────────────────────────────────────────────────
 .wrapper {
@@ -7,20 +7,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-
-  &:hover .tip {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
 }
 
 // ── Tip bubble ───────────────────────────────────────────────────────────────
+// position: fixed escapes overflow:hidden parents; top/left set by JS
 .tip {
-  position: absolute;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%) translateY(4px);
-  background: $border; // slate-700 — sits above card without being jarring
+  position: fixed;
+  transform: translateY(4px); // default slide-in direction (above → down a little)
+  background: $border;
   color: $text-bright;
   font-size: $font-xs;
   font-weight: 500;
@@ -33,17 +27,39 @@
   transition:
     opacity $transition-fast,
     transform $transition-fast;
-  z-index: 100;
+  z-index: 9999;
 
-  // ── Arrow ──────────────────────────────────────────────────────────────
+  // ── Arrow — points down (tooltip above) ────────────────────────────────
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 100%;
-    left: 50%;
+    left: var(--arrow-left, 50%); // JS keeps this centred over the trigger
     transform: translateX(-50%);
     border: 5px solid transparent;
     border-top-color: $border;
   }
 }
 
+// ── Visible state (JS-driven) ─────────────────────────────────────────────
+.tipVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+// ── Flipped below ────────────────────────────────────────────────────────
+.tipBelow {
+  transform: translateY(-4px); // slide-in from below
+
+  &.tipVisible {
+    transform: translateY(0);
+  }
+
+  // Arrow points up
+  &::after {
+    top: auto;
+    bottom: 100%;
+    border-top-color: transparent;
+    border-bottom-color: $border;
+  }
+}

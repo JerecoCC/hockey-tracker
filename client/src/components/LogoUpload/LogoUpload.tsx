@@ -10,9 +10,10 @@ interface Props {
   control: unknown;
   name: string;
   rules?: RegisterOptions;
+  disabled?: boolean;
 }
 
-const LogoUpload = ({ label = 'Add Logo', control, name, rules }: Props) => {
+const LogoUpload = ({ label = 'Add Logo', control, name, rules, disabled }: Props) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
   const { field } = useController({ control: ctrl, name, rules });
@@ -61,18 +62,20 @@ const LogoUpload = ({ label = 'Add Logo', control, name, rules }: Props) => {
             alt="Preview"
             className={styles.logoPreview}
           />
-          <Button
-            type="button"
-            variant="ghost"
-            intent="neutral"
-            icon="close"
-            iconSize="0.9em"
-            className={styles.clearBtn}
-            onClick={handleClear}
-          />
+          {!disabled && (
+            <Button
+              type="button"
+              variant="ghost"
+              intent="neutral"
+              icon="close"
+              iconSize="0.9em"
+              className={styles.clearBtn}
+              onClick={handleClear}
+            />
+          )}
         </div>
       ) : (
-        <label className={styles.fileLabel}>
+        <label className={`${styles.fileLabel} ${disabled ? styles.fileLabelDisabled : ''}`}>
           <Icon
             name="upload"
             size="1.5em"
@@ -83,6 +86,7 @@ const LogoUpload = ({ label = 'Add Logo', control, name, rules }: Props) => {
             className={styles.fileInput}
             type="file"
             accept="image/*,image/svg+xml,.svg"
+            disabled={disabled}
             onChange={handleFileChange}
           />
         </label>

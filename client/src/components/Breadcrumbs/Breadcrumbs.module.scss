@@ -1,0 +1,48 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: $space-xs;
+  margin-bottom: $space-xl;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.separator {
+  font-size: 0.65em;
+  color: $text-dim;
+}
+
+.link {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: $font-base;
+  font-family: inherit;
+  color: $accent-light;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $text-bright;
+    text-decoration: underline;
+  }
+}
+
+.label {
+  font-size: $font-base;
+  color: $text-dim;
+}
+
+.current {
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-bright;
+}

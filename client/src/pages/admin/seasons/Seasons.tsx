@@ -100,8 +100,8 @@ const SeasonsPage = () => {
             intent="accent"
             icon="edit"
             size="sm"
-            title="Edit"
             disabled={busy === s.id}
+            tooltip="Edit"
             onClick={() => openEditModal(s)}
           />
           <Button
@@ -109,8 +109,8 @@ const SeasonsPage = () => {
             intent="danger"
             icon="delete"
             size="sm"
-            title="Delete"
             disabled={busy === s.id}
+            tooltip="Delete"
             onClick={() => {
               setConfirmDelete(s);
               setConfirmDeleteOpen(true);

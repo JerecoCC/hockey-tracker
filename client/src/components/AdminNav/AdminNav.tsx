@@ -22,6 +22,8 @@ const AdminNav = () => {
   const { pathname } = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
+  const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
+
   return (
     <nav className={`${styles.nav} ${collapsed ? styles.collapsed : ''}`}>
       <div className={styles.top}>
@@ -40,9 +42,9 @@ const AdminNav = () => {
             intent="neutral"
             className={styles.toggleBtn}
             onClick={() => setCollapsed((c) => !c)}
-            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
             icon={collapsed ? 'chevron_right' : 'chevron_left'}
             iconSize="0.65rem"
+            tooltip={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           />
         </div>
 
@@ -52,9 +54,10 @@ const AdminNav = () => {
               <Button
                 variant="ghost"
                 intent="neutral"
-                className={`${styles.navItem} ${pathname === path ? styles.active : ''}`}
+                className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
                 onClick={() => navigate(path)}
-                title={collapsed ? label : undefined}
+                tooltip={collapsed ? label : undefined}
+                tooltipClassName={collapsed ? styles.navTooltipWrapper : undefined}
               >
                 <Icon
                   name={icon}
@@ -74,7 +77,8 @@ const AdminNav = () => {
           icon="arrow_back"
           className={styles.backBtn}
           onClick={() => navigate('/dashboard')}
-          title={collapsed ? 'Back to Dashboard' : undefined}
+          tooltip={collapsed ? 'Back to Dashboard' : undefined}
+          tooltipClassName={collapsed ? styles.navTooltipWrapper : undefined}
         >
           {!collapsed && 'Back to Dashboard'}
         </Button>

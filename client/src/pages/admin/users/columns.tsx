@@ -82,8 +82,8 @@ export const getUserColumns = ({
               intent="accent"
               icon="manage_accounts"
               size="sm"
-              title="Make Admin"
               disabled={isBusy}
+              tooltip="Make Admin"
               onClick={() => confirmRole(u, 'admin')}
             />
           )}
@@ -93,8 +93,8 @@ export const getUserColumns = ({
               intent="info"
               icon="person_remove"
               size="sm"
-              title="Remove Admin"
               disabled={isBusy}
+              tooltip="Remove Admin"
               onClick={() => confirmRole(u, 'user')}
             />
           )}
@@ -104,8 +104,8 @@ export const getUserColumns = ({
               intent="danger"
               icon="delete"
               size="sm"
-              title="Delete"
               disabled={isBusy}
+              tooltip="Delete"
               onClick={() => confirmDelete(u)}
             />
           )}

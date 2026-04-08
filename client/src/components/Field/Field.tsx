@@ -30,6 +30,7 @@ type SelectProps = BaseProps & {
   type: 'select';
   options: SelectOption[];
   placeholder?: string;
+  disabled?: boolean;
 };
 
 type CustomProps = BaseProps & {
@@ -83,13 +84,14 @@ const Field = (props: FieldProps) => {
               />
             );
           } else if (props.type === 'select') {
-            const { options, placeholder } = props;
+            const { options, placeholder, disabled } = props;
             return (
               <Select
                 value={(field.value as string) ?? null}
                 options={options}
                 placeholder={placeholder}
                 onChange={field.onChange}
+                disabled={disabled}
               />
             );
           } else if (props.type === 'custom') {

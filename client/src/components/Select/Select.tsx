@@ -15,9 +15,16 @@ interface Props {
   options: SelectOption[];
   placeholder?: string;
   onChange: (value: string) => void;
+  disabled?: boolean;
 }
 
-const Select = ({ value, options, placeholder = '— Select —', onChange }: Props) => {
+const Select = ({
+  value,
+  options,
+  placeholder = '— Select —',
+  onChange,
+  disabled = false,
+}: Props) => {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const menuId = useId();
@@ -67,8 +74,13 @@ const Select = ({ value, options, placeholder = '— Select —', onChange }: Pr
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={menuId}
-        className={cn(styles.trigger, open && styles.triggerOpen)}
-        onClick={() => setOpen((o) => !o)}
+        className={cn(
+          styles.trigger,
+          open && styles.triggerOpen,
+          disabled && styles.triggerDisabled,
+        )}
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled}
       >
         {selected ? (
           <span className={styles.optionInner}>

@@ -1,0 +1,565 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Layout ─────────────────────────────────────────────────────────────
+.main {
+  flex: 1;
+  padding: $space-4xl;
+  overflow-y: auto;
+}
+
+// ── Section title ──────────────────────────────────────────────────────
+.sectionTitle {
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0 0 $space-xl;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+// ── 12-column page grid ────────────────────────────────────────────────
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: $space-2xl;
+  align-items: start;
+}
+
+@for $i from 1 through 12 {
+  .col#{$i} {
+    grid-column: span #{$i};
+  }
+}
+
+// ── Card ───────────────────────────────────────────────────────────────
+.card {
+  background: $bg-card;
+  border-radius: $radius-xl;
+  padding: $space-2xl;
+  border: 1px solid $border;
+}
+
+// ── Header (logo + name) ───────────────────────────────────────────────
+.leagueHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-2xl;
+  margin-bottom: $space-2xl;
+  padding-bottom: $space-2xl;
+  border-bottom: 1px solid $border;
+}
+
+.logoWrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+
+  &:hover .logoEditOverlay {
+    opacity: 1;
+  }
+}
+
+.logoEditOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-lg;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  cursor: pointer;
+  color: $text-bright;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.fileInput {
+  display: none;
+}
+
+.logoSpinnerOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: $radius-lg;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.logoSpinner {
+  width: $space-2xl;
+  height: $space-2xl;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.logoEditTooltip {
+  position: absolute;
+  bottom: calc(100% + $space-sm);
+  left: 50%;
+  transform: translateX(-50%);
+  background: $border;
+  color: $text-bright;
+  font-size: $font-xs;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: $border;
+  }
+}
+
+.logoWrapper:hover .logoEditTooltip {
+  opacity: 1;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: $radius-lg;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
+}
+
+.logoPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: $radius-lg;
+  background: $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+}
+
+.leagueNameBlock {
+  flex: 1;
+  min-width: 0;
+}
+
+.leagueNameRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+
+  &:hover .nameEditBtn {
+    opacity: 1;
+  }
+}
+
+.nameEditBtn {
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: $text-dim;
+  padding: $space-xs;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition:
+    opacity $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    color: $text-bright;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+
+  &:hover .nameEditTooltip {
+    opacity: 1;
+  }
+}
+
+.nameEditTooltip {
+  position: absolute;
+  bottom: calc(100% + $space-xs + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: $border;
+  color: $text-bright;
+  font-size: $font-xs;
+  font-weight: 500;
+  white-space: nowrap;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity $transition-fast;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: $border;
+  }
+}
+
+.leagueName {
+  font-size: $font-3xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0 0 $space-xs;
+}
+
+.leagueCode {
+  font-size: $font-base;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+// ── Header color swatches ──────────────────────────────────────────────
+.headerColors {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  flex-shrink: 0;
+}
+
+.headerColorItem {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-md;
+}
+
+.headerColorLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: right;
+}
+
+.headerColorDot {
+  width: $space-2xl;
+  height: $space-2xl;
+  border-radius: $radius-sm;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+  cursor: default;
+}
+
+// ── Description editor ─────────────────────────────────────────────────
+.descriptionReadArea {
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: $space-sm;
+  padding: $space-sm;
+  margin: -$space-sm;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .descriptionEditIcon {
+      opacity: 1;
+    }
+  }
+}
+
+.descriptionEditIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: $text-dim;
+  opacity: 0;
+  transition: opacity $transition-fast;
+}
+
+.descriptionEditor {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.descriptionActions {
+  display: flex;
+  gap: $space-sm;
+}
+
+// ── Info grid ──────────────────────────────────────────────────────────
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: $space-2xl;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoItemFull {
+  grid-column: 1 / -1;
+}
+
+.infoLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+.infoValueMuted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Teams card ─────────────────────────────────────────────────────────
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-xl;
+}
+
+.cardTitle {
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+}
+
+.teamList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+// Applied only when teams.length > 5 — caps height and enables scrolling
+.teamListLimited {
+  max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-xs});
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+
+  // Firefox
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+
+  // Webkit
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: $radius-md;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: $border;
+
+    &:hover {
+      background: $text-dim;
+    }
+  }
+}
+
+.teamListItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .teamActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.teamActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+}
+
+.teamListName {
+  font-size: $font-lg;
+  color: $text-body;
+}
+
+.teamLogoThumb {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+}
+
+.teamLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-base;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.teamsEmpty {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
+}
+
+// ── Seasons list ──────────────────────────────────────────────────────────
+.seasonList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+// Applied only when seasons.length > 5 — caps height and enables scrolling
+.seasonListLimited {
+  max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$space-xs});
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+
+  // Firefox
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+
+  // Webkit
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: $radius-md;
+  }
+
+  &:hover::-webkit-scrollbar-thumb {
+    background: $border;
+
+    &:hover {
+      background: $text-dim;
+    }
+  }
+}
+
+.seasonListItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .seasonActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.seasonListName {
+  font-size: $font-lg;
+  color: $text-body;
+  font-weight: 500;
+}
+
+.seasonListDates {
+  font-size: $font-xs;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+.seasonActions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+  flex-shrink: 0;
+}

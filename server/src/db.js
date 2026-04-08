@@ -82,6 +82,26 @@ async function initSchema() {
       END IF;
     END $$
   `;
+  // Drop the erroneous UNIQUE constraint on teams.league_id – a league can have many teams
+  await sql`
+    DO $$
+    DECLARE
+      c_name TEXT;
+    BEGIN
+      SELECT kcu.constraint_name INTO c_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name
+       AND tc.table_schema    = kcu.table_schema
+      WHERE tc.table_name      = 'teams'
+        AND tc.constraint_type = 'UNIQUE'
+        AND kcu.column_name    = 'league_id';
+
+      IF c_name IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE teams DROP CONSTRAINT ' || quote_ident(c_name);
+      END IF;
+    END $$
+  `;
   console.log('Database schema ready');
 }
 

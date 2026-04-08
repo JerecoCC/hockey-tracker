@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
+import Tooltip from '../../../components/Tooltip/Tooltip';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
@@ -16,6 +18,7 @@ const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   });
 
 const LeaguesPage = () => {
+  const navigate = useNavigate();
   const { leagues, loading, busy, uploadLogo, addLeague, updateLeague, deleteLeague } =
     useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
@@ -50,13 +53,38 @@ const LeaguesPage = () => {
               className={styles.logoThumb}
             />
           ) : (
-            <span className={styles.logoPlaceholder}>{l.code.slice(0, 3)}</span>
+            <span
+              className={styles.logoPlaceholder}
+              style={{ background: l.primary_color, color: l.text_color }}
+            >
+              {l.code.slice(0, 3)}
+            </span>
           )}
           {l.name}
         </div>
       ),
     },
     { header: 'Code', key: 'code', sortable: true },
+    {
+      type: 'custom',
+      header: 'Colors',
+      render: (l) => (
+        <div className={styles.colorSwatches}>
+          <Tooltip text={`Primary: ${l.primary_color}`}>
+            <span
+              className={styles.swatch}
+              style={{ background: l.primary_color }}
+            />
+          </Tooltip>
+          <Tooltip text={`Text: ${l.text_color}`}>
+            <span
+              className={styles.swatch}
+              style={{ background: l.text_color }}
+            />
+          </Tooltip>
+        </div>
+      ),
+    },
     {
       type: 'custom',
       header: 'Actions',
@@ -68,18 +96,22 @@ const LeaguesPage = () => {
             intent="accent"
             icon="edit"
             size="sm"
-            title="Edit"
             disabled={busy === l.id}
-            onClick={() => openEditModal(l)}
+            tooltip="Edit"
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(l);
+            }}
           />
           <Button
             variant="outlined"
             intent="danger"
             icon="delete"
             size="sm"
-            title="Delete"
             disabled={busy === l.id}
-            onClick={() => {
+            tooltip="Delete"
+            onClick={(e) => {
+              e.stopPropagation();
               setConfirmDelete(l);
               setConfirmDeleteOpen(true);
             }}
@@ -132,6 +164,7 @@ const LeaguesPage = () => {
           activeSortKey={sortKey}
           sortDir={sortDir}
           onSort={handleSort}
+          onRowClick={(l) => navigate(`/admin/leagues/${l.id}`)}
         />
       </div>
 

@@ -42,6 +42,11 @@
   &::placeholder {
     color: $text-dim;
   }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
 }
 
 // ── Textarea extras ─────────────────────────────────────────────────────

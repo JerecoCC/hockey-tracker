@@ -111,7 +111,10 @@ router.post('/', async (req, res) => {
     return res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'A team with that code already exists' });
+      const msg = err.detail?.includes('(code)')
+        ? 'A team with that code already exists'
+        : 'A unique constraint was violated';
+      return res.status(409).json({ error: msg });
     }
     if (err.code === '23503') {
       return res.status(400).json({ error: 'The specified league does not exist' });
@@ -152,7 +155,10 @@ router.patch('/:id', async (req, res) => {
     return res.json(rows[0]);
   } catch (err) {
     if (err.code === '23505') {
-      return res.status(409).json({ error: 'A team with that code already exists' });
+      const msg = err.detail?.includes('(code)')
+        ? 'A team with that code already exists'
+        : 'A unique constraint was violated';
+      return res.status(409).json({ error: msg });
     }
     if (err.code === '23503') {
       return res.status(400).json({ error: 'The specified league does not exist' });

@@ -20,6 +20,8 @@ interface Props {
   onClose: () => void;
   addSeason: (data: CreateSeasonData) => Promise<boolean>;
   updateSeason: (id: string, data: Partial<CreateSeasonData>) => Promise<boolean>;
+  /** When set, the league field is pre-filled with this ID and locked. */
+  lockedLeagueId?: string;
 }
 
 const SeasonFormModal = ({
@@ -29,6 +31,7 @@ const SeasonFormModal = ({
   onClose,
   addSeason,
   updateSeason,
+  lockedLeagueId,
 }: Props) => {
   const {
     control,
@@ -42,7 +45,7 @@ const SeasonFormModal = ({
   useEffect(() => {
     if (!open) return;
     reset({
-      league_id: editTarget?.league_id ?? null,
+      league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       start_date: editTarget?.start_date?.slice(0, 10) ?? '',
       end_date: editTarget?.end_date?.slice(0, 10) ?? '',
     });
@@ -77,6 +80,7 @@ const SeasonFormModal = ({
           rules={{ required: true }}
           options={leagueOptions}
           placeholder="— Select a league —"
+          disabled={!!editTarget || !!lockedLeagueId}
         />
         <div className={styles.dateRow}>
           <Field
