@@ -286,6 +286,7 @@ const LeagueDetailsPage = () => {
                       <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
                     )}
                     <span className={styles.teamListName}>{t.name}</span>
+                    <span className={styles.seasonListDates}>{t.code}</span>
                     <span className={styles.teamActions}>
                       <Button
                         variant="outlined"
