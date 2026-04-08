@@ -7,6 +7,12 @@
   justify-content: center;
 }
 
+.fileLabelDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .fileLabel {
   display: flex;
   flex-direction: column;

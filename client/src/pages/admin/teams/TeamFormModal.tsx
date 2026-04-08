@@ -85,6 +85,7 @@ const TeamFormModal = ({
           control={control}
           name="logo"
           label="Add Team Logo"
+          disabled={isSubmitting}
         />
         <Field
           label="Name"
@@ -94,6 +95,7 @@ const TeamFormModal = ({
           rules={{ required: true }}
           placeholder="e.g. Toronto Maple Leafs"
           autoFocus
+          disabled={isSubmitting}
         />
         <Field
           label="Code"
@@ -103,6 +105,7 @@ const TeamFormModal = ({
           rules={{ required: true }}
           transform={(v) => v.toUpperCase()}
           placeholder="e.g. TOR"
+          disabled={isSubmitting}
         />
         <Field
           label="League"
@@ -113,13 +116,14 @@ const TeamFormModal = ({
           rules={{ required: true }}
           options={leagueOptions}
           placeholder="— Select a league —"
-          disabled={!!lockedLeagueId}
+          disabled={!!lockedLeagueId || isSubmitting}
         />
         <div className={styles.formActions}>
           <Button
             type="button"
             variant="outlined"
             intent="neutral"
+            disabled={isSubmitting}
             onClick={onClose}
           >
             Cancel
