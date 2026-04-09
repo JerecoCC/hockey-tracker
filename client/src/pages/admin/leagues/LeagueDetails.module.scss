@@ -65,15 +65,15 @@
 // ── Card ───────────────────────────────────────────────────────────────
 .card {
   background: $bg-card;
-  border-radius: $radius-xl;
-  padding: $space-2xl;
+  border-radius: $radius-lg;
+  padding: $space-xl;
   border: 1px solid $border;
 }
 
 // ── Header (logo + name) ───────────────────────────────────────────────
 .leagueHeader {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: $space-xl;
   margin-bottom: $space-2xl;
   padding-bottom: $space-2xl;
