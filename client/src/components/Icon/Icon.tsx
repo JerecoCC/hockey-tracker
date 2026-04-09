@@ -12,6 +12,8 @@ import {
   faEye,
   faEyeSlash,
   faHockeyPuck,
+  faArrowUpRightFromSquare,
+  faLocationDot,
   faPen,
   faPeopleGroup,
   faPlus,
@@ -74,6 +76,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
   mail: faEnvelope,
   visibility: faEye,
   visibility_off: faEyeSlash,
+  location_on: faLocationDot,
+  open_in_new: faArrowUpRightFromSquare,
 
   // decorative
   sports_hockey: faHockeyPuck,

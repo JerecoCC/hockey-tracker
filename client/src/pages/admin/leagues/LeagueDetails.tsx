@@ -303,6 +303,18 @@ const LeagueDetailsPage = () => {
                     <span className={styles.teamActions}>
                       <Button
                         variant="outlined"
+                        intent="neutral"
+                        icon="open_in_new"
+                        size="sm"
+                        tooltip="View Details"
+                        onClick={() =>
+                          navigate(`/admin/teams/${t.id}`, {
+                            state: { from: 'league', leagueId: league.id, leagueName: league.name },
+                          })
+                        }
+                      />
+                      <Button
+                        variant="outlined"
                         intent="accent"
                         icon="edit"
                         size="sm"

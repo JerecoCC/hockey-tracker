@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
@@ -18,6 +19,7 @@ const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   });
 
 const TeamsPage = () => {
+  const navigate = useNavigate();
   const { teams, loading, busy, uploadLogo, addTeam, updateTeam, deleteTeam } = useTeams();
   const { leagues } = useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
@@ -89,6 +91,14 @@ const TeamsPage = () => {
       align: 'center',
       render: (t) => (
         <div className={styles.actions}>
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="open_in_new"
+            size="sm"
+            tooltip="View Details"
+            onClick={() => navigate(`/admin/teams/${t.id}`, { state: { from: 'teams' } })}
+          />
           <Button
             variant="outlined"
             intent="accent"

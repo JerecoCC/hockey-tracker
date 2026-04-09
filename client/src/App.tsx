@@ -10,6 +10,7 @@ import LeaguesPage from './pages/admin/leagues/Leagues';
 import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
 import TeamsPage from './pages/admin/teams/Teams';
+import TeamDetailsPage from './pages/admin/teams/TeamDetails';
 import SeasonsPage from './pages/admin/seasons/Seasons';
 import AuthCallbackPage from './pages/auth/callback/AuthCallback';
 
@@ -131,6 +132,10 @@ const App = () => (
           <Route
             path="/admin/teams"
             element={<TeamsPage />}
+          />
+          <Route
+            path="/admin/teams/:id"
+            element={<TeamDetailsPage />}
           />
         </Route>
         <Route

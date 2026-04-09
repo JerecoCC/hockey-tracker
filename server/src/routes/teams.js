@@ -61,15 +61,17 @@ router.get('/', async (_req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/teams/:id  – get a single team
+// GET /api/admin/teams/:id  – get a single team (with league info)
 // ---------------------------------------------------------------------------
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT id, name, code, description, location, logo, league_id, created_at
-      FROM teams
-      WHERE id = ${id}
+      SELECT t.id, t.name, t.code, t.description, t.location, t.logo, t.league_id, t.created_at,
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+      FROM teams t
+      LEFT JOIN leagues l ON l.id = t.league_id
+      WHERE t.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Team not found' });
     return res.json(rows[0]);
