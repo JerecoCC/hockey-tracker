@@ -287,7 +287,8 @@ const LeagueDetailsPage = () => {
                 {teams.map((t) => (
                   <li
                     key={t.id}
-                    className={styles.teamListItem}
+                    className={`${styles.teamListItem} ${styles.teamListItemClickable}`}
+                    onClick={() => navigate(`/admin/leagues/${league.id}/teams/${t.id}`)}
                   >
                     {t.logo ? (
                       <img
@@ -303,24 +304,13 @@ const LeagueDetailsPage = () => {
                     <span className={styles.teamActions}>
                       <Button
                         variant="outlined"
-                        intent="neutral"
-                        icon="open_in_new"
-                        size="sm"
-                        tooltip="View Details"
-                        onClick={() =>
-                          navigate(`/admin/teams/${t.id}`, {
-                            state: { from: 'league', leagueId: league.id, leagueName: league.name },
-                          })
-                        }
-                      />
-                      <Button
-                        variant="outlined"
                         intent="accent"
                         icon="edit"
                         size="sm"
                         disabled={busy === t.id}
                         tooltip="Edit"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setEditTargetTeam(t);
                           setTeamModalOpen(true);
                         }}
@@ -332,7 +322,8 @@ const LeagueDetailsPage = () => {
                         size="sm"
                         disabled={busy === t.id}
                         tooltip="Delete"
-                        onClick={() => {
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setConfirmDeleteTeam(t);
                           setConfirmDeleteTeamOpen(true);
                         }}

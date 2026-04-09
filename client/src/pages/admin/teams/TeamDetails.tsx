@@ -1,37 +1,27 @@
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import useTeamDetails from '../../../hooks/useTeamDetails';
 import styles from './TeamDetails.module.scss';
 
-interface LocationState {
-  from?: 'teams' | 'league';
-  leagueId?: string;
-  leagueName?: string;
-}
-
 const TeamDetailsPage = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
-  const { state } = useLocation() as { state: LocationState | null };
+  const { id, leagueId } = useParams<{ id: string; leagueId?: string }>();
   const { team, loading } = useTeamDetails(id);
 
-  const fromLeague = state?.from === 'league';
+  const fromLeague = Boolean(leagueId);
 
   const breadcrumbItems = fromLeague
     ? [
         { label: 'Leagues', path: '/admin/leagues' },
-        { label: state!.leagueName!, path: `/admin/leagues/${state!.leagueId}` },
+        { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
         { label: team?.name ?? '…' },
       ]
-    : [
-        { label: 'Teams', path: '/admin/teams' },
-        { label: team?.name ?? '…' },
-      ];
+    : [{ label: 'Teams', path: '/admin/teams' }, { label: team?.name ?? '…' }];
 
-  const backPath = fromLeague ? `/admin/leagues/${state!.leagueId}` : '/admin/teams';
-  const backTooltip = fromLeague ? `Back to ${state!.leagueName}` : 'Back to Teams';
+  const backPath = fromLeague ? `/admin/leagues/${leagueId}` : '/admin/teams';
+  const backTooltip = fromLeague ? `Back to ${team?.league_name ?? 'League'}` : 'Back to Teams';
 
   if (loading) {
     return (
@@ -53,7 +43,10 @@ const TeamDetailsPage = () => {
   }
 
   const createdDate = new Intl.DateTimeFormat('en-US', {
-    year: 'numeric', month: 'long', day: 'numeric', timeZone: 'UTC',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    timeZone: 'UTC',
   }).format(new Date(team.created_at));
 
   return (
@@ -69,7 +62,10 @@ const TeamDetailsPage = () => {
           onClick={() => navigate(backPath)}
         />
         <h2 className={styles.sectionTitle}>
-          <Icon name="groups" size="1em" />
+          <Icon
+            name="groups"
+            size="1em"
+          />
           Team Details
         </h2>
       </div>
@@ -80,7 +76,11 @@ const TeamDetailsPage = () => {
           <div className={styles.teamHeader}>
             <div className={styles.logoArea}>
               {team.logo ? (
-                <img src={team.logo} alt={team.name} className={styles.logo} />
+                <img
+                  src={team.logo}
+                  alt={team.name}
+                  className={styles.logo}
+                />
               ) : (
                 <span className={styles.logoPlaceholder}>{team.code.slice(0, 3)}</span>
               )}
@@ -90,7 +90,10 @@ const TeamDetailsPage = () => {
               <span className={styles.teamCode}>{team.code}</span>
               {team.location && (
                 <span className={styles.teamLocation}>
-                  <Icon name="location_on" size="0.95em" />
+                  <Icon
+                    name="location_on"
+                    size="0.95em"
+                  />
                   {team.location}
                 </span>
               )}
@@ -121,9 +124,15 @@ const TeamDetailsPage = () => {
               {team.league_id ? (
                 <div className={styles.leagueBadge}>
                   {team.league_logo ? (
-                    <img src={team.league_logo} alt={team.league_name ?? ''} className={styles.leagueLogo} />
+                    <img
+                      src={team.league_logo}
+                      alt={team.league_name ?? ''}
+                      className={styles.leagueLogo}
+                    />
                   ) : (
-                    <span className={styles.leagueLogoPlaceholder}>{team.league_code?.slice(0, 3)}</span>
+                    <span className={styles.leagueLogoPlaceholder}>
+                      {team.league_code?.slice(0, 3)}
+                    </span>
                   )}
                   <span className={styles.infoValue}>{team.league_name}</span>
                 </div>

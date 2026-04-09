@@ -93,20 +93,15 @@ const TeamsPage = () => {
         <div className={styles.actions}>
           <Button
             variant="outlined"
-            intent="neutral"
-            icon="open_in_new"
-            size="sm"
-            tooltip="View Details"
-            onClick={() => navigate(`/admin/teams/${t.id}`, { state: { from: 'teams' } })}
-          />
-          <Button
-            variant="outlined"
             intent="accent"
             icon="edit"
             size="sm"
             disabled={busy === t.id}
             tooltip="Edit"
-            onClick={() => openEditModal(t)}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(t);
+            }}
           />
           <Button
             variant="outlined"
@@ -115,7 +110,8 @@ const TeamsPage = () => {
             size="sm"
             disabled={busy === t.id}
             tooltip="Delete"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setConfirmDelete(t);
               setConfirmDeleteOpen(true);
             }}
@@ -168,6 +164,7 @@ const TeamsPage = () => {
           activeSortKey={sortKey}
           sortDir={sortDir}
           onSort={handleSort}
+          onRowClick={(t) => navigate(`/admin/teams/${t.id}`)}
         />
       </div>
 

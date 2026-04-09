@@ -137,6 +137,10 @@ const App = () => (
             path="/admin/teams/:id"
             element={<TeamDetailsPage />}
           />
+          <Route
+            path="/admin/leagues/:leagueId/teams/:id"
+            element={<TeamDetailsPage />}
+          />
         </Route>
         <Route
           path="*"

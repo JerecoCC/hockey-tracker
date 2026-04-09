@@ -450,6 +450,10 @@
   }
 }
 
+.teamListItemClickable {
+  cursor: pointer;
+}
+
 .teamListItem {
   display: flex;
   align-items: center;
