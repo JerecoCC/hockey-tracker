@@ -14,6 +14,8 @@ const SignupPage = () => {
 
   const [form, setForm] = useState({ name: '', email: '', password: '', confirm: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -87,28 +89,50 @@ const SignupPage = () => {
 
           <label className={styles.label}>
             Password
-            <input
-              className={styles.input}
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="Min. 6 characters"
-              required
-            />
+            <div className={styles.inputWrapper}>
+              <input
+                className={styles.input}
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="Min. 6 characters"
+                required
+              />
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
+              </button>
+            </div>
           </label>
 
           <label className={styles.label}>
             Confirm password
-            <input
-              className={styles.input}
-              type="password"
-              name="confirm"
-              value={form.confirm}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-            />
+            <div className={styles.inputWrapper}>
+              <input
+                className={styles.input}
+                type={showConfirm ? 'text' : 'password'}
+                name="confirm"
+                value={form.confirm}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowConfirm((v) => !v)}
+                tabIndex={-1}
+                aria-label={showConfirm ? 'Hide password' : 'Show password'}
+              >
+                <Icon name={showConfirm ? 'visibility_off' : 'visibility'} />
+              </button>
+            </div>
           </label>
 
           <Button

@@ -49,6 +49,37 @@
   }
 }
 
+// ── Password wrapper ────────────────────────────────────────────────────
+.inputWrapper {
+  position: relative;
+  display: flex;
+
+  .field {
+    flex: 1;
+    padding-right: 2.75rem;
+  }
+}
+
+.passwordToggle {
+  position: absolute;
+  right: $space-md;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: $text-dim;
+  font-size: $font-base;
+  transition: color $transition-base;
+
+  &:hover {
+    color: $text-body;
+  }
+}
+
 // ── Textarea extras ─────────────────────────────────────────────────────
 .textarea {
   resize: vertical;

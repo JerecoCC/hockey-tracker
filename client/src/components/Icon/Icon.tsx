@@ -9,6 +9,8 @@ import {
   faChevronRight,
   faCircleUser,
   faEnvelope,
+  faEye,
+  faEyeSlash,
   faHockeyPuck,
   faPen,
   faPeopleGroup,
@@ -70,6 +72,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
   // auth
   account_circle: faCircleUser,
   mail: faEnvelope,
+  visibility: faEye,
+  visibility_off: faEyeSlash,
 
   // decorative
   sports_hockey: faHockeyPuck,
