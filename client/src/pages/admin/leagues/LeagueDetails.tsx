@@ -64,7 +64,10 @@ const LeagueDetailsPage = () => {
   if (loading) {
     return (
       <main className={styles.main}>
-        <p style={{ color: 'var(--text-dim)' }}>Loading…</p>
+        <div className={styles.loaderWrapper}>
+          <span className={styles.spinner} />
+          <p className={styles.loaderText}>Loading league…</p>
+        </div>
       </main>
     );
   }
