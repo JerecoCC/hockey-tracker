@@ -98,13 +98,7 @@ const LeagueDetailsPage = () => {
             tooltip="Back to Leagues"
             onClick={() => navigate('/admin/leagues')}
           />
-          <h2 className={styles.sectionTitle}>
-            <Icon
-              name="emoji_events"
-              size="1em"
-            />
-            League Details
-          </h2>
+          <h2 className={styles.sectionTitle}>League Details</h2>
         </div>
 
         <div className={styles.grid}>

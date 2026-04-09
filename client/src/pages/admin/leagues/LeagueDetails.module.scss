@@ -21,9 +21,6 @@
   font-weight: 700;
   color: $text-bright;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
 }
 
 // ── Page loader ────────────────────────────────────────────────────────
@@ -76,8 +73,8 @@
 // ── Header (logo + name) ───────────────────────────────────────────────
 .leagueHeader {
   display: flex;
-  align-items: center;
-  gap: $space-2xl;
+  align-items: flex-start;
+  gap: $space-xl;
   margin-bottom: $space-2xl;
   padding-bottom: $space-2xl;
   border-bottom: 1px solid $border;

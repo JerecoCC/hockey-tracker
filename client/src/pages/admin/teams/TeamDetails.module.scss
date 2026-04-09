@@ -21,14 +21,13 @@
   font-weight: 700;
   color: $text-bright;
   margin: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
 }
 
 // ── Page loader ────────────────────────────────────────────────────────
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .loaderWrapper {
@@ -91,12 +90,17 @@
 // ── Team header ────────────────────────────────────────────────────────
 .teamHeader {
   display: flex;
-  align-items: center;
-  gap: $space-2xl;
+  align-items: flex-start;
+  gap: $space-xl;
 }
 
 .logoArea {
   flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .logo {

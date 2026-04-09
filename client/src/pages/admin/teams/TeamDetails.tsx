@@ -1,7 +1,7 @@
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
+import Icon from '../../../components/Icon/Icon'; // still needed for location_on
 import useTeamDetails from '../../../hooks/useTeamDetails';
 import styles from './TeamDetails.module.scss';
 
@@ -21,7 +21,7 @@ const TeamDetailsPage = () => {
     : [{ label: 'Teams', path: '/admin/teams' }, { label: team?.name ?? '…' }];
 
   const backPath = fromLeague ? `/admin/leagues/${leagueId}` : '/admin/teams';
-  const backTooltip = fromLeague ? `Back to ${team?.league_name ?? 'League'}` : 'Back to Teams';
+  const backTooltip = fromLeague ? 'Back to League Details' : 'Back to Teams';
 
   if (loading) {
     return (
@@ -61,13 +61,7 @@ const TeamDetailsPage = () => {
           tooltip={backTooltip}
           onClick={() => navigate(backPath)}
         />
-        <h2 className={styles.sectionTitle}>
-          <Icon
-            name="groups"
-            size="1em"
-          />
-          Team Details
-        </h2>
+        <h2 className={styles.sectionTitle}>Team Details</h2>
       </div>
 
       <div className={styles.grid}>
