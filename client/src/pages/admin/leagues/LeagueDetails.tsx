@@ -89,7 +89,7 @@ const LeagueDetailsPage = () => {
 
         <div className={styles.titleRow}>
           <Button
-            variant="ghost"
+            variant="outlined"
             intent="neutral"
             icon="arrow_back"
             tooltip="Back to Leagues"
