@@ -23,14 +23,6 @@
   margin: 0;
 }
 
-// ── Card ───────────────────────────────────────────────────────────────
-.card {
-  background: $bg-card;
-  border-radius: $radius-lg;
-  padding: $space-xl;
-  border: 1px solid $border;
-}
-
 // ── Logo + name cell ───────────────────────────────────────────────────
 .logoWithName {
   display: flex;

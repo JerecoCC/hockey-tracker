@@ -13,6 +13,7 @@ import TeamDeleteModal from '../teams/TeamDeleteModal';
 import TeamFormModal from '../teams/TeamFormModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
+import Card from '../../../components/Card/Card';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
@@ -102,7 +103,7 @@ const LeagueDetailsPage = () => {
         </div>
 
         <div className={styles.grid}>
-          <div className={`${styles.card} ${styles.col12}`}>
+          <Card className={styles.col12}>
             <div className={styles.leagueHeader}>
               <div className={styles.logoWrapper}>
                 {league.logo ? (
@@ -257,11 +258,12 @@ const LeagueDetailsPage = () => {
                 )}
               </div>
             </div>
-          </div>
+          </Card>
 
-          <div className={`${styles.card} ${styles.col6}`}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Teams</h3>
+          <Card
+            className={styles.col6}
+            title="Teams"
+            action={
               <Button
                 icon="add"
                 size="sm"
@@ -269,7 +271,8 @@ const LeagueDetailsPage = () => {
               >
                 Add Team
               </Button>
-            </div>
+            }
+          >
             {loading ? (
               <p className={styles.teamsEmpty}>Loading…</p>
             ) : teams.length === 0 ? (
@@ -327,11 +330,12 @@ const LeagueDetailsPage = () => {
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
 
-          <div className={`${styles.card} ${styles.col6}`}>
-            <div className={styles.cardHeader}>
-              <h3 className={styles.cardTitle}>Seasons</h3>
+          <Card
+            className={styles.col6}
+            title="Seasons"
+            action={
               <Button
                 icon="add"
                 size="sm"
@@ -342,7 +346,8 @@ const LeagueDetailsPage = () => {
               >
                 Add Season
               </Button>
-            </div>
+            }
+          >
             {loading ? (
               <p className={styles.teamsEmpty}>Loading…</p>
             ) : seasons.length === 0 ? (
@@ -403,7 +408,7 @@ const LeagueDetailsPage = () => {
                 ))}
               </ul>
             )}
-          </div>
+          </Card>
         </div>
       </main>
 

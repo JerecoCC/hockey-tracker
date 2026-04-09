@@ -68,25 +68,6 @@
   }
 }
 
-// ── Card ───────────────────────────────────────────────────────────────
-.card {
-  background: $bg-card;
-  border-radius: $radius-lg;
-  padding: $space-xl;
-  border: 1px solid $border;
-}
-
-.cardHeader {
-  margin-bottom: $space-xl;
-}
-
-.cardTitle {
-  font-size: $font-xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
-}
-
 // ── Team header ────────────────────────────────────────────────────────
 .teamHeader {
   display: flex;

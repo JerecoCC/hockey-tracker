@@ -7,6 +7,7 @@ import Tooltip from '../../../components/Tooltip/Tooltip';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
+import Card from '../../../components/Card/Card';
 import styles from './Leagues.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
@@ -154,7 +155,7 @@ const LeaguesPage = () => {
         </Button>
       </div>
 
-      <div className={styles.card}>
+      <Card>
         <Table
           columns={columns}
           data={sortedLeagues}
@@ -166,7 +167,7 @@ const LeaguesPage = () => {
           onSort={handleSort}
           onRowClick={(l) => navigate(`/admin/leagues/${l.id}`)}
         />
-      </div>
+      </Card>
 
       <LeagueDeleteModal
         open={confirmDeleteOpen}

@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/Button/Button';
 import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
+import Card from '../../components/Card/Card';
 import styles from './Login.module.scss';
 
 const LoginPage = () => {
@@ -36,7 +37,10 @@ const LoginPage = () => {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
+      <Card
+        variant="light"
+        className={styles.authCard}
+      >
         <h1 className={styles.title}>
           <Icon
             name="sports_hockey"
@@ -111,7 +115,7 @@ const LoginPage = () => {
             Sign up
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   );
 };

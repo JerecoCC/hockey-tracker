@@ -7,6 +7,7 @@ import useSeasons, { SeasonRecord } from '../../../hooks/useSeasons';
 import useLeagues from '../../../hooks/useLeagues';
 import SeasonDeleteModal from './SeasonDeleteModal';
 import SeasonFormModal from './SeasonFormModal';
+import Card from '../../../components/Card/Card';
 import styles from './Seasons.module.scss';
 
 const US_DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -154,7 +155,7 @@ const SeasonsPage = () => {
         </Button>
       </div>
 
-      <div className={styles.card}>
+      <Card>
         <Table
           columns={columns}
           data={sortedSeasons}
@@ -165,7 +166,7 @@ const SeasonsPage = () => {
           sortDir={sortDir}
           onSort={handleSort}
         />
-      </div>
+      </Card>
 
       <SeasonDeleteModal
         open={confirmDeleteOpen}

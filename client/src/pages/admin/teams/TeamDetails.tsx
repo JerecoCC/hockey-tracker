@@ -3,6 +3,7 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon'; // still needed for location_on
 import useTeamDetails from '../../../hooks/useTeamDetails';
+import Card from '../../../components/Card/Card';
 import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
@@ -66,7 +67,7 @@ const TeamDetailsPage = () => {
 
       <div className={styles.grid}>
         {/* ── Header card ─────────────────────────────────── */}
-        <div className={`${styles.card} ${styles.col12}`}>
+        <Card className={styles.col12}>
           <div className={styles.teamHeader}>
             <div className={styles.logoArea}>
               {team.logo ? (
@@ -93,25 +94,25 @@ const TeamDetailsPage = () => {
               )}
             </div>
           </div>
-        </div>
+        </Card>
 
         {/* ── Description card ────────────────────────────── */}
-        <div className={`${styles.card} ${styles.col8}`}>
-          <div className={styles.cardHeader}>
-            <h4 className={styles.cardTitle}>Description</h4>
-          </div>
+        <Card
+          className={styles.col8}
+          title="Description"
+        >
           {team.description ? (
             <p className={styles.descriptionText}>{team.description}</p>
           ) : (
             <p className={styles.descriptionEmpty}>No description provided.</p>
           )}
-        </div>
+        </Card>
 
         {/* ── Info card ───────────────────────────────────── */}
-        <div className={`${styles.card} ${styles.col4}`}>
-          <div className={styles.cardHeader}>
-            <h4 className={styles.cardTitle}>Details</h4>
-          </div>
+        <Card
+          className={styles.col4}
+          title="Details"
+        >
           <div className={styles.infoGrid}>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>League</span>
@@ -139,7 +140,7 @@ const TeamDetailsPage = () => {
               <span className={styles.infoValue}>{createdDate}</span>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
     </main>
   );

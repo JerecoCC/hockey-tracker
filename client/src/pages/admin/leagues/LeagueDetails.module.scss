@@ -62,14 +62,6 @@
   }
 }
 
-// ── Card ───────────────────────────────────────────────────────────────
-.card {
-  background: $bg-card;
-  border-radius: $radius-lg;
-  padding: $space-xl;
-  border: 1px solid $border;
-}
-
 // ── Header (logo + name) ───────────────────────────────────────────────
 .leagueHeader {
   display: flex;
@@ -384,21 +376,6 @@
   font-size: $font-body;
   color: $text-dim;
   font-style: italic;
-}
-
-// ── Teams card ─────────────────────────────────────────────────────────
-.cardHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: $space-xl;
-}
-
-.cardTitle {
-  font-size: $font-xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
 }
 
 .teamList {

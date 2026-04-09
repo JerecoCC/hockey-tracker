@@ -8,6 +8,7 @@ import useTeams, { TeamRecord } from '../../../hooks/useTeams';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import TeamDeleteModal from './TeamDeleteModal';
 import TeamFormModal from './TeamFormModal';
+import Card from '../../../components/Card/Card';
 import styles from './Teams.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
@@ -154,7 +155,7 @@ const TeamsPage = () => {
         </Button>
       </div>
 
-      <div className={styles.card}>
+      <Card>
         <Table
           columns={columns}
           data={sortedTeams}
@@ -166,7 +167,7 @@ const TeamsPage = () => {
           onSort={handleSort}
           onRowClick={(t) => navigate(`/admin/teams/${t.id}`)}
         />
-      </div>
+      </Card>
 
       <TeamDeleteModal
         open={confirmDeleteOpen}

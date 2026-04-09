@@ -5,6 +5,7 @@ import useUsers from '../../../hooks/useUsers';
 import { getUserColumns, UserRecord } from './columns';
 import UserRoleModal, { RoleConfirm } from './UserRoleModal';
 import UserDeleteModal from './UserDeleteModal';
+import Card from '../../../components/Card/Card';
 import styles from './Users.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
@@ -45,7 +46,7 @@ const UsersPage = () => {
   return (
     <main className={styles.main}>
       <h2 className={styles.sectionTitle}>Users</h2>
-      <div className={styles.card}>
+      <Card>
         <Table
           columns={columns}
           data={sortedUsers}
@@ -56,7 +57,7 @@ const UsersPage = () => {
           sortDir={sortDir}
           onSort={handleSort}
         />
-      </div>
+      </Card>
 
       <UserRoleModal
         open={roleConfirmOpen}
