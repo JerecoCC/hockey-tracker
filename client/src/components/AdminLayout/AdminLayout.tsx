@@ -5,7 +5,9 @@ import styles from './AdminLayout.module.scss';
 const AdminLayout = () => (
   <div className={styles.page}>
     <AdminNav />
-    <Outlet />
+    <div className={styles.scrollArea}>
+      <Outlet />
+    </div>
   </div>
 );
 

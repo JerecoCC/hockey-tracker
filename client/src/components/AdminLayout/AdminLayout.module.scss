@@ -6,3 +6,9 @@ $bg-page: #0f172a;
   background: $bg-page;
   display: flex;
 }
+
+.scrollArea {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+}

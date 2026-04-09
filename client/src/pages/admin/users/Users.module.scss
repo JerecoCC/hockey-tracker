@@ -3,9 +3,10 @@
 
 // ── Layout ─────────────────────────────────────────────────────────────
 .main {
-  flex: 1;
+  width: 100%;
+  max-width: $max-content-width;
+  margin: 0 auto;
   padding: $space-4xl;
-  overflow-y: auto;
 }
 
 .sectionTitle {
