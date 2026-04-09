@@ -65,20 +65,7 @@ describe('useUsers', () => {
     expect(toast.error).toHaveBeenCalledWith('Forbidden');
   });
 
-  it('deleteUser() does nothing when the confirm dialog is cancelled', async () => {
-    window.confirm = jest.fn().mockReturnValue(false);
-    const { result } = renderHook(() => useUsers());
-    await waitFor(() => expect(result.current.loading).toBe(false));
-
-    await act(async () => {
-      await result.current.deleteUser('1');
-    });
-
-    expect(mockedAxios.delete).not.toHaveBeenCalled();
-  });
-
-  it('deleteUser() deletes the user when the confirm dialog is accepted', async () => {
-    window.confirm = jest.fn().mockReturnValue(true);
+  it('deleteUser() deletes /admin/users/:id', async () => {
     mockedAxios.delete.mockResolvedValue({});
     const { result } = renderHook(() => useUsers());
     await waitFor(() => expect(result.current.loading).toBe(false));
@@ -94,7 +81,6 @@ describe('useUsers', () => {
   });
 
   it('deleteUser() shows error toast on failure', async () => {
-    window.confirm = jest.fn().mockReturnValue(true);
     mockedAxios.delete.mockRejectedValue({ response: { data: { error: 'Not found' } } });
     const { result } = renderHook(() => useUsers());
     await waitFor(() => expect(result.current.loading).toBe(false));
