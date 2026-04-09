@@ -66,4 +66,14 @@ describe('Icon', () => {
     expect(svg).toHaveStyle({ fontSize: '1.5rem' });
     expect(svg.style.color).toBeTruthy();
   });
+
+  it('renders an SVG for visibility (eye open)', () => {
+    const { container } = render(<Icon name="visibility" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('renders an SVG for visibility_off (eye slash)', () => {
+    const { container } = render(<Icon name="visibility_off" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });
