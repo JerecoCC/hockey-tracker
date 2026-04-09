@@ -1,5 +1,5 @@
 import { useRef, useState, type ChangeEvent } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
@@ -16,6 +16,7 @@ import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
+  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const {
     league,
@@ -86,13 +87,22 @@ const LeagueDetailsPage = () => {
           items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: league.name }]}
         />
 
-        <h2 className={styles.sectionTitle}>
-          <Icon
-            name="emoji_events"
-            size="1em"
+        <div className={styles.titleRow}>
+          <Button
+            variant="ghost"
+            intent="neutral"
+            icon="arrow_back"
+            tooltip="Back to Leagues"
+            onClick={() => navigate('/admin/leagues')}
           />
-          League Details
-        </h2>
+          <h2 className={styles.sectionTitle}>
+            <Icon
+              name="emoji_events"
+              size="1em"
+            />
+            League Details
+          </h2>
+        </div>
 
         <div className={styles.grid}>
           <div className={`${styles.card} ${styles.col12}`}>

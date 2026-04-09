@@ -9,11 +9,18 @@
 }
 
 // ── Section title ──────────────────────────────────────────────────────
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin: 0 0 $space-xl;
+}
+
 .sectionTitle {
   font-size: $font-2xl;
   font-weight: 700;
   color: $text-bright;
-  margin: 0 0 $space-xl;
+  margin: 0;
   display: flex;
   align-items: center;
   gap: $space-sm;
