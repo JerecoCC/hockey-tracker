@@ -82,6 +82,36 @@ async function initSchema() {
       END IF;
     END $$
   `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS groups (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id  UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      parent_id  UUID REFERENCES groups(id) ON DELETE CASCADE,
+      name       TEXT NOT NULL,
+      sort_order INT NOT NULL DEFAULT 0,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_teams (
+      group_id   UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      team_id    UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (group_id, team_id)
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS season_group_teams (
+      season_id  UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      group_id   UUID NOT NULL REFERENCES groups(id) ON DELETE CASCADE,
+      team_id    UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (season_id, group_id, team_id)
+    )
+  `;
+
   // Drop the erroneous UNIQUE constraint on teams.league_id – a league can have many teams
   await sql`
     DO $$

@@ -147,3 +147,122 @@ describe('DELETE /api/admin/seasons/:id', () => {
     expect(res.status).toBe(404);
   });
 });
+
+
+const GROUP = {
+  id: 'group-1', league_id: 'league-1', parent_id: null,
+  name: 'Division A', sort_order: 0, created_at: new Date().toISOString(),
+  teams: [], has_season_override: false,
+};
+const TEAM = { id: 'team-1', name: 'Sharks', code: 'SJS', logo: null };
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:seasonId/groups
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/seasons/:seasonId/groups', () => {
+  it('returns 404 when season not found', async () => {
+    sql.mockResolvedValueOnce([]); // season check
+    const res = await request(app).get('/api/admin/seasons/nope/groups');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/season not found/i);
+  });
+
+  it('returns groups with default teams (no overrides)', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])   // season check
+      .mockResolvedValueOnce([GROUP]);   // groups query
+    const res = await request(app).get('/api/admin/seasons/season-1/groups');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].id).toBe('group-1');
+    expect(res.body[0].has_season_override).toBe(false);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/seasons/season-1/groups');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/seasons/:seasonId/groups/:groupId/teams
+// ---------------------------------------------------------------------------
+describe('PUT /api/admin/seasons/:seasonId/groups/:groupId/teams', () => {
+  it('returns 400 when team_ids is not an array', async () => {
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/groups/group-1/teams')
+      .send({ team_ids: 'bad' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/must be an array/i);
+  });
+
+  it('returns 404 when season not found', async () => {
+    sql
+      .mockResolvedValueOnce([])         // season check
+      .mockResolvedValueOnce([GROUP]);   // group check
+    const res = await request(app)
+      .put('/api/admin/seasons/nope/groups/group-1/teams')
+      .send({ team_ids: [] });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/season not found/i);
+  });
+
+  it('returns 404 when group not found', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])   // season check
+      .mockResolvedValueOnce([]);        // group check
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/groups/nope/teams')
+      .send({ team_ids: [] });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/group not found/i);
+  });
+
+  it('returns 400 when season and group are in different leagues', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])                                  // season (league-1)
+      .mockResolvedValueOnce([{ ...GROUP, league_id: 'league-2' }]);   // group (league-2)
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/groups/group-1/teams')
+      .send({ team_ids: [] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/same league/i);
+  });
+
+  it('sets season teams and returns them', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])   // season check
+      .mockResolvedValueOnce([GROUP])    // group check
+      .mockResolvedValueOnce([])         // DELETE
+      .mockResolvedValueOnce([])         // INSERT team-1
+      .mockResolvedValueOnce([TEAM]);    // SELECT teams
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/groups/group-1/teams')
+      .send({ team_ids: ['team-1'] });
+    expect(res.status).toBe(200);
+    expect(res.body.teams).toHaveLength(1);
+    expect(res.body.season_id).toBe('season-1');
+    expect(res.body.group_id).toBe('group-1');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/seasons/:seasonId/groups/:groupId/teams
+// ---------------------------------------------------------------------------
+describe('DELETE /api/admin/seasons/:seasonId/groups/:groupId/teams', () => {
+  it('removes the season override and returns 200', async () => {
+    sql.mockResolvedValueOnce([]);
+    const res = await request(app)
+      .delete('/api/admin/seasons/season-1/groups/group-1/teams');
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/reverts to defaults/i);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app)
+      .delete('/api/admin/seasons/season-1/groups/group-1/teams');
+    expect(res.status).toBe(500);
+  });
+});

@@ -13,6 +13,7 @@ const adminRoutes = require('./routes/admin');
 const leaguesRoutes = require('./routes/leagues');
 const teamsRoutes = require('./routes/teams');
 const seasonsRoutes = require('./routes/seasons');
+const groupsRoutes = require('./routes/groups');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -63,6 +64,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/admin/leagues', leaguesRoutes);
 app.use('/api/admin/teams', teamsRoutes);
 app.use('/api/admin/seasons', seasonsRoutes);
+app.use('/api/admin/groups', groupsRoutes);
 
 app.get('/api/health', async (_req, res) => {
   try {
