@@ -145,7 +145,7 @@ const TeamsPage = () => {
             icon="add"
             onClick={openModal}
           >
-            Add Team
+            Create Team
           </Button>
         }
       />

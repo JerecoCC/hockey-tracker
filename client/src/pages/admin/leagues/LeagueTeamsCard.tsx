@@ -15,7 +15,16 @@ interface Props {
   className?: string;
 }
 
-const LeagueTeamsCard = ({ leagueId, teams, loading, busy, onAdd, onEdit, onDelete, className }: Props) => {
+const LeagueTeamsCard = ({
+  leagueId,
+  teams,
+  loading,
+  busy,
+  onAdd,
+  onEdit,
+  onDelete,
+  className,
+}: Props) => {
   const navigate = useNavigate();
 
   return (
@@ -23,8 +32,12 @@ const LeagueTeamsCard = ({ leagueId, teams, loading, busy, onAdd, onEdit, onDele
       className={className}
       title="Teams"
       action={
-        <Button icon="add" size="sm" onClick={onAdd}>
-          Add Team
+        <Button
+          icon="add"
+          size="sm"
+          onClick={onAdd}
+        >
+          Create Team
         </Button>
       }
     >
@@ -41,7 +54,11 @@ const LeagueTeamsCard = ({ leagueId, teams, loading, busy, onAdd, onEdit, onDele
               onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`)}
             >
               {t.logo ? (
-                <img src={t.logo} alt="" className={styles.teamLogoThumb} />
+                <img
+                  src={t.logo}
+                  alt=""
+                  className={styles.teamLogoThumb}
+                />
               ) : (
                 <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
               )}
@@ -55,7 +72,10 @@ const LeagueTeamsCard = ({ leagueId, teams, loading, busy, onAdd, onEdit, onDele
                   size="sm"
                   disabled={busy === t.id}
                   tooltip="Edit"
-                  onClick={(e) => { e.stopPropagation(); onEdit(t); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onEdit(t);
+                  }}
                 />
                 <Button
                   variant="outlined"
@@ -64,7 +84,10 @@ const LeagueTeamsCard = ({ leagueId, teams, loading, busy, onAdd, onEdit, onDele
                   size="sm"
                   disabled={busy === t.id}
                   tooltip="Delete"
-                  onClick={(e) => { e.stopPropagation(); onDelete(t); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(t);
+                  }}
                 />
               </span>
             </li>

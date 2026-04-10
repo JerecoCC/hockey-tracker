@@ -145,7 +145,7 @@ const SeasonsPage = () => {
             icon="add"
             onClick={openModal}
           >
-            Add Season
+            Create Season
           </Button>
         }
       />

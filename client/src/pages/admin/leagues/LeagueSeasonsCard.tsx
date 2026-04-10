@@ -23,13 +23,25 @@ const formatDate = (d: string | null) =>
       }).format(new Date(d))
     : '?';
 
-const LeagueSeasonsCard = ({ seasons, loading, busy, onAdd, onEdit, onDelete, className }: Props) => (
+const LeagueSeasonsCard = ({
+  seasons,
+  loading,
+  busy,
+  onAdd,
+  onEdit,
+  onDelete,
+  className,
+}: Props) => (
   <Card
     className={className}
     title="Seasons"
     action={
-      <Button icon="add" size="sm" onClick={onAdd}>
-        Add Season
+      <Button
+        icon="add"
+        size="sm"
+        onClick={onAdd}
+      >
+        Create Season
       </Button>
     }
   >
@@ -40,7 +52,10 @@ const LeagueSeasonsCard = ({ seasons, loading, busy, onAdd, onEdit, onDelete, cl
     ) : (
       <ul className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}>
         {seasons.map((s) => (
-          <li key={s.id} className={styles.seasonListItem}>
+          <li
+            key={s.id}
+            className={styles.seasonListItem}
+          >
             <span className={styles.seasonListName}>{s.name}</span>
             <span className={styles.seasonListDates}>
               {s.start_date || s.end_date

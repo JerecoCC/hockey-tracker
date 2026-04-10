@@ -144,7 +144,7 @@ const GroupNode = ({
                 intent="neutral"
                 icon="folder_plus"
                 size="sm"
-                tooltip="Add Sub-group"
+                tooltip="Create Sub-group"
                 onClick={() => onStartAdd(group.id)}
               />
             )}
@@ -308,12 +308,11 @@ const LeagueGroupsCard = ({
       title="Groups"
       action={
         <Button
-          icon="add"
           icon="folder_plus"
           size="sm"
           onClick={() => setInlineMode({ type: 'add', parentId: null })}
         >
-          Add Group
+          Create Group
         </Button>
       }
     >

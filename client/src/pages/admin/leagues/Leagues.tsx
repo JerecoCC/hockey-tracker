@@ -145,7 +145,7 @@ const LeaguesPage = () => {
             icon="add"
             onClick={openModal}
           >
-            Add League
+            Create League
           </Button>
         }
       />
