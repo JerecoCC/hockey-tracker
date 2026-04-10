@@ -13,7 +13,6 @@ $nav-collapsed-width: 56px;
   border-right: 1px solid $border;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: $space-2xl 0;
   flex-shrink: 0;
   overflow: hidden;
@@ -116,14 +115,5 @@ $nav-collapsed-width: 56px;
 // ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
 .navTooltipWrapper {
   display: block;
-  width: 100%;
-}
-
-// ── Bottom / back button ───────────────────────────────────────────────
-.bottom {
-  padding: 0 $space-md;
-}
-
-.backBtn {
   width: 100%;
 }

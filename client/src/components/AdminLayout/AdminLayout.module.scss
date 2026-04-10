@@ -1,3 +1,5 @@
+@use "../../styles/mixins" as *;
+
 $bg-page: #0f172a;
 
 .page {
@@ -16,7 +18,8 @@ $bg-page: #0f172a;
 .sidebarToggle {
   position: absolute;
   right: -13px;
-  top: 48px;
+  // nav top-padding + half brand-row height − half button height
+  top: calc(#{$space-2xl} + #{$space-3xl} / 2 - 13px);
   z-index: 20;
   width: 26px;
   height: 26px;

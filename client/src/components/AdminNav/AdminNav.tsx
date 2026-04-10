@@ -63,20 +63,6 @@ const AdminNav = ({ collapsed }: AdminNavProps) => {
           ))}
         </ul>
       </div>
-
-      <div className={styles.bottom}>
-        <Button
-          variant="outlined"
-          intent="neutral"
-          icon="arrow_back"
-          className={styles.backBtn}
-          onClick={() => navigate('/dashboard')}
-          tooltip={collapsed ? 'Back to Dashboard' : undefined}
-          tooltipClassName={collapsed ? styles.navTooltipWrapper : undefined}
-        >
-          {!collapsed && 'Back to Dashboard'}
-        </Button>
-      </div>
     </nav>
   );
 };

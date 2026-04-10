@@ -3,6 +3,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faArrowUpRightFromSquare,
+  faGauge,
   faCalendarDays,
   faChevronDown,
   faChevronLeft,
@@ -12,11 +14,11 @@ import {
   faEye,
   faEyeSlash,
   faHockeyPuck,
-  faArrowUpRightFromSquare,
   faLocationDot,
   faPen,
   faPeopleGroup,
   faPlus,
+  faRightFromBracket,
   faShield,
   faSort,
   faSortDown,
@@ -78,6 +80,10 @@ const ICON_MAP: Record<string, IconDefinition> = {
   visibility_off: faEyeSlash,
   location_on: faLocationDot,
   open_in_new: faArrowUpRightFromSquare,
+
+  // page header
+  apps: faGauge,
+  logout: faRightFromBracket,
 
   // decorative
   sports_hockey: faHockeyPuck,
