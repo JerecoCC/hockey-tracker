@@ -50,6 +50,9 @@
 // ── User profile chip ──────────────────────────────────────────────────
 .profileChip {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
 }
 
 .profileBtn {

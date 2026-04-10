@@ -408,6 +408,7 @@
 }
 
 .teamListItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $space-md;
@@ -426,10 +427,17 @@
 }
 
 .teamActions {
-  margin-left: auto;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   gap: $space-xs;
+  padding: 0 $space-md;
+  // Gradient fades row content behind the buttons
+  background: linear-gradient(to right, transparent, $bg-card 32%);
+  border-radius: 0 $radius-md $radius-md 0;
   opacity: 0;
   pointer-events: none;
   transition: opacity $transition-fast;
@@ -519,6 +527,7 @@
 }
 
 .seasonListItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $space-md;
@@ -546,15 +555,21 @@
   font-size: $font-xs;
   color: $text-dim;
   white-space: nowrap;
+  margin-left: auto;
 }
 
 .seasonActions {
-  margin-left: auto;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   gap: $space-xs;
+  padding: 0 $space-md;
+  background: linear-gradient(to right, transparent, $bg-card 32%);
+  border-radius: 0 $radius-md $radius-md 0;
   opacity: 0;
   pointer-events: none;
   transition: opacity $transition-fast;
-  flex-shrink: 0;
 }
