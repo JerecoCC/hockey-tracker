@@ -76,4 +76,14 @@ describe('Icon', () => {
     const { container } = render(<Icon name="visibility_off" />);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('renders an SVG for apps (dashboard gauge)', () => {
+    const { container } = render(<Icon name="apps" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('renders an SVG for logout (sign out arrow)', () => {
+    const { container } = render(<Icon name="logout" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });
