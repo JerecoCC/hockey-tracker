@@ -116,6 +116,7 @@ const GroupNode = ({
   onDelete: (g: GroupRecord) => void;
   depth?: number;
 }) => {
+  const [open, setOpen] = useState(true);
   const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
 
   const children = allGroups
@@ -135,7 +136,19 @@ const GroupNode = ({
           onCancel={onCancel}
         />
       ) : (
-        <div className={styles.groupRow}>
+        <div className={`${styles.groupRow} ${!open ? styles.groupRowCollapsed : ''}`}>
+          <button
+            className={styles.groupToggle}
+            onClick={() => setOpen((v) => !v)}
+            aria-label={open ? 'Collapse' : 'Expand'}
+            aria-expanded={open}
+          >
+            <Icon
+              name="expand_more"
+              size="0.8em"
+              className={open ? styles.groupToggleIconOpen : styles.groupToggleIcon}
+            />
+          </button>
           <span className={styles.groupName}>{group.name}</span>
           <span className={styles.groupActions}>
             {!isAddingChild && group.teams.length === 0 && (
@@ -170,7 +183,7 @@ const GroupNode = ({
         </div>
       )}
 
-      {!isEditing && isLeaf && !isAddingChild && (
+      {open && !isEditing && isLeaf && !isAddingChild && (
         <div className={styles.groupFooter}>
           <Button
             icon="add"
@@ -184,7 +197,7 @@ const GroupNode = ({
         </div>
       )}
 
-      {group.teams.length > 0 && !isEditing && (
+      {open && group.teams.length > 0 && !isEditing && (
         <ul className={styles.teamList}>
           {group.teams.map((t) =>
             removingTeamId === t.id ? (
@@ -236,7 +249,7 @@ const GroupNode = ({
         </ul>
       )}
 
-      {(children.length > 0 || isAddingChild) && (
+      {open && (children.length > 0 || isAddingChild) && (
         <ul className={styles.groupList}>
           {children.map((child) => (
             <GroupNode
