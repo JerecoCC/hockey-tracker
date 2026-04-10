@@ -87,11 +87,10 @@ const LeagueDetailsPage = () => {
   return (
     <>
       <main className={styles.main}>
-        <Breadcrumbs
-          items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: league.name }]}
-        />
-
         <div className={styles.titleRow}>
+          <Breadcrumbs
+            items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: league.name }]}
+          />
           <Button
             variant="outlined"
             intent="neutral"

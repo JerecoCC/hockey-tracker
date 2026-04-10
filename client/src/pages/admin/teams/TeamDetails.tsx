@@ -52,9 +52,8 @@ const TeamDetailsPage = () => {
 
   return (
     <main className={styles.main}>
-      <Breadcrumbs items={breadcrumbItems} />
-
       <div className={styles.titleRow}>
+        <Breadcrumbs items={breadcrumbItems} />
         <Button
           variant="outlined"
           intent="neutral"
