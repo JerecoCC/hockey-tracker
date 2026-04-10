@@ -101,6 +101,49 @@
   }
 }
 
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeletonTeamItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  opacity: 0.55;
+
+  .skeletonBone {
+    background: linear-gradient(90deg, $border 25%, lighten($border, 6%) 50%, $border 75%);
+    background-size: 800px 100%;
+    animation: shimmer 1.4s ease-in-out infinite;
+    border-radius: $radius-sm;
+  }
+
+  .skeletonLogo {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+  }
+
+  .skeletonName {
+    height: 14px;
+    width: 120px;
+  }
+
+  .skeletonCode {
+    height: 12px;
+    width: 48px;
+    margin-left: auto;
+    margin-right: $space-md;
+  }
+}
+
 .logoSpinner {
   width: $space-2xl;
   height: $space-2xl;
@@ -572,4 +615,241 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity $transition-fast;
+}
+
+// ── Shared modal form styles ──────────────────────────────────────────────
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-top: $space-sm;
+}
+
+// ── Groups tree ───────────────────────────────────────────────────────────
+.groupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.groupItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  // Nested subgroup list — inset from the parent's border
+  > .groupList {
+    padding: $space-sm $space-md $space-md;
+  }
+}
+
+// Child groups are indented and separated from siblings
+.groupItemChild {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.groupRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .groupActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.groupName {
+  font-size: $font-lg;
+  color: $text-body;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+// Team chips inline in the row
+.groupTeams {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.groupTeamThumb {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2));
+}
+
+.groupTeamDot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  flex-shrink: 0;
+}
+
+// Hover-reveal action overlay (matches teamActions / seasonActions pattern)
+.groupActions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: 0 $space-md;
+  background: linear-gradient(to right, transparent, $bg-card 32%);
+  border-radius: 0 $radius-md $radius-md 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+}
+
+// ── Group "add team" selector list (used inside modal) ───────────────────
+.teamSelectList {
+  list-style: none;
+  margin: 0 0 $space-lg;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+}
+
+.teamSelectItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  cursor: pointer;
+  user-select: none;
+  transition: background $transition-fast;
+
+  &:hover,
+  &[data-selected="true"] {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.teamCheckbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 2px solid $border;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $bg-card;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &[data-checked="true"] {
+    background: $text-bright;
+    border-color: $text-bright;
+  }
+}
+
+// ── Inline add / edit row ─────────────────────────────────────────────────
+.groupInlineRow {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-sm $space-md;
+}
+
+.groupInlineInput {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid $border;
+  color: $text-body;
+  font-size: $font-lg;
+  font-weight: 500;
+  padding: $space-xs 0;
+  outline: none;
+
+  &:focus {
+    border-bottom-color: $text-bright;
+  }
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+.groupInlineBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $text-bright;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  &:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+}
+
+.groupInlineBtnCancel {
+  color: $text-dim;
+}
+
+// Always-visible footer row inside each group node
+.groupFooter {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-sm $space-md;
 }

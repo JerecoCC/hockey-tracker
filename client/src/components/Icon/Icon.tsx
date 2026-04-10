@@ -4,6 +4,7 @@ import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
   faArrowUpRightFromSquare,
+  faCheck,
   faGauge,
   faCalendarDays,
   faChevronDown,
@@ -13,6 +14,7 @@ import {
   faEnvelope,
   faEye,
   faEyeSlash,
+  faFolderPlus,
   faHockeyPuck,
   faLocationDot,
   faPen,
@@ -67,6 +69,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // actions
   add: faPlus,
+  folder_plus: faFolderPlus,
+  check: faCheck,
   close: faXmark,
   delete: faTrash,
   edit: faPen,

@@ -4,12 +4,16 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
+import useLeagueGroups, { type GroupRecord } from '../../../hooks/useLeagueGroups';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
 import LeagueFormModal from './LeagueFormModal';
 import LeagueInfoCard from './LeagueInfoCard';
 import LeagueTeamsCard from './LeagueTeamsCard';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
+import LeagueGroupsCard from './LeagueGroupsCard';
+import GroupAddTeamModal from './GroupAddTeamModal';
+import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import TeamDeleteModal from '../teams/TeamDeleteModal';
 import TeamFormModal from '../teams/TeamFormModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
@@ -35,7 +39,19 @@ const LeagueDetailsPage = () => {
     updateSeason,
     deleteSeason,
   } = useLeagueDetails(id);
+  const {
+    groups,
+    loading: groupsLoading,
+    busy: groupsBusy,
+    addGroup,
+    updateGroup,
+    deleteGroup,
+    setGroupTeams,
+  } = useLeagueGroups(league?.id);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  // Group state
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<GroupRecord | null>(null);
+  const [addTeamTargetGroup, setAddTeamTargetGroup] = useState<GroupRecord | null>(null);
   // Team modal state
   const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [editTargetTeam, setEditTargetTeam] = useState<TeamRecord | null>(null);
@@ -96,6 +112,25 @@ const LeagueDetailsPage = () => {
           onEditLeague={() => setEditModalOpen(true)}
         />
 
+        <LeagueSeasonsCard
+          className={styles.col12}
+          seasons={seasons}
+          loading={loading}
+          busy={busy}
+          onAdd={() => {
+            setEditTargetSeason(null);
+            setSeasonModalOpen(true);
+          }}
+          onEdit={(s) => {
+            setEditTargetSeason(s);
+            setSeasonModalOpen(true);
+          }}
+          onDelete={(s) => {
+            setConfirmDeleteSeason(s);
+            setConfirmDeleteSeasonOpen(true);
+          }}
+        />
+
         <LeagueTeamsCard
           className={styles.col4}
           leagueId={league.id}
@@ -113,25 +148,45 @@ const LeagueDetailsPage = () => {
           }}
         />
 
-        <LeagueSeasonsCard
-          className={styles.col6}
-          seasons={seasons}
-          loading={loading}
-          busy={busy}
-          onAdd={() => {
-            setEditTargetSeason(null);
-            setSeasonModalOpen(true);
-          }}
-          onEdit={(s) => {
-            setEditTargetSeason(s);
-            setSeasonModalOpen(true);
-          }}
-          onDelete={(s) => {
-            setConfirmDeleteSeason(s);
-            setConfirmDeleteSeasonOpen(true);
-          }}
+        <LeagueGroupsCard
+          className={styles.col8}
+          leagueId={league.id}
+          groups={groups}
+          loading={groupsLoading}
+          busy={groupsBusy}
+          addGroup={addGroup}
+          updateGroup={updateGroup}
+          setGroupTeams={setGroupTeams}
+          onAddTeam={(g) => setAddTeamTargetGroup(g)}
+          onDelete={(g) => setConfirmDeleteGroup(g)}
         />
       </div>
+
+      <ConfirmModal
+        open={confirmDeleteGroup !== null}
+        title="Delete Group"
+        body={`Delete "${confirmDeleteGroup?.name}"? This will also remove any subgroups and team assignments.`}
+        confirmLabel="Delete"
+        confirmIcon="delete"
+        variant="danger"
+        busy={groupsBusy === confirmDeleteGroup?.id}
+        onCancel={() => setConfirmDeleteGroup(null)}
+        onConfirm={async () => {
+          if (!confirmDeleteGroup) return;
+          await deleteGroup(confirmDeleteGroup.id);
+          setConfirmDeleteGroup(null);
+        }}
+      />
+
+      <GroupAddTeamModal
+        open={addTeamTargetGroup !== null}
+        group={addTeamTargetGroup}
+        unassignedTeams={teams.filter(
+          (t) => !groups.some((g) => g.teams.some((gt) => gt.id === t.id)),
+        )}
+        onClose={() => setAddTeamTargetGroup(null)}
+        setGroupTeams={setGroupTeams}
+      />
 
       <TeamDeleteModal
         open={confirmDeleteTeamOpen}
