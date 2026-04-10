@@ -138,7 +138,7 @@ const TeamsPage = () => {
   };
 
   return (
-    <main className={styles.main}>
+    <>
       <TitleRow
         left={
           <Button
@@ -193,7 +193,7 @@ const TeamsPage = () => {
         updateTeam={updateTeam}
         uploadLogo={uploadLogo}
       />
-    </main>
+    </>
   );
 };
 

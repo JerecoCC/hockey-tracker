@@ -138,7 +138,7 @@ const SeasonsPage = () => {
   };
 
   return (
-    <main className={styles.main}>
+    <>
       <TitleRow
         left={
           <Button
@@ -191,7 +191,7 @@ const SeasonsPage = () => {
         addSeason={addSeason}
         updateSeason={updateSeason}
       />
-    </main>
+    </>
   );
 };
 

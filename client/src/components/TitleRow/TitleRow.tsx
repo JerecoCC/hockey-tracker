@@ -1,4 +1,6 @@
 import type { ReactNode } from 'react';
+import { createPortal } from 'react-dom';
+import { useTitleRowContainer } from '../../context/TitleRowContext';
 import styles from './TitleRow.module.scss';
 
 interface TitleRowProps {
@@ -11,14 +13,19 @@ interface TitleRowProps {
 }
 
 const TitleRow = ({ left, right, className }: TitleRowProps) => {
+  const container = useTitleRowContainer();
   const classes = [styles.titleRow, className].filter(Boolean).join(' ');
 
-  return (
+  const node = (
     <div className={classes}>
       {left}
       {right}
     </div>
   );
+
+  // When AdminLayout provides a portal target, render there (outside the page's
+  // DOM tree but still inside <main>). Falls back to in-place rendering.
+  return container ? createPortal(node, container) : node;
 };
 
 export default TitleRow;

@@ -44,7 +44,7 @@ const UsersPage = () => {
   const sortedUsers = useMemo(() => sortRows(users, sortKey, sortDir), [users, sortKey, sortDir]);
 
   return (
-    <main className={styles.main}>
+    <>
       <Card>
         <Table
           columns={columns}
@@ -87,7 +87,7 @@ const UsersPage = () => {
           setDeleteConfirm(null);
         }}
       />
-    </main>
+    </>
   );
 };
 

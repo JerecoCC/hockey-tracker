@@ -48,3 +48,11 @@ $bg-page: #0f172a;
   display: flex;
   flex-direction: column;
 }
+
+.main {
+  width: 100%;
+  max-width: $max-content-width;
+  margin: 0 auto;
+  padding: $space-4xl;
+  flex: 1;
+}

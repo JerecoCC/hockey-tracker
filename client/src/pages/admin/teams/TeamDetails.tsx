@@ -27,21 +27,15 @@ const TeamDetailsPage = () => {
 
   if (loading) {
     return (
-      <main className={styles.main}>
-        <div className={styles.loaderWrapper}>
-          <span className={styles.spinner} />
-          <p className={styles.loaderText}>Loading team…</p>
-        </div>
-      </main>
+      <div className={styles.loaderWrapper}>
+        <span className={styles.spinner} />
+        <p className={styles.loaderText}>Loading team…</p>
+      </div>
     );
   }
 
   if (!team) {
-    return (
-      <main className={styles.main}>
-        <p className={styles.loaderText}>Team not found.</p>
-      </main>
-    );
+    return <p className={styles.loaderText}>Team not found.</p>;
   }
 
   const createdDate = new Intl.DateTimeFormat('en-US', {
@@ -52,7 +46,7 @@ const TeamDetailsPage = () => {
   }).format(new Date(team.created_at));
 
   return (
-    <main className={styles.main}>
+    <>
       <TitleRow
         left={
           <Button
@@ -143,7 +137,7 @@ const TeamDetailsPage = () => {
           </div>
         </Card>
       </div>
-    </main>
+    </>
   );
 };
 

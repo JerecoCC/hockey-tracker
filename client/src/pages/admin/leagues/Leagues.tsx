@@ -138,7 +138,7 @@ const LeaguesPage = () => {
   };
 
   return (
-    <main className={styles.main}>
+    <>
       <TitleRow
         left={
           <Button
@@ -187,7 +187,7 @@ const LeaguesPage = () => {
         updateLeague={updateLeague}
         uploadLogo={uploadLogo}
       />
-    </main>
+    </>
   );
 };
 

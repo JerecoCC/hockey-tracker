@@ -1,14 +1,6 @@
 @use "../../../styles/colors" as *;
 @use "../../../styles/mixins" as *;
 
-// ── Layout ─────────────────────────────────────────────────────────────
-.main {
-  width: 100%;
-  max-width: $max-content-width;
-  margin: 0 auto;
-  padding: $space-4xl;
-}
-
 // ── Title row ──────────────────────────────────────────────────────────
 // ── League cell ────────────────────────────────────────────────────────
 .logoWithName {
