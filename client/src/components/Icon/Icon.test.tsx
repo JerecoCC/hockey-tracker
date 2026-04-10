@@ -86,4 +86,9 @@ describe('Icon', () => {
     const { container } = render(<Icon name="logout" />);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('renders an SVG for folder_plus (create group)', () => {
+    const { container } = render(<Icon name="folder_plus" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });

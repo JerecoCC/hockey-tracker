@@ -1,6 +1,7 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useNavigate, useParams } from 'react-router-dom';
 import useLeagueDetails from '../../../hooks/useLeagueDetails';
+import useLeagueGroups from '../../../hooks/useLeagueGroups';
 import LeagueDetailsPage from './LeagueDetails';
 
 // ── Router ─────────────────────────────────────────────────────────────
@@ -10,20 +11,22 @@ jest.mock('react-router-dom', () => ({
   useParams: jest.fn(),
 }));
 
-// ── Hook ──────────────────────────────────────────────────────────────
+// ── Hooks ─────────────────────────────────────────────────────────────
 jest.mock('../../../hooks/useLeagueDetails', () => ({ __esModule: true, default: jest.fn() }));
+jest.mock('../../../hooks/useLeagueGroups', () => ({ __esModule: true, default: jest.fn() }));
 
 // ── Heavy / portal-incompatible child components ───────────────────────
 jest.mock('../../../components/RichTextEditor/RichTextEditor', () => () => (
   <div data-testid="rte" />
 ));
 jest.mock('./LeagueFormModal', () => () => null);
+jest.mock('./GroupAddTeamModal', () => () => null);
 jest.mock('../teams/TeamFormModal', () => () => null);
 jest.mock('../teams/TeamDeleteModal', () => () => null);
 jest.mock('../seasons/SeasonFormModal', () => () => null);
 jest.mock('../seasons/SeasonDeleteModal', () => () => null);
 
-// ── Base hook return ───────────────────────────────────────────────────
+// ── Base hook returns ──────────────────────────────────────────────────
 const baseHook = {
   league: null,
   teams: [],
@@ -41,6 +44,16 @@ const baseHook = {
   deleteSeason: jest.fn(),
 };
 
+const baseGroupsHook = {
+  groups: [],
+  loading: false,
+  busy: null,
+  addGroup: jest.fn(),
+  updateGroup: jest.fn(),
+  deleteGroup: jest.fn(),
+  setGroupTeams: jest.fn(),
+};
+
 const mockLeague = {
   id: 'lg1',
   name: 'Test League',
@@ -53,10 +66,11 @@ const mockLeague = {
   created_at: '2024-01-01T00:00:00Z',
 };
 
-const setup = (hookOverrides = {}) => {
+const setup = (hookOverrides = {}, groupOverrides = {}) => {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   (useParams as jest.Mock).mockReturnValue({ id: 'lg1' });
   (useLeagueDetails as jest.Mock).mockReturnValue({ ...baseHook, ...hookOverrides });
+  (useLeagueGroups as jest.Mock).mockReturnValue({ ...baseGroupsHook, ...groupOverrides });
   return render(<LeagueDetailsPage />);
 };
 
@@ -143,5 +157,95 @@ describe('LeagueDetailsPage – main render', () => {
   it('shows the description placeholder when description is empty', () => {
     setup({ league: { ...mockLeague, description: '' } });
     expect(screen.getByText('Click to add a description…')).toBeInTheDocument();
+  });
+});
+
+// ── Teams card ─────────────────────────────────────────────────────────
+describe('LeagueDetailsPage – teams card', () => {
+  it('renders the "Create Team" button', () => {
+    setup({ league: mockLeague });
+    expect(screen.getByRole('button', { name: /create team/i })).toBeInTheDocument();
+  });
+
+  it('shows empty message when teams list is empty', () => {
+    setup({ league: mockLeague, teams: [] });
+    expect(screen.getByText(/no teams assigned to this league yet/i)).toBeInTheDocument();
+  });
+
+  it('renders a team row for each team', () => {
+    const teams = [
+      { id: 't1', name: 'Team Alpha', code: 'TA', logo: '', league_id: 'lg1', created_at: '' },
+      { id: 't2', name: 'Team Beta', code: 'TB', logo: '', league_id: 'lg1', created_at: '' },
+    ];
+    setup({ league: mockLeague, teams });
+    expect(screen.getByText('Team Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Team Beta')).toBeInTheDocument();
+  });
+});
+
+// ── Seasons card ───────────────────────────────────────────────────────
+describe('LeagueDetailsPage – seasons card', () => {
+  it('renders the "Create Season" button', () => {
+    setup({ league: mockLeague });
+    expect(screen.getByRole('button', { name: /create season/i })).toBeInTheDocument();
+  });
+
+  it('shows empty message when seasons list is empty', () => {
+    setup({ league: mockLeague, seasons: [] });
+    expect(screen.getByText(/no seasons for this league yet/i)).toBeInTheDocument();
+  });
+
+  it('renders a season row for each season', () => {
+    const seasons = [
+      {
+        id: 's1',
+        name: 'Winter 2024',
+        league_id: 'lg1',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+        created_at: '',
+      },
+    ];
+    setup({ league: mockLeague, seasons });
+    expect(screen.getByText('Winter 2024')).toBeInTheDocument();
+  });
+});
+
+// ── Groups card ────────────────────────────────────────────────────────
+describe('LeagueDetailsPage – groups card', () => {
+  it('renders the "Create Group" button', () => {
+    setup({ league: mockLeague });
+    expect(screen.getByRole('button', { name: /create group/i })).toBeInTheDocument();
+  });
+
+  it('shows "No groups" message when groups list is empty', () => {
+    setup({ league: mockLeague });
+    expect(screen.getByText(/no groups for this league yet/i)).toBeInTheDocument();
+  });
+
+  it('renders a group name for each group', () => {
+    const groups = [
+      {
+        id: 'g1',
+        league_id: 'lg1',
+        parent_id: null,
+        name: 'Division A',
+        sort_order: 0,
+        teams: [],
+        created_at: '',
+      },
+      {
+        id: 'g2',
+        league_id: 'lg1',
+        parent_id: null,
+        name: 'Division B',
+        sort_order: 1,
+        teams: [],
+        created_at: '',
+      },
+    ];
+    setup({ league: mockLeague }, { groups });
+    expect(screen.getByText('Division A')).toBeInTheDocument();
+    expect(screen.getByText('Division B')).toBeInTheDocument();
   });
 });
