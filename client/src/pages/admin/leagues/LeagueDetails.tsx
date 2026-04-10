@@ -14,6 +14,7 @@ import TeamFormModal from '../teams/TeamFormModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import Card from '../../../components/Card/Card';
+import TitleRow from '../../../components/TitleRow/TitleRow';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
@@ -87,18 +88,22 @@ const LeagueDetailsPage = () => {
   return (
     <>
       <main className={styles.main}>
-        <div className={styles.titleRow}>
-          <Breadcrumbs
-            items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: league.name }]}
-          />
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            tooltip="Back to Leagues"
-            onClick={() => navigate('/admin/leagues')}
-          />
-        </div>
+        <TitleRow
+          left={
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="arrow_back"
+              tooltip="Back to Leagues"
+              onClick={() => navigate('/admin/leagues')}
+            />
+          }
+          right={
+            <Breadcrumbs
+              items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: league.name }]}
+            />
+          }
+        />
 
         <div className={styles.grid}>
           <Card className={styles.col12}>

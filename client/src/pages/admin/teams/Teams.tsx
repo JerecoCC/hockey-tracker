@@ -8,6 +8,7 @@ import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import TeamDeleteModal from './TeamDeleteModal';
 import TeamFormModal from './TeamFormModal';
 import Card from '../../../components/Card/Card';
+import TitleRow from '../../../components/TitleRow/TitleRow';
 import styles from './Teams.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
@@ -138,14 +139,16 @@ const TeamsPage = () => {
 
   return (
     <main className={styles.main}>
-      <div className={styles.titleRow}>
-        <Button
-          icon="add"
-          onClick={openModal}
-        >
-          Add Team
-        </Button>
-      </div>
+      <TitleRow
+        left={
+          <Button
+            icon="add"
+            onClick={openModal}
+          >
+            Add Team
+          </Button>
+        }
+      />
 
       <Card>
         <Table

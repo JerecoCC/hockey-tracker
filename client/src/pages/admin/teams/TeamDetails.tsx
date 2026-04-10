@@ -4,6 +4,7 @@ import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon'; // still needed for location_on
 import useTeamDetails from '../../../hooks/useTeamDetails';
 import Card from '../../../components/Card/Card';
+import TitleRow from '../../../components/TitleRow/TitleRow';
 import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
@@ -52,16 +53,18 @@ const TeamDetailsPage = () => {
 
   return (
     <main className={styles.main}>
-      <div className={styles.titleRow}>
-        <Breadcrumbs items={breadcrumbItems} />
-        <Button
-          variant="outlined"
-          intent="neutral"
-          icon="arrow_back"
-          tooltip={backTooltip}
-          onClick={() => navigate(backPath)}
-        />
-      </div>
+      <TitleRow
+        left={
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="arrow_back"
+            tooltip={backTooltip}
+            onClick={() => navigate(backPath)}
+          />
+        }
+        right={<Breadcrumbs items={breadcrumbItems} />}
+      />
 
       <div className={styles.grid}>
         {/* ── Header card ─────────────────────────────────── */}

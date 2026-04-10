@@ -7,6 +7,7 @@ import useLeagues from '../../../hooks/useLeagues';
 import SeasonDeleteModal from './SeasonDeleteModal';
 import SeasonFormModal from './SeasonFormModal';
 import Card from '../../../components/Card/Card';
+import TitleRow from '../../../components/TitleRow/TitleRow';
 import styles from './Seasons.module.scss';
 
 const US_DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -138,14 +139,16 @@ const SeasonsPage = () => {
 
   return (
     <main className={styles.main}>
-      <div className={styles.titleRow}>
-        <Button
-          icon="add"
-          onClick={openModal}
-        >
-          Add Season
-        </Button>
-      </div>
+      <TitleRow
+        left={
+          <Button
+            icon="add"
+            onClick={openModal}
+          >
+            Add Season
+          </Button>
+        }
+      />
 
       <Card>
         <Table

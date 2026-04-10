@@ -10,13 +10,6 @@
 }
 
 // ── Title row ──────────────────────────────────────────────────────────
-.titleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin: 0 0 $space-xl;
-}
-
 // ── Page loader ────────────────────────────────────────────────────────
 @keyframes spin {
   to {
