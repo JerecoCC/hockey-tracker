@@ -92,13 +92,13 @@ describe('POST /api/admin/teams', () => {
     expect(res.body.code).toBe('TOR');
   });
 
-  it('returns 409 with code-specific message on duplicate code', async () => {
+  it('returns 409 with league-scoped message on duplicate code', async () => {
     const err = Object.assign(new Error('dup'), { code: '23505', detail: '(code)' });
     sql.mockRejectedValueOnce(err);
     const res = await request(app).post('/api/admin/teams')
       .send({ name: 'Leafs', code: 'TOR', league_id: 'league-1' });
     expect(res.status).toBe(409);
-    expect(res.body.error).toMatch(/code already exists/i);
+    expect(res.body.error).toMatch(/code already exists in this league/i);
   });
 
   it('returns 400 on foreign key violation (bad league_id)', async () => {

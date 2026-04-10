@@ -114,7 +114,7 @@ router.post('/', async (req, res) => {
   } catch (err) {
     if (err.code === '23505') {
       const msg = err.detail?.includes('(code)')
-        ? 'A team with that code already exists'
+        ? 'A team with that code already exists in this league'
         : 'A unique constraint was violated';
       return res.status(409).json({ error: msg });
     }
@@ -158,7 +158,7 @@ router.patch('/:id', async (req, res) => {
   } catch (err) {
     if (err.code === '23505') {
       const msg = err.detail?.includes('(code)')
-        ? 'A team with that code already exists'
+        ? 'A team with that code already exists in this league'
         : 'A unique constraint was violated';
       return res.status(409).json({ error: msg });
     }

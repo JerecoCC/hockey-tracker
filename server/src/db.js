@@ -45,12 +45,13 @@ async function initSchema() {
     CREATE TABLE IF NOT EXISTS teams (
       id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       name        TEXT NOT NULL,
-      code        TEXT UNIQUE NOT NULL,
+      code        TEXT NOT NULL,
       description TEXT,
       location    TEXT,
       logo        TEXT,
-      league_id   UUID UNIQUE REFERENCES leagues(id) ON DELETE SET NULL,
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      league_id   UUID REFERENCES leagues(id) ON DELETE SET NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (code, league_id)
     )
   `;
 
@@ -129,6 +130,43 @@ async function initSchema() {
 
       IF c_name IS NOT NULL THEN
         EXECUTE 'ALTER TABLE teams DROP CONSTRAINT ' || quote_ident(c_name);
+      END IF;
+    END $$
+  `;
+
+  // Migrate teams.code from a global UNIQUE to a per-league UNIQUE(code, league_id)
+  await sql`
+    DO $$
+    DECLARE
+      c_name TEXT;
+    BEGIN
+      -- Drop the old single-column unique constraint on code, if it still exists
+      SELECT tc.constraint_name INTO c_name
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name
+       AND tc.table_schema    = kcu.table_schema
+      WHERE tc.table_name      = 'teams'
+        AND tc.constraint_type = 'UNIQUE'
+        AND kcu.column_name    = 'code'
+        AND (
+          SELECT COUNT(*) FROM information_schema.key_column_usage
+          WHERE constraint_name = tc.constraint_name
+            AND table_schema    = tc.table_schema
+        ) = 1;
+
+      IF c_name IS NOT NULL THEN
+        EXECUTE 'ALTER TABLE teams DROP CONSTRAINT ' || quote_ident(c_name);
+      END IF;
+
+      -- Add the composite constraint if it doesn't already exist
+      IF NOT EXISTS (
+        SELECT 1 FROM information_schema.table_constraints
+        WHERE table_name      = 'teams'
+          AND constraint_type = 'UNIQUE'
+          AND constraint_name = 'teams_code_league_id_key'
+      ) THEN
+        ALTER TABLE teams ADD CONSTRAINT teams_code_league_id_key UNIQUE (code, league_id);
       END IF;
     END $$
   `;
