@@ -1,0 +1,23 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  height: 52px;
+  padding: 0 $space-4xl;
+  background: $bg-page;
+  border-bottom: 1px solid $border;
+  flex-shrink: 0;
+}
+
+.title {
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+  white-space: nowrap;
+}

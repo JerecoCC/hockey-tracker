@@ -45,7 +45,6 @@ const UsersPage = () => {
 
   return (
     <main className={styles.main}>
-      <h2 className={styles.sectionTitle}>Users</h2>
       <Card>
         <Table
           columns={columns}

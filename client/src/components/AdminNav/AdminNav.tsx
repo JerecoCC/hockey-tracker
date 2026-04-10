@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
@@ -17,10 +16,14 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Users', path: '/admin/users', icon: 'group' },
 ];
 
-const AdminNav = () => {
+interface AdminNavProps {
+  collapsed: boolean;
+  onToggle: () => void;
+}
+
+const AdminNav = ({ collapsed }: AdminNavProps) => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const [collapsed, setCollapsed] = useState(false);
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
@@ -37,15 +40,6 @@ const AdminNav = () => {
               Admin
             </span>
           )}
-          <Button
-            variant="ghost"
-            intent="neutral"
-            className={styles.toggleBtn}
-            onClick={() => setCollapsed((c) => !c)}
-            icon={collapsed ? 'chevron_right' : 'chevron_left'}
-            iconSize="0.65rem"
-            tooltip={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          />
         </div>
 
         <ul className={styles.list}>

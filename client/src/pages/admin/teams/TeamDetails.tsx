@@ -62,7 +62,6 @@ const TeamDetailsPage = () => {
           tooltip={backTooltip}
           onClick={() => navigate(backPath)}
         />
-        <h2 className={styles.sectionTitle}>Team Details</h2>
       </div>
 
       <div className={styles.grid}>

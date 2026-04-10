@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
@@ -140,13 +139,6 @@ const LeaguesPage = () => {
   return (
     <main className={styles.main}>
       <div className={styles.titleRow}>
-        <h2 className={styles.sectionTitle}>
-          <Icon
-            name="emoji_events"
-            size="1em"
-          />{' '}
-          Leagues
-        </h2>
         <Button
           icon="add"
           onClick={openModal}

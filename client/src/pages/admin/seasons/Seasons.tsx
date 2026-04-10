@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import useSeasons, { SeasonRecord } from '../../../hooks/useSeasons';
@@ -140,13 +139,6 @@ const SeasonsPage = () => {
   return (
     <main className={styles.main}>
       <div className={styles.titleRow}>
-        <h2 className={styles.sectionTitle}>
-          <Icon
-            name="calendar_month"
-            size="1em"
-          />{' '}
-          Seasons
-        </h2>
         <Button
           icon="add"
           onClick={openModal}
