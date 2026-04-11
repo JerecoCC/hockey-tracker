@@ -7,8 +7,6 @@ import styles from './PageHeader.module.scss';
 
 const EXACT_TITLES: Record<string, string> = {
   '/admin/leagues': 'Leagues',
-  '/admin/seasons': 'Seasons',
-  '/admin/teams': 'Teams',
   '/admin/users': 'Users',
 };
 
