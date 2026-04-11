@@ -8,6 +8,11 @@ on:
 jobs:
   version-bump:
     runs-on: ubuntu-latest
+    # Skip if the commit was already a version bump to avoid double-bumping
+    if: "!startsWith(github.event.head_commit.message, 'chore: bump version')"
+
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout
