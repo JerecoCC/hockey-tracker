@@ -1,5 +1,12 @@
-import type { ChangeEvent, InputHTMLAttributes, ReactNode, TextareaHTMLAttributes } from 'react';
+import {
+  useState,
+  type ChangeEvent,
+  type InputHTMLAttributes,
+  type ReactNode,
+  type TextareaHTMLAttributes,
+} from 'react';
 import { Controller, type Control, type RegisterOptions } from 'react-hook-form';
+import Icon from '../Icon/Icon';
 import cn from 'classnames';
 import DatePicker from '../DatePicker/DatePicker';
 import Select, { SelectOption } from '../Select/Select';
@@ -49,6 +56,7 @@ const Field = (props: FieldProps) => {
   const { label, required, control, name, rules } = props;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
+  const [showPassword, setShowPassword] = useState(false);
 
   return (
     <Controller
@@ -119,15 +127,32 @@ const Field = (props: FieldProps) => {
             const onChange = transform
               ? (e: ChangeEvent<HTMLInputElement>) => field.onChange(transform(e.target.value))
               : field.onChange;
-            return (
+            const isPassword = props.type === 'password';
+            const input = (
               <input
                 className={styles.field}
                 required={required}
                 {...rest}
+                type={isPassword ? (showPassword ? 'text' : 'password') : rest.type}
                 value={(field.value as string) ?? ''}
                 onChange={onChange}
                 onBlur={field.onBlur}
               />
+            );
+            if (!isPassword) return input;
+            return (
+              <div className={styles.inputWrapper}>
+                {input}
+                <button
+                  type="button"
+                  className={styles.passwordToggle}
+                  onClick={() => setShowPassword((v) => !v)}
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
+                </button>
+              </div>
             );
           }
         };

@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import useSeasons, { SeasonRecord } from '../../../hooks/useSeasons';
 import useLeagues from '../../../hooks/useLeagues';
 import SeasonDeleteModal from './SeasonDeleteModal';
 import SeasonFormModal from './SeasonFormModal';
+import Card from '../../../components/Card/Card';
+import TitleRow from '../../../components/TitleRow/TitleRow';
 import styles from './Seasons.module.scss';
 
 const US_DATE_FORMAT = new Intl.DateTimeFormat('en-US', {
@@ -137,24 +138,19 @@ const SeasonsPage = () => {
   };
 
   return (
-    <main className={styles.main}>
-      <div className={styles.titleRow}>
-        <h2 className={styles.sectionTitle}>
-          <Icon
-            name="calendar_month"
-            size="1em"
-          />{' '}
-          Seasons
-        </h2>
-        <Button
-          icon="add"
-          onClick={openModal}
-        >
-          Add Season
-        </Button>
-      </div>
+    <>
+      <TitleRow
+        left={
+          <Button
+            icon="add"
+            onClick={openModal}
+          >
+            Create Season
+          </Button>
+        }
+      />
 
-      <div className={styles.card}>
+      <Card>
         <Table
           columns={columns}
           data={sortedSeasons}
@@ -165,7 +161,7 @@ const SeasonsPage = () => {
           sortDir={sortDir}
           onSort={handleSort}
         />
-      </div>
+      </Card>
 
       <SeasonDeleteModal
         open={confirmDeleteOpen}
@@ -195,7 +191,7 @@ const SeasonsPage = () => {
         addSeason={addSeason}
         updateSeason={updateSeason}
       />
-    </main>
+    </>
   );
 };
 

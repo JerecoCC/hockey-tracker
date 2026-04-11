@@ -1,0 +1,37 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+.card {
+  // base – variant classes provide the visual styles
+}
+
+// ── Admin variant (dark background, border) ───────────────────────────
+.admin {
+  background: $bg-card;
+  border-radius: $radius-lg;
+  padding: $space-xl;
+  border: 1px solid $border;
+}
+
+// ── Light variant (white background, shadow) ──────────────────────────
+.light {
+  background: #fff;
+  border-radius: $radius-xl;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
+  padding: $space-4xl;
+}
+
+// ── Optional card header (title + action row) ─────────────────────────
+.cardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: $space-xl;
+}
+
+.cardTitle {
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+}

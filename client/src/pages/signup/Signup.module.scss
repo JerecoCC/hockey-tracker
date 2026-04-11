@@ -1,5 +1,5 @@
-@use '../../styles/colors' as *;
-@use '../../styles/mixins' as *;
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
 
 // ── Page ───────────────────────────────────────────────────────────────
 .page {
@@ -11,12 +11,8 @@
   padding: $space-lg;
 }
 
-// ── Card ───────────────────────────────────────────────────────────────
-.card {
-  background: #fff;
-  border-radius: $radius-xl;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
-  padding: $space-4xl;
+// ── Auth card sizing ───────────────────────────────────────────────────
+.authCard {
   width: 100%;
   max-width: 420px;
 }
@@ -69,6 +65,37 @@
   }
 }
 
+// ── Password wrapper ───────────────────────────────────────────────────
+.inputWrapper {
+  position: relative;
+  display: flex;
+
+  .input {
+    flex: 1;
+    padding-right: 2.75rem;
+  }
+}
+
+.passwordToggle {
+  position: absolute;
+  right: $space-md;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: #9ca3af;
+  font-size: $font-body;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: #374151;
+  }
+}
+
 // ── Primary button ─────────────────────────────────────────────────────
 .primaryBtn {
   width: 100%;
@@ -104,7 +131,7 @@
 
   &::before,
   &::after {
-    content: '';
+    content: "";
     flex: 1;
     height: 1px;
     background: #e5e7eb;

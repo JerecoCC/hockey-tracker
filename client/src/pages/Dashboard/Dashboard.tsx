@@ -2,6 +2,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/Button/Button';
 import Icon from '../../components/Icon/Icon';
+import Card from '../../components/Card/Card';
 import styles from './Dashboard.module.scss';
 
 const DashboardPage = () => {
@@ -15,7 +16,10 @@ const DashboardPage = () => {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
+      <Card
+        variant="light"
+        className={styles.dashboardCard}
+      >
         <header className={styles.header}>
           <h1 className={styles.title}>
             <Icon
@@ -68,7 +72,7 @@ const DashboardPage = () => {
             Go to Admin Panel
           </Button>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

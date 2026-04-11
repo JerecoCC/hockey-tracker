@@ -1,0 +1,8 @@
+@use "../../styles/mixins" as *;
+
+.titleRow {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  margin: 0 0 $space-xl;
+}

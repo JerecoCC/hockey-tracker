@@ -1,36 +1,7 @@
 @use "../../../styles/colors" as *;
 @use "../../../styles/mixins" as *;
 
-// ── Layout ─────────────────────────────────────────────────────────────
-.main {
-  flex: 1;
-  padding: $space-4xl;
-  overflow-y: auto;
-}
-
 // ── Title row ──────────────────────────────────────────────────────────
-.titleRow {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: $space-xl;
-}
-
-.sectionTitle {
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
-}
-
-// ── Card ───────────────────────────────────────────────────────────────
-.card {
-  background: $bg-card;
-  border-radius: $radius-xl;
-  padding: $space-2xl;
-  border: 1px solid $border;
-}
-
 // ── League cell ────────────────────────────────────────────────────────
 .logoWithName {
   display: flex;

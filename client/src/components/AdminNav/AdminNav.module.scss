@@ -13,7 +13,6 @@ $nav-collapsed-width: 56px;
   border-right: 1px solid $border;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
   padding: $space-2xl 0;
   flex-shrink: 0;
   overflow: hidden;
@@ -25,8 +24,8 @@ $nav-collapsed-width: 56px;
   width: $nav-collapsed-width;
 
   .brandRow {
-    justify-content: center;
-    padding: 0;
+    justify-content: flex-start;
+    padding: 0 $space-xl;
   }
 
   .navItem {
@@ -51,8 +50,8 @@ $nav-collapsed-width: 56px;
 .brandRow {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 0 $space-md 0 $space-xl;
+  justify-content: flex-start;
+  padding: 0 $space-xl;
   min-height: $space-3xl;
 }
 
@@ -62,31 +61,6 @@ $nav-collapsed-width: 56px;
   color: $text-bright;
   white-space: nowrap;
   letter-spacing: 0.01em;
-}
-
-// ── Toggle button ──────────────────────────────────────────────────────
-.toggleBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-sm;
-  background: transparent;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  color: $text-dim;
-  font-size: $font-xs;
-  line-height: 1;
-  aspect-ratio: 1 / 1;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    border-color $transition-fast,
-    color $transition-fast;
-
-  &:hover {
-    border-color: $info-light;
-    color: $info-light;
-  }
 }
 
 // ── Nav list ───────────────────────────────────────────────────────────
@@ -141,14 +115,5 @@ $nav-collapsed-width: 56px;
 // ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
 .navTooltipWrapper {
   display: block;
-  width: 100%;
-}
-
-// ── Bottom / back button ───────────────────────────────────────────────
-.bottom {
-  padding: 0 $space-md;
-}
-
-.backBtn {
   width: 100%;
 }

@@ -54,6 +54,12 @@ table {
   gap: $space-lg;
 }
 
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .spinner {
   width: 36px;
   height: 36px;

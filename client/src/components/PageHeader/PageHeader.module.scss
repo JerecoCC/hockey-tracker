@@ -1,0 +1,151 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Shell ──────────────────────────────────────────────────────────────
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 $space-4xl;
+  background: $bg-page;
+  border-bottom: 1px solid $border;
+  flex-shrink: 0;
+}
+
+// ── Left / right slots ─────────────────────────────────────────────────
+.left,
+.right {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+}
+
+// ── Page title ─────────────────────────────────────────────────────────
+.title {
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+  white-space: nowrap;
+}
+
+// ── Switch panel button ────────────────────────────────────────────────
+.switchBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  color: $text-bright;
+  cursor: pointer;
+}
+
+// ── User profile chip ──────────────────────────────────────────────────
+.profileChip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.profileBtn {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs $space-md;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: $text-body;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+// ── Avatar ─────────────────────────────────────────────────────────────
+.avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.avatarInitials {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: $accent;
+  color: #fff;
+  font-size: $font-xs;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.04em;
+}
+
+.displayName {
+  font-size: $font-sm;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+// ── Chevron ────────────────────────────────────────────────────────────
+.chevron {
+  color: $text-dim;
+  transition: transform 0.2s;
+}
+
+.chevronOpen {
+  color: $text-dim;
+  transform: rotate(180deg);
+  transition: transform 0.2s;
+}
+
+// ── Dropdown ───────────────────────────────────────────────────────────
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 160px;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: 8px;
+  padding: $space-xs 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.dropdownItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-lg;
+  background: transparent;
+  border: none;
+  color: $text-body;
+  font-size: $font-sm;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.12s,
+    color 0.12s;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: $text-bright;
+  }
+}

@@ -1,0 +1,193 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Title row ──────────────────────────────────────────────────────────
+// ── Page loader ────────────────────────────────────────────────────────
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem $space-lg;
+  gap: $space-lg;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loaderText {
+  color: $text-dim;
+  font-size: $font-base;
+  margin: 0;
+}
+
+// ── 12-column grid ─────────────────────────────────────────────────────
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: $space-2xl;
+  align-items: start;
+}
+
+@for $i from 1 through 12 {
+  .col#{$i} {
+    grid-column: span #{$i};
+  }
+}
+
+// ── Team header ────────────────────────────────────────────────────────
+.teamHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-xl;
+}
+
+.logoArea {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  border-radius: $radius-lg;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
+}
+
+.logoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: $radius-lg;
+  background: $border;
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+}
+
+.teamInfo {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.teamName {
+  font-size: $font-3xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+}
+
+.teamCode {
+  font-size: $font-base;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.teamLocation {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-base;
+  color: $text-dim;
+}
+
+// ── Description ────────────────────────────────────────────────────────
+.descriptionText {
+  font-size: $font-body;
+  color: $text-body;
+  line-height: 1.6;
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.descriptionEmpty {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
+}
+
+// ── Info grid ──────────────────────────────────────────────────────────
+.infoGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+.infoValueMuted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── League badge ───────────────────────────────────────────────────────
+.leagueBadge {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.leagueLogo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.2));
+}
+
+.leagueLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}

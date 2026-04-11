@@ -1,12 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
+import Card from '../../../components/Card/Card';
+import TitleRow from '../../../components/TitleRow/TitleRow';
 import styles from './Leagues.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
@@ -137,24 +138,19 @@ const LeaguesPage = () => {
   };
 
   return (
-    <main className={styles.main}>
-      <div className={styles.titleRow}>
-        <h2 className={styles.sectionTitle}>
-          <Icon
-            name="emoji_events"
-            size="1em"
-          />{' '}
-          Leagues
-        </h2>
-        <Button
-          icon="add"
-          onClick={openModal}
-        >
-          Add League
-        </Button>
-      </div>
+    <>
+      <TitleRow
+        left={
+          <Button
+            icon="add"
+            onClick={openModal}
+          >
+            Create League
+          </Button>
+        }
+      />
 
-      <div className={styles.card}>
+      <Card>
         <Table
           columns={columns}
           data={sortedLeagues}
@@ -166,7 +162,7 @@ const LeaguesPage = () => {
           onSort={handleSort}
           onRowClick={(l) => navigate(`/admin/leagues/${l.id}`)}
         />
-      </div>
+      </Card>
 
       <LeagueDeleteModal
         open={confirmDeleteOpen}
@@ -191,7 +187,7 @@ const LeaguesPage = () => {
         updateLeague={updateLeague}
         uploadLogo={uploadLogo}
       />
-    </main>
+    </>
   );
 };
 

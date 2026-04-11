@@ -1,27 +1,5 @@
-@use '../../../styles/colors' as *;
-@use '../../../styles/mixins' as *;
-
-// ── Layout ─────────────────────────────────────────────────────────────
-.main {
-  flex: 1;
-  padding: $space-4xl;
-  overflow-y: auto;
-}
-
-.sectionTitle {
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0 0 $space-xl;
-}
-
-// ── Card ───────────────────────────────────────────────────────────────
-.card {
-  background: $bg-card;
-  border-radius: $radius-xl;
-  padding: $space-2xl;
-  border: 1px solid $border;
-}
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
 
 // ── Badges ─────────────────────────────────────────────────────────────
 .badge {

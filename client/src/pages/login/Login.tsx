@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import Button from '../../components/Button/Button';
 import GoogleButton from '../../components/GoogleButton/GoogleButton';
 import Icon from '../../components/Icon/Icon';
+import Card from '../../components/Card/Card';
 import styles from './Login.module.scss';
 
 const LoginPage = () => {
@@ -14,6 +15,7 @@ const LoginPage = () => {
 
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }));
@@ -35,7 +37,10 @@ const LoginPage = () => {
 
   return (
     <div className={styles.page}>
-      <div className={styles.card}>
+      <Card
+        variant="light"
+        className={styles.authCard}
+      >
         <h1 className={styles.title}>
           <Icon
             name="sports_hockey"
@@ -64,15 +69,26 @@ const LoginPage = () => {
 
           <label className={styles.label}>
             Password
-            <input
-              className={styles.input}
-              type="password"
-              name="password"
-              value={form.password}
-              onChange={handleChange}
-              placeholder="••••••••"
-              required
-            />
+            <div className={styles.inputWrapper}>
+              <input
+                className={styles.input}
+                type={showPassword ? 'text' : 'password'}
+                name="password"
+                value={form.password}
+                onChange={handleChange}
+                placeholder="••••••••"
+                required
+              />
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((v) => !v)}
+                tabIndex={-1}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
+              </button>
+            </div>
           </label>
 
           <Button
@@ -99,7 +115,7 @@ const LoginPage = () => {
             Sign up
           </Link>
         </p>
-      </div>
+      </Card>
     </div>
   );
 };

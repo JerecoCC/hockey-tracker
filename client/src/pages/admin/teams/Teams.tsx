@@ -1,12 +1,14 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
 import Table, { Column } from '../../../components/Table/Table';
 import Tooltip from '../../../components/Tooltip/Tooltip';
 import useTeams, { TeamRecord } from '../../../hooks/useTeams';
 import useLeagues, { LeagueRecord } from '../../../hooks/useLeagues';
 import TeamDeleteModal from './TeamDeleteModal';
 import TeamFormModal from './TeamFormModal';
+import Card from '../../../components/Card/Card';
+import TitleRow from '../../../components/TitleRow/TitleRow';
 import styles from './Teams.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
@@ -18,6 +20,7 @@ const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   });
 
 const TeamsPage = () => {
+  const navigate = useNavigate();
   const { teams, loading, busy, uploadLogo, addTeam, updateTeam, deleteTeam } = useTeams();
   const { leagues } = useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
@@ -96,7 +99,10 @@ const TeamsPage = () => {
             size="sm"
             disabled={busy === t.id}
             tooltip="Edit"
-            onClick={() => openEditModal(t)}
+            onClick={(e) => {
+              e.stopPropagation();
+              openEditModal(t);
+            }}
           />
           <Button
             variant="outlined"
@@ -105,7 +111,8 @@ const TeamsPage = () => {
             size="sm"
             disabled={busy === t.id}
             tooltip="Delete"
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               setConfirmDelete(t);
               setConfirmDeleteOpen(true);
             }}
@@ -131,24 +138,19 @@ const TeamsPage = () => {
   };
 
   return (
-    <main className={styles.main}>
-      <div className={styles.titleRow}>
-        <h2 className={styles.sectionTitle}>
-          <Icon
-            name="groups"
-            size="1em"
-          />{' '}
-          Teams
-        </h2>
-        <Button
-          icon="add"
-          onClick={openModal}
-        >
-          Add Team
-        </Button>
-      </div>
+    <>
+      <TitleRow
+        left={
+          <Button
+            icon="add"
+            onClick={openModal}
+          >
+            Create Team
+          </Button>
+        }
+      />
 
-      <div className={styles.card}>
+      <Card>
         <Table
           columns={columns}
           data={sortedTeams}
@@ -158,8 +160,9 @@ const TeamsPage = () => {
           activeSortKey={sortKey}
           sortDir={sortDir}
           onSort={handleSort}
+          onRowClick={(t) => navigate(`/admin/teams/${t.id}`)}
         />
-      </div>
+      </Card>
 
       <TeamDeleteModal
         open={confirmDeleteOpen}
@@ -190,7 +193,7 @@ const TeamsPage = () => {
         updateTeam={updateTeam}
         uploadLogo={uploadLogo}
       />
-    </main>
+    </>
   );
 };
 
