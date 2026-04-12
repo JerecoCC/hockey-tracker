@@ -8,6 +8,7 @@ import {
   type GroupRecord,
   type GroupTeamRecord,
 } from '../../../hooks/useLeagueGroups';
+import { type TeamRecord } from '../../../hooks/useTeams';
 import styles from './LeagueDetails.module.scss';
 
 // ── Inline add / edit row ────────────────────────────────────────────────────
@@ -81,12 +82,16 @@ const InlineInput = ({
 
 interface Props {
   leagueId: string;
+  teams: TeamRecord[];
   groups: GroupRecord[];
   loading: boolean;
   busy: string | null;
   addGroup: (data: CreateGroupData) => Promise<boolean>;
   updateGroup: (id: string, payload: { name: string }) => Promise<boolean>;
   onAddTeam: (group: GroupRecord) => void;
+  onCreateTeam: () => void;
+  onEditTeam: (teamId: string) => void;
+  onViewTeam: (teamId: string) => void;
   onDelete: (group: GroupRecord) => void;
   onDeleteTeam: (teamId: string) => Promise<void>;
   className?: string;
@@ -106,6 +111,8 @@ const GroupNode = ({
   onAddTeam,
   onDelete,
   onDeleteTeam,
+  onEditTeam,
+  onViewTeam,
   depth = 0,
 }: {
   group: GroupRecord;
@@ -119,6 +126,8 @@ const GroupNode = ({
   onAddTeam: (g: GroupRecord) => void;
   onDelete: (g: GroupRecord) => void;
   onDeleteTeam: (teamId: string) => Promise<void>;
+  onEditTeam: (teamId: string) => void;
+  onViewTeam: (teamId: string) => void;
   depth?: number;
 }) => {
   const [open, setOpen] = useState(true);
@@ -224,6 +233,22 @@ const GroupNode = ({
               <span className={styles.teamActions}>
                 <Button
                   variant="outlined"
+                  intent="neutral"
+                  icon="open_in_new"
+                  size="sm"
+                  tooltip="View team"
+                  onClick={() => onViewTeam(t.id)}
+                />
+                <Button
+                  variant="outlined"
+                  intent="accent"
+                  icon="edit"
+                  size="sm"
+                  tooltip="Edit team"
+                  onClick={() => onEditTeam(t.id)}
+                />
+                <Button
+                  variant="outlined"
                   intent="danger"
                   icon="delete"
                   size="sm"
@@ -275,6 +300,8 @@ const GroupNode = ({
               onAddTeam={onAddTeam}
               onDelete={onDelete}
               onDeleteTeam={onDeleteTeam}
+              onEditTeam={onEditTeam}
+              onViewTeam={onViewTeam}
               depth={depth + 1}
             />
           ))}
@@ -297,21 +324,30 @@ const GroupNode = ({
 
 const LeagueGroupsCard = ({
   leagueId,
+  teams,
   groups,
   loading,
   busy,
   addGroup,
   updateGroup,
   onAddTeam,
+  onCreateTeam,
+  onEditTeam,
+  onViewTeam,
   onDelete,
   onDeleteTeam,
   className,
 }: Props) => {
   const [inlineMode, setInlineMode] = useState<InlineMode>(null);
+  const [confirmDeleteUngrouped, setConfirmDeleteUngrouped] = useState<TeamRecord | null>(null);
+  const [isDeletingUngrouped, setIsDeletingUngrouped] = useState(false);
 
   const roots = groups
     .filter((g) => g.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+
+  const groupedTeamIds = new Set(groups.flatMap((g) => g.teams.map((t) => t.id)));
+  const ungroupedTeams = teams.filter((t) => !groupedTeamIds.has(t.id));
 
   const handleConfirm = async (name: string) => {
     if (!inlineMode) return;
@@ -357,6 +393,8 @@ const LeagueGroupsCard = ({
               onAddTeam={onAddTeam}
               onDelete={onDelete}
               onDeleteTeam={onDeleteTeam}
+              onEditTeam={onEditTeam}
+              onViewTeam={onViewTeam}
             />
           ))}
           {isRootAdding && (
@@ -368,11 +406,99 @@ const LeagueGroupsCard = ({
               />
             </li>
           )}
-          {!isRootAdding && roots.length === 0 && (
-            <p className={styles.teamsEmpty}>No groups for this league yet.</p>
+          {!isRootAdding && roots.length === 0 && ungroupedTeams.length === 0 && (
+            <div className={styles.emptyState}>
+              <Button
+                icon="add"
+                size="sm"
+                variant="outlined"
+                intent="neutral"
+                onClick={onCreateTeam}
+              >
+                Create Team
+              </Button>
+              <p className={styles.teamsEmpty}>
+                No teams yet. Create a group to organise teams, or add a team directly.
+              </p>
+            </div>
           )}
         </ul>
       )}
+
+      {!loading && ungroupedTeams.length > 0 && (
+        <>
+          {roots.length > 0 && <p className={styles.ungroupedLabel}>Unassigned</p>}
+          <ul className={styles.teamList}>
+            {ungroupedTeams.map((t) => (
+              <li
+                key={t.id}
+                className={styles.teamListItem}
+              >
+                {t.logo ? (
+                  <img
+                    src={t.logo}
+                    alt=""
+                    className={styles.teamLogoThumb}
+                  />
+                ) : (
+                  <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
+                )}
+                <span className={styles.teamListName}>{t.name}</span>
+                <span className={styles.seasonListDates}>{t.code}</span>
+                <span className={styles.teamActions}>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="open_in_new"
+                    size="sm"
+                    tooltip="View team"
+                    onClick={() => onViewTeam(t.id)}
+                  />
+                  <Button
+                    variant="outlined"
+                    intent="accent"
+                    icon="edit"
+                    size="sm"
+                    tooltip="Edit team"
+                    onClick={() => onEditTeam(t.id)}
+                  />
+                  <Button
+                    variant="outlined"
+                    intent="danger"
+                    icon="delete"
+                    size="sm"
+                    tooltip="Delete team"
+                    onClick={() => setConfirmDeleteUngrouped(t)}
+                  />
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <ConfirmModal
+        open={confirmDeleteUngrouped !== null}
+        title="Delete Team"
+        body={
+          <>
+            Are you sure you want to delete <strong>{confirmDeleteUngrouped?.name}</strong>? This
+            cannot be undone.
+          </>
+        }
+        confirmLabel={isDeletingUngrouped ? 'Deleting…' : 'Delete'}
+        confirmIcon="delete"
+        variant="danger"
+        busy={isDeletingUngrouped}
+        onCancel={() => setConfirmDeleteUngrouped(null)}
+        onConfirm={async () => {
+          if (!confirmDeleteUngrouped) return;
+          setIsDeletingUngrouped(true);
+          await onDeleteTeam(confirmDeleteUngrouped.id);
+          setIsDeletingUngrouped(false);
+          setConfirmDeleteUngrouped(null);
+        }}
+      />
     </Card>
   );
 };

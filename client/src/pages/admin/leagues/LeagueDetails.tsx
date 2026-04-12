@@ -6,6 +6,7 @@ import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
 import useLeagueGroups, { type GroupRecord } from '../../../hooks/useLeagueGroups';
+import { type TeamRecord } from '../../../hooks/useTeams';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
 import LeagueFormModal from './LeagueFormModal';
 import LeagueInfoCard from './LeagueInfoCard';
@@ -22,6 +23,7 @@ const LeagueDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const {
     league,
+    teams,
     seasons,
     loading,
     busy,
@@ -47,9 +49,10 @@ const LeagueDetailsPage = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   // Group state
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<GroupRecord | null>(null);
-  // Team modal state — opened from a group's "Create Team" button
+  // Team modal state
   const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [createTeamForGroup, setCreateTeamForGroup] = useState<GroupRecord | null>(null);
+  const [editTargetTeam, setEditTargetTeam] = useState<TeamRecord | null>(null);
   // Season modal state
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [editTargetSeason, setEditTargetSeason] = useState<LeagueSeasonRecord | null>(null);
@@ -137,6 +140,7 @@ const LeagueDetailsPage = () => {
                 <LeagueGroupsCard
                   className={styles.col12}
                   leagueId={league.id}
+                  teams={teams}
                   groups={groups}
                   loading={groupsLoading}
                   busy={groupsBusy}
@@ -144,8 +148,21 @@ const LeagueDetailsPage = () => {
                   updateGroup={updateGroup}
                   onAddTeam={(g) => {
                     setCreateTeamForGroup(g);
+                    setEditTargetTeam(null);
                     setTeamModalOpen(true);
                   }}
+                  onCreateTeam={() => {
+                    setCreateTeamForGroup(null);
+                    setEditTargetTeam(null);
+                    setTeamModalOpen(true);
+                  }}
+                  onEditTeam={(teamId) => {
+                    const t = teams.find((tm) => tm.id === teamId) ?? null;
+                    setEditTargetTeam(t);
+                    setCreateTeamForGroup(null);
+                    setTeamModalOpen(true);
+                  }}
+                  onViewTeam={(teamId) => navigate(`/admin/leagues/${id}/teams/${teamId}`)}
                   onDelete={(g) => setConfirmDeleteGroup(g)}
                   onDeleteTeam={deleteTeam}
                 />
@@ -182,7 +199,7 @@ const LeagueDetailsPage = () => {
 
       <TeamFormModal
         open={teamModalOpen}
-        editTarget={null}
+        editTarget={editTargetTeam}
         leagueOptions={
           league
             ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
@@ -192,6 +209,7 @@ const LeagueDetailsPage = () => {
         onClose={() => {
           setTeamModalOpen(false);
           setCreateTeamForGroup(null);
+          setEditTargetTeam(null);
         }}
         addTeam={async (payload) => {
           const newTeamId = await addTeam(payload);

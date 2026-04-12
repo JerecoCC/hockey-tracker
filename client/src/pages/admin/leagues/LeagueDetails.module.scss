@@ -522,6 +522,22 @@
   margin: 0;
 }
 
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-md;
+}
+
+.ungroupedLabel {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: $space-md 0 $space-sm;
+}
+
 // ── Seasons list ──────────────────────────────────────────────────────────
 .seasonList {
   list-style: none;
