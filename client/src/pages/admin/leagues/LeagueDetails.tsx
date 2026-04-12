@@ -98,7 +98,7 @@ const LeagueDetailsPage = () => {
       <Tabs
         tabs={[
           {
-            label: 'Info & Seasons',
+            label: 'Info',
             content: (
               <div className={styles.grid}>
                 <LeagueInfoCard

@@ -328,7 +328,7 @@ const LeagueGroupsCard = ({
   return (
     <Card
       className={className}
-      title="Groups"
+      title="Teams"
       action={
         <Button
           icon="folder_plus"
