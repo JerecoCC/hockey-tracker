@@ -11,7 +11,8 @@ interface Props {
 
 const normalize = (html: string) => (html.trim() === '<p></p>' ? '' : html);
 
-const DescriptionEditor = ({ description, onSave }: Props) => {
+const DescriptionEditor = (props: Props) => {
+  const { description, onSave } = props;
   const [editing, setEditing] = useState(false);
   const [html, setHtml] = useState('');
   const [saving, setSaving] = useState(false);

@@ -24,14 +24,8 @@ interface Props {
   uploadLogo: (file: File) => Promise<string | null>;
 }
 
-const LeagueFormModal = ({
-  open,
-  editTarget,
-  onClose,
-  addLeague,
-  updateLeague,
-  uploadLogo,
-}: Props) => {
+const LeagueFormModal = (props: Props) => {
+  const { open, editTarget, onClose, addLeague, updateLeague, uploadLogo } = props;
   const {
     control,
     handleSubmit,

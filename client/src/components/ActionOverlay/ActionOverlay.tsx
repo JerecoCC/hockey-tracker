@@ -7,10 +7,9 @@ interface Props {
   children: ReactNode;
 }
 
-const ActionOverlay = ({ className, children }: Props) => (
-  <span className={`${styles.root} ${className ?? ''}`.trim()}>
-    {children}
-  </span>
-);
+const ActionOverlay = (props: Props) => {
+  const { className, children } = props;
+  return <span className={`${styles.root} ${className ?? ''}`.trim()}>{children}</span>;
+};
 
 export default ActionOverlay;

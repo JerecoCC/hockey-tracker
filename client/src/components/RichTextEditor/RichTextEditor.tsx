@@ -11,20 +11,23 @@ interface ToolbarButtonProps {
   disabled?: boolean;
 }
 
-const ToolbarButton = ({ active, onClick, children, title, disabled }: ToolbarButtonProps) => (
-  <button
-    type="button"
-    className={`${styles.toolbarBtn} ${active ? styles.toolbarBtnActive : ''}`}
-    onMouseDown={(e) => {
-      e.preventDefault(); // keep editor focus
-      onClick();
-    }}
-    title={title}
-    disabled={disabled}
-  >
-    {children}
-  </button>
-);
+const ToolbarButton = (props: ToolbarButtonProps) => {
+  const { active, onClick, children, title, disabled } = props;
+  return (
+    <button
+      type="button"
+      className={`${styles.toolbarBtn} ${active ? styles.toolbarBtnActive : ''}`}
+      onMouseDown={(e) => {
+        e.preventDefault(); // keep editor focus
+        onClick();
+      }}
+      title={title}
+      disabled={disabled}
+    >
+      {children}
+    </button>
+  );
+};
 
 interface Props {
   content: string;
@@ -33,7 +36,8 @@ interface Props {
   editable?: boolean;
 }
 
-const RichTextEditor = ({ content, onChange, autoFocus = true, editable = true }: Props) => {
+const RichTextEditor = (props: Props) => {
+  const { content, onChange, autoFocus = true, editable = true } = props;
   const editor = useEditor({
     extensions: [StarterKit],
     content,

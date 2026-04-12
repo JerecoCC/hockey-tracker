@@ -18,13 +18,8 @@ interface Props {
   disabled?: boolean;
 }
 
-const Select = ({
-  value,
-  options,
-  placeholder = '— Select —',
-  onChange,
-  disabled = false,
-}: Props) => {
+const Select = (props: Props) => {
+  const { value, options, placeholder = '— Select —', onChange, disabled = false } = props;
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const menuId = useId();

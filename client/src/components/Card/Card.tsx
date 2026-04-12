@@ -14,24 +14,17 @@ interface CardProps {
   children: ReactNode;
 }
 
-const Card = ({
-  variant = 'admin',
-  title,
-  action,
-  className,
-  style,
-  children,
-}: CardProps) => {
-  const classes = [
-    styles.card,
-    variant === 'light' ? styles.light : styles.admin,
-    className,
-  ]
+const Card = (props: CardProps) => {
+  const { variant = 'admin', title, action, className, style, children } = props;
+  const classes = [styles.card, variant === 'light' ? styles.light : styles.admin, className]
     .filter(Boolean)
     .join(' ');
 
   return (
-    <div className={classes} style={style}>
+    <div
+      className={classes}
+      style={style}
+    >
       {(title || action) && (
         <div className={styles.cardHeader}>
           {title && <h3 className={styles.cardTitle}>{title}</h3>}

@@ -16,16 +16,8 @@ interface Props {
   className?: string;
 }
 
-const LeagueTeamsCard = ({
-  leagueId,
-  teams,
-  loading,
-  busy,
-  onAdd,
-  onEdit,
-  onDelete,
-  className,
-}: Props) => {
+const LeagueTeamsCard = (props: Props) => {
+  const { leagueId, teams, loading, busy, onAdd, onEdit, onDelete, className } = props;
   const navigate = useNavigate();
 
   return (

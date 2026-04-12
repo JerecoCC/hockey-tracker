@@ -24,70 +24,67 @@ const formatDate = (d: string | null) =>
       }).format(new Date(d))
     : '?';
 
-const LeagueSeasonsCard = ({
-  seasons,
-  loading,
-  busy,
-  onAdd,
-  onEdit,
-  onDelete,
-  className,
-}: Props) => (
-  <Card
-    className={className}
-    title="Seasons"
-    action={
-      <Button
-        icon="add"
-        size="sm"
-        onClick={onAdd}
-      >
-        Create Season
-      </Button>
-    }
-  >
-    {loading ? (
-      <p className={styles.teamsEmpty}>Loading…</p>
-    ) : seasons.length === 0 ? (
-      <p className={styles.teamsEmpty}>No seasons for this league yet.</p>
-    ) : (
-      <ul className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}>
-        {seasons.map((s) => (
-          <li
-            key={s.id}
-            className={styles.seasonListItem}
-          >
-            <span className={styles.seasonListName}>{s.name}</span>
-            <span className={styles.seasonListDates}>
-              {s.start_date || s.end_date
-                ? [s.start_date, s.end_date].map(formatDate).join(' – ')
-                : 'No dates'}
-            </span>
-            <ActionOverlay className={styles.seasonActions}>
-              <Button
-                variant="outlined"
-                intent="accent"
-                icon="edit"
-                size="sm"
-                disabled={busy === s.id}
-                tooltip="Edit"
-                onClick={() => onEdit(s)}
-              />
-              <Button
-                variant="outlined"
-                intent="danger"
-                icon="delete"
-                size="sm"
-                disabled={busy === s.id}
-                tooltip="Delete"
-                onClick={() => onDelete(s)}
-              />
-            </ActionOverlay>
-          </li>
-        ))}
-      </ul>
-    )}
-  </Card>
-);
+const LeagueSeasonsCard = (props: Props) => {
+  const { seasons, loading, busy, onAdd, onEdit, onDelete, className } = props;
+  return (
+    <Card
+      className={className}
+      title="Seasons"
+      action={
+        <Button
+          icon="add"
+          size="sm"
+          onClick={onAdd}
+        >
+          Create Season
+        </Button>
+      }
+    >
+      {loading ? (
+        <p className={styles.teamsEmpty}>Loading…</p>
+      ) : seasons.length === 0 ? (
+        <p className={styles.teamsEmpty}>No seasons for this league yet.</p>
+      ) : (
+        <ul
+          className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}
+        >
+          {seasons.map((s) => (
+            <li
+              key={s.id}
+              className={styles.seasonListItem}
+            >
+              <span className={styles.seasonListName}>{s.name}</span>
+              <span className={styles.seasonListDates}>
+                {s.start_date || s.end_date
+                  ? [s.start_date, s.end_date].map(formatDate).join(' – ')
+                  : 'No dates'}
+              </span>
+              <ActionOverlay className={styles.seasonActions}>
+                <Button
+                  variant="outlined"
+                  intent="accent"
+                  icon="edit"
+                  size="sm"
+                  disabled={busy === s.id}
+                  tooltip="Edit"
+                  onClick={() => onEdit(s)}
+                />
+                <Button
+                  variant="outlined"
+                  intent="danger"
+                  icon="delete"
+                  size="sm"
+                  disabled={busy === s.id}
+                  tooltip="Delete"
+                  onClick={() => onDelete(s)}
+                />
+              </ActionOverlay>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+};
 
 export default LeagueSeasonsCard;

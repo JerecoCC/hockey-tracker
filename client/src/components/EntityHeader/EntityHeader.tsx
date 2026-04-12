@@ -22,19 +22,20 @@ interface Props {
   swatches?: Swatch[];
 }
 
-const EntityHeader = ({
-  logo,
-  name,
-  code,
-  primaryColor,
-  textColor,
-  isBusy,
-  onLogoChange,
-  onEdit,
-  editTooltip = 'Edit',
-  logoEditTooltip = 'Edit logo',
-  swatches = [],
-}: Props) => {
+const EntityHeader = (props: Props) => {
+  const {
+    logo,
+    name,
+    code,
+    primaryColor,
+    textColor,
+    isBusy,
+    onLogoChange,
+    onEdit,
+    editTooltip = 'Edit',
+    logoEditTooltip = 'Edit logo',
+    swatches = [],
+  } = props;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {

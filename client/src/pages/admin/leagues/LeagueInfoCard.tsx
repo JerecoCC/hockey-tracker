@@ -14,14 +14,8 @@ interface Props {
   className?: string;
 }
 
-const LeagueInfoCard = ({
-  league,
-  busy,
-  uploadLogo,
-  updateLeague,
-  onEditLeague,
-  className,
-}: Props) => {
+const LeagueInfoCard = (props: Props) => {
+  const { league, busy, uploadLogo, updateLeague, onEditLeague, className } = props;
   const isBusy = busy === league.id;
 
   return (

@@ -101,7 +101,8 @@ interface IconProps {
   style?: CSSProperties;
 }
 
-const Icon = ({ name, size, className = '', style = {} }: IconProps) => {
+const Icon = (props: IconProps) => {
+  const { name, size, className = '', style = {} } = props;
   const icon = ICON_MAP[name];
   if (!icon) return null;
 

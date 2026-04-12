@@ -29,16 +29,17 @@ interface Props {
   lockedLeagueId?: string;
 }
 
-const TeamFormModal = ({
-  open,
-  editTarget,
-  leagueOptions,
-  onClose,
-  addTeam,
-  updateTeam,
-  uploadLogo,
-  lockedLeagueId,
-}: Props) => {
+const TeamFormModal = (props: Props) => {
+  const {
+    open,
+    editTarget,
+    leagueOptions,
+    onClose,
+    addTeam,
+    updateTeam,
+    uploadLogo,
+    lockedLeagueId,
+  } = props;
   const {
     control,
     handleSubmit,

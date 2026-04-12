@@ -61,18 +61,19 @@ const SIZE: Record<ButtonSize, string> = {
  *   <Button variant="ghost" intent="neutral" icon="edit" /> // ghost neutral, icon only
  *   <Button variant="filled" intent="danger" icon="delete" size="sm" /> // small icon-only
  */
-const Button = ({
-  variant = 'filled',
-  intent = 'accent',
-  size = 'md',
-  icon,
-  iconSize,
-  tooltip,
-  tooltipClassName,
-  children,
-  className = '',
-  ...rest
-}: ButtonProps) => {
+const Button = (props: ButtonProps) => {
+  const {
+    variant = 'filled',
+    intent = 'accent',
+    size = 'md',
+    icon,
+    iconSize,
+    tooltip,
+    tooltipClassName,
+    children,
+    className = '',
+    ...rest
+  } = props;
   const isIconOnly = !!icon && !children;
 
   const cls = cn(

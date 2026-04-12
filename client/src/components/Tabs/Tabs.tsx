@@ -17,7 +17,8 @@ interface TabsProps {
   className?: string;
 }
 
-const Tabs = ({ tabs, activeIndex, defaultIndex = 0, onTabChange, className }: TabsProps) => {
+const Tabs = (props: TabsProps) => {
+  const { tabs, activeIndex, defaultIndex = 0, onTabChange, className } = props;
   const [internal, setInternal] = useState(defaultIndex);
   const active = activeIndex ?? internal;
 

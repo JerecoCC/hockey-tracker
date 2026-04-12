@@ -19,7 +19,8 @@ interface AdminNavProps {
   onToggle: () => void;
 }
 
-const AdminNav = ({ collapsed }: AdminNavProps) => {
+const AdminNav = (props: AdminNavProps) => {
+  const { collapsed } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
 

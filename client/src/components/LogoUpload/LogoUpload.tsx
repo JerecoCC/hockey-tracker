@@ -13,7 +13,8 @@ interface Props {
   disabled?: boolean;
 }
 
-const LogoUpload = ({ label = 'Add Logo', control, name, rules, disabled }: Props) => {
+const LogoUpload = (props: Props) => {
+  const { label = 'Add Logo', control, name, rules, disabled } = props;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
   const { field } = useController({ control: ctrl, name, rules });

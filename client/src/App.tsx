@@ -12,7 +12,8 @@ import UsersPage from './pages/admin/users/Users';
 import TeamDetailsPage from './pages/admin/teams/TeamDetails';
 import AuthCallbackPage from './pages/auth/callback/AuthCallback';
 
-const PrivateRoute = ({ children }: { children: ReactNode }) => {
+const PrivateRoute = (props: { children: ReactNode }) => {
+  const { children } = props;
   const { user, loading } = useAuth();
   if (loading) return null;
   return user ? (
@@ -25,7 +26,8 @@ const PrivateRoute = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const PublicRoute = ({ children }: { children: ReactNode }) => {
+const PublicRoute = (props: { children: ReactNode }) => {
+  const { children } = props;
   const { user, loading } = useAuth();
   if (loading) return null;
   return user ? (
@@ -38,7 +40,8 @@ const PublicRoute = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const AdminRoute = ({ children }: { children: ReactNode }) => {
+const AdminRoute = (props: { children: ReactNode }) => {
+  const { children } = props;
   const { user, loading } = useAuth();
   if (loading) return null;
   if (!user)

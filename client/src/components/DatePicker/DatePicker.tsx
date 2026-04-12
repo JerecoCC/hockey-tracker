@@ -57,7 +57,8 @@ const toISO = (y: number, m: number, d: number) =>
 const daysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 const firstDayOfWeek = (y: number, m: number) => new Date(y, m - 1, 1).getDay();
 
-const DatePicker = ({ value, onChange, placeholder = 'Select date…' }: Props) => {
+const DatePicker = (props: Props) => {
+  const { value, onChange, placeholder = 'Select date…' } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
   const parsed = parseISO(value);

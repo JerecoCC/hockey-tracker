@@ -24,15 +24,9 @@ interface Props {
   lockedLeagueId?: string;
 }
 
-const SeasonFormModal = ({
-  open,
-  editTarget,
-  leagueOptions,
-  onClose,
-  addSeason,
-  updateSeason,
-  lockedLeagueId,
-}: Props) => {
+const SeasonFormModal = (props: Props) => {
+  const { open, editTarget, leagueOptions, onClose, addSeason, updateSeason, lockedLeagueId } =
+    props;
   const {
     control,
     handleSubmit,

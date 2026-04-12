@@ -9,7 +9,8 @@ interface Props {
   children: ReactNode;
 }
 
-const Modal = ({ open, title, onClose, children }: Props) => {
+const Modal = (props: Props) => {
+  const { open, title, onClose, children } = props;
   if (!open) return null;
   return (
     <div

@@ -19,17 +19,15 @@ type InlineMode =
   | { type: 'edit'; groupId: string }
   | null;
 
-const InlineInput = ({
-  initialValue = '',
-  placeholder = 'Group name…',
-  onConfirm,
-  onCancel,
-}: {
+interface InlineInputProps {
   initialValue?: string;
   placeholder?: string;
   onConfirm: (name: string) => Promise<void>;
   onCancel: () => void;
-}) => {
+}
+
+const InlineInput = (props: InlineInputProps) => {
+  const { initialValue = '', placeholder = 'Group name…', onConfirm, onCancel } = props;
   const [value, setValue] = useState(initialValue);
   const [saving, setSaving] = useState(false);
 
@@ -100,22 +98,7 @@ interface Props {
 
 // ── GroupNode ────────────────────────────────────────────────────────────────
 
-const GroupNode = ({
-  group,
-  allGroups,
-  busy,
-  inlineMode,
-  onStartEdit,
-  onStartAdd,
-  onConfirm,
-  onCancel,
-  onAddTeam,
-  onDelete,
-  onDeleteTeam,
-  onEditTeam,
-  onViewTeam,
-  depth = 0,
-}: {
+interface GroupNodeProps {
   group: GroupRecord;
   allGroups: GroupRecord[];
   busy: string | null;
@@ -130,7 +113,25 @@ const GroupNode = ({
   onEditTeam: (teamId: string) => void;
   onViewTeam: (teamId: string) => void;
   depth?: number;
-}) => {
+}
+
+const GroupNode = (props: GroupNodeProps) => {
+  const {
+    group,
+    allGroups,
+    busy,
+    inlineMode,
+    onStartEdit,
+    onStartAdd,
+    onConfirm,
+    onCancel,
+    onAddTeam,
+    onDelete,
+    onDeleteTeam,
+    onEditTeam,
+    onViewTeam,
+    depth = 0,
+  } = props;
   const [open, setOpen] = useState(true);
   const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<GroupTeamRecord | null>(null);
   const [isDeletingTeam, setIsDeletingTeam] = useState(false);
@@ -327,22 +328,23 @@ const GroupNode = ({
 
 // ── Card ─────────────────────────────────────────────────────────────────────
 
-const LeagueGroupsCard = ({
-  leagueId,
-  teams,
-  groups,
-  loading,
-  busy,
-  addGroup,
-  updateGroup,
-  onAddTeam,
-  onCreateTeam,
-  onEditTeam,
-  onViewTeam,
-  onDelete,
-  onDeleteTeam,
-  className,
-}: Props) => {
+const LeagueGroupsCard = (props: Props) => {
+  const {
+    leagueId,
+    teams,
+    groups,
+    loading,
+    busy,
+    addGroup,
+    updateGroup,
+    onAddTeam,
+    onCreateTeam,
+    onEditTeam,
+    onViewTeam,
+    onDelete,
+    onDeleteTeam,
+    className,
+  } = props;
   const [inlineMode, setInlineMode] = useState<InlineMode>(null);
   const [confirmDeleteUngrouped, setConfirmDeleteUngrouped] = useState<TeamRecord | null>(null);
   const [isDeletingUngrouped, setIsDeletingUngrouped] = useState(false);

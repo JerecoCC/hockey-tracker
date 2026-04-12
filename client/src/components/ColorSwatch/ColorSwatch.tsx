@@ -6,13 +6,19 @@ interface Props {
   color: string;
 }
 
-const ColorSwatch = ({ label, color }: Props) => (
-  <div className={styles.item}>
-    <span className={styles.label}>{label}</span>
-    <Tooltip text={color}>
-      <span className={styles.dot} style={{ background: color }} />
-    </Tooltip>
-  </div>
-);
+const ColorSwatch = (props: Props) => {
+  const { label, color } = props;
+  return (
+    <div className={styles.item}>
+      <span className={styles.label}>{label}</span>
+      <Tooltip text={color}>
+        <span
+          className={styles.dot}
+          style={{ background: color }}
+        />
+      </Tooltip>
+    </div>
+  );
+};
 
 export default ColorSwatch;
