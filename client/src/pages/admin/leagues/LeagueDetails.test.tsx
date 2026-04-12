@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import useLeagueDetails from '../../../hooks/useLeagueDetails';
 import useLeagueGroups from '../../../hooks/useLeagueGroups';
 import LeagueDetailsPage from './LeagueDetails';
@@ -9,6 +9,7 @@ const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
   useParams: jest.fn(),
+  useLocation: jest.fn(),
 }));
 
 // ── Hooks ─────────────────────────────────────────────────────────────
@@ -64,9 +65,10 @@ const mockLeague = {
   created_at: '2024-01-01T00:00:00Z',
 };
 
-const setup = (hookOverrides = {}, groupOverrides = {}) => {
+const setup = (hookOverrides = {}, groupOverrides = {}, locationState: unknown = null) => {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   (useParams as jest.Mock).mockReturnValue({ id: 'lg1' });
+  (useLocation as jest.Mock).mockReturnValue({ state: locationState });
   (useLeagueDetails as jest.Mock).mockReturnValue({ ...baseHook, ...hookOverrides });
   (useLeagueGroups as jest.Mock).mockReturnValue({ ...baseGroupsHook, ...groupOverrides });
   return render(<LeagueDetailsPage />);
@@ -179,6 +181,12 @@ describe('LeagueDetailsPage – tabs', () => {
     setup({ league: mockLeague });
     clickTeamsTab();
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('opens on the Teams tab when navigated back from team details', () => {
+    setup({ league: mockLeague }, {}, { activeTab: 1 });
+    expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 });
 

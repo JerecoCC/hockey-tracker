@@ -54,7 +54,7 @@ const TeamDetailsPage = () => {
             intent="neutral"
             icon="arrow_back"
             tooltip={backTooltip}
-            onClick={() => navigate(backPath)}
+            onClick={() => navigate(backPath, fromLeague ? { state: { activeTab: 1 } } : undefined)}
           />
         }
         right={<Breadcrumbs items={breadcrumbItems} />}

@@ -9,14 +9,16 @@ export interface Tab {
 
 interface TabsProps {
   tabs: Tab[];
-  /** Optional controlled active index. */
+  /** Controlled active index. */
   activeIndex?: number;
+  /** Initial tab index when uncontrolled (defaults to 0). */
+  defaultIndex?: number;
   onTabChange?: (index: number) => void;
   className?: string;
 }
 
-const Tabs = ({ tabs, activeIndex, onTabChange, className }: TabsProps) => {
-  const [internal, setInternal] = useState(0);
+const Tabs = ({ tabs, activeIndex, defaultIndex = 0, onTabChange, className }: TabsProps) => {
+  const [internal, setInternal] = useState(defaultIndex);
   const active = activeIndex ?? internal;
 
   const handleSelect = (i: number) => {
@@ -43,9 +45,7 @@ const Tabs = ({ tabs, activeIndex, onTabChange, className }: TabsProps) => {
         ))}
       </div>
 
-      <div className={styles.tabPanel}>
-        {tabs[active]?.content}
-      </div>
+      <div className={styles.tabPanel}>{tabs[active]?.content}</div>
     </div>
   );
 };

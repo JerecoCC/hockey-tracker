@@ -34,7 +34,12 @@ describe('Tabs – rendering', () => {
   });
 
   it('applies an extra className when provided', () => {
-    const { container } = render(<Tabs tabs={tabs} className="custom-class" />);
+    const { container } = render(
+      <Tabs
+        tabs={tabs}
+        className="custom-class"
+      />,
+    );
     expect(container.firstChild).toHaveClass('custom-class');
   });
 });
@@ -67,28 +72,83 @@ describe('Tabs – switching (uncontrolled)', () => {
 describe('Tabs – onTabChange callback', () => {
   it('calls onTabChange with the clicked index', () => {
     const onTabChange = jest.fn();
-    render(<Tabs tabs={tabs} onTabChange={onTabChange} />);
+    render(
+      <Tabs
+        tabs={tabs}
+        onTabChange={onTabChange}
+      />,
+    );
     fireEvent.click(screen.getByRole('tab', { name: 'Beta' }));
     expect(onTabChange).toHaveBeenCalledWith(1);
   });
 
   it('calls onTabChange with index 0 when the first tab is re-clicked', () => {
     const onTabChange = jest.fn();
-    render(<Tabs tabs={tabs} onTabChange={onTabChange} />);
+    render(
+      <Tabs
+        tabs={tabs}
+        onTabChange={onTabChange}
+      />,
+    );
     fireEvent.click(screen.getByRole('tab', { name: 'Alpha' }));
     expect(onTabChange).toHaveBeenCalledWith(0);
   });
 });
 
+describe('Tabs – defaultIndex', () => {
+  it('starts on the tab at defaultIndex', () => {
+    render(
+      <Tabs
+        tabs={tabs}
+        defaultIndex={1}
+      />,
+    );
+    expect(screen.getByText('Beta content')).toBeInTheDocument();
+    expect(screen.queryByText('Alpha content')).not.toBeInTheDocument();
+  });
+
+  it('marks the defaultIndex tab as selected initially', () => {
+    render(
+      <Tabs
+        tabs={tabs}
+        defaultIndex={2}
+      />,
+    );
+    expect(screen.getByRole('tab', { name: 'Gamma' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('still allows switching tabs after mounting with defaultIndex', () => {
+    render(
+      <Tabs
+        tabs={tabs}
+        defaultIndex={1}
+      />,
+    );
+    fireEvent.click(screen.getByRole('tab', { name: 'Alpha' }));
+    expect(screen.getByText('Alpha content')).toBeInTheDocument();
+  });
+});
+
 describe('Tabs – controlled mode', () => {
   it('shows the tab at the provided activeIndex', () => {
-    render(<Tabs tabs={tabs} activeIndex={2} />);
+    render(
+      <Tabs
+        tabs={tabs}
+        activeIndex={2}
+      />,
+    );
     expect(screen.getByText('Gamma content')).toBeInTheDocument();
     expect(screen.queryByText('Alpha content')).not.toBeInTheDocument();
   });
 
   it('marks the controlled tab as selected', () => {
-    render(<Tabs tabs={tabs} activeIndex={1} />);
+    render(
+      <Tabs
+        tabs={tabs}
+        activeIndex={1}
+      />,
+    );
     expect(screen.getByRole('tab', { name: 'Beta' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'false');
   });

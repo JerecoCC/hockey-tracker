@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Tabs from '../../../components/Tabs/Tabs';
@@ -20,6 +20,7 @@ import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { id } = useParams<{ id: string }>();
   const {
     league,
@@ -99,6 +100,7 @@ const LeagueDetailsPage = () => {
       />
 
       <Tabs
+        defaultIndex={(state as { activeTab?: number } | null)?.activeTab ?? 0}
         tabs={[
           {
             label: 'Info',
