@@ -654,13 +654,14 @@
   margin: 0;
   padding: 0;
   display: grid;
+  grid-auto-flow: row;
   grid-template-columns: repeat(2, 1fr);
+  align-items: start;
+  gap: $space-md;
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
   }
-  align-items: start;
-  gap: $space-md;
 }
 
 // Inline-add row spans both columns

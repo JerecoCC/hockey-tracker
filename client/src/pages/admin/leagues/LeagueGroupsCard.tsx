@@ -170,7 +170,7 @@ const GroupNode = ({
           </button>
           <span className={styles.groupName}>{group.name}</span>
           <span className={styles.groupActions}>
-            {!isAddingChild && group.teams.length === 0 && (
+            {depth === 0 && !isAddingChild && group.teams.length === 0 && (
               <Button
                 variant="outlined"
                 intent="neutral"
