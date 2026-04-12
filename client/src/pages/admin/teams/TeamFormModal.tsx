@@ -4,7 +4,6 @@ import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
-import { type SelectOption } from '../../../components/Select/Select';
 import { type CreateTeamData, type TeamRecord } from '../../../hooks/useTeams';
 import styles from './Teams.module.scss';
 
@@ -13,6 +12,8 @@ interface FormValues {
   code: string;
   league_id: string | null;
   logo: File | string | null;
+  city: string;
+  home_arena: string;
   primary_color: string;
   text_color: string;
 }
@@ -20,26 +21,16 @@ interface FormValues {
 interface Props {
   open: boolean;
   editTarget: TeamRecord | null;
-  leagueOptions: SelectOption[];
   onClose: () => void;
   addTeam: (data: CreateTeamData) => Promise<boolean>;
   updateTeam: (id: string, data: Partial<CreateTeamData>) => Promise<boolean>;
   uploadLogo: (file: File) => Promise<string | null>;
-  /** When set, the league field is pre-filled with this ID and locked. */
+  /** When set, the team is implicitly linked to this league on save. */
   lockedLeagueId?: string;
 }
 
 const TeamFormModal = (props: Props) => {
-  const {
-    open,
-    editTarget,
-    leagueOptions,
-    onClose,
-    addTeam,
-    updateTeam,
-    uploadLogo,
-    lockedLeagueId,
-  } = props;
+  const { open, editTarget, onClose, addTeam, updateTeam, uploadLogo, lockedLeagueId } = props;
   const {
     control,
     handleSubmit,
@@ -51,6 +42,8 @@ const TeamFormModal = (props: Props) => {
       code: '',
       league_id: null,
       logo: null,
+      city: '',
+      home_arena: '',
       primary_color: '#334155',
       text_color: '#ffffff',
     },
@@ -63,6 +56,8 @@ const TeamFormModal = (props: Props) => {
       code: editTarget?.code ?? '',
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       logo: editTarget?.logo ?? null,
+      city: editTarget?.city ?? '',
+      home_arena: editTarget?.home_arena ?? '',
       primary_color: editTarget?.primary_color ?? '#334155',
       text_color: editTarget?.text_color ?? '#ffffff',
     });
@@ -80,6 +75,8 @@ const TeamFormModal = (props: Props) => {
       code: data.code,
       logo: logoUrl,
       league_id: data.league_id || null,
+      city: data.city || undefined,
+      home_arena: data.home_arena || undefined,
       primary_color: data.primary_color,
       text_color: data.text_color,
     };
@@ -124,15 +121,18 @@ const TeamFormModal = (props: Props) => {
           disabled={isSubmitting}
         />
         <Field
-          label="League"
-          required
-          type="select"
+          label="City"
           control={control}
-          name="league_id"
-          rules={{ required: true }}
-          options={leagueOptions}
-          placeholder="— Select a league —"
-          disabled={!!lockedLeagueId || isSubmitting}
+          name="city"
+          placeholder="e.g. Toronto"
+          disabled={isSubmitting}
+        />
+        <Field
+          label="Home Arena"
+          control={control}
+          name="home_arena"
+          placeholder="e.g. Scotiabank Arena"
+          disabled={isSubmitting}
         />
         <div className={styles.colorRow}>
           <Field

@@ -120,6 +120,12 @@ async function initSchema() {
   await sql`
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS text_color TEXT NOT NULL DEFAULT '#ffffff'
   `;
+  await sql`
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS city TEXT
+  `;
+  await sql`
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS home_arena TEXT
+  `;
 
   // Drop the erroneous UNIQUE constraint on teams.league_id – a league can have many teams
   await sql`

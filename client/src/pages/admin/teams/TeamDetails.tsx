@@ -58,17 +58,6 @@ const TeamDetailsPage = () => {
 
   const isBusy = busy === team.id;
 
-  const leagueOption = team.league_id
-    ? [
-        {
-          value: team.league_id,
-          label: team.league_name ?? '',
-          logo: team.league_logo,
-          code: team.league_code ?? '',
-        },
-      ]
-    : [];
-
   return (
     <>
       <TitleRow
@@ -112,15 +101,6 @@ const TeamDetailsPage = () => {
 
                 {/* ── Info grid ──────────────────────────── */}
                 <div className={styles.infoGrid}>
-                  {/* Description – full width */}
-                  <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-                    <span className={styles.infoLabel}>Description</span>
-                    <DescriptionEditor
-                      description={team.description}
-                      onSave={(html) => updateTeam(team.id, { description: html })}
-                    />
-                  </div>
-
                   {/* League */}
                   <div className={styles.infoItem}>
                     <span className={styles.infoLabel}>League</span>
@@ -174,6 +154,31 @@ const TeamDetailsPage = () => {
                       </span>
                     </div>
                   )}
+
+                  {/* City */}
+                  {team.city && (
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>City</span>
+                      <span className={styles.infoValue}>{team.city}</span>
+                    </div>
+                  )}
+
+                  {/* Home Arena */}
+                  {team.home_arena && (
+                    <div className={styles.infoItem}>
+                      <span className={styles.infoLabel}>Home Arena</span>
+                      <span className={styles.infoValue}>{team.home_arena}</span>
+                    </div>
+                  )}
+
+                  {/* Description – full width */}
+                  <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+                    <span className={styles.infoLabel}>Description</span>
+                    <DescriptionEditor
+                      description={team.description}
+                      onSave={(html) => updateTeam(team.id, { description: html })}
+                    />
+                  </div>
                 </div>
               </Card>
             ),
@@ -208,7 +213,6 @@ const TeamDetailsPage = () => {
       <TeamFormModal
         open={editModalOpen}
         editTarget={team}
-        leagueOptions={leagueOption}
         lockedLeagueId={team.league_id ?? undefined}
         onClose={() => setEditModalOpen(false)}
         addTeam={async () => false}

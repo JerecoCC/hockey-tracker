@@ -202,11 +202,6 @@ const LeagueDetailsPage = () => {
       <TeamFormModal
         open={teamModalOpen}
         editTarget={editTargetTeam}
-        leagueOptions={
-          league
-            ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
-            : []
-        }
         lockedLeagueId={id}
         onClose={() => {
           setTeamModalOpen(false);

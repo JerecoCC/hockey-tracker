@@ -182,12 +182,6 @@ const TeamsPage = () => {
       <TeamFormModal
         open={modalOpen}
         editTarget={editTarget}
-        leagueOptions={leagues.map((l) => ({
-          value: l.id,
-          label: l.name,
-          logo: l.logo,
-          code: l.code,
-        }))}
         onClose={closeModal}
         addTeam={addTeam}
         updateTeam={updateTeam}
