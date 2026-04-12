@@ -2,19 +2,16 @@ import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
+import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
 import useLeagueGroups, { type GroupRecord } from '../../../hooks/useLeagueGroups';
-import { type TeamRecord } from '../../../hooks/useTeams';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
 import LeagueFormModal from './LeagueFormModal';
 import LeagueInfoCard from './LeagueInfoCard';
-import LeagueTeamsCard from './LeagueTeamsCard';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
 import LeagueGroupsCard from './LeagueGroupsCard';
-import GroupAddTeamModal from './GroupAddTeamModal';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import TeamDeleteModal from '../teams/TeamDeleteModal';
 import TeamFormModal from '../teams/TeamFormModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
@@ -25,7 +22,6 @@ const LeagueDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const {
     league,
-    teams,
     seasons,
     loading,
     busy,
@@ -51,12 +47,9 @@ const LeagueDetailsPage = () => {
   const [editModalOpen, setEditModalOpen] = useState(false);
   // Group state
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<GroupRecord | null>(null);
-  const [addTeamTargetGroup, setAddTeamTargetGroup] = useState<GroupRecord | null>(null);
-  // Team modal state
+  // Team modal state — opened from a group's "Create Team" button
   const [teamModalOpen, setTeamModalOpen] = useState(false);
-  const [editTargetTeam, setEditTargetTeam] = useState<TeamRecord | null>(null);
-  const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<TeamRecord | null>(null);
-  const [confirmDeleteTeamOpen, setConfirmDeleteTeamOpen] = useState(false);
+  const [createTeamForGroup, setCreateTeamForGroup] = useState<GroupRecord | null>(null);
   // Season modal state
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [editTargetSeason, setEditTargetSeason] = useState<LeagueSeasonRecord | null>(null);
@@ -102,65 +95,65 @@ const LeagueDetailsPage = () => {
         }
       />
 
-      <div className={styles.grid}>
-        <LeagueInfoCard
-          className={styles.col12}
-          league={league}
-          busy={busy}
-          uploadLogo={uploadLogo}
-          updateLeague={updateLeague}
-          onEditLeague={() => setEditModalOpen(true)}
-        />
-
-        <LeagueSeasonsCard
-          className={styles.col12}
-          seasons={seasons}
-          loading={loading}
-          busy={busy}
-          onAdd={() => {
-            setEditTargetSeason(null);
-            setSeasonModalOpen(true);
-          }}
-          onEdit={(s) => {
-            setEditTargetSeason(s);
-            setSeasonModalOpen(true);
-          }}
-          onDelete={(s) => {
-            setConfirmDeleteSeason(s);
-            setConfirmDeleteSeasonOpen(true);
-          }}
-        />
-
-        <LeagueTeamsCard
-          className={styles.col4}
-          leagueId={league.id}
-          teams={teams}
-          loading={loading}
-          busy={busy}
-          onAdd={() => setTeamModalOpen(true)}
-          onEdit={(t) => {
-            setEditTargetTeam(t);
-            setTeamModalOpen(true);
-          }}
-          onDelete={(t) => {
-            setConfirmDeleteTeam(t);
-            setConfirmDeleteTeamOpen(true);
-          }}
-        />
-
-        <LeagueGroupsCard
-          className={styles.col8}
-          leagueId={league.id}
-          groups={groups}
-          loading={groupsLoading}
-          busy={groupsBusy}
-          addGroup={addGroup}
-          updateGroup={updateGroup}
-          setGroupTeams={setGroupTeams}
-          onAddTeam={(g) => setAddTeamTargetGroup(g)}
-          onDelete={(g) => setConfirmDeleteGroup(g)}
-        />
-      </div>
+      <Tabs
+        tabs={[
+          {
+            label: 'Info & Seasons',
+            content: (
+              <div className={styles.grid}>
+                <LeagueInfoCard
+                  className={styles.col12}
+                  league={league}
+                  busy={busy}
+                  uploadLogo={uploadLogo}
+                  updateLeague={updateLeague}
+                  onEditLeague={() => setEditModalOpen(true)}
+                />
+                <LeagueSeasonsCard
+                  className={styles.col12}
+                  seasons={seasons}
+                  loading={loading}
+                  busy={busy}
+                  onAdd={() => {
+                    setEditTargetSeason(null);
+                    setSeasonModalOpen(true);
+                  }}
+                  onEdit={(s) => {
+                    setEditTargetSeason(s);
+                    setSeasonModalOpen(true);
+                  }}
+                  onDelete={(s) => {
+                    setConfirmDeleteSeason(s);
+                    setConfirmDeleteSeasonOpen(true);
+                  }}
+                />
+              </div>
+            ),
+          },
+          {
+            label: 'Teams',
+            content: (
+              <div className={styles.grid}>
+                <LeagueGroupsCard
+                  className={styles.col12}
+                  leagueId={league.id}
+                  groups={groups}
+                  loading={groupsLoading}
+                  busy={groupsBusy}
+                  addGroup={addGroup}
+                  updateGroup={updateGroup}
+                  onAddTeam={(g) => {
+                    setCreateTeamForGroup(g);
+                    setTeamModalOpen(true);
+                  }}
+                  onDelete={(g) => setConfirmDeleteGroup(g)}
+                  onDeleteTeam={deleteTeam}
+                />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       <ConfirmModal
         open={confirmDeleteGroup !== null}
@@ -178,31 +171,6 @@ const LeagueDetailsPage = () => {
         }}
       />
 
-      <GroupAddTeamModal
-        open={addTeamTargetGroup !== null}
-        group={addTeamTargetGroup}
-        unassignedTeams={teams.filter(
-          (t) => !groups.some((g) => g.teams.some((gt) => gt.id === t.id)),
-        )}
-        onClose={() => setAddTeamTargetGroup(null)}
-        setGroupTeams={setGroupTeams}
-      />
-
-      <TeamDeleteModal
-        open={confirmDeleteTeamOpen}
-        busy={busy}
-        target={confirmDeleteTeam}
-        onCancel={() => {
-          setConfirmDeleteTeamOpen(false);
-          setConfirmDeleteTeam(null);
-        }}
-        onConfirm={async () => {
-          await deleteTeam(confirmDeleteTeam!.id);
-          setConfirmDeleteTeamOpen(false);
-          setConfirmDeleteTeam(null);
-        }}
-      />
-
       <LeagueFormModal
         open={editModalOpen}
         editTarget={league}
@@ -214,7 +182,7 @@ const LeagueDetailsPage = () => {
 
       <TeamFormModal
         open={teamModalOpen}
-        editTarget={editTargetTeam}
+        editTarget={null}
         leagueOptions={
           league
             ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
@@ -223,9 +191,16 @@ const LeagueDetailsPage = () => {
         lockedLeagueId={id}
         onClose={() => {
           setTeamModalOpen(false);
-          setEditTargetTeam(null);
+          setCreateTeamForGroup(null);
         }}
-        addTeam={addTeam}
+        addTeam={async (payload) => {
+          const newTeamId = await addTeam(payload);
+          if (newTeamId && createTeamForGroup) {
+            const currentIds = createTeamForGroup.teams.map((t) => t.id);
+            await setGroupTeams(createTeamForGroup.id, [...currentIds, newTeamId]);
+          }
+          return newTeamId !== null;
+        }}
         updateTeam={updateTeam}
         uploadLogo={uploadTeamLogo}
       />

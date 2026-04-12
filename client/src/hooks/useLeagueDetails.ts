@@ -121,15 +121,15 @@ const useLeagueDetails = (id: string | undefined) => {
     }
   };
 
-  const addTeam = async (payload: CreateTeamData): Promise<boolean> => {
+  const addTeam = async (payload: CreateTeamData): Promise<string | null> => {
     try {
-      await axios.post(`${API}/admin/teams`, payload, { headers: authHeaders() });
+      const { data } = await axios.post<TeamRecord>(`${API}/admin/teams`, payload, { headers: authHeaders() });
       toast.success('Team created!');
       await fetchDetails();
-      return true;
+      return data.id;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create team'));
-      return false;
+      return null;
     }
   };
 

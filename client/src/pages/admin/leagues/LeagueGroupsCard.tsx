@@ -1,8 +1,13 @@
 import { useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
+import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Icon from '../../../components/Icon/Icon';
-import { type CreateGroupData, type GroupRecord } from '../../../hooks/useLeagueGroups';
+import {
+  type CreateGroupData,
+  type GroupRecord,
+  type GroupTeamRecord,
+} from '../../../hooks/useLeagueGroups';
 import styles from './LeagueDetails.module.scss';
 
 // ── Inline add / edit row ────────────────────────────────────────────────────
@@ -81,9 +86,9 @@ interface Props {
   busy: string | null;
   addGroup: (data: CreateGroupData) => Promise<boolean>;
   updateGroup: (id: string, payload: { name: string }) => Promise<boolean>;
-  setGroupTeams: (groupId: string, teamIds: string[]) => Promise<boolean>;
   onAddTeam: (group: GroupRecord) => void;
   onDelete: (group: GroupRecord) => void;
+  onDeleteTeam: (teamId: string) => Promise<void>;
   className?: string;
 }
 
@@ -98,9 +103,9 @@ const GroupNode = ({
   onStartAdd,
   onConfirm,
   onCancel,
-  setGroupTeams,
   onAddTeam,
   onDelete,
+  onDeleteTeam,
   depth = 0,
 }: {
   group: GroupRecord;
@@ -111,13 +116,14 @@ const GroupNode = ({
   onStartAdd: (parentId: string) => void;
   onConfirm: (name: string) => Promise<void>;
   onCancel: () => void;
-  setGroupTeams: (groupId: string, teamIds: string[]) => Promise<boolean>;
   onAddTeam: (g: GroupRecord) => void;
   onDelete: (g: GroupRecord) => void;
+  onDeleteTeam: (teamId: string) => Promise<void>;
   depth?: number;
 }) => {
   const [open, setOpen] = useState(true);
-  const [removingTeamId, setRemovingTeamId] = useState<string | null>(null);
+  const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<GroupTeamRecord | null>(null);
+  const [isDeletingTeam, setIsDeletingTeam] = useState(false);
 
   const children = allGroups
     .filter((g) => g.parent_id === group.id)
@@ -192,62 +198,66 @@ const GroupNode = ({
             intent="neutral"
             onClick={() => onAddTeam(group)}
           >
-            Add Team
+            Create Team
           </Button>
         </div>
       )}
 
       {open && group.teams.length > 0 && !isEditing && (
         <ul className={styles.teamList}>
-          {group.teams.map((t) =>
-            removingTeamId === t.id ? (
-              <li
-                key={t.id}
-                className={styles.skeletonTeamItem}
-              >
-                <span className={`${styles.skeletonBone} ${styles.skeletonLogo}`} />
-                <span className={`${styles.skeletonBone} ${styles.skeletonName}`} />
-                <span className={`${styles.skeletonBone} ${styles.skeletonCode}`} />
-              </li>
-            ) : (
-              <li
-                key={t.id}
-                className={styles.teamListItem}
-              >
-                {t.logo ? (
-                  <img
-                    src={t.logo}
-                    alt=""
-                    className={styles.teamLogoThumb}
-                  />
-                ) : (
-                  <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-                )}
-                <span className={styles.teamListName}>{t.name}</span>
-                <span className={styles.seasonListDates}>{t.code}</span>
-                <span className={styles.teamActions}>
-                  <Button
-                    variant="outlined"
-                    intent="danger"
-                    icon="close"
-                    size="sm"
-                    tooltip="Remove from group"
-                    disabled={removingTeamId !== null}
-                    onClick={async () => {
-                      setRemovingTeamId(t.id);
-                      const remaining = group.teams
-                        .filter((gt) => gt.id !== t.id)
-                        .map((gt) => gt.id);
-                      await setGroupTeams(group.id, remaining);
-                      setRemovingTeamId(null);
-                    }}
-                  />
-                </span>
-              </li>
-            ),
-          )}
+          {group.teams.map((t) => (
+            <li
+              key={t.id}
+              className={styles.teamListItem}
+            >
+              {t.logo ? (
+                <img
+                  src={t.logo}
+                  alt=""
+                  className={styles.teamLogoThumb}
+                />
+              ) : (
+                <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
+              )}
+              <span className={styles.teamListName}>{t.name}</span>
+              <span className={styles.seasonListDates}>{t.code}</span>
+              <span className={styles.teamActions}>
+                <Button
+                  variant="outlined"
+                  intent="danger"
+                  icon="delete"
+                  size="sm"
+                  tooltip="Delete team"
+                  onClick={() => setConfirmDeleteTeam(t)}
+                />
+              </span>
+            </li>
+          ))}
         </ul>
       )}
+
+      <ConfirmModal
+        open={confirmDeleteTeam !== null}
+        title="Delete Team"
+        body={
+          <>
+            Are you sure you want to delete <strong>{confirmDeleteTeam?.name}</strong>? This cannot
+            be undone.
+          </>
+        }
+        confirmLabel={isDeletingTeam ? 'Deleting…' : 'Delete'}
+        confirmIcon="delete"
+        variant="danger"
+        busy={isDeletingTeam}
+        onCancel={() => setConfirmDeleteTeam(null)}
+        onConfirm={async () => {
+          if (!confirmDeleteTeam) return;
+          setIsDeletingTeam(true);
+          await onDeleteTeam(confirmDeleteTeam.id);
+          setIsDeletingTeam(false);
+          setConfirmDeleteTeam(null);
+        }}
+      />
 
       {open && (children.length > 0 || isAddingChild) && (
         <ul className={styles.groupList}>
@@ -262,9 +272,9 @@ const GroupNode = ({
               onStartAdd={onStartAdd}
               onConfirm={onConfirm}
               onCancel={onCancel}
-              setGroupTeams={setGroupTeams}
               onAddTeam={onAddTeam}
               onDelete={onDelete}
+              onDeleteTeam={onDeleteTeam}
               depth={depth + 1}
             />
           ))}
@@ -292,9 +302,9 @@ const LeagueGroupsCard = ({
   busy,
   addGroup,
   updateGroup,
-  setGroupTeams,
   onAddTeam,
   onDelete,
+  onDeleteTeam,
   className,
 }: Props) => {
   const [inlineMode, setInlineMode] = useState<InlineMode>(null);
@@ -344,9 +354,9 @@ const LeagueGroupsCard = ({
               onStartAdd={(pid) => setInlineMode({ type: 'add', parentId: pid })}
               onConfirm={handleConfirm}
               onCancel={handleCancel}
-              setGroupTeams={setGroupTeams}
               onAddTeam={onAddTeam}
               onDelete={onDelete}
+              onDeleteTeam={onDeleteTeam}
             />
           ))}
           {isRootAdding && (
