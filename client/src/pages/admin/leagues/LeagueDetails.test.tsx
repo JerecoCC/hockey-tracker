@@ -20,9 +20,7 @@ jest.mock('../../../components/RichTextEditor/RichTextEditor', () => () => (
   <div data-testid="rte" />
 ));
 jest.mock('./LeagueFormModal', () => () => null);
-jest.mock('./GroupAddTeamModal', () => () => null);
 jest.mock('../teams/TeamFormModal', () => () => null);
-jest.mock('../teams/TeamDeleteModal', () => () => null);
 jest.mock('../seasons/SeasonFormModal', () => () => null);
 jest.mock('../seasons/SeasonDeleteModal', () => () => null);
 
@@ -75,6 +73,9 @@ const setup = (hookOverrides = {}, groupOverrides = {}) => {
 };
 
 beforeEach(() => jest.clearAllMocks());
+
+/** Switch to the Teams tab (second tab) */
+const clickTeamsTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Teams' }));
 
 // ── Loading ────────────────────────────────────────────────────────────
 describe('LeagueDetailsPage – loading', () => {
@@ -160,30 +161,28 @@ describe('LeagueDetailsPage – main render', () => {
   });
 });
 
-// ── Teams card ─────────────────────────────────────────────────────────
-describe('LeagueDetailsPage – teams card', () => {
-  it('renders the "Create Team" button', () => {
+// ── Tabs ───────────────────────────────────────────────────────────────
+describe('LeagueDetailsPage – tabs', () => {
+  it('renders Info and Teams tabs', () => {
     setup({ league: mockLeague });
-    expect(screen.getByRole('button', { name: /create team/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Info' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Teams' })).toBeInTheDocument();
   });
 
-  it('shows empty message when teams list is empty', () => {
-    setup({ league: mockLeague, teams: [] });
-    expect(screen.getByText(/no teams assigned to this league yet/i)).toBeInTheDocument();
+  it('Info tab is active by default', () => {
+    setup({ league: mockLeague });
+    expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('renders a team row for each team', () => {
-    const teams = [
-      { id: 't1', name: 'Team Alpha', code: 'TA', logo: '', league_id: 'lg1', created_at: '' },
-      { id: 't2', name: 'Team Beta', code: 'TB', logo: '', league_id: 'lg1', created_at: '' },
-    ];
-    setup({ league: mockLeague, teams });
-    expect(screen.getByText('Team Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Team Beta')).toBeInTheDocument();
+  it('switches to Teams tab when clicked', () => {
+    setup({ league: mockLeague });
+    clickTeamsTab();
+    expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
   });
 });
 
-// ── Seasons card ───────────────────────────────────────────────────────
+// ── Seasons card (Info tab) ────────────────────────────────────────────
 describe('LeagueDetailsPage – seasons card', () => {
   it('renders the "Create Season" button', () => {
     setup({ league: mockLeague });
@@ -211,16 +210,30 @@ describe('LeagueDetailsPage – seasons card', () => {
   });
 });
 
-// ── Groups card ────────────────────────────────────────────────────────
-describe('LeagueDetailsPage – groups card', () => {
-  it('renders the "Create Group" button', () => {
+// ── Teams tab ──────────────────────────────────────────────────────────
+describe('LeagueDetailsPage – teams tab', () => {
+  it('renders the "Create Group" button on the Teams tab', () => {
     setup({ league: mockLeague });
+    clickTeamsTab();
     expect(screen.getByRole('button', { name: /create group/i })).toBeInTheDocument();
   });
 
-  it('shows "No groups" message when groups list is empty', () => {
-    setup({ league: mockLeague });
-    expect(screen.getByText(/no groups for this league yet/i)).toBeInTheDocument();
+  it('shows empty state with "Create Team" button when no groups and no teams', () => {
+    setup({ league: mockLeague, teams: [] });
+    clickTeamsTab();
+    expect(screen.getByRole('button', { name: /create team/i })).toBeInTheDocument();
+    expect(screen.getByText(/no teams yet/i)).toBeInTheDocument();
+  });
+
+  it('renders ungrouped team rows on the Teams tab', () => {
+    const teams = [
+      { id: 't1', name: 'Team Alpha', code: 'TA', logo: '', league_id: 'lg1', created_at: '' },
+      { id: 't2', name: 'Team Beta', code: 'TB', logo: '', league_id: 'lg1', created_at: '' },
+    ];
+    setup({ league: mockLeague, teams });
+    clickTeamsTab();
+    expect(screen.getByText('Team Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Team Beta')).toBeInTheDocument();
   });
 
   it('renders a group name for each group', () => {
@@ -245,6 +258,7 @@ describe('LeagueDetailsPage – groups card', () => {
       },
     ];
     setup({ league: mockLeague }, { groups });
+    clickTeamsTab();
     expect(screen.getByText('Division A')).toBeInTheDocument();
     expect(screen.getByText('Division B')).toBeInTheDocument();
   });
