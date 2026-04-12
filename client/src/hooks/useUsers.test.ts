@@ -1,7 +1,15 @@
+import React from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import useUsers from './useUsers';
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+};
 
 jest.mock('axios');
 jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
@@ -28,7 +36,7 @@ afterEach(() => localStorage.clear());
 
 describe('useUsers', () => {
   it('fetches users on mount and clears loading', async () => {
-    const { result } = renderHook(() => useUsers());
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.users).toEqual([mockUser]);
     expect(mockedAxios.get).toHaveBeenCalledWith(
@@ -39,7 +47,7 @@ describe('useUsers', () => {
 
   it('changeRole() patches /admin/users/:id/role with the new role', async () => {
     mockedAxios.patch.mockResolvedValue({});
-    const { result } = renderHook(() => useUsers());
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -55,7 +63,7 @@ describe('useUsers', () => {
 
   it('changeRole() shows error toast on failure', async () => {
     mockedAxios.patch.mockRejectedValue({ response: { data: { error: 'Forbidden' } } });
-    const { result } = renderHook(() => useUsers());
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -67,7 +75,7 @@ describe('useUsers', () => {
 
   it('deleteUser() deletes /admin/users/:id', async () => {
     mockedAxios.delete.mockResolvedValue({});
-    const { result } = renderHook(() => useUsers());
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -82,7 +90,7 @@ describe('useUsers', () => {
 
   it('deleteUser() shows error toast on failure', async () => {
     mockedAxios.delete.mockRejectedValue({ response: { data: { error: 'Not found' } } });
-    const { result } = renderHook(() => useUsers());
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {

@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 
@@ -33,30 +34,23 @@ const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const useTeams = () => {
-  const [teams, setTeams] = useState<TeamRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const fetchTeams = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const { data } = await axios.get<TeamRecord[]>(`${API}/admin/teams`, {
-        headers: authHeaders(),
-        signal,
-      });
-      setTeams(data);
-      setLoading(false);
-    } catch (err) {
-      if (axios.isCancel(err)) return;
-      toast.error(apiError(err, 'Failed to load teams'));
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchTeams(controller.signal);
-    return () => controller.abort();
-  }, [fetchTeams]);
+  const { data: teams = [], isLoading: loading } = useQuery({
+    queryKey: ['teams'],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<TeamRecord[]>(`${API}/admin/teams`, {
+          headers: authHeaders(),
+        });
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load teams'));
+        return [] as TeamRecord[];
+      }
+    },
+  });
 
   const uploadLogo = async (file: File): Promise<string | null> => {
     const formData = new FormData();
@@ -76,7 +70,7 @@ const useTeams = () => {
     try {
       await axios.post(`${API}/admin/teams`, payload, { headers: authHeaders() });
       toast.success('Team created!');
-      await fetchTeams();
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create team'));
@@ -89,7 +83,7 @@ const useTeams = () => {
     try {
       await axios.patch(`${API}/admin/teams/${id}`, payload, { headers: authHeaders() });
       toast.success('Team updated!');
-      await fetchTeams();
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update team'));
@@ -104,7 +98,7 @@ const useTeams = () => {
     try {
       await axios.delete(`${API}/admin/teams/${id}`, { headers: authHeaders() });
       toast.success('Team deleted');
-      await fetchTeams();
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete team'));
     } finally {

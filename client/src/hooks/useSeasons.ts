@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 
@@ -31,36 +32,29 @@ const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const useSeasons = () => {
-  const [seasons, setSeasons] = useState<SeasonRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const fetchSeasons = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const { data } = await axios.get<SeasonRecord[]>(`${API}/admin/seasons`, {
-        headers: authHeaders(),
-        signal,
-      });
-      setSeasons(data);
-      setLoading(false);
-    } catch (err) {
-      if (axios.isCancel(err)) return;
-      toast.error(apiError(err, 'Failed to load seasons'));
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchSeasons(controller.signal);
-    return () => controller.abort();
-  }, [fetchSeasons]);
+  const { data: seasons = [], isLoading: loading } = useQuery({
+    queryKey: ['seasons'],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<SeasonRecord[]>(`${API}/admin/seasons`, {
+          headers: authHeaders(),
+        });
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load seasons'));
+        return [] as SeasonRecord[];
+      }
+    },
+  });
 
   const addSeason = async (payload: CreateSeasonData): Promise<boolean> => {
     try {
       await axios.post(`${API}/admin/seasons`, payload, { headers: authHeaders() });
       toast.success('Season created!');
-      await fetchSeasons();
+      await queryClient.invalidateQueries({ queryKey: ['seasons'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create season'));
@@ -73,7 +67,7 @@ const useSeasons = () => {
     try {
       await axios.patch(`${API}/admin/seasons/${id}`, payload, { headers: authHeaders() });
       toast.success('Season updated!');
-      await fetchSeasons();
+      await queryClient.invalidateQueries({ queryKey: ['seasons'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update season'));
@@ -88,7 +82,7 @@ const useSeasons = () => {
     try {
       await axios.delete(`${API}/admin/seasons/${id}`, { headers: authHeaders() });
       toast.success('Season deleted');
-      await fetchSeasons();
+      await queryClient.invalidateQueries({ queryKey: ['seasons'] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete season'));
     } finally {

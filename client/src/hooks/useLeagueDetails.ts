@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import { type LeagueRecord, type CreateLeagueData } from './useLeagues';
@@ -36,40 +37,31 @@ const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const useLeagueDetails = (id: string | undefined) => {
-  const [league, setLeague] = useState<LeagueFullRecord | null>(null);
-  const [teams, setTeams] = useState<TeamRecord[]>([]);
-  const [seasons, setSeasons] = useState<LeagueSeasonRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const fetchDetails = useCallback(
-    async (signal?: AbortSignal) => {
-      if (!id) return;
+  const { data, isLoading: loading } = useQuery({
+    queryKey: ['leagues', id],
+    queryFn: async () => {
       try {
         const { data } = await axios.get<LeagueDetailsRecord>(
           `${API}/admin/leagues/${id}`,
-          { headers: authHeaders(), signal },
+          { headers: authHeaders() },
         );
-        const { teams: t, seasons: s, ...leagueData } = data;
-        setLeague(leagueData);
-        setTeams(t);
-        setSeasons(s);
-        setLoading(false);
+        return data;
       } catch (err) {
-        if (axios.isCancel(err)) return;
         toast.error(apiError(err, 'Failed to load league'));
-        setLoading(false);
+        return null;
       }
     },
-    [id],
-  );
+    enabled: !!id,
+  });
 
-  useEffect(() => {
-    setLoading(true);
-    const controller = new AbortController();
-    fetchDetails(controller.signal);
-    return () => controller.abort();
-  }, [fetchDetails]);
+  const teams: TeamRecord[] = data?.teams ?? [];
+  const seasons: LeagueSeasonRecord[] = data?.seasons ?? [];
+  const league: LeagueFullRecord | null = data
+    ? (({ teams: _t, seasons: _s, ...rest }) => rest as LeagueFullRecord)(data)
+    : null;
 
   const uploadLogo = async (file: File): Promise<string | null> => {
     const formData = new FormData();
@@ -111,7 +103,8 @@ const useLeagueDetails = (id: string | undefined) => {
     try {
       await axios.patch(`${API}/admin/leagues/${leagueId}`, payload, { headers: authHeaders() });
       toast.success('League updated!');
-      await fetchDetails();
+      await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
+      await queryClient.invalidateQueries({ queryKey: ['leagues'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update league'));
@@ -125,7 +118,8 @@ const useLeagueDetails = (id: string | undefined) => {
     try {
       const { data } = await axios.post<TeamRecord>(`${API}/admin/teams`, payload, { headers: authHeaders() });
       toast.success('Team created!');
-      await fetchDetails();
+      await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
       return data.id;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create team'));
@@ -138,7 +132,9 @@ const useLeagueDetails = (id: string | undefined) => {
     try {
       await axios.patch(`${API}/admin/teams/${teamId}`, payload, { headers: authHeaders() });
       toast.success('Team updated!');
-      await fetchDetails();
+      await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
+      await queryClient.invalidateQueries({ queryKey: ['teams', teamId] });
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update team'));
@@ -153,7 +149,8 @@ const useLeagueDetails = (id: string | undefined) => {
     try {
       await axios.delete(`${API}/admin/teams/${teamId}`, { headers: authHeaders() });
       toast.success('Team deleted');
-      await fetchDetails();
+      await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete team'));
     } finally {
@@ -165,7 +162,8 @@ const useLeagueDetails = (id: string | undefined) => {
     try {
       await axios.post(`${API}/admin/seasons`, payload, { headers: authHeaders() });
       toast.success('Season created!');
-      await fetchDetails();
+      await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
+      await queryClient.invalidateQueries({ queryKey: ['seasons'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create season'));
@@ -178,7 +176,8 @@ const useLeagueDetails = (id: string | undefined) => {
     try {
       await axios.patch(`${API}/admin/seasons/${seasonId}`, payload, { headers: authHeaders() });
       toast.success('Season updated!');
-      await fetchDetails();
+      await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
+      await queryClient.invalidateQueries({ queryKey: ['seasons'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update season'));
@@ -193,7 +192,8 @@ const useLeagueDetails = (id: string | undefined) => {
     try {
       await axios.delete(`${API}/admin/seasons/${seasonId}`, { headers: authHeaders() });
       toast.success('Season deleted');
-      await fetchDetails();
+      await queryClient.invalidateQueries({ queryKey: ['leagues', id] });
+      await queryClient.invalidateQueries({ queryKey: ['seasons'] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete season'));
     } finally {

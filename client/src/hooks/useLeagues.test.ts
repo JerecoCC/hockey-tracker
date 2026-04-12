@@ -1,7 +1,15 @@
+import React from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import useLeagues from './useLeagues';
+
+const createWrapper = () => {
+  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return ({ children }: { children: React.ReactNode }) =>
+    React.createElement(QueryClientProvider, { client: queryClient }, children);
+};
 
 jest.mock('axios');
 jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
@@ -28,7 +36,7 @@ afterEach(() => localStorage.clear());
 
 describe('useLeagues', () => {
   it('fetches leagues on mount and clears loading', async () => {
-    const { result } = renderHook(() => useLeagues());
+    const { result } = renderHook(() => useLeagues(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.leagues).toEqual([mockLeague]);
     expect(mockedAxios.get).toHaveBeenCalledWith(
@@ -39,7 +47,7 @@ describe('useLeagues', () => {
 
   it('addLeague() posts to /admin/leagues and shows success toast', async () => {
     mockedAxios.post.mockResolvedValue({});
-    const { result } = renderHook(() => useLeagues());
+    const { result } = renderHook(() => useLeagues(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     let success!: boolean;
@@ -58,7 +66,7 @@ describe('useLeagues', () => {
 
   it('addLeague() returns false and shows error toast on failure', async () => {
     mockedAxios.post.mockRejectedValue({ response: { data: { error: 'Already exists' } } });
-    const { result } = renderHook(() => useLeagues());
+    const { result } = renderHook(() => useLeagues(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     let success!: boolean;
@@ -72,7 +80,7 @@ describe('useLeagues', () => {
 
   it('updateLeague() patches /admin/leagues/:id and shows success toast', async () => {
     mockedAxios.patch.mockResolvedValue({});
-    const { result } = renderHook(() => useLeagues());
+    const { result } = renderHook(() => useLeagues(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -89,7 +97,7 @@ describe('useLeagues', () => {
 
   it('deleteLeague() deletes /admin/leagues/:id and shows success toast', async () => {
     mockedAxios.delete.mockResolvedValue({});
-    const { result } = renderHook(() => useLeagues());
+    const { result } = renderHook(() => useLeagues(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     await act(async () => {
@@ -105,7 +113,7 @@ describe('useLeagues', () => {
 
   it('uploadLogo() posts FormData and returns the blob URL', async () => {
     mockedAxios.post.mockResolvedValue({ data: { url: 'https://cdn.example.com/logo.png' } });
-    const { result } = renderHook(() => useLeagues());
+    const { result } = renderHook(() => useLeagues(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     const file = new File(['(binary)'], 'logo.png', { type: 'image/png' });
@@ -124,7 +132,7 @@ describe('useLeagues', () => {
 
   it('uploadLogo() returns null and shows error toast on failure', async () => {
     mockedAxios.post.mockRejectedValue({ response: { data: { error: 'Upload failed' } } });
-    const { result } = renderHook(() => useLeagues());
+    const { result } = renderHook(() => useLeagues(), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
 
     let url!: string | null;

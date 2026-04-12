@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 
@@ -29,34 +29,22 @@ const apiError = (err: unknown, fallback: string) => {
 };
 
 const useTeamDetails = (id: string | undefined) => {
-  const [team, setTeam] = useState<TeamDetailRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchTeam = useCallback(
-    async (signal?: AbortSignal) => {
-      if (!id) return;
+  const { data: team = null, isLoading: loading } = useQuery({
+    queryKey: ['teams', id],
+    queryFn: async () => {
       try {
         const { data } = await axios.get<TeamDetailRecord>(
           `${API}/admin/teams/${id}`,
-          { headers: authHeaders(), signal },
+          { headers: authHeaders() },
         );
-        setTeam(data);
-        setLoading(false);
+        return data;
       } catch (err) {
-        if (axios.isCancel(err)) return;
         toast.error(apiError(err, 'Failed to load team'));
-        setLoading(false);
+        return null;
       }
     },
-    [id],
-  );
-
-  useEffect(() => {
-    setLoading(true);
-    const controller = new AbortController();
-    fetchTeam(controller.signal);
-    return () => controller.abort();
-  }, [fetchTeam]);
+    enabled: !!id,
+  });
 
   return { team, loading };
 };
