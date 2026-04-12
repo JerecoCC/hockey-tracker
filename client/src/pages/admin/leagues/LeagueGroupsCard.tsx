@@ -143,7 +143,11 @@ const GroupNode = ({
   const isLeaf = children.length === 0;
 
   return (
-    <li className={`${styles.groupItem} ${depth > 0 ? styles.groupItemChild : ''}`}>
+    <li
+      className={[styles.groupItem, depth > 0 ? styles.groupItemChild : '']
+        .filter(Boolean)
+        .join(' ')}
+    >
       {isEditing ? (
         <InlineInput
           initialValue={group.name}
@@ -306,7 +310,7 @@ const GroupNode = ({
             />
           ))}
           {isAddingChild && (
-            <li className={styles.groupItem}>
+            <li className={`${styles.groupItem} ${styles.groupItemSpanFull}`}>
               <InlineInput
                 placeholder="Sub-group name…"
                 onConfirm={onConfirm}
@@ -398,7 +402,7 @@ const LeagueGroupsCard = ({
             />
           ))}
           {isRootAdding && (
-            <li className={styles.groupItem}>
+            <li className={`${styles.groupItem} ${styles.groupItemSpanFull}`}>
               <InlineInput
                 placeholder="Group name…"
                 onConfirm={handleConfirm}

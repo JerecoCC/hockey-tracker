@@ -527,6 +527,7 @@
   flex-direction: column;
   align-items: flex-start;
   gap: $space-md;
+  grid-column: 1 / -1;
 }
 
 .ungroupedLabel {
@@ -652,9 +653,19 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+  align-items: start;
   gap: $space-md;
+}
+
+// Inline-add row spans both columns
+.groupItemSpanFull {
+  grid-column: 1 / -1;
 }
 
 .groupItem {
