@@ -1,4 +1,5 @@
 import {
+  useRef,
   useState,
   type ChangeEvent,
   type InputHTMLAttributes,
@@ -50,13 +51,24 @@ type DatePickerProps = BaseProps & {
   placeholder?: string;
 };
 
-export type FieldProps = TextProps | TextareaProps | SelectProps | CustomProps | DatePickerProps;
+type ColorProps = BaseProps & {
+  type: 'color';
+};
+
+export type FieldProps =
+  | TextProps
+  | TextareaProps
+  | SelectProps
+  | CustomProps
+  | DatePickerProps
+  | ColorProps;
 
 const Field = (props: FieldProps) => {
   const { label, required, control, name, rules } = props;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
   const [showPassword, setShowPassword] = useState(false);
+  const colorPickerRef = useRef<HTMLInputElement>(null);
 
   return (
     <Controller
@@ -111,6 +123,35 @@ const Field = (props: FieldProps) => {
                 onChange={field.onChange}
                 placeholder={props.placeholder}
               />
+            );
+          } else if (props.type === 'color') {
+            const color = (field.value as string) ?? '#000000';
+            return (
+              <div className={styles.colorInputWrapper}>
+                <button
+                  type="button"
+                  className={styles.colorSwatch}
+                  style={{ background: color }}
+                  onClick={() => colorPickerRef.current?.click()}
+                />
+                <input
+                  ref={colorPickerRef}
+                  type="color"
+                  value={color}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className={styles.colorHiddenInput}
+                  tabIndex={-1}
+                />
+                <input
+                  type="text"
+                  value={color}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  onBlur={field.onBlur}
+                  className={styles.colorHexInput}
+                  spellCheck={false}
+                  maxLength={7}
+                />
+              </div>
             );
           } else {
             /* eslint-disable @typescript-eslint/no-unused-vars */

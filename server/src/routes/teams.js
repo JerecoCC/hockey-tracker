@@ -49,7 +49,7 @@ router.post('/upload', upload.single('logo'), async (req, res) => {
 router.get('/', async (_req, res) => {
   try {
     const teams = await sql`
-      SELECT id, name, code, description, location, logo, league_id, created_at
+      SELECT id, name, code, description, location, logo, league_id, primary_color, text_color, created_at
       FROM teams
       ORDER BY name ASC
     `;
@@ -67,8 +67,9 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT t.id, t.name, t.code, t.description, t.location, t.logo, t.league_id, t.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+      SELECT t.id, t.name, t.code, t.description, t.location, t.logo, t.league_id, t.primary_color, t.text_color, t.created_at,
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.primary_color AS league_primary_color, l.text_color AS league_text_color
       FROM teams t
       LEFT JOIN leagues l ON l.id = t.league_id
       WHERE t.id = ${id}
@@ -85,7 +86,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/teams  – create a team
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { name, code, description, location, logo, league_id } = req.body;
+  const { name, code, description, location, logo, league_id, primary_color, text_color } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -99,16 +100,18 @@ router.post('/', async (req, res) => {
 
   try {
     const rows = await sql`
-      INSERT INTO teams (name, code, description, location, logo, league_id)
+      INSERT INTO teams (name, code, description, location, logo, league_id, primary_color, text_color)
       VALUES (
         ${name.trim()},
         ${code.trim().toUpperCase()},
         ${description ?? null},
         ${location ?? null},
         ${logo ?? null},
-        ${league_id ?? null}
+        ${league_id ?? null},
+        ${primary_color ?? '#334155'},
+        ${text_color ?? '#ffffff'}
       )
-      RETURNING id, name, code, description, location, logo, league_id, created_at
+      RETURNING id, name, code, description, location, logo, league_id, primary_color, text_color, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -131,7 +134,10 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, location, logo, league_id } = req.body;
+  const { name, code, description, location, logo, league_id, primary_color, text_color } = req.body;
+  const logoInBody          = 'logo'          in req.body;
+  const primaryColorInBody  = 'primary_color' in req.body;
+  const textColorInBody     = 'text_color'    in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -144,14 +150,16 @@ router.patch('/:id', async (req, res) => {
     const rows = await sql`
       UPDATE teams
       SET
-        name        = COALESCE(${name?.trim() ?? null}, name),
-        code        = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
-        description = COALESCE(${description ?? null}, description),
-        location    = COALESCE(${location ?? null}, location),
-        logo        = COALESCE(${logo ?? null}, logo),
-        league_id   = COALESCE(${league_id ?? null}, league_id)
+        name          = COALESCE(${name?.trim() ?? null}, name),
+        code          = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
+        description   = COALESCE(${description ?? null}, description),
+        location      = COALESCE(${location ?? null}, location),
+        logo          = CASE WHEN ${logoInBody}         THEN ${logo ?? null}                    ELSE logo          END,
+        league_id     = COALESCE(${league_id ?? null}, league_id),
+        primary_color = CASE WHEN ${primaryColorInBody} THEN ${primary_color || '#334155'}      ELSE primary_color END,
+        text_color    = CASE WHEN ${textColorInBody}    THEN ${text_color    || '#ffffff'}      ELSE text_color    END
       WHERE id = ${id}
-      RETURNING id, name, code, description, location, logo, league_id, created_at
+      RETURNING id, name, code, description, location, logo, league_id, primary_color, text_color, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Team not found' });
     return res.json(rows[0]);

@@ -13,6 +13,8 @@ interface FormValues {
   code: string;
   league_id: string | null;
   logo: File | string | null;
+  primary_color: string;
+  text_color: string;
 }
 
 interface Props {
@@ -42,7 +44,16 @@ const TeamFormModal = ({
     handleSubmit,
     reset,
     formState: { isSubmitting },
-  } = useForm<FormValues>({ defaultValues: { name: '', code: '', league_id: null, logo: null } });
+  } = useForm<FormValues>({
+    defaultValues: {
+      name: '',
+      code: '',
+      league_id: null,
+      logo: null,
+      primary_color: '#334155',
+      text_color: '#ffffff',
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -51,6 +62,8 @@ const TeamFormModal = ({
       code: editTarget?.code ?? '',
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       logo: editTarget?.logo ?? null,
+      primary_color: editTarget?.primary_color ?? '#334155',
+      text_color: editTarget?.text_color ?? '#ffffff',
     });
   }, [open, editTarget, lockedLeagueId, reset]);
 
@@ -66,6 +79,8 @@ const TeamFormModal = ({
       code: data.code,
       logo: logoUrl,
       league_id: data.league_id || null,
+      primary_color: data.primary_color,
+      text_color: data.text_color,
     };
     const ok = editTarget ? await updateTeam(editTarget.id, payload) : await addTeam(payload);
     if (ok) onClose();
@@ -118,6 +133,20 @@ const TeamFormModal = ({
           placeholder="— Select a league —"
           disabled={!!lockedLeagueId || isSubmitting}
         />
+        <div className={styles.colorRow}>
+          <Field
+            type="color"
+            label="Primary Color"
+            control={control}
+            name="primary_color"
+          />
+          <Field
+            type="color"
+            label="Text Color"
+            control={control}
+            name="text_color"
+          />
+        </div>
         <div className={styles.formActions}>
           <Button
             type="button"

@@ -59,78 +59,11 @@
 .colorRow {
   display: flex;
   gap: $space-xl;
-}
 
-.colorLabel {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  flex: 1;
-  min-width: 0;
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.colorLabelText {
-  display: flex;
-  align-items: center;
-}
-
-.colorInputWrapper {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  background: $bg-input;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: $space-sm $space-md;
-  overflow: hidden;
-  transition: border-color $transition-base;
-
-  &:focus-within {
-    border-color: $accent;
+  > * {
+    flex: 1;
+    min-width: 0;
   }
-}
-
-.colorSwatch {
-  width: 24px;
-  height: 24px;
-  border-radius: $radius-sm;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  transition: transform $transition-fast;
-
-  &:hover {
-    transform: scale(1.1);
-  }
-}
-
-.colorHiddenInput {
-  position: absolute;
-  width: 0;
-  height: 0;
-  padding: 0;
-  border: none;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.colorHexInput {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  font-size: $font-sm;
-  font-family: monospace;
-  color: $text-body;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  min-width: 0;
 }
 
 // ── Form ───────────────────────────────────────────────────────────────

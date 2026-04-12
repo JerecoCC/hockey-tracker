@@ -44,6 +44,17 @@
   gap: $space-sm;
 }
 
+// ── Color pickers (form) ───────────────────────────────────────────────
+.colorRow {
+  display: flex;
+  gap: $space-xl;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 // ── Form ───────────────────────────────────────────────────────────────
 .form {
   display: flex;

@@ -47,93 +47,15 @@
   }
 }
 
-// ── Team header ────────────────────────────────────────────────────────
-.teamHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-xl;
-}
-
-.logoArea {
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-  border-radius: $radius-lg;
-  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
-}
-
-.logoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  border-radius: $radius-lg;
-  background: $border;
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-}
-
-.teamInfo {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.teamName {
-  font-size: $font-3xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
-}
-
-.teamCode {
-  font-size: $font-base;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.teamLocation {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  font-size: $font-base;
-  color: $text-dim;
-}
-
-// ── Description ────────────────────────────────────────────────────────
-.descriptionText {
-  font-size: $font-body;
-  color: $text-body;
-  line-height: 1.6;
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.descriptionEmpty {
-  font-size: $font-body;
-  color: $text-dim;
-  font-style: italic;
-  margin: 0;
-}
-
 // ── Info grid ──────────────────────────────────────────────────────────
 .infoGrid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: $space-xl;
+}
+
+.infoItemFull {
+  grid-column: 1 / -1;
 }
 
 .infoItem {
@@ -159,6 +81,16 @@
   font-size: $font-body;
   color: $text-dim;
   font-style: italic;
+}
+
+// ── Tab placeholder ────────────────────────────────────────────────────
+.tabPlaceholder {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
+  padding: $space-lg 0;
+  text-align: center;
 }
 
 // ── League badge ───────────────────────────────────────────────────────

@@ -13,6 +13,8 @@ export interface TeamRecord {
   location: string | null;
   logo: string | null;
   league_id: string | null;
+  primary_color: string;
+  text_color: string;
   created_at: string;
 }
 
@@ -23,6 +25,8 @@ export interface CreateTeamData {
   location?: string;
   logo?: string | null;
   league_id?: string | null;
+  primary_color?: string;
+  text_color?: string;
 }
 
 const authHeaders = () => {

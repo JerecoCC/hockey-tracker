@@ -1,0 +1,56 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Read mode ───────────────────────────────────────────────────────────
+.readArea {
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  gap: $space-sm;
+  padding: $space-sm;
+  margin: -$space-sm;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .editIcon {
+      opacity: 1;
+    }
+  }
+}
+
+.editIcon {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: $text-dim;
+  opacity: 0;
+  transition: opacity $transition-fast;
+}
+
+.content {
+  font-size: $font-body;
+  color: $text-body;
+  flex: 1;
+  min-width: 0;
+}
+
+.muted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+  flex: 1;
+}
+
+// ── Edit mode ───────────────────────────────────────────────────────────
+.editor {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.actions {
+  display: flex;
+  gap: $space-sm;
+}
