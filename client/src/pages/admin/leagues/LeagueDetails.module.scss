@@ -189,21 +189,8 @@
   }
 }
 
+// Exists so .teamListItem:hover can reference it; structural styles live in ActionOverlay
 .teamActions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: 0 $space-md;
-  // Gradient fades row content behind the buttons
-  background: linear-gradient(to right, transparent, $bg-card 32%);
-  border-radius: 0 $radius-md $radius-md 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
 }
 
 .teamListName {
@@ -338,20 +325,8 @@
   margin-left: auto;
 }
 
+// Exists so .seasonListItem:hover can reference it; structural styles live in ActionOverlay
 .seasonActions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: 0 $space-md;
-  background: linear-gradient(to right, transparent, $bg-card 32%);
-  border-radius: 0 $radius-md $radius-md 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
 }
 
 // ── Shared modal form styles ──────────────────────────────────────────────
@@ -502,21 +477,8 @@
   flex-shrink: 0;
 }
 
-// Hover-reveal action overlay (matches teamActions / seasonActions pattern)
+// Exists so .groupRow:hover can reference it; structural styles live in ActionOverlay
 .groupActions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: 0 $space-md;
-  background: linear-gradient(to right, transparent, $bg-card 32%);
-  border-radius: 0 $radius-md $radius-md 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
 }
 
 // ── Group "add team" selector list (used inside modal) ───────────────────

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
@@ -169,7 +170,7 @@ const GroupNode = ({
             />
           </button>
           <span className={styles.groupName}>{group.name}</span>
-          <span className={styles.groupActions}>
+          <ActionOverlay className={styles.groupActions}>
             {depth === 0 && !isAddingChild && group.teams.length === 0 && (
               <Button
                 variant="outlined"
@@ -198,7 +199,7 @@ const GroupNode = ({
               tooltip="Delete"
               onClick={() => onDelete(group)}
             />
-          </span>
+          </ActionOverlay>
         </div>
       )}
 
@@ -234,7 +235,7 @@ const GroupNode = ({
               )}
               <span className={styles.teamListName}>{t.name}</span>
               <span className={styles.seasonListDates}>{t.code}</span>
-              <span className={styles.teamActions}>
+              <ActionOverlay className={styles.teamActions}>
                 <Button
                   variant="outlined"
                   intent="neutral"
@@ -259,7 +260,7 @@ const GroupNode = ({
                   tooltip="Delete team"
                   onClick={() => setConfirmDeleteTeam(t)}
                 />
-              </span>
+              </ActionOverlay>
             </li>
           ))}
         </ul>
@@ -449,7 +450,7 @@ const LeagueGroupsCard = ({
                 )}
                 <span className={styles.teamListName}>{t.name}</span>
                 <span className={styles.seasonListDates}>{t.code}</span>
-                <span className={styles.teamActions}>
+                <ActionOverlay className={styles.teamActions}>
                   <Button
                     variant="outlined"
                     intent="neutral"
@@ -474,7 +475,7 @@ const LeagueGroupsCard = ({
                     tooltip="Delete team"
                     onClick={() => setConfirmDeleteUngrouped(t)}
                   />
-                </span>
+                </ActionOverlay>
               </li>
             ))}
           </ul>

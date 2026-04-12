@@ -1,0 +1,30 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+.root {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: 0 $space-md;
+  background: $bg-card;
+  border-radius: 0 $radius-md $radius-md 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+
+  // Transparent gradient extending left — fixed width, independent of button count
+  &::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 0;
+    bottom: 0;
+    width: 3rem;
+    background: linear-gradient(to right, transparent, $bg-card);
+    pointer-events: none;
+  }
+}

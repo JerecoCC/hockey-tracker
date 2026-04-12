@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import { type TeamRecord } from '../../../hooks/useTeams';
@@ -64,7 +65,7 @@ const LeagueTeamsCard = ({
               )}
               <span className={styles.teamListName}>{t.name}</span>
               <span className={styles.seasonListDates}>{t.code}</span>
-              <span className={styles.teamActions}>
+              <ActionOverlay className={styles.teamActions}>
                 <Button
                   variant="outlined"
                   intent="accent"
@@ -89,7 +90,7 @@ const LeagueTeamsCard = ({
                     onDelete(t);
                   }}
                 />
-              </span>
+              </ActionOverlay>
             </li>
           ))}
         </ul>

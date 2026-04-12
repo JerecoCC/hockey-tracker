@@ -1,3 +1,4 @@
+import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
@@ -62,7 +63,7 @@ const LeagueSeasonsCard = ({
                 ? [s.start_date, s.end_date].map(formatDate).join(' – ')
                 : 'No dates'}
             </span>
-            <span className={styles.seasonActions}>
+            <ActionOverlay className={styles.seasonActions}>
               <Button
                 variant="outlined"
                 intent="accent"
@@ -81,7 +82,7 @@ const LeagueSeasonsCard = ({
                 tooltip="Delete"
                 onClick={() => onDelete(s)}
               />
-            </span>
+            </ActionOverlay>
           </li>
         ))}
       </ul>
