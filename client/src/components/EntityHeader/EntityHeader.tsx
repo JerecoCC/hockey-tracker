@@ -1,6 +1,6 @@
-import { useRef, type ChangeEvent } from 'react';
+import type { ReactNode } from 'react';
+import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
-import Icon from '../Icon/Icon';
 import styles from './EntityHeader.module.scss';
 
 interface Swatch {
@@ -14,12 +14,17 @@ interface Props {
   code: string;
   primaryColor: string;
   textColor: string;
-  isBusy: boolean;
-  onLogoChange: (file: File) => Promise<void>;
-  onEdit: () => void;
-  editTooltip?: string;
-  logoEditTooltip?: string;
   swatches?: Swatch[];
+  /** Called when the Edit button is clicked. If omitted, no button is rendered. */
+  onEdit?: () => void;
+  /** When true, the Edit button is hidden (page is in edit mode). */
+  isEditing?: boolean;
+  /** Edit-mode slot: replaces the logo image/placeholder when isEditing=true. */
+  logoSlot?: ReactNode;
+  /** Edit-mode slot: replaces the name+code text block when isEditing=true. */
+  nameSlot?: ReactNode;
+  /** Edit-mode slot: replaces the Edit button and swatches when isEditing=true. */
+  rightSlot?: ReactNode;
 }
 
 const EntityHeader = (props: Props) => {
@@ -29,25 +34,18 @@ const EntityHeader = (props: Props) => {
     code,
     primaryColor,
     textColor,
-    isBusy,
-    onLogoChange,
-    onEdit,
-    editTooltip = 'Edit',
-    logoEditTooltip = 'Edit logo',
     swatches = [],
+    onEdit,
+    isEditing = false,
+    logoSlot,
+    nameSlot,
+    rightSlot,
   } = props;
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileChange = async (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    e.target.value = '';
-    await onLogoChange(file);
-  };
-
-  return (
-    <div className={styles.header}>
-      {/* ── Logo ──────────────────────────────────────────── */}
+  const logoArea =
+    isEditing && logoSlot ? (
+      logoSlot
+    ) : (
       <div className={styles.logoWrapper}>
         {logo ? (
           <img
@@ -63,64 +61,60 @@ const EntityHeader = (props: Props) => {
             {code.slice(0, 3)}
           </span>
         )}
-
-        {isBusy ? (
-          <div className={styles.logoSpinnerOverlay}>
-            <span className={styles.logoSpinner} />
-          </div>
-        ) : (
-          <button
-            className={styles.logoEditOverlay}
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <Icon
-              name="edit"
-              size="1.25em"
-            />
-            <span className={styles.logoEditTooltip}>{logoEditTooltip}</span>
-          </button>
-        )}
-
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*,image/svg+xml,.svg"
-          className={styles.fileInput}
-          onChange={handleFileChange}
-        />
       </div>
+    );
 
-      {/* ── Name + code ────────────────────────────────────── */}
-      <div className={styles.nameBlock}>
-        <div className={styles.nameRow}>
+  const nameArea = (
+    <div className={isEditing && nameSlot ? styles.nameBlockEdit : styles.nameBlock}>
+      {isEditing && nameSlot ? (
+        nameSlot
+      ) : (
+        <>
           <h3 className={styles.name}>{name}</h3>
-          <button
-            className={styles.nameEditBtn}
-            onClick={onEdit}
-            disabled={isBusy}
-          >
-            <Icon
-              name="edit"
-              size="0.9em"
-            />
-            <span className={styles.nameEditTooltip}>{editTooltip}</span>
-          </button>
-        </div>
-        <span className={styles.code}>{code}</span>
-      </div>
-
-      {/* ── Color swatches ─────────────────────────────────── */}
-      {swatches.length > 0 && (
-        <div className={styles.swatches}>
-          {swatches.map((s) => (
-            <ColorSwatch
-              key={s.label}
-              label={s.label}
-              color={s.color}
-            />
-          ))}
-        </div>
+          <span className={styles.code}>{code}</span>
+        </>
       )}
+    </div>
+  );
+
+  const rightArea =
+    onEdit || swatches.length > 0 || rightSlot ? (
+      <div className={styles.rightCol}>
+        {isEditing && rightSlot ? (
+          rightSlot
+        ) : (
+          <>
+            {!isEditing && onEdit && (
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="edit"
+                onClick={onEdit}
+              >
+                Edit
+              </Button>
+            )}
+            {swatches.length > 0 && (
+              <div className={styles.swatches}>
+                {swatches.map((s) => (
+                  <ColorSwatch
+                    key={s.label}
+                    label={s.label}
+                    color={s.color}
+                  />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    ) : null;
+
+  return (
+    <div className={`${styles.header}${isEditing ? ` ${styles.headerEditMode}` : ''}`}>
+      {logoArea}
+      {nameArea}
+      {rightArea}
     </div>
   );
 };

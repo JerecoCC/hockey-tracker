@@ -1,22 +1,40 @@
+import type { ReactNode } from 'react';
 import Card from '../../../components/Card/Card';
-import DescriptionEditor from '../../../components/DescriptionEditor/DescriptionEditor';
 import EntityHeader from '../../../components/EntityHeader/EntityHeader';
 import { type LeagueFullRecord } from '../../../hooks/useLeagueDetails';
-import { type CreateLeagueData } from '../../../hooks/useLeagues';
 import styles from './LeagueDetails.module.scss';
+
+const normalizeDescription = (html: string | null | undefined): string | null => {
+  if (!html || html === '<p></p>') return null;
+  return html;
+};
 
 interface Props {
   league: LeagueFullRecord;
-  busy: string | null;
-  uploadLogo: (file: File) => Promise<string | null>;
-  updateLeague: (id: string, payload: Partial<CreateLeagueData>) => Promise<boolean>;
-  onEditLeague: () => void;
+  onEdit: () => void;
+  isEditing?: boolean;
+  /** Rendered inside the Card when isEditing=true, replacing the read-only description. */
+  editForm?: ReactNode;
+  /** Edit-mode slot forwarded to EntityHeader: replaces the logo. */
+  logoSlot?: ReactNode;
+  /** Edit-mode slot forwarded to EntityHeader: replaces the name+code block. */
+  nameSlot?: ReactNode;
+  /** Edit-mode slot forwarded to EntityHeader: replaces the Edit button and swatches. */
+  rightSlot?: ReactNode;
   className?: string;
 }
 
 const LeagueInfoCard = (props: Props) => {
-  const { league, busy, uploadLogo, updateLeague, onEditLeague, className } = props;
-  const isBusy = busy === league.id;
+  const {
+    league,
+    onEdit,
+    isEditing = false,
+    editForm,
+    logoSlot,
+    nameSlot,
+    rightSlot,
+    className,
+  } = props;
 
   return (
     <Card className={className}>
@@ -26,29 +44,34 @@ const LeagueInfoCard = (props: Props) => {
         code={league.code}
         primaryColor={league.primary_color}
         textColor={league.text_color}
-        isBusy={isBusy}
-        onLogoChange={async (file) => {
-          const url = await uploadLogo(file);
-          if (url) await updateLeague(league.id, { logo: url });
-        }}
-        onEdit={onEditLeague}
-        editTooltip="Edit League"
-        logoEditTooltip="Edit League Icon"
+        isEditing={isEditing}
+        onEdit={onEdit}
         swatches={[
           { label: 'Primary', color: league.primary_color },
           { label: 'Text', color: league.text_color },
         ]}
+        logoSlot={logoSlot}
+        nameSlot={nameSlot}
+        rightSlot={rightSlot}
       />
 
-      <div className={styles.infoGrid}>
-        <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-          <span className={styles.infoLabel}>Description</span>
-          <DescriptionEditor
-            description={league.description}
-            onSave={(html) => updateLeague(league.id, { description: html })}
-          />
+      {isEditing ? (
+        editForm
+      ) : (
+        <div className={styles.infoGrid}>
+          <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+            <span className={styles.infoLabel}>Description</span>
+            {normalizeDescription(league.description) ? (
+              <div
+                className={styles.infoValue}
+                dangerouslySetInnerHTML={{ __html: league.description! }}
+              />
+            ) : (
+              <span className={styles.infoValueMuted}>No description</span>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </Card>
   );
 };

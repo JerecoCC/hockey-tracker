@@ -15,6 +15,11 @@
   border-bottom: 1px solid $border;
 }
 
+.tabListDisabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
 // ── Individual tab button ──────────────────────────────────────────────
 .tab {
   position: relative;

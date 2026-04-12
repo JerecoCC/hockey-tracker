@@ -10,6 +10,7 @@ jest.mock('react-router-dom', () => ({
   useNavigate: jest.fn(),
   useParams: jest.fn(),
   useLocation: jest.fn(),
+  useBlocker: jest.fn(() => ({ state: 'unblocked', reset: jest.fn(), proceed: jest.fn() })),
 }));
 
 // ── Hooks ─────────────────────────────────────────────────────────────
@@ -154,12 +155,13 @@ describe('LeagueDetailsPage – main render', () => {
 
   it('shows the description placeholder when description is null', () => {
     setup({ league: { ...mockLeague, description: null } });
-    expect(screen.getByText('Click to add a description…')).toBeInTheDocument();
+    expect(screen.getByText('No description')).toBeInTheDocument();
   });
 
   it('shows the description placeholder when description is empty', () => {
     setup({ league: { ...mockLeague, description: '' } });
-    expect(screen.getByText('Click to add a description…')).toBeInTheDocument();
+    // empty string is falsy → renders the same "No description" muted placeholder
+    expect(screen.getByText('No description')).toBeInTheDocument();
   });
 });
 

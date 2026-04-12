@@ -1,11 +1,7 @@
 @use "../../styles/colors" as *;
 @use "../../styles/mixins" as *;
 
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-// ── Row ────────────────────────────────────────────────────────────────
+// ── Row: logo | name+code | right column (view mode) ──────────────────
 .header {
   display: flex;
   align-items: center;
@@ -15,22 +11,18 @@
   border-bottom: 1px solid $border;
 }
 
+// ── Edit mode: top-align columns so name/buttons and code/colors share rows
+.headerEditMode {
+  align-items: flex-start;
+}
+
 // ── Logo ───────────────────────────────────────────────────────────────
 .logoWrapper {
-  position: relative;
   flex-shrink: 0;
   width: 80px;
   height: 80px;
   border-radius: $radius-lg;
   overflow: hidden;
-
-  &:hover .logoEditOverlay {
-    opacity: 1;
-  }
-
-  &:hover .logoEditTooltip {
-    opacity: 1;
-  }
 }
 
 .logo {
@@ -54,78 +46,6 @@
   text-transform: uppercase;
 }
 
-.logoEditOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $radius-lg;
-  background: rgba(0, 0, 0, 0.55);
-  border: none;
-  cursor: pointer;
-  color: $text-bright;
-  opacity: 0;
-  transition: opacity $transition-fast;
-
-  &:focus-visible {
-    opacity: 1;
-    outline: 2px solid $accent;
-    outline-offset: -2px;
-  }
-}
-
-.logoEditTooltip {
-  position: absolute;
-  bottom: calc(100% + $space-sm);
-  left: 50%;
-  transform: translateX(-50%);
-  background: $border;
-  color: $text-bright;
-  font-size: $font-xs;
-  font-weight: 500;
-  white-space: nowrap;
-  padding: $space-xs $space-sm;
-  border-radius: $radius-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity $transition-fast;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: $border;
-  }
-}
-
-.logoSpinnerOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $radius-lg;
-  background: rgba(0, 0, 0, 0.55);
-}
-
-.logoSpinner {
-  width: $space-2xl;
-  height: $space-2xl;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-.fileInput {
-  display: none;
-}
-
 // ── Name block ─────────────────────────────────────────────────────────
 .nameBlock {
   flex: 1;
@@ -133,24 +53,23 @@
   display: flex;
   flex-direction: column;
   gap: $space-xs;
+  padding-top: $space-xs;
 }
 
-.nameRow {
+// Edit-mode variant: wider gap for stacked Field inputs, no top padding
+.nameBlockEdit {
+  flex: 1;
+  min-width: 0;
   display: flex;
-  align-items: center;
-  gap: $space-sm;
-
-  &:hover .nameEditBtn,
-  &:focus-within .nameEditBtn {
-    opacity: 1;
-  }
+  flex-direction: column;
+  gap: $space-md;
 }
 
 .name {
   font-size: $font-3xl;
   font-weight: 700;
   color: $text-bright;
-  margin: 0 0 $space-xs;
+  margin: 0;
 }
 
 .code {
@@ -160,72 +79,20 @@
   letter-spacing: 0.08em;
 }
 
-.nameEditBtn {
-  position: relative;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: $text-dim;
-  padding: $space-xs;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  opacity: 0;
+// ── Right column: edit button on top, swatches below ───────────────────
+.rightCol {
   flex-shrink: 0;
-  transition:
-    opacity $transition-fast,
-    color $transition-fast;
-
-  &:hover {
-    color: $text-bright;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-
-  &:focus-visible {
-    opacity: 1;
-    outline: 2px solid $accent;
-  }
-
-  &:hover .nameEditTooltip {
-    opacity: 1;
-  }
-}
-
-.nameEditTooltip {
-  position: absolute;
-  bottom: calc(100% + $space-xs + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: $border;
-  color: $text-bright;
-  font-size: $font-xs;
-  font-weight: 500;
-  white-space: nowrap;
-  padding: $space-xs $space-sm;
-  border-radius: $radius-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity $transition-fast;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: $border;
-  }
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $space-md;
 }
 
 // ── Color swatches ─────────────────────────────────────────────────────
 .swatches {
   display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  flex-shrink: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: $space-xl;
+  justify-content: flex-end;
 }

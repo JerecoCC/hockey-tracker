@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ReactNode } from 'react';
+import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
+import { type ReactNode } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/login/Login';
@@ -61,6 +61,74 @@ const AdminRoute = (props: { children: ReactNode }) => {
   return <>{children}</>;
 };
 
+const router = createBrowserRouter([
+  {
+    path: '/',
+    element: (
+      <Navigate
+        to="/login"
+        replace
+      />
+    ),
+  },
+  {
+    path: '/login',
+    element: (
+      <PublicRoute>
+        <LoginPage />
+      </PublicRoute>
+    ),
+  },
+  {
+    path: '/signup',
+    element: (
+      <PublicRoute>
+        <SignupPage />
+      </PublicRoute>
+    ),
+  },
+  { path: '/auth/callback', element: <AuthCallbackPage /> },
+  {
+    path: '/dashboard',
+    element: (
+      <PrivateRoute>
+        <DashboardPage />
+      </PrivateRoute>
+    ),
+  },
+  {
+    element: (
+      <AdminRoute>
+        <AdminLayout />
+      </AdminRoute>
+    ),
+    children: [
+      {
+        path: '/admin',
+        element: (
+          <Navigate
+            to="/admin/leagues"
+            replace
+          />
+        ),
+      },
+      { path: '/admin/leagues', element: <LeaguesPage /> },
+      { path: '/admin/users', element: <UsersPage /> },
+      { path: '/admin/leagues/:id', element: <LeagueDetailsPage /> },
+      { path: '/admin/leagues/:leagueId/teams/:id', element: <TeamDetailsPage /> },
+    ],
+  },
+  {
+    path: '*',
+    element: (
+      <Navigate
+        to="/login"
+        replace
+      />
+    ),
+  },
+]);
+
 const App = () => (
   <AuthProvider>
     <ToastContainer
@@ -68,89 +136,7 @@ const App = () => (
       autoClose={4000}
       theme="colored"
     />
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/"
-          element={
-            <Navigate
-              to="/login"
-              replace
-            />
-          }
-        />
-        <Route
-          path="/login"
-          element={
-            <PublicRoute>
-              <LoginPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/signup"
-          element={
-            <PublicRoute>
-              <SignupPage />
-            </PublicRoute>
-          }
-        />
-        <Route
-          path="/auth/callback"
-          element={<AuthCallbackPage />}
-        />
-        <Route
-          path="/dashboard"
-          element={
-            <PrivateRoute>
-              <DashboardPage />
-            </PrivateRoute>
-          }
-        />
-        <Route
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          <Route
-            path="/admin"
-            element={
-              <Navigate
-                to="/admin/leagues"
-                replace
-              />
-            }
-          />
-          <Route
-            path="/admin/leagues"
-            element={<LeaguesPage />}
-          />
-          <Route
-            path="/admin/users"
-            element={<UsersPage />}
-          />
-          <Route
-            path="/admin/leagues/:id"
-            element={<LeagueDetailsPage />}
-          />
-          <Route
-            path="/admin/leagues/:leagueId/teams/:id"
-            element={<TeamDetailsPage />}
-          />
-        </Route>
-        <Route
-          path="*"
-          element={
-            <Navigate
-              to="/login"
-              replace
-            />
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+    <RouterProvider router={router} />
   </AuthProvider>
 );
 

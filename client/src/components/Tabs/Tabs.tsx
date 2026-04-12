@@ -15,10 +15,12 @@ interface TabsProps {
   defaultIndex?: number;
   onTabChange?: (index: number) => void;
   className?: string;
+  /** When true, all tab buttons are dimmed and non-interactive. */
+  disabled?: boolean;
 }
 
 const Tabs = (props: TabsProps) => {
-  const { tabs, activeIndex, defaultIndex = 0, onTabChange, className } = props;
+  const { tabs, activeIndex, defaultIndex = 0, onTabChange, className, disabled = false } = props;
   const [internal, setInternal] = useState(defaultIndex);
   const active = activeIndex ?? internal;
 
@@ -30,7 +32,9 @@ const Tabs = (props: TabsProps) => {
   return (
     <div className={[styles.tabs, className].filter(Boolean).join(' ')}>
       <div
-        className={styles.tabList}
+        className={[styles.tabList, disabled ? styles.tabListDisabled : '']
+          .filter(Boolean)
+          .join(' ')}
         role="tablist"
       >
         {tabs.map((tab, i) => (
@@ -40,6 +44,7 @@ const Tabs = (props: TabsProps) => {
             aria-selected={active === i}
             className={`${styles.tab} ${active === i ? styles.tabActive : ''}`}
             onClick={() => handleSelect(i)}
+            disabled={disabled}
           >
             {tab.label}
           </button>
