@@ -197,6 +197,17 @@ async function initSchema() {
       END IF;
     END $$
   `;
+  // Auto-generated season groups: season_id scopes the group to one season;
+  // is_auto distinguishes system-created groups from user-created ones.
+  await sql`
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS
+      season_id UUID REFERENCES seasons(id) ON DELETE CASCADE
+  `;
+  await sql`
+    ALTER TABLE groups ADD COLUMN IF NOT EXISTS
+      is_auto BOOLEAN NOT NULL DEFAULT false
+  `;
+
   console.log('Database schema ready');
 }
 

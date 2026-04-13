@@ -293,6 +293,63 @@
 }
 
 // ── Modal team selector ────────────────────────────────────────────────────────
+.teamSearch {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  margin-bottom: $space-sm;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color $transition-fast;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+}
+
+.teamSearchIcon {
+  flex-shrink: 0;
+  color: $text-dim;
+}
+
+.teamSearchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  color: $text-body;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+.teamSearchClear {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 50%;
+  color: $text-dim;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: $text-body;
+  }
+}
+
 .teamSelectList {
   list-style: none;
   margin: 0 0 $space-lg;

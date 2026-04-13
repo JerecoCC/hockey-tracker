@@ -218,8 +218,21 @@ router.get('/:seasonId/teams', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // PUT /api/admin/seasons/:seasonId/teams
-// Replace the full list of teams for this season.  Body: { team_ids: string[] }
+// Replace the flat team roster for this season.  Body: { team_ids: string[] }
+// Also creates/updates an auto group named after the season to represent the
+// roster as a group (is_auto = true, season_id = seasonId).
 // ---------------------------------------------------------------------------
+
+/** Derive a human-readable name from season dates, e.g. "2024-25". */
+function deriveSeasonGroupName(startDate, endDate) {
+  if (!startDate) return 'Season Roster';
+  const sy = parseInt(startDate.slice(0, 4), 10);
+  if (!endDate) return String(sy);
+  const ey = parseInt(endDate.slice(0, 4), 10);
+  if (sy === ey) return String(sy);
+  return `${sy}-${String(ey).slice(2)}`; // "2024-25"
+}
+
 router.put('/:seasonId/teams', async (req, res) => {
   const { seasonId } = req.params;
   const { team_ids } = req.body;
@@ -229,9 +242,44 @@ router.put('/:seasonId/teams', async (req, res) => {
   }
 
   try {
-    const seasonRows = await sql`SELECT id FROM seasons WHERE id = ${seasonId}`;
+    const seasonRows = await sql`
+      SELECT id, league_id, start_date::text, end_date::text
+      FROM seasons WHERE id = ${seasonId}
+    `;
     if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    const { league_id, start_date, end_date } = seasonRows[0];
 
+    // ── 1. Find or create the auto group for this season ────────────────────
+    const groupName = deriveSeasonGroupName(start_date, end_date);
+
+    let autoGroupRows = await sql`
+      SELECT id FROM groups
+      WHERE season_id = ${seasonId} AND is_auto = true
+      LIMIT 1
+    `;
+    let autoGroupId;
+    if (autoGroupRows.length === 0) {
+      const created = await sql`
+        INSERT INTO groups (league_id, season_id, name, is_auto, sort_order)
+        VALUES (${league_id}, ${seasonId}, ${groupName}, true, 0)
+        RETURNING id
+      `;
+      autoGroupId = created[0].id;
+    } else {
+      autoGroupId = autoGroupRows[0].id;
+    }
+
+    // ── 2. Sync group_teams for the auto group ───────────────────────────────
+    await sql`DELETE FROM group_teams WHERE group_id = ${autoGroupId}`;
+    for (const team_id of team_ids) {
+      await sql`
+        INSERT INTO group_teams (group_id, team_id)
+        VALUES (${autoGroupId}, ${team_id})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+
+    // ── 3. Keep season_teams in sync (used for inheritance fallback) ─────────
     await sql`DELETE FROM season_teams WHERE season_id = ${seasonId}`;
     for (const team_id of team_ids) {
       await sql`
@@ -243,12 +291,12 @@ router.put('/:seasonId/teams', async (req, res) => {
 
     const teams = await sql`
       SELECT t.id, t.name, t.code, t.logo, t.primary_color, t.text_color, t.secondary_color
-      FROM season_teams st
-      JOIN teams t ON t.id = st.team_id
-      WHERE st.season_id = ${seasonId}
+      FROM group_teams gt
+      JOIN teams t ON t.id = gt.team_id
+      WHERE gt.group_id = ${autoGroupId}
       ORDER BY t.name
     `;
-    return res.json({ season_id: seasonId, teams });
+    return res.json({ season_id: seasonId, auto_group_id: autoGroupId, teams });
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'One or more teams not found' });
     console.error('season teams update error:', err);
@@ -258,12 +306,14 @@ router.put('/:seasonId/teams', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/seasons/:seasonId/groups
-// Returns all groups for the season's league with resolved teams using a
-// three-level fallback chain per group:
-//   1. Current season explicit override  (src = 'season')
-//   2. Most-recent prior season's override  (src = 'inherited')
-//   3. League-level group_teams default  (src = 'default')
-// Emits has_season_override and is_inherited flags per group.
+// Returns:
+//   - All non-auto league groups (season_id IS NULL) with a 3-level fallback
+//     for their teams: current season override → prev season override → default
+//   - The auto group for this season (is_auto = true, season_id = seasonId),
+//     with its teams sourced directly from group_teams (src = 'auto').
+//   - The auto group from the previous season if this season has none yet,
+//     tagged src = 'inherited'.
+// Emits has_season_override, is_inherited, and is_auto per group.
 // ---------------------------------------------------------------------------
 router.get('/:seasonId/groups', async (req, res) => {
   const { seasonId } = req.params;
@@ -282,7 +332,19 @@ router.get('/:seasonId/groups', async (req, res) => {
           ORDER BY start_date DESC NULLS LAST, created_at DESC
           LIMIT 1
         ),
-        -- Groups that already have an explicit override for the current season
+        -- Auto group for this season (if any)
+        auto_group AS (
+          SELECT id FROM groups
+          WHERE season_id = ${seasonId} AND is_auto = true
+          LIMIT 1
+        ),
+        -- Auto group from the previous season (used for inheritance when this season has none)
+        prev_auto_group AS (
+          SELECT id FROM groups
+          WHERE season_id = (SELECT id FROM prev) AND is_auto = true
+          LIMIT 1
+        ),
+        -- Groups that already have an explicit override for the current season (user groups only)
         cur_overrides AS (
           SELECT DISTINCT group_id FROM season_group_teams WHERE season_id = ${seasonId}
         ),
@@ -293,7 +355,7 @@ router.get('/:seasonId/groups', async (req, res) => {
             AND group_id NOT IN (SELECT group_id FROM cur_overrides)
         ),
         resolved AS (
-          -- 1. Current season explicit override
+          -- 1. Current season explicit override (user groups)
           SELECT sgt.group_id, t.id AS team_id, t.name, t.code, t.logo,
                  'season' AS src
           FROM season_group_teams sgt
@@ -302,7 +364,7 @@ router.get('/:seasonId/groups', async (req, res) => {
 
           UNION ALL
 
-          -- 2. Inherited from the previous season
+          -- 2. Inherited from the previous season (user groups not overridden this season)
           SELECT sgt.group_id, t.id, t.name, t.code, t.logo,
                  'inherited' AS src
           FROM season_group_teams sgt
@@ -312,16 +374,38 @@ router.get('/:seasonId/groups', async (req, res) => {
 
           UNION ALL
 
-          -- 3. League default (untouched by either season)
+          -- 3. League default (user groups untouched by either season, not auto groups)
           SELECT gt.group_id, t.id, t.name, t.code, t.logo,
                  'default' AS src
           FROM group_teams gt
           JOIN teams t ON t.id = gt.team_id
           WHERE gt.group_id NOT IN (SELECT group_id FROM cur_overrides)
             AND gt.group_id NOT IN (SELECT group_id FROM prev_overrides)
+            AND gt.group_id NOT IN (SELECT id FROM auto_group)
+            AND gt.group_id NOT IN (SELECT id FROM prev_auto_group)
+
+          UNION ALL
+
+          -- 4a. Auto group for this season — teams from group_teams directly
+          SELECT gt.group_id, t.id, t.name, t.code, t.logo,
+                 'auto' AS src
+          FROM group_teams gt
+          JOIN teams t ON t.id = gt.team_id
+          WHERE gt.group_id = (SELECT id FROM auto_group)
+
+          UNION ALL
+
+          -- 4b. Previous season's auto group — shown when this season has no auto group yet
+          SELECT gt.group_id, t.id, t.name, t.code, t.logo,
+                 'inherited' AS src
+          FROM group_teams gt
+          JOIN teams t ON t.id = gt.team_id
+          WHERE gt.group_id = (SELECT id FROM prev_auto_group)
+            AND NOT EXISTS (SELECT 1 FROM auto_group)
         )
       SELECT
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at,
+        g.is_auto,
         COALESCE(
           json_agg(
             json_build_object('id', r.team_id, 'name', r.name, 'code', r.code, 'logo', r.logo)
@@ -333,9 +417,18 @@ router.get('/:seasonId/groups', async (req, res) => {
         BOOL_OR(r.src = 'inherited') AS is_inherited
       FROM groups g
       LEFT JOIN resolved r ON r.group_id = g.id
-      WHERE g.league_id = ${league_id}
+      WHERE
+        -- User groups (league-scoped, no season_id)
+        (g.league_id = ${league_id} AND g.season_id IS NULL)
+        -- Auto group for this season
+        OR g.season_id = ${seasonId}
+        -- Previous season's auto group when this season has no auto group yet
+        OR (
+          g.id = (SELECT id FROM prev_auto_group)
+          AND NOT EXISTS (SELECT 1 FROM auto_group)
+        )
       GROUP BY g.id
-      ORDER BY g.parent_id NULLS FIRST, g.sort_order, g.name
+      ORDER BY g.is_auto DESC, g.parent_id NULLS FIRST, g.sort_order, g.name
     `;
     return res.json(groups);
   } catch (err) {

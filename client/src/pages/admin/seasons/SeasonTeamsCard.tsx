@@ -23,7 +23,8 @@ type InlineMode =
 
 interface PickerProps {
   open: boolean;
-  seasonTeams: SeasonTeam[];
+  /** IDs to pre-select when the modal opens. */
+  preSelectedIds: string[];
   leagueTeams: LeagueTeam[];
   busy: boolean;
   onClose: () => void;
@@ -32,17 +33,21 @@ interface PickerProps {
 
 const ManageTeamsModal = ({
   open,
-  seasonTeams,
+  preSelectedIds,
   leagueTeams,
   busy,
   onClose,
   onSave,
 }: PickerProps) => {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
-    if (open) setSelectedIds(new Set(seasonTeams.map((t) => t.id)));
-  }, [open, seasonTeams]);
+    if (open) {
+      setSelectedIds(new Set(preSelectedIds));
+      setQuery('');
+    }
+  }, [open, preSelectedIds]);
 
   const toggle = (id: string) =>
     setSelectedIds((prev) => {
@@ -67,42 +72,75 @@ const ManageTeamsModal = ({
           No teams in this league yet. Add teams from the league page.
         </p>
       ) : (
-        <ul className={styles.teamSelectList}>
-          {leagueTeams.map((t) => {
-            const checked = selectedIds.has(t.id);
-            return (
-              <li
-                key={t.id}
-                className={styles.teamSelectItem}
-                data-selected={checked}
-                onClick={() => toggle(t.id)}
+        <>
+          <div className={styles.teamSearch}>
+            <Icon
+              name="search"
+              size="1em"
+              className={styles.teamSearchIcon}
+            />
+            <input
+              className={styles.teamSearchInput}
+              type="text"
+              placeholder="Search teams…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query && (
+              <button
+                className={styles.teamSearchClear}
+                onClick={() => setQuery('')}
+                aria-label="Clear search"
               >
-                <span
-                  className={styles.teamCheckbox}
-                  data-checked={checked}
-                >
-                  {checked && (
-                    <Icon
-                      name="check"
-                      size="0.7em"
-                    />
-                  )}
-                </span>
-                {t.logo ? (
-                  <img
-                    src={t.logo}
-                    alt=""
-                    className={styles.teamLogoThumb}
-                  />
-                ) : (
-                  <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-                )}
-                <span className={styles.teamListName}>{t.name}</span>
-                <span className={styles.teamCode}>{t.code}</span>
-              </li>
-            );
-          })}
-        </ul>
+                <Icon
+                  name="close"
+                  size="0.8em"
+                />
+              </button>
+            )}
+          </div>
+          <ul className={styles.teamSelectList}>
+            {leagueTeams
+              .filter((t) => {
+                const q = query.trim().toLowerCase();
+                return !q || t.name.toLowerCase().includes(q) || t.code.toLowerCase().includes(q);
+              })
+              .map((t) => {
+                const checked = selectedIds.has(t.id);
+                return (
+                  <li
+                    key={t.id}
+                    className={styles.teamSelectItem}
+                    data-selected={checked}
+                    onClick={() => toggle(t.id)}
+                  >
+                    <span
+                      className={styles.teamCheckbox}
+                      data-checked={checked}
+                    >
+                      {checked && (
+                        <Icon
+                          name="check"
+                          size="0.7em"
+                        />
+                      )}
+                    </span>
+                    {t.logo ? (
+                      <img
+                        src={t.logo}
+                        alt=""
+                        className={styles.teamLogoThumb}
+                      />
+                    ) : (
+                      <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
+                    )}
+                    <span className={styles.teamListName}>{t.name}</span>
+                    <span className={styles.teamCode}>{t.code}</span>
+                  </li>
+                );
+              })}
+          </ul>
+        </>
       )}
       <div className={styles.modalActions}>
         <Button
@@ -428,13 +466,25 @@ const SeasonTeamsCard = (props: Props) => {
   const [inlineMode, setInlineMode] = useState<InlineMode>(null);
   const [teamTarget, setTeamTarget] = useState<SeasonGroupRecord | null>(null);
 
-  const roots = groups
+  // ── Split auto group from user groups ────────────────────────────────────────
+  const autoGroup = groups.find((g) => g.is_auto);
+  const userGroups = groups.filter((g) => !g.is_auto);
+  const userRoots = userGroups
     .filter((g) => g.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   const isRootAdding = inlineMode?.type === 'add' && inlineMode.parentId === null;
 
-  const handleRemove = async (teamId: string) => {
-    const next = seasonTeams.filter((t) => t.id !== teamId).map((t) => t.id);
+  // Teams shown in the auto-group flat list
+  const autoTeams = autoGroup?.teams ?? [];
+  const isInherited = autoGroup?.is_inherited ?? false;
+
+  // Pre-selection for the picker: auto group teams (if any), else inherited season teams
+  const pickerPreSelectedIds = autoGroup
+    ? autoGroup.teams.map((t) => t.id)
+    : seasonTeams.map((t) => t.id);
+
+  const handleRemoveAutoTeam = async (teamId: string) => {
+    const next = autoTeams.filter((t) => t.id !== teamId).map((t) => t.id);
     await setSeasonTeams(next);
   };
 
@@ -454,7 +504,8 @@ const SeasonTeamsCard = (props: Props) => {
         title="Teams"
         action={
           <div className={styles.cardActions}>
-            {!loading && groups.length === 0 && seasonTeams.length === 0 && (
+            {/* "Manage Teams" — hidden once user groups exist */}
+            {!loading && userGroups.length === 0 && (
               <Button
                 icon="group_add"
                 size="sm"
@@ -463,7 +514,8 @@ const SeasonTeamsCard = (props: Props) => {
                 Manage Teams
               </Button>
             )}
-            {!loading && seasonTeams.length === 0 && (
+            {/* "Create Group" — hidden once an auto group (i.e. season roster) exists */}
+            {!loading && autoGroup === undefined && (
               <Button
                 icon="folder_plus"
                 size="sm"
@@ -481,18 +533,18 @@ const SeasonTeamsCard = (props: Props) => {
           <p className={styles.emptyMsg}>Loading…</p>
         ) : (
           <>
-            {/* ── Empty state: only when no teams, no groups, and not actively adding a group ── */}
-            {seasonTeams.length === 0 && groups.length === 0 && !isRootAdding && (
+            {/* ── Empty state ── */}
+            {autoTeams.length === 0 && userGroups.length === 0 && !isRootAdding && (
               <p className={styles.emptyMsg}>
                 No teams added to this season yet. Use &ldquo;Manage Teams&rdquo; to select teams
                 from the league.
               </p>
             )}
 
-            {/* ── Season roster ── */}
-            {seasonTeams.length > 0 && (
+            {/* ── Auto group: flat team list ── */}
+            {autoTeams.length > 0 && (
               <>
-                {seasonTeams.every((t) => t.inherited) && (
+                {isInherited && (
                   <p className={styles.inheritedBanner}>
                     <Icon
                       name="history"
@@ -503,7 +555,7 @@ const SeasonTeamsCard = (props: Props) => {
                   </p>
                 )}
                 <ul className={styles.teamList}>
-                  {seasonTeams.map((t) => (
+                  {autoTeams.map((t) => (
                     <li
                       key={t.id}
                       className={styles.teamListItem}
@@ -519,32 +571,34 @@ const SeasonTeamsCard = (props: Props) => {
                       )}
                       <span className={styles.teamListName}>{t.name}</span>
                       <span className={styles.teamCode}>{t.code}</span>
-                      <ActionOverlay className={styles.teamActions}>
-                        <Button
-                          variant="outlined"
-                          intent="danger"
-                          icon="remove_circle_outline"
-                          size="sm"
-                          disabled={busy === 'season-teams'}
-                          tooltip="Remove from season"
-                          onClick={() => handleRemove(t.id)}
-                        />
-                      </ActionOverlay>
+                      {!isInherited && (
+                        <ActionOverlay className={styles.teamActions}>
+                          <Button
+                            variant="outlined"
+                            intent="danger"
+                            icon="remove_circle_outline"
+                            size="sm"
+                            disabled={busy === 'season-teams'}
+                            tooltip="Remove from season"
+                            onClick={() => handleRemoveAutoTeam(t.id)}
+                          />
+                        </ActionOverlay>
+                      )}
                     </li>
                   ))}
                 </ul>
               </>
             )}
 
-            {/* ── Groups section ── */}
-            {(roots.length > 0 || isRootAdding) && (
+            {/* ── User groups section ── */}
+            {(userRoots.length > 0 || isRootAdding) && (
               <div className={styles.groupsSection}>
                 <ul className={styles.groupList}>
-                  {roots.map((g) => (
+                  {userRoots.map((g) => (
                     <GroupNode
                       key={g.id}
                       group={g}
-                      allGroups={groups}
+                      allGroups={userGroups}
                       seasonBusy={busy}
                       groupBusy={groupBusy}
                       inlineMode={inlineMode}
@@ -575,7 +629,7 @@ const SeasonTeamsCard = (props: Props) => {
 
       <ManageTeamsModal
         open={pickerOpen}
-        seasonTeams={seasonTeams}
+        preSelectedIds={pickerPreSelectedIds}
         leagueTeams={leagueTeams}
         busy={busy === 'season-teams'}
         onClose={() => setPickerOpen(false)}
