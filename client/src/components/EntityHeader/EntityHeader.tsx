@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import type { Control, FieldValues } from 'react-hook-form';
 import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
+import Field from '../Field/Field';
+import LogoUpload from '../LogoUpload/LogoUpload';
 import styles from './EntityHeader.module.scss';
 
 interface Swatch {
@@ -8,26 +10,23 @@ interface Swatch {
   color: string;
 }
 
-interface Props {
+interface Props<T extends FieldValues = FieldValues> {
   logo: string | null;
   name: string;
   code: string;
   primaryColor: string;
   textColor: string;
   swatches?: Swatch[];
-  /** Called when the Edit button is clicked. If omitted, no button is rendered. */
   onEdit?: () => void;
-  /** When true, the Edit button is hidden (page is in edit mode). */
+  // Edit mode — provide all four together when isEditing=true
   isEditing?: boolean;
-  /** Edit-mode slot: replaces the logo image/placeholder when isEditing=true. */
-  logoSlot?: ReactNode;
-  /** Edit-mode slot: replaces the name+code text block when isEditing=true. */
-  nameSlot?: ReactNode;
-  /** Edit-mode slot: replaces the Edit button and swatches when isEditing=true. */
-  rightSlot?: ReactNode;
+  control?: Control<T>;
+  formId?: string;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
 }
 
-const EntityHeader = (props: Props) => {
+function EntityHeader<T extends FieldValues = FieldValues>(props: Props<T>) {
   const {
     logo,
     name,
@@ -37,15 +36,84 @@ const EntityHeader = (props: Props) => {
     swatches = [],
     onEdit,
     isEditing = false,
-    logoSlot,
-    nameSlot,
-    rightSlot,
+    control,
+    formId,
+    onCancel,
+    isSubmitting = false,
   } = props;
 
-  const logoArea =
-    isEditing && logoSlot ? (
-      logoSlot
-    ) : (
+  if (isEditing) {
+    return (
+      <div className={styles.editHeader}>
+        <div className={styles.editLogoCell}>
+          <LogoUpload
+            control={control!}
+            name="logo"
+            label="Logo"
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className={styles.editTopRow}>
+          <div className={styles.editNameSlot}>
+            <Field
+              label="Name"
+              required
+              control={control!}
+              name="name"
+              rules={{ required: true }}
+              disabled={isSubmitting}
+            />
+          </div>
+          <div className={styles.editActionsSlot}>
+            <Button
+              type="button"
+              variant="outlined"
+              intent="neutral"
+              disabled={isSubmitting}
+              onClick={onCancel!}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form={formId!}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? 'Saving…' : 'Save Changes'}
+            </Button>
+          </div>
+        </div>
+        <div className={styles.editBottomRow}>
+          <Field
+            label="Code"
+            required
+            control={control!}
+            name="code"
+            rules={{ required: true }}
+            transform={(v: string) => v.toUpperCase()}
+            disabled={isSubmitting}
+          />
+          <div className={styles.editColorsSlot}>
+            <Field
+              type="color"
+              label="Primary Color"
+              control={control!}
+              name="primary_color"
+            />
+            <Field
+              type="color"
+              label="Text Color"
+              control={control!}
+              name="text_color"
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.header}>
       <div className={styles.logoWrapper}>
         {logo ? (
           <img
@@ -62,61 +130,39 @@ const EntityHeader = (props: Props) => {
           </span>
         )}
       </div>
-    );
 
-  const nameArea = (
-    <div className={isEditing && nameSlot ? styles.nameBlockEdit : styles.nameBlock}>
-      {isEditing && nameSlot ? (
-        nameSlot
-      ) : (
-        <>
-          <h3 className={styles.name}>{name}</h3>
-          <span className={styles.code}>{code}</span>
-        </>
+      <div className={styles.nameBlock}>
+        <h3 className={styles.name}>{name}</h3>
+        <span className={styles.code}>{code}</span>
+      </div>
+
+      {(onEdit || swatches.length > 0) && (
+        <div className={styles.rightCol}>
+          {onEdit && (
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="edit"
+              onClick={onEdit}
+            >
+              Edit
+            </Button>
+          )}
+          {swatches.length > 0 && (
+            <div className={styles.swatches}>
+              {swatches.map((s) => (
+                <ColorSwatch
+                  key={s.label}
+                  label={s.label}
+                  color={s.color}
+                />
+              ))}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
-
-  const rightArea =
-    onEdit || swatches.length > 0 || rightSlot ? (
-      <div className={styles.rightCol}>
-        {isEditing && rightSlot ? (
-          rightSlot
-        ) : (
-          <>
-            {!isEditing && onEdit && (
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                onClick={onEdit}
-              >
-                Edit
-              </Button>
-            )}
-            {swatches.length > 0 && (
-              <div className={styles.swatches}>
-                {swatches.map((s) => (
-                  <ColorSwatch
-                    key={s.label}
-                    label={s.label}
-                    color={s.color}
-                  />
-                ))}
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    ) : null;
-
-  return (
-    <div className={`${styles.header}${isEditing ? ` ${styles.headerEditMode}` : ''}`}>
-      {logoArea}
-      {nameArea}
-      {rightArea}
-    </div>
-  );
-};
+}
 
 export default EntityHeader;

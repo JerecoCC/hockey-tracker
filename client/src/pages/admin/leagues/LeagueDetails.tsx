@@ -4,11 +4,9 @@ import { useForm, Controller } from 'react-hook-form';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Field from '../../../components/Field/Field';
 import LeagueGroupsCard from './LeagueGroupsCard';
 import LeagueInfoCard from './LeagueInfoCard';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
-import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
@@ -188,73 +186,10 @@ const LeagueDetailsPage = () => {
                   league={league}
                   isEditing={isEditing}
                   onEdit={() => setIsEditing(true)}
-                  logoSlot={
-                    <LogoUpload
-                      control={control}
-                      name="logo"
-                      label="League Logo"
-                      disabled={isSubmitting}
-                    />
-                  }
-                  nameSlot={
-                    <>
-                      <Field
-                        label="Name"
-                        required
-                        control={control}
-                        name="name"
-                        rules={{ required: true }}
-                        placeholder="e.g. National Hockey League"
-                        disabled={isSubmitting}
-                      />
-                      <Field
-                        label="Code"
-                        required
-                        control={control}
-                        name="code"
-                        rules={{ required: true }}
-                        transform={(v: string) => v.toUpperCase()}
-                        placeholder="e.g. NHL"
-                        disabled={isSubmitting}
-                      />
-                    </>
-                  }
-                  rightSlot={
-                    <>
-                      <div className={styles.editHeaderActions}>
-                        <Button
-                          type="button"
-                          variant="outlined"
-                          intent="neutral"
-                          disabled={isSubmitting}
-                          onClick={handleCancelLeagueEdit}
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          type="submit"
-                          form="league-edit-form"
-                          disabled={isSubmitting}
-                        >
-                          {isSubmitting ? 'Saving…' : 'Save Changes'}
-                        </Button>
-                      </div>
-                      <div className={styles.editHeaderFields}>
-                        <Field
-                          type="color"
-                          label="Primary Color"
-                          control={control}
-                          name="primary_color"
-                        />
-                        <Field
-                          type="color"
-                          label="Text Color"
-                          control={control}
-                          name="text_color"
-                        />
-                      </div>
-                    </>
-                  }
+                  control={control}
+                  formId="league-edit-form"
+                  onCancel={handleCancelLeagueEdit}
+                  isSubmitting={isSubmitting}
                   editForm={
                     <form
                       id="league-edit-form"

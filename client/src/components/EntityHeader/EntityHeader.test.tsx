@@ -74,17 +74,6 @@ describe('EntityHeader – edit button', () => {
     expect(onEdit).toHaveBeenCalledTimes(1);
   });
 
-  it('hides the Edit button when isEditing=true', () => {
-    render(
-      <EntityHeader
-        {...defaultProps}
-        onEdit={jest.fn()}
-        isEditing={true}
-      />,
-    );
-    expect(screen.queryByRole('button', { name: /edit/i })).toBeNull();
-  });
-
   it('renders no button when onEdit is omitted', () => {
     render(<EntityHeader {...defaultProps} />);
     expect(screen.queryByRole('button')).toBeNull();

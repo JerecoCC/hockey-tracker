@@ -351,19 +351,6 @@
   margin-top: $space-xl;
 }
 
-// Cancel / Save row
-.editHeaderActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-md;
-}
-
-// Color picker fields row
-.editHeaderFields {
-  display: flex;
-  gap: $space-xl;
-}
-
 // ── Groups tree ───────────────────────────────────────────────────────────
 .groupList {
   list-style: none;

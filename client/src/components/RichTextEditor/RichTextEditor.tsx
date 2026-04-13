@@ -50,6 +50,13 @@ const RichTextEditor = (props: Props) => {
     if (editor) editor.setEditable(editable);
   }, [editor, editable]);
 
+  // Sync external content changes (e.g. form reset populating the field after mount)
+  useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content, false);
+    }
+  }, [editor, content]);
+
   if (!editor) return null;
 
   return (

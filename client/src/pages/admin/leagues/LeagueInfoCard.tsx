@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { Control, FieldValues } from 'react-hook-form';
 import Card from '../../../components/Card/Card';
 import EntityHeader from '../../../components/EntityHeader/EntityHeader';
 import { type LeagueFullRecord } from '../../../hooks/useLeagueDetails';
@@ -9,30 +10,29 @@ const normalizeDescription = (html: string | null | undefined): string | null =>
   return html;
 };
 
-interface Props {
+interface Props<T extends FieldValues = FieldValues> {
   league: LeagueFullRecord;
   onEdit: () => void;
   isEditing?: boolean;
-  /** Rendered inside the Card when isEditing=true, replacing the read-only description. */
+  control?: Control<T>;
+  formId?: string;
+  onCancel?: () => void;
+  isSubmitting?: boolean;
+  /** Rendered below the header when isEditing=true (description editor form). */
   editForm?: ReactNode;
-  /** Edit-mode slot forwarded to EntityHeader: replaces the logo. */
-  logoSlot?: ReactNode;
-  /** Edit-mode slot forwarded to EntityHeader: replaces the name+code block. */
-  nameSlot?: ReactNode;
-  /** Edit-mode slot forwarded to EntityHeader: replaces the Edit button and swatches. */
-  rightSlot?: ReactNode;
   className?: string;
 }
 
-const LeagueInfoCard = (props: Props) => {
+function LeagueInfoCard<T extends FieldValues = FieldValues>(props: Props<T>) {
   const {
     league,
     onEdit,
     isEditing = false,
+    control,
+    formId,
+    onCancel,
+    isSubmitting,
     editForm,
-    logoSlot,
-    nameSlot,
-    rightSlot,
     className,
   } = props;
 
@@ -50,9 +50,10 @@ const LeagueInfoCard = (props: Props) => {
           { label: 'Primary', color: league.primary_color },
           { label: 'Text', color: league.text_color },
         ]}
-        logoSlot={logoSlot}
-        nameSlot={nameSlot}
-        rightSlot={rightSlot}
+        control={control}
+        formId={formId}
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
       />
 
       {isEditing ? (
@@ -74,6 +75,6 @@ const LeagueInfoCard = (props: Props) => {
       )}
     </Card>
   );
-};
+}
 
 export default LeagueInfoCard;
