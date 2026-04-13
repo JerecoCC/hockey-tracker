@@ -20,13 +20,15 @@ const formatDate = (d: string | null) =>
   d ? US_DATE.format(new Date(`${d.slice(0, 10)}T12:00:00Z`)) : '—';
 
 const SeasonDetailsPage = () => {
-  const { id } = useParams<{ id: string }>();
+  const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
   const navigate = useNavigate();
 
   const { season, groups, leagueTeams, loading, busy, setSeasonGroupTeams, resetSeasonGroupTeams } =
     useSeasonDetails(id);
 
   const [overrideTarget, setOverrideTarget] = useState<SeasonGroupRecord | null>(null);
+
+  const leagueHref = `/admin/leagues/${leagueId}`;
 
   if (loading && !season) {
     return (
@@ -41,7 +43,11 @@ const SeasonDetailsPage = () => {
     return (
       <>
         <Breadcrumbs
-          items={[{ label: 'Seasons', path: '/admin/seasons' }, { label: 'Not Found' }]}
+          items={[
+            { label: 'Leagues', path: '/admin/leagues' },
+            { label: 'League', path: leagueHref },
+            { label: 'Not Found' },
+          ]}
         />
         <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>
       </>
@@ -56,20 +62,27 @@ const SeasonDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
-            tooltip="Back to Seasons"
-            onClick={() => navigate('/admin/seasons')}
+            tooltip={`Back to ${season.league_name}`}
+            onClick={() => navigate(leagueHref)}
           />
         }
         right={
           <Breadcrumbs
-            items={[{ label: 'Seasons', path: '/admin/seasons' }, { label: season.name }]}
+            items={[
+              { label: 'Leagues', path: '/admin/leagues' },
+              { label: season.league_name, path: leagueHref },
+              { label: season.name },
+            ]}
           />
         }
       />
 
       <div className={styles.grid}>
         {/* ── Season info ────────────────────────────────────────────────── */}
-        <Card className={styles.col12} title="Info">
+        <Card
+          className={styles.col12}
+          title="Info"
+        >
           <div className={styles.infoGrid}>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>League</span>

@@ -104,7 +104,7 @@ const SeasonsPage = () => {
             icon="open_in_new"
             size="sm"
             tooltip="View season"
-            onClick={() => navigate(`/admin/seasons/${s.id}`)}
+            onClick={() => navigate(`/admin/leagues/${s.league_id}/seasons/${s.id}`)}
           />
           <Button
             variant="outlined"

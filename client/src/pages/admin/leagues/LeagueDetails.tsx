@@ -4,8 +4,8 @@ import { useForm, Controller } from 'react-hook-form';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import LeagueGroupsCard from './LeagueGroupsCard';
 import LeagueInfoCard from './LeagueInfoCard';
+import LeagueTeamsCard from './LeagueTeamsCard';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
@@ -14,7 +14,6 @@ import Tabs from '../../../components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
-import useLeagueGroups, { type GroupRecord } from '../../../hooks/useLeagueGroups';
 import { type CreateLeagueData } from '../../../hooks/useLeagues';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
@@ -55,16 +54,6 @@ const LeagueDetailsPage = () => {
     updateSeason,
     deleteSeason,
   } = useLeagueDetails(id);
-  const {
-    groups,
-    loading: groupsLoading,
-    busy: groupsBusy,
-    addGroup,
-    updateGroup,
-    deleteGroup,
-    setGroupTeams,
-  } = useLeagueGroups(league?.id);
-
   const [isEditing, setIsEditing] = useState(false);
 
   const {
@@ -122,12 +111,10 @@ const LeagueDetailsPage = () => {
     const ok = await updateLeague(league.id, payload);
     if (ok) setIsEditing(false);
   });
-  // Group state
-  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<GroupRecord | null>(null);
-  // Team modal state
+  // Team modal / delete state
   const [teamModalOpen, setTeamModalOpen] = useState(false);
-  const [createTeamForGroup, setCreateTeamForGroup] = useState<GroupRecord | null>(null);
   const [editTargetTeam, setEditTargetTeam] = useState<TeamRecord | null>(null);
+  const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<TeamRecord | null>(null);
   // Season modal state
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [editTargetSeason, setEditTargetSeason] = useState<LeagueSeasonRecord | null>(null);
@@ -232,7 +219,7 @@ const LeagueDetailsPage = () => {
                       setConfirmDeleteSeason(s);
                       setConfirmDeleteSeasonOpen(true);
                     }}
-                    onView={(s) => navigate(`/admin/seasons/${s.id}`)}
+                    onView={(s) => navigate(`/admin/leagues/${id}/seasons/${s.id}`)}
                   />
                 )}
               </div>
@@ -242,34 +229,21 @@ const LeagueDetailsPage = () => {
             label: 'Teams',
             content: (
               <div className={styles.grid}>
-                <LeagueGroupsCard
+                <LeagueTeamsCard
                   className={styles.col12}
                   leagueId={league.id}
                   teams={teams}
-                  groups={groups}
-                  loading={groupsLoading}
-                  busy={groupsBusy}
-                  addGroup={addGroup}
-                  updateGroup={updateGroup}
-                  onAddTeam={(g) => {
-                    setCreateTeamForGroup(g);
+                  loading={loading}
+                  busy={busy}
+                  onAdd={() => {
                     setEditTargetTeam(null);
                     setTeamModalOpen(true);
                   }}
-                  onCreateTeam={() => {
-                    setCreateTeamForGroup(null);
-                    setEditTargetTeam(null);
-                    setTeamModalOpen(true);
-                  }}
-                  onEditTeam={(teamId) => {
-                    const t = teams.find((tm) => tm.id === teamId) ?? null;
+                  onEdit={(t) => {
                     setEditTargetTeam(t);
-                    setCreateTeamForGroup(null);
                     setTeamModalOpen(true);
                   }}
-                  onViewTeam={(teamId) => navigate(`/admin/leagues/${id}/teams/${teamId}`)}
-                  onDelete={(g) => setConfirmDeleteGroup(g)}
-                  onDeleteTeam={deleteTeam}
+                  onDelete={(t) => setConfirmDeleteTeam(t)}
                 />
               </div>
             ),
@@ -278,18 +252,23 @@ const LeagueDetailsPage = () => {
       />
 
       <ConfirmModal
-        open={confirmDeleteGroup !== null}
-        title="Delete Group"
-        body={`Delete "${confirmDeleteGroup?.name}"? This will also remove any subgroups and team assignments.`}
+        open={confirmDeleteTeam !== null}
+        title="Delete Team"
+        body={
+          <>
+            Are you sure you want to delete <strong>{confirmDeleteTeam?.name}</strong>? This cannot
+            be undone.
+          </>
+        }
         confirmLabel="Delete"
         confirmIcon="delete"
         variant="danger"
-        busy={groupsBusy === confirmDeleteGroup?.id}
-        onCancel={() => setConfirmDeleteGroup(null)}
+        busy={busy === confirmDeleteTeam?.id}
+        onCancel={() => setConfirmDeleteTeam(null)}
         onConfirm={async () => {
-          if (!confirmDeleteGroup) return;
-          await deleteGroup(confirmDeleteGroup.id);
-          setConfirmDeleteGroup(null);
+          if (!confirmDeleteTeam) return;
+          await deleteTeam(confirmDeleteTeam.id);
+          setConfirmDeleteTeam(null);
         }}
       />
 
@@ -310,15 +289,10 @@ const LeagueDetailsPage = () => {
         lockedLeagueId={id}
         onClose={() => {
           setTeamModalOpen(false);
-          setCreateTeamForGroup(null);
           setEditTargetTeam(null);
         }}
         addTeam={async (payload) => {
           const newTeamId = await addTeam(payload);
-          if (newTeamId && createTeamForGroup) {
-            const currentIds = createTeamForGroup.teams.map((t) => t.id);
-            await setGroupTeams(createTeamForGroup.id, [...currentIds, newTeamId]);
-          }
           return newTeamId !== null;
         }}
         updateTeam={updateTeam}

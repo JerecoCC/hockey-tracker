@@ -117,7 +117,7 @@ const router = createBrowserRouter([
       { path: '/admin/users', element: <UsersPage /> },
       { path: '/admin/leagues/:id', element: <LeagueDetailsPage /> },
       { path: '/admin/leagues/:leagueId/teams/:id', element: <TeamDetailsPage /> },
-      { path: '/admin/seasons/:id', element: <SeasonDetailsPage /> },
+      { path: '/admin/leagues/:leagueId/seasons/:id', element: <SeasonDetailsPage /> },
     ],
   },
   {
