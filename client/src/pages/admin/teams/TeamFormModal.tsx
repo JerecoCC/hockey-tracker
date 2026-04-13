@@ -87,7 +87,7 @@ const TeamFormModal = (props: Props) => {
   return (
     <Modal
       open={open}
-      title={editTarget ? 'Edit Team' : 'Add Team'}
+      title={editTarget ? 'Edit Team' : 'Create Team'}
       onClose={onClose}
     >
       <form
@@ -97,7 +97,7 @@ const TeamFormModal = (props: Props) => {
         <LogoUpload
           control={control}
           name="logo"
-          label="Add Team Logo"
+          label="Team Logo"
           disabled={isSubmitting}
         />
         <Field
@@ -162,7 +162,7 @@ const TeamFormModal = (props: Props) => {
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add Team'}
+            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Team'}
           </Button>
         </div>
       </form>

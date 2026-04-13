@@ -58,7 +58,7 @@ const SeasonFormModal = (props: Props) => {
   return (
     <Modal
       open={open}
-      title={editTarget ? 'Edit Season' : 'Add Season'}
+      title={editTarget ? 'Edit Season' : 'Create Season'}
       onClose={onClose}
     >
       <form
@@ -105,7 +105,7 @@ const SeasonFormModal = (props: Props) => {
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add Season'}
+            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Season'}
           </Button>
         </div>
       </form>

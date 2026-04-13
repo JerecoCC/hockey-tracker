@@ -88,7 +88,7 @@ const LeagueFormModal = (props: Props) => {
   return (
     <Modal
       open={open}
-      title={editTarget ? 'Edit League' : 'Add League'}
+      title={editTarget ? 'Edit League' : 'Create League'}
       onClose={onClose}
     >
       <form
@@ -98,7 +98,7 @@ const LeagueFormModal = (props: Props) => {
         <LogoUpload
           control={control}
           name="logo"
-          label="Add League Logo"
+          label="League Logo"
         />
         <Field
           label="Name"
@@ -145,7 +145,7 @@ const LeagueFormModal = (props: Props) => {
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add League'}
+            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
           </Button>
         </div>
       </form>
