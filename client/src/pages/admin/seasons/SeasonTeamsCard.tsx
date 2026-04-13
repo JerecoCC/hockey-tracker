@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
@@ -462,6 +463,7 @@ const SeasonTeamsCard = (props: Props) => {
     className,
   } = props;
 
+  const navigate = useNavigate();
   const [pickerOpen, setPickerOpen] = useState(false);
   const [inlineMode, setInlineMode] = useState<InlineMode>(null);
   const [teamTarget, setTeamTarget] = useState<SeasonGroupRecord | null>(null);
@@ -571,8 +573,18 @@ const SeasonTeamsCard = (props: Props) => {
                       )}
                       <span className={styles.teamListName}>{t.name}</span>
                       <span className={styles.teamCode}>{t.code}</span>
-                      {!isInherited && (
-                        <ActionOverlay className={styles.teamActions}>
+                      <ActionOverlay className={styles.teamActions}>
+                        <Button
+                          variant="outlined"
+                          intent="neutral"
+                          icon="open_in_new"
+                          size="sm"
+                          tooltip="View team"
+                          onClick={() =>
+                            navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`)
+                          }
+                        />
+                        {!isInherited && (
                           <Button
                             variant="outlined"
                             intent="danger"
@@ -582,8 +594,8 @@ const SeasonTeamsCard = (props: Props) => {
                             tooltip="Remove from season"
                             onClick={() => handleRemoveAutoTeam(t.id)}
                           />
-                        </ActionOverlay>
-                      )}
+                        )}
+                      </ActionOverlay>
                     </li>
                   ))}
                 </ul>
