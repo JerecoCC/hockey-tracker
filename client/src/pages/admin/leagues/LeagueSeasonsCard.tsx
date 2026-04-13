@@ -11,6 +11,7 @@ interface Props {
   onAdd: () => void;
   onEdit: (season: LeagueSeasonRecord) => void;
   onDelete: (season: LeagueSeasonRecord) => void;
+  onView: (season: LeagueSeasonRecord) => void;
   className?: string;
 }
 
@@ -25,7 +26,7 @@ const formatDate = (d: string | null) =>
     : '?';
 
 const LeagueSeasonsCard = (props: Props) => {
-  const { seasons, loading, busy, onAdd, onEdit, onDelete, className } = props;
+  const { seasons, loading, busy, onAdd, onEdit, onDelete, onView, className } = props;
   return (
     <Card
       className={className}
@@ -60,6 +61,14 @@ const LeagueSeasonsCard = (props: Props) => {
                   : 'No dates'}
               </span>
               <ActionOverlay className={styles.seasonActions}>
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="open_in_new"
+                  size="sm"
+                  tooltip="View season"
+                  onClick={() => onView(s)}
+                />
                 <Button
                   variant="outlined"
                   intent="accent"

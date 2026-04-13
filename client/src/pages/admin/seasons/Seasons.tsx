@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Table, { Column } from '../../../components/Table/Table';
 import Tooltip from '../../../components/Tooltip/Tooltip';
@@ -35,6 +36,7 @@ const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   });
 
 const SeasonsPage = () => {
+  const navigate = useNavigate();
   const { seasons, loading, busy, addSeason, updateSeason, deleteSeason } = useSeasons();
   const { leagues } = useLeagues();
   const [modalOpen, setModalOpen] = useState(false);
@@ -96,6 +98,14 @@ const SeasonsPage = () => {
       align: 'center',
       render: (s) => (
         <div className={styles.actions}>
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="open_in_new"
+            size="sm"
+            tooltip="View season"
+            onClick={() => navigate(`/admin/seasons/${s.id}`)}
+          />
           <Button
             variant="outlined"
             intent="accent"

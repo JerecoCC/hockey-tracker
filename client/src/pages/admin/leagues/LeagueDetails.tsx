@@ -232,6 +232,7 @@ const LeagueDetailsPage = () => {
                       setConfirmDeleteSeason(s);
                       setConfirmDeleteSeasonOpen(true);
                     }}
+                    onView={(s) => navigate(`/admin/seasons/${s.id}`)}
                   />
                 )}
               </div>

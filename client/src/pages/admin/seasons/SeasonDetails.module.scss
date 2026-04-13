@@ -1,0 +1,325 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Page loader ────────────────────────────────────────────────────────────────
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem $space-lg;
+  gap: $space-lg;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loaderText {
+  color: $text-dim;
+  font-size: $font-base;
+  margin: 0;
+}
+
+// ── 12-column page grid ────────────────────────────────────────────────────────
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: $space-2xl;
+  align-items: start;
+}
+
+@for $i from 1 through 12 {
+  .col#{$i} {
+    grid-column: span #{$i};
+  }
+}
+
+// ── Info grid ──────────────────────────────────────────────────────────────────
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: $space-xl;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+// ── Groups tree ────────────────────────────────────────────────────────────────
+.groupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: start;
+  gap: $space-md;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.groupItem {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  > .groupList {
+    padding: $space-sm $space-md $space-md;
+  }
+}
+
+.groupItemChild {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.groupRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .groupActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.groupRowCollapsed {
+  border-bottom: none;
+}
+
+.groupToggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  color: $text-dim;
+  cursor: pointer;
+  padding: 0;
+  border-radius: $radius-sm;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $text-body;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.groupToggleIcon {
+  transition: transform $transition-base;
+  transform: rotate(-90deg);
+}
+
+.groupToggleIconOpen {
+  transition: transform $transition-base;
+  transform: rotate(0deg);
+}
+
+.groupName {
+  font-size: $font-lg;
+  color: $text-body;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+// Exists so .groupRow:hover can reference it
+.groupActions {
+}
+
+// ── Override / Default badges ──────────────────────────────────────────────────
+.badgeOverride,
+.badgeDefault {
+  display: inline-flex;
+  align-items: center;
+  font-size: $font-xs;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  padding: 2px $space-sm;
+  border-radius: $radius-sm;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.badgeOverride {
+  background: rgba($accent, 0.15);
+  color: $accent;
+  border: 1px solid rgba($accent, 0.3);
+}
+
+.badgeDefault {
+  background: rgba(255, 255, 255, 0.05);
+  color: $text-dim;
+  border: 1px solid $border;
+}
+
+// ── Team list inside a group ───────────────────────────────────────────────────
+.teamList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.teamListItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.teamListName {
+  font-size: $font-base;
+  color: $text-body;
+}
+
+.teamCode {
+  font-size: $font-xs;
+  color: $text-dim;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.teamLogoThumb {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+}
+
+.teamLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.emptyMsg {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  margin: $space-sm $space-md;
+}
+
+// ── Modal team selector ────────────────────────────────────────────────────────
+.teamSelectList {
+  list-style: none;
+  margin: 0 0 $space-lg;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+}
+
+.teamSelectItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  cursor: pointer;
+  user-select: none;
+  transition: background $transition-fast;
+
+  &:hover,
+  &[data-selected="true"] {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.teamCheckbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 2px solid $border;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $bg-card;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &[data-checked="true"] {
+    background: $text-bright;
+    border-color: $text-bright;
+  }
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-top: $space-sm;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
