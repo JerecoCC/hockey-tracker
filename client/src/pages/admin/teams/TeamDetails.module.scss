@@ -101,6 +101,87 @@
   text-align: center;
 }
 
+// ── Team history tab ───────────────────────────────────────────────────
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md $space-lg;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+}
+
+.historyLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.15));
+}
+
+.historyLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.historyInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.historyName {
+  font-size: $font-body;
+  font-weight: 600;
+  color: $text-bright;
+}
+
+.historyMeta {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.historyNote {
+  font-size: $font-sm;
+  color: $text-body;
+  font-style: italic;
+}
+
+.historyFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-top: $space-xl;
+}
+
+.historyForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
 // ── League badge ───────────────────────────────────────────────────────
 .leagueBadge {
   display: flex;

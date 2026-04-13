@@ -23,14 +23,20 @@ router.get('/', async (req, res) => {
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at,
         COALESCE(
           json_agg(
-            json_build_object('id', t.id, 'name', t.name, 'code', t.code, 'logo', t.logo)
-            ORDER BY t.name
+            json_build_object('id', t.id, 'name', ti.name, 'code', ti.code, 'logo', ti.logo)
+            ORDER BY ti.name
           ) FILTER (WHERE t.id IS NOT NULL),
           '[]'::json
         ) AS teams
       FROM groups g
       LEFT JOIN group_teams gt ON gt.group_id = g.id
-      LEFT JOIN teams t        ON t.id = gt.team_id
+      LEFT JOIN teams t ON t.id = gt.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
       WHERE g.league_id = ${league_id}
       GROUP BY g.id
       ORDER BY g.parent_id NULLS FIRST, g.sort_order, g.name
@@ -169,11 +175,17 @@ router.put('/:id/teams', async (req, res) => {
     }
 
     const teams = await sql`
-      SELECT t.id, t.name, t.code, t.logo
+      SELECT t.id, ti.name, ti.code, ti.logo
       FROM group_teams gt
       JOIN teams t ON t.id = gt.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
       WHERE gt.group_id = ${id}
-      ORDER BY t.name
+      ORDER BY ti.name
     `;
     return res.json({ group_id: id, teams });
   } catch (err) {

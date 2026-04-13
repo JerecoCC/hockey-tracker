@@ -75,10 +75,18 @@ router.get('/:id', async (req, res) => {
 
     const [teams, seasons] = await Promise.all([
       sql`
-        SELECT id, name, code, description, location, logo, league_id, created_at
-        FROM teams
-        WHERE league_id = ${id}
-        ORDER BY name ASC
+        SELECT
+          t.id, t.description, t.location, t.league_id, t.created_at,
+          ti.name, ti.code, ti.logo
+        FROM teams t
+        LEFT JOIN LATERAL (
+          SELECT name, code, logo FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) ti ON true
+        WHERE t.league_id = ${id}
+        ORDER BY ti.name ASC
       `,
       sql`
         SELECT id, name, league_id,

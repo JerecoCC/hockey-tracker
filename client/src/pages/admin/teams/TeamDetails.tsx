@@ -10,6 +10,7 @@ import TeamInfoTab from './TeamInfoTab';
 import TeamGamesTab from './TeamGamesTab';
 import TeamRosterTab from './TeamRosterTab';
 import TeamProspectsTab from './TeamProspectsTab';
+import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
@@ -78,6 +79,19 @@ const TeamDetailsPage = () => {
           { label: 'Games', content: <TeamGamesTab /> },
           { label: 'Roster', content: <TeamRosterTab /> },
           { label: 'Prospects', content: <TeamProspectsTab /> },
+          {
+            label: 'History',
+            content: (
+              <TeamHistoryTab
+                teamId={team.id}
+                leagueId={team.league_id}
+                teamName={team.name}
+                teamCode={team.code}
+                teamLogo={team.logo}
+                uploadLogo={uploadLogo}
+              />
+            ),
+          },
         ]}
       />
     </>

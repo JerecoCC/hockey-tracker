@@ -45,13 +45,23 @@ router.post('/upload', upload.single('logo'), async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/teams  – list all teams
+// name/code/logo resolved from the latest base iteration (season_id IS NULL first).
 // ---------------------------------------------------------------------------
 router.get('/', async (_req, res) => {
   try {
     const teams = await sql`
-      SELECT id, name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color, created_at
-      FROM teams
-      ORDER BY name ASC
+      SELECT
+        t.id, t.description, t.location, t.city, t.home_arena,
+        t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
+        ti.name, ti.code, ti.logo
+      FROM teams t
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      ORDER BY ti.name ASC
     `;
     return res.json(teams);
   } catch (err) {
@@ -67,10 +77,19 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT t.id, t.name, t.code, t.description, t.location, t.city, t.home_arena, t.logo, t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
-             l.primary_color AS league_primary_color, l.text_color AS league_text_color
+      SELECT
+        t.id, t.description, t.location, t.city, t.home_arena,
+        t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
+        ti.name, ti.code, ti.logo,
+        l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+        l.primary_color AS league_primary_color, l.text_color AS league_text_color
       FROM teams t
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
       LEFT JOIN leagues l ON l.id = t.league_id
       WHERE t.id = ${id}
     `;
@@ -83,7 +102,7 @@ router.get('/:id', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/admin/teams  – create a team
+// POST /api/admin/teams  – create a team + auto-create its base iteration
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
   const { name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color } = req.body;
@@ -95,31 +114,46 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'code is required' });
   }
   try {
-    const rows = await sql`
-      INSERT INTO teams (name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color)
+    // Insert the team record (no name/code/logo — those live in iterations)
+    const teamRows = await sql`
+      INSERT INTO teams (description, location, city, home_arena, league_id, primary_color, secondary_color, text_color)
       VALUES (
-        ${name.trim()},
-        ${code.trim().toUpperCase()},
         ${description ?? null},
         ${location ?? null},
         ${city ?? null},
         ${home_arena ?? null},
-        ${logo ?? null},
         ${league_id ?? null},
         ${primary_color ?? '#334155'},
         ${secondary_color ?? '#1e293b'},
         ${text_color ?? '#ffffff'}
       )
-      RETURNING id, name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color, created_at
+      RETURNING id
     `;
-    return res.status(201).json(rows[0]);
+    const teamId = teamRows[0].id;
+
+    // Auto-create the base iteration (season_id = NULL = current identity)
+    await sql`
+      INSERT INTO team_iterations (team_id, season_id, name, code, logo)
+      VALUES (${teamId}, NULL, ${name.trim()}, ${code.trim().toUpperCase()}, ${logo ?? null})
+    `;
+
+    // Return the full team with resolved identity
+    const full = await sql`
+      SELECT
+        t.id, t.description, t.location, t.city, t.home_arena,
+        t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
+        ti.name, ti.code, ti.logo
+      FROM teams t
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      WHERE t.id = ${teamId}
+    `;
+    return res.status(201).json(full[0]);
   } catch (err) {
-    if (err.code === '23505') {
-      const msg = err.detail?.includes('(code)')
-        ? 'A team with that code already exists in this league'
-        : 'A unique constraint was violated';
-      return res.status(409).json({ error: msg });
-    }
     if (err.code === '23503') {
       return res.status(400).json({ error: 'The specified league does not exist' });
     }
@@ -130,14 +164,16 @@ router.post('/', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/teams/:id  – update a team
+// name/code/logo  → update (or create) the base iteration (season_id IS NULL)
+// everything else → update the teams row directly
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color } = req.body;
-  const logoInBody             = 'logo'             in req.body;
-  const primaryColorInBody     = 'primary_color'    in req.body;
-  const secondaryColorInBody   = 'secondary_color'  in req.body;
-  const textColorInBody        = 'text_color'       in req.body;
+  const logoInBody           = 'logo'           in req.body;
+  const primaryColorInBody   = 'primary_color'  in req.body;
+  const secondaryColorInBody = 'secondary_color' in req.body;
+  const textColorInBody      = 'text_color'     in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -147,36 +183,205 @@ router.patch('/:id', async (req, res) => {
   }
 
   try {
-    const rows = await sql`
-      UPDATE teams
-      SET
-        name          = COALESCE(${name?.trim() ?? null}, name),
-        code          = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
-        description   = COALESCE(${description ?? null}, description),
-        location      = COALESCE(${location ?? null}, location),
-        city          = COALESCE(${city ?? null}, city),
-        home_arena    = COALESCE(${home_arena ?? null}, home_arena),
-        logo            = CASE WHEN ${logoInBody}           THEN ${logo ?? null}                      ELSE logo            END,
-        league_id       = COALESCE(${league_id ?? null}, league_id),
-        primary_color   = CASE WHEN ${primaryColorInBody}   THEN ${primary_color   || '#334155'}      ELSE primary_color   END,
-        secondary_color = CASE WHEN ${secondaryColorInBody} THEN ${secondary_color || '#1e293b'}      ELSE secondary_color END,
-        text_color      = CASE WHEN ${textColorInBody}      THEN ${text_color      || '#ffffff'}      ELSE text_color      END
-      WHERE id = ${id}
-      RETURNING id, name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color, created_at
-    `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Team not found' });
-    return res.json(rows[0]);
-  } catch (err) {
-    if (err.code === '23505') {
-      const msg = err.detail?.includes('(code)')
-        ? 'A team with that code already exists in this league'
-        : 'A unique constraint was violated';
-      return res.status(409).json({ error: msg });
+    // Verify team exists
+    const exists = await sql`SELECT id FROM teams WHERE id = ${id}`;
+    if (exists.length === 0) return res.status(404).json({ error: 'Team not found' });
+
+    // ── Identity fields → base iteration (season_id IS NULL) ───────────────
+    const hasIdentity = name !== undefined || code !== undefined || logoInBody;
+    if (hasIdentity) {
+      const baseIter = await sql`
+        SELECT id FROM team_iterations
+        WHERE team_id = ${id} AND season_id IS NULL
+        ORDER BY recorded_at DESC
+        LIMIT 1
+      `;
+      if (baseIter.length > 0) {
+        await sql`
+          UPDATE team_iterations SET
+            name = COALESCE(${name?.trim() ?? null}, name),
+            code = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
+            logo = CASE WHEN ${logoInBody} THEN ${logo ?? null} ELSE logo END
+          WHERE id = ${baseIter[0].id}
+        `;
+      } else {
+        await sql`
+          INSERT INTO team_iterations (team_id, season_id, name, code, logo)
+          VALUES (
+            ${id}, NULL,
+            ${name?.trim() ?? ''},
+            ${code ? code.trim().toUpperCase() : ''},
+            ${logoInBody ? (logo ?? null) : null}
+          )
+        `;
+      }
     }
+
+    // ── Non-identity fields → teams table ──────────────────────────────────
+    await sql`
+      UPDATE teams SET
+        description     = COALESCE(${description     ?? null}, description),
+        location        = COALESCE(${location        ?? null}, location),
+        city            = COALESCE(${city            ?? null}, city),
+        home_arena      = COALESCE(${home_arena      ?? null}, home_arena),
+        league_id       = COALESCE(${league_id       ?? null}, league_id),
+        primary_color   = CASE WHEN ${primaryColorInBody}   THEN ${primary_color   || '#334155'} ELSE primary_color   END,
+        secondary_color = CASE WHEN ${secondaryColorInBody} THEN ${secondary_color || '#1e293b'} ELSE secondary_color END,
+        text_color      = CASE WHEN ${textColorInBody}      THEN ${text_color      || '#ffffff'}  ELSE text_color      END
+      WHERE id = ${id}
+    `;
+
+    // Return full team with resolved identity
+    const full = await sql`
+      SELECT
+        t.id, t.description, t.location, t.city, t.home_arena,
+        t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
+        ti.name, ti.code, ti.logo
+      FROM teams t
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      WHERE t.id = ${id}
+    `;
+    return res.json(full[0]);
+  } catch (err) {
     if (err.code === '23503') {
       return res.status(400).json({ error: 'The specified league does not exist' });
     }
     console.error('teams update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/teams/:id/iterations  – list recorded identity snapshots
+// ---------------------------------------------------------------------------
+router.get('/:id/iterations', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        ti.id, ti.team_id, ti.season_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
+        s.start_date::text AS season_start_date,
+        s.end_date::text   AS season_end_date
+      FROM team_iterations ti
+      LEFT JOIN seasons s ON s.id = ti.season_id
+      WHERE ti.team_id = ${id}
+      ORDER BY s.start_date DESC NULLS LAST, ti.recorded_at DESC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('team iterations list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/teams/:id/iterations  – record a new identity snapshot
+// Body: { name, code?, logo?, season_id?, note? }
+// ---------------------------------------------------------------------------
+router.post('/:id/iterations', async (req, res) => {
+  const { id } = req.params;
+  const { name, code, logo, season_id, note } = req.body;
+
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return res.status(400).json({ error: 'name is required' });
+  }
+
+  try {
+    const teamRows = await sql`SELECT id FROM teams WHERE id = ${id}`;
+    if (teamRows.length === 0) return res.status(404).json({ error: 'Team not found' });
+
+    const rows = await sql`
+      INSERT INTO team_iterations (team_id, season_id, name, code, logo, note)
+      VALUES (
+        ${id},
+        ${season_id ?? null},
+        ${name.trim()},
+        ${code ? code.trim().toUpperCase() : null},
+        ${logo ?? null},
+        ${note?.trim() ?? null}
+      )
+      RETURNING id
+    `;
+    const full = await sql`
+      SELECT
+        ti.id, ti.team_id, ti.season_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
+        s.start_date::text AS season_start_date,
+        s.end_date::text   AS season_end_date
+      FROM team_iterations ti
+      LEFT JOIN seasons s ON s.id = ti.season_id
+      WHERE ti.id = ${rows[0].id}
+    `;
+    return res.status(201).json(full[0]);
+  } catch (err) {
+    console.error('team iterations create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/teams/:id/iterations/:iterationId  – update a snapshot
+// Body: { name?, code?, logo?, season_id?, note? }
+// ---------------------------------------------------------------------------
+router.patch('/:id/iterations/:iterationId', async (req, res) => {
+  const { id, iterationId } = req.params;
+  const { name, code, logo, season_id, note } = req.body;
+  const logoInBody      = 'logo'      in req.body;
+  const seasonIdInBody  = 'season_id' in req.body;
+  const noteInBody      = 'note'      in req.body;
+
+  if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+    return res.status(400).json({ error: 'name cannot be empty' });
+  }
+
+  try {
+    const rows = await sql`
+      UPDATE team_iterations SET
+        name      = COALESCE(${name?.trim() ?? null}, name),
+        code      = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
+        logo      = CASE WHEN ${logoInBody}     THEN ${logo      ?? null} ELSE logo      END,
+        season_id = CASE WHEN ${seasonIdInBody} THEN ${season_id ?? null} ELSE season_id END,
+        note      = CASE WHEN ${noteInBody}     THEN ${note?.trim() ?? null} ELSE note   END
+      WHERE id = ${iterationId} AND team_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Iteration not found' });
+
+    const full = await sql`
+      SELECT
+        ti.id, ti.team_id, ti.season_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
+        s.start_date::text AS season_start_date,
+        s.end_date::text   AS season_end_date
+      FROM team_iterations ti
+      LEFT JOIN seasons s ON s.id = ti.season_id
+      WHERE ti.id = ${iterationId}
+    `;
+    return res.json(full[0]);
+  } catch (err) {
+    console.error('team iterations update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/teams/:id/iterations/:iterationId  – remove a snapshot
+// ---------------------------------------------------------------------------
+router.delete('/:id/iterations/:iterationId', async (req, res) => {
+  const { id, iterationId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM team_iterations
+      WHERE id = ${iterationId} AND team_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Iteration not found' });
+    return res.json({ message: 'Iteration deleted' });
+  } catch (err) {
+    console.error('team iterations delete error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
+import TeamListItem from '../../../components/TeamListItem/TeamListItem';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import Icon from '../../../components/Icon/Icon';
@@ -370,22 +371,12 @@ const GroupNode = (props: GroupNodeProps) => {
       {open && isLeaf && !isEditing && group.teams.length > 0 && (
         <ul className={styles.teamList}>
           {group.teams.map((t) => (
-            <li
+            <TeamListItem
               key={t.id}
-              className={styles.teamListItem}
-            >
-              {t.logo ? (
-                <img
-                  src={t.logo}
-                  alt=""
-                  className={styles.teamLogoThumb}
-                />
-              ) : (
-                <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-              )}
-              <span className={styles.teamListName}>{t.name}</span>
-              <span className={styles.teamCode}>{t.code}</span>
-            </li>
+              logo={t.logo}
+              name={t.name}
+              code={t.code}
+            />
           ))}
         </ul>
       )}
@@ -558,45 +549,37 @@ const SeasonTeamsCard = (props: Props) => {
                 )}
                 <ul className={styles.teamList}>
                   {autoTeams.map((t) => (
-                    <li
+                    <TeamListItem
                       key={t.id}
-                      className={styles.teamListItem}
-                    >
-                      {t.logo ? (
-                        <img
-                          src={t.logo}
-                          alt=""
-                          className={styles.teamLogoThumb}
-                        />
-                      ) : (
-                        <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-                      )}
-                      <span className={styles.teamListName}>{t.name}</span>
-                      <span className={styles.teamCode}>{t.code}</span>
-                      <ActionOverlay className={styles.teamActions}>
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          icon="open_in_new"
-                          size="sm"
-                          tooltip="View team"
-                          onClick={() =>
-                            navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`)
-                          }
-                        />
-                        {!isInherited && (
+                      logo={t.logo}
+                      name={t.name}
+                      code={t.code}
+                      actions={
+                        <>
                           <Button
                             variant="outlined"
-                            intent="danger"
-                            icon="remove_circle_outline"
+                            intent="neutral"
+                            icon="open_in_new"
                             size="sm"
-                            disabled={busy === 'season-teams'}
-                            tooltip="Remove from season"
-                            onClick={() => handleRemoveAutoTeam(t.id)}
+                            tooltip="View team"
+                            onClick={() =>
+                              navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`)
+                            }
                           />
-                        )}
-                      </ActionOverlay>
-                    </li>
+                          {!isInherited && (
+                            <Button
+                              variant="outlined"
+                              intent="danger"
+                              icon="remove_circle_outline"
+                              size="sm"
+                              disabled={busy === 'season-teams'}
+                              tooltip="Remove from season"
+                              onClick={() => handleRemoveAutoTeam(t.id)}
+                            />
+                          )}
+                        </>
+                      }
+                    />
                   ))}
                 </ul>
               </>

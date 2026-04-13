@@ -208,6 +208,55 @@ async function initSchema() {
       is_auto BOOLEAN NOT NULL DEFAULT false
   `;
 
+  // Explicit team identity snapshots — recorded manually, not on every edit.
+  // name/code/logo live here, not on teams.
+  await sql`
+    CREATE TABLE IF NOT EXISTS team_iterations (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      team_id     UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      season_id   UUID REFERENCES seasons(id) ON DELETE SET NULL,
+      name        TEXT NOT NULL,
+      code        TEXT,
+      logo        TEXT,
+      note        TEXT,
+      recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  // Migration: drop legacy effective_from column if it still exists
+  await sql`ALTER TABLE team_iterations DROP COLUMN IF EXISTS effective_from`;
+  // Migration: add columns added after initial creation
+  await sql`
+    ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
+      season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS code TEXT`;
+
+  // Migration: for any existing team that has no base iteration yet,
+  // create one from the teams columns (only runs while those columns still exist).
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'teams' AND column_name = 'name'
+      ) THEN
+        INSERT INTO team_iterations (team_id, season_id, name, code, logo, recorded_at)
+        SELECT t.id, NULL, t.name, t.code, t.logo, NOW()
+        FROM teams t
+        WHERE NOT EXISTS (
+          SELECT 1 FROM team_iterations ti
+          WHERE ti.team_id = t.id AND ti.season_id IS NULL
+        );
+      END IF;
+    END $$
+  `;
+
+  // Migration: drop identity columns from teams (code drop also removes the
+  // teams_code_league_id_key constraint automatically).
+  await sql`ALTER TABLE teams DROP COLUMN IF EXISTS name`;
+  await sql`ALTER TABLE teams DROP COLUMN IF EXISTS code`;
+  await sql`ALTER TABLE teams DROP COLUMN IF EXISTS logo`;
+
   console.log('Database schema ready');
 }
 

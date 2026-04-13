@@ -180,18 +180,30 @@ router.get('/:seasonId/teams', async (req, res) => {
     if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
     const { league_id } = seasonRows[0];
 
-    // 1. Try the current season's explicit roster
+    // 1. Try the current season's explicit roster, versioning identity via season_id match
     const current = await sql`
-      SELECT t.id, t.name, t.code, t.logo, t.primary_color, t.text_color, t.secondary_color,
-             false AS inherited
+      SELECT
+        t.id, iter.name, iter.code, iter.logo,
+        t.primary_color, t.text_color, t.secondary_color,
+        false AS inherited
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
+      LEFT JOIN LATERAL (
+        SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+        LEFT JOIN seasons s ON s.id = ti.season_id
+        WHERE ti.team_id = t.id
+        ORDER BY
+          CASE WHEN ti.season_id = ${seasonId} THEN 0 ELSE 1 END,
+          s.start_date DESC NULLS LAST,
+          ti.recorded_at DESC
+        LIMIT 1
+      ) iter ON true
       WHERE st.season_id = ${seasonId}
-      ORDER BY t.name
+      ORDER BY iter.name
     `;
     if (current.length > 0) return res.json(current);
 
-    // 2. Fall back to the most-recent prior season's roster
+    // 2. Fall back to the most-recent prior season's roster, versioned to that season
     const prevRows = await sql`
       SELECT id FROM seasons
       WHERE league_id = ${league_id}
@@ -201,13 +213,26 @@ router.get('/:seasonId/teams', async (req, res) => {
     `;
     if (prevRows.length === 0) return res.json([]);
 
+    const prevSeasonId = prevRows[0].id;
     const inherited = await sql`
-      SELECT t.id, t.name, t.code, t.logo, t.primary_color, t.text_color, t.secondary_color,
-             true AS inherited
+      SELECT
+        t.id, iter.name, iter.code, iter.logo,
+        t.primary_color, t.text_color, t.secondary_color,
+        true AS inherited
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
-      WHERE st.season_id = ${prevRows[0].id}
-      ORDER BY t.name
+      LEFT JOIN LATERAL (
+        SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+        LEFT JOIN seasons s ON s.id = ti.season_id
+        WHERE ti.team_id = t.id
+        ORDER BY
+          CASE WHEN ti.season_id = ${prevSeasonId} THEN 0 ELSE 1 END,
+          s.start_date DESC NULLS LAST,
+          ti.recorded_at DESC
+        LIMIT 1
+      ) iter ON true
+      WHERE st.season_id = ${prevSeasonId}
+      ORDER BY iter.name
     `;
     return res.json(inherited);
   } catch (err) {
@@ -290,11 +315,19 @@ router.put('/:seasonId/teams', async (req, res) => {
     }
 
     const teams = await sql`
-      SELECT t.id, t.name, t.code, t.logo, t.primary_color, t.text_color, t.secondary_color
+      SELECT
+        t.id, ti.name, ti.code, ti.logo,
+        t.primary_color, t.text_color, t.secondary_color
       FROM group_teams gt
       JOIN teams t ON t.id = gt.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
       WHERE gt.group_id = ${autoGroupId}
-      ORDER BY t.name
+      ORDER BY ti.name
     `;
     return res.json({ season_id: seasonId, auto_group_id: autoGroupId, teams });
   } catch (err) {
@@ -354,31 +387,26 @@ router.get('/:seasonId/groups', async (req, res) => {
           WHERE season_id = (SELECT id FROM prev)
             AND group_id NOT IN (SELECT group_id FROM cur_overrides)
         ),
+        -- resolved: membership + source only (name/logo resolved later via versioned CTE)
         resolved AS (
           -- 1. Current season explicit override (user groups)
-          SELECT sgt.group_id, t.id AS team_id, t.name, t.code, t.logo,
-                 'season' AS src
+          SELECT sgt.group_id, sgt.team_id, 'season' AS src
           FROM season_group_teams sgt
-          JOIN teams t ON t.id = sgt.team_id
           WHERE sgt.season_id = ${seasonId}
 
           UNION ALL
 
           -- 2. Inherited from the previous season (user groups not overridden this season)
-          SELECT sgt.group_id, t.id, t.name, t.code, t.logo,
-                 'inherited' AS src
+          SELECT sgt.group_id, sgt.team_id, 'inherited' AS src
           FROM season_group_teams sgt
-          JOIN teams t ON t.id = sgt.team_id
           WHERE sgt.season_id = (SELECT id FROM prev)
             AND sgt.group_id NOT IN (SELECT group_id FROM cur_overrides)
 
           UNION ALL
 
           -- 3. League default (user groups untouched by either season, not auto groups)
-          SELECT gt.group_id, t.id, t.name, t.code, t.logo,
-                 'default' AS src
+          SELECT gt.group_id, gt.team_id, 'default' AS src
           FROM group_teams gt
-          JOIN teams t ON t.id = gt.team_id
           WHERE gt.group_id NOT IN (SELECT group_id FROM cur_overrides)
             AND gt.group_id NOT IN (SELECT group_id FROM prev_overrides)
             AND gt.group_id NOT IN (SELECT id FROM auto_group)
@@ -387,36 +415,55 @@ router.get('/:seasonId/groups', async (req, res) => {
           UNION ALL
 
           -- 4a. Auto group for this season — teams from group_teams directly
-          SELECT gt.group_id, t.id, t.name, t.code, t.logo,
-                 'auto' AS src
+          SELECT gt.group_id, gt.team_id, 'auto' AS src
           FROM group_teams gt
-          JOIN teams t ON t.id = gt.team_id
           WHERE gt.group_id = (SELECT id FROM auto_group)
 
           UNION ALL
 
           -- 4b. Previous season's auto group — shown when this season has no auto group yet
-          SELECT gt.group_id, t.id, t.name, t.code, t.logo,
-                 'inherited' AS src
+          SELECT gt.group_id, gt.team_id, 'inherited' AS src
           FROM group_teams gt
-          JOIN teams t ON t.id = gt.team_id
           WHERE gt.group_id = (SELECT id FROM prev_auto_group)
             AND NOT EXISTS (SELECT 1 FROM auto_group)
+        ),
+        -- versioned: resolve name/code/logo via season_id match, falling back to
+        -- the most recent prior iteration ordered by the linked season's start_date.
+        versioned AS (
+          SELECT
+            r.group_id,
+            r.team_id,
+            r.src,
+            iter.name,
+            iter.code,
+            iter.logo
+          FROM resolved r
+          JOIN teams t ON t.id = r.team_id
+          LEFT JOIN LATERAL (
+            SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+            LEFT JOIN seasons s ON s.id = ti.season_id
+            WHERE ti.team_id = t.id
+            ORDER BY
+              CASE WHEN ti.season_id = ${seasonId} THEN 0 ELSE 1 END,
+              s.start_date DESC NULLS LAST,
+              ti.recorded_at DESC
+            LIMIT 1
+          ) iter ON true
         )
       SELECT
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at,
         g.is_auto,
         COALESCE(
           json_agg(
-            json_build_object('id', r.team_id, 'name', r.name, 'code', r.code, 'logo', r.logo)
-            ORDER BY r.name
-          ) FILTER (WHERE r.team_id IS NOT NULL),
+            json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo)
+            ORDER BY v.name
+          ) FILTER (WHERE v.team_id IS NOT NULL),
           '[]'::json
         ) AS teams,
-        BOOL_OR(r.src = 'season')    AS has_season_override,
-        BOOL_OR(r.src = 'inherited') AS is_inherited
+        BOOL_OR(v.src = 'season')    AS has_season_override,
+        BOOL_OR(v.src = 'inherited') AS is_inherited
       FROM groups g
-      LEFT JOIN resolved r ON r.group_id = g.id
+      LEFT JOIN versioned v ON v.group_id = g.id
       WHERE
         -- User groups (league-scoped, no season_id)
         (g.league_id = ${league_id} AND g.season_id IS NULL)
@@ -470,11 +517,17 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
     }
 
     const teams = await sql`
-      SELECT t.id, t.name, t.code, t.logo
+      SELECT t.id, ti.name, ti.code, ti.logo
       FROM season_group_teams sgt
       JOIN teams t ON t.id = sgt.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
       WHERE sgt.season_id = ${seasonId} AND sgt.group_id = ${groupId}
-      ORDER BY t.name
+      ORDER BY ti.name
     `;
     return res.json({ season_id: seasonId, group_id: groupId, teams });
   } catch (err) {
