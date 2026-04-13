@@ -42,7 +42,7 @@ const SeasonTeamOverrideModal = (props: Props) => {
     if (ok) onClose();
   };
 
-  const title = group ? `Override Teams for "${group.name}"` : 'Override Teams';
+  const title = group ? `Set Season Teams — ${group.name}` : 'Set Season Teams';
 
   return (
     <Modal
@@ -106,7 +106,9 @@ const SeasonTeamOverrideModal = (props: Props) => {
           disabled={saving || leagueTeams.length === 0}
           onClick={handleSave}
         >
-          {saving ? 'Saving…' : `Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`}
+          {saving
+            ? 'Saving…'
+            : `Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`}
         </Button>
       </div>
     </Modal>

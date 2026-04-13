@@ -113,6 +113,16 @@ async function initSchema() {
     )
   `;
 
+  // Which teams are participating in a given season (season-level roster)
+  await sql`
+    CREATE TABLE IF NOT EXISTS season_teams (
+      season_id  UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      team_id    UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (season_id, team_id)
+    )
+  `;
+
   // Add primary_color and text_color to teams
   await sql`
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS primary_color TEXT NOT NULL DEFAULT '#334155'

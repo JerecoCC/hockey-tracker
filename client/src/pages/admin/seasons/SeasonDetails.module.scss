@@ -202,6 +202,7 @@
 }
 
 .teamListItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $space-md;
@@ -211,7 +212,20 @@
 
   &:hover {
     background: rgba(255, 255, 255, 0.04);
+
+    .teamActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
+}
+
+// Exists so .teamListItem:hover can reference it
+.teamActions {
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
 }
 
 .teamListName {
@@ -316,6 +330,97 @@
   justify-content: flex-end;
   gap: $space-md;
   margin-top: $space-sm;
+}
+
+// ── Inline group name add / edit ───────────────────────────────────────────────
+.groupInlineRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+}
+
+.groupInlineInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid $accent;
+  outline: none;
+  font-size: $font-lg;
+  color: $text-body;
+  padding: 2px 0;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+.groupInlineBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.06);
+  color: $text-body;
+  cursor: pointer;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.groupInlineBtnCancel {
+  color: $text-dim;
+}
+
+// Spans full grid width so the inline-add row fills the row
+.groupItemSpanFull {
+  grid-column: 1 / -1;
+}
+
+// Footer inside a leaf group — houses Set Season Teams + Reset buttons
+.groupFooter {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+// ── Card header action wrapper (when multiple buttons) ────────────────────────
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+// ── Groups section within the Teams card ──────────────────────────────────────
+.groupsSection {
+  margin-top: $space-xl;
+  border-top: 1px solid $border;
+  padding-top: $space-md;
+}
+
+.sectionLabel {
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: $text-dim;
+  margin: 0 $space-md $space-md;
 }
 
 @keyframes spin {

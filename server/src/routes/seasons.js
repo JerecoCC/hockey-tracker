@@ -168,6 +168,70 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:seasonId/teams
+// Returns the list of teams that are participating in this season.
+// ---------------------------------------------------------------------------
+router.get('/:seasonId/teams', async (req, res) => {
+  const { seasonId } = req.params;
+  try {
+    const seasonRows = await sql`SELECT id FROM seasons WHERE id = ${seasonId}`;
+    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+
+    const teams = await sql`
+      SELECT t.id, t.name, t.code, t.logo, t.primary_color, t.text_color, t.secondary_color
+      FROM season_teams st
+      JOIN teams t ON t.id = st.team_id
+      WHERE st.season_id = ${seasonId}
+      ORDER BY t.name
+    `;
+    return res.json(teams);
+  } catch (err) {
+    console.error('season teams list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/seasons/:seasonId/teams
+// Replace the full list of teams for this season.  Body: { team_ids: string[] }
+// ---------------------------------------------------------------------------
+router.put('/:seasonId/teams', async (req, res) => {
+  const { seasonId } = req.params;
+  const { team_ids } = req.body;
+
+  if (!Array.isArray(team_ids)) {
+    return res.status(400).json({ error: 'team_ids must be an array' });
+  }
+
+  try {
+    const seasonRows = await sql`SELECT id FROM seasons WHERE id = ${seasonId}`;
+    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+
+    await sql`DELETE FROM season_teams WHERE season_id = ${seasonId}`;
+    for (const team_id of team_ids) {
+      await sql`
+        INSERT INTO season_teams (season_id, team_id)
+        VALUES (${seasonId}, ${team_id})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+
+    const teams = await sql`
+      SELECT t.id, t.name, t.code, t.logo, t.primary_color, t.text_color, t.secondary_color
+      FROM season_teams st
+      JOIN teams t ON t.id = st.team_id
+      WHERE st.season_id = ${seasonId}
+      ORDER BY t.name
+    `;
+    return res.json({ season_id: seasonId, teams });
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'One or more teams not found' });
+    console.error('season teams update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/seasons/:seasonId/groups
 // Returns all groups for the season's league with resolved teams:
 //   – if a season-specific override exists for (season, group) → use those teams

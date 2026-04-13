@@ -3,10 +3,10 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
+import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeasonDetails';
-import SeasonGroupsCard from './SeasonGroupsCard';
-import SeasonTeamOverrideModal from './SeasonTeamOverrideModal';
+import SeasonTeamsCard from './SeasonTeamsCard';
 import styles from './SeasonDetails.module.scss';
 
 const US_DATE = new Intl.DateTimeFormat('en-US', {
@@ -23,10 +23,23 @@ const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
   const navigate = useNavigate();
 
-  const { season, groups, leagueTeams, loading, busy, setSeasonGroupTeams, resetSeasonGroupTeams } =
-    useSeasonDetails(id);
+  const {
+    season,
+    groups,
+    seasonTeams,
+    leagueTeams,
+    loading,
+    busy,
+    groupBusy,
+    setSeasonTeams,
+    setSeasonGroupTeams,
+    resetSeasonGroupTeams,
+    addGroup,
+    updateGroup,
+    deleteGroup,
+  } = useSeasonDetails(id);
 
-  const [overrideTarget, setOverrideTarget] = useState<SeasonGroupRecord | null>(null);
+  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
 
   const leagueHref = `/admin/leagues/${leagueId}`;
 
@@ -99,26 +112,42 @@ const SeasonDetailsPage = () => {
           </div>
         </Card>
 
-        {/* ── Season groups ──────────────────────────────────────────────── */}
-        <SeasonGroupsCard
+        {/* ── Teams + Groups ─────────────────────────────────────────────── */}
+        <SeasonTeamsCard
           className={styles.col12}
+          seasonTeams={seasonTeams}
           groups={groups}
+          leagueTeams={leagueTeams}
           loading={loading}
           busy={busy}
-          onOverride={setOverrideTarget}
-          onReset={resetSeasonGroupTeams}
+          groupBusy={groupBusy}
+          setSeasonTeams={setSeasonTeams}
+          setSeasonGroupTeams={setSeasonGroupTeams}
+          resetSeasonGroupTeams={resetSeasonGroupTeams}
+          addGroup={addGroup}
+          updateGroup={updateGroup}
+          onDeleteGroup={setConfirmDeleteGroup}
         />
       </div>
 
-      <SeasonTeamOverrideModal
-        open={overrideTarget !== null}
-        group={overrideTarget}
-        leagueTeams={leagueTeams}
-        onClose={() => setOverrideTarget(null)}
-        onSave={async (groupId, teamIds) => {
-          const ok = await setSeasonGroupTeams(groupId, teamIds);
-          if (ok) setOverrideTarget(null);
-          return ok;
+      <ConfirmModal
+        open={confirmDeleteGroup !== null}
+        title="Delete Division"
+        body={
+          <>
+            Delete <strong>{confirmDeleteGroup?.name}</strong>? This will also remove any
+            sub-divisions and all season team assignments for this division.
+          </>
+        }
+        confirmLabel="Delete"
+        confirmIcon="delete"
+        variant="danger"
+        busy={groupBusy === confirmDeleteGroup?.id}
+        onCancel={() => setConfirmDeleteGroup(null)}
+        onConfirm={async () => {
+          if (!confirmDeleteGroup) return;
+          await deleteGroup(confirmDeleteGroup.id);
+          setConfirmDeleteGroup(null);
         }}
       />
     </>

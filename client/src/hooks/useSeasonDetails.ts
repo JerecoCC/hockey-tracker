@@ -28,7 +28,7 @@ export interface SeasonGroupRecord {
   has_season_override: boolean;
 }
 
-/** Minimal team shape returned by the league endpoint — used for the override modal. */
+/** Minimal team shape returned by the league endpoint — used for pickers. */
 export interface LeagueTeam {
   id: string;
   name: string;
@@ -36,11 +36,19 @@ export interface LeagueTeam {
   logo: string | null;
 }
 
+/** Team record returned by the season teams endpoint. */
+export interface SeasonTeam extends LeagueTeam {
+  primary_color: string;
+  text_color: string;
+  secondary_color: string;
+}
+
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
 const useSeasonDetails = (seasonId: string | undefined) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const [groupBusy, setGroupBusy] = useState<string | null>(null);
 
   // ① Season info (includes league_name, league_code, league_logo)
   const { data: season = null, isLoading: seasonLoading } = useQuery<SeasonRecord | null>({
@@ -97,10 +105,48 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     enabled: !!leagueId,
   });
 
+  // ④ Teams participating in this season
+  const { data: seasonTeams = [], isLoading: seasonTeamsLoading } = useQuery<SeasonTeam[]>({
+    queryKey: ['season-teams', seasonId],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<SeasonTeam[]>(
+          `${API}/admin/seasons/${seasonId}/teams`,
+          { headers: authHeaders() },
+        );
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load season teams'));
+        return [];
+      }
+    },
+    enabled: !!seasonId,
+  });
+
   const leagueTeams: LeagueTeam[] = leagueData?.teams ?? [];
-  const loading = seasonLoading || groupsLoading || (!!leagueId && leagueLoading);
+  const loading =
+    seasonLoading || groupsLoading || (!!leagueId && leagueLoading) || seasonTeamsLoading;
 
   // ── Mutations ────────────────────────────────────────────────────────────────
+
+  const setSeasonTeams = async (teamIds: string[]): Promise<boolean> => {
+    setBusy('season-teams');
+    try {
+      await axios.put(
+        `${API}/admin/seasons/${seasonId}/teams`,
+        { team_ids: teamIds },
+        { headers: authHeaders() },
+      );
+      toast.success('Season roster updated!');
+      await queryClient.invalidateQueries({ queryKey: ['season-teams', seasonId] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update season roster'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
 
   const setSeasonGroupTeams = async (groupId: string, teamIds: string[]): Promise<boolean> => {
     setBusy(groupId);
@@ -139,7 +185,80 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     }
   };
 
-  return { season, groups, leagueTeams, loading, busy, setSeasonGroupTeams, resetSeasonGroupTeams };
+  // ── Group CRUD ───────────────────────────────────────────────────────────────
+  // Groups are league-level entities. Creating / renaming / deleting them here
+  // invalidates both the season-groups view and the league groups cache so
+  // navigating back to the league page shows fresh data.
+
+  const invalidateGroups = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] }),
+      queryClient.invalidateQueries({ queryKey: ['groups', season?.league_id] }),
+    ]);
+  };
+
+  const addGroup = async (data: { name: string; parent_id?: string | null }): Promise<boolean> => {
+    if (!season?.league_id) return false;
+    try {
+      await axios.post(
+        `${API}/admin/groups`,
+        { ...data, league_id: season.league_id },
+        { headers: authHeaders() },
+      );
+      toast.success('Group created!');
+      await invalidateGroups();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to create group'));
+      return false;
+    }
+  };
+
+  const updateGroup = async (groupId: string, payload: { name: string }): Promise<boolean> => {
+    setGroupBusy(groupId);
+    try {
+      await axios.patch(`${API}/admin/groups/${groupId}`, payload, { headers: authHeaders() });
+      toast.success('Group updated!');
+      await invalidateGroups();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update group'));
+      return false;
+    } finally {
+      setGroupBusy(null);
+    }
+  };
+
+  const deleteGroup = async (groupId: string): Promise<boolean> => {
+    setGroupBusy(groupId);
+    try {
+      await axios.delete(`${API}/admin/groups/${groupId}`, { headers: authHeaders() });
+      toast.success('Group deleted');
+      await invalidateGroups();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete group'));
+      return false;
+    } finally {
+      setGroupBusy(null);
+    }
+  };
+
+  return {
+    season,
+    groups,
+    seasonTeams,
+    leagueTeams,
+    loading,
+    busy,
+    groupBusy,
+    setSeasonTeams,
+    setSeasonGroupTeams,
+    resetSeasonGroupTeams,
+    addGroup,
+    updateGroup,
+    deleteGroup,
+  };
 };
 
 export default useSeasonDetails;
