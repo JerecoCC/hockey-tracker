@@ -39,6 +39,7 @@ const TeamInfoTab = (props: Props) => {
       city: '',
       home_arena: '',
       primary_color: '#334155',
+      secondary_color: '#1e293b',
       text_color: '#ffffff',
       description: null,
     },
@@ -53,6 +54,7 @@ const TeamInfoTab = (props: Props) => {
         city: team.city ?? '',
         home_arena: team.home_arena ?? '',
         primary_color: team.primary_color,
+        secondary_color: team.secondary_color,
         text_color: team.text_color,
         description: team.description ?? null,
       });
@@ -85,6 +87,7 @@ const TeamInfoTab = (props: Props) => {
       city: data.city || undefined,
       home_arena: data.home_arena || undefined,
       primary_color: data.primary_color,
+      secondary_color: data.secondary_color,
       text_color: data.text_color,
       description: normalizeDescription(data.description) ?? undefined,
     };
@@ -115,6 +118,7 @@ const TeamInfoTab = (props: Props) => {
           onEdit={() => setEditing(true)}
           swatches={[
             { label: 'Primary', color: team.primary_color },
+            { label: 'Secondary', color: team.secondary_color },
             { label: 'Text', color: team.text_color },
           ]}
           control={control}

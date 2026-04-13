@@ -16,6 +16,7 @@ export interface TeamRecord {
   logo: string | null;
   league_id: string | null;
   primary_color: string;
+  secondary_color: string;
   text_color: string;
   created_at: string;
 }
@@ -30,6 +31,7 @@ export interface CreateTeamData {
   logo?: string | null;
   league_id?: string | null;
   primary_color?: string;
+  secondary_color?: string;
   text_color?: string;
 }
 

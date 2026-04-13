@@ -102,6 +102,12 @@ function EntityHeader<T extends FieldValues = FieldValues>(props: Props<T>) {
             />
             <Field
               type="color"
+              label="Secondary Color"
+              control={control!}
+              name="secondary_color"
+            />
+            <Field
+              type="color"
               label="Text Color"
               control={control!}
               name="text_color"

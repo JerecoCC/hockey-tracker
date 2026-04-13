@@ -14,6 +14,7 @@ export interface FormValues {
   city: string;
   home_arena: string;
   primary_color: string;
+  secondary_color: string;
   text_color: string;
   description: string | null;
 }
