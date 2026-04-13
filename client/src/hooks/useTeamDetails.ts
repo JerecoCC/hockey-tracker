@@ -25,6 +25,12 @@ export interface TeamDetailRecord {
   league_primary_color: string | null;
   league_text_color: string | null;
   created_at: string;
+  start_season_id: string | null;
+  latest_season_id: string | null;
+  /** start_date of the first season this team was added to */
+  start_season_start_date: string | null;
+  /** end_date of the most recent season this team was added to (null = open-ended / present) */
+  latest_season_end_date: string | null;
 }
 
 const authHeaders = () => {

@@ -9,6 +9,7 @@ import Modal from '../../../components/Modal/Modal';
 import TeamListItem from '../../../components/TeamListItem/TeamListItem';
 import useTeamHistory, { type TeamIteration } from '../../../hooks/useTeamHistory';
 import useSeasons from '../../../hooks/useSeasons';
+import { seasonLabel } from './TeamInfoGrid';
 import styles from './TeamDetails.module.scss';
 
 interface Props {
@@ -17,6 +18,10 @@ interface Props {
   teamName: string;
   teamCode: string;
   teamLogo: string | null;
+  /** start_date of the team's first ever season (drives the subtitle start year) */
+  startSeasonStartDate: string | null;
+  /** end_date of the team's most recent season; null means still active (show "present") */
+  latestSeasonEndDate: string | null;
   uploadLogo: (file: File) => Promise<string | null>;
 }
 
@@ -28,16 +33,16 @@ interface FormValues {
   note: string;
 }
 
-/** Derives a "2024-25" label from season start/end dates. */
-const seasonLabel = (startDate: string | null, endDate: string | null, name: string): string => {
-  if (!startDate) return name;
-  const sy = startDate.slice(0, 4);
-  const ey = endDate?.slice(0, 4);
-  if (!ey || ey === sy) return sy;
-  return `${sy}-${ey.slice(2)}`;
-};
-
-const TeamHistoryTab = ({ teamId, leagueId, teamName, teamCode, teamLogo, uploadLogo }: Props) => {
+const TeamHistoryTab = ({
+  teamId,
+  leagueId,
+  teamName,
+  teamCode,
+  teamLogo,
+  startSeasonStartDate,
+  latestSeasonEndDate,
+  uploadLogo,
+}: Props) => {
   const { iterations, isLoading, busy, addIteration, updateIteration, deleteIteration } =
     useTeamHistory(teamId);
   const { seasons } = useSeasons();
@@ -144,12 +149,11 @@ const TeamHistoryTab = ({ teamId, leagueId, teamName, teamCode, teamLogo, upload
           </p>
         ) : (
           <ul className={styles.historyList}>
-            {iterations.map((iter, index) => {
-              // iterations are newest-first; derive a year-range subtitle
-              const startYear = iter.season_start_date?.slice(0, 4);
-              const newerIter = iterations[index - 1]; // index-1 = the one that superseded this one
-              const endYear =
-                index === 0 ? 'present' : (newerIter?.season_start_date?.slice(0, 4) ?? 'present');
+            {iterations.map((iter) => {
+              // Start year = first year of the team's starting season (team-level field).
+              // End year   = second year of the team's latest season, or "present".
+              const startYear = startSeasonStartDate?.slice(0, 4);
+              const endYear = latestSeasonEndDate?.slice(0, 4) ?? 'present';
               const subtitle = startYear ? `${startYear} – ${endYear}` : undefined;
               return (
                 <TeamListItem

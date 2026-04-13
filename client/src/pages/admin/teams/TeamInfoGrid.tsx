@@ -17,7 +17,27 @@ export interface FormValues {
   secondary_color: string;
   text_color: string;
   description: string | null;
+  start_season_id: string;
+  latest_season_id: string;
 }
+
+export interface SeasonOption {
+  value: string;
+  label: string;
+}
+
+/** Derives a short label like "2024-25" from a season's start/end dates. */
+export const seasonLabel = (
+  startDate: string | null,
+  endDate: string | null,
+  name: string,
+): string => {
+  if (!startDate) return name;
+  const sy = startDate.slice(0, 4);
+  const ey = endDate?.slice(0, 4);
+  if (!ey || ey === sy) return sy;
+  return `${sy}-${ey.slice(2)}`;
+};
 
 const normalizeDescription = (html: string | null | undefined): string | null => {
   if (!html || html === '<p></p>') return null;
@@ -37,6 +57,7 @@ interface EditProps {
   control: Control<FormValues>;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   isSubmitting: boolean;
+  seasonOptions: SeasonOption[];
 }
 
 type Props = ViewProps | EditProps;
@@ -85,7 +106,7 @@ const TeamInfoGrid = (props: Props) => {
   const { team, teamGroupLabels } = props;
 
   if (props.isEditing) {
-    const { control, onSubmit, isSubmitting } = props;
+    const { control, onSubmit, isSubmitting, seasonOptions } = props;
     return (
       <form
         id="team-edit-form"
@@ -107,6 +128,24 @@ const TeamInfoGrid = (props: Props) => {
             control={control}
             name="home_arena"
             placeholder="e.g. Scotiabank Arena"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Starting Season"
+            type="select"
+            control={control}
+            name="start_season_id"
+            options={seasonOptions}
+            placeholder="— None —"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Latest Season"
+            type="select"
+            control={control}
+            name="latest_season_id"
+            options={seasonOptions}
+            placeholder="— None —"
             disabled={isSubmitting}
           />
           <div className={styles.infoItemFull}>
@@ -154,6 +193,16 @@ const TeamInfoGrid = (props: Props) => {
         <div className={styles.infoItem}>
           <span className={styles.infoLabel}>Home Arena</span>
           <span className={styles.infoValue}>{team.home_arena}</span>
+        </div>
+      )}
+      {(team.start_season_start_date || team.latest_season_end_date) && (
+        <div className={styles.infoItem}>
+          <span className={styles.infoLabel}>Active Seasons</span>
+          <span className={styles.infoValue}>
+            {team.start_season_start_date?.slice(0, 4) ?? '?'}
+            {' – '}
+            {team.latest_season_end_date?.slice(0, 4) ?? 'present'}
+          </span>
         </div>
       )}
       <div className={`${styles.infoItem} ${styles.infoItemFull}`}>

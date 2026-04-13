@@ -33,6 +33,8 @@ export interface CreateTeamData {
   primary_color?: string;
   secondary_color?: string;
   text_color?: string;
+  start_season_id?: string | null;
+  latest_season_id?: string | null;
 }
 
 const authHeaders = () => {

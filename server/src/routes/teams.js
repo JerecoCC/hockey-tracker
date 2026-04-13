@@ -82,7 +82,11 @@ router.get('/:id', async (req, res) => {
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
         ti.name, ti.code, ti.logo,
         l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
-        l.primary_color AS league_primary_color, l.text_color AS league_text_color
+        l.primary_color AS league_primary_color, l.text_color AS league_text_color,
+        t.start_season_id,
+        t.latest_season_id,
+        ss.start_date::text AS start_season_start_date,
+        ls.end_date::text   AS latest_season_end_date
       FROM teams t
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
@@ -91,6 +95,8 @@ router.get('/:id', async (req, res) => {
         LIMIT 1
       ) ti ON true
       LEFT JOIN leagues l ON l.id = t.league_id
+      LEFT JOIN seasons ss ON ss.id = t.start_season_id
+      LEFT JOIN seasons ls ON ls.id = t.latest_season_id
       WHERE t.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Team not found' });
@@ -169,11 +175,13 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color } = req.body;
-  const logoInBody           = 'logo'           in req.body;
-  const primaryColorInBody   = 'primary_color'  in req.body;
-  const secondaryColorInBody = 'secondary_color' in req.body;
-  const textColorInBody      = 'text_color'     in req.body;
+  const { name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color, start_season_id, latest_season_id } = req.body;
+  const logoInBody            = 'logo'             in req.body;
+  const primaryColorInBody    = 'primary_color'    in req.body;
+  const secondaryColorInBody  = 'secondary_color'  in req.body;
+  const textColorInBody       = 'text_color'       in req.body;
+  const startSeasonInBody     = 'start_season_id'  in req.body;
+  const latestSeasonInBody    = 'latest_season_id' in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -220,14 +228,16 @@ router.patch('/:id', async (req, res) => {
     // ── Non-identity fields → teams table ──────────────────────────────────
     await sql`
       UPDATE teams SET
-        description     = COALESCE(${description     ?? null}, description),
-        location        = COALESCE(${location        ?? null}, location),
-        city            = COALESCE(${city            ?? null}, city),
-        home_arena      = COALESCE(${home_arena      ?? null}, home_arena),
-        league_id       = COALESCE(${league_id       ?? null}, league_id),
-        primary_color   = CASE WHEN ${primaryColorInBody}   THEN ${primary_color   || '#334155'} ELSE primary_color   END,
-        secondary_color = CASE WHEN ${secondaryColorInBody} THEN ${secondary_color || '#1e293b'} ELSE secondary_color END,
-        text_color      = CASE WHEN ${textColorInBody}      THEN ${text_color      || '#ffffff'}  ELSE text_color      END
+        description      = COALESCE(${description  ?? null}, description),
+        location         = COALESCE(${location     ?? null}, location),
+        city             = COALESCE(${city         ?? null}, city),
+        home_arena       = COALESCE(${home_arena   ?? null}, home_arena),
+        league_id        = COALESCE(${league_id    ?? null}, league_id),
+        primary_color    = CASE WHEN ${primaryColorInBody}   THEN ${primary_color   || '#334155'} ELSE primary_color   END,
+        secondary_color  = CASE WHEN ${secondaryColorInBody} THEN ${secondary_color || '#1e293b'} ELSE secondary_color END,
+        text_color       = CASE WHEN ${textColorInBody}      THEN ${text_color      || '#ffffff'}  ELSE text_color      END,
+        start_season_id  = CASE WHEN ${startSeasonInBody}    THEN ${start_season_id  ?? null}      ELSE start_season_id  END,
+        latest_season_id = CASE WHEN ${latestSeasonInBody}   THEN ${latest_season_id ?? null}      ELSE latest_season_id END
       WHERE id = ${id}
     `;
 

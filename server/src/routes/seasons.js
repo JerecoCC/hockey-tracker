@@ -312,6 +312,27 @@ router.put('/:seasonId/teams', async (req, res) => {
         VALUES (${seasonId}, ${team_id})
         ON CONFLICT DO NOTHING
       `;
+      // Track the first and most-recent season each team has been added to.
+      await sql`
+        UPDATE teams SET
+          start_season_id = CASE
+            WHEN start_season_id IS NULL THEN ${seasonId}::uuid
+            WHEN ${start_date ?? null}::date < (
+              SELECT start_date FROM seasons WHERE id = start_season_id
+            ) THEN ${seasonId}::uuid
+            ELSE start_season_id
+          END,
+          latest_season_id = CASE
+            -- First time ever added: latest must match start
+            WHEN start_season_id IS NULL THEN ${seasonId}::uuid
+            WHEN latest_season_id IS NULL THEN ${seasonId}::uuid
+            WHEN ${start_date ?? null}::date > (
+              SELECT start_date FROM seasons WHERE id = latest_season_id
+            ) THEN ${seasonId}::uuid
+            ELSE latest_season_id
+          END
+        WHERE id = ${team_id}::uuid
+      `;
     }
 
     const teams = await sql`

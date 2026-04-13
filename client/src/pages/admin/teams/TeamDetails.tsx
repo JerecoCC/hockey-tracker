@@ -88,6 +88,8 @@ const TeamDetailsPage = () => {
                 teamName={team.name}
                 teamCode={team.code}
                 teamLogo={team.logo}
+                startSeasonStartDate={team.start_season_start_date}
+                latestSeasonEndDate={team.latest_season_end_date}
                 uploadLogo={uploadLogo}
               />
             ),

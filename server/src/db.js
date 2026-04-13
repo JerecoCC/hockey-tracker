@@ -186,8 +186,12 @@ async function initSchema() {
         EXECUTE 'ALTER TABLE teams DROP CONSTRAINT ' || quote_ident(c_name);
       END IF;
 
-      -- Add the composite constraint if it doesn't already exist
-      IF NOT EXISTS (
+      -- Add the composite constraint only if the code column still exists
+      -- (a later migration drops it, which also removes this constraint automatically)
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'teams' AND column_name = 'code'
+      ) AND NOT EXISTS (
         SELECT 1 FROM information_schema.table_constraints
         WHERE table_name      = 'teams'
           AND constraint_type = 'UNIQUE'
@@ -256,6 +260,16 @@ async function initSchema() {
   await sql`ALTER TABLE teams DROP COLUMN IF EXISTS name`;
   await sql`ALTER TABLE teams DROP COLUMN IF EXISTS code`;
   await sql`ALTER TABLE teams DROP COLUMN IF EXISTS logo`;
+
+  // Track the first and most-recent season a team has been added to.
+  await sql`
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS
+      start_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
+  await sql`
+    ALTER TABLE teams ADD COLUMN IF NOT EXISTS
+      latest_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
 
   console.log('Database schema ready');
 }
