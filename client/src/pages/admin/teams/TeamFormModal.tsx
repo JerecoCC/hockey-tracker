@@ -12,10 +12,6 @@ interface FormValues {
   code: string;
   league_id: string | null;
   logo: File | string | null;
-  city: string;
-  home_arena: string;
-  primary_color: string;
-  text_color: string;
 }
 
 interface Props {
@@ -42,10 +38,6 @@ const TeamFormModal = (props: Props) => {
       code: '',
       league_id: null,
       logo: null,
-      city: '',
-      home_arena: '',
-      primary_color: '#334155',
-      text_color: '#ffffff',
     },
   });
 
@@ -56,10 +48,6 @@ const TeamFormModal = (props: Props) => {
       code: editTarget?.code ?? '',
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       logo: editTarget?.logo ?? null,
-      city: editTarget?.city ?? '',
-      home_arena: editTarget?.home_arena ?? '',
-      primary_color: editTarget?.primary_color ?? '#334155',
-      text_color: editTarget?.text_color ?? '#ffffff',
     });
   }, [open, editTarget, lockedLeagueId, reset]);
 
@@ -75,10 +63,6 @@ const TeamFormModal = (props: Props) => {
       code: data.code,
       logo: logoUrl,
       league_id: data.league_id || null,
-      city: data.city || undefined,
-      home_arena: data.home_arena || undefined,
-      primary_color: data.primary_color,
-      text_color: data.text_color,
     };
     const ok = editTarget ? await updateTeam(editTarget.id, payload) : await addTeam(payload);
     if (ok) onClose();
@@ -120,34 +104,6 @@ const TeamFormModal = (props: Props) => {
           placeholder="e.g. TOR"
           disabled={isSubmitting}
         />
-        <Field
-          label="City"
-          control={control}
-          name="city"
-          placeholder="e.g. Toronto"
-          disabled={isSubmitting}
-        />
-        <Field
-          label="Home Arena"
-          control={control}
-          name="home_arena"
-          placeholder="e.g. Scotiabank Arena"
-          disabled={isSubmitting}
-        />
-        <div className={styles.colorRow}>
-          <Field
-            type="color"
-            label="Primary Color"
-            control={control}
-            name="primary_color"
-          />
-          <Field
-            type="color"
-            label="Text Color"
-            control={control}
-            name="text_color"
-          />
-        </div>
         <div className={styles.formActions}>
           <Button
             type="button"

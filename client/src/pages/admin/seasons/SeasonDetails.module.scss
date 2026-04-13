@@ -167,6 +167,7 @@
 
 // ── Override / Default badges ──────────────────────────────────────────────────
 .badgeOverride,
+.badgeInherited,
 .badgeDefault {
   display: inline-flex;
   align-items: center;
@@ -189,6 +190,26 @@
   background: rgba(255, 255, 255, 0.05);
   color: $text-dim;
   border: 1px solid $border;
+}
+
+.badgeInherited {
+  background: rgba(#f59e0b, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(#f59e0b, 0.28);
+}
+
+.inheritedBanner {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin: 0 0 $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  background: rgba(#f59e0b, 0.07);
+  border: 1px solid rgba(#f59e0b, 0.2);
+  font-size: $font-sm;
+  color: #fbbf24;
+  font-style: italic;
 }
 
 // ── Team list inside a group ───────────────────────────────────────────────────
@@ -409,18 +430,12 @@
 
 // ── Groups section within the Teams card ──────────────────────────────────────
 .groupsSection {
-  margin-top: $space-xl;
-  border-top: 1px solid $border;
-  padding-top: $space-md;
+  // intentionally no border-top/margin — groups render alone when present
 }
 
-.sectionLabel {
-  font-size: $font-xs;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: $text-dim;
-  margin: 0 $space-md $space-md;
+// 1 group → full width; 3 groups → 2 on row 1, last one full width; etc.
+.groupsSection > .groupList > .groupItem:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
 }
 
 @keyframes spin {

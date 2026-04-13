@@ -26,6 +26,8 @@ export interface SeasonGroupRecord {
   teams: GroupTeamRecord[];
   /** True when this group has season-specific team overrides (vs. league defaults). */
   has_season_override: boolean;
+  /** true when teams came from the previous season (no explicit override for this season) */
+  is_inherited: boolean;
 }
 
 /** Minimal team shape returned by the league endpoint — used for pickers. */
@@ -41,6 +43,8 @@ export interface SeasonTeam extends LeagueTeam {
   primary_color: string;
   text_color: string;
   secondary_color: string;
+  /** true when the team was inherited from the previous season (not explicitly set for this one) */
+  inherited: boolean;
 }
 
 // ── Hook ──────────────────────────────────────────────────────────────────────

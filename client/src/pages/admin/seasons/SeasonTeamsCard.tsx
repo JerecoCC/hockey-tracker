@@ -258,8 +258,16 @@ const GroupNode = (props: GroupNodeProps) => {
             />
           </button>
           <span className={styles.groupName}>{group.name}</span>
-          <span className={group.has_season_override ? styles.badgeOverride : styles.badgeDefault}>
-            {group.has_season_override ? 'Season' : 'Default'}
+          <span
+            className={
+              group.has_season_override
+                ? styles.badgeOverride
+                : group.is_inherited
+                  ? styles.badgeInherited
+                  : styles.badgeDefault
+            }
+          >
+            {group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'}
           </span>
           <ActionOverlay className={styles.groupActions}>
             {depth === 0 && !isAddingChild && group.teams.length === 0 && (
@@ -446,7 +454,7 @@ const SeasonTeamsCard = (props: Props) => {
         title="Teams"
         action={
           <div className={styles.cardActions}>
-            {groups.length === 0 && (
+            {!loading && groups.length === 0 && seasonTeams.length === 0 && (
               <Button
                 icon="group_add"
                 size="sm"
@@ -455,7 +463,7 @@ const SeasonTeamsCard = (props: Props) => {
                 Manage Teams
               </Button>
             )}
-            {seasonTeams.length === 0 && (
+            {!loading && seasonTeams.length === 0 && (
               <Button
                 icon="folder_plus"
                 size="sm"
@@ -473,50 +481,64 @@ const SeasonTeamsCard = (props: Props) => {
           <p className={styles.emptyMsg}>Loading…</p>
         ) : (
           <>
-            {/* ── Season roster ── */}
-            {seasonTeams.length === 0 ? (
+            {/* ── Empty state: only when no teams, no groups, and not actively adding a group ── */}
+            {seasonTeams.length === 0 && groups.length === 0 && !isRootAdding && (
               <p className={styles.emptyMsg}>
                 No teams added to this season yet. Use &ldquo;Manage Teams&rdquo; to select teams
                 from the league.
               </p>
-            ) : (
-              <ul className={styles.teamList}>
-                {seasonTeams.map((t) => (
-                  <li
-                    key={t.id}
-                    className={styles.teamListItem}
-                  >
-                    {t.logo ? (
-                      <img
-                        src={t.logo}
-                        alt=""
-                        className={styles.teamLogoThumb}
-                      />
-                    ) : (
-                      <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-                    )}
-                    <span className={styles.teamListName}>{t.name}</span>
-                    <span className={styles.teamCode}>{t.code}</span>
-                    <ActionOverlay className={styles.teamActions}>
-                      <Button
-                        variant="outlined"
-                        intent="danger"
-                        icon="remove_circle_outline"
-                        size="sm"
-                        disabled={busy === 'season-teams'}
-                        tooltip="Remove from season"
-                        onClick={() => handleRemove(t.id)}
-                      />
-                    </ActionOverlay>
-                  </li>
-                ))}
-              </ul>
+            )}
+
+            {/* ── Season roster ── */}
+            {seasonTeams.length > 0 && (
+              <>
+                {seasonTeams.every((t) => t.inherited) && (
+                  <p className={styles.inheritedBanner}>
+                    <Icon
+                      name="history"
+                      size="1em"
+                    />
+                    Inherited from the previous season &mdash; use &ldquo;Manage Teams&rdquo; to set
+                    this season&apos;s roster explicitly.
+                  </p>
+                )}
+                <ul className={styles.teamList}>
+                  {seasonTeams.map((t) => (
+                    <li
+                      key={t.id}
+                      className={styles.teamListItem}
+                    >
+                      {t.logo ? (
+                        <img
+                          src={t.logo}
+                          alt=""
+                          className={styles.teamLogoThumb}
+                        />
+                      ) : (
+                        <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
+                      )}
+                      <span className={styles.teamListName}>{t.name}</span>
+                      <span className={styles.teamCode}>{t.code}</span>
+                      <ActionOverlay className={styles.teamActions}>
+                        <Button
+                          variant="outlined"
+                          intent="danger"
+                          icon="remove_circle_outline"
+                          size="sm"
+                          disabled={busy === 'season-teams'}
+                          tooltip="Remove from season"
+                          onClick={() => handleRemove(t.id)}
+                        />
+                      </ActionOverlay>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
 
             {/* ── Groups section ── */}
             {(roots.length > 0 || isRootAdding) && (
               <div className={styles.groupsSection}>
-                <p className={styles.sectionLabel}>Groups</p>
                 <ul className={styles.groupList}>
                   {roots.map((g) => (
                     <GroupNode
