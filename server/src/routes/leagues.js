@@ -81,7 +81,9 @@ router.get('/:id', async (req, res) => {
         ORDER BY name ASC
       `,
       sql`
-        SELECT id, name, league_id, start_date, end_date, created_at
+        SELECT id, name, league_id,
+               start_date::text AS start_date, end_date::text AS end_date,
+               created_at
         FROM seasons
         WHERE league_id = ${id}
         ORDER BY start_date DESC NULLS LAST, name ASC

@@ -31,7 +31,9 @@ router.use(requireAdmin);
 router.get('/', async (_req, res) => {
   try {
     const seasons = await sql`
-      SELECT s.id, s.name, s.league_id, s.start_date, s.end_date, s.created_at,
+      SELECT s.id, s.name, s.league_id,
+             s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
@@ -51,7 +53,9 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT s.id, s.name, s.league_id, s.start_date, s.end_date, s.created_at,
+      SELECT s.id, s.name, s.league_id,
+             s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
@@ -85,7 +89,7 @@ router.post('/', async (req, res) => {
     const rows = await sql`
       INSERT INTO seasons (name, league_id, start_date, end_date)
       VALUES (${name}, ${league_id}, ${start_date ?? null}, ${end_date ?? null})
-      RETURNING id, name, league_id, start_date, end_date, created_at
+      RETURNING id, name, league_id, start_date::text AS start_date, end_date::text AS end_date, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -106,7 +110,12 @@ router.patch('/:id', async (req, res) => {
 
   try {
     // Fetch the current row so we can merge and re-generate the name
-    const existing = await sql`SELECT * FROM seasons WHERE id = ${id}`;
+    const existing = await sql`
+      SELECT id, name, league_id,
+             start_date::text AS start_date, end_date::text AS end_date,
+             created_at
+      FROM seasons WHERE id = ${id}
+    `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
     const cur = existing[0];
 
@@ -129,7 +138,7 @@ router.patch('/:id', async (req, res) => {
         start_date = ${mergedStartDate},
         end_date   = ${mergedEndDate}
       WHERE id = ${id}
-      RETURNING id, name, league_id, start_date, end_date, created_at
+      RETURNING id, name, league_id, start_date::text AS start_date, end_date::text AS end_date, created_at
     `;
     return res.json(rows[0]);
   } catch (err) {
