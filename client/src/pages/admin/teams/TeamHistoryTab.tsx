@@ -144,15 +144,13 @@ const TeamHistoryTab = ({ teamId, leagueId, teamName, teamCode, teamLogo, upload
           </p>
         ) : (
           <ul className={styles.historyList}>
-            {iterations.map((iter) => {
-              const recorded = new Date(iter.recorded_at).toLocaleDateString(undefined, {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric',
-              });
-              const subtitle = iter.season_id
-                ? `${seasonLabel(iter.season_start_date, iter.season_end_date, 'Season')} · Recorded ${recorded}`
-                : `Recorded ${recorded}`;
+            {iterations.map((iter, index) => {
+              // iterations are newest-first; derive a year-range subtitle
+              const startYear = iter.season_start_date?.slice(0, 4);
+              const newerIter = iterations[index - 1]; // index-1 = the one that superseded this one
+              const endYear =
+                index === 0 ? 'present' : (newerIter?.season_start_date?.slice(0, 4) ?? 'present');
+              const subtitle = startYear ? `${startYear} – ${endYear}` : undefined;
               return (
                 <TeamListItem
                   key={iter.id}

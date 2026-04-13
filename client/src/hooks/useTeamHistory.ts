@@ -10,6 +10,7 @@ export interface TeamIteration {
   team_id: string;
   season_id: string | null;
   name: string;
+  code: string | null;
   logo: string | null;
   note: string | null;
   recorded_at: string;
