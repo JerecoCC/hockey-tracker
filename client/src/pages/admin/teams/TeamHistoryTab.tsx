@@ -18,6 +18,8 @@ interface Props {
   teamName: string;
   teamCode: string;
   teamLogo: string | null;
+  startSeasonId: string | null;
+  latestSeasonId: string | null;
   /** start_date of the team's first ever season (drives the subtitle start year) */
   startSeasonStartDate: string | null;
   /** end_date of the team's most recent season; null means still active (show "present") */
@@ -29,8 +31,9 @@ interface FormValues {
   name: string;
   code: string;
   logo: File | string | null;
-  season_id: string;
   note: string;
+  start_season_id: string;
+  latest_season_id: string;
 }
 
 const TeamHistoryTab = ({
@@ -39,6 +42,8 @@ const TeamHistoryTab = ({
   teamName,
   teamCode,
   teamLogo,
+  startSeasonId,
+  latestSeasonId,
   startSeasonStartDate,
   latestSeasonEndDate,
   uploadLogo,
@@ -73,7 +78,14 @@ const TeamHistoryTab = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { name: '', code: '', logo: null, season_id: '', note: '' },
+    defaultValues: {
+      name: '',
+      code: '',
+      logo: null,
+      note: '',
+      start_season_id: '',
+      latest_season_id: '',
+    },
   });
 
   const closeModal = () => {
@@ -93,18 +105,28 @@ const TeamHistoryTab = ({
 
   useEffect(() => {
     if (!modalOpen) return;
+    const teamStartId = startSeasonId ?? '';
+    const teamLatestId = latestSeasonId ?? '';
     if (editTarget) {
       reset({
         name: editTarget.name,
         code: editTarget.code ?? '',
         logo: editTarget.logo,
-        season_id: editTarget.season_id ?? '',
         note: editTarget.note ?? '',
+        start_season_id: teamStartId,
+        latest_season_id: teamLatestId,
       });
     } else {
-      reset({ name: teamName, code: teamCode, logo: teamLogo, season_id: '', note: '' });
+      reset({
+        name: teamName,
+        code: teamCode,
+        logo: teamLogo,
+        note: '',
+        start_season_id: teamStartId,
+        latest_season_id: teamLatestId,
+      });
     }
-  }, [modalOpen, editTarget, teamName, teamCode, teamLogo, reset]);
+  }, [modalOpen, editTarget, teamName, teamCode, teamLogo, startSeasonId, latestSeasonId, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -117,8 +139,9 @@ const TeamHistoryTab = ({
       name: data.name,
       code: data.code || null,
       logo: logoUrl,
-      season_id: data.season_id || null,
       note: data.note || null,
+      start_season_id: data.start_season_id || null,
+      latest_season_id: data.latest_season_id || null,
     };
     const ok = isEditing
       ? await updateIteration(editTarget.id, payload)
@@ -195,7 +218,7 @@ const TeamHistoryTab = ({
       {/* ── Record / edit version modal ── */}
       <Modal
         open={modalOpen}
-        title={isEditing ? 'Edit Version' : 'Record Version'}
+        title={isEditing ? 'Edit Team Version' : 'Record Version'}
         onClose={closeModal}
       >
         <form
@@ -223,14 +246,26 @@ const TeamHistoryTab = ({
             placeholder="e.g. TOR"
             disabled={isSubmitting}
           />
-          <Field
-            label="Season"
-            type="select"
-            control={control}
-            name="season_id"
-            options={seasonOptions}
-            placeholder="— No season —"
-          />
+          <div className={styles.historyFormRow}>
+            <Field
+              label="Starting Season"
+              type="select"
+              control={control}
+              name="start_season_id"
+              options={seasonOptions}
+              placeholder="— None —"
+              disabled={isSubmitting}
+            />
+            <Field
+              label="Latest Season"
+              type="select"
+              control={control}
+              name="latest_season_id"
+              options={seasonOptions}
+              placeholder="— None —"
+              disabled={isSubmitting}
+            />
+          </div>
           <Field
             label="Note"
             type="textarea"

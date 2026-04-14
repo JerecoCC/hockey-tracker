@@ -182,6 +182,16 @@
   gap: $space-lg;
 }
 
+.historyFormRow {
+  display: flex;
+  gap: $space-lg;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 // ── League badge ───────────────────────────────────────────────────────
 .leagueBadge {
   display: flex;

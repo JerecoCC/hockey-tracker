@@ -6,8 +6,7 @@ import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import { type GroupRecord } from '../../../hooks/useLeagueGroups';
 import { type TeamDetailRecord } from '../../../hooks/useTeamDetails';
 import { type CreateTeamData } from '../../../hooks/useTeams';
-import useSeasons from '../../../hooks/useSeasons';
-import TeamInfoGrid, { type FormValues, seasonLabel, type SeasonOption } from './TeamInfoGrid';
+import TeamInfoGrid, { type FormValues } from './TeamInfoGrid';
 import EntityHeader from '../../../components/EntityHeader/EntityHeader';
 
 const normalizeDescription = (html: string | null | undefined): string | null => {
@@ -26,18 +25,6 @@ interface Props {
 const TeamInfoTab = (props: Props) => {
   const { team, groups, uploadLogo, updateTeam, onEditingChange } = props;
   const [isEditing, setIsEditing] = useState(false);
-  const { seasons } = useSeasons();
-
-  // League seasons sorted newest-first, used for the two season selects
-  const seasonOptions: SeasonOption[] = seasons
-    .filter((s) => team.league_id && s.league_id === team.league_id)
-    .sort((a, b) => {
-      if (!a.start_date && !b.start_date) return 0;
-      if (!a.start_date) return 1;
-      if (!b.start_date) return -1;
-      return b.start_date.localeCompare(a.start_date);
-    })
-    .map((s) => ({ value: s.id, label: seasonLabel(s.start_date, s.end_date, s.name) }));
 
   const {
     control,
@@ -55,8 +42,6 @@ const TeamInfoTab = (props: Props) => {
       secondary_color: '#1e293b',
       text_color: '#ffffff',
       description: null,
-      start_season_id: '',
-      latest_season_id: '',
     },
   });
 
@@ -72,8 +57,6 @@ const TeamInfoTab = (props: Props) => {
         secondary_color: team.secondary_color,
         text_color: team.text_color,
         description: team.description ?? null,
-        start_season_id: team.start_season_id ?? '',
-        latest_season_id: team.latest_season_id ?? '',
       });
     }
   }, [isEditing, team, reset]);
@@ -107,8 +90,6 @@ const TeamInfoTab = (props: Props) => {
       secondary_color: data.secondary_color,
       text_color: data.text_color,
       description: normalizeDescription(data.description) ?? undefined,
-      start_season_id: data.start_season_id || null,
-      latest_season_id: data.latest_season_id || null,
     };
     const ok = await updateTeam(team.id, payload);
     if (ok) setEditing(false);
@@ -152,7 +133,6 @@ const TeamInfoTab = (props: Props) => {
           control={control}
           onSubmit={onSubmit}
           isSubmitting={isSubmitting}
-          seasonOptions={seasonOptions}
         />
       </Card>
 

@@ -17,8 +17,6 @@ export interface FormValues {
   secondary_color: string;
   text_color: string;
   description: string | null;
-  start_season_id: string;
-  latest_season_id: string;
 }
 
 export interface SeasonOption {
@@ -57,7 +55,6 @@ interface EditProps {
   control: Control<FormValues>;
   onSubmit: (e: FormEvent<HTMLFormElement>) => void;
   isSubmitting: boolean;
-  seasonOptions: SeasonOption[];
 }
 
 type Props = ViewProps | EditProps;
@@ -106,7 +103,7 @@ const TeamInfoGrid = (props: Props) => {
   const { team, teamGroupLabels } = props;
 
   if (props.isEditing) {
-    const { control, onSubmit, isSubmitting, seasonOptions } = props;
+    const { control, onSubmit, isSubmitting } = props;
     return (
       <form
         id="team-edit-form"
@@ -128,24 +125,6 @@ const TeamInfoGrid = (props: Props) => {
             control={control}
             name="home_arena"
             placeholder="e.g. Scotiabank Arena"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Starting Season"
-            type="select"
-            control={control}
-            name="start_season_id"
-            options={seasonOptions}
-            placeholder="— None —"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Latest Season"
-            type="select"
-            control={control}
-            name="latest_season_id"
-            options={seasonOptions}
-            placeholder="— None —"
             disabled={isSubmitting}
           />
           <div className={styles.infoItemFull}>

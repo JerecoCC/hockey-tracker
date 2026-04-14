@@ -295,7 +295,9 @@ router.get('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/:id/iterations', async (req, res) => {
   const { id } = req.params;
-  const { name, code, logo, season_id, note } = req.body;
+  const { name, code, logo, season_id, note, start_season_id, latest_season_id } = req.body;
+  const startSeasonInBody  = 'start_season_id'  in req.body;
+  const latestSeasonInBody = 'latest_season_id' in req.body;
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -317,6 +319,16 @@ router.post('/:id/iterations', async (req, res) => {
       )
       RETURNING id
     `;
+
+    if (startSeasonInBody || latestSeasonInBody) {
+      await sql`
+        UPDATE teams SET
+          start_season_id  = CASE WHEN ${startSeasonInBody}  THEN ${start_season_id  ?? null} ELSE start_season_id  END,
+          latest_season_id = CASE WHEN ${latestSeasonInBody} THEN ${latest_season_id ?? null} ELSE latest_season_id END
+        WHERE id = ${id}
+      `;
+    }
+
     const full = await sql`
       SELECT
         ti.id, ti.team_id, ti.season_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
@@ -339,10 +351,12 @@ router.post('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id/iterations/:iterationId', async (req, res) => {
   const { id, iterationId } = req.params;
-  const { name, code, logo, season_id, note } = req.body;
-  const logoInBody      = 'logo'      in req.body;
-  const seasonIdInBody  = 'season_id' in req.body;
-  const noteInBody      = 'note'      in req.body;
+  const { name, code, logo, season_id, note, start_season_id, latest_season_id } = req.body;
+  const logoInBody         = 'logo'             in req.body;
+  const seasonIdInBody     = 'season_id'        in req.body;
+  const noteInBody         = 'note'             in req.body;
+  const startSeasonInBody  = 'start_season_id'  in req.body;
+  const latestSeasonInBody = 'latest_season_id' in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -360,6 +374,15 @@ router.patch('/:id/iterations/:iterationId', async (req, res) => {
       RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Iteration not found' });
+
+    if (startSeasonInBody || latestSeasonInBody) {
+      await sql`
+        UPDATE teams SET
+          start_season_id  = CASE WHEN ${startSeasonInBody}  THEN ${start_season_id  ?? null} ELSE start_season_id  END,
+          latest_season_id = CASE WHEN ${latestSeasonInBody} THEN ${latest_season_id ?? null} ELSE latest_season_id END
+        WHERE id = ${id}
+      `;
+    }
 
     const full = await sql`
       SELECT

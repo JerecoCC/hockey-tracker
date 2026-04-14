@@ -26,6 +26,8 @@ export interface AddIterationPayload {
   logo?: string | null;
   season_id?: string | null;
   note?: string | null;
+  start_season_id?: string | null;
+  latest_season_id?: string | null;
 }
 
 export interface UpdateIterationPayload {
@@ -34,6 +36,8 @@ export interface UpdateIterationPayload {
   logo?: string | null;
   season_id?: string | null;
   note?: string | null;
+  start_season_id?: string | null;
+  latest_season_id?: string | null;
 }
 
 const authHeaders = () => {
@@ -76,6 +80,7 @@ const useTeamHistory = (teamId: string | undefined) => {
       });
       toast.success('Version recorded!');
       await queryClient.invalidateQueries({ queryKey: ['team-iterations', teamId] });
+      await queryClient.invalidateQueries({ queryKey: ['team', teamId] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record version'));
@@ -94,6 +99,7 @@ const useTeamHistory = (teamId: string | undefined) => {
       });
       toast.success('Version updated!');
       await queryClient.invalidateQueries({ queryKey: ['team-iterations', teamId] });
+      await queryClient.invalidateQueries({ queryKey: ['team', teamId] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update version'));
