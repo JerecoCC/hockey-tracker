@@ -19,6 +19,8 @@ export interface GroupTeamRecord {
   name: string;
   code: string;
   logo: string | null;
+  primary_color: string;
+  text_color: string;
 }
 
 export interface GroupRecord {

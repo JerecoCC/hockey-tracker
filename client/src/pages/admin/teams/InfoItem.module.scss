@@ -1,0 +1,41 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.item {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+// Spans all columns when placed inside a CSS grid
+.itemFull {
+  grid-column: 1 / -1;
+}
+
+.label {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.value {
+  font-size: $font-body;
+  color: $text-body;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.muted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// Block container for dangerouslySetInnerHTML rich-text content
+.htmlContent {
+  font-size: $font-body;
+  color: $text-body;
+}

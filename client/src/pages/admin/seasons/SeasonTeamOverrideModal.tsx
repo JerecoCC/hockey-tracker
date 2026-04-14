@@ -82,7 +82,12 @@ const SeasonTeamOverrideModal = (props: Props) => {
                     className={styles.teamLogoThumb}
                   />
                 ) : (
-                  <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
+                  <span
+                    className={styles.teamLogoPlaceholder}
+                    style={{ background: t.primary_color, color: t.text_color }}
+                  >
+                    {t.code.slice(0, 3)}
+                  </span>
                 )}
 
                 <span className={styles.teamListName}>{t.name}</span>

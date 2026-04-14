@@ -38,6 +38,8 @@ export interface LeagueTeam {
   name: string;
   code: string;
   logo: string | null;
+  primary_color: string;
+  text_color: string;
 }
 
 /** Team record returned by the season teams endpoint. */

@@ -457,7 +457,9 @@ router.get('/:seasonId/groups', async (req, res) => {
             r.src,
             iter.name,
             iter.code,
-            iter.logo
+            iter.logo,
+            t.primary_color,
+            t.text_color
           FROM resolved r
           JOIN teams t ON t.id = r.team_id
           LEFT JOIN LATERAL (
@@ -476,7 +478,8 @@ router.get('/:seasonId/groups', async (req, res) => {
         g.is_auto,
         COALESCE(
           json_agg(
-            json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo)
+            json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo,
+                              'primary_color', v.primary_color, 'text_color', v.text_color)
             ORDER BY v.name
           ) FILTER (WHERE v.team_id IS NOT NULL),
           '[]'::json
@@ -538,7 +541,7 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
     }
 
     const teams = await sql`
-      SELECT t.id, ti.name, ti.code, ti.logo
+      SELECT t.id, ti.name, ti.code, ti.logo, t.primary_color, t.text_color
       FROM season_group_teams sgt
       JOIN teams t ON t.id = sgt.team_id
       LEFT JOIN LATERAL (

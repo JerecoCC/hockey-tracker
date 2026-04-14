@@ -18,6 +18,8 @@ interface Props {
   teamName: string;
   teamCode: string;
   teamLogo: string | null;
+  primaryColor: string;
+  textColor: string;
   startSeasonId: string | null;
   latestSeasonId: string | null;
   /** start_date of the team's first ever season (drives the subtitle start year) */
@@ -42,6 +44,8 @@ const TeamHistoryTab = ({
   teamName,
   teamCode,
   teamLogo,
+  primaryColor,
+  textColor,
   startSeasonId,
   latestSeasonId,
   startSeasonStartDate,
@@ -184,6 +188,8 @@ const TeamHistoryTab = ({
                   logo={iter.logo}
                   name={iter.name}
                   code={iter.code}
+                  primaryColor={primaryColor}
+                  textColor={textColor}
                   subtitle={subtitle}
                   note={iter.note ?? undefined}
                   actions={

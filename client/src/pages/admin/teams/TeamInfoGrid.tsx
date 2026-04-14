@@ -2,9 +2,9 @@ import type { FormEvent } from 'react';
 import type { Control } from 'react-hook-form';
 import { Controller } from 'react-hook-form';
 import Field from '../../../components/Field/Field';
-import Icon from '../../../components/Icon/Icon';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import { type TeamDetailRecord } from '../../../hooks/useTeamDetails';
+import InfoItem from './InfoItem';
 import styles from './TeamDetails.module.scss';
 
 export interface FormValues {
@@ -60,8 +60,10 @@ interface EditProps {
 type Props = ViewProps | EditProps;
 
 const LeagueBadge = ({ team }: { team: TeamDetailRecord }) => (
-  <div className={styles.infoItem}>
-    <span className={styles.infoLabel}>League</span>
+  <InfoItem
+    type="custom"
+    label="League"
+  >
     {team.league_id ? (
       <div className={styles.leagueBadge}>
         {team.league_logo ? (
@@ -71,19 +73,33 @@ const LeagueBadge = ({ team }: { team: TeamDetailRecord }) => (
             className={styles.leagueLogo}
           />
         ) : (
-          <span className={styles.leagueLogoPlaceholder}>{team.league_code?.slice(0, 3)}</span>
+          <span
+            className={styles.leagueLogoPlaceholder}
+            style={
+              team.league_primary_color
+                ? {
+                    background: team.league_primary_color,
+                    color: team.league_text_color ?? undefined,
+                  }
+                : undefined
+            }
+          >
+            {team.league_code?.slice(0, 3)}
+          </span>
         )}
         <span className={styles.infoValue}>{team.league_name}</span>
       </div>
     ) : (
       <span className={styles.infoValueMuted}>Unassigned</span>
     )}
-  </div>
+  </InfoItem>
 );
 
 const GroupBadge = ({ teamGroupLabels }: { teamGroupLabels: string[] }) => (
-  <div className={styles.infoItem}>
-    <span className={styles.infoLabel}>Group</span>
+  <InfoItem
+    type="custom"
+    label="Group"
+  >
     {teamGroupLabels.length > 0 ? (
       teamGroupLabels.map((label, i) => (
         <span
@@ -96,8 +112,18 @@ const GroupBadge = ({ teamGroupLabels }: { teamGroupLabels: string[] }) => (
     ) : (
       <span className={styles.infoValueMuted}>No groups</span>
     )}
-  </div>
+  </InfoItem>
 );
+
+const ActiveSeasonsBadge = ({ team }: { team: TeamDetailRecord }) => {
+  if (!team.start_season_start_date && !team.latest_season_end_date) return null;
+  return (
+    <InfoItem
+      label="Active Seasons"
+      data={`${team.start_season_start_date?.slice(0, 4) ?? '?'} – ${team.latest_season_end_date?.slice(0, 4) ?? 'present'}`}
+    />
+  );
+};
 
 const TeamInfoGrid = (props: Props) => {
   const { team, teamGroupLabels } = props;
@@ -111,8 +137,11 @@ const TeamInfoGrid = (props: Props) => {
         onSubmit={onSubmit}
       >
         <div className={styles.infoGrid}>
-          <LeagueBadge team={team} />
-          <GroupBadge teamGroupLabels={teamGroupLabels} />
+          <div className={styles.infoBadgeRow}>
+            <LeagueBadge team={team} />
+            <GroupBadge teamGroupLabels={teamGroupLabels} />
+            <ActiveSeasonsBadge team={team} />
+          </div>
           <Field
             label="City"
             control={control}
@@ -127,8 +156,11 @@ const TeamInfoGrid = (props: Props) => {
             placeholder="e.g. Scotiabank Arena"
             disabled={isSubmitting}
           />
-          <div className={styles.infoItemFull}>
-            <span className={styles.infoLabel}>Description</span>
+          <InfoItem
+            type="custom"
+            label="Description"
+            full
+          >
             <Controller
               control={control}
               name="description"
@@ -140,7 +172,7 @@ const TeamInfoGrid = (props: Props) => {
                 />
               )}
             />
-          </div>
+          </InfoItem>
         </div>
       </form>
     );
@@ -148,53 +180,33 @@ const TeamInfoGrid = (props: Props) => {
 
   return (
     <div className={styles.infoGrid}>
-      <LeagueBadge team={team} />
-      <GroupBadge teamGroupLabels={teamGroupLabels} />
-      {team.location && (
-        <div className={styles.infoItem}>
-          <span className={styles.infoLabel}>Location</span>
-          <span className={styles.infoValue}>
-            <Icon
-              name="location_on"
-              size="0.9em"
-            />
-            {team.location}
-          </span>
-        </div>
-      )}
-      {team.city && (
-        <div className={styles.infoItem}>
-          <span className={styles.infoLabel}>City</span>
-          <span className={styles.infoValue}>{team.city}</span>
-        </div>
-      )}
-      {team.home_arena && (
-        <div className={styles.infoItem}>
-          <span className={styles.infoLabel}>Home Arena</span>
-          <span className={styles.infoValue}>{team.home_arena}</span>
-        </div>
-      )}
-      {(team.start_season_start_date || team.latest_season_end_date) && (
-        <div className={styles.infoItem}>
-          <span className={styles.infoLabel}>Active Seasons</span>
-          <span className={styles.infoValue}>
-            {team.start_season_start_date?.slice(0, 4) ?? '?'}
-            {' – '}
-            {team.latest_season_end_date?.slice(0, 4) ?? 'present'}
-          </span>
-        </div>
-      )}
-      <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-        <span className={styles.infoLabel}>Description</span>
-        {normalizeDescription(team.description) ? (
-          <div
-            className={styles.infoValue}
-            dangerouslySetInnerHTML={{ __html: team.description! }}
-          />
-        ) : (
-          <span className={styles.infoValueMuted}>No description</span>
-        )}
+      <div className={styles.infoBadgeRow}>
+        <LeagueBadge team={team} />
+        <GroupBadge teamGroupLabels={teamGroupLabels} />
+        <ActiveSeasonsBadge team={team} />
       </div>
+      <InfoItem
+        label="City"
+        data={team.city ?? '-'}
+      />
+      <InfoItem
+        label="Home Arena"
+        data={team.home_arena ?? '-'}
+      />
+      {team.location && (
+        <InfoItem
+          label="Location"
+          data={team.location}
+          icon="location_on"
+        />
+      )}
+      <InfoItem
+        type="html"
+        label="Description"
+        data={normalizeDescription(team.description) ? team.description : null}
+        muted="No description"
+        full
+      />
     </div>
   );
 };

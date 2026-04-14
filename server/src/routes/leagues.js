@@ -77,6 +77,7 @@ router.get('/:id', async (req, res) => {
       sql`
         SELECT
           t.id, t.description, t.location, t.league_id, t.created_at,
+          t.primary_color, t.secondary_color, t.text_color,
           ti.name, ti.code, ti.logo
         FROM teams t
         LEFT JOIN LATERAL (

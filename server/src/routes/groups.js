@@ -23,7 +23,8 @@ router.get('/', async (req, res) => {
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at,
         COALESCE(
           json_agg(
-            json_build_object('id', t.id, 'name', ti.name, 'code', ti.code, 'logo', ti.logo)
+            json_build_object('id', t.id, 'name', ti.name, 'code', ti.code, 'logo', ti.logo,
+                              'primary_color', t.primary_color, 'text_color', t.text_color)
             ORDER BY ti.name
           ) FILTER (WHERE t.id IS NOT NULL),
           '[]'::json

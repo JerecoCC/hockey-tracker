@@ -84,6 +84,8 @@ const TeamDetailsPage = () => {
                 teamName={team.name}
                 teamCode={team.code}
                 teamLogo={team.logo}
+                primaryColor={team.primary_color}
+                textColor={team.text_color}
                 startSeasonId={team.start_season_id}
                 latestSeasonId={team.latest_season_id}
                 startSeasonStartDate={team.start_season_start_date}

@@ -4,6 +4,7 @@ import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Icon from '../../../components/Icon/Icon';
+import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
 import {
   type CreateGroupData,
   type GroupRecord,
@@ -221,48 +222,36 @@ const GroupNode = (props: GroupNodeProps) => {
       {open && group.teams.length > 0 && !isEditing && (
         <ul className={styles.teamList}>
           {group.teams.map((t) => (
-            <li
+            <ListItem
               key={t.id}
-              className={styles.teamListItem}
-            >
-              {t.logo ? (
-                <img
-                  src={t.logo}
-                  alt=""
-                  className={styles.teamLogoThumb}
-                />
-              ) : (
-                <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-              )}
-              <span className={styles.teamListName}>{t.name}</span>
-              <span className={styles.seasonListDates}>{t.code}</span>
-              <ActionOverlay className={styles.teamActions}>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="open_in_new"
-                  size="sm"
-                  tooltip="View team"
-                  onClick={() => onViewTeam(t.id)}
-                />
-                <Button
-                  variant="outlined"
-                  intent="accent"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit team"
-                  onClick={() => onEditTeam(t.id)}
-                />
-                <Button
-                  variant="outlined"
-                  intent="danger"
-                  icon="delete"
-                  size="sm"
-                  tooltip="Delete team"
-                  onClick={() => setConfirmDeleteTeam(t)}
-                />
-              </ActionOverlay>
-            </li>
+              logo={t.logo}
+              name={t.name}
+              code={t.code}
+              primaryColor={t.primary_color}
+              textColor={t.text_color}
+              actions={
+                [
+                  {
+                    icon: 'open_in_new',
+                    intent: 'neutral',
+                    tooltip: 'View team',
+                    onClick: () => onViewTeam(t.id),
+                  },
+                  {
+                    icon: 'edit',
+                    intent: 'accent',
+                    tooltip: 'Edit team',
+                    onClick: () => onEditTeam(t.id),
+                  },
+                  {
+                    icon: 'delete',
+                    intent: 'danger',
+                    tooltip: 'Delete team',
+                    onClick: () => setConfirmDeleteTeam(t),
+                  },
+                ] satisfies ListItemAction[]
+              }
+            />
           ))}
         </ul>
       )}
@@ -437,48 +426,36 @@ const LeagueGroupsCard = (props: Props) => {
           {roots.length > 0 && <p className={styles.ungroupedLabel}>Unassigned</p>}
           <ul className={styles.teamList}>
             {ungroupedTeams.map((t) => (
-              <li
+              <ListItem
                 key={t.id}
-                className={styles.teamListItem}
-              >
-                {t.logo ? (
-                  <img
-                    src={t.logo}
-                    alt=""
-                    className={styles.teamLogoThumb}
-                  />
-                ) : (
-                  <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-                )}
-                <span className={styles.teamListName}>{t.name}</span>
-                <span className={styles.seasonListDates}>{t.code}</span>
-                <ActionOverlay className={styles.teamActions}>
-                  <Button
-                    variant="outlined"
-                    intent="neutral"
-                    icon="open_in_new"
-                    size="sm"
-                    tooltip="View team"
-                    onClick={() => onViewTeam(t.id)}
-                  />
-                  <Button
-                    variant="outlined"
-                    intent="accent"
-                    icon="edit"
-                    size="sm"
-                    tooltip="Edit team"
-                    onClick={() => onEditTeam(t.id)}
-                  />
-                  <Button
-                    variant="outlined"
-                    intent="danger"
-                    icon="delete"
-                    size="sm"
-                    tooltip="Delete team"
-                    onClick={() => setConfirmDeleteUngrouped(t)}
-                  />
-                </ActionOverlay>
-              </li>
+                logo={t.logo}
+                name={t.name}
+                code={t.code}
+                primaryColor={t.primary_color}
+                textColor={t.text_color}
+                actions={
+                  [
+                    {
+                      icon: 'open_in_new',
+                      intent: 'neutral',
+                      tooltip: 'View team',
+                      onClick: () => onViewTeam(t.id),
+                    },
+                    {
+                      icon: 'edit',
+                      intent: 'accent',
+                      tooltip: 'Edit team',
+                      onClick: () => onEditTeam(t.id),
+                    },
+                    {
+                      icon: 'delete',
+                      intent: 'danger',
+                      tooltip: 'Delete team',
+                      onClick: () => setConfirmDeleteUngrouped(t),
+                    },
+                  ] satisfies ListItemAction[]
+                }
+              />
             ))}
           </ul>
         </>

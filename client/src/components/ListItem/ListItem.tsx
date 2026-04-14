@@ -14,6 +14,10 @@ interface Props {
   logo?: string | null;
   name: string;
   code?: string | null;
+  /** Team primary color — used as placeholder background when no logo is set. */
+  primaryColor?: string | null;
+  /** Team text color — used as placeholder text color when no logo is set. */
+  textColor?: string | null;
   /** Optional secondary line shown below the name (e.g. season label + recorded date). */
   subtitle?: string;
   /** Optional third line shown below the subtitle (e.g. a version note). */
@@ -26,13 +30,23 @@ interface Props {
   className?: string;
 }
 
-const ListItem = ({ logo, name, code, subtitle, note, actions, className }: Props) => {
+const ListItem = ({
+  logo,
+  name,
+  code,
+  primaryColor,
+  textColor,
+  subtitle,
+  note,
+  actions,
+  className,
+}: Props) => {
   const hasExtra = !!subtitle || !!note;
   const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
 
   return (
     <li className={[styles.item, className].filter(Boolean).join(' ')}>
-      {/* Logo or code placeholder */}
+      {/* Logo or color-branded placeholder */}
       {logo ? (
         <img
           src={logo}
@@ -40,7 +54,14 @@ const ListItem = ({ logo, name, code, subtitle, note, actions, className }: Prop
           className={styles.logo}
         />
       ) : (
-        <span className={styles.logoPlaceholder}>{(code ?? name).slice(0, 3)}</span>
+        <span
+          className={styles.logoPlaceholder}
+          style={
+            primaryColor ? { background: primaryColor, color: textColor ?? undefined } : undefined
+          }
+        >
+          {(code ?? name).slice(0, 3)}
+        </span>
       )}
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}

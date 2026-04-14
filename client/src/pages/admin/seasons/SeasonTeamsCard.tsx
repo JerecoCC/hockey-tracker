@@ -134,7 +134,12 @@ const ManageTeamsModal = ({
                         className={styles.teamLogoThumb}
                       />
                     ) : (
-                      <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
+                      <span
+                        className={styles.teamLogoPlaceholder}
+                        style={{ background: t.primary_color, color: t.text_color }}
+                      >
+                        {t.code.slice(0, 3)}
+                      </span>
                     )}
                     <span className={styles.teamListName}>{t.name}</span>
                     <span className={styles.teamCode}>{t.code}</span>
@@ -376,6 +381,8 @@ const GroupNode = (props: GroupNodeProps) => {
               logo={t.logo}
               name={t.name}
               code={t.code}
+              primaryColor={t.primary_color}
+              textColor={t.text_color}
             />
           ))}
         </ul>
@@ -554,6 +561,8 @@ const SeasonTeamsCard = (props: Props) => {
                       logo={t.logo}
                       name={t.name}
                       code={t.code}
+                      primaryColor={t.primary_color}
+                      textColor={t.text_color}
                       actions={
                         [
                           {
