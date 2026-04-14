@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
-import TeamListItem from '../../../components/TeamListItem/TeamListItem';
+import ListItem from '../../../components/ListItem/ListItem';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import Icon from '../../../components/Icon/Icon';
@@ -371,7 +371,7 @@ const GroupNode = (props: GroupNodeProps) => {
       {open && isLeaf && !isEditing && group.teams.length > 0 && (
         <ul className={styles.teamList}>
           {group.teams.map((t) => (
-            <TeamListItem
+            <ListItem
               key={t.id}
               logo={t.logo}
               name={t.name}
@@ -549,7 +549,7 @@ const SeasonTeamsCard = (props: Props) => {
                 )}
                 <ul className={styles.teamList}>
                   {autoTeams.map((t) => (
-                    <TeamListItem
+                    <ListItem
                       key={t.id}
                       logo={t.logo}
                       name={t.name}

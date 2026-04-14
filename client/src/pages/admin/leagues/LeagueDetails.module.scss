@@ -223,62 +223,6 @@
   }
 }
 
-.teamListItemClickable {
-  cursor: pointer;
-}
-
-.teamListItem {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-
-    .teamActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-}
-
-// Exists so .teamListItem:hover can reference it; structural styles live in ActionOverlay
-.teamActions {
-}
-
-.teamListName {
-  font-size: $font-lg;
-  color: $text-body;
-}
-
-.teamLogoThumb {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
-}
-
-.teamLogoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-base;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
 .teamsEmpty {
   font-size: $font-base;
   color: $text-dim;

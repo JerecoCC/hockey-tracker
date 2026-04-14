@@ -6,7 +6,7 @@ import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
-import TeamListItem from '../../../components/TeamListItem/TeamListItem';
+import ListItem from '../../../components/ListItem/ListItem';
 import useTeamHistory, { type TeamIteration } from '../../../hooks/useTeamHistory';
 import useSeasons from '../../../hooks/useSeasons';
 import { seasonLabel } from './TeamInfoGrid';
@@ -179,7 +179,7 @@ const TeamHistoryTab = ({
               const endYear = latestSeasonEndDate?.slice(0, 4) ?? 'present';
               const subtitle = startYear ? `${startYear} – ${endYear}` : undefined;
               return (
-                <TeamListItem
+                <ListItem
                   key={iter.id}
                   logo={iter.logo}
                   name={iter.name}

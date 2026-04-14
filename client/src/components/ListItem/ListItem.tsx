@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
-import styles from './TeamListItem.module.scss';
+import styles from './ListItem.module.scss';
 
 interface Props {
   logo?: string | null;
@@ -15,7 +15,7 @@ interface Props {
   className?: string;
 }
 
-const TeamListItem = ({ logo, name, code, subtitle, note, actions, className }: Props) => {
+const ListItem = ({ logo, name, code, subtitle, note, actions, className }: Props) => {
   const hasExtra = !!subtitle || !!note;
 
   return (
@@ -51,4 +51,4 @@ const TeamListItem = ({ logo, name, code, subtitle, note, actions, className }: 
   );
 };
 
-export default TeamListItem;
+export default ListItem;

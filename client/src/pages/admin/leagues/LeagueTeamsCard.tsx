@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import Icon from '../../../components/Icon/Icon';
+import ListItem from '../../../components/ListItem/ListItem';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import styles from './LeagueDetails.module.scss';
 
@@ -82,49 +82,42 @@ const LeagueTeamsCard = (props: Props) => {
           ) : (
             <ul className={styles.teamList}>
               {filtered.map((t) => (
-                <li
+                <ListItem
                   key={t.id}
-                  className={`${styles.teamListItem} ${styles.teamListItemClickable}`}
-                  onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`)}
-                >
-                  {t.logo ? (
-                    <img
-                      src={t.logo}
-                      alt=""
-                      className={styles.teamLogoThumb}
-                    />
-                  ) : (
-                    <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-                  )}
-                  <span className={styles.teamListName}>{t.name}</span>
-                  <span className={styles.seasonListDates}>{t.code}</span>
-                  <ActionOverlay className={styles.teamActions}>
-                    <Button
-                      variant="outlined"
-                      intent="accent"
-                      icon="edit"
-                      size="sm"
-                      disabled={busy === t.id}
-                      tooltip="Edit"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onEdit(t);
-                      }}
-                    />
-                    <Button
-                      variant="outlined"
-                      intent="danger"
-                      icon="delete"
-                      size="sm"
-                      disabled={busy === t.id}
-                      tooltip="Delete"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(t);
-                      }}
-                    />
-                  </ActionOverlay>
-                </li>
+                  logo={t.logo}
+                  name={t.name}
+                  code={t.code}
+                  actions={
+                    <>
+                      <Button
+                        variant="ghost"
+                        intent="accent"
+                        icon="open_in_new"
+                        size="sm"
+                        tooltip="View team"
+                        onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`)}
+                      />
+                      <Button
+                        variant="ghost"
+                        intent="neutral"
+                        icon="edit"
+                        size="sm"
+                        disabled={busy === t.id}
+                        tooltip="Edit"
+                        onClick={() => onEdit(t)}
+                      />
+                      <Button
+                        variant="ghost"
+                        intent="danger"
+                        icon="delete"
+                        size="sm"
+                        disabled={busy === t.id}
+                        tooltip="Delete"
+                        onClick={() => onDelete(t)}
+                      />
+                    </>
+                  }
+                />
               ))}
             </ul>
           )}
