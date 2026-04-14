@@ -222,20 +222,20 @@ describe('LeagueDetailsPage – seasons card', () => {
 
 // ── Teams tab ──────────────────────────────────────────────────────────
 describe('LeagueDetailsPage – teams tab', () => {
-  it('renders the "Create Group" button on the Teams tab', () => {
+  it('always shows the "Create Team" button in the Teams tab header', () => {
     setup({ league: mockLeague });
     clickTeamsTab();
-    expect(screen.getByRole('button', { name: /create group/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create team/i })).toBeInTheDocument();
   });
 
-  it('shows empty state with "Create Team" button when no groups and no teams', () => {
+  it('shows empty state message when no teams are assigned', () => {
     setup({ league: mockLeague, teams: [] });
     clickTeamsTab();
     expect(screen.getByRole('button', { name: /create team/i })).toBeInTheDocument();
-    expect(screen.getByText(/no teams yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no teams assigned to this league yet/i)).toBeInTheDocument();
   });
 
-  it('renders ungrouped team rows on the Teams tab', () => {
+  it('renders team rows on the Teams tab', () => {
     const teams = [
       { id: 't1', name: 'Team Alpha', code: 'TA', logo: '', league_id: 'lg1', created_at: '' },
       { id: 't2', name: 'Team Beta', code: 'TB', logo: '', league_id: 'lg1', created_at: '' },
@@ -244,32 +244,5 @@ describe('LeagueDetailsPage – teams tab', () => {
     clickTeamsTab();
     expect(screen.getByText('Team Alpha')).toBeInTheDocument();
     expect(screen.getByText('Team Beta')).toBeInTheDocument();
-  });
-
-  it('renders a group name for each group', () => {
-    const groups = [
-      {
-        id: 'g1',
-        league_id: 'lg1',
-        parent_id: null,
-        name: 'Division A',
-        sort_order: 0,
-        teams: [],
-        created_at: '',
-      },
-      {
-        id: 'g2',
-        league_id: 'lg1',
-        parent_id: null,
-        name: 'Division B',
-        sort_order: 1,
-        teams: [],
-        created_at: '',
-      },
-    ];
-    setup({ league: mockLeague }, { groups });
-    clickTeamsTab();
-    expect(screen.getByText('Division A')).toBeInTheDocument();
-    expect(screen.getByText('Division B')).toBeInTheDocument();
   });
 });

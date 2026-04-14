@@ -266,3 +266,113 @@ describe('DELETE /api/admin/seasons/:seasonId/groups/:groupId/teams', () => {
     expect(res.status).toBe(500);
   });
 });
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/seasons/:seasonId/teams
+// Replaces the flat season roster and updates each team's start/latest season.
+// SQL sequence per team_id (N teams):
+//   1) SELECT season
+//   2) SELECT auto group (or INSERT if missing)
+//   3) DELETE group_teams
+//   4..3+N) INSERT group_teams (one per team)
+//   5+N) DELETE season_teams
+//   6+N..5+2N) INSERT season_teams + UPDATE teams tracking (two calls per team)
+//   last) SELECT teams for response
+// ---------------------------------------------------------------------------
+describe('PUT /api/admin/seasons/:seasonId/teams', () => {
+  it('returns 400 when team_ids is not an array', async () => {
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/teams')
+      .send({ team_ids: 'bad' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/must be an array/i);
+  });
+
+  it('returns 404 when season not found', async () => {
+    sql.mockResolvedValueOnce([]); // season SELECT → empty
+    const res = await request(app)
+      .put('/api/admin/seasons/nope/teams')
+      .send({ team_ids: [] });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/season not found/i);
+  });
+
+  it('clears roster and returns empty teams when team_ids is []', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])            // SELECT season
+      .mockResolvedValueOnce([{ id: 'ag-1' }])   // SELECT auto group (exists)
+      .mockResolvedValueOnce([])                   // DELETE group_teams
+      .mockResolvedValueOnce([])                   // DELETE season_teams
+      .mockResolvedValueOnce([]);                  // SELECT teams → empty
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/teams')
+      .send({ team_ids: [] });
+    expect(res.status).toBe(200);
+    expect(res.body.teams).toHaveLength(0);
+    expect(res.body.season_id).toBe('season-1');
+  });
+
+  it('creates the auto group when none exists and sets the roster', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])              // SELECT season
+      .mockResolvedValueOnce([])                     // SELECT auto group → none
+      .mockResolvedValueOnce([{ id: 'ag-new' }])   // INSERT auto group RETURNING id
+      .mockResolvedValueOnce([])                     // DELETE group_teams
+      .mockResolvedValueOnce([])                     // INSERT group_team (team-1)
+      .mockResolvedValueOnce([])                     // DELETE season_teams
+      .mockResolvedValueOnce([])                     // INSERT season_team (team-1)
+      .mockResolvedValueOnce([])                     // UPDATE teams tracking (team-1)
+      .mockResolvedValueOnce([TEAM]);               // SELECT teams
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/teams')
+      .send({ team_ids: ['team-1'] });
+    expect(res.status).toBe(200);
+    expect(res.body.teams).toHaveLength(1);
+    expect(res.body.auto_group_id).toBe('ag-new');
+  });
+
+  it('uses existing auto group and updates start/latest season on first add', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])              // SELECT season
+      .mockResolvedValueOnce([{ id: 'ag-1' }])    // SELECT auto group (exists)
+      .mockResolvedValueOnce([])                    // DELETE group_teams
+      .mockResolvedValueOnce([])                    // INSERT group_team (team-1)
+      .mockResolvedValueOnce([])                    // DELETE season_teams
+      .mockResolvedValueOnce([])                    // INSERT season_team (team-1)
+      .mockResolvedValueOnce([])                    // UPDATE teams tracking (team-1)
+      .mockResolvedValueOnce([TEAM]);              // SELECT teams
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/teams')
+      .send({ team_ids: ['team-1'] });
+    expect(res.status).toBe(200);
+    expect(res.body.teams).toHaveLength(1);
+    expect(res.body.season_id).toBe('season-1');
+    expect(res.body.auto_group_id).toBe('ag-1');
+    // One UPDATE teams call per team_id = 8 total sql calls
+    expect(sql).toHaveBeenCalledTimes(8);
+  });
+
+  it('returns 400 on FK violation (invalid team_id)', async () => {
+    const fkErr = Object.assign(new Error('fk'), { code: '23503' });
+    sql
+      .mockResolvedValueOnce([SEASON])
+      .mockResolvedValueOnce([{ id: 'ag-1' }])
+      .mockResolvedValueOnce([])
+      .mockRejectedValueOnce(fkErr);             // INSERT group_team → FK error
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/teams')
+      .send({ team_ids: ['bad-team'] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/one or more teams not found/i);
+  });
+
+  it('returns 500 on generic DB error', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])
+      .mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app)
+      .put('/api/admin/seasons/season-1/teams')
+      .send({ team_ids: [] });
+    expect(res.status).toBe(500);
+  });
+});

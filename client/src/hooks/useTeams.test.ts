@@ -106,6 +106,25 @@ describe('useTeams', () => {
     expect(toast.success).toHaveBeenCalledWith('Team updated!');
   });
 
+  it('updateTeam() sends start_season_id and latest_season_id in the payload', async () => {
+    mockedAxios.patch.mockResolvedValue({});
+    const { result } = renderHook(() => useTeams(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    await act(async () => {
+      await result.current.updateTeam('1', {
+        start_season_id: 'season-1',
+        latest_season_id: 'season-3',
+      });
+    });
+
+    expect(mockedAxios.patch).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/teams/1'),
+      { start_season_id: 'season-1', latest_season_id: 'season-3' },
+      expect.any(Object),
+    );
+  });
+
   it('updateTeam() returns false and shows an error toast on failure', async () => {
     mockedAxios.patch.mockRejectedValue({ response: { data: { error: 'Not found' } } });
     const { result } = renderHook(() => useTeams(), { wrapper: createWrapper() });
