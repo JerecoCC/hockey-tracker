@@ -15,23 +15,19 @@ import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
   const navigate = useNavigate();
-  const { id, leagueId } = useParams<{ id: string; leagueId?: string }>();
+  const { id, leagueId } = useParams<{ id: string; leagueId: string }>();
   const { team, loading, uploadLogo, updateTeam } = useTeamDetails(id);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
   const [isEditing, setIsEditing] = useState(false);
 
-  const fromLeague = Boolean(leagueId);
+  const breadcrumbItems = [
+    { label: 'Leagues', path: '/admin/leagues' },
+    { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
+    { label: team?.name ?? '…' },
+  ];
 
-  const breadcrumbItems = fromLeague
-    ? [
-        { label: 'Leagues', path: '/admin/leagues' },
-        { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
-        { label: team?.name ?? '…' },
-      ]
-    : [{ label: 'Teams', path: '/admin/teams' }, { label: team?.name ?? '…' }];
-
-  const backPath = fromLeague ? `/admin/leagues/${leagueId}` : '/admin/teams';
-  const backTooltip = fromLeague ? 'Back to League Details' : 'Back to Teams';
+  const backPath = `/admin/leagues/${leagueId}`;
+  const backTooltip = 'Back to League Details';
 
   if (loading) {
     return (
@@ -55,7 +51,7 @@ const TeamDetailsPage = () => {
             intent="neutral"
             icon="arrow_back"
             tooltip={backTooltip}
-            onClick={() => navigate(backPath, fromLeague ? { state: { activeTab: 1 } } : undefined)}
+            onClick={() => navigate(backPath, { state: { activeTab: 1 } })}
           />
         }
         right={<Breadcrumbs items={breadcrumbItems} />}
