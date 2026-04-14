@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
-import ListItem from '../../../components/ListItem/ListItem';
+import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import Icon from '../../../components/Icon/Icon';
@@ -555,29 +555,22 @@ const SeasonTeamsCard = (props: Props) => {
                       name={t.name}
                       code={t.code}
                       actions={
-                        <>
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            icon="open_in_new"
-                            size="sm"
-                            tooltip="View team"
-                            onClick={() =>
-                              navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`)
-                            }
-                          />
-                          {!isInherited && (
-                            <Button
-                              variant="outlined"
-                              intent="danger"
-                              icon="remove_circle_outline"
-                              size="sm"
-                              disabled={busy === 'season-teams'}
-                              tooltip="Remove from season"
-                              onClick={() => handleRemoveAutoTeam(t.id)}
-                            />
-                          )}
-                        </>
+                        [
+                          {
+                            icon: 'open_in_new',
+                            intent: 'neutral',
+                            tooltip: 'View team',
+                            onClick: () =>
+                              navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`),
+                          },
+                          !isInherited && {
+                            icon: 'remove_circle_outline',
+                            intent: 'danger',
+                            tooltip: 'Remove from season',
+                            disabled: busy === 'season-teams',
+                            onClick: () => handleRemoveAutoTeam(t.id),
+                          },
+                        ] satisfies (ListItemAction | false)[]
                       }
                     />
                   ))}

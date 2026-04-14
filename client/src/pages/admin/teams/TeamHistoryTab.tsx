@@ -6,7 +6,7 @@ import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
-import ListItem from '../../../components/ListItem/ListItem';
+import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
 import useTeamHistory, { type TeamIteration } from '../../../hooks/useTeamHistory';
 import useSeasons from '../../../hooks/useSeasons';
 import { seasonLabel } from './TeamInfoGrid';
@@ -187,26 +187,22 @@ const TeamHistoryTab = ({
                   subtitle={subtitle}
                   note={iter.note ?? undefined}
                   actions={
-                    <>
-                      <Button
-                        variant="ghost"
-                        intent="neutral"
-                        icon="edit"
-                        size="sm"
-                        tooltip="Edit version"
-                        disabled={busy}
-                        onClick={() => openEdit(iter)}
-                      />
-                      <Button
-                        variant="ghost"
-                        intent="danger"
-                        icon="delete"
-                        size="sm"
-                        tooltip="Delete version"
-                        disabled={busy}
-                        onClick={() => setDeleteTarget(iter)}
-                      />
-                    </>
+                    [
+                      {
+                        icon: 'edit',
+                        intent: 'neutral',
+                        tooltip: 'Edit version',
+                        disabled: busy,
+                        onClick: () => openEdit(iter),
+                      },
+                      {
+                        icon: 'delete',
+                        intent: 'danger',
+                        tooltip: 'Delete version',
+                        disabled: busy,
+                        onClick: () => setDeleteTarget(iter),
+                      },
+                    ] satisfies ListItemAction[]
                   }
                 />
               );

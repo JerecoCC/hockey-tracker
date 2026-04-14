@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import Icon from '../../../components/Icon/Icon';
-import ListItem from '../../../components/ListItem/ListItem';
+import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import styles from './LeagueDetails.module.scss';
 
@@ -88,34 +88,28 @@ const LeagueTeamsCard = (props: Props) => {
                   name={t.name}
                   code={t.code}
                   actions={
-                    <>
-                      <Button
-                        variant="ghost"
-                        intent="accent"
-                        icon="open_in_new"
-                        size="sm"
-                        tooltip="View team"
-                        onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`)}
-                      />
-                      <Button
-                        variant="ghost"
-                        intent="neutral"
-                        icon="edit"
-                        size="sm"
-                        disabled={busy === t.id}
-                        tooltip="Edit"
-                        onClick={() => onEdit(t)}
-                      />
-                      <Button
-                        variant="ghost"
-                        intent="danger"
-                        icon="delete"
-                        size="sm"
-                        disabled={busy === t.id}
-                        tooltip="Delete"
-                        onClick={() => onDelete(t)}
-                      />
-                    </>
+                    [
+                      {
+                        icon: 'open_in_new',
+                        intent: 'accent',
+                        tooltip: 'View team',
+                        onClick: () => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`),
+                      },
+                      {
+                        icon: 'edit',
+                        intent: 'neutral',
+                        tooltip: 'Edit',
+                        disabled: busy === t.id,
+                        onClick: () => onEdit(t),
+                      },
+                      {
+                        icon: 'delete',
+                        intent: 'danger',
+                        tooltip: 'Delete',
+                        disabled: busy === t.id,
+                        onClick: () => onDelete(t),
+                      },
+                    ] satisfies ListItemAction[]
                   }
                 />
               ))}

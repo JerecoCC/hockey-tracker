@@ -24,6 +24,8 @@ interface Props<T extends FieldValues = FieldValues> {
   formId?: string;
   onCancel?: () => void;
   isSubmitting?: boolean;
+  /** When true, renders the Secondary Color picker in edit mode. Default: false. */
+  showSecondaryColor?: boolean;
 }
 
 function EntityHeader<T extends FieldValues = FieldValues>(props: Props<T>) {
@@ -40,6 +42,7 @@ function EntityHeader<T extends FieldValues = FieldValues>(props: Props<T>) {
     formId,
     onCancel,
     isSubmitting = false,
+    showSecondaryColor = false,
   } = props;
 
   if (isEditing) {
@@ -100,12 +103,14 @@ function EntityHeader<T extends FieldValues = FieldValues>(props: Props<T>) {
               control={control!}
               name="primary_color"
             />
-            <Field
-              type="color"
-              label="Secondary Color"
-              control={control!}
-              name="secondary_color"
-            />
+            {showSecondaryColor && (
+              <Field
+                type="color"
+                label="Secondary Color"
+                control={control!}
+                name="secondary_color"
+              />
+            )}
             <Field
               type="color"
               label="Text Color"

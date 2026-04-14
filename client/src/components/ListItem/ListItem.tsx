@@ -1,6 +1,14 @@
-import type { ReactNode } from 'react';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
+import Button, { type ButtonIntent } from '../Button/Button';
 import styles from './ListItem.module.scss';
+
+export interface ListItemAction {
+  icon: string;
+  intent?: ButtonIntent;
+  tooltip?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}
 
 interface Props {
   logo?: string | null;
@@ -10,13 +18,17 @@ interface Props {
   subtitle?: string;
   /** Optional third line shown below the subtitle (e.g. a version note). */
   note?: string;
-  /** Hover-revealed action buttons. */
-  actions?: ReactNode;
+  /**
+   * Hover-revealed action buttons. Pass an array of action descriptors; falsy
+   * entries (false | null | undefined) are ignored, enabling conditional buttons.
+   */
+  actions?: (ListItemAction | false | null | undefined)[];
   className?: string;
 }
 
 const ListItem = ({ logo, name, code, subtitle, note, actions, className }: Props) => {
   const hasExtra = !!subtitle || !!note;
+  const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
 
   return (
     <li className={[styles.item, className].filter(Boolean).join(' ')}>
@@ -46,7 +58,22 @@ const ListItem = ({ logo, name, code, subtitle, note, actions, className }: Prop
       {code && <span className={styles.code}>{code}</span>}
 
       {/* Actions (fade in on hover via ActionOverlay) */}
-      {actions && <ActionOverlay className={styles.actions}>{actions}</ActionOverlay>}
+      {visibleActions.length > 0 && (
+        <ActionOverlay className={styles.actions}>
+          {visibleActions.map((action, i) => (
+            <Button
+              key={i}
+              variant="outlined"
+              intent={action.intent ?? 'neutral'}
+              icon={action.icon}
+              size="sm"
+              tooltip={action.tooltip}
+              disabled={action.disabled}
+              onClick={action.onClick}
+            />
+          ))}
+        </ActionOverlay>
+      )}
     </li>
   );
 };

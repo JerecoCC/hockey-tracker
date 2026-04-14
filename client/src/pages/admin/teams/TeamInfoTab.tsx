@@ -116,6 +116,7 @@ const TeamInfoTab = (props: Props) => {
           textColor={team.text_color}
           isEditing={isEditing}
           onEdit={() => setEditing(true)}
+          showSecondaryColor
           swatches={[
             { label: 'Primary', color: team.primary_color },
             { label: 'Secondary', color: team.secondary_color },
