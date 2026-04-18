@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Icon from '../Icon/Icon';
 import styles from './DatePicker.module.scss';
 
@@ -72,55 +72,102 @@ const toISO = (y: number, m: number, d: number) =>
 const daysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 const firstDayOfWeek = (y: number, m: number) => new Date(y, m - 1, 1).getDay();
 
-/** Convert internal ISO value (YYYY-MM-DD) to the display format (YYYY/MM/DD). */
-const toDisplay = (iso: string) => iso.replace(/-/g, '/');
+// ── Segment types & constants ────────────────────────────────────────────────
+type Segment = 'year' | 'month' | 'day';
+
+const SEGMENT_INFO: Record<
+  Segment,
+  { start: number; end: number; placeholder: string; maxLen: number }
+> = {
+  year: { start: 0, end: 4, placeholder: 'YYYY', maxLen: 4 },
+  month: { start: 5, end: 7, placeholder: 'MM', maxLen: 2 },
+  day: { start: 8, end: 10, placeholder: 'DD', maxLen: 2 },
+};
+
+const SEGMENT_ORDER: Segment[] = ['year', 'month', 'day'];
 
 /**
- * Build a masked YYYY/MM/DD string from a digit-only string (up to 8 digits).
- * Slashes are inserted automatically and are never user-editable.
+ * Build the 10-char display string (e.g. "2024/01/DD") from committed segment
+ * values and the digit buffer being typed into the active segment.
  */
-const buildMasked = (digits: string): string => {
-  const d = digits.slice(0, 8);
-  let out = d.slice(0, 4);
-  if (d.length > 4) out += '/' + d.slice(4, 6);
-  if (d.length > 6) out += '/' + d.slice(6, 8);
-  return out;
+const buildDisplay = (
+  cYear: number | null,
+  cMonth: number | null,
+  cDay: number | null,
+  activeSeg: Segment | null,
+  buf: string,
+): string => {
+  const seg = (s: Segment, committed: number | null): string => {
+    const info = SEGMENT_INFO[s];
+    if (s === activeSeg && buf.length > 0) {
+      return buf + info.placeholder.slice(buf.length);
+    }
+    return committed !== null ? String(committed).padStart(info.maxLen, '0') : info.placeholder;
+  };
+  return `${seg('year', cYear)}/${seg('month', cMonth)}/${seg('day', cDay)}`;
 };
 
 const DatePicker = (props: Props) => {
-  const { value, onChange, placeholder = 'YYYY/MM/DD' } = props;
+  const { value, onChange } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
-  const [inputText, setInputText] = useState(value ? toDisplay(value) : '');
   const parsed = parseISO(value);
   const t = todayParts();
   const [viewYear, setViewYear] = useState(parsed?.y ?? t.y);
   const [viewMonth, setViewMonth] = useState(parsed?.m ?? t.m);
   const [yearBase, setYearBase] = useState(() => Math.floor((parsed?.y ?? t.y) / 12) * 12);
+
+  // Segment state: independently committed values + the active editing buffer
+  const [cYear, setCYear] = useState<number | null>(parsed?.y ?? null);
+  const [cMonth, setCMonth] = useState<number | null>(parsed?.m ?? null);
+  const [cDay, setCDay] = useState<number | null>(parsed?.d ?? null);
+  const [activeSeg, setActiveSeg] = useState<Segment | null>(null);
+  const [buf, setBuf] = useState('');
+
   const wrapperRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-  /** Cursor position to restore after the next render caused by setInputText. */
-  const pendingCursorRef = useRef<number | null>(null);
+  /** Selection range [start, end] to restore after the next render. */
+  const pendingSelRef = useRef<[number, number] | null>(null);
 
-  // Restore cursor position after each render (triggered by handleTextChange).
-  // useLayoutEffect without deps runs after every render — safe because
-  // pendingCursorRef is only set during user interaction, not in effects.
+  // Restore the segment highlight after renders triggered by user interaction
   useLayoutEffect(() => {
-    if (pendingCursorRef.current !== null && inputRef.current) {
-      inputRef.current.setSelectionRange(pendingCursorRef.current, pendingCursorRef.current);
-      pendingCursorRef.current = null;
+    if (pendingSelRef.current && inputRef.current) {
+      const [s, e] = pendingSelRef.current;
+      inputRef.current.setSelectionRange(s, e);
+      pendingSelRef.current = null;
     }
   });
 
-  // Sync inputText and calendar view when value changes externally (calendar pick, reset, edit)
+  // Derive display value from committed segments + active digit buffer
+  const displayValue = buildDisplay(cYear, cMonth, cDay, activeSeg, buf);
+
+  // Emit ISO date or '' to parent whenever segments change
+  const emitChange = (y: number | null, m: number | null, d: number | null) => {
+    if (y !== null && m !== null && d !== null && isValidDate(y, m, d)) {
+      const iso = toISO(y, m, d);
+      if (iso !== value) onChange(iso);
+    } else if (value !== '') {
+      onChange('');
+    }
+  };
+
+  // Sync segment state when value changes externally (calendar pick, reset, etc.)
   useEffect(() => {
-    setInputText(value ? toDisplay(value) : '');
     const p = parseISO(value);
     if (p) {
+      setCYear(p.y);
+      setCMonth(p.m);
+      setCDay(p.d);
       setViewYear(p.y);
       setViewMonth(p.m);
       setYearBase(Math.floor(p.y / 12) * 12);
+    } else {
+      setCYear(null);
+      setCMonth(null);
+      setCDay(null);
     }
+    setActiveSeg(null);
+    setBuf('');
   }, [value]);
 
   // Close on outside click
@@ -160,57 +207,155 @@ const DatePicker = (props: Props) => {
   const clearDate = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     onChange('');
-    setInputText('');
+    setCYear(null);
+    setCMonth(null);
+    setCDay(null);
+    setBuf('');
+    setActiveSeg(null);
   };
 
-  const handleTextChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const input = e.currentTarget;
-    const raw = input.value;
-    const selStart = input.selectionStart ?? raw.length;
-
-    // Count digits left of the cursor so we can restore cursor intent after reformatting
-    const digitsBeforeCursor = raw.slice(0, selStart).replace(/\D/g, '').length;
-
-    // Keep only digits, cap at 8 (YYYY MM DD)
-    const allDigits = raw.replace(/\D/g, '').slice(0, 8);
-
-    if (allDigits.length === 0) {
-      setInputText('');
-      if (value) onChange('');
-      return;
-    }
-
-    const formatted = buildMasked(allDigits);
-    setInputText(formatted);
-
-    // Find the position in the formatted string that corresponds to
-    // digitsBeforeCursor digits (skipping over slash separators).
-    let newCursor = formatted.length; // default: end of string
-    let dc = 0;
-    for (let i = 0; i < formatted.length; i++) {
-      if (formatted[i] !== '/') dc++;
-      if (dc === digitsBeforeCursor) {
-        newCursor = i + 1;
-        break;
-      }
-    }
-    pendingCursorRef.current = newCursor;
-
-    // Commit the ISO value when all 8 digits form a valid date
-    if (allDigits.length === 8) {
-      const iso = `${allDigits.slice(0, 4)}-${allDigits.slice(4, 6)}-${allDigits.slice(6, 8)}`;
-      const p = parseISO(iso);
-      if (p && isValidDate(p.y, p.m, p.d)) {
-        onChange(iso);
-        return;
-      }
-    }
-    if (value) onChange('');
+  // ── Segment keyboard & mouse interaction ────────────────────────────────────
+  const activateSegment = (seg: Segment) => {
+    setActiveSeg(seg);
+    setBuf('');
+    pendingSelRef.current = [SEGMENT_INFO[seg].start, SEGMENT_INFO[seg].end];
   };
 
-  const handleTextBlur = () => {
-    // Revert to the last committed value if the input is incomplete / invalid
-    setInputText(value ? toDisplay(value) : '');
+  const handleInputClick = () => {
+    const pos = inputRef.current?.selectionStart ?? 0;
+    activateSegment(pos <= 4 ? 'year' : pos <= 7 ? 'month' : 'day');
+  };
+
+  const handleFocus = () => {
+    if (!activeSeg) activateSegment('year');
+  };
+
+  const handleBlur = () => {
+    setBuf('');
+    setActiveSeg(null);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    // Allow browser / OS shortcuts (copy, paste, etc.)
+    if (e.ctrlKey || e.metaKey) return;
+
+    const seg = activeSeg;
+    if (!seg) return;
+
+    const info = SEGMENT_INFO[seg];
+    const segIdx = SEGMENT_ORDER.indexOf(seg);
+
+    const goToSeg = (s: Segment) => {
+      setActiveSeg(s);
+      setBuf('');
+      pendingSelRef.current = [SEGMENT_INFO[s].start, SEGMENT_INFO[s].end];
+    };
+
+    if (e.key >= '0' && e.key <= '9') {
+      e.preventDefault();
+      const newBuf = buf + e.key;
+
+      // Determine whether to commit this segment immediately
+      let shouldCommit = newBuf.length === info.maxLen;
+      if (!shouldCommit && info.maxLen === 2) {
+        const v = parseInt(newBuf, 10);
+        // Month: first digit > 1 can never be a valid two-digit month (13–19…)
+        if (seg === 'month' && v > 1) shouldCommit = true;
+        // Day: first digit > 3 can never be a valid two-digit day (40+)
+        if (seg === 'day' && v > 3) shouldCommit = true;
+      }
+
+      if (shouldCommit) {
+        const v = parseInt(newBuf.padStart(info.maxLen, '0'), 10);
+
+        // Validate before committing
+        let valid = true;
+        if (seg === 'month' && (v < 1 || v > 12)) valid = false;
+        if (seg === 'day') {
+          const maxD = cYear && cMonth ? daysInMonth(cYear, cMonth) : 31;
+          if (v < 1 || v > maxD) valid = false;
+        }
+        if (!valid) {
+          setBuf('');
+          pendingSelRef.current = [info.start, info.end];
+          return;
+        }
+
+        // Commit and advance
+        let newY = cYear,
+          newM = cMonth,
+          newD = cDay;
+        if (seg === 'year') {
+          setCYear(v);
+          newY = v;
+        } else if (seg === 'month') {
+          setCMonth(v);
+          newM = v;
+        } else {
+          setCDay(v);
+          newD = v;
+        }
+        setBuf('');
+        emitChange(newY, newM, newD);
+
+        const nextSeg = SEGMENT_ORDER[segIdx + 1];
+        if (nextSeg) {
+          setActiveSeg(nextSeg);
+          pendingSelRef.current = [SEGMENT_INFO[nextSeg].start, SEGMENT_INFO[nextSeg].end];
+        } else {
+          setActiveSeg(null);
+        }
+      } else {
+        setBuf(newBuf);
+        pendingSelRef.current = [info.start, info.end];
+      }
+    } else if (e.key === 'Backspace' || e.key === 'Delete') {
+      e.preventDefault();
+      if (buf.length > 0) {
+        setBuf(buf.slice(0, -1));
+      } else {
+        if (seg === 'year') {
+          setCYear(null);
+          emitChange(null, cMonth, cDay);
+        } else if (seg === 'month') {
+          setCMonth(null);
+          emitChange(cYear, null, cDay);
+        } else {
+          setCDay(null);
+          emitChange(cYear, cMonth, null);
+        }
+      }
+      pendingSelRef.current = [info.start, info.end];
+    } else if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setBuf('');
+      const prevSeg = SEGMENT_ORDER[segIdx - 1];
+      if (prevSeg) goToSeg(prevSeg);
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setBuf('');
+      const nextSeg = SEGMENT_ORDER[segIdx + 1];
+      if (nextSeg) goToSeg(nextSeg);
+    } else if (e.key === 'Tab') {
+      if (!e.shiftKey) {
+        const nextSeg = SEGMENT_ORDER[segIdx + 1];
+        if (nextSeg) {
+          e.preventDefault();
+          goToSeg(nextSeg);
+        }
+        // else: let Tab move focus naturally to the next form element
+      } else {
+        const prevSeg = SEGMENT_ORDER[segIdx - 1];
+        if (prevSeg) {
+          e.preventDefault();
+          goToSeg(prevSeg);
+        }
+        // else: let Shift+Tab move focus naturally
+      }
+    } else {
+      // Block all other printable keys
+      e.preventDefault();
+    }
   };
   const selectMonth = (m: number) => {
     setViewMonth(m);
@@ -258,10 +403,13 @@ const DatePicker = (props: Props) => {
           ref={inputRef}
           type="text"
           className={styles.textInput}
-          value={inputText}
-          onChange={handleTextChange}
-          onBlur={handleTextBlur}
-          placeholder={placeholder}
+          value={displayValue}
+          data-empty={!cYear && !cMonth && !cDay}
+          onChange={() => {}}
+          onClick={handleInputClick}
+          onKeyDown={handleKeyDown}
+          onFocus={handleFocus}
+          onBlur={handleBlur}
         />
         {value && (
           <span

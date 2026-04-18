@@ -57,8 +57,10 @@
   font-size: $font-base;
   font-family: inherit;
   color: $text-body;
+  cursor: text;
 
-  &::placeholder {
+  // Dim the YYYY/MM/DD placeholder text when no segment has been committed
+  &[data-empty="true"] {
     color: $text-dim;
   }
 }
