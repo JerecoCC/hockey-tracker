@@ -136,7 +136,7 @@ const LeagueDetailsPage = () => {
     bulkAddPlayers,
     updatePlayer,
     deletePlayer,
-  } = useLeaguePlayers();
+  } = useLeaguePlayers(id);
 
   if (loading) {
     return (

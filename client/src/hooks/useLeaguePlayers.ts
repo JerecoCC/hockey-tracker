@@ -30,6 +30,11 @@ export interface PlayerRecord {
   shoots: PlayerShoots | null;
   is_active: boolean;
   created_at: string;
+  // Roster fields — populated when fetching by league_id or team_id
+  jersey_number?: number | null;
+  team_name?: string | null;
+  primary_color?: string | null;
+  text_color?: string | null;
 }
 
 export interface CreatePlayerData {
@@ -54,17 +59,17 @@ export interface BulkPlayerInput {
   shoots: PlayerShoots;
 }
 
-const useLeaguePlayers = () => {
+const useLeaguePlayers = (leagueId?: string) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
   const { data: players = [], isLoading: loading } = useQuery<PlayerRecord[]>({
-    queryKey: ['players'],
+    queryKey: ['players', { league_id: leagueId }],
     queryFn: async () => {
       try {
         const { data } = await axios.get<PlayerRecord[]>(
           `${API}/admin/players`,
-          { headers: authHeaders() },
+          { headers: authHeaders(), params: leagueId ? { league_id: leagueId } : undefined },
         );
         return data;
       } catch (err) {

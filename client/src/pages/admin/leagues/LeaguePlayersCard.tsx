@@ -125,14 +125,20 @@ const LeaguePlayersCard = ({
                     key={p.id}
                     image={p.photo}
                     image_shape="circle"
-                    name={`${p.first_name} ${p.last_name}`}
+                    name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
                     placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                    primaryColor={p.primary_color ?? undefined}
+                    textColor={p.text_color ?? undefined}
+                    subtitle={
+                      [p.team_name, p.position ? (POSITION_LABELS[p.position] ?? p.position) : null]
+                        .filter(Boolean)
+                        .join(' • ') || undefined
+                    }
                     rightContent={{
                       type: 'tag',
                       label: p.is_active ? 'Active' : 'Inactive',
                       intent: p.is_active ? 'success' : 'neutral',
                     }}
-                    subtitle={p.position ? POSITION_LABELS[p.position] : undefined}
                     actions={
                       [
                         {

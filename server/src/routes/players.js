@@ -15,46 +15,70 @@ router.get('/', async (req, res) => {
     const players = league_id
       ? await sql`
           SELECT
-            p.id, p.first_name, p.last_name, p.photo,
-            p.date_of_birth::text AS date_of_birth,
-            p.birth_city, p.birth_country, p.nationality,
-            p.height_cm, p.weight_lbs, p.position, p.shoots,
-            p.is_active, p.created_at
-          FROM players p
-          WHERE EXISTS (
-            SELECT 1 FROM player_teams pt
-            JOIN teams t ON t.id = pt.team_id
-            WHERE pt.player_id = p.id AND t.league_id = ${league_id}
-          )
-          ORDER BY p.last_name, p.first_name
+            id, first_name, last_name, photo,
+            date_of_birth::text AS date_of_birth,
+            birth_city, birth_country, nationality,
+            height_cm, weight_lbs, position, shoots,
+            is_active, created_at,
+            jersey_number, team_name, primary_color, text_color
+          FROM (
+            SELECT DISTINCT ON (p.id)
+              p.id, p.first_name, p.last_name, p.photo,
+              p.date_of_birth,
+              p.birth_city, p.birth_country, p.nationality,
+              p.height_cm, p.weight_lbs, p.position, p.shoots,
+              p.is_active, p.created_at,
+              pt.jersey_number,
+              ti.name       AS team_name,
+              t.primary_color,
+              t.text_color
+            FROM players p
+            JOIN player_teams pt ON pt.player_id = p.id
+            JOIN teams        t  ON t.id          = pt.team_id
+                                AND t.league_id   = ${league_id}
+            LEFT JOIN LATERAL (
+              SELECT name FROM team_iterations
+              WHERE team_id = t.id
+              ORDER BY season_id DESC NULLS LAST
+              LIMIT 1
+            ) ti ON TRUE
+            ORDER BY p.id, pt.season_id DESC
+          ) sub
+          ORDER BY last_name, first_name
         `
       : team_id
       ? await sql`
           SELECT
-            p.id, p.first_name, p.last_name, p.photo,
-            p.date_of_birth::text AS date_of_birth,
-            p.birth_city, p.birth_country, p.nationality,
-            p.height_cm, p.weight_lbs, p.position, p.shoots,
-            p.is_active, p.created_at,
-            la.jersey_number,
-            la.team_name,
-            la.primary_color,
-            la.text_color
-          FROM players p
-          JOIN LATERAL (
-            SELECT
+            id, first_name, last_name, photo,
+            date_of_birth::text AS date_of_birth,
+            birth_city, birth_country, nationality,
+            height_cm, weight_lbs, position, shoots,
+            is_active, created_at,
+            jersey_number, team_name, primary_color, text_color
+          FROM (
+            SELECT DISTINCT ON (p.id)
+              p.id, p.first_name, p.last_name, p.photo,
+              p.date_of_birth,
+              p.birth_city, p.birth_country, p.nationality,
+              p.height_cm, p.weight_lbs, p.position, p.shoots,
+              p.is_active, p.created_at,
               pt.jersey_number,
-              t.name        AS team_name,
+              ti.name       AS team_name,
               t.primary_color,
               t.text_color
-            FROM player_teams pt
-            JOIN teams t ON t.id = pt.team_id
-            WHERE pt.player_id = p.id
-              AND pt.team_id = ${team_id}
-            ORDER BY pt.season_id DESC
-            LIMIT 1
-          ) la ON TRUE
-          ORDER BY p.last_name, p.first_name
+            FROM players p
+            JOIN player_teams pt ON pt.player_id = p.id
+                                AND pt.team_id   = ${team_id}
+            JOIN teams        t  ON t.id          = pt.team_id
+            LEFT JOIN LATERAL (
+              SELECT name FROM team_iterations
+              WHERE team_id = t.id
+              ORDER BY season_id DESC NULLS LAST
+              LIMIT 1
+            ) ti ON TRUE
+            ORDER BY p.id, pt.season_id DESC
+          ) sub
+          ORDER BY last_name, first_name
         `
       : await sql`
           SELECT

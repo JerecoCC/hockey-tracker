@@ -109,11 +109,7 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                     placeholder={`${p.first_name[0]}${p.last_name[0]}`}
                     primaryColor={p.primary_color ?? undefined}
                     textColor={p.text_color ?? undefined}
-                    subtitle={
-                      [p.team_name, p.position ? (POSITION_LABELS[p.position] ?? p.position) : null]
-                        .filter(Boolean)
-                        .join(' • ') || undefined
-                    }
+                    subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                     rightContent={{
                       type: 'tag',
                       label: p.is_active ? 'Active' : 'Inactive',
