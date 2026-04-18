@@ -13,6 +13,7 @@ const EXACT_TITLES: Record<string, string> = {
 const getTitle = (pathname: string): string => {
   if (EXACT_TITLES[pathname]) return EXACT_TITLES[pathname];
   if (/\/admin\/leagues\/[^/]+\/teams\//.test(pathname)) return 'Team Details';
+  if (/\/admin\/leagues\/[^/]+\/seasons\//.test(pathname)) return 'Season Details';
   if (/\/admin\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   if (/\/admin\/teams\/[^/]+/.test(pathname)) return 'Team Details';
   return '';

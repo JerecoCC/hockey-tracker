@@ -11,7 +11,17 @@ import SeasonEndModal from './SeasonEndModal';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import styles from './SeasonDetails.module.scss';
 
-const formatDate = (d: string | null) => (d ? d.slice(0, 10).replace(/-/g, '/') : '—');
+const DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+const parseLocal = (iso: string) => {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : '—');
+const formatEndDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : 'Present');
 
 const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
@@ -91,7 +101,17 @@ const SeasonDetailsPage = () => {
         {/* ── Season info ────────────────────────────────────────────────── */}
         <Card
           className={styles.col12}
-          title="Info"
+          title={
+            <>
+              {season.name}
+              {season.is_current && (
+                <Tag
+                  label="Current"
+                  intent="success"
+                />
+              )}
+            </>
+          }
           action={
             <div className={styles.infoCardActions}>
               {!season.is_current && (
@@ -128,20 +148,7 @@ const SeasonDetailsPage = () => {
             </div>
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>End Date</span>
-              <span className={styles.infoValue}>{formatDate(season.end_date)}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Status</span>
-              <span className={styles.infoValue}>
-                {season.is_current ? (
-                  <Tag
-                    label="Current Season"
-                    intent="success"
-                  />
-                ) : (
-                  '—'
-                )}
-              </span>
+              <span className={styles.infoValue}>{formatEndDate(season.end_date)}</span>
             </div>
           </div>
         </Card>

@@ -4,8 +4,8 @@ import styles from './Card.module.scss';
 interface CardProps {
   /** Visual theme. 'admin' = dark bg + border. 'light' = white bg + shadow. */
   variant?: 'admin' | 'light';
-  /** Renders a header row with a title at the start. */
-  title?: string;
+  /** Renders a header row with a title at the start. Accepts a string or any ReactNode. */
+  title?: ReactNode;
   /** Optional element placed at the end of the header row (e.g. an Add button). */
   action?: ReactNode;
   /** Extra CSS class for layout/sizing concerns (max-width, grid column, margin, etc.). */

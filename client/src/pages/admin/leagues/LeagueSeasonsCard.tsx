@@ -15,7 +15,17 @@ interface Props {
   className?: string;
 }
 
-const formatDate = (d: string | null) => (d ? d.slice(0, 10).replace(/-/g, '/') : '?');
+const DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+const parseLocal = (iso: string) => {
+  const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
+const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : '—');
+const formatEndDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : 'Present');
 
 const LeagueSeasonsCard = (props: Props) => {
   const { seasons, loading, busy, onAdd, onEdit, onDelete, onView, className } = props;
@@ -49,7 +59,7 @@ const LeagueSeasonsCard = (props: Props) => {
               <span className={styles.seasonListName}>{s.name}</span>
               <span className={styles.seasonListDates}>
                 {s.start_date || s.end_date
-                  ? [s.start_date, s.end_date].map(formatDate).join(' – ')
+                  ? `${formatDate(s.start_date)} – ${formatEndDate(s.end_date)}`
                   : 'No dates'}
               </span>
               <ActionOverlay className={styles.seasonActions}>
