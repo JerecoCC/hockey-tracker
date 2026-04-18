@@ -28,18 +28,31 @@ router.use(requireAdmin);
 // ---------------------------------------------------------------------------
 // GET /api/admin/seasons  – list all seasons (with league info)
 // ---------------------------------------------------------------------------
-router.get('/', async (_req, res) => {
+router.get('/', async (req, res) => {
+  const { league_id } = req.query;
   try {
-    const seasons = await sql`
-      SELECT s.id, s.name, s.league_id,
-             (l.current_season_id = s.id) AS is_current,
-             s.start_date::text AS start_date, s.end_date::text AS end_date,
-             s.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
-      FROM seasons s
-      JOIN leagues l ON l.id = s.league_id
-      ORDER BY s.start_date DESC NULLS LAST, s.name ASC
-    `;
+    const seasons = league_id
+      ? await sql`
+          SELECT s.id, s.name, s.league_id,
+                 (l.current_season_id = s.id) AS is_current,
+                 s.start_date::text AS start_date, s.end_date::text AS end_date,
+                 s.created_at,
+                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+          FROM seasons s
+          JOIN leagues l ON l.id = s.league_id
+          WHERE s.league_id = ${league_id}
+          ORDER BY (l.current_season_id = s.id) DESC, s.start_date DESC NULLS LAST, s.name ASC
+        `
+      : await sql`
+          SELECT s.id, s.name, s.league_id,
+                 (l.current_season_id = s.id) AS is_current,
+                 s.start_date::text AS start_date, s.end_date::text AS end_date,
+                 s.created_at,
+                 l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+          FROM seasons s
+          JOIN leagues l ON l.id = s.league_id
+          ORDER BY (l.current_season_id = s.id) DESC, s.start_date DESC NULLS LAST, s.name ASC
+        `;
     return res.json(seasons);
   } catch (err) {
     console.error('seasons list error:', err);

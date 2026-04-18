@@ -90,12 +90,14 @@ router.get('/:id', async (req, res) => {
         ORDER BY ti.name ASC
       `,
       sql`
-        SELECT id, name, league_id,
-               start_date::text AS start_date, end_date::text AS end_date,
-               created_at
-        FROM seasons
-        WHERE league_id = ${id}
-        ORDER BY start_date DESC NULLS LAST, name ASC
+        SELECT s.id, s.name, s.league_id,
+               s.start_date::text AS start_date, s.end_date::text AS end_date,
+               s.created_at,
+               (l.current_season_id = s.id) AS is_current
+        FROM seasons s
+        JOIN leagues l ON l.id = s.league_id
+        WHERE s.league_id = ${id}
+        ORDER BY (l.current_season_id = s.id) DESC, s.start_date DESC NULLS LAST, s.name ASC
       `,
     ]);
 

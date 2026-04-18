@@ -91,4 +91,19 @@ describe('Icon', () => {
     const { container } = render(<Icon name="folder_plus" />);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('renders an SVG for more_vert (3-dot menu)', () => {
+    const { container } = render(<Icon name="more_vert" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('renders an SVG for flag (end season)', () => {
+    const { container } = render(<Icon name="flag" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('renders an SVG for stars (set as current)', () => {
+    const { container } = render(<Icon name="stars" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });

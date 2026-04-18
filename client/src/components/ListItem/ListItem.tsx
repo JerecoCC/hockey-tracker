@@ -41,6 +41,8 @@ interface Props {
   subtitle?: string;
   /** Optional third line shown below the subtitle (e.g. a version note). */
   note?: string;
+  /** When true, suppresses the image and placeholder entirely. */
+  hideImage?: boolean;
   /**
    * Hover-revealed action buttons. Pass an array of action descriptors; falsy
    * entries (false | null | undefined) are ignored, enabling conditional buttons.
@@ -52,6 +54,7 @@ interface Props {
 const ListItem = ({
   image,
   image_shape = 'square',
+  hideImage = false,
   name,
   placeholder,
   rightContent,
@@ -70,24 +73,25 @@ const ListItem = ({
   return (
     <li className={[styles.item, className].filter(Boolean).join(' ')}>
       {/* Image or color-branded placeholder */}
-      {image ? (
-        <img
-          src={image}
-          alt=""
-          className={[styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')}
-        />
-      ) : (
-        <span
-          className={[styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
-            .filter(Boolean)
-            .join(' ')}
-          style={
-            primaryColor ? { background: primaryColor, color: textColor ?? undefined } : undefined
-          }
-        >
-          {placeholder ?? (codeValue ?? name).slice(0, 3)}
-        </span>
-      )}
+      {!hideImage &&
+        (image ? (
+          <img
+            src={image}
+            alt=""
+            className={[styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')}
+          />
+        ) : (
+          <span
+            className={[styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
+              .filter(Boolean)
+              .join(' ')}
+            style={
+              primaryColor ? { background: primaryColor, color: textColor ?? undefined } : undefined
+            }
+          >
+            {placeholder ?? (codeValue ?? name).slice(0, 3)}
+          </span>
+        ))}
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}
       <div className={styles.info}>

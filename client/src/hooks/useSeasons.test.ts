@@ -48,6 +48,24 @@ describe('useSeasons', () => {
     );
   });
 
+  it('passes league_id as a query param when leagueId is provided', async () => {
+    const { result } = renderHook(() => useSeasons('league-1'), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/seasons'),
+      expect.objectContaining({ params: { league_id: 'league-1' } }),
+    );
+  });
+
+  it('does not pass params when no leagueId is provided', async () => {
+    const { result } = renderHook(() => useSeasons(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/seasons'),
+      expect.objectContaining({ params: undefined }),
+    );
+  });
+
   it('shows an error toast when the fetch fails', async () => {
     mockedAxios.get.mockRejectedValue({ response: { data: { error: 'Server error' } } });
     const { result } = renderHook(() => useSeasons(), { wrapper: createWrapper() });

@@ -34,6 +34,14 @@ describe('GET /api/admin/seasons', () => {
     expect(res.body).toEqual([SEASON]);
   });
 
+  it('filters by league_id when provided', async () => {
+    sql.mockResolvedValueOnce([SEASON]);
+    const res = await request(app).get('/api/admin/seasons?league_id=league-1');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([SEASON]);
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+
   it('returns 500 on DB error', async () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).get('/api/admin/seasons');

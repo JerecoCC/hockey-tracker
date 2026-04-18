@@ -1,5 +1,5 @@
-@use '../../styles/colors' as *;
-@use '../../styles/mixins' as *;
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
 
 // ── Base ───────────────────────────────────────────────────────────────
 .btn {
@@ -22,7 +22,7 @@
 
 // ── Sizes ──────────────────────────────────────────────────────────────
 .sm {
-  padding: $space-md $space-md;
+  padding: $space-sm $space-md;
   font-size: $font-sm;
   &.iconOnly {
     padding: $space-sm;
@@ -30,14 +30,14 @@
 }
 
 .md {
-  padding: $space-md $space-lg;
+  padding: $space-sm $space-lg;
   &.iconOnly {
     padding: $space-sm;
   }
 }
 
 .lg {
-  padding: $space-md $space-xl;
+  padding: $space-sm $space-xl;
   font-size: $font-lg;
   &.iconOnly {
     padding: $space-sm;

@@ -294,42 +294,6 @@
   }
 }
 
-.seasonListItem {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-
-    .seasonActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-}
-
-.seasonListName {
-  font-size: $font-lg;
-  color: $text-body;
-  font-weight: 500;
-}
-
-.seasonListDates {
-  font-size: $font-xs;
-  color: $text-dim;
-  white-space: nowrap;
-  margin-left: auto;
-}
-
-// Exists so .seasonListItem:hover can reference it; structural styles live in ActionOverlay
-.seasonActions {
-}
-
 // ── Shared modal form styles ──────────────────────────────────────────────
 .form {
   display: flex;

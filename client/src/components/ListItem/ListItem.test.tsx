@@ -57,6 +57,31 @@ describe('ListItem – image', () => {
 });
 
 // ---------------------------------------------------------------------------
+// hideImage
+// ---------------------------------------------------------------------------
+describe('ListItem – hideImage', () => {
+  it('suppresses the <img> when hideImage is true and an image is provided', () => {
+    renderItem({ name: 'Leafs', image: 'https://example.com/logo.png', hideImage: true });
+    expect(screen.queryByRole('img')).not.toBeInTheDocument();
+  });
+
+  it('suppresses the placeholder when hideImage is true and no image is provided', () => {
+    renderItem({ name: 'Leafs', hideImage: true });
+    expect(screen.queryByText('Lea')).not.toBeInTheDocument();
+  });
+
+  it('still renders the name when hideImage is true', () => {
+    renderItem({ name: 'Leafs', hideImage: true });
+    expect(screen.getByText('Leafs')).toBeInTheDocument();
+  });
+
+  it('renders image normally when hideImage is false', () => {
+    renderItem({ name: 'Leafs', image: 'https://example.com/logo.png', hideImage: false });
+    expect(screen.getByAltText('')).toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Image shape
 // ---------------------------------------------------------------------------
 describe('ListItem – image_shape', () => {

@@ -32,16 +32,18 @@ const authHeaders = () => {
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useSeasons = () => {
+const useSeasons = (leagueId?: string) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
   const { data: seasons = [], isLoading: loading } = useQuery({
-    queryKey: ['seasons'],
+    queryKey: leagueId ? ['seasons', { league_id: leagueId }] : ['seasons'],
     queryFn: async () => {
       try {
+        const params = leagueId ? { league_id: leagueId } : undefined;
         const { data } = await axios.get<SeasonRecord[]>(`${API}/admin/seasons`, {
           headers: authHeaders(),
+          params,
         });
         return data;
       } catch (err) {

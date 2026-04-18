@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Icon from '../../../components/Icon/Icon';
 import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
+import Select from '../../../components/Select/Select';
+import useSeasons from '../../../hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '../../../hooks/useTeamPlayers';
 import AddPlayersModal from './AddPlayersModal';
 import styles from './TeamDetails.module.scss';
@@ -23,7 +25,23 @@ interface Props {
 }
 
 const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
-  const { players, loading, busy, addPlayersToRoster, deletePlayer } = useTeamPlayers(teamId);
+  // Load all seasons for this league
+  const { seasons: leagueSeasons } = useSeasons(leagueId);
+  const currentSeason = leagueSeasons.find((s) => s.is_current);
+
+  // Selected season — null until seasons load, then defaults to current (or most recent)
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedSeasonId === null && leagueSeasons.length > 0) {
+      setSelectedSeasonId(currentSeason?.id ?? leagueSeasons[0]?.id ?? latestSeasonId);
+    }
+  }, [leagueSeasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const { players, loading, busy, addPlayersToRoster, deletePlayer } = useTeamPlayers(
+    teamId,
+    selectedSeasonId ?? undefined,
+  );
   const [query, setQuery] = useState('');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
@@ -53,14 +71,26 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
       <Card
         title="Roster"
         action={
-          <Button
-            intent="accent"
-            icon="group_add"
-            size="sm"
-            onClick={() => setAddModalOpen(true)}
-          >
-            Add Players
-          </Button>
+          <div className={styles.rosterActions}>
+            {leagueSeasons.length > 0 && (
+              <Select
+                value={selectedSeasonId}
+                options={leagueSeasons.map((s) => ({
+                  value: s.id,
+                  label: s.is_current ? `${s.name} ✦` : s.name,
+                }))}
+                onChange={setSelectedSeasonId}
+              />
+            )}
+            <Button
+              intent="accent"
+              icon="group_add"
+              size="sm"
+              onClick={() => setAddModalOpen(true)}
+            >
+              Add Players
+            </Button>
+          </div>
         }
       >
         {loading ? (

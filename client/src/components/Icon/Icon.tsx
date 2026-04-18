@@ -7,6 +7,8 @@ import {
   faArrowUpRightFromSquare,
   faCheck,
   faCircleMinus,
+  faEllipsisVertical,
+  faFlag,
   faGauge,
   faCalendarDays,
   faChevronDown,
@@ -102,6 +104,9 @@ const ICON_MAP: Record<string, IconDefinition> = {
   // decorative
   sports_hockey: faHockeyPuck,
   celebration: faStar,
+  stars: faStar,
+  flag: faFlag,
+  more_vert: faEllipsisVertical,
 };
 
 interface IconProps {

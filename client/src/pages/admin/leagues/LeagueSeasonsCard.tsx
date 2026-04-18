@@ -1,6 +1,6 @@
-import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
+import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
 import { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
 import styles from './LeagueDetails.module.scss';
 
@@ -25,7 +25,8 @@ const parseLocal = (iso: string) => {
   return new Date(y, m - 1, d);
 };
 const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : '—');
-const formatEndDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : 'Present');
+const formatEndDate = (d: string | null, isCurrent: boolean) =>
+  d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : '?';
 
 const LeagueSeasonsCard = (props: Props) => {
   const { seasons, loading, busy, onAdd, onEdit, onDelete, onView, className } = props;
@@ -52,45 +53,43 @@ const LeagueSeasonsCard = (props: Props) => {
           className={`${styles.seasonList} ${seasons.length > 5 ? styles.seasonListLimited : ''}`}
         >
           {seasons.map((s) => (
-            <li
+            <ListItem
               key={s.id}
-              className={styles.seasonListItem}
-            >
-              <span className={styles.seasonListName}>{s.name}</span>
-              <span className={styles.seasonListDates}>
-                {s.start_date || s.end_date
-                  ? `${formatDate(s.start_date)} – ${formatEndDate(s.end_date)}`
-                  : 'No dates'}
-              </span>
-              <ActionOverlay className={styles.seasonActions}>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="open_in_new"
-                  size="sm"
-                  tooltip="View season"
-                  onClick={() => onView(s)}
-                />
-                <Button
-                  variant="outlined"
-                  intent="accent"
-                  icon="edit"
-                  size="sm"
-                  disabled={busy === s.id}
-                  tooltip="Edit"
-                  onClick={() => onEdit(s)}
-                />
-                <Button
-                  variant="outlined"
-                  intent="danger"
-                  icon="delete"
-                  size="sm"
-                  disabled={busy === s.id}
-                  tooltip="Delete"
-                  onClick={() => onDelete(s)}
-                />
-              </ActionOverlay>
-            </li>
+              hideImage
+              name={s.name}
+              subtitle={
+                s.start_date || s.end_date
+                  ? `${formatDate(s.start_date)} – ${formatEndDate(s.end_date, s.is_current)}`
+                  : 'No dates'
+              }
+              rightContent={
+                s.is_current ? { type: 'tag', label: 'Current', intent: 'success' } : undefined
+              }
+              actions={
+                [
+                  {
+                    icon: 'open_in_new',
+                    intent: 'neutral',
+                    tooltip: 'View season',
+                    onClick: () => onView(s),
+                  },
+                  {
+                    icon: 'edit',
+                    intent: 'accent',
+                    tooltip: 'Edit',
+                    disabled: busy === s.id,
+                    onClick: () => onEdit(s),
+                  },
+                  {
+                    icon: 'delete',
+                    intent: 'danger',
+                    tooltip: 'Delete',
+                    disabled: busy === s.id,
+                    onClick: () => onDelete(s),
+                  },
+                ] satisfies ListItemAction[]
+              }
+            />
           ))}
         </ul>
       )}

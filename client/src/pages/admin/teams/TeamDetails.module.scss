@@ -186,6 +186,12 @@
 }
 
 // ── Roster tab ─────────────────────────────────────────────────────────
+.rosterActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
 .rosterEmpty {
   font-size: $font-base;
   color: $text-dim;

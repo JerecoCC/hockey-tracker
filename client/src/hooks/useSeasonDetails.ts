@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
-import { type SeasonRecord } from './useSeasons';
+import { type SeasonRecord, type CreateSeasonData } from './useSeasons';
 import { type GroupTeamRecord } from './useLeagueGroups';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -299,6 +299,24 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     }
   };
 
+  const updateSeason = async (id: string, payload: Partial<CreateSeasonData>): Promise<boolean> => {
+    setBusy('update');
+    try {
+      await axios.patch(`${API}/admin/seasons/${id}`, payload, { headers: authHeaders() });
+      toast.success('Season updated!');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['seasons'] }),
+      ]);
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update season'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return {
     season,
     groups,
@@ -315,6 +333,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     deleteGroup,
     setCurrentSeason,
     endSeason,
+    updateSeason,
   };
 };
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
@@ -20,6 +20,7 @@ export interface LeagueSeasonRecord {
   league_id: string;
   start_date: string | null;
   end_date: string | null;
+  is_current: boolean;
   created_at: string;
 }
 
@@ -59,9 +60,11 @@ const useLeagueDetails = (id: string | undefined) => {
 
   const teams: TeamRecord[] = data?.teams ?? [];
   const seasons: LeagueSeasonRecord[] = data?.seasons ?? [];
-  const league: LeagueFullRecord | null = data
-    ? (({ teams: _t, seasons: _s, ...rest }) => rest as LeagueFullRecord)(data)
-    : null;
+  const league: LeagueFullRecord | null = useMemo(
+    () =>
+      data ? (({ teams: _t, seasons: _s, ...rest }) => rest as LeagueFullRecord)(data) : null,
+    [data],
+  );
 
   const uploadLogo = async (file: File): Promise<string | null> => {
     const formData = new FormData();
