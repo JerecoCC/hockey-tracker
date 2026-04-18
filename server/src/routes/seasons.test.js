@@ -114,9 +114,10 @@ describe('POST /api/admin/seasons', () => {
 describe('PATCH /api/admin/seasons/:id', () => {
   it('returns updated season on success', async () => {
     sql
-      .mockResolvedValueOnce([{ ...SEASON, end_date: '2025-04-15' }]) // existing
-      .mockResolvedValueOnce([{ code: 'NHL' }])                        // league lookup
-      .mockResolvedValueOnce([{ ...SEASON, name: 'NHL 2024–25', end_date: '2025-04-15' }]);
+      .mockResolvedValueOnce([{ ...SEASON, end_date: '2025-04-15' }])            // fetch existing
+      .mockResolvedValueOnce([{ code: 'NHL' }])                                   // league code lookup
+      .mockResolvedValueOnce([])                                                  // UPDATE seasons
+      .mockResolvedValueOnce([{ ...SEASON, name: 'NHL 2024–25', end_date: '2025-04-15' }]); // SELECT JOIN re-fetch
     const res = await request(app).patch('/api/admin/seasons/season-1')
       .send({ end_date: '2025-04-15' });
     expect(res.status).toBe(200);
@@ -153,31 +154,32 @@ describe('DELETE /api/admin/seasons/:id', () => {
 // PATCH /api/admin/seasons/:id/current
 // ---------------------------------------------------------------------------
 describe('PATCH /api/admin/seasons/:id/current', () => {
-  it('sets is_current to true and returns the updated season', async () => {
+  it('sets is_current to true by updating leagues.current_season_id', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'season-1', league_id: 'league-1' }]) // existence check
-      .mockResolvedValueOnce([])                                           // clear league
-      .mockResolvedValueOnce([{ ...SEASON, is_current: true }]);           // set this one
+      .mockResolvedValueOnce([])                                           // UPDATE leagues SET current_season_id = id
+      .mockResolvedValueOnce([{ ...SEASON, is_current: true }]);           // SELECT JOIN to return season
     const res = await request(app)
       .patch('/api/admin/seasons/season-1/current')
       .send({ is_current: true });
     expect(res.status).toBe(200);
     expect(res.body.is_current).toBe(true);
-    // Verify the league-wide clear ran before the targeted update
+    // 3 queries: check + update league + select back
     expect(sql).toHaveBeenCalledTimes(3);
   });
 
-  it('sets is_current to false without clearing others', async () => {
+  it('sets is_current to false by clearing leagues.current_season_id', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'season-1', league_id: 'league-1' }]) // existence check
-      .mockResolvedValueOnce([{ ...SEASON, is_current: false }]);          // set this one
+      .mockResolvedValueOnce([])                                           // UPDATE leagues SET current_season_id = NULL
+      .mockResolvedValueOnce([{ ...SEASON, is_current: false }]);          // SELECT JOIN to return season
     const res = await request(app)
       .patch('/api/admin/seasons/season-1/current')
       .send({ is_current: false });
     expect(res.status).toBe(200);
     expect(res.body.is_current).toBe(false);
-    // No league-wide clear — only 2 queries
-    expect(sql).toHaveBeenCalledTimes(2);
+    // 3 queries: check + update league + select back
+    expect(sql).toHaveBeenCalledTimes(3);
   });
 
   it('returns 400 when is_current is not a boolean', async () => {

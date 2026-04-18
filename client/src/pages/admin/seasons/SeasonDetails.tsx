@@ -104,8 +104,6 @@ const SeasonDetailsPage = () => {
             <div className={styles.infoCardActions}>
               {!season.is_current && (
                 <Button
-                  variant="outlined"
-                  intent="neutral"
                   icon="stars"
                   disabled={busy === 'set-current'}
                   onClick={() => setCurrentSeason(true)}
@@ -113,15 +111,17 @@ const SeasonDetailsPage = () => {
                   Set as Current
                 </Button>
               )}
-              <Button
-                variant="outlined"
-                intent="danger"
-                icon="flag"
-                disabled={busy === 'end-season'}
-                onClick={() => setShowEndModal(true)}
-              >
-                End Season
-              </Button>
+              {season.is_current && (
+                <Button
+                  variant="outlined"
+                  intent="danger"
+                  icon="flag"
+                  disabled={busy === 'end-season'}
+                  onClick={() => setShowEndModal(true)}
+                >
+                  End Season
+                </Button>
+              )}
             </div>
           }
         >

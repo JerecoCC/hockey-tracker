@@ -31,7 +31,8 @@ router.use(requireAdmin);
 router.get('/', async (_req, res) => {
   try {
     const seasons = await sql`
-      SELECT s.id, s.name, s.league_id, s.is_current,
+      SELECT s.id, s.name, s.league_id,
+             (l.current_season_id = s.id) AS is_current,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -53,7 +54,8 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT s.id, s.name, s.league_id, s.is_current,
+      SELECT s.id, s.name, s.league_id,
+             (l.current_season_id = s.id) AS is_current,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -89,7 +91,8 @@ router.post('/', async (req, res) => {
     const rows = await sql`
       INSERT INTO seasons (name, league_id, start_date, end_date)
       VALUES (${name}, ${league_id}, ${start_date ?? null}, ${end_date ?? null})
-      RETURNING id, name, league_id, is_current, start_date::text AS start_date, end_date::text AS end_date, created_at
+      RETURNING id, name, league_id, FALSE AS is_current,
+                start_date::text AS start_date, end_date::text AS end_date, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -130,7 +133,7 @@ router.patch('/:id', async (req, res) => {
 
     const newName = generateSeasonName(league_code, mergedStartDate, mergedEndDate);
 
-    const rows = await sql`
+    await sql`
       UPDATE seasons
       SET
         name       = ${newName},
@@ -138,7 +141,17 @@ router.patch('/:id', async (req, res) => {
         start_date = ${mergedStartDate},
         end_date   = ${mergedEndDate}
       WHERE id = ${id}
-      RETURNING id, name, league_id, is_current, start_date::text AS start_date, end_date::text AS end_date, created_at
+    `;
+
+    const rows = await sql`
+      SELECT s.id, s.name, s.league_id,
+             (l.current_season_id = s.id) AS is_current,
+             s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.created_at,
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+      FROM seasons s
+      JOIN leagues l ON l.id = s.league_id
+      WHERE s.id = ${id}
     `;
     return res.json(rows[0]);
   } catch (err) {
@@ -153,8 +166,8 @@ router.patch('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/seasons/:id/current  – set or unset the current-season flag
 // Body: { is_current: boolean }
-// Setting true atomically clears the flag on every other season in the same
-// league so there is always at most one current season per league.
+// Uniqueness is enforced at the DB level: leagues.current_season_id is a FK
+// that can only hold one season id per league at a time.
 // ---------------------------------------------------------------------------
 router.patch('/:id/current', async (req, res) => {
   const { id } = req.params;
@@ -174,18 +187,29 @@ router.patch('/:id/current', async (req, res) => {
     const { league_id } = existing[0];
 
     if (is_current) {
-      // Clear the flag on every other season in the same league first
+      // Point the league's current_season_id at this season.
+      // Any previous current season is implicitly unset — the FK column holds only one value.
       await sql`
-        UPDATE seasons SET is_current = FALSE WHERE league_id = ${league_id}
+        UPDATE leagues SET current_season_id = ${id} WHERE id = ${league_id}
+      `;
+    } else {
+      // Only clear the FK if it currently points to this season.
+      await sql`
+        UPDATE leagues
+        SET current_season_id = NULL
+        WHERE id = ${league_id} AND current_season_id = ${id}
       `;
     }
 
     const rows = await sql`
-      UPDATE seasons
-      SET is_current = ${is_current}
-      WHERE id = ${id}
-      RETURNING id, name, league_id, is_current,
-                start_date::text AS start_date, end_date::text AS end_date, created_at
+      SELECT s.id, s.name, s.league_id,
+             (l.current_season_id = s.id) AS is_current,
+             s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.created_at,
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+      FROM seasons s
+      JOIN leagues l ON l.id = s.league_id
+      WHERE s.id = ${id}
     `;
     return res.json(rows[0]);
   } catch (err) {

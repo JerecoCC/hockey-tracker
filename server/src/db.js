@@ -334,14 +334,20 @@ async function initSchema() {
   `;
 
   // Flag exactly one season per league as the "current" season.
+  // is_current is kept for backward-compat but is no longer the source of truth —
+  // leagues.current_season_id is the authoritative FK and enforces uniqueness at the DB level.
   await sql`
     ALTER TABLE seasons ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT FALSE
   `;
-  // At most one current season per league at a time.
+  // Drop the old partial-unique-index approach now that the FK on leagues enforces uniqueness.
+  await sql`DROP INDEX IF EXISTS seasons_one_current_per_league`;
+
+  // current_season_id on leagues is the single source of truth.
+  // ON DELETE SET NULL keeps the league intact even if the current season is deleted.
   await sql`
-    CREATE UNIQUE INDEX IF NOT EXISTS seasons_one_current_per_league
-      ON seasons (league_id)
-      WHERE is_current = TRUE
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS current_season_id UUID
+        REFERENCES seasons(id) ON DELETE SET NULL
   `;
 
   console.log('Database schema ready');
