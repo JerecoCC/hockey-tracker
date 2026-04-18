@@ -16,12 +16,27 @@ jest.mock('react-router-dom', () => ({
 // ── Hooks ─────────────────────────────────────────────────────────────
 jest.mock('../../../hooks/useLeagueDetails', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('../../../hooks/useLeagueGroups', () => ({ __esModule: true, default: jest.fn() }));
+jest.mock('../../../hooks/useLeaguePlayers', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    players: [],
+    loading: false,
+    busy: null,
+    addPlayer: jest.fn(),
+    bulkAddPlayers: jest.fn(),
+    updatePlayer: jest.fn(),
+    deletePlayer: jest.fn(),
+  })),
+}));
+
+jest.mock('./BulkAddPlayersModal', () => () => null);
 
 // ── Heavy / portal-incompatible child components ───────────────────────
 jest.mock('../../../components/RichTextEditor/RichTextEditor', () => () => (
   <div data-testid="rte" />
 ));
 jest.mock('./LeagueFormModal', () => () => null);
+jest.mock('./PlayerFormModal', () => () => null);
 jest.mock('../teams/TeamFormModal', () => () => null);
 jest.mock('../seasons/SeasonFormModal', () => () => null);
 jest.mock('../seasons/SeasonDeleteModal', () => () => null);
@@ -77,8 +92,8 @@ const setup = (hookOverrides = {}, groupOverrides = {}, locationState: unknown =
 
 beforeEach(() => jest.clearAllMocks());
 
-/** Switch to the Teams tab (second tab) */
 const clickTeamsTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Teams' }));
+const clickPlayersTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Players' }));
 
 // ── Loading ────────────────────────────────────────────────────────────
 describe('LeagueDetailsPage – loading', () => {
@@ -167,16 +182,18 @@ describe('LeagueDetailsPage – main render', () => {
 
 // ── Tabs ───────────────────────────────────────────────────────────────
 describe('LeagueDetailsPage – tabs', () => {
-  it('renders Info and Teams tabs', () => {
+  it('renders Info, Teams, and Players tabs', () => {
     setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Info' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Teams' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Players' })).toBeInTheDocument();
   });
 
   it('Info tab is active by default', () => {
     setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'false');
   });
 
   it('switches to Teams tab when clicked', () => {
@@ -185,9 +202,23 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
   });
 
+  it('switches to Players tab when clicked', () => {
+    setup({ league: mockLeague });
+    clickPlayersTab();
+    expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
+    expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'false');
+  });
+
   it('opens on the Teams tab when navigated back from team details', () => {
     setup({ league: mockLeague }, {}, { activeTab: 1 });
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('opens on the Players tab when navigated with activeTab 2', () => {
+    setup({ league: mockLeague }, {}, { activeTab: 2 });
+    expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 });
@@ -244,5 +275,26 @@ describe('LeagueDetailsPage – teams tab', () => {
     clickTeamsTab();
     expect(screen.getByText('Team Alpha')).toBeInTheDocument();
     expect(screen.getByText('Team Beta')).toBeInTheDocument();
+  });
+});
+
+// ── Players tab ────────────────────────────────────────────────────────
+describe('LeagueDetailsPage – players tab', () => {
+  it('renders "Create Player" button on the Players tab', () => {
+    setup({ league: mockLeague });
+    clickPlayersTab();
+    expect(screen.getByRole('button', { name: /create player/i })).toBeInTheDocument();
+  });
+
+  it('renders "Bulk Create" button on the Players tab', () => {
+    setup({ league: mockLeague });
+    clickPlayersTab();
+    expect(screen.getByRole('button', { name: /bulk create/i })).toBeInTheDocument();
+  });
+
+  it('shows empty state when no players are assigned', () => {
+    setup({ league: mockLeague });
+    clickPlayersTab();
+    expect(screen.getByText(/no players in this league yet/i)).toBeInTheDocument();
   });
 });

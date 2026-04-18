@@ -41,12 +41,16 @@ type CustomProps = {
 type Props = DataProps | HtmlProps | CustomProps;
 
 const formatDate = (value: string): string => {
-  const d = new Date(value.includes('T') ? value : `${value}T00:00:00`);
+  // Always strip any time component and reconstruct at local noon so the date
+  // never shifts when the Eastern UTC offset (~5 h) is applied by the formatter.
+  const [y, m, d] = value.split('T')[0].split('-').map(Number);
+  const date = new Date(y, m - 1, d, 12, 0, 0);
   return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(d);
+  }).format(date);
 };
 
 const InfoItem = (props: Props) => {

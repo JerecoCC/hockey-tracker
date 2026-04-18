@@ -1,10 +1,16 @@
 const { neon } = require('@neondatabase/serverless');
 
-const connectionString = process.env.POSTGRES_URL;
+const rawUrl = process.env.POSTGRES_URL;
 
-if (!connectionString) {
+if (!rawUrl) {
   throw new Error('POSTGRES_URL environment variable is not set');
 }
+
+// Append a startup option so every Neon HTTP session uses US Eastern time.
+// This ensures NOW(), CURRENT_TIMESTAMP, and TIMESTAMPTZ display all use
+// America/New_York regardless of where the server process runs.
+const sep = rawUrl.includes('?') ? '&' : '?';
+const connectionString = `${rawUrl}${sep}options=-c%20TimeZone%3DAmerica/New_York`;
 
 // `sql` is a tagged-template function – every call opens a pooled HTTP connection
 const sql = neon(connectionString);
@@ -269,6 +275,62 @@ async function initSchema() {
   await sql`
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS
       latest_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS players (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      first_name     TEXT NOT NULL,
+      last_name      TEXT NOT NULL,
+      -- Generic headshot (no team branding). Season-specific photos live on player_teams.
+      photo          TEXT,
+      date_of_birth  DATE,
+      birth_city     TEXT,
+      birth_country  TEXT,
+      nationality    TEXT,
+      height_cm      SMALLINT,
+      weight_lbs     SMALLINT,
+      position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'D', 'G')),
+      shoots         TEXT CHECK (shoots IN ('L', 'R')),
+      is_active      BOOLEAN NOT NULL DEFAULT TRUE,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // Migrations for columns added after the table was first created
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+
+  // Player roster stints: one row per player-team-season stint.
+  // A mid-season trade is recorded by setting end_date on the current row
+  // and inserting a new row for the new team.
+  // jersey_number and photo are stint-specific (team jersey, team headshot).
+  // League is intentionally omitted — derivable via team.league_id.
+  await sql`
+    CREATE TABLE IF NOT EXISTS player_teams (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      player_id      UUID NOT NULL REFERENCES players(id)  ON DELETE CASCADE,
+      team_id        UUID NOT NULL REFERENCES teams(id)    ON DELETE CASCADE,
+      season_id      UUID NOT NULL REFERENCES seasons(id)  ON DELETE CASCADE,
+      jersey_number  SMALLINT,
+      photo          TEXT,
+      start_date     DATE,
+      -- NULL means the player is currently on this team
+      end_date       DATE,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // Migrations for columns added after player_teams was first created
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS id UUID DEFAULT gen_random_uuid()`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS photo TEXT`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS start_date DATE`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
+
+  // Only one active (end_date IS NULL) stint per player per season at a time.
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS player_teams_one_active_per_season
+      ON player_teams (player_id, season_id)
+      WHERE end_date IS NULL
   `;
 
   console.log('Database schema ready');

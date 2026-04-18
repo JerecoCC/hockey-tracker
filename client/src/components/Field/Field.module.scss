@@ -11,6 +11,8 @@
   color: $text-dim;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  width: 100%;
+  min-width: 0;
   min-width: 0;
 }
 
@@ -48,9 +50,20 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  // Remove spinner arrows on number inputs
+  &[type="number"] {
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
 }
 
-// ── Password wrapper ────────────────────────────────────────────────────
+// ── Input wrapper (password toggle / suffix adornments) ──────────────────
 .inputWrapper {
   position: relative;
   display: flex;
@@ -58,6 +71,7 @@
   .field {
     flex: 1;
     padding-right: 2.75rem;
+    width: 100%;
   }
 }
 
@@ -79,6 +93,24 @@
   &:hover {
     color: $text-body;
   }
+}
+
+// Unit label (e.g. "ft", "lbs") shown inside the field on the right
+.fieldWithSuffix {
+  padding-right: 2.25rem;
+}
+
+.inputSuffix {
+  position: absolute;
+  right: $space-lg;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0.04em;
 }
 
 // ── Textarea extras ─────────────────────────────────────────────────────

@@ -224,7 +224,7 @@ const GroupNode = (props: GroupNodeProps) => {
           {group.teams.map((t) => (
             <ListItem
               key={t.id}
-              logo={t.logo}
+              image={t.logo}
               name={t.name}
               code={t.code}
               primaryColor={t.primary_color}
@@ -428,7 +428,7 @@ const LeagueGroupsCard = (props: Props) => {
             {ungroupedTeams.map((t) => (
               <ListItem
                 key={t.id}
-                logo={t.logo}
+                image={t.logo}
                 name={t.name}
                 code={t.code}
                 primaryColor={t.primary_color}

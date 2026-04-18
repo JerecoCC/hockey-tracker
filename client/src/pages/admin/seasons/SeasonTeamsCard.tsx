@@ -378,7 +378,7 @@ const GroupNode = (props: GroupNodeProps) => {
           {group.teams.map((t) => (
             <ListItem
               key={t.id}
-              logo={t.logo}
+              image={t.logo}
               name={t.name}
               code={t.code}
               primaryColor={t.primary_color}
@@ -558,7 +558,7 @@ const SeasonTeamsCard = (props: Props) => {
                   {autoTeams.map((t) => (
                     <ListItem
                       key={t.id}
-                      logo={t.logo}
+                      image={t.logo}
                       name={t.name}
                       code={t.code}
                       primaryColor={t.primary_color}

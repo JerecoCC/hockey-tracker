@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import Icon from '../Icon/Icon';
 import styles from './DatePicker.module.scss';
 
@@ -40,15 +40,30 @@ const MONTHS_SHORT = [
 ];
 const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
+/** Returns year/month/day for the current date in US Eastern time. */
 const todayParts = () => {
-  const d = new Date();
-  return { y: d.getFullYear(), m: d.getMonth() + 1, d: d.getDate() };
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(new Date());
+  return {
+    y: Number(parts.find((p) => p.type === 'year')!.value),
+    m: Number(parts.find((p) => p.type === 'month')!.value),
+    d: Number(parts.find((p) => p.type === 'day')!.value),
+  };
 };
 
 const parseISO = (iso: string) => {
   if (!iso) return null;
   const [y, m, d] = iso.split('-').map(Number);
   return { y, m, d };
+};
+
+const isValidDate = (y: number, m: number, d: number) => {
+  if (m < 1 || m > 12 || d < 1) return false;
+  return d <= daysInMonth(y, m);
 };
 
 const toISO = (y: number, m: number, d: number) =>
@@ -58,9 +73,10 @@ const daysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 const firstDayOfWeek = (y: number, m: number) => new Date(y, m - 1, 1).getDay();
 
 const DatePicker = (props: Props) => {
-  const { value, onChange, placeholder = 'Select date…' } = props;
+  const { value, onChange, placeholder = 'YYYY-MM-DD' } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
+  const [inputText, setInputText] = useState(value);
   const parsed = parseISO(value);
   const t = todayParts();
   const [viewYear, setViewYear] = useState(parsed?.y ?? t.y);
@@ -68,8 +84,9 @@ const DatePicker = (props: Props) => {
   const [yearBase, setYearBase] = useState(() => Math.floor((parsed?.y ?? t.y) / 12) * 12);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Sync calendar view when value changes externally
+  // Sync inputText and calendar view when value changes externally (calendar pick, reset, edit)
   useEffect(() => {
+    setInputText(value);
     const p = parseISO(value);
     if (p) {
       setViewYear(p.y);
@@ -115,6 +132,32 @@ const DatePicker = (props: Props) => {
   const clearDate = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     onChange('');
+    setInputText('');
+  };
+
+  const handleTextChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    setInputText(raw);
+    if (raw === '') {
+      onChange('');
+      return;
+    }
+    // Auto-commit when the user finishes typing a full YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+      const p = parseISO(raw);
+      if (p && isValidDate(p.y, p.m, p.d)) {
+        onChange(raw);
+      }
+    }
+  };
+
+  const handleTextBlur = () => {
+    // Revert to the last committed value if input is incomplete or invalid
+    if (/^\d{4}-\d{2}-\d{2}$/.test(inputText)) {
+      const p = parseISO(inputText);
+      if (p && isValidDate(p.y, p.m, p.d)) return;
+    }
+    setInputText(value);
   };
   const selectMonth = (m: number) => {
     setViewMonth(m);
@@ -130,8 +173,6 @@ const DatePicker = (props: Props) => {
     setView('year');
   };
 
-  const displayValue = parsed ? `${MONTHS[parsed.m - 1]} ${parsed.d}, ${parsed.y}` : '';
-
   // Build calendar grid cells
   const total = daysInMonth(viewYear, viewMonth);
   const startDow = firstDayOfWeek(viewYear, viewMonth);
@@ -146,19 +187,28 @@ const DatePicker = (props: Props) => {
       className={styles.wrapper}
     >
       {/* ── Trigger ── */}
-      <button
-        type="button"
-        className={styles.trigger}
-        onClick={openPicker}
-      >
-        <Icon
-          name="calendar_today"
-          size="0.875rem"
-          className={styles.calIcon}
+      <div className={styles.trigger}>
+        <button
+          type="button"
+          className={styles.calIconBtn}
+          onClick={openPicker}
+          tabIndex={-1}
+          aria-label="Open calendar"
+        >
+          <Icon
+            name="calendar_today"
+            size="0.875rem"
+            className={styles.calIcon}
+          />
+        </button>
+        <input
+          type="text"
+          className={styles.textInput}
+          value={inputText}
+          onChange={handleTextChange}
+          onBlur={handleTextBlur}
+          placeholder={placeholder}
         />
-        <span className={displayValue ? styles.value : styles.placeholder}>
-          {displayValue || placeholder}
-        </span>
         {value && (
           <span
             className={styles.clear}
@@ -169,7 +219,7 @@ const DatePicker = (props: Props) => {
             ×
           </span>
         )}
-      </button>
+      </div>
 
       {open && (
         <div className={styles.dropdown}>

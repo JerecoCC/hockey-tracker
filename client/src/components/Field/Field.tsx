@@ -14,7 +14,7 @@ import Select, { SelectOption } from '../Select/Select';
 import styles from './Field.module.scss';
 
 type BaseProps = {
-  label: string;
+  label?: string;
   required?: boolean;
   // typed as unknown so any Control<TFieldValues> can be passed without variance errors
   control: unknown;
@@ -26,6 +26,8 @@ type TextProps = BaseProps &
   Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'name'> & {
     type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url' | 'tel' | 'date';
     transform?: (value: string) => string;
+    /** Short unit label rendered inside the input on the right (e.g. "ft", "lbs"). */
+    suffix?: string;
   };
 
 type TextareaProps = BaseProps &
@@ -162,6 +164,7 @@ const Field = (props: FieldProps) => {
               name: _n,
               rules: _ru,
               transform,
+              suffix,
               ...rest
             } = props;
             /* eslint-enable @typescript-eslint/no-unused-vars */
@@ -169,9 +172,10 @@ const Field = (props: FieldProps) => {
               ? (e: ChangeEvent<HTMLInputElement>) => field.onChange(transform(e.target.value))
               : field.onChange;
             const isPassword = props.type === 'password';
+            const hasSuffix = !isPassword && !!suffix;
             const input = (
               <input
-                className={styles.field}
+                className={cn(styles.field, hasSuffix && styles.fieldWithSuffix)}
                 required={required}
                 {...rest}
                 type={isPassword ? (showPassword ? 'text' : 'password') : rest.type}
@@ -180,19 +184,27 @@ const Field = (props: FieldProps) => {
                 onBlur={field.onBlur}
               />
             );
-            if (!isPassword) return input;
+            if (!isPassword && !hasSuffix) return input;
+            if (isPassword) {
+              return (
+                <div className={styles.inputWrapper}>
+                  {input}
+                  <button
+                    type="button"
+                    className={styles.passwordToggle}
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
+                  </button>
+                </div>
+              );
+            }
             return (
               <div className={styles.inputWrapper}>
                 {input}
-                <button
-                  type="button"
-                  className={styles.passwordToggle}
-                  onClick={() => setShowPassword((v) => !v)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
-                </button>
+                <span className={styles.inputSuffix}>{suffix}</span>
               </div>
             );
           }
@@ -200,10 +212,12 @@ const Field = (props: FieldProps) => {
 
         return (
           <label className={styles.label}>
-            <span className={styles.labelText}>
-              {label}
-              {required && <span className={styles.required}>*</span>}
-            </span>
+            {label && (
+              <span className={styles.labelText}>
+                {label}
+                {required && <span className={styles.required}>*</span>}
+              </span>
+            )}
             {getField()}
           </label>
         );

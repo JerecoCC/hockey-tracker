@@ -84,7 +84,7 @@ const LeagueTeamsCard = (props: Props) => {
               {filtered.map((t) => (
                 <ListItem
                   key={t.id}
-                  logo={t.logo}
+                  image={t.logo}
                   name={t.name}
                   code={t.code}
                   primaryColor={t.primary_color}

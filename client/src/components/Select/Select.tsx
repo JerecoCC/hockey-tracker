@@ -1,4 +1,4 @@
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import styles from './Select.module.scss';
@@ -21,8 +21,17 @@ interface Props {
 const Select = (props: Props) => {
   const { value, options, placeholder = '— Select —', onChange, disabled = false } = props;
   const [open, setOpen] = useState(false);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const menuId = useId();
+
+  /** Measure the trigger and compute fixed-position coordinates for the menu. */
+  const measureMenu = () => {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    setMenuStyle({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -64,6 +73,7 @@ const Select = (props: Props) => {
       onKeyDown={handleKeyDown}
     >
       <button
+        ref={triggerRef}
         type="button"
         role="combobox"
         aria-haspopup="listbox"
@@ -74,7 +84,11 @@ const Select = (props: Props) => {
           open && styles.triggerOpen,
           disabled && styles.triggerDisabled,
         )}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={() => {
+          if (disabled) return;
+          if (!open) measureMenu();
+          setOpen((o) => !o);
+        }}
         disabled={disabled}
       >
         {selected ? (
@@ -105,6 +119,7 @@ const Select = (props: Props) => {
           id={menuId}
           role="listbox"
           className={styles.menu}
+          style={menuStyle}
         >
           {options.map((opt) => (
             <li

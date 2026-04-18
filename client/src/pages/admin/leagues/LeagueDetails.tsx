@@ -5,8 +5,11 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import LeagueInfoCard from './LeagueInfoCard';
+import LeaguePlayersCard from './LeaguePlayersCard';
 import LeagueTeamsCard from './LeagueTeamsCard';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
+import BulkAddPlayersModal from './BulkAddPlayersModal';
+import PlayerFormModal from './PlayerFormModal';
 import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
@@ -14,6 +17,7 @@ import Tabs from '../../../components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
+import useLeaguePlayers, { type PlayerRecord } from '../../../hooks/useLeaguePlayers';
 import { type CreateLeagueData } from '../../../hooks/useLeagues';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
@@ -120,6 +124,19 @@ const LeagueDetailsPage = () => {
   const [editTargetSeason, setEditTargetSeason] = useState<LeagueSeasonRecord | null>(null);
   const [confirmDeleteSeason, setConfirmDeleteSeason] = useState<LeagueSeasonRecord | null>(null);
   const [confirmDeleteSeasonOpen, setConfirmDeleteSeasonOpen] = useState(false);
+  // Player modal state
+  const [playerModalOpen, setPlayerModalOpen] = useState(false);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [editTargetPlayer, setEditTargetPlayer] = useState<PlayerRecord | null>(null);
+  const {
+    players,
+    loading: playersLoading,
+    busy: playerBusy,
+    addPlayer,
+    bulkAddPlayers,
+    updatePlayer,
+    deletePlayer,
+  } = useLeaguePlayers();
 
   if (loading) {
     return (
@@ -248,6 +265,29 @@ const LeagueDetailsPage = () => {
               </div>
             ),
           },
+          {
+            label: 'Players',
+            content: (
+              <div className={styles.grid}>
+                <LeaguePlayersCard
+                  className={styles.col12}
+                  players={players}
+                  loading={playersLoading}
+                  busy={playerBusy}
+                  onAdd={() => {
+                    setEditTargetPlayer(null);
+                    setPlayerModalOpen(true);
+                  }}
+                  onBulkAdd={() => setBulkAddOpen(true)}
+                  onEdit={(p) => {
+                    setEditTargetPlayer(p);
+                    setPlayerModalOpen(true);
+                  }}
+                  onDelete={deletePlayer}
+                />
+              </div>
+            ),
+          },
         ]}
       />
 
@@ -329,6 +369,23 @@ const LeagueDetailsPage = () => {
         }}
         addSeason={addSeason}
         updateSeason={updateSeason}
+      />
+
+      <PlayerFormModal
+        open={playerModalOpen}
+        editTarget={editTargetPlayer}
+        onClose={() => {
+          setPlayerModalOpen(false);
+          setEditTargetPlayer(null);
+        }}
+        addPlayer={addPlayer}
+        updatePlayer={updatePlayer}
+      />
+
+      <BulkAddPlayersModal
+        open={bulkAddOpen}
+        onClose={() => setBulkAddOpen(false)}
+        bulkAddPlayers={bulkAddPlayers}
       />
     </>
   );

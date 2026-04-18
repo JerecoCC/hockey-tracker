@@ -10,13 +10,33 @@ export interface ListItemAction {
   onClick: () => void;
 }
 
+export type ListItemTagIntent = 'success' | 'neutral' | 'danger' | 'warning';
+
+export interface ListItemTag {
+  label: string;
+  intent?: ListItemTagIntent;
+}
+
+const TAG_CLASS: Record<ListItemTagIntent, string> = {
+  success: styles.tagSuccess,
+  neutral: styles.tagNeutral,
+  danger: styles.tagDanger,
+  warning: styles.tagWarning,
+};
+
 interface Props {
-  logo?: string | null;
+  image?: string | null;
+  /** Controls the shape of the image and placeholder. Defaults to 'square'. */
+  image_shape?: 'square' | 'circle';
   name: string;
   code?: string | null;
-  /** Team primary color — used as placeholder background when no logo is set. */
+  /** Overrides the text shown inside the image placeholder (e.g. initials). Defaults to code or name slice. */
+  placeholder?: string;
+  /** Colored pill badge rendered in the code slot. When provided, code is ignored. */
+  tag?: ListItemTag;
+  /** Team primary color — used as placeholder background when no image is set. */
   primaryColor?: string | null;
-  /** Team text color — used as placeholder text color when no logo is set. */
+  /** Team text color — used as placeholder text color when no image is set. */
   textColor?: string | null;
   /** Optional secondary line shown below the name (e.g. season label + recorded date). */
   subtitle?: string;
@@ -31,9 +51,12 @@ interface Props {
 }
 
 const ListItem = ({
-  logo,
+  image,
+  image_shape = 'square',
   name,
   code,
+  placeholder,
+  tag,
   primaryColor,
   textColor,
   subtitle,
@@ -43,24 +66,27 @@ const ListItem = ({
 }: Props) => {
   const hasExtra = !!subtitle || !!note;
   const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
+  const isCircle = image_shape === 'circle';
 
   return (
     <li className={[styles.item, className].filter(Boolean).join(' ')}>
-      {/* Logo or color-branded placeholder */}
-      {logo ? (
+      {/* Image or color-branded placeholder */}
+      {image ? (
         <img
-          src={logo}
+          src={image}
           alt=""
-          className={styles.logo}
+          className={[styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')}
         />
       ) : (
         <span
-          className={styles.logoPlaceholder}
+          className={[styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
+            .filter(Boolean)
+            .join(' ')}
           style={
             primaryColor ? { background: primaryColor, color: textColor ?? undefined } : undefined
           }
         >
-          {(code ?? name).slice(0, 3)}
+          {placeholder ?? (code ?? name).slice(0, 3)}
         </span>
       )}
 
@@ -75,8 +101,14 @@ const ListItem = ({
         )}
       </div>
 
-      {/* Code */}
-      {code && <span className={styles.code}>{code}</span>}
+      {/* Tag (active/inactive pill) or plain code badge */}
+      {tag ? (
+        <span className={[styles.tag, TAG_CLASS[tag.intent ?? 'neutral']].join(' ')}>
+          {tag.label}
+        </span>
+      ) : code ? (
+        <span className={styles.code}>{code}</span>
+      ) : null}
 
       {/* Actions (fade in on hover via ActionOverlay) */}
       {visibleActions.length > 0 && (

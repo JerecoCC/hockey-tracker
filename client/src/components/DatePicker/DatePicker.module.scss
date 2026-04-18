@@ -7,7 +7,7 @@
   width: 100%;
 }
 
-// ── Trigger button ───────────────────────────────────────────────────────
+// ── Trigger container (div wrapping icon button + text input + clear) ────
 .trigger {
   display: flex;
   align-items: center;
@@ -16,16 +16,10 @@
   background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
-  color: $text-body;
-  font-size: $font-base;
-  font-family: inherit;
   padding: $space-md $space-lg;
-  cursor: pointer;
-  text-align: left;
   transition: border-color $transition-base;
 
-  &:focus {
-    outline: none;
+  &:focus-within {
     border-color: $accent;
   }
 
@@ -34,19 +28,39 @@
   }
 }
 
+// Calendar icon — transparent button, just a clickable hit-target
+.calIconBtn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:focus {
+    outline: none;
+  }
+}
+
 .calIcon {
   color: $text-dim;
-  flex-shrink: 0;
 }
 
-.value {
+// Inline text input for typing the date
+.textInput {
   flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  font-family: inherit;
   color: $text-body;
-}
 
-.placeholder {
-  flex: 1;
-  color: $text-dim;
+  &::placeholder {
+    color: $text-dim;
+  }
 }
 
 .clear {
