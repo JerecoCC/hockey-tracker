@@ -2,11 +2,11 @@ import { useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Icon from '../../../components/Icon/Icon';
 import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
+import SearchableList from '../../../components/SearchableList/SearchableList';
 import Select from '../../../components/Select/Select';
-import { type PlayerRecord } from '../../../hooks/useLeaguePlayers';
 import { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
+import { type PlayerRecord } from '../../../hooks/useLeaguePlayers';
 import styles from './LeagueDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
@@ -44,18 +44,8 @@ const LeaguePlayersCard = ({
   onDelete,
   className,
 }: Props) => {
-  const [query, setQuery] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
-
-  const filtered = query.trim()
-    ? players.filter((p) => {
-        const q = query.trim().toLowerCase();
-        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-        const pos = (p.position ?? '').toLowerCase();
-        return name.includes(q) || pos.includes(q);
-      })
-    : players;
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -83,59 +73,14 @@ const LeaguePlayersCard = ({
           ) : undefined
         }
       >
-        <>
-          <div className={styles.playersToolbar}>
-            <div className={styles.teamSearch}>
-              <Icon
-                name="search"
-                size="1em"
-                className={styles.teamSearchIcon}
-              />
-              <input
-                className={styles.teamSearchInput}
-                type="text"
-                placeholder="Search players…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {query && (
-                <button
-                  className={styles.teamSearchClear}
-                  onClick={() => setQuery('')}
-                  aria-label="Clear search"
-                >
-                  <Icon
-                    name="close"
-                    size="0.8em"
-                  />
-                </button>
-              )}
-            </div>
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="group_add"
-              size="sm"
-              onClick={onBulkAdd}
-            >
-              Bulk Create
-            </Button>
-            <Button
-              icon="add"
-              size="sm"
-              onClick={onAdd}
-            >
-              Create Player
-            </Button>
-          </div>
-
-          {loading ? (
-            <p className={styles.teamsEmpty}>Loading…</p>
-          ) : players.length === 0 ? (
-            <p className={styles.teamsEmpty}>No players in this league yet.</p>
-          ) : filtered.length === 0 ? (
-            <p className={styles.teamsEmpty}>No players match "{query}".</p>
-          ) : (
+        <SearchableList
+          items={players}
+          filterFn={(p, q) => {
+            const name = `${p.first_name} ${p.last_name}`.toLowerCase();
+            const pos = (p.position ?? '').toLowerCase();
+            return name.includes(q.toLowerCase()) || pos.includes(q.toLowerCase());
+          }}
+          renderItems={(filtered) => (
             <ul className={styles.teamList}>
               {filtered.map((p) => (
                 <ListItem
@@ -178,7 +123,31 @@ const LeaguePlayersCard = ({
               ))}
             </ul>
           )}
-        </>
+          placeholder="Search players…"
+          actions={
+            <>
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="group_add"
+                size="sm"
+                onClick={onBulkAdd}
+              >
+                Bulk Create
+              </Button>
+              <Button
+                icon="add"
+                size="sm"
+                onClick={onAdd}
+              >
+                Create Player
+              </Button>
+            </>
+          }
+          loading={loading}
+          emptyMessage="No players in this league yet."
+          noResultsMessage={(q) => `No players match "${q}".`}
+        />
       </Card>
 
       <ConfirmModal

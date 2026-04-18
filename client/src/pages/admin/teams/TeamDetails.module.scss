@@ -199,66 +199,6 @@
   margin: 0;
 }
 
-.rosterToolbar {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  margin-bottom: $space-xs;
-}
-
-.rosterSearch {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-sm $space-md;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid $border;
-  border-radius: $radius-md;
-
-  &:focus-within {
-    border-color: $accent;
-  }
-}
-
-.rosterSearchIcon {
-  flex-shrink: 0;
-  color: $text-dim;
-}
-
-.rosterSearchInput {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: $font-base;
-  color: $text-body;
-
-  &::placeholder {
-    color: $text-dim;
-  }
-}
-
-.rosterSearchClear {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: none;
-  padding: 0;
-  background: transparent;
-  color: $text-dim;
-  cursor: pointer;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: $text-body;
-  }
-}
-
 .rosterList {
   list-style: none;
   margin: 0;

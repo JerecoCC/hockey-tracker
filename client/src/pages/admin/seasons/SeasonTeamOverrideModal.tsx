@@ -42,7 +42,7 @@ const SeasonTeamOverrideModal = (props: Props) => {
     if (ok) onClose();
   };
 
-  const title = group ? `Set Season Teams — ${group.name}` : 'Set Season Teams';
+  const title = group ? `Add Teams to Group — ${group.name}` : 'Add Teams to Group';
 
   return (
     <Modal

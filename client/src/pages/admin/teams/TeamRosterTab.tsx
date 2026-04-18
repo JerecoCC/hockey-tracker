@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Icon from '../../../components/Icon/Icon';
 import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
+import SearchableList from '../../../components/SearchableList/SearchableList';
 import Select from '../../../components/Select/Select';
 import useSeasons from '../../../hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '../../../hooks/useTeamPlayers';
@@ -42,21 +42,11 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     teamId,
     selectedSeasonId ?? undefined,
   );
-  const [query, setQuery] = useState('');
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const existingPlayerIds = new Set(players.map((p) => p.id));
-
-  const filtered = query.trim()
-    ? players.filter((p) => {
-        const q = query.trim().toLowerCase();
-        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-        const pos = (p.position ?? '').toLowerCase();
-        return name.includes(q) || pos.includes(q);
-      })
-    : players;
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -83,51 +73,14 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
           ) : undefined
         }
       >
-        <>
-          <div className={styles.rosterToolbar}>
-            <div className={styles.rosterSearch}>
-              <Icon
-                name="search"
-                size="1em"
-                className={styles.rosterSearchIcon}
-              />
-              <input
-                className={styles.rosterSearchInput}
-                type="text"
-                placeholder="Search players…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-              />
-              {query && (
-                <button
-                  className={styles.rosterSearchClear}
-                  onClick={() => setQuery('')}
-                  aria-label="Clear search"
-                >
-                  <Icon
-                    name="close"
-                    size="0.8em"
-                  />
-                </button>
-              )}
-            </div>
-            <Button
-              intent="accent"
-              icon="group_add"
-              size="sm"
-              onClick={() => setAddModalOpen(true)}
-            >
-              Add Players
-            </Button>
-          </div>
-
-          {loading ? (
-            <p className={styles.rosterEmpty}>Loading…</p>
-          ) : players.length === 0 ? (
-            <p className={styles.rosterEmpty}>No players on this roster yet.</p>
-          ) : filtered.length === 0 ? (
-            <p className={styles.rosterEmpty}>No players match "{query}".</p>
-          ) : (
+        <SearchableList
+          items={players}
+          filterFn={(p, q) => {
+            const name = `${p.first_name} ${p.last_name}`.toLowerCase();
+            const pos = (p.position ?? '').toLowerCase();
+            return name.includes(q.toLowerCase()) || pos.includes(q.toLowerCase());
+          }}
+          renderItems={(filtered) => (
             <ul className={styles.rosterList}>
               {filtered.map((p) => (
                 <ListItem
@@ -159,7 +112,21 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
               ))}
             </ul>
           )}
-        </>
+          placeholder="Search players…"
+          actions={
+            <Button
+              intent="accent"
+              icon="group_add"
+              size="sm"
+              onClick={() => setAddModalOpen(true)}
+            >
+              Add Players
+            </Button>
+          }
+          loading={loading}
+          emptyMessage="No players on this roster yet."
+          noResultsMessage={(q) => `No players match "${q}".`}
+        />
       </Card>
 
       <AddPlayersModal

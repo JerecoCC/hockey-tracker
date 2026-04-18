@@ -325,6 +325,28 @@ const GroupNode = (props: GroupNodeProps) => {
                 onClick={() => onStartAdd(group.id)}
               />
             )}
+            {isLeaf && (
+              <Button
+                variant="outlined"
+                intent={group.has_season_override ? 'accent' : 'neutral'}
+                icon="groups"
+                size="sm"
+                disabled={!!seasonBusy}
+                tooltip="Add Teams to Group"
+                onClick={() => onSetTeams(group)}
+              />
+            )}
+            {isLeaf && group.has_season_override && (
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="restart_alt"
+                size="sm"
+                disabled={!!seasonBusy}
+                tooltip="Revert to default team list"
+                onClick={() => onResetTeams(group.id)}
+              />
+            )}
             <Button
               variant="outlined"
               intent="accent"
@@ -344,32 +366,6 @@ const GroupNode = (props: GroupNodeProps) => {
               onClick={() => onDeleteGroup(group)}
             />
           </ActionOverlay>
-        </div>
-      )}
-
-      {open && isLeaf && !isEditing && (
-        <div className={styles.groupFooter}>
-          <Button
-            icon="groups"
-            size="sm"
-            variant="outlined"
-            intent={group.has_season_override ? 'accent' : 'neutral'}
-            disabled={seasonBusy === group.id}
-            onClick={() => onSetTeams(group)}
-          >
-            Set Season Teams
-          </Button>
-          {group.has_season_override && (
-            <Button
-              icon="restart_alt"
-              size="sm"
-              variant="outlined"
-              intent="neutral"
-              disabled={seasonBusy === group.id}
-              tooltip="Revert to default team list"
-              onClick={() => onResetTeams(group.id)}
-            />
-          )}
         </div>
       )}
 
