@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ChangeEvent } from 'react';
 import Icon from '../Icon/Icon';
 import styles from './DatePicker.module.scss';
 
@@ -74,8 +74,18 @@ const firstDayOfWeek = (y: number, m: number) => new Date(y, m - 1, 1).getDay();
 
 /** Convert internal ISO value (YYYY-MM-DD) to the display format (YYYY/MM/DD). */
 const toDisplay = (iso: string) => iso.replace(/-/g, '/');
-/** Convert display input (YYYY/MM/DD) back to the ISO value (YYYY-MM-DD). */
-const fromDisplay = (display: string) => display.replace(/\//g, '-');
+
+/**
+ * Build a masked YYYY/MM/DD string from a digit-only string (up to 8 digits).
+ * Slashes are inserted automatically and are never user-editable.
+ */
+const buildMasked = (digits: string): string => {
+  const d = digits.slice(0, 8);
+  let out = d.slice(0, 4);
+  if (d.length > 4) out += '/' + d.slice(4, 6);
+  if (d.length > 6) out += '/' + d.slice(6, 8);
+  return out;
+};
 
 const DatePicker = (props: Props) => {
   const { value, onChange, placeholder = 'YYYY/MM/DD' } = props;
@@ -88,6 +98,19 @@ const DatePicker = (props: Props) => {
   const [viewMonth, setViewMonth] = useState(parsed?.m ?? t.m);
   const [yearBase, setYearBase] = useState(() => Math.floor((parsed?.y ?? t.y) / 12) * 12);
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  /** Cursor position to restore after the next render caused by setInputText. */
+  const pendingCursorRef = useRef<number | null>(null);
+
+  // Restore cursor position after each render (triggered by handleTextChange).
+  // useLayoutEffect without deps runs after every render — safe because
+  // pendingCursorRef is only set during user interaction, not in effects.
+  useLayoutEffect(() => {
+    if (pendingCursorRef.current !== null && inputRef.current) {
+      inputRef.current.setSelectionRange(pendingCursorRef.current, pendingCursorRef.current);
+      pendingCursorRef.current = null;
+    }
+  });
 
   // Sync inputText and calendar view when value changes externally (calendar pick, reset, edit)
   useEffect(() => {
@@ -141,28 +164,52 @@ const DatePicker = (props: Props) => {
   };
 
   const handleTextChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    setInputText(raw);
-    if (raw === '') {
-      onChange('');
+    const input = e.currentTarget;
+    const raw = input.value;
+    const selStart = input.selectionStart ?? raw.length;
+
+    // Count digits left of the cursor so we can restore cursor intent after reformatting
+    const digitsBeforeCursor = raw.slice(0, selStart).replace(/\D/g, '').length;
+
+    // Keep only digits, cap at 8 (YYYY MM DD)
+    const allDigits = raw.replace(/\D/g, '').slice(0, 8);
+
+    if (allDigits.length === 0) {
+      setInputText('');
+      if (value) onChange('');
       return;
     }
-    // Auto-commit when the user finishes typing a full YYYY/MM/DD
-    if (/^\d{4}\/\d{2}\/\d{2}$/.test(raw)) {
-      const iso = fromDisplay(raw);
+
+    const formatted = buildMasked(allDigits);
+    setInputText(formatted);
+
+    // Find the position in the formatted string that corresponds to
+    // digitsBeforeCursor digits (skipping over slash separators).
+    let newCursor = formatted.length; // default: end of string
+    let dc = 0;
+    for (let i = 0; i < formatted.length; i++) {
+      if (formatted[i] !== '/') dc++;
+      if (dc === digitsBeforeCursor) {
+        newCursor = i + 1;
+        break;
+      }
+    }
+    pendingCursorRef.current = newCursor;
+
+    // Commit the ISO value when all 8 digits form a valid date
+    if (allDigits.length === 8) {
+      const iso = `${allDigits.slice(0, 4)}-${allDigits.slice(4, 6)}-${allDigits.slice(6, 8)}`;
       const p = parseISO(iso);
       if (p && isValidDate(p.y, p.m, p.d)) {
         onChange(iso);
+        return;
       }
     }
+    if (value) onChange('');
   };
 
   const handleTextBlur = () => {
-    // Revert to the last committed value if input is incomplete or invalid
-    if (/^\d{4}\/\d{2}\/\d{2}$/.test(inputText)) {
-      const p = parseISO(fromDisplay(inputText));
-      if (p && isValidDate(p.y, p.m, p.d)) return;
-    }
+    // Revert to the last committed value if the input is incomplete / invalid
     setInputText(value ? toDisplay(value) : '');
   };
   const selectMonth = (m: number) => {
@@ -208,6 +255,7 @@ const DatePicker = (props: Props) => {
           />
         </button>
         <input
+          ref={inputRef}
           type="text"
           className={styles.textInput}
           value={inputText}
