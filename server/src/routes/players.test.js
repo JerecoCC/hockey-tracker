@@ -31,6 +31,14 @@ const PLAYER = {
   created_at: new Date().toISOString(),
 };
 
+const PLAYER_WITH_ROSTER = {
+  ...PLAYER,
+  jersey_number: 99,
+  team_name: 'Oilers',
+  primary_color: '#ff4500',
+  text_color: '#ffffff',
+};
+
 afterEach(() => jest.clearAllMocks());
 
 // ---------------------------------------------------------------------------
@@ -44,16 +52,47 @@ describe('GET /api/admin/players', () => {
     expect(res.body).toEqual([PLAYER]);
   });
 
-  it('filters by league_id when provided', async () => {
-    sql.mockResolvedValueOnce([PLAYER]);
+  it('filters by league_id and returns roster fields', async () => {
+    sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
     const res = await request(app).get('/api/admin/players?league_id=league-1');
     expect(res.status).toBe(200);
     expect(sql).toHaveBeenCalledTimes(1);
+    expect(res.body[0]).toMatchObject({
+      jersey_number: 99,
+      team_name: 'Oilers',
+      primary_color: '#ff4500',
+      text_color: '#ffffff',
+    });
+  });
+
+  it('filters by team_id and returns roster fields', async () => {
+    sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
+    const res = await request(app).get('/api/admin/players?team_id=team-1');
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(1);
+    expect(res.body[0]).toMatchObject({
+      jersey_number: 99,
+      team_name: 'Oilers',
+      primary_color: '#ff4500',
+      text_color: '#ffffff',
+    });
   });
 
   it('returns 500 on DB error', async () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).get('/api/admin/players');
+    expect(res.status).toBe(500);
+  });
+
+  it('returns 500 on DB error with league_id', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/players?league_id=league-1');
+    expect(res.status).toBe(500);
+  });
+
+  it('returns 500 on DB error with team_id', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/players?team_id=team-1');
     expect(res.status).toBe(500);
   });
 });

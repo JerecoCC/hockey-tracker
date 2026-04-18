@@ -33,6 +33,14 @@ const PLAYER = {
   created_at: '2024-01-01T00:00:00Z',
 };
 
+const PLAYER_WITH_ROSTER = {
+  ...PLAYER,
+  jersey_number: 99,
+  team_name: 'Oilers',
+  primary_color: '#ff4500',
+  text_color: '#ffffff',
+};
+
 beforeEach(() => {
   jest.clearAllMocks();
   localStorage.setItem('token', 'test-token');
@@ -59,6 +67,36 @@ describe('useLeaguePlayers – fetch', () => {
   it('starts with loading true', () => {
     const { result } = renderHook(() => useLeaguePlayers(), { wrapper: createWrapper() });
     expect(result.current.loading).toBe(true);
+  });
+
+  it('omits params when leagueId is not provided', async () => {
+    const { result } = renderHook(() => useLeaguePlayers(), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/players'),
+      expect.objectContaining({ params: undefined }),
+    );
+  });
+
+  it('passes league_id as query param when leagueId is provided', async () => {
+    const { result } = renderHook(() => useLeaguePlayers('league-1'), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/players'),
+      expect.objectContaining({ params: { league_id: 'league-1' } }),
+    );
+  });
+
+  it('exposes optional roster fields from the API response', async () => {
+    mockedAxios.get.mockResolvedValueOnce({ data: [PLAYER_WITH_ROSTER] });
+    const { result } = renderHook(() => useLeaguePlayers('league-1'), { wrapper: createWrapper() });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.players[0]).toMatchObject({
+      jersey_number: 99,
+      team_name: 'Oilers',
+      primary_color: '#ff4500',
+      text_color: '#ffffff',
+    });
   });
 });
 
