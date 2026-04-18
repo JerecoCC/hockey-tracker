@@ -1,5 +1,6 @@
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button, { type ButtonIntent } from '../Button/Button';
+import Tag, { type TagIntent } from '../Tag/Tag';
 import styles from './ListItem.module.scss';
 
 export interface ListItemAction {
@@ -10,30 +11,28 @@ export interface ListItemAction {
   onClick: () => void;
 }
 
-export type ListItemTagIntent = 'success' | 'neutral' | 'danger' | 'warning';
-
-export interface ListItemTag {
+export interface RightContentTag {
+  type: 'tag';
   label: string;
-  intent?: ListItemTagIntent;
+  intent?: TagIntent;
 }
 
-const TAG_CLASS: Record<ListItemTagIntent, string> = {
-  success: styles.tagSuccess,
-  neutral: styles.tagNeutral,
-  danger: styles.tagDanger,
-  warning: styles.tagWarning,
-};
+export interface RightContentCode {
+  type: 'code';
+  value: string;
+}
+
+export type ListItemRightContent = RightContentTag | RightContentCode;
 
 interface Props {
   image?: string | null;
   /** Controls the shape of the image and placeholder. Defaults to 'square'. */
   image_shape?: 'square' | 'circle';
   name: string;
-  code?: string | null;
-  /** Overrides the text shown inside the image placeholder (e.g. initials). Defaults to code or name slice. */
+  /** Overrides the text shown inside the image placeholder (e.g. initials). Defaults to rightContent.value or name slice. */
   placeholder?: string;
-  /** Colored pill badge rendered in the code slot. When provided, code is ignored. */
-  tag?: ListItemTag;
+  /** Optional right-side content: a Tag pill or a plain code badge. */
+  rightContent?: ListItemRightContent;
   /** Team primary color — used as placeholder background when no image is set. */
   primaryColor?: string | null;
   /** Team text color — used as placeholder text color when no image is set. */
@@ -54,9 +53,8 @@ const ListItem = ({
   image,
   image_shape = 'square',
   name,
-  code,
   placeholder,
-  tag,
+  rightContent,
   primaryColor,
   textColor,
   subtitle,
@@ -67,6 +65,7 @@ const ListItem = ({
   const hasExtra = !!subtitle || !!note;
   const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
   const isCircle = image_shape === 'circle';
+  const codeValue = rightContent?.type === 'code' ? rightContent.value : null;
 
   return (
     <li className={[styles.item, className].filter(Boolean).join(' ')}>
@@ -86,7 +85,7 @@ const ListItem = ({
             primaryColor ? { background: primaryColor, color: textColor ?? undefined } : undefined
           }
         >
-          {placeholder ?? (code ?? name).slice(0, 3)}
+          {placeholder ?? (codeValue ?? name).slice(0, 3)}
         </span>
       )}
 
@@ -101,13 +100,16 @@ const ListItem = ({
         )}
       </div>
 
-      {/* Tag (active/inactive pill) or plain code badge */}
-      {tag ? (
-        <span className={[styles.tag, TAG_CLASS[tag.intent ?? 'neutral']].join(' ')}>
-          {tag.label}
-        </span>
-      ) : code ? (
-        <span className={styles.code}>{code}</span>
+      {/* Right content — Tag pill or code badge */}
+      {rightContent ? (
+        rightContent.type === 'tag' ? (
+          <Tag
+            label={rightContent.label}
+            intent={rightContent.intent}
+          />
+        ) : (
+          <span className={styles.code}>{rightContent.value}</span>
+        )
       ) : null}
 
       {/* Actions (fade in on hover via ActionOverlay) */}

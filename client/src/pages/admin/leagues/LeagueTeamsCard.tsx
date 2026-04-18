@@ -86,7 +86,7 @@ const LeagueTeamsCard = (props: Props) => {
                   key={t.id}
                   image={t.logo}
                   name={t.name}
-                  code={t.code}
+                  rightContent={{ type: 'code', value: t.code }}
                   primaryColor={t.primary_color}
                   textColor={t.text_color}
                   actions={

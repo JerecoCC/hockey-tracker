@@ -127,7 +127,8 @@ const LeaguePlayersCard = ({
                     image_shape="circle"
                     name={`${p.first_name} ${p.last_name}`}
                     placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                    tag={{
+                    rightContent={{
+                      type: 'tag',
                       label: p.is_active ? 'Active' : 'Inactive',
                       intent: p.is_active ? 'success' : 'neutral',
                     }}
