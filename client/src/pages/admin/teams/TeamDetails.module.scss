@@ -199,12 +199,19 @@
   margin: 0;
 }
 
+.rosterToolbar {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin-bottom: $space-xs;
+}
+
 .rosterSearch {
+  flex: 1;
   display: flex;
   align-items: center;
   gap: $space-sm;
   padding: $space-sm $space-md;
-  margin-bottom: $space-xs;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid $border;
   border-radius: $radius-md;

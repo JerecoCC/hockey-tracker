@@ -128,6 +128,15 @@ const LeagueDetailsPage = () => {
   const [playerModalOpen, setPlayerModalOpen] = useState(false);
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [editTargetPlayer, setEditTargetPlayer] = useState<PlayerRecord | null>(null);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedSeasonId === null && seasons.length > 0) {
+      const current = seasons.find((s) => s.is_current);
+      setSelectedSeasonId(current?.id ?? seasons[0].id);
+    }
+  }, [seasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const {
     players,
     loading: playersLoading,
@@ -136,7 +145,7 @@ const LeagueDetailsPage = () => {
     bulkAddPlayers,
     updatePlayer,
     deletePlayer,
-  } = useLeaguePlayers(id);
+  } = useLeaguePlayers(id, selectedSeasonId ?? undefined);
 
   if (loading) {
     return (
@@ -272,6 +281,9 @@ const LeagueDetailsPage = () => {
                 <LeaguePlayersCard
                   className={styles.col12}
                   players={players}
+                  seasons={seasons}
+                  selectedSeasonId={selectedSeasonId}
+                  onSeasonChange={setSelectedSeasonId}
                   loading={playersLoading}
                   busy={playerBusy}
                   onAdd={() => {

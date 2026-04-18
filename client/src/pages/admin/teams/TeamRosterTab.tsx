@@ -71,34 +71,20 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
       <Card
         title="Roster"
         action={
-          <div className={styles.rosterActions}>
-            {leagueSeasons.length > 0 && (
-              <Select
-                value={selectedSeasonId}
-                options={leagueSeasons.map((s) => ({
-                  value: s.id,
-                  label: s.is_current ? `${s.name} ✦` : s.name,
-                }))}
-                onChange={setSelectedSeasonId}
-              />
-            )}
-            <Button
-              intent="accent"
-              icon="group_add"
-              size="sm"
-              onClick={() => setAddModalOpen(true)}
-            >
-              Add Players
-            </Button>
-          </div>
+          leagueSeasons.length > 0 ? (
+            <Select
+              value={selectedSeasonId}
+              options={leagueSeasons.map((s) => ({
+                value: s.id,
+                label: s.is_current ? `${s.name} ✦` : s.name,
+              }))}
+              onChange={setSelectedSeasonId}
+            />
+          ) : undefined
         }
       >
-        {loading ? (
-          <p className={styles.rosterEmpty}>Loading…</p>
-        ) : players.length === 0 ? (
-          <p className={styles.rosterEmpty}>No players on this roster yet.</p>
-        ) : (
-          <>
+        <>
+          <div className={styles.rosterToolbar}>
             <div className={styles.rosterSearch}>
               <Icon
                 name="search"
@@ -125,43 +111,55 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                 </button>
               )}
             </div>
+            <Button
+              intent="accent"
+              icon="group_add"
+              size="sm"
+              onClick={() => setAddModalOpen(true)}
+            >
+              Add Players
+            </Button>
+          </div>
 
-            {filtered.length === 0 ? (
-              <p className={styles.rosterEmpty}>No players match "{query}".</p>
-            ) : (
-              <ul className={styles.rosterList}>
-                {filtered.map((p) => (
-                  <ListItem
-                    key={p.id}
-                    image={p.photo}
-                    image_shape="circle"
-                    name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
-                    placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                    primaryColor={p.primary_color ?? undefined}
-                    textColor={p.text_color ?? undefined}
-                    subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
-                    rightContent={{
-                      type: 'tag',
-                      label: p.is_active ? 'Active' : 'Inactive',
-                      intent: p.is_active ? 'success' : 'neutral',
-                    }}
-                    actions={
-                      [
-                        {
-                          icon: 'delete',
-                          intent: 'danger',
-                          tooltip: 'Delete player',
-                          disabled: busy === p.id,
-                          onClick: () => setConfirmDelete(p),
-                        },
-                      ] satisfies ListItemAction[]
-                    }
-                  />
-                ))}
-              </ul>
-            )}
-          </>
-        )}
+          {loading ? (
+            <p className={styles.rosterEmpty}>Loading…</p>
+          ) : players.length === 0 ? (
+            <p className={styles.rosterEmpty}>No players on this roster yet.</p>
+          ) : filtered.length === 0 ? (
+            <p className={styles.rosterEmpty}>No players match "{query}".</p>
+          ) : (
+            <ul className={styles.rosterList}>
+              {filtered.map((p) => (
+                <ListItem
+                  key={p.id}
+                  image={p.photo}
+                  image_shape="circle"
+                  name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
+                  placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                  primaryColor={p.primary_color ?? undefined}
+                  textColor={p.text_color ?? undefined}
+                  subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+                  rightContent={{
+                    type: 'tag',
+                    label: p.is_active ? 'Active' : 'Inactive',
+                    intent: p.is_active ? 'success' : 'neutral',
+                  }}
+                  actions={
+                    [
+                      {
+                        icon: 'delete',
+                        intent: 'danger',
+                        tooltip: 'Delete player',
+                        disabled: busy === p.id,
+                        onClick: () => setConfirmDelete(p),
+                      },
+                    ] satisfies ListItemAction[]
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </>
       </Card>
 
       <AddPlayersModal

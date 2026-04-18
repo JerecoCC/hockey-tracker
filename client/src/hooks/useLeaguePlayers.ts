@@ -59,17 +59,20 @@ export interface BulkPlayerInput {
   shoots: PlayerShoots;
 }
 
-const useLeaguePlayers = (leagueId?: string) => {
+const useLeaguePlayers = (leagueId?: string, seasonId?: string) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
   const { data: players = [], isLoading: loading } = useQuery<PlayerRecord[]>({
-    queryKey: ['players', { league_id: leagueId }],
+    queryKey: ['players', { league_id: leagueId, season_id: seasonId }],
     queryFn: async () => {
       try {
+        const params: Record<string, string> = {};
+        if (leagueId) params.league_id = leagueId;
+        if (seasonId) params.season_id = seasonId;
         const { data } = await axios.get<PlayerRecord[]>(
           `${API}/admin/players`,
-          { headers: authHeaders(), params: leagueId ? { league_id: leagueId } : undefined },
+          { headers: authHeaders(), params: Object.keys(params).length ? params : undefined },
         );
         return data;
       } catch (err) {
