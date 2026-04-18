@@ -73,7 +73,7 @@ const TeamDetailsPage = () => {
             ),
           },
           { label: 'Games', content: <TeamGamesTab /> },
-          { label: 'Roster', content: <TeamRosterTab /> },
+          { label: 'Roster', content: <TeamRosterTab teamId={team.id} /> },
           { label: 'Prospects', content: <TeamProspectsTab /> },
           {
             label: 'History',

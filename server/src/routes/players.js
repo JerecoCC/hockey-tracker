@@ -7,10 +7,10 @@ router.use(requireAdmin);
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/players  – list all players
-// Supports optional ?league_id= to filter to teams in that league.
+// Supports optional ?league_id= or ?team_id= to scope results.
 // ---------------------------------------------------------------------------
 router.get('/', async (req, res) => {
-  const { league_id } = req.query;
+  const { league_id, team_id } = req.query;
   try {
     const players = league_id
       ? await sql`
@@ -25,6 +25,21 @@ router.get('/', async (req, res) => {
             SELECT 1 FROM player_teams pt
             JOIN teams t ON t.id = pt.team_id
             WHERE pt.player_id = p.id AND t.league_id = ${league_id}
+          )
+          ORDER BY p.last_name, p.first_name
+        `
+      : team_id
+      ? await sql`
+          SELECT
+            p.id, p.first_name, p.last_name, p.photo,
+            p.date_of_birth::text AS date_of_birth,
+            p.birth_city, p.birth_country, p.nationality,
+            p.height_cm, p.weight_lbs, p.position, p.shoots,
+            p.is_active, p.created_at
+          FROM players p
+          WHERE EXISTS (
+            SELECT 1 FROM player_teams pt
+            WHERE pt.player_id = p.id AND pt.team_id = ${team_id}
           )
           ORDER BY p.last_name, p.first_name
         `
