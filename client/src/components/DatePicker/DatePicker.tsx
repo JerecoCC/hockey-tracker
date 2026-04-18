@@ -72,11 +72,16 @@ const toISO = (y: number, m: number, d: number) =>
 const daysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 const firstDayOfWeek = (y: number, m: number) => new Date(y, m - 1, 1).getDay();
 
+/** Convert internal ISO value (YYYY-MM-DD) to the display format (YYYY/MM/DD). */
+const toDisplay = (iso: string) => iso.replace(/-/g, '/');
+/** Convert display input (YYYY/MM/DD) back to the ISO value (YYYY-MM-DD). */
+const fromDisplay = (display: string) => display.replace(/\//g, '-');
+
 const DatePicker = (props: Props) => {
-  const { value, onChange, placeholder = 'YYYY-MM-DD' } = props;
+  const { value, onChange, placeholder = 'YYYY/MM/DD' } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
-  const [inputText, setInputText] = useState(value);
+  const [inputText, setInputText] = useState(value ? toDisplay(value) : '');
   const parsed = parseISO(value);
   const t = todayParts();
   const [viewYear, setViewYear] = useState(parsed?.y ?? t.y);
@@ -86,7 +91,7 @@ const DatePicker = (props: Props) => {
 
   // Sync inputText and calendar view when value changes externally (calendar pick, reset, edit)
   useEffect(() => {
-    setInputText(value);
+    setInputText(value ? toDisplay(value) : '');
     const p = parseISO(value);
     if (p) {
       setViewYear(p.y);
@@ -142,22 +147,23 @@ const DatePicker = (props: Props) => {
       onChange('');
       return;
     }
-    // Auto-commit when the user finishes typing a full YYYY-MM-DD
-    if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
-      const p = parseISO(raw);
+    // Auto-commit when the user finishes typing a full YYYY/MM/DD
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(raw)) {
+      const iso = fromDisplay(raw);
+      const p = parseISO(iso);
       if (p && isValidDate(p.y, p.m, p.d)) {
-        onChange(raw);
+        onChange(iso);
       }
     }
   };
 
   const handleTextBlur = () => {
     // Revert to the last committed value if input is incomplete or invalid
-    if (/^\d{4}-\d{2}-\d{2}$/.test(inputText)) {
-      const p = parseISO(inputText);
+    if (/^\d{4}\/\d{2}\/\d{2}$/.test(inputText)) {
+      const p = parseISO(fromDisplay(inputText));
       if (p && isValidDate(p.y, p.m, p.d)) return;
     }
-    setInputText(value);
+    setInputText(value ? toDisplay(value) : '');
   };
   const selectMonth = (m: number) => {
     setViewMonth(m);

@@ -15,15 +15,7 @@ interface Props {
   className?: string;
 }
 
-const formatDate = (d: string | null) =>
-  d
-    ? new Intl.DateTimeFormat('en-US', {
-        timeZone: 'UTC',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-      }).format(new Date(d))
-    : '?';
+const formatDate = (d: string | null) => (d ? d.slice(0, 10).replace(/-/g, '/') : '?');
 
 const LeagueSeasonsCard = (props: Props) => {
   const { seasons, loading, busy, onAdd, onEdit, onDelete, onView, className } = props;

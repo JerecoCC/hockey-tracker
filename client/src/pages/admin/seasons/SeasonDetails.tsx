@@ -11,15 +11,7 @@ import SeasonEndModal from './SeasonEndModal';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import styles from './SeasonDetails.module.scss';
 
-const US_DATE = new Intl.DateTimeFormat('en-US', {
-  timeZone: 'UTC',
-  year: 'numeric',
-  month: 'short',
-  day: 'numeric',
-});
-
-const formatDate = (d: string | null) =>
-  d ? US_DATE.format(new Date(`${d.slice(0, 10)}T12:00:00Z`)) : '—';
+const formatDate = (d: string | null) => (d ? d.slice(0, 10).replace(/-/g, '/') : '—');
 
 const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();

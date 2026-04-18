@@ -80,7 +80,7 @@ describe('Table', () => {
     expect(screen.getByText('Beta')).toBeInTheDocument();
   });
 
-  it('formats date columns using toLocaleDateString', () => {
+  it('formats date columns as YYYY/MM/DD', () => {
     render(
       <Table
         columns={columns}
@@ -88,8 +88,7 @@ describe('Table', () => {
         rowKey={(r) => r.id}
       />,
     );
-    const expected = new Date('2024-01-15T00:00:00.000Z').toLocaleDateString();
-    expect(screen.getByText(expected)).toBeInTheDocument();
+    expect(screen.getByText('2024/01/15')).toBeInTheDocument();
   });
 
   it('renders custom column via render prop', () => {
