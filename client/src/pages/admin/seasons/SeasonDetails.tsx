@@ -4,8 +4,10 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
+import Tag from '../../../components/Tag/Tag';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeasonDetails';
+import SeasonEndModal from './SeasonEndModal';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import styles from './SeasonDetails.module.scss';
 
@@ -37,9 +39,12 @@ const SeasonDetailsPage = () => {
     addGroup,
     updateGroup,
     deleteGroup,
+    setCurrentSeason,
+    endSeason,
   } = useSeasonDetails(id);
 
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
+  const [showEndModal, setShowEndModal] = useState(false);
 
   const leagueHref = `/admin/leagues/${leagueId}`;
 
@@ -95,6 +100,30 @@ const SeasonDetailsPage = () => {
         <Card
           className={styles.col12}
           title="Info"
+          action={
+            <div className={styles.infoCardActions}>
+              {!season.is_current && (
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="stars"
+                  disabled={busy === 'set-current'}
+                  onClick={() => setCurrentSeason(true)}
+                >
+                  Set as Current
+                </Button>
+              )}
+              <Button
+                variant="outlined"
+                intent="danger"
+                icon="flag"
+                disabled={busy === 'end-season'}
+                onClick={() => setShowEndModal(true)}
+              >
+                End Season
+              </Button>
+            </div>
+          }
         >
           <div className={styles.infoGrid}>
             <div className={styles.infoItem}>
@@ -108,6 +137,19 @@ const SeasonDetailsPage = () => {
             <div className={styles.infoItem}>
               <span className={styles.infoLabel}>End Date</span>
               <span className={styles.infoValue}>{formatDate(season.end_date)}</span>
+            </div>
+            <div className={styles.infoItem}>
+              <span className={styles.infoLabel}>Status</span>
+              <span className={styles.infoValue}>
+                {season.is_current ? (
+                  <Tag
+                    label="Current Season"
+                    intent="success"
+                  />
+                ) : (
+                  '—'
+                )}
+              </span>
             </div>
           </div>
         </Card>
@@ -149,6 +191,14 @@ const SeasonDetailsPage = () => {
           await deleteGroup(confirmDeleteGroup.id);
           setConfirmDeleteGroup(null);
         }}
+      />
+
+      <SeasonEndModal
+        open={showEndModal}
+        currentEndDate={season?.end_date ?? null}
+        busy={busy === 'end-season'}
+        onClose={() => setShowEndModal(false)}
+        onConfirm={endSeason}
       />
     </>
   );

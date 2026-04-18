@@ -485,6 +485,13 @@
   gap: $space-sm;
 }
 
+// ── Info card action buttons ───────────────────────────────────────────────────
+.infoCardActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
 // ── Groups section within the Teams card ──────────────────────────────────────
 .groupsSection {
   // intentionally no border-top/margin — groups render alone when present

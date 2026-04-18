@@ -14,6 +14,7 @@ export interface SeasonRecord {
   league_logo: string | null;
   start_date: string | null;
   end_date: string | null;
+  is_current: boolean;
   created_at: string;
 }
 

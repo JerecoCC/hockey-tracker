@@ -253,6 +253,52 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     }
   };
 
+  // ── Season-level actions ─────────────────────────────────────────────────────
+
+  const setCurrentSeason = async (isCurrent: boolean): Promise<boolean> => {
+    setBusy('set-current');
+    try {
+      await axios.patch(
+        `${API}/admin/seasons/${seasonId}/current`,
+        { is_current: isCurrent },
+        { headers: authHeaders() },
+      );
+      toast.success(isCurrent ? 'Season set as current!' : 'Season unmarked as current');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['seasons'] }),
+      ]);
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update current season'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const endSeason = async (endDate: string): Promise<boolean> => {
+    setBusy('end-season');
+    try {
+      await axios.patch(
+        `${API}/admin/seasons/${seasonId}`,
+        { end_date: endDate },
+        { headers: authHeaders() },
+      );
+      toast.success('Season ended!');
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['seasons'] }),
+      ]);
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to end season'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return {
     season,
     groups,
@@ -267,6 +313,8 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     addGroup,
     updateGroup,
     deleteGroup,
+    setCurrentSeason,
+    endSeason,
   };
 };
 
