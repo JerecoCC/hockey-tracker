@@ -73,7 +73,16 @@ const TeamDetailsPage = () => {
             ),
           },
           { label: 'Games', content: <TeamGamesTab /> },
-          { label: 'Roster', content: <TeamRosterTab teamId={team.id} /> },
+          {
+            label: 'Roster',
+            content: (
+              <TeamRosterTab
+                teamId={team.id}
+                leagueId={team.league_id ?? ''}
+                latestSeasonId={team.latest_season_id ?? null}
+              />
+            ),
+          },
           { label: 'Prospects', content: <TeamProspectsTab /> },
           {
             label: 'History',

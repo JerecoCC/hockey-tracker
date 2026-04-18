@@ -35,12 +35,25 @@ router.get('/', async (req, res) => {
             p.date_of_birth::text AS date_of_birth,
             p.birth_city, p.birth_country, p.nationality,
             p.height_cm, p.weight_lbs, p.position, p.shoots,
-            p.is_active, p.created_at
+            p.is_active, p.created_at,
+            la.jersey_number,
+            la.team_name,
+            la.primary_color,
+            la.text_color
           FROM players p
-          WHERE EXISTS (
-            SELECT 1 FROM player_teams pt
-            WHERE pt.player_id = p.id AND pt.team_id = ${team_id}
-          )
+          JOIN LATERAL (
+            SELECT
+              pt.jersey_number,
+              t.name        AS team_name,
+              t.primary_color,
+              t.text_color
+            FROM player_teams pt
+            JOIN teams t ON t.id = pt.team_id
+            WHERE pt.player_id = p.id
+              AND pt.team_id = ${team_id}
+            ORDER BY pt.season_id DESC
+            LIMIT 1
+          ) la ON TRUE
           ORDER BY p.last_name, p.first_name
         `
       : await sql`

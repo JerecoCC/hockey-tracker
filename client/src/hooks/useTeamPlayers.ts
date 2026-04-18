@@ -4,6 +4,19 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { type PlayerRecord, type CreatePlayerData } from './useLeaguePlayers';
 
+export interface PlayerRosterInput {
+  player_id: string;
+  jersey_number?: number | null;
+}
+
+/** Extends PlayerRecord with team-assignment fields returned when fetching by team_id. */
+export interface TeamPlayerRecord extends PlayerRecord {
+  jersey_number: number | null;
+  team_name: string | null;
+  primary_color: string | null;
+  text_color: string | null;
+}
+
 const API = import.meta.env.VITE_API_URL || '/api';
 
 const authHeaders = () => ({
@@ -17,11 +30,11 @@ const useTeamPlayers = (teamId: string | undefined) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const { data: players = [], isLoading: loading } = useQuery<PlayerRecord[]>({
+  const { data: players = [], isLoading: loading } = useQuery<TeamPlayerRecord[]>({
     queryKey: ['players', { team_id: teamId }],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<PlayerRecord[]>(
+        const { data } = await axios.get<TeamPlayerRecord[]>(
           `${API}/admin/players`,
           { headers: authHeaders(), params: { team_id: teamId } },
         );
@@ -65,7 +78,33 @@ const useTeamPlayers = (teamId: string | undefined) => {
     }
   };
 
-  return { players, loading, busy, updatePlayer, deletePlayer };
+  const addPlayersToRoster = async (
+    teamId: string,
+    seasonId: string,
+    players: PlayerRosterInput[],
+  ): Promise<boolean> => {
+    try {
+      const { data } = await axios.post(
+        `${API}/admin/player-teams/bulk`,
+        { team_id: teamId, season_id: seasonId, players },
+        { headers: authHeaders() },
+      );
+      const count: number = data.created?.length ?? 0;
+      const skipped: number = data.skipped ?? 0;
+      toast.success(
+        skipped > 0
+          ? `${count} player${count !== 1 ? 's' : ''} added (${skipped} already rostered)`
+          : `${count} player${count !== 1 ? 's' : ''} added to roster!`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ['players', { team_id: teamId }] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to add players to roster'));
+      return false;
+    }
+  };
+
+  return { players, loading, busy, addPlayersToRoster, updatePlayer, deletePlayer };
 };
 
 export default useTeamPlayers;

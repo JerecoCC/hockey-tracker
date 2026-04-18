@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Icon from '../../../components/Icon/Icon';
 import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
-import useTeamPlayers from '../../../hooks/useTeamPlayers';
-import { type PlayerRecord } from '../../../hooks/useLeaguePlayers';
+import useTeamPlayers, { type TeamPlayerRecord } from '../../../hooks/useTeamPlayers';
+import AddPlayersModal from './AddPlayersModal';
 import styles from './TeamDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
@@ -17,13 +18,18 @@ const POSITION_LABELS: Record<string, string> = {
 
 interface Props {
   teamId: string;
+  leagueId: string;
+  latestSeasonId: string | null;
 }
 
-const TeamRosterTab = ({ teamId }: Props) => {
-  const { players, loading, busy, deletePlayer } = useTeamPlayers(teamId);
+const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
+  const { players, loading, busy, addPlayersToRoster, deletePlayer } = useTeamPlayers(teamId);
   const [query, setQuery] = useState('');
-  const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const existingPlayerIds = new Set(players.map((p) => p.id));
 
   const filtered = query.trim()
     ? players.filter((p) => {
@@ -44,7 +50,19 @@ const TeamRosterTab = ({ teamId }: Props) => {
 
   return (
     <>
-      <Card title="Roster">
+      <Card
+        title="Roster"
+        action={
+          <Button
+            intent="accent"
+            icon="group_add"
+            size="sm"
+            onClick={() => setAddModalOpen(true)}
+          >
+            Add Players
+          </Button>
+        }
+      >
         {loading ? (
           <p className={styles.rosterEmpty}>Loading…</p>
         ) : players.length === 0 ? (
@@ -87,9 +105,15 @@ const TeamRosterTab = ({ teamId }: Props) => {
                     key={p.id}
                     image={p.photo}
                     image_shape="circle"
-                    name={`${p.first_name} ${p.last_name}`}
+                    name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
                     placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                    subtitle={p.position ? POSITION_LABELS[p.position] : undefined}
+                    primaryColor={p.primary_color ?? undefined}
+                    textColor={p.text_color ?? undefined}
+                    subtitle={
+                      [p.team_name, p.position ? (POSITION_LABELS[p.position] ?? p.position) : null]
+                        .filter(Boolean)
+                        .join(' • ') || undefined
+                    }
                     rightContent={{
                       type: 'tag',
                       label: p.is_active ? 'Active' : 'Inactive',
@@ -113,6 +137,16 @@ const TeamRosterTab = ({ teamId }: Props) => {
           </>
         )}
       </Card>
+
+      <AddPlayersModal
+        open={addModalOpen}
+        onClose={() => setAddModalOpen(false)}
+        teamId={teamId}
+        leagueId={leagueId}
+        latestSeasonId={latestSeasonId}
+        existingPlayerIds={existingPlayerIds}
+        addPlayersToRoster={addPlayersToRoster}
+      />
 
       <ConfirmModal
         open={!!confirmDelete}

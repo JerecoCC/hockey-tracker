@@ -508,42 +508,6 @@
   }
 }
 
-.teamSelectItem {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  cursor: pointer;
-  user-select: none;
-  transition: background $transition-fast;
-
-  &:hover,
-  &[data-selected="true"] {
-    background: rgba(255, 255, 255, 0.05);
-  }
-}
-
-.teamCheckbox {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border: 2px solid $border;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: $bg-card;
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &[data-checked="true"] {
-    background: $text-bright;
-    border-color: $text-bright;
-  }
-}
-
 // ── Inline add / edit row ─────────────────────────────────────────────────
 .groupInlineRow {
   display: flex;

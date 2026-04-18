@@ -1,0 +1,22 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+.checkbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 2px solid $border;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $bg-card;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &.checked {
+    background: $text-bright;
+    border-color: $text-bright;
+  }
+}

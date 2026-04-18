@@ -15,6 +15,7 @@ const teamsRoutes = require('./routes/teams');
 const seasonsRoutes = require('./routes/seasons');
 const groupsRoutes = require('./routes/groups');
 const playersRoutes = require('./routes/players');
+const playerTeamsRoutes = require('./routes/player-teams');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -67,6 +68,7 @@ app.use('/api/admin/teams', teamsRoutes);
 app.use('/api/admin/seasons', seasonsRoutes);
 app.use('/api/admin/groups', groupsRoutes);
 app.use('/api/admin/players', playersRoutes);
+app.use('/api/admin/player-teams', playerTeamsRoutes);
 
 app.get('/api/health', async (_req, res) => {
   try {
