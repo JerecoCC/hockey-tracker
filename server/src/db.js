@@ -333,6 +333,17 @@ async function initSchema() {
       WHERE end_date IS NULL
   `;
 
+  // Flag exactly one season per league as the "current" season.
+  await sql`
+    ALTER TABLE seasons ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT FALSE
+  `;
+  // At most one current season per league at a time.
+  await sql`
+    CREATE UNIQUE INDEX IF NOT EXISTS seasons_one_current_per_league
+      ON seasons (league_id)
+      WHERE is_current = TRUE
+  `;
+
   console.log('Database schema ready');
 }
 

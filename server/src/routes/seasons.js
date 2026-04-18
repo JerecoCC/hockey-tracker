@@ -31,7 +31,7 @@ router.use(requireAdmin);
 router.get('/', async (_req, res) => {
   try {
     const seasons = await sql`
-      SELECT s.id, s.name, s.league_id,
+      SELECT s.id, s.name, s.league_id, s.is_current,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -53,7 +53,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT s.id, s.name, s.league_id,
+      SELECT s.id, s.name, s.league_id, s.is_current,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -89,7 +89,7 @@ router.post('/', async (req, res) => {
     const rows = await sql`
       INSERT INTO seasons (name, league_id, start_date, end_date)
       VALUES (${name}, ${league_id}, ${start_date ?? null}, ${end_date ?? null})
-      RETURNING id, name, league_id, start_date::text AS start_date, end_date::text AS end_date, created_at
+      RETURNING id, name, league_id, is_current, start_date::text AS start_date, end_date::text AS end_date, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -138,7 +138,7 @@ router.patch('/:id', async (req, res) => {
         start_date = ${mergedStartDate},
         end_date   = ${mergedEndDate}
       WHERE id = ${id}
-      RETURNING id, name, league_id, start_date::text AS start_date, end_date::text AS end_date, created_at
+      RETURNING id, name, league_id, is_current, start_date::text AS start_date, end_date::text AS end_date, created_at
     `;
     return res.json(rows[0]);
   } catch (err) {
@@ -146,6 +146,50 @@ router.patch('/:id', async (req, res) => {
       return res.status(400).json({ error: 'League not found' });
     }
     console.error('seasons update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/seasons/:id/current  – set or unset the current-season flag
+// Body: { is_current: boolean }
+// Setting true atomically clears the flag on every other season in the same
+// league so there is always at most one current season per league.
+// ---------------------------------------------------------------------------
+router.patch('/:id/current', async (req, res) => {
+  const { id } = req.params;
+  const { is_current } = req.body;
+
+  if (typeof is_current !== 'boolean') {
+    return res.status(400).json({ error: 'is_current must be a boolean' });
+  }
+
+  try {
+    // Verify the season exists and fetch its league_id
+    const existing = await sql`
+      SELECT id, league_id FROM seasons WHERE id = ${id}
+    `;
+    if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+
+    const { league_id } = existing[0];
+
+    if (is_current) {
+      // Clear the flag on every other season in the same league first
+      await sql`
+        UPDATE seasons SET is_current = FALSE WHERE league_id = ${league_id}
+      `;
+    }
+
+    const rows = await sql`
+      UPDATE seasons
+      SET is_current = ${is_current}
+      WHERE id = ${id}
+      RETURNING id, name, league_id, is_current,
+                start_date::text AS start_date, end_date::text AS end_date, created_at
+    `;
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('seasons set-current error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

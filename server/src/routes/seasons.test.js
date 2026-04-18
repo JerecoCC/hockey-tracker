@@ -17,6 +17,7 @@ app.use('/api/admin/seasons', seasonsRouter);
 
 const SEASON = {
   id: 'season-1', name: 'NHL 2024–25', league_id: 'league-1',
+  is_current: false,
   start_date: '2024-09-01', end_date: '2025-04-30', created_at: new Date().toISOString(),
 };
 
@@ -148,6 +149,70 @@ describe('DELETE /api/admin/seasons/:id', () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/seasons/:id/current
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/seasons/:id/current', () => {
+  it('sets is_current to true and returns the updated season', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'season-1', league_id: 'league-1' }]) // existence check
+      .mockResolvedValueOnce([])                                           // clear league
+      .mockResolvedValueOnce([{ ...SEASON, is_current: true }]);           // set this one
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1/current')
+      .send({ is_current: true });
+    expect(res.status).toBe(200);
+    expect(res.body.is_current).toBe(true);
+    // Verify the league-wide clear ran before the targeted update
+    expect(sql).toHaveBeenCalledTimes(3);
+  });
+
+  it('sets is_current to false without clearing others', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'season-1', league_id: 'league-1' }]) // existence check
+      .mockResolvedValueOnce([{ ...SEASON, is_current: false }]);          // set this one
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1/current')
+      .send({ is_current: false });
+    expect(res.status).toBe(200);
+    expect(res.body.is_current).toBe(false);
+    // No league-wide clear — only 2 queries
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+
+  it('returns 400 when is_current is not a boolean', async () => {
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1/current')
+      .send({ is_current: 'yes' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/boolean/i);
+  });
+
+  it('returns 400 when is_current is missing', async () => {
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1/current')
+      .send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/boolean/i);
+  });
+
+  it('returns 404 when season not found', async () => {
+    sql.mockResolvedValueOnce([]); // existence check returns nothing
+    const res = await request(app)
+      .patch('/api/admin/seasons/nope/current')
+      .send({ is_current: true });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app)
+      .patch('/api/admin/seasons/season-1/current')
+      .send({ is_current: true });
+    expect(res.status).toBe(500);
+  });
+});
 
 const GROUP = {
   id: 'group-1', league_id: 'league-1', parent_id: null,
