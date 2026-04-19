@@ -17,7 +17,7 @@ app.use('/api/admin/seasons', seasonsRouter);
 
 const SEASON = {
   id: 'season-1', name: 'NHL 2024–25', league_id: 'league-1',
-  is_current: false,
+  is_current: false, is_ended: false,
   start_date: '2024-09-01', end_date: '2025-04-30', created_at: new Date().toISOString(),
 };
 

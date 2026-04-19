@@ -15,6 +15,7 @@ router.get('/', async (req, res) => {
       ? await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
+                 s.is_ended,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.created_at,
                  l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -26,6 +27,7 @@ router.get('/', async (req, res) => {
       : await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
+                 s.is_ended,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.created_at,
                  l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -49,6 +51,7 @@ router.get('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
+             s.is_ended,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -104,16 +107,18 @@ router.patch('/:id', async (req, res) => {
     // Fetch current row so we can merge partial updates
     const existing = await sql`
       SELECT id, name, league_id,
-             start_date::text AS start_date, end_date::text AS end_date
+             start_date::text AS start_date, end_date::text AS end_date, is_ended
       FROM seasons WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
     const cur = existing[0];
 
-    const mergedName      = name        !== undefined ? name.trim()         : cur.name;
-    const mergedLeagueId  = league_id   !== undefined ? league_id           : cur.league_id;
+    const mergedName      = name        !== undefined ? name.trim()          : cur.name;
+    const mergedLeagueId  = league_id   !== undefined ? league_id            : cur.league_id;
     const mergedStartDate = start_date  !== undefined ? (start_date || null) : cur.start_date;
     const mergedEndDate   = end_date    !== undefined ? (end_date   || null) : cur.end_date;
+    // Auto-set is_ended when an end_date is provided; never auto-clear it.
+    const mergedIsEnded   = mergedEndDate ? true : cur.is_ended;
 
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
 
@@ -128,12 +133,13 @@ router.patch('/:id', async (req, res) => {
         name       = ${mergedName},
         league_id  = ${mergedLeagueId},
         start_date = ${mergedStartDate},
-        end_date   = ${mergedEndDate}
+        end_date   = ${mergedEndDate},
+        is_ended   = ${mergedIsEnded}
       WHERE id = ${id}
     `;
 
-    // If an end date is being set, the season is over — unset it as the current season.
-    if (mergedEndDate) {
+    // If an end date is being set (or season is now marked ended), unset it as current.
+    if (mergedEndDate || mergedIsEnded) {
       await sql`
         UPDATE leagues
         SET current_season_id = NULL
@@ -144,6 +150,7 @@ router.patch('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
+             s.is_ended,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
@@ -202,6 +209,7 @@ router.patch('/:id/current', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
+             s.is_ended,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo

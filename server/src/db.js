@@ -347,6 +347,9 @@ async function initSchema() {
   await sql`
     ALTER TABLE seasons ADD COLUMN IF NOT EXISTS is_current BOOLEAN NOT NULL DEFAULT FALSE
   `;
+  await sql`
+    ALTER TABLE seasons ADD COLUMN IF NOT EXISTS is_ended BOOLEAN NOT NULL DEFAULT FALSE
+  `;
   // Drop the old partial-unique-index approach now that the FK on leagues enforces uniqueness.
   await sql`DROP INDEX IF EXISTS seasons_one_current_per_league`;
 
