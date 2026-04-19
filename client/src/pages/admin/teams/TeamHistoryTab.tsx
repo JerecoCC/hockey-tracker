@@ -19,12 +19,6 @@ interface Props {
   teamLogo: string | null;
   primaryColor: string;
   textColor: string;
-  startSeasonId: string | null;
-  latestSeasonId: string | null;
-  /** start_date of the team's first ever season (drives the subtitle start year) */
-  startSeasonStartDate: string | null;
-  /** end_date of the team's most recent season; null means still active (show "present") */
-  latestSeasonEndDate: string | null;
   uploadLogo: (file: File) => Promise<string | null>;
 }
 
@@ -45,10 +39,6 @@ const TeamHistoryTab = ({
   teamLogo,
   primaryColor,
   textColor,
-  startSeasonId,
-  latestSeasonId,
-  startSeasonStartDate,
-  latestSeasonEndDate,
   uploadLogo,
 }: Props) => {
   const { iterations, isLoading, busy, addIteration, updateIteration, deleteIteration } =
@@ -108,16 +98,14 @@ const TeamHistoryTab = ({
 
   useEffect(() => {
     if (!modalOpen) return;
-    const teamStartId = startSeasonId ?? '';
-    const teamLatestId = latestSeasonId ?? '';
     if (editTarget) {
       reset({
         name: editTarget.name,
         code: editTarget.code ?? '',
         logo: editTarget.logo,
         note: editTarget.note ?? '',
-        start_season_id: teamStartId,
-        latest_season_id: teamLatestId,
+        start_season_id: editTarget.start_season_id ?? '',
+        latest_season_id: editTarget.latest_season_id ?? '',
       });
     } else {
       reset({
@@ -125,11 +113,11 @@ const TeamHistoryTab = ({
         code: teamCode,
         logo: teamLogo,
         note: '',
-        start_season_id: teamStartId,
-        latest_season_id: teamLatestId,
+        start_season_id: '',
+        latest_season_id: '',
       });
     }
-  }, [modalOpen, editTarget, teamName, teamCode, teamLogo, startSeasonId, latestSeasonId, reset]);
+  }, [modalOpen, editTarget, teamName, teamCode, teamLogo, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -176,11 +164,12 @@ const TeamHistoryTab = ({
         ) : (
           <ul className={styles.historyList}>
             {iterations.map((iter) => {
-              // Start year = first year of the team's starting season (team-level field).
-              // End year   = second year of the team's latest season, or "present".
-              const startYear = startSeasonStartDate?.slice(0, 4);
-              const endYear = latestSeasonEndDate?.slice(0, 4) ?? 'present';
-              const subtitle = startYear ? `${startYear} – ${endYear}` : undefined;
+              // Per-iteration season range: "NHL 2022-23 – NHL 2023-24" or "NHL 2024-25 – present"
+              const subtitle = iter.start_season_name
+                ? `${iter.start_season_name} – ${iter.latest_season_name ?? 'present'}`
+                : iter.latest_season_name
+                  ? `Up to ${iter.latest_season_name}`
+                  : undefined;
               return (
                 <ListItem
                   key={iter.id}

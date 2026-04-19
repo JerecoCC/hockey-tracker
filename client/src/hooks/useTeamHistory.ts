@@ -8,23 +8,23 @@ const API = import.meta.env.VITE_API_URL || '/api';
 export interface TeamIteration {
   id: string;
   team_id: string;
-  season_id: string | null;
   name: string;
   code: string | null;
   logo: string | null;
   note: string | null;
   recorded_at: string;
-  /** ISO date string from the linked season's start_date */
-  season_start_date: string | null;
-  /** ISO date string from the linked season's end_date */
-  season_end_date: string | null;
+  /** Season this version first applied to. */
+  start_season_id: string | null;
+  start_season_name: string | null;
+  /** Last season this version applied to. Null means still active/current. */
+  latest_season_id: string | null;
+  latest_season_name: string | null;
 }
 
 export interface AddIterationPayload {
   name: string;
   code?: string | null;
   logo?: string | null;
-  season_id?: string | null;
   note?: string | null;
   start_season_id?: string | null;
   latest_season_id?: string | null;
@@ -34,7 +34,6 @@ export interface UpdateIterationPayload {
   name?: string;
   code?: string | null;
   logo?: string | null;
-  season_id?: string | null;
   note?: string | null;
   start_season_id?: string | null;
   latest_season_id?: string | null;
