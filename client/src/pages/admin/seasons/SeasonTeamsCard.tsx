@@ -242,6 +242,7 @@ interface GroupNodeProps {
   seasonBusy: string | null;
   groupBusy: string | null;
   inlineMode: InlineMode;
+  isEnded: boolean;
   onStartEdit: (groupId: string) => void;
   onStartAdd: (parentId: string) => void;
   onConfirm: (name: string) => Promise<void>;
@@ -259,6 +260,7 @@ const GroupNode = (props: GroupNodeProps) => {
     seasonBusy,
     groupBusy,
     inlineMode,
+    isEnded,
     onStartEdit,
     onStartAdd,
     onConfirm,
@@ -313,7 +315,7 @@ const GroupNode = (props: GroupNodeProps) => {
             }
           />
           <ActionOverlay className={styles.groupActions}>
-            {depth === 0 && !isAddingChild && group.teams.length === 0 && (
+            {!isEnded && depth === 0 && !isAddingChild && group.teams.length === 0 && (
               <Button
                 variant="outlined"
                 intent="neutral"
@@ -323,7 +325,7 @@ const GroupNode = (props: GroupNodeProps) => {
                 onClick={() => onStartAdd(group.id)}
               />
             )}
-            {isLeaf && (
+            {!isEnded && isLeaf && (
               <Button
                 variant="outlined"
                 intent={group.has_season_override ? 'accent' : 'neutral'}
@@ -334,7 +336,7 @@ const GroupNode = (props: GroupNodeProps) => {
                 onClick={() => onSetTeams(group)}
               />
             )}
-            {isLeaf && group.has_season_override && (
+            {!isEnded && isLeaf && group.has_season_override && (
               <Button
                 variant="outlined"
                 intent="neutral"
@@ -404,6 +406,7 @@ const GroupNode = (props: GroupNodeProps) => {
               seasonBusy={seasonBusy}
               groupBusy={groupBusy}
               inlineMode={inlineMode}
+              isEnded={isEnded}
               onStartEdit={onStartEdit}
               onStartAdd={onStartAdd}
               onConfirm={onConfirm}
@@ -429,6 +432,8 @@ interface Props {
   loading: boolean;
   busy: string | null;
   groupBusy: string | null;
+  /** When true the season is ended — all roster-editing actions are hidden. */
+  isEnded: boolean;
   setSeasonTeams: (teamIds: string[]) => Promise<boolean>;
   setSeasonGroupTeams: (groupId: string, teamIds: string[]) => Promise<boolean>;
   resetSeasonGroupTeams: (groupId: string) => Promise<boolean>;
@@ -446,6 +451,7 @@ const SeasonTeamsCard = (props: Props) => {
     loading,
     busy,
     groupBusy,
+    isEnded,
     setSeasonTeams,
     setSeasonGroupTeams,
     resetSeasonGroupTeams,
@@ -498,8 +504,8 @@ const SeasonTeamsCard = (props: Props) => {
         title="Teams"
         action={
           <div className={styles.cardActions}>
-            {/* "Manage Teams" — hidden once user groups exist */}
-            {!loading && userGroups.length === 0 && (
+            {/* "Manage Teams" — hidden once user groups exist or season is ended */}
+            {!loading && !isEnded && userGroups.length === 0 && (
               <Button
                 icon="group_add"
                 size="sm"
@@ -508,8 +514,8 @@ const SeasonTeamsCard = (props: Props) => {
                 Manage Teams
               </Button>
             )}
-            {/* "Create Group" — hidden once an auto group (i.e. season roster) exists */}
-            {!loading && autoGroup === undefined && (
+            {/* "Create Group" — hidden once an auto group exists or season is ended */}
+            {!loading && !isEnded && autoGroup === undefined && (
               <Button
                 icon="folder_plus"
                 size="sm"
@@ -566,13 +572,14 @@ const SeasonTeamsCard = (props: Props) => {
                             onClick: () =>
                               navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`),
                           },
-                          !isInherited && {
-                            icon: 'remove_circle_outline',
-                            intent: 'danger',
-                            tooltip: 'Remove from season',
-                            disabled: busy === 'season-teams',
-                            onClick: () => handleRemoveAutoTeam(t.id),
-                          },
+                          !isEnded &&
+                            !isInherited && {
+                              icon: 'remove_circle_outline',
+                              intent: 'danger',
+                              tooltip: 'Remove from season',
+                              disabled: busy === 'season-teams',
+                              onClick: () => handleRemoveAutoTeam(t.id),
+                            },
                         ] satisfies (ListItemAction | false)[]
                       }
                     />
@@ -605,6 +612,7 @@ const SeasonTeamsCard = (props: Props) => {
                         seasonBusy={busy}
                         groupBusy={groupBusy}
                         inlineMode={inlineMode}
+                        isEnded={isEnded}
                         onStartEdit={(id) => setInlineMode({ type: 'edit', groupId: id })}
                         onStartAdd={(pid) => setInlineMode({ type: 'add', parentId: pid })}
                         onConfirm={handleGroupConfirm}

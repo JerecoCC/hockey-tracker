@@ -129,6 +129,12 @@ const SeasonDetailsPage = () => {
                   intent="success"
                 />
               )}
+              {season.is_ended && (
+                <Badge
+                  label="Ended"
+                  intent="neutral"
+                />
+              )}
             </>
           }
           action={
@@ -212,6 +218,7 @@ const SeasonDetailsPage = () => {
           loading={loading}
           busy={busy}
           groupBusy={groupBusy}
+          isEnded={season.is_ended}
           setSeasonTeams={setSeasonTeams}
           setSeasonGroupTeams={setSeasonGroupTeams}
           resetSeasonGroupTeams={resetSeasonGroupTeams}

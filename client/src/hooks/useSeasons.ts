@@ -15,6 +15,8 @@ export interface SeasonRecord {
   start_date: string | null;
   end_date: string | null;
   is_current: boolean;
+  /** True when the season has been explicitly marked as ended — roster editing is locked. */
+  is_ended: boolean;
   created_at: string;
 }
 
