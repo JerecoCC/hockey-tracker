@@ -89,7 +89,7 @@ const ListItem = ({
               primaryColor ? { background: primaryColor, color: textColor ?? undefined } : undefined
             }
           >
-            {placeholder ?? (codeValue ?? name).slice(0, 3)}
+            {placeholder ?? (codeValue ?? name ?? '').slice(0, 3)}
           </span>
         ))}
 
