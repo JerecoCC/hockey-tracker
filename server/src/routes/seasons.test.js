@@ -163,6 +163,28 @@ describe('PATCH /api/admin/seasons/:id', () => {
       .send({ end_date: '2025-04-15' });
     expect(res.status).toBe(404);
   });
+
+  it('auto-keeps is_ended true when already ended and no end_date in request', async () => {
+    // cur.is_ended = true, no end_date in body → mergedEndDate = null, mergedIsEnded stays true
+    // UPDATE leagues should still fire because mergedIsEnded is true
+    sql
+      .mockResolvedValueOnce([{ ...SEASON, end_date: null, is_ended: true }]) // fetch existing
+      .mockResolvedValueOnce([])                                               // UPDATE seasons
+      .mockResolvedValueOnce([])                                               // UPDATE leagues (unset current)
+      .mockResolvedValueOnce([{ ...SEASON, name: 'NHL Renamed', end_date: null, is_ended: true }]);
+    const res = await request(app).patch('/api/admin/seasons/season-1')
+      .send({ name: 'NHL Renamed' });
+    expect(res.status).toBe(200);
+    // 4 calls: fetch + UPDATE seasons + UPDATE leagues + SELECT re-fetch
+    expect(sql).toHaveBeenCalledTimes(4);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).patch('/api/admin/seasons/season-1')
+      .send({ name: 'Crash' });
+    expect(res.status).toBe(500);
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -180,6 +202,12 @@ describe('DELETE /api/admin/seasons/:id', () => {
     sql.mockResolvedValueOnce([]);
     const res = await request(app).delete('/api/admin/seasons/nope');
     expect(res.status).toBe(404);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).delete('/api/admin/seasons/season-1');
+    expect(res.status).toBe(500);
   });
 });
 
@@ -473,6 +501,70 @@ describe('PUT /api/admin/seasons/:seasonId/teams', () => {
     const res = await request(app)
       .put('/api/admin/seasons/season-1/teams')
       .send({ team_ids: [] });
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:seasonId/teams
+// ---------------------------------------------------------------------------
+const SEASON_TEAM = {
+  id: 'team-1', name: 'Sharks', code: 'SJS', logo: null,
+  primary_color: '#007A53', text_color: '#FFFFFF', secondary_color: null,
+  inherited: false,
+};
+
+describe('GET /api/admin/seasons/:seasonId/teams', () => {
+  it('returns 404 when season is not found', async () => {
+    sql.mockResolvedValueOnce([]); // season check
+    const res = await request(app).get('/api/admin/seasons/nope/teams');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/season not found/i);
+  });
+
+  it('returns the season\'s own teams when the roster is set', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])          // season check (start_date)
+      .mockResolvedValueOnce([SEASON_TEAM]);    // current teams LATERAL query
+    const res = await request(app).get('/api/admin/seasons/season-1/teams');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].id).toBe('team-1');
+    expect(res.body[0].inherited).toBe(false);
+    // 2 SQL calls: season check + current teams
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+
+  it('falls back to the previous season\'s roster when the current season has none', async () => {
+    const prevSeason = { id: 'season-0', prev_start_date: '2023-09-01' };
+    const inheritedTeam = { ...SEASON_TEAM, inherited: true };
+    sql
+      .mockResolvedValueOnce([SEASON])          // season check
+      .mockResolvedValueOnce([])                // current teams → empty
+      .mockResolvedValueOnce([prevSeason])      // prev season lookup
+      .mockResolvedValueOnce([inheritedTeam]);  // inherited teams LATERAL query
+    const res = await request(app).get('/api/admin/seasons/season-1/teams');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].inherited).toBe(true);
+    // 4 SQL calls: season + empty current + prev season + inherited
+    expect(sql).toHaveBeenCalledTimes(4);
+  });
+
+  it('returns an empty array when there are no teams and no previous season', async () => {
+    sql
+      .mockResolvedValueOnce([SEASON])  // season check
+      .mockResolvedValueOnce([])        // current teams → empty
+      .mockResolvedValueOnce([]);       // prev season → none
+    const res = await request(app).get('/api/admin/seasons/season-1/teams');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+    expect(sql).toHaveBeenCalledTimes(3);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/seasons/season-1/teams');
     expect(res.status).toBe(500);
   });
 });

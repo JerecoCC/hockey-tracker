@@ -243,6 +243,8 @@ describe('LeagueDetailsPage – seasons card', () => {
         league_id: 'lg1',
         start_date: '2024-01-01',
         end_date: '2024-03-31',
+        is_current: false,
+        is_ended: true,
         created_at: '',
       },
     ];
