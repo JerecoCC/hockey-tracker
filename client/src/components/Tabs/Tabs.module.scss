@@ -1,0 +1,69 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Shell ──────────────────────────────────────────────────────────────
+.tabs {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2xl;
+}
+
+// ── Tab bar ────────────────────────────────────────────────────────────
+.tabList {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid $border;
+}
+
+.tabListDisabled {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+// ── Individual tab button ──────────────────────────────────────────────
+.tab {
+  position: relative;
+  background: none;
+  border: none;
+  padding: $space-sm $space-xl;
+  font-size: $font-nav;
+  font-weight: 500;
+  color: $text-light;
+  cursor: pointer;
+  transition: color $transition-fast;
+
+  // Active indicator underline
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: $radius-sm $radius-sm 0 0;
+    background: $accent;
+    opacity: 0;
+    transition: opacity $transition-fast;
+  }
+
+  &:hover {
+    color: $text-body;
+  }
+}
+
+.tabActive {
+  color: $accent-light;
+
+  &::after {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: $accent-light;
+  }
+}
+
+// ── Tab panel ─────────────────────────────────────────────────────────
+.tabPanel {
+  // content fills available space naturally
+}

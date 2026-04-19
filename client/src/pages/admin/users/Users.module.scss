@@ -1,27 +1,6 @@
 @use "../../../styles/colors" as *;
 @use "../../../styles/mixins" as *;
 
-// ── Badges ─────────────────────────────────────────────────────────────
-.badge {
-  display: inline-block;
-  padding: $space-xs 0.625rem;
-  border-radius: $radius-pill;
-  font-size: $font-xs;
-  font-weight: 600;
-}
-
-.badgeAdmin {
-  background: rgba($accent, 0.13);
-  color: $accent-light;
-  border: 1px solid rgba($accent, 0.33);
-}
-
-.badgeUser {
-  background: rgba($info, 0.13);
-  color: $info-light;
-  border: 1px solid rgba($info, 0.33);
-}
-
 // ── Action buttons ─────────────────────────────────────────────────────
 .actions {
   display: flex;

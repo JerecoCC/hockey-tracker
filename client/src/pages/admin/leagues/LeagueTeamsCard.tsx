@@ -1,6 +1,8 @@
 import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
+import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
+import SearchableList from '../../../components/SearchableList/SearchableList';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import styles from './LeagueDetails.module.scss';
 
@@ -15,16 +17,8 @@ interface Props {
   className?: string;
 }
 
-const LeagueTeamsCard = ({
-  leagueId,
-  teams,
-  loading,
-  busy,
-  onAdd,
-  onEdit,
-  onDelete,
-  className,
-}: Props) => {
+const LeagueTeamsCard = (props: Props) => {
+  const { leagueId, teams, loading, busy, onAdd, onEdit, onDelete, className } = props;
   const navigate = useNavigate();
 
   return (
@@ -41,59 +35,55 @@ const LeagueTeamsCard = ({
         </Button>
       }
     >
-      {loading ? (
-        <p className={styles.teamsEmpty}>Loading…</p>
-      ) : teams.length === 0 ? (
-        <p className={styles.teamsEmpty}>No teams assigned to this league yet.</p>
-      ) : (
-        <ul className={`${styles.teamList} ${teams.length > 5 ? styles.teamListLimited : ''}`}>
-          {teams.map((t) => (
-            <li
-              key={t.id}
-              className={`${styles.teamListItem} ${styles.teamListItemClickable}`}
-              onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`)}
-            >
-              {t.logo ? (
-                <img
-                  src={t.logo}
-                  alt=""
-                  className={styles.teamLogoThumb}
-                />
-              ) : (
-                <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-              )}
-              <span className={styles.teamListName}>{t.name}</span>
-              <span className={styles.seasonListDates}>{t.code}</span>
-              <span className={styles.teamActions}>
-                <Button
-                  variant="outlined"
-                  intent="accent"
-                  icon="edit"
-                  size="sm"
-                  disabled={busy === t.id}
-                  tooltip="Edit"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(t);
-                  }}
-                />
-                <Button
-                  variant="outlined"
-                  intent="danger"
-                  icon="delete"
-                  size="sm"
-                  disabled={busy === t.id}
-                  tooltip="Delete"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(t);
-                  }}
-                />
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
+      <SearchableList
+        items={teams}
+        filterFn={(t, q) =>
+          t.name.toLowerCase().includes(q.toLowerCase()) ||
+          t.code.toLowerCase().includes(q.toLowerCase())
+        }
+        renderItems={(filtered) => (
+          <ul className={styles.teamList}>
+            {filtered.map((t) => (
+              <ListItem
+                key={t.id}
+                image={t.logo}
+                name={t.name}
+                rightContent={{ type: 'code', value: t.code }}
+                primaryColor={t.primary_color}
+                textColor={t.text_color}
+                actions={
+                  [
+                    {
+                      icon: 'open_in_new',
+                      intent: 'accent',
+                      tooltip: 'View team',
+                      onClick: () => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`),
+                    },
+                    {
+                      icon: 'edit',
+                      intent: 'neutral',
+                      tooltip: 'Edit',
+                      disabled: busy === t.id,
+                      onClick: () => onEdit(t),
+                    },
+                    {
+                      icon: 'delete',
+                      intent: 'danger',
+                      tooltip: 'Delete',
+                      disabled: busy === t.id,
+                      onClick: () => onDelete(t),
+                    },
+                  ] satisfies ListItemAction[]
+                }
+              />
+            ))}
+          </ul>
+        )}
+        placeholder="Search teams…"
+        loading={loading}
+        emptyMessage="No teams assigned to this league yet."
+        noResultsMessage={(q) => `No teams match "${q}".`}
+      />
     </Card>
   );
 };

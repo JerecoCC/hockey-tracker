@@ -12,7 +12,8 @@ interface TitleRowProps {
   className?: string;
 }
 
-const TitleRow = ({ left, right, className }: TitleRowProps) => {
+const TitleRow = (props: TitleRowProps) => {
+  const { left, right, className } = props;
   const container = useTitleRowContainer();
   const classes = [styles.titleRow, className].filter(Boolean).join(' ');
 

@@ -11,7 +11,8 @@ interface BreadcrumbsProps {
   items: BreadcrumbItem[];
 }
 
-const Breadcrumbs = ({ items }: BreadcrumbsProps) => {
+const Breadcrumbs = (props: BreadcrumbsProps) => {
+  const { items } = props;
   const navigate = useNavigate();
 
   return (

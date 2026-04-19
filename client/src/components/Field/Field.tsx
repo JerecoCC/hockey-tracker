@@ -1,4 +1,5 @@
 import {
+  useRef,
   useState,
   type ChangeEvent,
   type InputHTMLAttributes,
@@ -13,7 +14,7 @@ import Select, { SelectOption } from '../Select/Select';
 import styles from './Field.module.scss';
 
 type BaseProps = {
-  label: string;
+  label?: string;
   required?: boolean;
   // typed as unknown so any Control<TFieldValues> can be passed without variance errors
   control: unknown;
@@ -25,6 +26,8 @@ type TextProps = BaseProps &
   Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'name'> & {
     type?: 'text' | 'email' | 'password' | 'number' | 'search' | 'url' | 'tel' | 'date';
     transform?: (value: string) => string;
+    /** Short unit label rendered inside the input on the right (e.g. "ft", "lbs"). */
+    suffix?: string;
   };
 
 type TextareaProps = BaseProps &
@@ -50,13 +53,24 @@ type DatePickerProps = BaseProps & {
   placeholder?: string;
 };
 
-export type FieldProps = TextProps | TextareaProps | SelectProps | CustomProps | DatePickerProps;
+type ColorProps = BaseProps & {
+  type: 'color';
+};
+
+export type FieldProps =
+  | TextProps
+  | TextareaProps
+  | SelectProps
+  | CustomProps
+  | DatePickerProps
+  | ColorProps;
 
 const Field = (props: FieldProps) => {
   const { label, required, control, name, rules } = props;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
   const [showPassword, setShowPassword] = useState(false);
+  const colorPickerRef = useRef<HTMLInputElement>(null);
 
   return (
     <Controller
@@ -112,6 +126,35 @@ const Field = (props: FieldProps) => {
                 placeholder={props.placeholder}
               />
             );
+          } else if (props.type === 'color') {
+            const color = (field.value as string) ?? '#000000';
+            return (
+              <div className={styles.colorInputWrapper}>
+                <button
+                  type="button"
+                  className={styles.colorSwatch}
+                  style={{ background: color }}
+                  onClick={() => colorPickerRef.current?.click()}
+                />
+                <input
+                  ref={colorPickerRef}
+                  type="color"
+                  value={color}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  className={styles.colorHiddenInput}
+                  tabIndex={-1}
+                />
+                <input
+                  type="text"
+                  value={color}
+                  onChange={(e) => field.onChange(e.target.value)}
+                  onBlur={field.onBlur}
+                  className={styles.colorHexInput}
+                  spellCheck={false}
+                  maxLength={7}
+                />
+              </div>
+            );
           } else {
             /* eslint-disable @typescript-eslint/no-unused-vars */
             const {
@@ -121,6 +164,7 @@ const Field = (props: FieldProps) => {
               name: _n,
               rules: _ru,
               transform,
+              suffix,
               ...rest
             } = props;
             /* eslint-enable @typescript-eslint/no-unused-vars */
@@ -128,9 +172,10 @@ const Field = (props: FieldProps) => {
               ? (e: ChangeEvent<HTMLInputElement>) => field.onChange(transform(e.target.value))
               : field.onChange;
             const isPassword = props.type === 'password';
+            const hasSuffix = !isPassword && !!suffix;
             const input = (
               <input
-                className={styles.field}
+                className={cn(styles.field, hasSuffix && styles.fieldWithSuffix)}
                 required={required}
                 {...rest}
                 type={isPassword ? (showPassword ? 'text' : 'password') : rest.type}
@@ -139,19 +184,27 @@ const Field = (props: FieldProps) => {
                 onBlur={field.onBlur}
               />
             );
-            if (!isPassword) return input;
+            if (!isPassword && !hasSuffix) return input;
+            if (isPassword) {
+              return (
+                <div className={styles.inputWrapper}>
+                  {input}
+                  <button
+                    type="button"
+                    className={styles.passwordToggle}
+                    onClick={() => setShowPassword((v) => !v)}
+                    tabIndex={-1}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
+                  </button>
+                </div>
+              );
+            }
             return (
               <div className={styles.inputWrapper}>
                 {input}
-                <button
-                  type="button"
-                  className={styles.passwordToggle}
-                  onClick={() => setShowPassword((v) => !v)}
-                  tabIndex={-1}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                >
-                  <Icon name={showPassword ? 'visibility_off' : 'visibility'} />
-                </button>
+                <span className={styles.inputSuffix}>{suffix}</span>
               </div>
             );
           }
@@ -159,10 +212,12 @@ const Field = (props: FieldProps) => {
 
         return (
           <label className={styles.label}>
-            <span className={styles.labelText}>
-              {label}
-              {required && <span className={styles.required}>*</span>}
-            </span>
+            {label && (
+              <span className={styles.labelText}>
+                {label}
+                {required && <span className={styles.required}>*</span>}
+              </span>
+            )}
             {getField()}
           </label>
         );

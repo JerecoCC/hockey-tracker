@@ -1,0 +1,52 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// Side-by-side pair (e.g. First / Last Name, Position / Shoots, Height / Weight)
+.row {
+  display: flex;
+  gap: $space-xl;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+// Height group: shared "Height" label above two compact ft / in inputs
+.heightGroup {
+  // flex: 1 + min-width: 0 come from .row > * — no override needed
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.heightGroupLabel {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.heightInputs {
+  display: flex;
+  gap: $space-md;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-top: $space-sm;
+}

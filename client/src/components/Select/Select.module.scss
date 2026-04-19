@@ -56,10 +56,10 @@
 }
 
 .menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  right: 0;
+  // position, top, left, width are applied via inline style so the menu
+  // renders at position:fixed relative to the viewport — this prevents any
+  // overflow:auto ancestor (e.g. a scrollable modal list) from clipping it.
+  position: fixed;
   background: $bg-card;
   border: 1px solid $accent;
   border-radius: $radius-md;

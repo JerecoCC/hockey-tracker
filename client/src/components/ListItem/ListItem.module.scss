@@ -1,0 +1,100 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Row ──────────────────────────────────────────────────────────────────────
+.item {
+  position: relative;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    // Reveals the ActionOverlay
+    .actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+// ── Image ─────────────────────────────────────────────────────────────────────
+.logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+}
+
+.logoCircle {
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+.logoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.logoPlaceholderCircle {
+  border-radius: 50%;
+}
+
+// ── Info column (name + optional subtitle / note) ─────────────────────────────
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.name {
+  font-size: $font-base;
+  color: $text-body;
+  @include truncate;
+}
+
+.subtitle {
+  font-size: $font-xs;
+  color: $text-dim;
+  @include truncate;
+}
+
+.note {
+  font-size: $font-xs;
+  color: $text-body;
+  font-style: italic;
+  @include truncate;
+}
+
+// ── Code badge ───────────────────────────────────────────────────────────────
+.code {
+  font-size: $font-xs;
+  color: $text-dim;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+// ── Hover-revealed actions slot ───────────────────────────────────────────────
+// Structural styles (position, opacity, gradient) live in ActionOverlay.module.scss.
+// This class exists so .item:hover can target it.
+.actions {
+}

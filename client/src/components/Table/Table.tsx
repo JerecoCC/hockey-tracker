@@ -39,7 +39,7 @@ export type Column<T> =
 
 const renderCell = <T,>(col: Column<T>, row: T): ReactNode => {
   if (col.type === 'custom') return col.render(row);
-  if (col.type === 'date') return new Date(row[col.key] as string).toLocaleDateString();
+  if (col.type === 'date') return String(row[col.key]).slice(0, 10).replace(/-/g, '/');
   if (col.type === 'logo') {
     const src = col.getLogo(row);
     const name = col.getName(row);

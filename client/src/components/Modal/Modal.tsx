@@ -7,9 +7,11 @@ interface Props {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  size?: 'md' | 'lg';
 }
 
-const Modal = ({ open, title, onClose, children }: Props) => {
+const Modal = (props: Props) => {
+  const { open, title, onClose, children, size = 'md' } = props;
   if (!open) return null;
   return (
     <div
@@ -17,7 +19,7 @@ const Modal = ({ open, title, onClose, children }: Props) => {
       onClick={onClose}
     >
       <div
-        className={styles.modal}
+        className={`${styles.modal}${size === 'lg' ? ` ${styles.modalLg}` : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>

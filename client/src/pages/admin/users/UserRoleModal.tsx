@@ -14,7 +14,8 @@ interface Props {
   onConfirm: () => void;
 }
 
-const UserRoleModal = ({ open, busy, roleConfirm, onCancel, onConfirm }: Props) => {
+const UserRoleModal = (props: Props) => {
+  const { open, busy, roleConfirm, onCancel, onConfirm } = props;
   const isPromote = roleConfirm?.role === 'admin';
   const actionLabel = isPromote ? 'Make Admin' : 'Remove Admin';
 

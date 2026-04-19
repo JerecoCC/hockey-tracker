@@ -1,4 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 
@@ -18,6 +19,8 @@ export interface GroupTeamRecord {
   name: string;
   code: string;
   logo: string | null;
+  primary_color: string;
+  text_color: string;
 }
 
 export interface GroupRecord {
@@ -40,41 +43,31 @@ export interface CreateGroupData {
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
 const useLeagueGroups = (leagueId: string | undefined) => {
-  const [groups, setGroups] = useState<GroupRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const fetchGroups = useCallback(
-    async (signal?: AbortSignal) => {
-      if (!leagueId) return;
+  const { data: groups = [], isLoading: loading } = useQuery({
+    queryKey: ['groups', leagueId],
+    queryFn: async () => {
       try {
         const { data } = await axios.get<GroupRecord[]>(
           `${API}/admin/groups`,
-          { params: { league_id: leagueId }, headers: authHeaders(), signal },
+          { params: { league_id: leagueId }, headers: authHeaders() },
         );
-        setGroups(data);
-        setLoading(false);
+        return data;
       } catch (err) {
-        if (axios.isCancel(err)) return;
         toast.error(apiError(err, 'Failed to load groups'));
-        setLoading(false);
+        return [] as GroupRecord[];
       }
     },
-    [leagueId],
-  );
-
-  useEffect(() => {
-    setLoading(true);
-    const controller = new AbortController();
-    fetchGroups(controller.signal);
-    return () => controller.abort();
-  }, [fetchGroups]);
+    enabled: !!leagueId,
+  });
 
   const addGroup = async (payload: CreateGroupData): Promise<boolean> => {
     try {
       await axios.post(`${API}/admin/groups`, payload, { headers: authHeaders() });
       toast.success('Group created!');
-      await fetchGroups();
+      await queryClient.invalidateQueries({ queryKey: ['groups', leagueId] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to create group'));
@@ -90,7 +83,7 @@ const useLeagueGroups = (leagueId: string | undefined) => {
     try {
       await axios.patch(`${API}/admin/groups/${groupId}`, payload, { headers: authHeaders() });
       toast.success('Group updated!');
-      await fetchGroups();
+      await queryClient.invalidateQueries({ queryKey: ['groups', leagueId] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update group'));
@@ -105,7 +98,7 @@ const useLeagueGroups = (leagueId: string | undefined) => {
     try {
       await axios.delete(`${API}/admin/groups/${groupId}`, { headers: authHeaders() });
       toast.success('Group deleted');
-      await fetchGroups();
+      await queryClient.invalidateQueries({ queryKey: ['groups', leagueId] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete group'));
     } finally {
@@ -122,7 +115,7 @@ const useLeagueGroups = (leagueId: string | undefined) => {
         { headers: authHeaders() },
       );
       toast.success('Group teams updated!');
-      await fetchGroups();
+      await queryClient.invalidateQueries({ queryKey: ['groups', leagueId] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update group teams'));

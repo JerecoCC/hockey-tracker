@@ -41,66 +41,6 @@
   }
 }
 
-// ── Header (logo + name) ───────────────────────────────────────────────
-.leagueHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-xl;
-  margin-bottom: $space-2xl;
-  padding-bottom: $space-2xl;
-  border-bottom: 1px solid $border;
-}
-
-.logoWrapper {
-  position: relative;
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-
-  &:hover .logoEditOverlay {
-    opacity: 1;
-  }
-}
-
-.logoEditOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $radius-lg;
-  background: rgba(0, 0, 0, 0.55);
-  border: none;
-  cursor: pointer;
-  color: $text-bright;
-  opacity: 0;
-  transition: opacity $transition-fast;
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-}
-
-.fileInput {
-  display: none;
-}
-
-.logoSpinnerOverlay {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: $radius-lg;
-  background: rgba(0, 0, 0, 0.55);
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 @keyframes shimmer {
   0% {
     background-position: -400px 0;
@@ -142,226 +82,6 @@
     margin-left: auto;
     margin-right: $space-md;
   }
-}
-
-.logoSpinner {
-  width: $space-2xl;
-  height: $space-2xl;
-  border: 2px solid rgba(255, 255, 255, 0.25);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-}
-
-.logoEditTooltip {
-  position: absolute;
-  bottom: calc(100% + $space-sm);
-  left: 50%;
-  transform: translateX(-50%);
-  background: $border;
-  color: $text-bright;
-  font-size: $font-xs;
-  font-weight: 500;
-  white-space: nowrap;
-  padding: $space-xs $space-sm;
-  border-radius: $radius-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity $transition-fast;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: $border;
-  }
-}
-
-.logoWrapper:hover .logoEditTooltip {
-  opacity: 1;
-}
-
-.logo {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-  border-radius: $radius-lg;
-  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
-}
-
-.logoPlaceholder {
-  width: 80px;
-  height: 80px;
-  border-radius: $radius-lg;
-  background: $border;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-}
-
-.leagueNameBlock {
-  flex: 1;
-  min-width: 0;
-}
-
-.leagueNameRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-
-  &:hover .nameEditBtn {
-    opacity: 1;
-  }
-}
-
-.nameEditBtn {
-  position: relative;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: $text-dim;
-  padding: $space-xs;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  opacity: 0;
-  transition:
-    opacity $transition-fast,
-    color $transition-fast;
-
-  &:hover {
-    color: $text-bright;
-  }
-
-  &:disabled {
-    cursor: not-allowed;
-  }
-
-  &:hover .nameEditTooltip {
-    opacity: 1;
-  }
-}
-
-.nameEditTooltip {
-  position: absolute;
-  bottom: calc(100% + $space-xs + 2px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: $border;
-  color: $text-bright;
-  font-size: $font-xs;
-  font-weight: 500;
-  white-space: nowrap;
-  padding: $space-xs $space-sm;
-  border-radius: $radius-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity $transition-fast;
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 5px solid transparent;
-    border-top-color: $border;
-  }
-}
-
-.leagueName {
-  font-size: $font-3xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0 0 $space-xs;
-}
-
-.leagueCode {
-  font-size: $font-base;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-// ── Header color swatches ──────────────────────────────────────────────
-.headerColors {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  flex-shrink: 0;
-}
-
-.headerColorItem {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-md;
-}
-
-.headerColorLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  text-align: right;
-}
-
-.headerColorDot {
-  width: $space-2xl;
-  height: $space-2xl;
-  border-radius: $radius-sm;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  flex-shrink: 0;
-  cursor: default;
-}
-
-// ── Description editor ─────────────────────────────────────────────────
-.descriptionReadArea {
-  cursor: pointer;
-  display: flex;
-  align-items: flex-start;
-  gap: $space-sm;
-  padding: $space-sm;
-  margin: -$space-sm;
-  border-radius: $radius-md;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-
-    .descriptionEditIcon {
-      opacity: 1;
-    }
-  }
-}
-
-.descriptionEditIcon {
-  flex-shrink: 0;
-  margin-top: 2px;
-  color: $text-dim;
-  opacity: 0;
-  transition: opacity $transition-fast;
-}
-
-.descriptionEditor {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.descriptionActions {
-  display: flex;
-  gap: $space-sm;
 }
 
 // ── Info grid ──────────────────────────────────────────────────────────
@@ -446,80 +166,21 @@
   }
 }
 
-.teamListItemClickable {
-  cursor: pointer;
-}
-
-.teamListItem {
-  position: relative;
+.emptyState {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-
-    .teamActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
+  grid-column: 1 / -1;
 }
 
-.teamActions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: 0 $space-md;
-  // Gradient fades row content behind the buttons
-  background: linear-gradient(to right, transparent, $bg-card 32%);
-  border-radius: 0 $radius-md $radius-md 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
-}
-
-.teamListName {
-  font-size: $font-lg;
-  color: $text-body;
-}
-
-.teamLogoThumb {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
-}
-
-.teamLogoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-base;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
-
-.teamsEmpty {
-  font-size: $font-base;
+.ungroupedLabel {
+  font-size: $font-sm;
+  font-weight: 600;
   color: $text-dim;
-  font-style: italic;
-  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: $space-md 0 $space-sm;
 }
 
 // ── Seasons list ──────────────────────────────────────────────────────────
@@ -569,54 +230,6 @@
   }
 }
 
-.seasonListItem {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-
-    .seasonActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-}
-
-.seasonListName {
-  font-size: $font-lg;
-  color: $text-body;
-  font-weight: 500;
-}
-
-.seasonListDates {
-  font-size: $font-xs;
-  color: $text-dim;
-  white-space: nowrap;
-  margin-left: auto;
-}
-
-.seasonActions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: 0 $space-md;
-  background: linear-gradient(to right, transparent, $bg-card 32%);
-  border-radius: 0 $radius-md $radius-md 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
-}
-
 // ── Shared modal form styles ──────────────────────────────────────────────
 .form {
   display: flex;
@@ -631,14 +244,33 @@
   margin-top: $space-sm;
 }
 
+// ── Inline league edit form ───────────────────────────────────────────────
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  margin-top: $space-xl;
+}
+
 // ── Groups tree ───────────────────────────────────────────────────────────
 .groupList {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: start;
   gap: $space-md;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Inline-add row spans both columns
+.groupItemSpanFull {
+  grid-column: 1 / -1;
 }
 
 .groupItem {
@@ -656,6 +288,15 @@
 }
 
 // Child groups are indented and separated from siblings
+.groupItemNew {
+  margin: $space-sm;
+}
+
+.groupItemNewRoot {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .groupItemChild {
   border-color: rgba(255, 255, 255, 0.06);
 }
@@ -754,21 +395,8 @@
   flex-shrink: 0;
 }
 
-// Hover-reveal action overlay (matches teamActions / seasonActions pattern)
+// Exists so .groupRow:hover can reference it; structural styles live in ActionOverlay
 .groupActions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: 0 $space-md;
-  background: linear-gradient(to right, transparent, $bg-card 32%);
-  border-radius: 0 $radius-md $radius-md 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
 }
 
 // ── Group "add team" selector list (used inside modal) ───────────────────
@@ -786,42 +414,6 @@
 
   &:hover {
     scrollbar-color: $border transparent;
-  }
-}
-
-.teamSelectItem {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  cursor: pointer;
-  user-select: none;
-  transition: background $transition-fast;
-
-  &:hover,
-  &[data-selected="true"] {
-    background: rgba(255, 255, 255, 0.05);
-  }
-}
-
-.teamCheckbox {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border: 2px solid $border;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: $bg-card;
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &[data-checked="true"] {
-    background: $text-bright;
-    border-color: $text-bright;
   }
 }
 

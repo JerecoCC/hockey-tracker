@@ -4,9 +4,8 @@ import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
-import { type SelectOption } from '../../../components/Select/Select';
 import { type CreateTeamData, type TeamRecord } from '../../../hooks/useTeams';
-import styles from './Teams.module.scss';
+import styles from './TeamFormModal.module.scss';
 
 interface FormValues {
   name: string;
@@ -18,31 +17,29 @@ interface FormValues {
 interface Props {
   open: boolean;
   editTarget: TeamRecord | null;
-  leagueOptions: SelectOption[];
   onClose: () => void;
   addTeam: (data: CreateTeamData) => Promise<boolean>;
   updateTeam: (id: string, data: Partial<CreateTeamData>) => Promise<boolean>;
   uploadLogo: (file: File) => Promise<string | null>;
-  /** When set, the league field is pre-filled with this ID and locked. */
+  /** When set, the team is implicitly linked to this league on save. */
   lockedLeagueId?: string;
 }
 
-const TeamFormModal = ({
-  open,
-  editTarget,
-  leagueOptions,
-  onClose,
-  addTeam,
-  updateTeam,
-  uploadLogo,
-  lockedLeagueId,
-}: Props) => {
+const TeamFormModal = (props: Props) => {
+  const { open, editTarget, onClose, addTeam, updateTeam, uploadLogo, lockedLeagueId } = props;
   const {
     control,
     handleSubmit,
     reset,
     formState: { isSubmitting },
-  } = useForm<FormValues>({ defaultValues: { name: '', code: '', league_id: null, logo: null } });
+  } = useForm<FormValues>({
+    defaultValues: {
+      name: '',
+      code: '',
+      league_id: null,
+      logo: null,
+    },
+  });
 
   useEffect(() => {
     if (!open) return;
@@ -74,7 +71,7 @@ const TeamFormModal = ({
   return (
     <Modal
       open={open}
-      title={editTarget ? 'Edit Team' : 'Add Team'}
+      title={editTarget ? 'Edit Team' : 'Create Team'}
       onClose={onClose}
     >
       <form
@@ -84,7 +81,7 @@ const TeamFormModal = ({
         <LogoUpload
           control={control}
           name="logo"
-          label="Add Team Logo"
+          label="Team Logo"
           disabled={isSubmitting}
         />
         <Field
@@ -107,17 +104,6 @@ const TeamFormModal = ({
           placeholder="e.g. TOR"
           disabled={isSubmitting}
         />
-        <Field
-          label="League"
-          required
-          type="select"
-          control={control}
-          name="league_id"
-          rules={{ required: true }}
-          options={leagueOptions}
-          placeholder="— Select a league —"
-          disabled={!!lockedLeagueId || isSubmitting}
-        />
         <div className={styles.formActions}>
           <Button
             type="button"
@@ -132,7 +118,7 @@ const TeamFormModal = ({
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add Team'}
+            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Team'}
           </Button>
         </div>
       </form>

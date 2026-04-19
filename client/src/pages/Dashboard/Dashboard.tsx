@@ -66,7 +66,7 @@ const DashboardPage = () => {
             className={styles.adminBtn}
             icon="admin_panel_settings"
             iconSize="1.1em"
-            onClick={() => navigate('/admin/users')}
+            onClick={() => navigate('/admin/leagues')}
             style={{ marginTop: '1.25rem', width: '100%' }}
           >
             Go to Admin Panel

@@ -1,6 +1,8 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { type CreateTeamData } from './useTeams';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -10,12 +12,25 @@ export interface TeamDetailRecord {
   code: string;
   description: string | null;
   location: string | null;
+  city: string | null;
+  home_arena: string | null;
   logo: string | null;
   league_id: string | null;
+  primary_color: string;
+  secondary_color: string;
+  text_color: string;
   league_name: string | null;
   league_code: string | null;
   league_logo: string | null;
+  league_primary_color: string | null;
+  league_text_color: string | null;
   created_at: string;
+  start_season_id: string | null;
+  latest_season_id: string | null;
+  /** start_date of the first season this team was added to */
+  start_season_start_date: string | null;
+  /** end_date of the most recent season this team was added to (null = open-ended / present) */
+  latest_season_end_date: string | null;
 }
 
 const authHeaders = () => {
@@ -29,36 +44,63 @@ const apiError = (err: unknown, fallback: string) => {
 };
 
 const useTeamDetails = (id: string | undefined) => {
-  const [team, setTeam] = useState<TeamDetailRecord | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
 
-  const fetchTeam = useCallback(
-    async (signal?: AbortSignal) => {
-      if (!id) return;
+  const { data: team = null, isLoading: loading } = useQuery({
+    queryKey: ['teams', id],
+    queryFn: async () => {
       try {
         const { data } = await axios.get<TeamDetailRecord>(
           `${API}/admin/teams/${id}`,
-          { headers: authHeaders(), signal },
+          { headers: authHeaders() },
         );
-        setTeam(data);
-        setLoading(false);
+        return data;
       } catch (err) {
-        if (axios.isCancel(err)) return;
         toast.error(apiError(err, 'Failed to load team'));
-        setLoading(false);
+        return null;
       }
     },
-    [id],
-  );
+    enabled: !!id,
+  });
 
-  useEffect(() => {
-    setLoading(true);
-    const controller = new AbortController();
-    fetchTeam(controller.signal);
-    return () => controller.abort();
-  }, [fetchTeam]);
+  const uploadLogo = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('logo', file);
+    try {
+      const { data } = await axios.post<{ url: string }>(`${API}/admin/teams/upload`, formData, {
+        headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' },
+      });
+      return data.url;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to upload logo'));
+      return null;
+    }
+  };
 
-  return { team, loading };
+  const updateTeam = async (teamId: string, payload: Partial<CreateTeamData>): Promise<boolean> => {
+    setBusy(teamId);
+    try {
+      await axios.patch(`${API}/admin/teams/${teamId}`, payload, { headers: authHeaders() });
+      toast.success('Team updated!');
+      await queryClient.invalidateQueries({ queryKey: ['teams', teamId] });
+      await queryClient.invalidateQueries({ queryKey: ['teams'] });
+      await queryClient.invalidateQueries({ queryKey: ['leagues'] });
+      // Remove the specific league detail from cache so the league details page
+      // fetches fresh data on next mount instead of flashing stale team info.
+      if (team?.league_id) {
+        queryClient.removeQueries({ queryKey: ['leagues', team.league_id] });
+      }
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update team'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { team, loading, busy, uploadLogo, updateTeam };
 };
 
 export default useTeamDetails;

@@ -1,0 +1,137 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Row: logo | name+code | right column (view mode) ──────────────────
+.header {
+  display: flex;
+  align-items: center;
+  gap: $space-xl;
+  margin-bottom: $space-2xl;
+  padding-bottom: $space-2xl;
+  border-bottom: 1px solid $border;
+}
+
+// ── Logo ───────────────────────────────────────────────────────────────
+.logoWrapper {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: $radius-lg;
+  overflow: hidden;
+}
+
+.logo {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
+}
+
+.logoPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: $radius-lg;
+  background: $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-2xl;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// ── Name block ─────────────────────────────────────────────────────────
+.nameBlock {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  padding-top: $space-xs;
+}
+
+.name {
+  font-size: $font-3xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+}
+
+.code {
+  font-size: $font-base;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+// ── Right column: edit button on top, swatches below ───────────────────
+.rightCol {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $space-md;
+}
+
+// ── Edit mode: 2-column, 2-row CSS grid ────────────────────────────────
+.editHeader {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: $space-xl;
+  row-gap: $space-md;
+  margin-bottom: $space-2xl;
+  padding-bottom: $space-2xl;
+  border-bottom: 1px solid $border;
+}
+
+// Col 1: logo upload — spans both rows
+.editLogoCell {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  align-self: center;
+}
+
+// Col 2, Row 1: name field (stretches) + action buttons
+.editTopRow {
+  grid-column: 2;
+  grid-row: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.editNameSlot {
+  width: 40%;
+}
+
+.editActionsSlot {
+  display: flex;
+  gap: $space-md;
+}
+
+// Col 2, Row 2: code field + color pickers
+.editBottomRow {
+  grid-column: 2;
+  grid-row: 2;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  justify-content: space-between;
+}
+
+.editColorsSlot {
+  display: flex;
+  gap: $space-md;
+}
+
+// ── Color swatches ─────────────────────────────────────────────────────
+.swatches {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: $space-xl;
+  justify-content: flex-end;
+}

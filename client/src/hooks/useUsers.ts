@@ -1,4 +1,5 @@
-﻿import { useEffect, useState, useCallback } from 'react';
+﻿import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import { UserRecord } from '../pages/admin/users/columns';
@@ -14,36 +15,29 @@ const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const useUsers = () => {
-  const [users, setUsers] = useState<UserRecord[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
-  const fetchUsers = useCallback(async (signal?: AbortSignal) => {
-    try {
-      const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, {
-        headers: authHeaders(),
-        signal,
-      });
-      setUsers(data);
-      setLoading(false);
-    } catch (err) {
-      if (axios.isCancel(err)) return;
-      toast.error(apiError(err, 'Failed to load users'));
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    fetchUsers(controller.signal);
-    return () => controller.abort();
-  }, [fetchUsers]);
+  const { data: users = [], isLoading: loading } = useQuery({
+    queryKey: ['users'],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<UserRecord[]>(`${API}/admin/users`, {
+          headers: authHeaders(),
+        });
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load users'));
+        return [] as UserRecord[];
+      }
+    },
+  });
 
   const changeRole = async (id: string, role: 'admin' | 'user') => {
     setBusy(id);
     try {
       await axios.patch(`${API}/admin/users/${id}/role`, { role }, { headers: authHeaders() });
-      await fetchUsers();
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to update role'));
     } finally {
@@ -55,7 +49,7 @@ const useUsers = () => {
     setBusy(id);
     try {
       await axios.delete(`${API}/admin/users/${id}`, { headers: authHeaders() });
-      await fetchUsers();
+      await queryClient.invalidateQueries({ queryKey: ['users'] });
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete user'));
     } finally {

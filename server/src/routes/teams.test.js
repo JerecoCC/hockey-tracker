@@ -19,6 +19,16 @@ app.use('/api/admin/teams', teamsRouter);
 const TEAM = {
   id: 'team-1', name: 'Leafs', code: 'TOR', description: null,
   location: 'Toronto', logo: null, league_id: 'league-1', created_at: new Date().toISOString(),
+  start_season_id: null, latest_season_id: null,
+  start_season_start_date: null, latest_season_end_date: null,
+};
+
+const ITER = {
+  id: 'iter-1', team_id: 'team-1',
+  name: 'Leafs', code: 'TOR', logo: null, note: null,
+  recorded_at: new Date().toISOString(),
+  start_season_id: null, start_season_name: null,
+  latest_season_id: null, latest_season_name: null,
 };
 
 afterEach(() => jest.clearAllMocks());
@@ -77,28 +87,16 @@ describe('POST /api/admin/teams', () => {
     expect(res.body.error).toMatch(/code is required/i);
   });
 
-  it('returns 400 when league_id is missing', async () => {
-    const res = await request(app).post('/api/admin/teams')
-      .send({ name: 'Leafs', code: 'TOR' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/league_id is required/i);
-  });
-
-  it('returns 201 on success', async () => {
-    sql.mockResolvedValueOnce([TEAM]);
+  // Route creates team row, inserts base iteration, then fetches full team (3 sql calls)
+  it('returns 201 on success and upper-cases the code', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])  // INSERT teams RETURNING id
+      .mockResolvedValueOnce([])                    // INSERT team_iterations (base)
+      .mockResolvedValueOnce([{ ...TEAM, code: 'TOR' }]); // SELECT full team
     const res = await request(app).post('/api/admin/teams')
       .send({ name: 'Leafs', code: 'tor', league_id: 'league-1' });
     expect(res.status).toBe(201);
     expect(res.body.code).toBe('TOR');
-  });
-
-  it('returns 409 with league-scoped message on duplicate code', async () => {
-    const err = Object.assign(new Error('dup'), { code: '23505', detail: '(code)' });
-    sql.mockRejectedValueOnce(err);
-    const res = await request(app).post('/api/admin/teams')
-      .send({ name: 'Leafs', code: 'TOR', league_id: 'league-1' });
-    expect(res.status).toBe(409);
-    expect(res.body.error).toMatch(/code already exists in this league/i);
   });
 
   it('returns 400 on foreign key violation (bad league_id)', async () => {
@@ -109,18 +107,60 @@ describe('POST /api/admin/teams', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/league does not exist/i);
   });
+
+  it('returns 500 on generic DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('connection lost'));
+    const res = await request(app).post('/api/admin/teams')
+      .send({ name: 'Leafs', code: 'TOR', league_id: 'league-1' });
+    expect(res.status).toBe(500);
+  });
 });
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/teams/:id
+// Route SQL sequence (identity field like name):
+//   1. SELECT id FROM teams (exists check)
+//   2. SELECT id FROM team_iterations WHERE season_id IS NULL (base iter)
+//   3. UPDATE team_iterations (update base iter name/code/logo)
+//   4. UPDATE teams (non-identity fields + season tracking)
+//   5. SELECT full team (return value)
+// For non-identity-only patches steps 2 & 3 are skipped.
 // ---------------------------------------------------------------------------
 describe('PATCH /api/admin/teams/:id', () => {
-  it('returns updated team on success', async () => {
-    sql.mockResolvedValueOnce([{ ...TEAM, name: 'Toronto Maple Leafs' }]);
+  it('returns updated team when updating an identity field (name)', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])                        // exists
+      .mockResolvedValueOnce([{ id: 'iter-1' }])                        // base iter found
+      .mockResolvedValueOnce([])                                          // UPDATE team_iterations
+      .mockResolvedValueOnce([])                                          // UPDATE teams
+      .mockResolvedValueOnce([{ ...TEAM, name: 'Toronto Maple Leafs' }]); // SELECT full
     const res = await request(app).patch('/api/admin/teams/team-1')
       .send({ name: 'Toronto Maple Leafs' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Toronto Maple Leafs');
+  });
+
+  it('returns updated team when updating a non-identity field (city)', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])               // exists
+      .mockResolvedValueOnce([])                                 // UPDATE teams
+      .mockResolvedValueOnce([{ ...TEAM, city: 'Ottawa' }]);    // SELECT full
+    const res = await request(app).patch('/api/admin/teams/team-1')
+      .send({ city: 'Ottawa' });
+    expect(res.status).toBe(200);
+    expect(res.body.city).toBe('Ottawa');
+  });
+
+  it('sends start_season_id and latest_season_id to the DB', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...TEAM, start_season_id: 'season-1', latest_season_id: 'season-3' }]);
+    const res = await request(app).patch('/api/admin/teams/team-1')
+      .send({ start_season_id: 'season-1', latest_season_id: 'season-3' });
+    expect(res.status).toBe(200);
+    expect(res.body.start_season_id).toBe('season-1');
+    expect(res.body.latest_season_id).toBe('season-3');
   });
 
   it('returns 404 when not found', async () => {
@@ -131,6 +171,11 @@ describe('PATCH /api/admin/teams/:id', () => {
 
   it('returns 400 when name is empty string', async () => {
     const res = await request(app).patch('/api/admin/teams/team-1').send({ name: '' });
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 400 when code is empty string', async () => {
+    const res = await request(app).patch('/api/admin/teams/team-1').send({ code: '' });
     expect(res.status).toBe(400);
   });
 });
@@ -150,5 +195,145 @@ describe('DELETE /api/admin/teams/:id', () => {
     sql.mockResolvedValueOnce([]);
     const res = await request(app).delete('/api/admin/teams/nope');
     expect(res.status).toBe(404);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/teams/:id/iterations
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/teams/:id/iterations', () => {
+  it('returns an array of iterations', async () => {
+    sql.mockResolvedValueOnce([ITER]);
+    const res = await request(app).get('/api/admin/teams/team-1/iterations');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].id).toBe('iter-1');
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/teams/team-1/iterations');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/teams/:id/iterations
+// SQL sequence: 1) SELECT team exists  2) INSERT iteration  3) optionally UPDATE teams
+//               4) SELECT full iteration
+// ---------------------------------------------------------------------------
+describe('POST /api/admin/teams/:id/iterations', () => {
+  it('returns 400 when name is missing', async () => {
+    const res = await request(app).post('/api/admin/teams/team-1/iterations').send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/name is required/i);
+  });
+
+  it('returns 404 when team does not exist', async () => {
+    sql.mockResolvedValueOnce([]); // team exists check → empty
+    const res = await request(app).post('/api/admin/teams/nope/iterations')
+      .send({ name: 'Leafs' });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/team not found/i);
+  });
+
+  it('returns 201 without season tracking fields', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])  // team exists
+      .mockResolvedValueOnce([{ id: 'iter-1' }])  // INSERT RETURNING id
+      .mockResolvedValueOnce([ITER]);              // SELECT full iteration
+    const res = await request(app).post('/api/admin/teams/team-1/iterations')
+      .send({ name: 'Leafs', code: 'tor' });
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe('iter-1');
+    expect(res.body.name).toBe('Leafs');
+  });
+
+  it('returns 201 with start/latest season IDs stored on iteration', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])  // team exists
+      .mockResolvedValueOnce([{ id: 'iter-1' }])  // INSERT RETURNING id
+      .mockResolvedValueOnce([ITER]);              // SELECT full iteration
+    const res = await request(app).post('/api/admin/teams/team-1/iterations')
+      .send({ name: 'Leafs', start_season_id: 'season-1', latest_season_id: 'season-2' });
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe('iter-1');
+    // 3 sql calls: team check, INSERT, SELECT full
+    expect(sql).toHaveBeenCalledTimes(3);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])
+      .mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).post('/api/admin/teams/team-1/iterations')
+      .send({ name: 'Leafs' });
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/teams/:id/iterations/:iterationId
+// SQL sequence: 1) UPDATE iteration RETURNING id  2) optionally UPDATE teams
+//               3) SELECT full iteration
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/teams/:id/iterations/:iterationId', () => {
+  it('returns 400 when name is empty string', async () => {
+    const res = await request(app)
+      .patch('/api/admin/teams/team-1/iterations/iter-1').send({ name: '' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/name cannot be empty/i);
+  });
+
+  it('returns 404 when iteration not found', async () => {
+    sql.mockResolvedValueOnce([]); // UPDATE RETURNING → nothing matched
+    const res = await request(app)
+      .patch('/api/admin/teams/team-1/iterations/nope').send({ name: 'X' });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/iteration not found/i);
+  });
+
+  it('returns updated iteration without season tracking fields', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'iter-1' }])          // UPDATE RETURNING id
+      .mockResolvedValueOnce([{ ...ITER, name: 'New Name' }]); // SELECT full
+    const res = await request(app)
+      .patch('/api/admin/teams/team-1/iterations/iter-1')
+      .send({ name: 'New Name' });
+    expect(res.status).toBe(200);
+    expect(res.body.name).toBe('New Name');
+  });
+
+  it('stores start/latest season IDs on the iteration row', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'iter-1' }])  // UPDATE RETURNING id
+      .mockResolvedValueOnce([ITER]);              // SELECT full
+    const res = await request(app)
+      .patch('/api/admin/teams/team-1/iterations/iter-1')
+      .send({ name: 'Leafs', start_season_id: 'season-1', latest_season_id: 'season-3' });
+    expect(res.status).toBe(200);
+    // 2 sql calls: UPDATE iteration, SELECT full (no separate UPDATE teams)
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/teams/:id/iterations/:iterationId
+// ---------------------------------------------------------------------------
+describe('DELETE /api/admin/teams/:id/iterations/:iterationId', () => {
+  it('returns 200 on success', async () => {
+    sql.mockResolvedValueOnce([{ id: 'iter-1' }]);
+    const res = await request(app)
+      .delete('/api/admin/teams/team-1/iterations/iter-1');
+    expect(res.status).toBe(200);
+    expect(res.body.message).toMatch(/deleted/i);
+  });
+
+  it('returns 404 when iteration not found', async () => {
+    sql.mockResolvedValueOnce([]);
+    const res = await request(app)
+      .delete('/api/admin/teams/team-1/iterations/nope');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/iteration not found/i);
   });
 });

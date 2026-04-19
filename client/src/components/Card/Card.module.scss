@@ -30,6 +30,9 @@
 }
 
 .cardTitle {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
   font-size: $font-xl;
   font-weight: 700;
   color: $text-bright;

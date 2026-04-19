@@ -1,29 +1,33 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon'; // still needed for location_on
-import useTeamDetails from '../../../hooks/useTeamDetails';
-import Card from '../../../components/Card/Card';
+import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
+import useTeamDetails from '../../../hooks/useTeamDetails';
+import useLeagueGroups from '../../../hooks/useLeagueGroups';
+import TeamInfoTab from './TeamInfoTab';
+import TeamGamesTab from './TeamGamesTab';
+import TeamRosterTab from './TeamRosterTab';
+import TeamProspectsTab from './TeamProspectsTab';
+import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
   const navigate = useNavigate();
-  const { id, leagueId } = useParams<{ id: string; leagueId?: string }>();
-  const { team, loading } = useTeamDetails(id);
+  const { id, leagueId } = useParams<{ id: string; leagueId: string }>();
+  const { team, loading, uploadLogo, updateTeam } = useTeamDetails(id);
+  const { groups } = useLeagueGroups(team?.league_id ?? undefined);
+  const [isEditing, setIsEditing] = useState(false);
 
-  const fromLeague = Boolean(leagueId);
+  const breadcrumbItems = [
+    { label: 'Leagues', path: '/admin/leagues' },
+    { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
+    { label: team?.name ?? '…' },
+  ];
 
-  const breadcrumbItems = fromLeague
-    ? [
-        { label: 'Leagues', path: '/admin/leagues' },
-        { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
-        { label: team?.name ?? '…' },
-      ]
-    : [{ label: 'Teams', path: '/admin/teams' }, { label: team?.name ?? '…' }];
-
-  const backPath = fromLeague ? `/admin/leagues/${leagueId}` : '/admin/teams';
-  const backTooltip = fromLeague ? 'Back to League Details' : 'Back to Teams';
+  const backPath = `/admin/leagues/${leagueId}`;
+  const backTooltip = 'Back to League Details';
 
   if (loading) {
     return (
@@ -38,13 +42,6 @@ const TeamDetailsPage = () => {
     return <p className={styles.loaderText}>Team not found.</p>;
   }
 
-  const createdDate = new Intl.DateTimeFormat('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-    timeZone: 'UTC',
-  }).format(new Date(team.created_at));
-
   return (
     <>
       <TitleRow
@@ -54,89 +51,56 @@ const TeamDetailsPage = () => {
             intent="neutral"
             icon="arrow_back"
             tooltip={backTooltip}
-            onClick={() => navigate(backPath)}
+            onClick={() => navigate(backPath, { state: { activeTab: 1 } })}
           />
         }
         right={<Breadcrumbs items={breadcrumbItems} />}
       />
 
-      <div className={styles.grid}>
-        {/* ── Header card ─────────────────────────────────── */}
-        <Card className={styles.col12}>
-          <div className={styles.teamHeader}>
-            <div className={styles.logoArea}>
-              {team.logo ? (
-                <img
-                  src={team.logo}
-                  alt={team.name}
-                  className={styles.logo}
-                />
-              ) : (
-                <span className={styles.logoPlaceholder}>{team.code.slice(0, 3)}</span>
-              )}
-            </div>
-            <div className={styles.teamInfo}>
-              <h3 className={styles.teamName}>{team.name}</h3>
-              <span className={styles.teamCode}>{team.code}</span>
-              {team.location && (
-                <span className={styles.teamLocation}>
-                  <Icon
-                    name="location_on"
-                    size="0.95em"
-                  />
-                  {team.location}
-                </span>
-              )}
-            </div>
-          </div>
-        </Card>
-
-        {/* ── Description card ────────────────────────────── */}
-        <Card
-          className={styles.col8}
-          title="Description"
-        >
-          {team.description ? (
-            <p className={styles.descriptionText}>{team.description}</p>
-          ) : (
-            <p className={styles.descriptionEmpty}>No description provided.</p>
-          )}
-        </Card>
-
-        {/* ── Info card ───────────────────────────────────── */}
-        <Card
-          className={styles.col4}
-          title="Details"
-        >
-          <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>League</span>
-              {team.league_id ? (
-                <div className={styles.leagueBadge}>
-                  {team.league_logo ? (
-                    <img
-                      src={team.league_logo}
-                      alt={team.league_name ?? ''}
-                      className={styles.leagueLogo}
-                    />
-                  ) : (
-                    <span className={styles.leagueLogoPlaceholder}>
-                      {team.league_code?.slice(0, 3)}
-                    </span>
-                  )}
-                  <span className={styles.infoValue}>{team.league_name}</span>
-                </div>
-              ) : (
-                <span className={styles.infoValueMuted}>Unassigned</span>
-              )}
-            </div>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Created</span>
-              <span className={styles.infoValue}>{createdDate}</span>
-            </div>
-          </div>
-        </Card>
-      </div>
+      <Tabs
+        disabled={isEditing}
+        tabs={[
+          {
+            label: 'Info',
+            content: (
+              <TeamInfoTab
+                team={team}
+                groups={groups}
+                uploadLogo={uploadLogo}
+                updateTeam={updateTeam}
+                onEditingChange={setIsEditing}
+              />
+            ),
+          },
+          { label: 'Games', content: <TeamGamesTab /> },
+          {
+            label: 'Roster',
+            content: (
+              <TeamRosterTab
+                teamId={team.id}
+                leagueId={team.league_id ?? ''}
+                latestSeasonId={team.latest_season_id ?? null}
+              />
+            ),
+          },
+          { label: 'Prospects', content: <TeamProspectsTab /> },
+          {
+            label: 'History',
+            content: (
+              <TeamHistoryTab
+                teamId={team.id}
+                leagueId={team.league_id}
+                teamName={team.name}
+                teamCode={team.code}
+                teamLogo={team.logo}
+                primaryColor={team.primary_color}
+                textColor={team.text_color}
+                uploadLogo={uploadLogo}
+              />
+            ),
+          },
+        ]}
+      />
     </>
   );
 };

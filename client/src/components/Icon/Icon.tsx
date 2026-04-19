@@ -3,20 +3,26 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faArrowRotateRight,
   faArrowUpRightFromSquare,
   faCheck,
+  faCircleMinus,
+  faEllipsisVertical,
+  faFlag,
   faGauge,
   faCalendarDays,
   faChevronDown,
   faChevronLeft,
   faChevronRight,
   faCircleUser,
+  faClockRotateLeft,
   faEnvelope,
   faEye,
   faEyeSlash,
   faFolderPlus,
   faHockeyPuck,
   faLocationDot,
+  faMagnifyingGlass,
   faPen,
   faPeopleGroup,
   faPlus,
@@ -30,6 +36,7 @@ import {
   faTrophy,
   faUserGear,
   faUserMinus,
+  faUserPlus,
   faUsers,
   faXmark,
 } from '@fortawesome/free-solid-svg-icons';
@@ -74,8 +81,13 @@ const ICON_MAP: Record<string, IconDefinition> = {
   close: faXmark,
   delete: faTrash,
   edit: faPen,
+  group_add: faUserPlus,
+  history: faClockRotateLeft,
   manage_accounts: faUserGear,
   person_remove: faUserMinus,
+  remove_circle_outline: faCircleMinus,
+  restart_alt: faArrowRotateRight,
+  search: faMagnifyingGlass,
 
   // auth
   account_circle: faCircleUser,
@@ -92,6 +104,9 @@ const ICON_MAP: Record<string, IconDefinition> = {
   // decorative
   sports_hockey: faHockeyPuck,
   celebration: faStar,
+  stars: faStar,
+  flag: faFlag,
+  more_vert: faEllipsisVertical,
 };
 
 interface IconProps {
@@ -101,7 +116,8 @@ interface IconProps {
   style?: CSSProperties;
 }
 
-const Icon = ({ name, size, className = '', style = {} }: IconProps) => {
+const Icon = (props: IconProps) => {
+  const { name, size, className = '', style = {} } = props;
   const icon = ICON_MAP[name];
   if (!icon) return null;
 

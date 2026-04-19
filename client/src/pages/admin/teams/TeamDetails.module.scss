@@ -47,107 +47,22 @@
   }
 }
 
-// ── Team header ────────────────────────────────────────────────────────
-.teamHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-xl;
-}
-
-.logoArea {
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.logo {
-  width: 80px;
-  height: 80px;
-  object-fit: contain;
-  border-radius: $radius-lg;
-  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
-}
-
-.logoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  border-radius: $radius-lg;
-  background: $border;
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-}
-
-.teamInfo {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.teamName {
-  font-size: $font-3xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
-}
-
-.teamCode {
-  font-size: $font-base;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.teamLocation {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  font-size: $font-base;
-  color: $text-dim;
-}
-
-// ── Description ────────────────────────────────────────────────────────
-.descriptionText {
-  font-size: $font-body;
-  color: $text-body;
-  line-height: 1.6;
-  margin: 0;
-  white-space: pre-wrap;
-}
-
-.descriptionEmpty {
-  font-size: $font-body;
-  color: $text-dim;
-  font-style: italic;
-  margin: 0;
-}
-
 // ── Info grid ──────────────────────────────────────────────────────────
 .infoGrid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: $space-xl;
 }
 
-.infoItem {
+// Full-width flex row inside the grid — for badge groups (League, Group, Active Seasons)
+.infoBadgeRow {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
+  gap: $space-xl;
 
-.infoLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  > * {
+    flex: 1;
+  }
 }
 
 .infoValue {
@@ -159,6 +74,138 @@
   font-size: $font-body;
   color: $text-dim;
   font-style: italic;
+}
+
+// ── Inline edit form ───────────────────────────────────────────────────
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  margin-top: $space-xl;
+}
+
+// ── Tab placeholder ────────────────────────────────────────────────────
+.tabPlaceholder {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
+  padding: $space-lg 0;
+  text-align: center;
+}
+
+// ── Team history tab ───────────────────────────────────────────────────
+.historyList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.historyItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md $space-lg;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+}
+
+.historyLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.15));
+}
+
+.historyLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.historyInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.historyName {
+  font-size: $font-body;
+  font-weight: 600;
+  color: $text-bright;
+}
+
+.historyMeta {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.historyNote {
+  font-size: $font-sm;
+  color: $text-body;
+  font-style: italic;
+}
+
+.historyFormActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-top: $space-xl;
+}
+
+.historyForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.historyFormRow {
+  display: flex;
+  gap: $space-lg;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+// ── Roster tab ─────────────────────────────────────────────────────────
+.rosterActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.rosterEmpty {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
+}
+
+.rosterList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
 }
 
 // ── League badge ───────────────────────────────────────────────────────

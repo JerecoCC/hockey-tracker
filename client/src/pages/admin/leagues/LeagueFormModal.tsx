@@ -1,49 +1,11 @@
-import { useEffect, useRef } from 'react';
-import { Controller, useForm, useWatch } from 'react-hook-form';
+import { useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
 import { type CreateLeagueData, type LeagueRecord } from '../../../hooks/useLeagues';
 import styles from './Leagues.module.scss';
-
-// ── Inline color picker ────────────────────────────────────────────────
-interface ColorPickerInputProps {
-  value: string;
-  onChange: (value: string) => void;
-  onBlur?: () => void;
-}
-
-const ColorPickerInput = ({ value, onChange, onBlur }: ColorPickerInputProps) => {
-  const pickerRef = useRef<HTMLInputElement>(null);
-  return (
-    <div className={styles.colorInputWrapper}>
-      <button
-        type="button"
-        className={styles.colorSwatch}
-        style={{ background: value }}
-        onClick={() => pickerRef.current?.click()}
-      />
-      <input
-        ref={pickerRef}
-        type="color"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={styles.colorHiddenInput}
-        tabIndex={-1}
-      />
-      <input
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
-        className={styles.colorHexInput}
-        spellCheck={false}
-        maxLength={7}
-      />
-    </div>
-  );
-};
 
 interface FormValues {
   name: string;
@@ -62,14 +24,8 @@ interface Props {
   uploadLogo: (file: File) => Promise<string | null>;
 }
 
-const LeagueFormModal = ({
-  open,
-  editTarget,
-  onClose,
-  addLeague,
-  updateLeague,
-  uploadLogo,
-}: Props) => {
+const LeagueFormModal = (props: Props) => {
+  const { open, editTarget, onClose, addLeague, updateLeague, uploadLogo } = props;
   const {
     control,
     handleSubmit,
@@ -132,7 +88,7 @@ const LeagueFormModal = ({
   return (
     <Modal
       open={open}
-      title={editTarget ? 'Edit League' : 'Add League'}
+      title={editTarget ? 'Edit League' : 'Create League'}
       onClose={onClose}
     >
       <form
@@ -142,7 +98,7 @@ const LeagueFormModal = ({
         <LogoUpload
           control={control}
           name="logo"
-          label="Add League Logo"
+          label="League Logo"
         />
         <Field
           label="Name"
@@ -163,33 +119,17 @@ const LeagueFormModal = ({
           placeholder="e.g. NHL"
         />
         <div className={styles.colorRow}>
-          <Controller
+          <Field
+            type="color"
+            label="Primary Color"
             control={control}
             name="primary_color"
-            render={({ field }) => (
-              <div className={styles.colorLabel}>
-                <span className={styles.colorLabelText}>Primary Color</span>
-                <ColorPickerInput
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                />
-              </div>
-            )}
           />
-          <Controller
+          <Field
+            type="color"
+            label="Text Color"
             control={control}
             name="text_color"
-            render={({ field }) => (
-              <div className={styles.colorLabel}>
-                <span className={styles.colorLabelText}>Text Color</span>
-                <ColorPickerInput
-                  value={field.value}
-                  onChange={field.onChange}
-                  onBlur={field.onBlur}
-                />
-              </div>
-            )}
           />
         </div>
         <div className={styles.formActions}>
@@ -205,7 +145,7 @@ const LeagueFormModal = ({
             type="submit"
             disabled={isSubmitting}
           >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Add League'}
+            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
           </Button>
         </div>
       </form>

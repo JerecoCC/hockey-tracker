@@ -24,44 +24,47 @@ const variantIntent: Record<ConfirmVariant, ButtonIntent> = {
   info: 'info',
 };
 
-const ConfirmModal = ({
-  open,
-  title,
-  body,
-  confirmLabel,
-  confirmIcon,
-  variant = 'danger',
-  busy = false,
-  onCancel,
-  onConfirm,
-}: Props) => (
-  <Modal
-    open={open}
-    title={title}
-    onClose={onCancel}
-  >
-    <p className={styles.body}>{body}</p>
-    <div className={styles.actions}>
-      <Button
-        variant="outlined"
-        intent="neutral"
-        onClick={onCancel}
-        type="button"
-        disabled={busy}
-      >
-        Cancel
-      </Button>
-      <Button
-        intent={variantIntent[variant]}
-        icon={confirmIcon}
-        onClick={onConfirm}
-        type="button"
-        disabled={busy}
-      >
-        {confirmLabel}
-      </Button>
-    </div>
-  </Modal>
-);
+const ConfirmModal = (props: Props) => {
+  const {
+    open,
+    title,
+    body,
+    confirmLabel,
+    confirmIcon,
+    variant = 'danger',
+    busy = false,
+    onCancel,
+    onConfirm,
+  } = props;
+  return (
+    <Modal
+      open={open}
+      title={title}
+      onClose={onCancel}
+    >
+      <p className={styles.body}>{body}</p>
+      <div className={styles.actions}>
+        <Button
+          variant="outlined"
+          intent="neutral"
+          onClick={onCancel}
+          type="button"
+          disabled={busy}
+        >
+          Cancel
+        </Button>
+        <Button
+          intent={variantIntent[variant]}
+          icon={confirmIcon}
+          onClick={onConfirm}
+          type="button"
+          disabled={busy}
+        >
+          {confirmLabel}
+        </Button>
+      </div>
+    </Modal>
+  );
+};
 
 export default ConfirmModal;

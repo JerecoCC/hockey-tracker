@@ -11,6 +11,9 @@
   color: $text-dim;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  width: 100%;
+  min-width: 0;
+  min-width: 0;
 }
 
 // ── Label text row ───────────────────────────────────────────────────────
@@ -47,9 +50,20 @@
     opacity: 0.4;
     cursor: not-allowed;
   }
+
+  // Remove spinner arrows on number inputs
+  &[type="number"] {
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
 }
 
-// ── Password wrapper ────────────────────────────────────────────────────
+// ── Input wrapper (password toggle / suffix adornments) ──────────────────
 .inputWrapper {
   position: relative;
   display: flex;
@@ -57,6 +71,7 @@
   .field {
     flex: 1;
     padding-right: 2.75rem;
+    width: 100%;
   }
 }
 
@@ -80,9 +95,83 @@
   }
 }
 
+// Unit label (e.g. "ft", "lbs") shown inside the field on the right
+.fieldWithSuffix {
+  padding-right: 2.25rem;
+}
+
+.inputSuffix {
+  position: absolute;
+  right: $space-lg;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: 0.04em;
+}
+
 // ── Textarea extras ─────────────────────────────────────────────────────
 .textarea {
   resize: vertical;
   font-family: inherit;
   min-height: 80px;
+}
+
+// ── Color picker ────────────────────────────────────────────────────────
+.colorInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+  transition: border-color $transition-base;
+  min-width: 0;
+  width: 100%;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+}
+
+.colorSwatch {
+  width: 24px;
+  height: 24px;
+  border-radius: $radius-sm;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  transition: transform $transition-fast;
+
+  &:hover {
+    transform: scale(1.1);
+  }
+}
+
+.colorHiddenInput {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.colorHexInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: $font-sm;
+  font-family: monospace;
+  color: $text-body;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  min-width: 0;
 }

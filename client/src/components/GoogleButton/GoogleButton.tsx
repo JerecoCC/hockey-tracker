@@ -6,7 +6,8 @@ interface GoogleButtonProps {
   label?: string;
 }
 
-const GoogleButton = ({ label = 'Continue with Google' }: GoogleButtonProps) => {
+const GoogleButton = (props: GoogleButtonProps) => {
+  const { label = 'Continue with Google' } = props;
   const { loginWithGoogle } = useAuth();
 
   return (

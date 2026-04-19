@@ -10,7 +10,8 @@ interface TooltipProps {
 const MARGIN = 8; // min gap from viewport edge (px)
 const GAP = 8; // gap between trigger and tip (px)
 
-const Tooltip = ({ text, children, className = '' }: TooltipProps) => {
+const Tooltip = (props: TooltipProps) => {
+  const { text, children, className = '' } = props;
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(false);

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
+import SelectableListItem from '../../../components/SelectableListItem/SelectableListItem';
 import { type GroupRecord } from '../../../hooks/useLeagueGroups';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import styles from './LeagueDetails.module.scss';
@@ -16,7 +16,8 @@ interface Props {
   setGroupTeams: (groupId: string, teamIds: string[]) => Promise<boolean>;
 }
 
-const GroupAddTeamModal = ({ open, group, unassignedTeams, onClose, setGroupTeams }: Props) => {
+const GroupAddTeamModal = (props: Props) => {
+  const { open, group, unassignedTeams, onClose, setGroupTeams } = props;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
 
@@ -47,49 +48,48 @@ const GroupAddTeamModal = ({ open, group, unassignedTeams, onClose, setGroupTeam
   const title = group ? `Add Teams to "${group.name}"` : 'Add Teams';
 
   return (
-    <Modal open={open} title={title} onClose={onClose}>
+    <Modal
+      open={open}
+      title={title}
+      onClose={onClose}
+    >
       {unassignedTeams.length === 0 ? (
         <p className={styles.teamsEmpty}>
           All teams in this league are already assigned to a group.
         </p>
       ) : (
         <ul className={styles.teamSelectList}>
-          {unassignedTeams.map((t) => {
-            const checked = selectedIds.has(t.id);
-            return (
-              <li
-                key={t.id}
-                className={styles.teamSelectItem}
-                data-selected={checked}
-                onClick={() => toggle(t.id)}
-              >
-                <span className={styles.teamCheckbox} data-checked={checked}>
-                  {checked && <Icon name="check" size="0.7em" />}
-                </span>
-
-                {t.logo ? (
-                  <img src={t.logo} alt="" className={styles.teamLogoThumb} />
-                ) : (
-                  <span className={styles.teamLogoPlaceholder}>{t.code.slice(0, 3)}</span>
-                )}
-
-                <span className={styles.teamListName}>{t.name}</span>
-                <span className={styles.seasonListDates}>{t.code}</span>
-              </li>
-            );
-          })}
+          {unassignedTeams.map((t) => (
+            <SelectableListItem
+              key={t.id}
+              checked={selectedIds.has(t.id)}
+              onToggle={() => toggle(t.id)}
+              image={t.logo}
+              imagePlaceholder={t.code.slice(0, 3)}
+              name={t.name}
+              rightContent={<span className={styles.seasonListDates}>{t.code}</span>}
+            />
+          ))}
         </ul>
       )}
 
       <div className={styles.formActions}>
-        <Button variant="outlined" intent="neutral" onClick={onClose}>
+        <Button
+          variant="outlined"
+          intent="neutral"
+          onClick={onClose}
+        >
           Cancel
         </Button>
         <Button
           disabled={count === 0 || saving}
           onClick={handleAdd}
         >
-          {saving ? 'Adding…' : count === 0 ? 'Add Teams' : `Add ${count} Team${count === 1 ? '' : 's'}`}
+          {saving
+            ? 'Adding…'
+            : count === 0
+              ? 'Add Teams'
+              : `Add ${count} Team${count === 1 ? '' : 's'}`}
         </Button>
       </div>
     </Modal>

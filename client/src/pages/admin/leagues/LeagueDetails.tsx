@@ -1,27 +1,46 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useLocation, useNavigate, useParams, useBlocker } from 'react-router-dom';
+import { useForm, Controller } from 'react-hook-form';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
-import TitleRow from '../../../components/TitleRow/TitleRow';
-import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
-import useLeagueGroups, { type GroupRecord } from '../../../hooks/useLeagueGroups';
-import { type TeamRecord } from '../../../hooks/useTeams';
-import { type SeasonRecord } from '../../../hooks/useSeasons';
-import LeagueFormModal from './LeagueFormModal';
+import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import LeagueInfoCard from './LeagueInfoCard';
+import LeaguePlayersCard from './LeaguePlayersCard';
 import LeagueTeamsCard from './LeagueTeamsCard';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
-import LeagueGroupsCard from './LeagueGroupsCard';
-import GroupAddTeamModal from './GroupAddTeamModal';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import TeamDeleteModal from '../teams/TeamDeleteModal';
-import TeamFormModal from '../teams/TeamFormModal';
-import SeasonFormModal from '../seasons/SeasonFormModal';
+import BulkAddPlayersModal from './BulkAddPlayersModal';
+import PlayerFormModal from './PlayerFormModal';
+import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
+import SeasonFormModal from '../seasons/SeasonFormModal';
+import Tabs from '../../../components/Tabs/Tabs';
+import TeamFormModal from '../teams/TeamFormModal';
+import TitleRow from '../../../components/TitleRow/TitleRow';
+import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
+import useLeaguePlayers, { type PlayerRecord } from '../../../hooks/useLeaguePlayers';
+import { type CreateLeagueData } from '../../../hooks/useLeagues';
+import { type TeamRecord } from '../../../hooks/useTeams';
+import { type SeasonRecord } from '../../../hooks/useSeasons';
 import styles from './LeagueDetails.module.scss';
+
+interface LeagueFormValues {
+  logo: File | string | null;
+  name: string;
+  code: string;
+  primary_color: string;
+  text_color: string;
+  description: string | null;
+}
+
+/** Treats empty-paragraph HTML from the rich-text editor as null. */
+const normalizeDescription = (html: string | null | undefined): string | null => {
+  if (!html || html === '<p></p>') return null;
+  return html;
+};
 
 const LeagueDetailsPage = () => {
   const navigate = useNavigate();
+  const { state } = useLocation();
   const { id } = useParams<{ id: string }>();
   const {
     league,
@@ -39,29 +58,94 @@ const LeagueDetailsPage = () => {
     updateSeason,
     deleteSeason,
   } = useLeagueDetails(id);
+  const [isEditing, setIsEditing] = useState(false);
+
   const {
-    groups,
-    loading: groupsLoading,
-    busy: groupsBusy,
-    addGroup,
-    updateGroup,
-    deleteGroup,
-    setGroupTeams,
-  } = useLeagueGroups(league?.id);
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  // Group state
-  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<GroupRecord | null>(null);
-  const [addTeamTargetGroup, setAddTeamTargetGroup] = useState<GroupRecord | null>(null);
-  // Team modal state
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<LeagueFormValues>({
+    defaultValues: {
+      logo: null,
+      name: '',
+      code: '',
+      primary_color: '#334155',
+      text_color: '#ffffff',
+      description: null,
+    },
+  });
+
+  useEffect(() => {
+    if (isEditing && league) {
+      reset({
+        logo: league.logo ?? null,
+        name: league.name,
+        code: league.code,
+        primary_color: league.primary_color,
+        text_color: league.text_color,
+        description: league.description ?? null,
+      });
+    }
+  }, [isEditing, league, reset]);
+
+  const blocker = useBlocker(isEditing);
+
+  const handleCancelLeagueEdit = () => {
+    setIsEditing(false);
+    reset();
+  };
+
+  const onLeagueSubmit = handleSubmit(async (data) => {
+    if (!league) return;
+    let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
+    if (data.logo instanceof File) {
+      const url = await uploadLogo(data.logo);
+      if (!url) return;
+      logoUrl = url;
+    }
+    const payload: Partial<CreateLeagueData> = {
+      logo: logoUrl,
+      name: data.name,
+      code: data.code,
+      primary_color: data.primary_color,
+      text_color: data.text_color,
+      description: normalizeDescription(data.description) ?? undefined,
+    };
+    const ok = await updateLeague(league.id, payload);
+    if (ok) setIsEditing(false);
+  });
+  // Team modal / delete state
   const [teamModalOpen, setTeamModalOpen] = useState(false);
   const [editTargetTeam, setEditTargetTeam] = useState<TeamRecord | null>(null);
   const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<TeamRecord | null>(null);
-  const [confirmDeleteTeamOpen, setConfirmDeleteTeamOpen] = useState(false);
   // Season modal state
   const [seasonModalOpen, setSeasonModalOpen] = useState(false);
   const [editTargetSeason, setEditTargetSeason] = useState<LeagueSeasonRecord | null>(null);
   const [confirmDeleteSeason, setConfirmDeleteSeason] = useState<LeagueSeasonRecord | null>(null);
   const [confirmDeleteSeasonOpen, setConfirmDeleteSeasonOpen] = useState(false);
+  // Player modal state
+  const [playerModalOpen, setPlayerModalOpen] = useState(false);
+  const [bulkAddOpen, setBulkAddOpen] = useState(false);
+  const [editTargetPlayer, setEditTargetPlayer] = useState<PlayerRecord | null>(null);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedSeasonId === null && seasons.length > 0) {
+      const current = seasons.find((s) => s.is_current);
+      setSelectedSeasonId(current?.id ?? seasons[0].id);
+    }
+  }, [seasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const {
+    players,
+    loading: playersLoading,
+    busy: playerBusy,
+    addPlayer,
+    bulkAddPlayers,
+    updatePlayer,
+    deletePlayer,
+  } = useLeaguePlayers(id, selectedSeasonId ?? undefined);
 
   if (loading) {
     return (
@@ -102,130 +186,167 @@ const LeagueDetailsPage = () => {
         }
       />
 
-      <div className={styles.grid}>
-        <LeagueInfoCard
-          className={styles.col12}
-          league={league}
-          busy={busy}
-          uploadLogo={uploadLogo}
-          updateLeague={updateLeague}
-          onEditLeague={() => setEditModalOpen(true)}
-        />
+      <Tabs
+        defaultIndex={(state as { activeTab?: number } | null)?.activeTab ?? 0}
+        disabled={isEditing}
+        tabs={[
+          {
+            label: 'Info',
+            content: (
+              <div className={styles.grid}>
+                <LeagueInfoCard
+                  className={styles.col12}
+                  league={league}
+                  isEditing={isEditing}
+                  onEdit={() => setIsEditing(true)}
+                  control={control}
+                  formId="league-edit-form"
+                  onCancel={handleCancelLeagueEdit}
+                  isSubmitting={isSubmitting}
+                  editForm={
+                    <form
+                      id="league-edit-form"
+                      className={styles.editForm}
+                      onSubmit={onLeagueSubmit}
+                    >
+                      <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+                        <span className={styles.infoLabel}>Description</span>
+                        <Controller
+                          control={control}
+                          name="description"
+                          render={({ field }) => (
+                            <RichTextEditor
+                              content={field.value ?? ''}
+                              onChange={field.onChange}
+                              autoFocus={false}
+                            />
+                          )}
+                        />
+                      </div>
+                    </form>
+                  }
+                />
 
-        <LeagueSeasonsCard
-          className={styles.col12}
-          seasons={seasons}
-          loading={loading}
-          busy={busy}
-          onAdd={() => {
-            setEditTargetSeason(null);
-            setSeasonModalOpen(true);
-          }}
-          onEdit={(s) => {
-            setEditTargetSeason(s);
-            setSeasonModalOpen(true);
-          }}
-          onDelete={(s) => {
-            setConfirmDeleteSeason(s);
-            setConfirmDeleteSeasonOpen(true);
-          }}
-        />
-
-        <LeagueTeamsCard
-          className={styles.col4}
-          leagueId={league.id}
-          teams={teams}
-          loading={loading}
-          busy={busy}
-          onAdd={() => setTeamModalOpen(true)}
-          onEdit={(t) => {
-            setEditTargetTeam(t);
-            setTeamModalOpen(true);
-          }}
-          onDelete={(t) => {
-            setConfirmDeleteTeam(t);
-            setConfirmDeleteTeamOpen(true);
-          }}
-        />
-
-        <LeagueGroupsCard
-          className={styles.col8}
-          leagueId={league.id}
-          groups={groups}
-          loading={groupsLoading}
-          busy={groupsBusy}
-          addGroup={addGroup}
-          updateGroup={updateGroup}
-          setGroupTeams={setGroupTeams}
-          onAddTeam={(g) => setAddTeamTargetGroup(g)}
-          onDelete={(g) => setConfirmDeleteGroup(g)}
-        />
-      </div>
+                {!isEditing && (
+                  <LeagueSeasonsCard
+                    className={styles.col12}
+                    seasons={seasons}
+                    loading={loading}
+                    busy={busy}
+                    onAdd={() => {
+                      setEditTargetSeason(null);
+                      setSeasonModalOpen(true);
+                    }}
+                    onEdit={(s) => {
+                      setEditTargetSeason(s);
+                      setSeasonModalOpen(true);
+                    }}
+                    onDelete={(s) => {
+                      setConfirmDeleteSeason(s);
+                      setConfirmDeleteSeasonOpen(true);
+                    }}
+                    onView={(s) => navigate(`/admin/leagues/${id}/seasons/${s.id}`)}
+                  />
+                )}
+              </div>
+            ),
+          },
+          {
+            label: 'Teams',
+            content: (
+              <div className={styles.grid}>
+                <LeagueTeamsCard
+                  className={styles.col12}
+                  leagueId={league.id}
+                  teams={teams}
+                  loading={loading}
+                  busy={busy}
+                  onAdd={() => {
+                    setEditTargetTeam(null);
+                    setTeamModalOpen(true);
+                  }}
+                  onEdit={(t) => {
+                    setEditTargetTeam(t);
+                    setTeamModalOpen(true);
+                  }}
+                  onDelete={(t) => setConfirmDeleteTeam(t)}
+                />
+              </div>
+            ),
+          },
+          {
+            label: 'Players',
+            content: (
+              <div className={styles.grid}>
+                <LeaguePlayersCard
+                  className={styles.col12}
+                  players={players}
+                  seasons={seasons}
+                  selectedSeasonId={selectedSeasonId}
+                  onSeasonChange={setSelectedSeasonId}
+                  loading={playersLoading}
+                  busy={playerBusy}
+                  onAdd={() => {
+                    setEditTargetPlayer(null);
+                    setPlayerModalOpen(true);
+                  }}
+                  onBulkAdd={() => setBulkAddOpen(true)}
+                  onEdit={(p) => {
+                    setEditTargetPlayer(p);
+                    setPlayerModalOpen(true);
+                  }}
+                  onDelete={deletePlayer}
+                />
+              </div>
+            ),
+          },
+        ]}
+      />
 
       <ConfirmModal
-        open={confirmDeleteGroup !== null}
-        title="Delete Group"
-        body={`Delete "${confirmDeleteGroup?.name}"? This will also remove any subgroups and team assignments.`}
+        open={confirmDeleteTeam !== null}
+        title="Delete Team"
+        body={
+          <>
+            Are you sure you want to delete <strong>{confirmDeleteTeam?.name}</strong>? This cannot
+            be undone.
+          </>
+        }
         confirmLabel="Delete"
         confirmIcon="delete"
         variant="danger"
-        busy={groupsBusy === confirmDeleteGroup?.id}
-        onCancel={() => setConfirmDeleteGroup(null)}
+        busy={busy === confirmDeleteTeam?.id}
+        onCancel={() => setConfirmDeleteTeam(null)}
         onConfirm={async () => {
-          if (!confirmDeleteGroup) return;
-          await deleteGroup(confirmDeleteGroup.id);
-          setConfirmDeleteGroup(null);
-        }}
-      />
-
-      <GroupAddTeamModal
-        open={addTeamTargetGroup !== null}
-        group={addTeamTargetGroup}
-        unassignedTeams={teams.filter(
-          (t) => !groups.some((g) => g.teams.some((gt) => gt.id === t.id)),
-        )}
-        onClose={() => setAddTeamTargetGroup(null)}
-        setGroupTeams={setGroupTeams}
-      />
-
-      <TeamDeleteModal
-        open={confirmDeleteTeamOpen}
-        busy={busy}
-        target={confirmDeleteTeam}
-        onCancel={() => {
-          setConfirmDeleteTeamOpen(false);
-          setConfirmDeleteTeam(null);
-        }}
-        onConfirm={async () => {
-          await deleteTeam(confirmDeleteTeam!.id);
-          setConfirmDeleteTeamOpen(false);
+          if (!confirmDeleteTeam) return;
+          await deleteTeam(confirmDeleteTeam.id);
           setConfirmDeleteTeam(null);
         }}
       />
 
-      <LeagueFormModal
-        open={editModalOpen}
-        editTarget={league}
-        onClose={() => setEditModalOpen(false)}
-        addLeague={async () => false}
-        updateLeague={updateLeague}
-        uploadLogo={uploadLogo}
+      {/* Navigation guard modal */}
+      <ConfirmModal
+        open={blocker.state === 'blocked'}
+        title="Unsaved Changes"
+        body="You have unsaved changes. Are you sure you want to leave?"
+        confirmLabel="Leave without saving"
+        variant="danger"
+        onCancel={() => blocker.reset?.()}
+        onConfirm={() => blocker.proceed?.()}
       />
 
       <TeamFormModal
         open={teamModalOpen}
         editTarget={editTargetTeam}
-        leagueOptions={
-          league
-            ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
-            : []
-        }
         lockedLeagueId={id}
         onClose={() => {
           setTeamModalOpen(false);
           setEditTargetTeam(null);
         }}
-        addTeam={addTeam}
+        addTeam={async (payload) => {
+          const newTeamId = await addTeam(payload);
+          return newTeamId !== null;
+        }}
         updateTeam={updateTeam}
         uploadLogo={uploadTeamLogo}
       />
@@ -260,6 +381,23 @@ const LeagueDetailsPage = () => {
         }}
         addSeason={addSeason}
         updateSeason={updateSeason}
+      />
+
+      <PlayerFormModal
+        open={playerModalOpen}
+        editTarget={editTargetPlayer}
+        onClose={() => {
+          setPlayerModalOpen(false);
+          setEditTargetPlayer(null);
+        }}
+        addPlayer={addPlayer}
+        updatePlayer={updatePlayer}
+      />
+
+      <BulkAddPlayersModal
+        open={bulkAddOpen}
+        onClose={() => setBulkAddOpen(false)}
+        bulkAddPlayers={bulkAddPlayers}
       />
     </>
   );

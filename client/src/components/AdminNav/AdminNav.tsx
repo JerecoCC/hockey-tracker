@@ -11,8 +11,6 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Leagues', path: '/admin/leagues', icon: 'emoji_events' },
-  { label: 'Seasons', path: '/admin/seasons', icon: 'calendar_month' },
-  { label: 'Teams', path: '/admin/teams', icon: 'groups' },
   { label: 'Users', path: '/admin/users', icon: 'group' },
 ];
 
@@ -21,7 +19,8 @@ interface AdminNavProps {
   onToggle: () => void;
 }
 
-const AdminNav = ({ collapsed }: AdminNavProps) => {
+const AdminNav = (props: AdminNavProps) => {
+  const { collapsed } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
 

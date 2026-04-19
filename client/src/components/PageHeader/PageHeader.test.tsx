@@ -34,12 +34,9 @@ beforeEach(() => jest.clearAllMocks());
 describe('PageHeader – title resolution', () => {
   it.each([
     ['/admin/leagues', 'Leagues'],
-    ['/admin/seasons', 'Seasons'],
-    ['/admin/teams', 'Teams'],
     ['/admin/users', 'Users'],
     ['/admin/leagues/123', 'League Details'],
     ['/admin/leagues/123/teams/456', 'Team Details'],
-    ['/admin/teams/789', 'Team Details'],
   ])('shows "%s" title for %s', (pathname, title) => {
     setup(pathname);
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();

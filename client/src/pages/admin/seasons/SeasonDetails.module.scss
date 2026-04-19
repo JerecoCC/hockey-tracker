@@ -1,0 +1,539 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Page loader ────────────────────────────────────────────────────────────────
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem $space-lg;
+  gap: $space-lg;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loaderText {
+  color: $text-dim;
+  font-size: $font-base;
+  margin: 0;
+}
+
+// ── 12-column page grid ────────────────────────────────────────────────────────
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: $space-2xl;
+  align-items: start;
+}
+
+@for $i from 1 through 12 {
+  .col#{$i} {
+    grid-column: span #{$i};
+  }
+}
+
+// ── Info grid ──────────────────────────────────────────────────────────────────
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: $space-xl;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+// ── Groups tree ────────────────────────────────────────────────────────────────
+.groupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(2, 1fr);
+  align-items: start;
+  gap: $space-md;
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.groupItem {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+
+  > .groupList {
+    padding: $space-sm $space-md $space-md;
+  }
+}
+
+.groupItemNew {
+  margin: $space-sm;
+}
+
+.groupItemNewRoot {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.groupItemChild {
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.groupRow {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .groupActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.groupRowCollapsed {
+  border-bottom: none;
+}
+
+.groupToggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  color: $text-dim;
+  cursor: pointer;
+  padding: 0;
+  border-radius: $radius-sm;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $text-body;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.groupToggleIcon {
+  transition: transform $transition-base;
+  transform: rotate(-90deg);
+}
+
+.groupToggleIconOpen {
+  transition: transform $transition-base;
+  transform: rotate(0deg);
+}
+
+.groupName {
+  font-size: $font-lg;
+  color: $text-body;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+// Exists so .groupRow:hover can reference it
+.groupActions {
+}
+
+.inheritedBanner {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  margin: 0 0 $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  background: rgba(#f59e0b, 0.07);
+  border: 1px solid rgba(#f59e0b, 0.2);
+  font-size: $font-sm;
+  color: #fbbf24;
+  font-style: italic;
+}
+
+// ── Team list inside a group ───────────────────────────────────────────────────
+.teamList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.teamListItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .teamActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+// Exists so .teamListItem:hover can reference it
+.teamActions {
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+}
+
+.teamListName {
+  font-size: $font-base;
+  color: $text-body;
+}
+
+.teamCode {
+  font-size: $font-xs;
+  color: $text-dim;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.teamLogoThumb {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+}
+
+.teamLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.emptyMsg {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  margin: $space-sm $space-md;
+}
+
+// ── Modal team selector ────────────────────────────────────────────────────────
+.teamSearch {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  margin-bottom: $space-sm;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.03);
+  transition: border-color $transition-fast;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+}
+
+.teamSearchIcon {
+  flex-shrink: 0;
+  color: $text-dim;
+}
+
+.teamSearchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  color: $text-body;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+.teamSearchClear {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  border-radius: 50%;
+  color: $text-dim;
+  cursor: pointer;
+  padding: 0;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: $text-body;
+  }
+}
+
+.teamSelectList {
+  list-style: none;
+  margin: 0 0 $space-lg;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+}
+
+.teamSelectItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  cursor: pointer;
+  user-select: none;
+  transition: background $transition-fast;
+
+  &:hover,
+  &[data-selected="true"] {
+    background: rgba(255, 255, 255, 0.05);
+  }
+}
+
+.teamCheckbox {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 2px solid $border;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $bg-card;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &[data-checked="true"] {
+    background: $text-bright;
+    border-color: $text-bright;
+  }
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-top: $space-sm;
+}
+
+// ── Inline group name add / edit ───────────────────────────────────────────────
+.groupInlineRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+}
+
+.groupInlineInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid $accent;
+  outline: none;
+  font-size: $font-lg;
+  color: $text-body;
+  padding: 2px 0;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+.groupInlineBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.06);
+  color: $text-body;
+  cursor: pointer;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.groupInlineBtnCancel {
+  color: $text-dim;
+}
+
+// Spans full grid width so the inline-add row fills the row
+.groupItemSpanFull {
+  grid-column: 1 / -1;
+}
+
+// Footer inside a leaf group — houses Add Teams to Group + Reset buttons
+.groupFooter {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+// ── Card header action wrapper (when multiple buttons) ────────────────────────
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+// ── Info card action buttons ───────────────────────────────────────────────────
+.infoCardActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.menuWrapper {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 168px;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-xs 0;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  z-index: 100;
+}
+
+.menuItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-lg;
+  background: transparent;
+  border: none;
+  color: $text-body;
+  font-size: $font-sm;
+  font-family: inherit;
+  cursor: pointer;
+  justify-content: flex-start;
+  transition:
+    background 0.12s,
+    color 0.12s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.06);
+    color: $text-bright;
+  }
+
+  &:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+}
+
+.menuItemDanger {
+  color: $danger;
+
+  &:hover:not(:disabled) {
+    background: rgba($danger, 0.1);
+    color: $danger;
+  }
+}
+
+// ── Groups section within the Teams card ──────────────────────────────────────
+.groupsSection {
+  // intentionally no border-top/margin — groups render alone when present
+}
+
+// 1 group → full width; 3 groups → 2 on row 1, last one full width; etc.
+.groupsSection > .groupList > .groupItem:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
