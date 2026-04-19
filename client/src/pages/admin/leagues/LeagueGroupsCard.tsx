@@ -279,7 +279,16 @@ const GroupNode = (props: GroupNodeProps) => {
         }}
       />
 
-      {open && (children.length > 0 || isAddingChild) && (
+      {open && isAddingChild && (
+        <div className={`${styles.groupItem} ${styles.groupItemNew}`}>
+          <InlineInput
+            placeholder="Sub-group name…"
+            onConfirm={onConfirm}
+            onCancel={onCancel}
+          />
+        </div>
+      )}
+      {open && children.length > 0 && (
         <ul className={styles.groupList}>
           {children.map((child) => (
             <GroupNode
@@ -300,15 +309,6 @@ const GroupNode = (props: GroupNodeProps) => {
               depth={depth + 1}
             />
           ))}
-          {isAddingChild && (
-            <li className={`${styles.groupItem} ${styles.groupItemSpanFull}`}>
-              <InlineInput
-                placeholder="Sub-group name…"
-                onConfirm={onConfirm}
-                onCancel={onCancel}
-              />
-            </li>
-          )}
         </ul>
       )}
     </li>
@@ -374,33 +374,39 @@ const LeagueGroupsCard = (props: Props) => {
       {loading ? (
         <p className={styles.teamsEmpty}>Loading…</p>
       ) : (
-        <ul className={styles.groupList}>
-          {roots.map((g) => (
-            <GroupNode
-              key={g.id}
-              group={g}
-              allGroups={groups}
-              busy={busy}
-              inlineMode={inlineMode}
-              onStartEdit={(id) => setInlineMode({ type: 'edit', groupId: id })}
-              onStartAdd={(pid) => setInlineMode({ type: 'add', parentId: pid })}
-              onConfirm={handleConfirm}
-              onCancel={handleCancel}
-              onAddTeam={onAddTeam}
-              onDelete={onDelete}
-              onDeleteTeam={onDeleteTeam}
-              onEditTeam={onEditTeam}
-              onViewTeam={onViewTeam}
-            />
-          ))}
+        <>
           {isRootAdding && (
-            <li className={`${styles.groupItem} ${styles.groupItemSpanFull}`}>
+            <div
+              className={`${styles.groupItem} ${styles.groupItemNew} ${styles.groupItemNewRoot}`}
+            >
               <InlineInput
                 placeholder="Group name…"
                 onConfirm={handleConfirm}
                 onCancel={handleCancel}
               />
-            </li>
+            </div>
+          )}
+          {roots.length > 0 && (
+            <ul className={styles.groupList}>
+              {roots.map((g) => (
+                <GroupNode
+                  key={g.id}
+                  group={g}
+                  allGroups={groups}
+                  busy={busy}
+                  inlineMode={inlineMode}
+                  onStartEdit={(id) => setInlineMode({ type: 'edit', groupId: id })}
+                  onStartAdd={(pid) => setInlineMode({ type: 'add', parentId: pid })}
+                  onConfirm={handleConfirm}
+                  onCancel={handleCancel}
+                  onAddTeam={onAddTeam}
+                  onDelete={onDelete}
+                  onDeleteTeam={onDeleteTeam}
+                  onEditTeam={onEditTeam}
+                  onViewTeam={onViewTeam}
+                />
+              ))}
+            </ul>
           )}
           {!isRootAdding && roots.length === 0 && ungroupedTeams.length === 0 && (
             <div className={styles.emptyState}>
@@ -418,7 +424,7 @@ const LeagueGroupsCard = (props: Props) => {
               </p>
             </div>
           )}
-        </ul>
+        </>
       )}
 
       {!loading && ungroupedTeams.length > 0 && (

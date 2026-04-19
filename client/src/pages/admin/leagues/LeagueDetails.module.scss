@@ -288,6 +288,15 @@
 }
 
 // Child groups are indented and separated from siblings
+.groupItemNew {
+  margin: $space-sm;
+}
+
+.groupItemNewRoot {
+  margin-left: 0;
+  margin-right: 0;
+}
+
 .groupItemChild {
   border-color: rgba(255, 255, 255, 0.06);
 }
