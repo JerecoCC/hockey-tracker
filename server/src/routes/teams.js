@@ -274,13 +274,14 @@ router.get('/:id/iterations', async (req, res) => {
   try {
     const rows = await sql`
       SELECT
-        ti.id, ti.team_id, ti.season_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
-        s.start_date::text AS season_start_date,
-        s.end_date::text   AS season_end_date
+        ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
+        ti.start_season_id, ss.name AS start_season_name,
+        ti.latest_season_id, ls.name AS latest_season_name
       FROM team_iterations ti
-      LEFT JOIN seasons s ON s.id = ti.season_id
+      LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+      LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
       WHERE ti.team_id = ${id}
-      ORDER BY s.start_date DESC NULLS LAST, ti.recorded_at DESC
+      ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
     `;
     return res.json(rows);
   } catch (err) {
@@ -295,9 +296,7 @@ router.get('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/:id/iterations', async (req, res) => {
   const { id } = req.params;
-  const { name, code, logo, season_id, note, start_season_id, latest_season_id } = req.body;
-  const startSeasonInBody  = 'start_season_id'  in req.body;
-  const latestSeasonInBody = 'latest_season_id' in req.body;
+  const { name, code, logo, note, start_season_id, latest_season_id } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -308,34 +307,27 @@ router.post('/:id/iterations', async (req, res) => {
     if (teamRows.length === 0) return res.status(404).json({ error: 'Team not found' });
 
     const rows = await sql`
-      INSERT INTO team_iterations (team_id, season_id, name, code, logo, note)
+      INSERT INTO team_iterations (team_id, name, code, logo, note, start_season_id, latest_season_id)
       VALUES (
         ${id},
-        ${season_id ?? null},
         ${name.trim()},
         ${code ? code.trim().toUpperCase() : null},
         ${logo ?? null},
-        ${note?.trim() ?? null}
+        ${note?.trim() ?? null},
+        ${start_season_id ?? null},
+        ${latest_season_id ?? null}
       )
       RETURNING id
     `;
 
-    if (startSeasonInBody || latestSeasonInBody) {
-      await sql`
-        UPDATE teams SET
-          start_season_id  = CASE WHEN ${startSeasonInBody}  THEN ${start_season_id  ?? null} ELSE start_season_id  END,
-          latest_season_id = CASE WHEN ${latestSeasonInBody} THEN ${latest_season_id ?? null} ELSE latest_season_id END
-        WHERE id = ${id}
-      `;
-    }
-
     const full = await sql`
       SELECT
-        ti.id, ti.team_id, ti.season_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
-        s.start_date::text AS season_start_date,
-        s.end_date::text   AS season_end_date
+        ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
+        ti.start_season_id, ss.name AS start_season_name,
+        ti.latest_season_id, ls.name AS latest_season_name
       FROM team_iterations ti
-      LEFT JOIN seasons s ON s.id = ti.season_id
+      LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+      LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
       WHERE ti.id = ${rows[0].id}
     `;
     return res.status(201).json(full[0]);
@@ -351,11 +343,10 @@ router.post('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id/iterations/:iterationId', async (req, res) => {
   const { id, iterationId } = req.params;
-  const { name, code, logo, season_id, note, start_season_id, latest_season_id } = req.body;
-  const logoInBody         = 'logo'             in req.body;
-  const seasonIdInBody     = 'season_id'        in req.body;
-  const noteInBody         = 'note'             in req.body;
-  const startSeasonInBody  = 'start_season_id'  in req.body;
+  const { name, code, logo, note, start_season_id, latest_season_id } = req.body;
+  const logoInBody           = 'logo'             in req.body;
+  const noteInBody           = 'note'             in req.body;
+  const startSeasonInBody    = 'start_season_id'  in req.body;
   const latestSeasonInBody = 'latest_season_id' in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
@@ -365,32 +356,25 @@ router.patch('/:id/iterations/:iterationId', async (req, res) => {
   try {
     const rows = await sql`
       UPDATE team_iterations SET
-        name      = COALESCE(${name?.trim() ?? null}, name),
-        code      = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
-        logo      = CASE WHEN ${logoInBody}     THEN ${logo      ?? null} ELSE logo      END,
-        season_id = CASE WHEN ${seasonIdInBody} THEN ${season_id ?? null} ELSE season_id END,
-        note      = CASE WHEN ${noteInBody}     THEN ${note?.trim() ?? null} ELSE note   END
+        name             = COALESCE(${name?.trim() ?? null}, name),
+        code             = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
+        logo             = CASE WHEN ${logoInBody}          THEN ${logo ?? null}             ELSE logo             END,
+        note             = CASE WHEN ${noteInBody}          THEN ${note?.trim() ?? null}     ELSE note             END,
+        start_season_id  = CASE WHEN ${startSeasonInBody}  THEN ${start_season_id ?? null}  ELSE start_season_id  END,
+        latest_season_id = CASE WHEN ${latestSeasonInBody} THEN ${latest_season_id ?? null} ELSE latest_season_id END
       WHERE id = ${iterationId} AND team_id = ${id}
       RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Iteration not found' });
 
-    if (startSeasonInBody || latestSeasonInBody) {
-      await sql`
-        UPDATE teams SET
-          start_season_id  = CASE WHEN ${startSeasonInBody}  THEN ${start_season_id  ?? null} ELSE start_season_id  END,
-          latest_season_id = CASE WHEN ${latestSeasonInBody} THEN ${latest_season_id ?? null} ELSE latest_season_id END
-        WHERE id = ${id}
-      `;
-    }
-
     const full = await sql`
       SELECT
-        ti.id, ti.team_id, ti.season_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
-        s.start_date::text AS season_start_date,
-        s.end_date::text   AS season_end_date
+        ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
+        ti.start_season_id, ss.name AS start_season_name,
+        ti.latest_season_id, ls.name AS latest_season_name
       FROM team_iterations ti
-      LEFT JOIN seasons s ON s.id = ti.season_id
+      LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+      LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
       WHERE ti.id = ${iterationId}
     `;
     return res.json(full[0]);

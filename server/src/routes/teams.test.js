@@ -24,10 +24,11 @@ const TEAM = {
 };
 
 const ITER = {
-  id: 'iter-1', team_id: 'team-1', season_id: null,
+  id: 'iter-1', team_id: 'team-1',
   name: 'Leafs', code: 'TOR', logo: null, note: null,
   recorded_at: new Date().toISOString(),
-  season_start_date: null, season_end_date: null,
+  start_season_id: null, start_season_name: null,
+  latest_season_id: null, latest_season_name: null,
 };
 
 afterEach(() => jest.clearAllMocks());
@@ -248,18 +249,17 @@ describe('POST /api/admin/teams/:id/iterations', () => {
     expect(res.body.name).toBe('Leafs');
   });
 
-  it('returns 201 and updates team season tracking when provided', async () => {
+  it('returns 201 with start/latest season IDs stored on iteration', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'team-1' }])  // team exists
       .mockResolvedValueOnce([{ id: 'iter-1' }])  // INSERT RETURNING id
-      .mockResolvedValueOnce([])                    // UPDATE teams (season tracking)
       .mockResolvedValueOnce([ITER]);              // SELECT full iteration
     const res = await request(app).post('/api/admin/teams/team-1/iterations')
       .send({ name: 'Leafs', start_season_id: 'season-1', latest_season_id: 'season-2' });
     expect(res.status).toBe(201);
     expect(res.body.id).toBe('iter-1');
-    // Verify the UPDATE teams call happened (4 total sql calls)
-    expect(sql).toHaveBeenCalledTimes(4);
+    // 3 sql calls: team check, INSERT, SELECT full
+    expect(sql).toHaveBeenCalledTimes(3);
   });
 
   it('returns 500 on DB error', async () => {
@@ -304,16 +304,16 @@ describe('PATCH /api/admin/teams/:id/iterations/:iterationId', () => {
     expect(res.body.name).toBe('New Name');
   });
 
-  it('updates team season tracking when provided', async () => {
+  it('stores start/latest season IDs on the iteration row', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'iter-1' }])  // UPDATE RETURNING id
-      .mockResolvedValueOnce([])                    // UPDATE teams (season tracking)
       .mockResolvedValueOnce([ITER]);              // SELECT full
     const res = await request(app)
       .patch('/api/admin/teams/team-1/iterations/iter-1')
       .send({ name: 'Leafs', start_season_id: 'season-1', latest_season_id: 'season-3' });
     expect(res.status).toBe(200);
-    expect(sql).toHaveBeenCalledTimes(3);
+    // 2 sql calls: UPDATE iteration, SELECT full (no separate UPDATE teams)
+    expect(sql).toHaveBeenCalledTimes(2);
   });
 });
 

@@ -240,6 +240,14 @@ async function initSchema() {
       season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
   `;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS code TEXT`;
+  await sql`
+    ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
+      start_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
+  await sql`
+    ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
+      latest_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
 
   // Migration: for any existing team that has no base iteration yet,
   // create one from the teams columns (only runs while those columns still exist).
