@@ -361,6 +361,79 @@ async function initSchema() {
         REFERENCES seasons(id) ON DELETE SET NULL
   `;
 
+  // ── Playoff series ────────────────────────────────────────────────────────
+  // One row per best-of-N playoff matchup. Games reference this via FK.
+  // round: 1=First Round / Wild Card, 2=Second Round, 3=Conference Finals, 4=Stanley Cup Final
+  // games_to_win: 4 for best-of-7 (the standard), 3 for best-of-5, etc.
+  await sql`
+    CREATE TABLE IF NOT EXISTS playoff_series (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      season_id      UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      round          SMALLINT NOT NULL CHECK (round BETWEEN 1 AND 4),
+      series_letter  TEXT,
+      home_team_id   UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      away_team_id   UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      games_to_win   SMALLINT NOT NULL DEFAULT 4,
+      home_wins      SMALLINT NOT NULL DEFAULT 0,
+      away_wins      SMALLINT NOT NULL DEFAULT 0,
+      status         TEXT NOT NULL DEFAULT 'upcoming'
+                       CHECK (status IN ('upcoming', 'active', 'complete')),
+      winner_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT playoff_series_different_teams CHECK (home_team_id != away_team_id)
+    )
+  `;
+
+  // ── Games ─────────────────────────────────────────────────────────────────
+  // Core game record. Team identity (name/code/logo) is resolved at query time
+  // from team_iterations, consistent with the rest of the data model.
+  //
+  // overtime_periods: 0 = regulation, 1 = 1 OT period, 2 = 2 OT, etc.
+  // home/away_score_reg: score at end of regulation (for OT/SO detection).
+  // game_number: sequential number within the regular season.
+  // game_number_in_series: which game within a playoff series (1–7).
+  await sql`
+    CREATE TABLE IF NOT EXISTS games (
+      id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      season_id             UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      home_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      away_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      scheduled_at          TIMESTAMPTZ,
+      venue                 TEXT,
+      game_type             TEXT NOT NULL DEFAULT 'regular'
+                              CHECK (game_type IN ('preseason', 'regular', 'playoff')),
+      status                TEXT NOT NULL DEFAULT 'scheduled'
+                              CHECK (status IN ('scheduled', 'in_progress', 'final', 'postponed', 'cancelled')),
+      home_score            SMALLINT,
+      away_score            SMALLINT,
+      home_score_reg        SMALLINT,
+      away_score_reg        SMALLINT,
+      overtime_periods      SMALLINT,
+      shootout              BOOLEAN NOT NULL DEFAULT false,
+      playoff_series_id     UUID REFERENCES playoff_series(id) ON DELETE SET NULL,
+      game_number_in_series SMALLINT,
+      game_number           SMALLINT,
+      notes                 TEXT,
+      created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT games_different_teams CHECK (home_team_id != away_team_id)
+    )
+  `;
+
+  // ── Game periods ──────────────────────────────────────────────────────────
+  // Period-by-period scoring breakdown.
+  // period: 1, 2, 3 = regulation; 4+ = OT periods; 0 = shootout round
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_periods (
+      game_id      UUID     NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+      period       SMALLINT NOT NULL,
+      period_type  TEXT     NOT NULL CHECK (period_type IN ('regulation', 'overtime', 'shootout')),
+      home_goals   SMALLINT NOT NULL DEFAULT 0,
+      away_goals   SMALLINT NOT NULL DEFAULT 0,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (game_id, period)
+    )
+  `;
+
   console.log('Database schema ready');
 }
 

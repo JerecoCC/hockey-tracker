@@ -511,6 +511,7 @@ describe('PUT /api/admin/seasons/:seasonId/teams', () => {
 const SEASON_TEAM = {
   id: 'team-1', name: 'Sharks', code: 'SJS', logo: null,
   primary_color: '#007A53', text_color: '#FFFFFF', secondary_color: null,
+  home_arena: 'SAP Center',
   inherited: false,
 };
 

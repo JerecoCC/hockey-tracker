@@ -12,6 +12,7 @@ import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeas
 import { type SeasonRecord } from '../../../hooks/useSeasons';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonFormModal from './SeasonFormModal';
+import SeasonGamesTab from './SeasonGamesTab';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import styles from './SeasonDetails.module.scss';
 
@@ -236,9 +237,11 @@ const SeasonDetailsPage = () => {
           {
             label: 'Games',
             content: (
-              <Card>
-                <p className={styles.tabPlaceholder}>Games coming soon.</p>
-              </Card>
+              <SeasonGamesTab
+                seasonId={id!}
+                seasonTeams={seasonTeams}
+                isEnded={season.is_ended}
+              />
             ),
           },
           {

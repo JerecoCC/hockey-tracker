@@ -16,7 +16,8 @@
   background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
-  padding: $space-md $space-lg;
+  height: 42px;
+  padding: 0 $space-lg;
   transition: border-color $transition-base;
 
   &:focus-within {
@@ -81,9 +82,7 @@
 
 // ── Dropdown calendar ────────────────────────────────────────────────────
 .dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  position: fixed;
   z-index: 200;
   background: $bg-card;
   border: 1px solid $border;

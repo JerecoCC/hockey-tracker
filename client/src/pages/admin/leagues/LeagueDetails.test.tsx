@@ -182,9 +182,10 @@ describe('LeagueDetailsPage – main render', () => {
 
 // ── Tabs ───────────────────────────────────────────────────────────────
 describe('LeagueDetailsPage – tabs', () => {
-  it('renders Info, Teams, and Players tabs', () => {
+  it('renders Info, Seasons, Teams, and Players tabs', () => {
     setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Info' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Seasons' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Teams' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Players' })).toBeInTheDocument();
   });
@@ -211,27 +212,31 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('opens on the Teams tab when navigated back from team details', () => {
-    setup({ league: mockLeague }, {}, { activeTab: 1 });
+    setup({ league: mockLeague }, {}, { activeTab: 2 });
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('opens on the Players tab when navigated with activeTab 2', () => {
-    setup({ league: mockLeague }, {}, { activeTab: 2 });
+  it('opens on the Players tab when navigated with activeTab 3', () => {
+    setup({ league: mockLeague }, {}, { activeTab: 3 });
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 });
 
-// ── Seasons card (Info tab) ────────────────────────────────────────────
+const clickSeasonsTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Seasons' }));
+
+// ── Seasons card (Seasons tab) ─────────────────────────────────────────
 describe('LeagueDetailsPage – seasons card', () => {
   it('renders the "Create Season" button', () => {
     setup({ league: mockLeague });
+    clickSeasonsTab();
     expect(screen.getByRole('button', { name: /create season/i })).toBeInTheDocument();
   });
 
   it('shows empty message when seasons list is empty', () => {
     setup({ league: mockLeague, seasons: [] });
+    clickSeasonsTab();
     expect(screen.getByText(/no seasons for this league yet/i)).toBeInTheDocument();
   });
 
@@ -249,6 +254,7 @@ describe('LeagueDetailsPage – seasons card', () => {
       },
     ];
     setup({ league: mockLeague, seasons });
+    clickSeasonsTab();
     expect(screen.getByText('Winter 2024')).toBeInTheDocument();
   });
 });

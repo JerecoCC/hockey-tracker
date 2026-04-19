@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Icon from '../Icon/Icon';
 import styles from './DatePicker.module.scss';
 
@@ -125,7 +125,15 @@ const DatePicker = (props: Props) => {
   const [buf, setBuf] = useState('');
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+
+  const measureDropdown = () => {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    setDropdownStyle({ top: r.bottom + 6, left: r.left });
+  };
   /** Selection range [start, end] to restore after the next render. */
   const pendingSelRef = useRef<[number, number] | null>(null);
 
@@ -182,6 +190,7 @@ const DatePicker = (props: Props) => {
 
   const openPicker = () => {
     setView('day');
+    if (!open) measureDropdown();
     setOpen((o) => !o);
   };
   const prevMonth = () => {
@@ -385,7 +394,10 @@ const DatePicker = (props: Props) => {
       className={styles.wrapper}
     >
       {/* ── Trigger ── */}
-      <div className={styles.trigger}>
+      <div
+        ref={triggerRef}
+        className={styles.trigger}
+      >
         <button
           type="button"
           className={styles.calIconBtn}
@@ -424,7 +436,10 @@ const DatePicker = (props: Props) => {
       </div>
 
       {open && (
-        <div className={styles.dropdown}>
+        <div
+          className={styles.dropdown}
+          style={dropdownStyle}
+        >
           {/* ── Day view ── */}
           {view === 'day' && (
             <>

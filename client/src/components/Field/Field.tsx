@@ -42,6 +42,8 @@ type SelectProps = BaseProps & {
   options: SelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  /** Called with the new value whenever the user picks an option (fires synchronously, alongside field.onChange). */
+  onChange?: (value: string | null) => void;
 };
 
 type CustomProps = BaseProps & {
@@ -113,13 +115,16 @@ const Field = (props: FieldProps) => {
               />
             );
           } else if (props.type === 'select') {
-            const { options, placeholder, disabled } = props;
+            const { options, placeholder, disabled, onChange: onChangeProp } = props;
             return (
               <Select
                 value={(field.value as string) ?? null}
                 options={options}
                 placeholder={placeholder}
-                onChange={field.onChange}
+                onChange={(val) => {
+                  field.onChange(val);
+                  onChangeProp?.(val);
+                }}
                 disabled={disabled}
               />
             );

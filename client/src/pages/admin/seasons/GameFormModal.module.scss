@@ -1,0 +1,47 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// Away @ Home team pickers
+.teamRow {
+  display: flex;
+  gap: $space-xl;
+
+  > * { flex: 1; min-width: 0; }
+}
+
+// Date + Venue
+.metaRow {
+  display: flex;
+  gap: $space-xl;
+
+  > *:first-child { flex: 0 0 200px; }
+  > *:last-child  { flex: 1; min-width: 0; }
+}
+
+// Game type + Status
+.typeRow {
+  display: flex;
+  gap: $space-xl;
+
+  > * { flex: 1; min-width: 0; }
+}
+
+// Away score / Home score / OT periods / Shootout
+.scoreRow {
+  display: flex;
+  gap: $space-xl;
+
+  > * { flex: 1; min-width: 0; }
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+}

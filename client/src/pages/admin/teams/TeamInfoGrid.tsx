@@ -27,7 +27,8 @@ const normalizeDescription = (html: string | null | undefined): string | null =>
 
 interface Props {
   team: TeamDetailRecord;
-  teamGroupLabels: string[];
+  /** The single group label to display, or null to hide the group badge entirely. */
+  groupLabel: string | null;
 }
 
 const LeagueBadge = ({ team }: { team: TeamDetailRecord }) => (
@@ -66,23 +67,12 @@ const LeagueBadge = ({ team }: { team: TeamDetailRecord }) => (
   </InfoItem>
 );
 
-const GroupBadge = ({ teamGroupLabels }: { teamGroupLabels: string[] }) => (
+const GroupBadge = ({ label }: { label: string }) => (
   <InfoItem
     type="custom"
     label="Group"
   >
-    {teamGroupLabels.length > 0 ? (
-      teamGroupLabels.map((label, i) => (
-        <span
-          key={i}
-          className={styles.infoValue}
-        >
-          {label}
-        </span>
-      ))
-    ) : (
-      <span className={styles.infoValueMuted}>No groups</span>
-    )}
+    <span className={styles.infoValue}>{label}</span>
   </InfoItem>
 );
 
@@ -96,12 +86,12 @@ const ActiveSeasonsBadge = ({ team }: { team: TeamDetailRecord }) => {
   );
 };
 
-const TeamInfoGrid = ({ team, teamGroupLabels }: Props) => {
+const TeamInfoGrid = ({ team, groupLabel }: Props) => {
   return (
     <div className={styles.infoGrid}>
       <div className={styles.infoBadgeRow}>
         <LeagueBadge team={team} />
-        <GroupBadge teamGroupLabels={teamGroupLabels} />
+        {groupLabel && <GroupBadge label={groupLabel} />}
         <ActiveSeasonsBadge team={team} />
       </div>
       <InfoItem

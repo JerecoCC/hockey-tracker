@@ -262,7 +262,7 @@ router.get('/:seasonId/teams', async (req, res) => {
     const current = await sql`
       SELECT
         t.id, iter.name, iter.code, iter.logo,
-        t.primary_color, t.text_color, t.secondary_color,
+        t.primary_color, t.text_color, t.secondary_color, t.home_arena,
         false AS inherited
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
@@ -300,7 +300,7 @@ router.get('/:seasonId/teams', async (req, res) => {
     const inherited = await sql`
       SELECT
         t.id, iter.name, iter.code, iter.logo,
-        t.primary_color, t.text_color, t.secondary_color,
+        t.primary_color, t.text_color, t.secondary_color, t.home_arena,
         true AS inherited
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id

@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
   try {
     const groups = await sql`
       SELECT
-        g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at,
+        g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at, g.is_auto,
         COALESCE(
           json_agg(
             json_build_object('id', t.id, 'name', ti.name, 'code', ti.code, 'logo', ti.logo,
@@ -38,7 +38,7 @@ router.get('/', async (req, res) => {
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      WHERE g.league_id = ${league_id}
+      WHERE g.league_id = ${league_id} AND g.season_id IS NULL
       GROUP BY g.id
       ORDER BY g.parent_id NULLS FIRST, g.sort_order, g.name
     `;

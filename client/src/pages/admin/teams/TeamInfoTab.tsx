@@ -17,15 +17,16 @@ interface Props {
 const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam }: Props) => {
   const [editModalOpen, setEditModalOpen] = useState(false);
 
-  const teamGroupLabels = groups
-    .filter((g) => g.teams.some((t) => t.id === team.id))
-    .map((g) => {
-      if (g.parent_id) {
-        const parent = groups.find((p) => p.id === g.parent_id);
-        return parent ? `${parent.name} – ${g.name}` : g.name;
-      }
-      return g.name;
-    });
+  const userGroups = groups.filter((g) => !g.is_auto && g.teams.some((t) => t.id === team.id));
+  const allGroupLabels = userGroups.map((g) => {
+    if (g.parent_id) {
+      const parent = groups.find((p) => p.id === g.parent_id);
+      return parent ? `${parent.name} – ${g.name}` : g.name;
+    }
+    return g.name;
+  });
+  // Only show the latest (last in sort order) group
+  const groupLabel = allGroupLabels.length > 0 ? allGroupLabels[allGroupLabels.length - 1] : null;
 
   return (
     <>
@@ -45,7 +46,7 @@ const TeamInfoTab = ({ team, groups, uploadLogo, updateTeam }: Props) => {
         />
         <TeamInfoGrid
           team={team}
-          teamGroupLabels={teamGroupLabels}
+          groupLabel={groupLabel}
         />
       </Card>
 

@@ -9,7 +9,7 @@ interface Props {
   children: ReactNode;
   /** Pinned below the scrollable body — use for action buttons. */
   footer?: ReactNode;
-  size?: 'md' | 'lg';
+  size?: 'md' | 'lg' | 'xl';
 }
 
 const Modal = (props: Props) => {
@@ -21,7 +21,7 @@ const Modal = (props: Props) => {
       onClick={onClose}
     >
       <div
-        className={`${styles.modal}${size === 'lg' ? ` ${styles.modalLg}` : ''}`}
+        className={`${styles.modal}${size === 'lg' ? ` ${styles.modalLg}` : size === 'xl' ? ` ${styles.modalXl}` : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>
