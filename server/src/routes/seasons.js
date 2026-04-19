@@ -132,6 +132,15 @@ router.patch('/:id', async (req, res) => {
       WHERE id = ${id}
     `;
 
+    // If an end date is being set, the season is over — unset it as the current season.
+    if (mergedEndDate) {
+      await sql`
+        UPDATE leagues
+        SET current_season_id = NULL
+        WHERE id = ${mergedLeagueId} AND current_season_id = ${id}
+      `;
+    }
+
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
@@ -233,11 +242,15 @@ router.delete('/:id', async (req, res) => {
 router.get('/:seasonId/teams', async (req, res) => {
   const { seasonId } = req.params;
   try {
-    const seasonRows = await sql`SELECT id, league_id FROM seasons WHERE id = ${seasonId}`;
+    const seasonRows = await sql`SELECT id, league_id, end_date::text FROM seasons WHERE id = ${seasonId}`;
     if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
-    const { league_id } = seasonRows[0];
+    const { league_id, end_date: seasonEndDate } = seasonRows[0];
 
-    // 1. Try the current season's explicit roster, versioning identity via season_id match
+    // 1. Try the current season's explicit roster.
+    //    Resolve each team's identity to the version that was active at the time:
+    //    - an iteration explicitly linked to this season_id (highest priority), OR
+    //    - the most recent iteration recorded on or before the season's end date
+    //      (open/current seasons have no end_date, so any iteration qualifies).
     const current = await sql`
       SELECT
         t.id, iter.name, iter.code, iter.logo,
@@ -246,13 +259,20 @@ router.get('/:seasonId/teams', async (req, res) => {
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
       LEFT JOIN LATERAL (
-        SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
-        LEFT JOIN seasons s ON s.id = ti.season_id
-        WHERE ti.team_id = t.id
-        ORDER BY
-          CASE WHEN ti.season_id = ${seasonId} THEN 0 ELSE 1 END,
-          s.start_date DESC NULLS LAST,
-          ti.recorded_at DESC
+        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+          WHERE ti.team_id = t.id
+            AND (
+              ti.season_id = ${seasonId}
+              OR (ti.season_id IS NULL AND (
+                ${seasonEndDate}::date IS NULL
+                OR ti.recorded_at::date <= ${seasonEndDate}::date
+              ))
+            )
+          ORDER BY CASE WHEN ti.season_id = ${seasonId} THEN 0 ELSE 1 END, ti.recorded_at DESC
+          LIMIT 1)
+        UNION ALL
+        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+          WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) iter ON true
       WHERE st.season_id = ${seasonId}
@@ -260,9 +280,9 @@ router.get('/:seasonId/teams', async (req, res) => {
     `;
     if (current.length > 0) return res.json(current);
 
-    // 2. Fall back to the most-recent prior season's roster, versioned to that season
+    // 2. Fall back to the most-recent prior season's roster, versioned to that season.
     const prevRows = await sql`
-      SELECT id FROM seasons
+      SELECT id, end_date::text AS prev_end_date FROM seasons
       WHERE league_id = ${league_id}
         AND id <> ${seasonId}
       ORDER BY start_date DESC NULLS LAST, created_at DESC
@@ -271,6 +291,7 @@ router.get('/:seasonId/teams', async (req, res) => {
     if (prevRows.length === 0) return res.json([]);
 
     const prevSeasonId = prevRows[0].id;
+    const prevSeasonEndDate = prevRows[0].prev_end_date;
     const inherited = await sql`
       SELECT
         t.id, iter.name, iter.code, iter.logo,
@@ -279,13 +300,20 @@ router.get('/:seasonId/teams', async (req, res) => {
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
       LEFT JOIN LATERAL (
-        SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
-        LEFT JOIN seasons s ON s.id = ti.season_id
-        WHERE ti.team_id = t.id
-        ORDER BY
-          CASE WHEN ti.season_id = ${prevSeasonId} THEN 0 ELSE 1 END,
-          s.start_date DESC NULLS LAST,
-          ti.recorded_at DESC
+        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+          WHERE ti.team_id = t.id
+            AND (
+              ti.season_id = ${prevSeasonId}
+              OR (ti.season_id IS NULL AND (
+                ${prevSeasonEndDate}::date IS NULL
+                OR ti.recorded_at::date <= ${prevSeasonEndDate}::date
+              ))
+            )
+          ORDER BY CASE WHEN ti.season_id = ${prevSeasonId} THEN 0 ELSE 1 END, ti.recorded_at DESC
+          LIMIT 1)
+        UNION ALL
+        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+          WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) iter ON true
       WHERE st.season_id = ${prevSeasonId}
@@ -399,9 +427,20 @@ router.put('/:seasonId/teams', async (req, res) => {
       FROM group_teams gt
       JOIN teams t ON t.id = gt.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
-        WHERE team_id = t.id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+          WHERE ti2.team_id = t.id
+            AND (
+              ti2.season_id = ${seasonId}
+              OR (ti2.season_id IS NULL AND (
+                ${end_date}::date IS NULL
+                OR ti2.recorded_at::date <= ${end_date}::date
+              ))
+            )
+          ORDER BY CASE WHEN ti2.season_id = ${seasonId} THEN 0 ELSE 1 END, ti2.recorded_at DESC
+          LIMIT 1)
+        UNION ALL
+        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+          WHERE ti2.team_id = t.id ORDER BY ti2.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) ti ON true
       WHERE gt.group_id = ${autoGroupId}
@@ -429,9 +468,9 @@ router.put('/:seasonId/teams', async (req, res) => {
 router.get('/:seasonId/groups', async (req, res) => {
   const { seasonId } = req.params;
   try {
-    const seasonRows = await sql`SELECT id, league_id FROM seasons WHERE id = ${seasonId}`;
+    const seasonRows = await sql`SELECT id, league_id, end_date::text FROM seasons WHERE id = ${seasonId}`;
     if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
-    const { league_id } = seasonRows[0];
+    const { league_id, end_date: seasonEndDate } = seasonRows[0];
 
     const groups = await sql`
       WITH
@@ -505,8 +544,10 @@ router.get('/:seasonId/groups', async (req, res) => {
           WHERE gt.group_id = (SELECT id FROM prev_auto_group)
             AND NOT EXISTS (SELECT 1 FROM auto_group)
         ),
-        -- versioned: resolve name/code/logo via season_id match, falling back to
-        -- the most recent prior iteration ordered by the linked season's start_date.
+        -- versioned: resolve each team's name/code/logo to the version active at this season.
+        -- Uses the iteration explicitly linked to this season, or falls back to the most
+        -- recent iteration recorded on or before the season's end date (so renames after the
+        -- season ended never bleed back into the historical view).
         versioned AS (
           SELECT
             r.group_id,
@@ -520,13 +561,20 @@ router.get('/:seasonId/groups', async (req, res) => {
           FROM resolved r
           JOIN teams t ON t.id = r.team_id
           LEFT JOIN LATERAL (
-            SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
-            LEFT JOIN seasons s ON s.id = ti.season_id
-            WHERE ti.team_id = t.id
-            ORDER BY
-              CASE WHEN ti.season_id = ${seasonId} THEN 0 ELSE 1 END,
-              s.start_date DESC NULLS LAST,
-              ti.recorded_at DESC
+            (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+              WHERE ti.team_id = t.id
+                AND (
+                  ti.season_id = ${seasonId}
+                  OR (ti.season_id IS NULL AND (
+                    ${seasonEndDate}::date IS NULL
+                    OR ti.recorded_at::date <= ${seasonEndDate}::date
+                  ))
+                )
+              ORDER BY CASE WHEN ti.season_id = ${seasonId} THEN 0 ELSE 1 END, ti.recorded_at DESC
+              LIMIT 1)
+            UNION ALL
+            (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+              WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
             LIMIT 1
           ) iter ON true
         )
@@ -579,7 +627,7 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
 
   try {
     const [seasonRows, groupRows] = await Promise.all([
-      sql`SELECT id, league_id FROM seasons WHERE id = ${seasonId}`,
+      sql`SELECT id, league_id, end_date::text FROM seasons WHERE id = ${seasonId}`,
       sql`SELECT id, league_id FROM groups  WHERE id = ${groupId}`,
     ]);
     if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
@@ -597,14 +645,26 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
       `;
     }
 
+    const { end_date: seasonEndDate } = seasonRows[0];
     const teams = await sql`
       SELECT t.id, ti.name, ti.code, ti.logo, t.primary_color, t.text_color
       FROM season_group_teams sgt
       JOIN teams t ON t.id = sgt.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
-        WHERE team_id = t.id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+          WHERE ti2.team_id = t.id
+            AND (
+              ti2.season_id = ${seasonId}
+              OR (ti2.season_id IS NULL AND (
+                ${seasonEndDate}::date IS NULL
+                OR ti2.recorded_at::date <= ${seasonEndDate}::date
+              ))
+            )
+          ORDER BY CASE WHEN ti2.season_id = ${seasonId} THEN 0 ELSE 1 END, ti2.recorded_at DESC
+          LIMIT 1)
+        UNION ALL
+        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+          WHERE ti2.team_id = t.id ORDER BY ti2.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) ti ON true
       WHERE sgt.season_id = ${seasonId} AND sgt.group_id = ${groupId}

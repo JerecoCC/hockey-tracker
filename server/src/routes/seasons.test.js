@@ -126,6 +126,7 @@ describe('PATCH /api/admin/seasons/:id', () => {
     sql
       .mockResolvedValueOnce([{ ...SEASON }])                                     // fetch existing
       .mockResolvedValueOnce([])                                                  // UPDATE seasons
+      .mockResolvedValueOnce([])                                                  // UPDATE leagues (unset current)
       .mockResolvedValueOnce([{ ...SEASON, name: 'NHL 2024–25', end_date: '2025-04-15' }]); // SELECT JOIN re-fetch
     const res = await request(app).patch('/api/admin/seasons/season-1')
       .send({ name: 'NHL 2024–25', end_date: '2025-04-15' });
@@ -136,11 +137,24 @@ describe('PATCH /api/admin/seasons/:id', () => {
   it('keeps the existing name when name is not provided', async () => {
     sql
       .mockResolvedValueOnce([{ ...SEASON }])
-      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])                                                  // UPDATE seasons
+      .mockResolvedValueOnce([])                                                  // UPDATE leagues (unset current)
       .mockResolvedValueOnce([{ ...SEASON, end_date: '2025-04-15' }]);
     const res = await request(app).patch('/api/admin/seasons/season-1')
       .send({ end_date: '2025-04-15' });
     expect(res.status).toBe(200);
+  });
+
+  it('does not clear is_current when end_date is not set', async () => {
+    sql
+      .mockResolvedValueOnce([{ ...SEASON, end_date: null }])    // fetch existing (no end_date)
+      .mockResolvedValueOnce([])                                  // UPDATE seasons
+      .mockResolvedValueOnce([{ ...SEASON, name: 'NHL Updated', end_date: null }]); // re-fetch
+    const res = await request(app).patch('/api/admin/seasons/season-1')
+      .send({ name: 'NHL Updated' });
+    expect(res.status).toBe(200);
+    // Only 3 SQL calls — no UPDATE leagues step when end_date is absent
+    expect(sql).toHaveBeenCalledTimes(3);
   });
 
   it('returns 404 when season not found', async () => {
