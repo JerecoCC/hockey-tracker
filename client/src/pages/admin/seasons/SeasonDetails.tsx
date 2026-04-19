@@ -5,7 +5,7 @@ import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Icon from '../../../components/Icon/Icon';
-import Tag from '../../../components/Tag/Tag';
+import Badge from '../../../components/Badge/Badge';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeasonDetails';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
@@ -124,7 +124,7 @@ const SeasonDetailsPage = () => {
             <>
               {season.name}
               {season.is_current && (
-                <Tag
+                <Badge
                   label="Current"
                   intent="success"
                 />

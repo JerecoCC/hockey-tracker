@@ -1,6 +1,6 @@
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
+import Badge, { type BadgeIntent } from '../Badge/Badge';
 import Button, { type ButtonIntent } from '../Button/Button';
-import Tag, { type TagIntent } from '../Tag/Tag';
 import styles from './ListItem.module.scss';
 
 export interface ListItemAction {
@@ -14,7 +14,7 @@ export interface ListItemAction {
 export interface RightContentTag {
   type: 'tag';
   label: string;
-  intent?: TagIntent;
+  intent?: BadgeIntent;
 }
 
 export interface RightContentCode {
@@ -104,10 +104,10 @@ const ListItem = ({
         )}
       </div>
 
-      {/* Right content — Tag pill or code badge */}
+      {/* Right content — Badge or code badge */}
       {rightContent ? (
         rightContent.type === 'tag' ? (
-          <Tag
+          <Badge
             label={rightContent.label}
             intent={rightContent.intent}
           />
