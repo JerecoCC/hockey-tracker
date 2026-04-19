@@ -1,0 +1,34 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.colorRow {
+  display: flex;
+  gap: $space-xl;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.locationRow {
+  display: flex;
+  gap: $space-xl;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+}

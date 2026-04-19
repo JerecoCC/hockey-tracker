@@ -1,23 +1,6 @@
-import type { FormEvent } from 'react';
-import type { Control } from 'react-hook-form';
-import { Controller } from 'react-hook-form';
-import Field from '../../../components/Field/Field';
-import RichTextEditor from '../../../components/RichTextEditor/RichTextEditor';
 import { type TeamDetailRecord } from '../../../hooks/useTeamDetails';
 import InfoItem from './InfoItem';
 import styles from './TeamDetails.module.scss';
-
-export interface FormValues {
-  logo: File | string | null;
-  name: string;
-  code: string;
-  city: string;
-  home_arena: string;
-  primary_color: string;
-  secondary_color: string;
-  text_color: string;
-  description: string | null;
-}
 
 export interface SeasonOption {
   value: string;
@@ -42,22 +25,10 @@ const normalizeDescription = (html: string | null | undefined): string | null =>
   return html;
 };
 
-interface ViewProps {
-  isEditing?: false;
+interface Props {
   team: TeamDetailRecord;
   teamGroupLabels: string[];
 }
-
-interface EditProps {
-  isEditing: true;
-  team: TeamDetailRecord;
-  teamGroupLabels: string[];
-  control: Control<FormValues>;
-  onSubmit: (e: FormEvent<HTMLFormElement>) => void;
-  isSubmitting: boolean;
-}
-
-type Props = ViewProps | EditProps;
 
 const LeagueBadge = ({ team }: { team: TeamDetailRecord }) => (
   <InfoItem
@@ -125,59 +96,7 @@ const ActiveSeasonsBadge = ({ team }: { team: TeamDetailRecord }) => {
   );
 };
 
-const TeamInfoGrid = (props: Props) => {
-  const { team, teamGroupLabels } = props;
-
-  if (props.isEditing) {
-    const { control, onSubmit, isSubmitting } = props;
-    return (
-      <form
-        id="team-edit-form"
-        className={styles.editForm}
-        onSubmit={onSubmit}
-      >
-        <div className={styles.infoGrid}>
-          <div className={styles.infoBadgeRow}>
-            <LeagueBadge team={team} />
-            <GroupBadge teamGroupLabels={teamGroupLabels} />
-            <ActiveSeasonsBadge team={team} />
-          </div>
-          <Field
-            label="City"
-            control={control}
-            name="city"
-            placeholder="e.g. Toronto"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Home Arena"
-            control={control}
-            name="home_arena"
-            placeholder="e.g. Scotiabank Arena"
-            disabled={isSubmitting}
-          />
-          <InfoItem
-            type="custom"
-            label="Description"
-            full
-          >
-            <Controller
-              control={control}
-              name="description"
-              render={({ field }) => (
-                <RichTextEditor
-                  content={field.value ?? ''}
-                  onChange={field.onChange}
-                  autoFocus={false}
-                />
-              )}
-            />
-          </InfoItem>
-        </div>
-      </form>
-    );
-  }
-
+const TeamInfoGrid = ({ team, teamGroupLabels }: Props) => {
   return (
     <div className={styles.infoGrid}>
       <div className={styles.infoBadgeRow}>

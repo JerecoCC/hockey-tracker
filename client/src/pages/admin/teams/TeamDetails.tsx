@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
@@ -18,8 +17,6 @@ const TeamDetailsPage = () => {
   const { id, leagueId } = useParams<{ id: string; leagueId: string }>();
   const { team, loading, uploadLogo, updateTeam } = useTeamDetails(id);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
-  const [isEditing, setIsEditing] = useState(false);
-
   const breadcrumbItems = [
     { label: 'Leagues', path: '/admin/leagues' },
     { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
@@ -58,7 +55,6 @@ const TeamDetailsPage = () => {
       />
 
       <Tabs
-        disabled={isEditing}
         tabs={[
           {
             label: 'Info',
@@ -68,7 +64,6 @@ const TeamDetailsPage = () => {
                 groups={groups}
                 uploadLogo={uploadLogo}
                 updateTeam={updateTeam}
-                onEditingChange={setIsEditing}
               />
             ),
           },
