@@ -9,7 +9,6 @@ import Modal from '../../../components/Modal/Modal';
 import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
 import useTeamHistory, { type TeamIteration } from '../../../hooks/useTeamHistory';
 import useSeasons from '../../../hooks/useSeasons';
-import { seasonLabel } from './TeamInfoGrid';
 import styles from './TeamDetails.module.scss';
 
 interface Props {
@@ -73,7 +72,7 @@ const TeamHistoryTab = ({
 
   const seasonOptions = leagueSeasons.map((s) => ({
     value: s.id,
-    label: seasonLabel(s.start_date, s.end_date, s.name),
+    label: s.name,
   }));
 
   const {
