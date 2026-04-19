@@ -9,6 +9,7 @@ import styles from './SeasonFormModal.module.scss';
 
 interface FormValues {
   league_id: string | null;
+  name: string;
   start_date: string;
   end_date: string;
 }
@@ -33,13 +34,14 @@ const SeasonFormModal = (props: Props) => {
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { league_id: null, start_date: '', end_date: '' },
+    defaultValues: { league_id: null, name: '', start_date: '', end_date: '' },
   });
 
   useEffect(() => {
     if (!open) return;
     reset({
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
+      name: editTarget?.name ?? '',
       start_date: editTarget?.start_date?.slice(0, 10) ?? '',
       end_date: editTarget?.end_date?.slice(0, 10) ?? '',
     });
@@ -48,6 +50,7 @@ const SeasonFormModal = (props: Props) => {
   const onSubmit = handleSubmit(async (data) => {
     const payload: CreateSeasonData = {
       league_id: data.league_id!,
+      name: data.name.trim(),
       start_date: data.start_date || null,
       end_date: data.end_date || null,
     };
@@ -75,6 +78,15 @@ const SeasonFormModal = (props: Props) => {
           options={leagueOptions}
           placeholder="— Select a league —"
           disabled={!!editTarget || !!lockedLeagueId}
+        />
+        <Field
+          label="Name"
+          required
+          type="text"
+          control={control}
+          name="name"
+          rules={{ required: 'Name is required' }}
+          placeholder="e.g. NHL 2024–25"
         />
         <div className={styles.dateRow}>
           <Field

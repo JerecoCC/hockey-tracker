@@ -68,51 +68,53 @@ describe('GET /api/admin/seasons/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
-// POST /api/admin/seasons  (also tests generateSeasonName logic)
+// POST /api/admin/seasons
 // ---------------------------------------------------------------------------
 describe('POST /api/admin/seasons', () => {
   it('returns 400 when league_id is missing', async () => {
-    const res = await request(app).post('/api/admin/seasons').send({});
+    const res = await request(app).post('/api/admin/seasons').send({ name: 'NHL 2024–25' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/league_id is required/i);
+  });
+
+  it('returns 400 when name is missing', async () => {
+    const res = await request(app).post('/api/admin/seasons').send({ league_id: 'league-1' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/name is required/i);
+  });
+
+  it('returns 400 when name is blank', async () => {
+    const res = await request(app).post('/api/admin/seasons')
+      .send({ league_id: 'league-1', name: '   ' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/name is required/i);
   });
 
   it('returns 400 when league is not found', async () => {
     sql.mockResolvedValueOnce([]); // no league rows
     const res = await request(app).post('/api/admin/seasons')
-      .send({ league_id: 'bad-id' });
+      .send({ league_id: 'bad-id', name: 'Test Season' });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/league not found/i);
   });
 
-  it('auto-generates a cross-year name (2024–25)', async () => {
+  it('creates a season with the provided name', async () => {
     sql
-      .mockResolvedValueOnce([{ code: 'NHL' }])  // league lookup
+      .mockResolvedValueOnce([{ id: 'league-1' }])              // league existence check
       .mockResolvedValueOnce([{ ...SEASON, name: 'NHL 2024–25' }]); // INSERT RETURNING
     const res = await request(app).post('/api/admin/seasons')
-      .send({ league_id: 'league-1', start_date: '2024-09-01', end_date: '2025-04-30' });
+      .send({ league_id: 'league-1', name: 'NHL 2024–25', start_date: '2024-09-01', end_date: '2025-04-30' });
     expect(res.status).toBe(201);
     expect(res.body.name).toBe('NHL 2024–25');
   });
 
-  it('auto-generates a single-year name (2025)', async () => {
+  it('trims whitespace from the name', async () => {
     sql
-      .mockResolvedValueOnce([{ code: 'AHL' }])
-      .mockResolvedValueOnce([{ ...SEASON, id: 's-2', name: 'AHL 2025', league_id: 'l-2' }]);
+      .mockResolvedValueOnce([{ id: 'league-1' }])
+      .mockResolvedValueOnce([{ ...SEASON, name: 'NHL 2024–25' }]);
     const res = await request(app).post('/api/admin/seasons')
-      .send({ league_id: 'l-2', start_date: '2025-01-01', end_date: '2025-06-30' });
+      .send({ league_id: 'league-1', name: '  NHL 2024–25  ' });
     expect(res.status).toBe(201);
-    expect(res.body.name).toBe('AHL 2025');
-  });
-
-  it('auto-generates a name with no dates', async () => {
-    sql
-      .mockResolvedValueOnce([{ code: 'OHL' }])
-      .mockResolvedValueOnce([{ ...SEASON, id: 's-3', name: 'OHL', league_id: 'l-3' }]);
-    const res = await request(app).post('/api/admin/seasons')
-      .send({ league_id: 'l-3' });
-    expect(res.status).toBe(201);
-    expect(res.body.name).toBe('OHL');
   });
 });
 
@@ -122,14 +124,23 @@ describe('POST /api/admin/seasons', () => {
 describe('PATCH /api/admin/seasons/:id', () => {
   it('returns updated season on success', async () => {
     sql
-      .mockResolvedValueOnce([{ ...SEASON, end_date: '2025-04-15' }])            // fetch existing
-      .mockResolvedValueOnce([{ code: 'NHL' }])                                   // league code lookup
+      .mockResolvedValueOnce([{ ...SEASON }])                                     // fetch existing
       .mockResolvedValueOnce([])                                                  // UPDATE seasons
       .mockResolvedValueOnce([{ ...SEASON, name: 'NHL 2024–25', end_date: '2025-04-15' }]); // SELECT JOIN re-fetch
     const res = await request(app).patch('/api/admin/seasons/season-1')
-      .send({ end_date: '2025-04-15' });
+      .send({ name: 'NHL 2024–25', end_date: '2025-04-15' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('NHL 2024–25');
+  });
+
+  it('keeps the existing name when name is not provided', async () => {
+    sql
+      .mockResolvedValueOnce([{ ...SEASON }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...SEASON, end_date: '2025-04-15' }]);
+    const res = await request(app).patch('/api/admin/seasons/season-1')
+      .send({ end_date: '2025-04-15' });
+    expect(res.status).toBe(200);
   });
 
   it('returns 404 when season not found', async () => {
