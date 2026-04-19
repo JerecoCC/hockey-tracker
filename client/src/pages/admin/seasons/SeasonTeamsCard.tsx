@@ -572,14 +572,13 @@ const SeasonTeamsCard = (props: Props) => {
                             onClick: () =>
                               navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`),
                           },
-                          !isEnded &&
-                            !isInherited && {
-                              icon: 'remove_circle_outline',
-                              intent: 'danger',
-                              tooltip: 'Remove from season',
-                              disabled: busy === 'season-teams',
-                              onClick: () => handleRemoveAutoTeam(t.id),
-                            },
+                          !isEnded && {
+                            icon: 'remove_circle_outline',
+                            intent: 'danger',
+                            tooltip: 'Remove from season',
+                            disabled: busy === 'season-teams',
+                            onClick: () => handleRemoveAutoTeam(t.id),
+                          },
                         ] satisfies (ListItemAction | false)[]
                       }
                     />
