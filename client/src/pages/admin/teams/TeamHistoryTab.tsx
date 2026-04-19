@@ -65,6 +65,11 @@ const TeamHistoryTab = ({
     label: s.name,
   }));
 
+  // Maps season id → the 4-digit start year (e.g. "2024"), used for iteration subtitles.
+  const seasonStartYearMap = new Map(
+    leagueSeasons.filter((s) => s.start_date).map((s) => [s.id, s.start_date!.slice(0, 4)]),
+  );
+
   const {
     control,
     handleSubmit,
@@ -164,11 +169,20 @@ const TeamHistoryTab = ({
         ) : (
           <ul className={styles.historyList}>
             {iterations.map((iter) => {
-              // Per-iteration season range: "NHL 2022-23 – NHL 2023-24" or "NHL 2024-25 – present"
-              const subtitle = iter.start_season_name
-                ? `${iter.start_season_name} – ${iter.latest_season_name ?? 'present'}`
-                : iter.latest_season_name
-                  ? `Up to ${iter.latest_season_name}`
+              // Year range subtitle: "2024 – Present" or "2022 – 2028"
+              const startYear = iter.start_season_id
+                ? seasonStartYearMap.get(iter.start_season_id)
+                : undefined;
+              const latestYear = iter.latest_season_id
+                ? seasonStartYearMap.get(iter.latest_season_id)
+                : undefined;
+              const endLabel = latestYear ?? 'Present';
+              const subtitle = startYear
+                ? startYear === latestYear
+                  ? startYear
+                  : `${startYear} – ${endLabel}`
+                : latestYear
+                  ? `Up to ${latestYear}`
                   : undefined;
               return (
                 <ListItem
