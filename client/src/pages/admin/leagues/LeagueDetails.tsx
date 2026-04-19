@@ -5,8 +5,8 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import LeagueInfoCard from './LeagueInfoCard';
-import LeaguePlayersCard from './LeaguePlayersCard';
-import LeagueTeamsCard from './LeagueTeamsCard';
+import LeaguePlayersTab from './LeaguePlayersTab';
+import LeagueTeamsTab from './LeagueTeamsTab';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
 import BulkAddPlayersModal from './BulkAddPlayersModal';
 import PlayerFormModal from './PlayerFormModal';
@@ -255,7 +255,7 @@ const LeagueDetailsPage = () => {
             label: 'Teams',
             content: (
               <div className={styles.grid}>
-                <LeagueTeamsCard
+                <LeagueTeamsTab
                   className={styles.col12}
                   leagueId={league.id}
                   teams={teams}
@@ -278,7 +278,7 @@ const LeagueDetailsPage = () => {
             label: 'Players',
             content: (
               <div className={styles.grid}>
-                <LeaguePlayersCard
+                <LeaguePlayersTab
                   className={styles.col12}
                   players={players}
                   seasons={seasons}

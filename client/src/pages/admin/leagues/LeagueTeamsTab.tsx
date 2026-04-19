@@ -17,7 +17,7 @@ interface Props {
   className?: string;
 }
 
-const LeagueTeamsCard = (props: Props) => {
+const LeagueTeamsTab = (props: Props) => {
   const { leagueId, teams, loading, busy, onAdd, onEdit, onDelete, className } = props;
   const navigate = useNavigate();
 
@@ -88,4 +88,4 @@ const LeagueTeamsCard = (props: Props) => {
   );
 };
 
-export default LeagueTeamsCard;
+export default LeagueTeamsTab;

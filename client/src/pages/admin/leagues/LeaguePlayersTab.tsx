@@ -31,7 +31,7 @@ interface Props {
   className?: string;
 }
 
-const LeaguePlayersCard = ({
+const LeaguePlayersTab = ({
   players,
   seasons,
   selectedSeasonId,
@@ -177,4 +177,4 @@ const LeaguePlayersCard = ({
   );
 };
 
-export default LeaguePlayersCard;
+export default LeaguePlayersTab;
