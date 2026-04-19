@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
+import Badge from '../../../components/Badge/Badge';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import Icon from '../../../components/Icon/Icon';
@@ -303,17 +304,14 @@ const GroupNode = (props: GroupNodeProps) => {
             />
           </button>
           <span className={styles.groupName}>{group.name}</span>
-          <span
-            className={
-              group.has_season_override
-                ? styles.badgeOverride
-                : group.is_inherited
-                  ? styles.badgeInherited
-                  : styles.badgeDefault
+          <Badge
+            label={
+              group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'
             }
-          >
-            {group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'}
-          </span>
+            intent={
+              group.has_season_override ? 'accent' : group.is_inherited ? 'warning' : 'neutral'
+            }
+          />
           <ActionOverlay className={styles.groupActions}>
             {depth === 0 && !isAddingChild && group.teams.length === 0 && (
               <Button
@@ -383,11 +381,20 @@ const GroupNode = (props: GroupNodeProps) => {
           ))}
         </ul>
       )}
+      {open && isAddingChild && (
+        <div className={`${styles.groupItem} ${styles.groupItemNew}`}>
+          <InlineInput
+            placeholder="Sub-group name…"
+            onConfirm={onConfirm}
+            onCancel={onCancel}
+          />
+        </div>
+      )}
+
       {open && isLeaf && !isEditing && group.teams.length === 0 && (
         <p className={styles.emptyMsg}>No teams assigned to this group.</p>
       )}
-
-      {open && (children.length > 0 || isAddingChild) && (
+      {open && children.length > 0 && (
         <ul className={styles.groupList}>
           {children.map((child) => (
             <GroupNode
@@ -407,15 +414,6 @@ const GroupNode = (props: GroupNodeProps) => {
               depth={depth + 1}
             />
           ))}
-          {isAddingChild && (
-            <li className={`${styles.groupItem} ${styles.groupItemSpanFull}`}>
-              <InlineInput
-                placeholder="Sub-group name…"
-                onConfirm={onConfirm}
-                onCancel={onCancel}
-              />
-            </li>
-          )}
         </ul>
       )}
     </li>
@@ -586,34 +584,38 @@ const SeasonTeamsCard = (props: Props) => {
             {/* ── User groups section ── */}
             {(userRoots.length > 0 || isRootAdding) && (
               <div className={styles.groupsSection}>
-                <ul className={styles.groupList}>
-                  {userRoots.map((g) => (
-                    <GroupNode
-                      key={g.id}
-                      group={g}
-                      allGroups={userGroups}
-                      seasonBusy={busy}
-                      groupBusy={groupBusy}
-                      inlineMode={inlineMode}
-                      onStartEdit={(id) => setInlineMode({ type: 'edit', groupId: id })}
-                      onStartAdd={(pid) => setInlineMode({ type: 'add', parentId: pid })}
+                {isRootAdding && (
+                  <div
+                    className={`${styles.groupItem} ${styles.groupItemNew} ${styles.groupItemNewRoot}`}
+                  >
+                    <InlineInput
+                      placeholder="Group name…"
                       onConfirm={handleGroupConfirm}
                       onCancel={() => setInlineMode(null)}
-                      onSetTeams={setTeamTarget}
-                      onResetTeams={resetSeasonGroupTeams}
-                      onDeleteGroup={onDeleteGroup}
                     />
-                  ))}
-                  {isRootAdding && (
-                    <li className={`${styles.groupItem} ${styles.groupItemSpanFull}`}>
-                      <InlineInput
-                        placeholder="Group name…"
+                  </div>
+                )}
+                {userRoots.length > 0 && (
+                  <ul className={styles.groupList}>
+                    {userRoots.map((g) => (
+                      <GroupNode
+                        key={g.id}
+                        group={g}
+                        allGroups={userGroups}
+                        seasonBusy={busy}
+                        groupBusy={groupBusy}
+                        inlineMode={inlineMode}
+                        onStartEdit={(id) => setInlineMode({ type: 'edit', groupId: id })}
+                        onStartAdd={(pid) => setInlineMode({ type: 'add', parentId: pid })}
                         onConfirm={handleGroupConfirm}
                         onCancel={() => setInlineMode(null)}
+                        onSetTeams={setTeamTarget}
+                        onResetTeams={resetSeasonGroupTeams}
+                        onDeleteGroup={onDeleteGroup}
                       />
-                    </li>
-                  )}
-                </ul>
+                    ))}
+                  </ul>
+                )}
               </div>
             )}
           </>
@@ -632,6 +634,7 @@ const SeasonTeamsCard = (props: Props) => {
       <SeasonTeamOverrideModal
         open={teamTarget !== null}
         group={teamTarget}
+        groups={userGroups}
         leagueTeams={leagueTeams}
         onClose={() => setTeamTarget(null)}
         onSave={async (groupId, teamIds) => {
