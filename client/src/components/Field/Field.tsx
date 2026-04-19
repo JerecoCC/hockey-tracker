@@ -10,6 +10,7 @@ import { Controller, type Control, type RegisterOptions } from 'react-hook-form'
 import Icon from '../Icon/Icon';
 import cn from 'classnames';
 import DatePicker from '../DatePicker/DatePicker';
+import RichTextEditor from '../RichTextEditor/RichTextEditor';
 import Select, { SelectOption } from '../Select/Select';
 import styles from './Field.module.scss';
 
@@ -57,13 +58,19 @@ type ColorProps = BaseProps & {
   type: 'color';
 };
 
+type RichTextProps = BaseProps & {
+  type: 'richtext';
+  disabled?: boolean;
+};
+
 export type FieldProps =
   | TextProps
   | TextareaProps
   | SelectProps
   | CustomProps
   | DatePickerProps
-  | ColorProps;
+  | ColorProps
+  | RichTextProps;
 
 const Field = (props: FieldProps) => {
   const { label, required, control, name, rules } = props;
@@ -124,6 +131,15 @@ const Field = (props: FieldProps) => {
                 value={(field.value as string) ?? ''}
                 onChange={field.onChange}
                 placeholder={props.placeholder}
+              />
+            );
+          } else if (props.type === 'richtext') {
+            return (
+              <RichTextEditor
+                content={(field.value as string) ?? ''}
+                onChange={field.onChange}
+                autoFocus={false}
+                editable={!props.disabled}
               />
             );
           } else if (props.type === 'color') {

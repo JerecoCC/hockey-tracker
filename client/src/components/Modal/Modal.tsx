@@ -7,11 +7,13 @@ interface Props {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  /** Pinned below the scrollable body — use for action buttons. */
+  footer?: ReactNode;
   size?: 'md' | 'lg';
 }
 
 const Modal = (props: Props) => {
-  const { open, title, onClose, children, size = 'md' } = props;
+  const { open, title, onClose, children, footer, size = 'md' } = props;
   if (!open) return null;
   return (
     <div
@@ -34,7 +36,8 @@ const Modal = (props: Props) => {
             className={styles.closeBtn}
           />
         </div>
-        {children}
+        <div className={styles.body}>{children}</div>
+        {footer && <div className={styles.footer}>{footer}</div>}
       </div>
     </div>
   );
