@@ -6,6 +6,7 @@ import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Icon from '../../../components/Icon/Icon';
 import Badge from '../../../components/Badge/Badge';
+import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeasonDetails';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
@@ -116,117 +117,148 @@ const SeasonDetailsPage = () => {
         }
       />
 
-      <div className={styles.grid}>
-        {/* ── Season info ────────────────────────────────────────────────── */}
-        <Card
-          className={styles.col12}
-          title={
-            <>
-              {season.name}
-              {season.is_current && (
-                <Badge
-                  label="Current"
-                  intent="success"
-                />
-              )}
-              {season.is_ended && (
-                <Badge
-                  label="Ended"
-                  intent="neutral"
-                />
-              )}
-            </>
-          }
-          action={
-            <div className={styles.infoCardActions}>
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                onClick={() => setShowEditModal(true)}
-              >
-                Edit
-              </Button>
-              <div
-                className={styles.menuWrapper}
-                ref={menuRef}
-              >
-                <Button
-                  variant="ghost"
-                  intent="neutral"
-                  icon="more_vert"
-                  onClick={() => setShowMenu((o) => !o)}
-                />
-                {showMenu && (
-                  <div className={styles.menu}>
-                    {!season.is_current && (
-                      <button
-                        className={styles.menuItem}
-                        disabled={busy === 'set-current'}
-                        onClick={() => {
-                          setShowMenu(false);
-                          setCurrentSeason(true);
-                        }}
-                      >
-                        <Icon name="stars" />
-                        Set as Current
-                      </button>
-                    )}
+      <Tabs
+        tabs={[
+          {
+            label: 'Info',
+            content: (
+              <Card
+                title={
+                  <>
+                    {season.name}
                     {season.is_current && (
-                      <button
-                        className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                        disabled={busy === 'end-season'}
-                        onClick={() => {
-                          setShowMenu(false);
-                          setShowEndModal(true);
-                        }}
-                      >
-                        <Icon name="flag" />
-                        End Season
-                      </button>
+                      <Badge
+                        label="Current"
+                        intent="success"
+                      />
                     )}
+                    {season.is_ended && (
+                      <Badge
+                        label="Ended"
+                        intent="neutral"
+                      />
+                    )}
+                  </>
+                }
+                action={
+                  <div className={styles.infoCardActions}>
+                    <Button
+                      variant="outlined"
+                      intent="neutral"
+                      icon="edit"
+                      onClick={() => setShowEditModal(true)}
+                    >
+                      Edit
+                    </Button>
+                    <div
+                      className={styles.menuWrapper}
+                      ref={menuRef}
+                    >
+                      <Button
+                        variant="ghost"
+                        intent="neutral"
+                        icon="more_vert"
+                        onClick={() => setShowMenu((o) => !o)}
+                      />
+                      {showMenu && (
+                        <div className={styles.menu}>
+                          {!season.is_current && (
+                            <button
+                              className={styles.menuItem}
+                              disabled={busy === 'set-current'}
+                              onClick={() => {
+                                setShowMenu(false);
+                                setCurrentSeason(true);
+                              }}
+                            >
+                              <Icon name="stars" />
+                              Set as Current
+                            </button>
+                          )}
+                          {season.is_current && (
+                            <button
+                              className={`${styles.menuItem} ${styles.menuItemDanger}`}
+                              disabled={busy === 'end-season'}
+                              onClick={() => {
+                                setShowMenu(false);
+                                setShowEndModal(true);
+                              }}
+                            >
+                              <Icon name="flag" />
+                              End Season
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
-                )}
-              </div>
-            </div>
-          }
-        >
-          <div className={styles.infoGrid}>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>League</span>
-              <span className={styles.infoValue}>{season.league_name}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>Start Date</span>
-              <span className={styles.infoValue}>{formatDate(season.start_date)}</span>
-            </div>
-            <div className={styles.infoItem}>
-              <span className={styles.infoLabel}>End Date</span>
-              <span className={styles.infoValue}>
-                {formatEndDate(season.end_date, season.is_current)}
-              </span>
-            </div>
-          </div>
-        </Card>
-
-        {/* ── Teams + Groups ─────────────────────────────────────────────── */}
-        <SeasonTeamsCard
-          className={styles.col12}
-          seasonTeams={seasonTeams}
-          groups={groups}
-          leagueTeams={leagueTeams}
-          loading={loading}
-          busy={busy}
-          groupBusy={groupBusy}
-          isEnded={season.is_ended}
-          setSeasonTeams={setSeasonTeams}
-          setSeasonGroupTeams={setSeasonGroupTeams}
-          resetSeasonGroupTeams={resetSeasonGroupTeams}
-          addGroup={addGroup}
-          updateGroup={updateGroup}
-          onDeleteGroup={setConfirmDeleteGroup}
-        />
-      </div>
+                }
+              >
+                <div className={styles.infoGrid}>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>League</span>
+                    <span className={styles.infoValue}>{season.league_name}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Start Date</span>
+                    <span className={styles.infoValue}>{formatDate(season.start_date)}</span>
+                  </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>End Date</span>
+                    <span className={styles.infoValue}>
+                      {formatEndDate(season.end_date, season.is_current)}
+                    </span>
+                  </div>
+                </div>
+              </Card>
+            ),
+          },
+          {
+            label: 'Teams',
+            content: (
+              <SeasonTeamsCard
+                seasonTeams={seasonTeams}
+                groups={groups}
+                leagueTeams={leagueTeams}
+                loading={loading}
+                busy={busy}
+                groupBusy={groupBusy}
+                isEnded={season.is_ended}
+                setSeasonTeams={setSeasonTeams}
+                setSeasonGroupTeams={setSeasonGroupTeams}
+                resetSeasonGroupTeams={resetSeasonGroupTeams}
+                addGroup={addGroup}
+                updateGroup={updateGroup}
+                onDeleteGroup={setConfirmDeleteGroup}
+              />
+            ),
+          },
+          {
+            label: 'Games',
+            content: (
+              <Card>
+                <p className={styles.tabPlaceholder}>Games coming soon.</p>
+              </Card>
+            ),
+          },
+          {
+            label: 'Players',
+            content: (
+              <Card>
+                <p className={styles.tabPlaceholder}>Players coming soon.</p>
+              </Card>
+            ),
+          },
+          {
+            label: 'Playoffs',
+            content: (
+              <Card>
+                <p className={styles.tabPlaceholder}>Playoffs coming soon.</p>
+              </Card>
+            ),
+          },
+        ]}
+      />
 
       <ConfirmModal
         open={confirmDeleteGroup !== null}

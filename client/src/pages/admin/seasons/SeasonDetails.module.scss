@@ -40,6 +40,15 @@
   }
 }
 
+// ── Placeholder ────────────────────────────────────────────────────────────────
+.tabPlaceholder {
+  color: $text-dim;
+  font-style: italic;
+  text-align: center;
+  padding: $space-xl 0;
+  margin: 0;
+}
+
 // ── Info grid ──────────────────────────────────────────────────────────────────
 .infoGrid {
   display: grid;
