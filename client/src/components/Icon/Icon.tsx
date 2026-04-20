@@ -25,6 +25,7 @@ import {
   faMagnifyingGlass,
   faPen,
   faPeopleGroup,
+  faPlay,
   faPlus,
   faRightFromBracket,
   faShield,
@@ -76,6 +77,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // actions
   add: faPlus,
+  calendar: faCalendarDays,
+  play_arrow: faPlay,
   folder_plus: faFolderPlus,
   check: faCheck,
   close: faXmark,
