@@ -1,11 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Icon from '../../../components/Icon/Icon';
 import Badge from '../../../components/Badge/Badge';
+import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
 import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeasonDetails';
@@ -55,19 +55,6 @@ const SeasonDetailsPage = () => {
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showMenu, setShowMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!showMenu) return;
-    const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
-  }, [showMenu]);
 
   const leagueHref = `/admin/leagues/${leagueId}`;
 
@@ -151,47 +138,31 @@ const SeasonDetailsPage = () => {
                     >
                       Edit
                     </Button>
-                    <div
-                      className={styles.menuWrapper}
-                      ref={menuRef}
-                    >
-                      <Button
-                        variant="ghost"
-                        intent="neutral"
-                        icon="more_vert"
-                        onClick={() => setShowMenu((o) => !o)}
-                      />
-                      {showMenu && (
-                        <div className={styles.menu}>
-                          {!season.is_current && (
-                            <button
-                              className={styles.menuItem}
-                              disabled={busy === 'set-current'}
-                              onClick={() => {
-                                setShowMenu(false);
-                                setCurrentSeason(true);
-                              }}
-                            >
-                              <Icon name="stars" />
-                              Set as Current
-                            </button>
-                          )}
-                          {season.is_current && (
-                            <button
-                              className={`${styles.menuItem} ${styles.menuItemDanger}`}
-                              disabled={busy === 'end-season'}
-                              onClick={() => {
-                                setShowMenu(false);
-                                setShowEndModal(true);
-                              }}
-                            >
-                              <Icon name="flag" />
-                              End Season
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
+                    <MoreActionsMenu
+                      items={[
+                        ...(!season.is_current
+                          ? [
+                              {
+                                label: 'Set as Current',
+                                icon: 'stars',
+                                disabled: busy === 'set-current',
+                                onClick: () => setCurrentSeason(true),
+                              },
+                            ]
+                          : []),
+                        ...(season.is_current
+                          ? [
+                              {
+                                label: 'End Season',
+                                icon: 'flag',
+                                intent: 'danger' as const,
+                                disabled: busy === 'end-season',
+                                onClick: () => setShowEndModal(true),
+                              },
+                            ]
+                          : []),
+                      ]}
+                    />
                   </div>
                 }
               >
@@ -238,6 +209,7 @@ const SeasonDetailsPage = () => {
             label: 'Games',
             content: (
               <SeasonGamesTab
+                leagueId={leagueId!}
                 seasonId={id!}
                 seasonTeams={seasonTeams}
                 isEnded={season.is_ended}

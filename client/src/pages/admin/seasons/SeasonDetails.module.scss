@@ -91,16 +91,10 @@
   }
 }
 
+// groupItem: list-item wrapper only — Accordion provides the visual border/radius.
 .groupItem {
   display: flex;
   flex-direction: column;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  overflow: hidden;
-
-  > .groupList {
-    padding: $space-sm $space-md $space-md;
-  }
 }
 
 .groupItemNew {
@@ -112,75 +106,21 @@
   margin-right: 0;
 }
 
+// Passed as className to Accordion to tint the border for nested sub-groups.
 .groupItemChild {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-.groupRow {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-sm $space-md;
-  border-bottom: 1px solid $border;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-
-    .groupActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-}
-
-.groupRowCollapsed {
-  border-bottom: none;
-}
-
-.groupToggle {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  background: transparent;
-  border: none;
-  color: $text-dim;
-  cursor: pointer;
-  padding: 0;
-  border-radius: $radius-sm;
-  transition:
-    color $transition-fast,
-    background $transition-fast;
-
-  &:hover {
-    color: $text-body;
-    background: rgba(255, 255, 255, 0.06);
-  }
-}
-
-.groupToggleIcon {
-  transition: transform $transition-base;
-  transform: rotate(-90deg);
-}
-
-.groupToggleIconOpen {
-  transition: transform $transition-base;
-  transform: rotate(0deg);
-}
-
+// Passed as className to Accordion label slot to set the group-name font size.
 .groupName {
   font-size: $font-lg;
   color: $text-body;
   font-weight: 500;
-  flex-shrink: 0;
 }
 
-// Exists so .groupRow:hover can reference it
-.groupActions {
+// Padding wrapper for the nested sub-group list rendered inside Accordion body.
+.groupNestedList {
+  padding: $space-sm $space-md $space-md;
 }
 
 .inheritedBanner {
@@ -477,67 +417,13 @@
   gap: $space-sm;
 }
 
-.menuWrapper {
-  position: relative;
-}
-
-.menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  min-width: 168px;
-  background: $bg-card;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: $space-xs 0;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
-  z-index: 100;
-}
-
-.menuItem {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-sm $space-lg;
-  background: transparent;
-  border: none;
-  color: $text-body;
-  font-size: $font-sm;
-  font-family: inherit;
-  cursor: pointer;
-  justify-content: flex-start;
-  transition:
-    background 0.12s,
-    color 0.12s;
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.06);
-    color: $text-bright;
-  }
-
-  &:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
-  }
-}
-
-.menuItemDanger {
-  color: $danger;
-
-  &:hover:not(:disabled) {
-    background: rgba($danger, 0.1);
-    color: $danger;
-  }
-}
-
 // ── Groups section within the Teams card ──────────────────────────────────────
 .groupsSection {
   // intentionally no border-top/margin — groups render alone when present
 }
 
 // 1 group → full width; 3 groups → 2 on row 1, last one full width; etc.
-.groupsSection > .groupList > .groupItem:last-child:nth-child(odd) {
+.groupsSection > .groupList > li:last-child:nth-child(odd) {
   grid-column: 1 / -1;
 }
 

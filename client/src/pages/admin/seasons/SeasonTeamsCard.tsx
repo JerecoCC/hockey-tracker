@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
+import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
 import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
 import Badge from '../../../components/Badge/Badge';
 import Button from '../../../components/Button/Button';
@@ -270,7 +270,6 @@ const GroupNode = (props: GroupNodeProps) => {
     onDeleteGroup,
     depth = 0,
   } = props;
-  const [open, setOpen] = useState(true);
 
   const children = allGroups
     .filter((g) => g.parent_id === group.id)
@@ -280,11 +279,7 @@ const GroupNode = (props: GroupNodeProps) => {
   const isLeaf = children.length === 0;
 
   return (
-    <li
-      className={[styles.groupItem, depth > 0 ? styles.groupItemChild : '']
-        .filter(Boolean)
-        .join(' ')}
-    >
+    <li className={styles.groupItem}>
       {isEditing ? (
         <InlineInput
           initialValue={group.name}
@@ -292,132 +287,118 @@ const GroupNode = (props: GroupNodeProps) => {
           onCancel={onCancel}
         />
       ) : (
-        <div className={`${styles.groupRow} ${!open ? styles.groupRowCollapsed : ''}`}>
-          <button
-            className={styles.groupToggle}
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? 'Collapse' : 'Expand'}
-            aria-expanded={open}
-          >
-            <Icon
-              name="expand_more"
-              size="0.8em"
-              className={open ? styles.groupToggleIconOpen : styles.groupToggleIcon}
+        <Accordion
+          className={depth > 0 ? styles.groupItemChild : undefined}
+          label={<span className={styles.groupName}>{group.name}</span>}
+          headerRight={
+            <Badge
+              label={
+                group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'
+              }
+              intent={
+                group.has_season_override ? 'accent' : group.is_inherited ? 'warning' : 'neutral'
+              }
             />
-          </button>
-          <span className={styles.groupName}>{group.name}</span>
-          <Badge
-            label={
-              group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'
-            }
-            intent={
-              group.has_season_override ? 'accent' : group.is_inherited ? 'warning' : 'neutral'
-            }
-          />
-          <ActionOverlay className={styles.groupActions}>
-            {!isEnded && depth === 0 && !isAddingChild && group.teams.length === 0 && (
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="folder_plus"
-                size="sm"
-                tooltip="Create Sub-group"
-                onClick={() => onStartAdd(group.id)}
+          }
+          hoverActions={
+            [
+              !isEnded && depth === 0 && !isAddingChild && group.teams.length === 0
+                ? {
+                    icon: 'folder_plus',
+                    intent: 'neutral' as const,
+                    tooltip: 'Create Sub-group',
+                    onClick: () => onStartAdd(group.id),
+                  }
+                : null,
+              !isEnded && isLeaf
+                ? {
+                    icon: 'groups',
+                    intent: (group.has_season_override
+                      ? 'accent'
+                      : 'neutral') as AccordionAction['intent'],
+                    disabled: !!seasonBusy,
+                    tooltip: 'Add Teams to Group',
+                    onClick: () => onSetTeams(group),
+                  }
+                : null,
+              !isEnded && isLeaf && group.has_season_override
+                ? {
+                    icon: 'restart_alt',
+                    intent: 'neutral' as const,
+                    disabled: !!seasonBusy,
+                    tooltip: 'Revert to default team list',
+                    onClick: () => onResetTeams(group.id),
+                  }
+                : null,
+              {
+                icon: 'edit',
+                intent: 'accent' as const,
+                disabled: groupBusy === group.id,
+                tooltip: 'Rename group',
+                onClick: () => onStartEdit(group.id),
+              },
+              {
+                icon: 'delete',
+                intent: 'danger' as const,
+                disabled: groupBusy === group.id,
+                tooltip: 'Delete group',
+                onClick: () => onDeleteGroup(group),
+              },
+            ].filter(Boolean) as AccordionAction[]
+          }
+        >
+          {isLeaf && group.teams.length > 0 && (
+            <ul className={styles.teamList}>
+              {group.teams.map((t) => (
+                <ListItem
+                  key={t.id}
+                  image={t.logo}
+                  name={t.name}
+                  rightContent={{ type: 'code', value: t.code }}
+                  primaryColor={t.primary_color}
+                  textColor={t.text_color}
+                />
+              ))}
+            </ul>
+          )}
+          {isAddingChild && (
+            <div className={styles.groupItemNew}>
+              <InlineInput
+                placeholder="Sub-group name…"
+                onConfirm={onConfirm}
+                onCancel={onCancel}
               />
-            )}
-            {!isEnded && isLeaf && (
-              <Button
-                variant="outlined"
-                intent={group.has_season_override ? 'accent' : 'neutral'}
-                icon="groups"
-                size="sm"
-                disabled={!!seasonBusy}
-                tooltip="Add Teams to Group"
-                onClick={() => onSetTeams(group)}
-              />
-            )}
-            {!isEnded && isLeaf && group.has_season_override && (
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="restart_alt"
-                size="sm"
-                disabled={!!seasonBusy}
-                tooltip="Revert to default team list"
-                onClick={() => onResetTeams(group.id)}
-              />
-            )}
-            <Button
-              variant="outlined"
-              intent="accent"
-              icon="edit"
-              size="sm"
-              disabled={groupBusy === group.id}
-              tooltip="Rename group"
-              onClick={() => onStartEdit(group.id)}
-            />
-            <Button
-              variant="outlined"
-              intent="danger"
-              icon="delete"
-              size="sm"
-              disabled={groupBusy === group.id}
-              tooltip="Delete group"
-              onClick={() => onDeleteGroup(group)}
-            />
-          </ActionOverlay>
-        </div>
-      )}
-
-      {open && isLeaf && !isEditing && group.teams.length > 0 && (
-        <ul className={styles.teamList}>
-          {group.teams.map((t) => (
-            <ListItem
-              key={t.id}
-              image={t.logo}
-              name={t.name}
-              rightContent={{ type: 'code', value: t.code }}
-              primaryColor={t.primary_color}
-              textColor={t.text_color}
-            />
-          ))}
-        </ul>
-      )}
-      {open && isAddingChild && (
-        <div className={`${styles.groupItem} ${styles.groupItemNew}`}>
-          <InlineInput
-            placeholder="Sub-group name…"
-            onConfirm={onConfirm}
-            onCancel={onCancel}
-          />
-        </div>
-      )}
-
-      {open && isLeaf && !isEditing && group.teams.length === 0 && (
-        <p className={styles.emptyMsg}>No teams assigned to this group.</p>
-      )}
-      {open && children.length > 0 && (
-        <ul className={styles.groupList}>
-          {children.map((child) => (
-            <GroupNode
-              key={child.id}
-              group={child}
-              allGroups={allGroups}
-              seasonBusy={seasonBusy}
-              groupBusy={groupBusy}
-              inlineMode={inlineMode}
-              isEnded={isEnded}
-              onStartEdit={onStartEdit}
-              onStartAdd={onStartAdd}
-              onConfirm={onConfirm}
-              onCancel={onCancel}
-              onSetTeams={onSetTeams}
-              onResetTeams={onResetTeams}
-              onDeleteGroup={onDeleteGroup}
-              depth={depth + 1}
-            />
-          ))}
-        </ul>
+            </div>
+          )}
+          {isLeaf && group.teams.length === 0 && (
+            <p className={styles.emptyMsg}>No teams assigned to this group.</p>
+          )}
+          {children.length > 0 && (
+            <div className={styles.groupNestedList}>
+              <ul className={styles.groupList}>
+                {children.map((child) => (
+                  <GroupNode
+                    key={child.id}
+                    group={child}
+                    allGroups={allGroups}
+                    seasonBusy={seasonBusy}
+                    groupBusy={groupBusy}
+                    inlineMode={inlineMode}
+                    isEnded={isEnded}
+                    onStartEdit={onStartEdit}
+                    onStartAdd={onStartAdd}
+                    onConfirm={onConfirm}
+                    onCancel={onCancel}
+                    onSetTeams={onSetTeams}
+                    onResetTeams={onResetTeams}
+                    onDeleteGroup={onDeleteGroup}
+                    depth={depth + 1}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+        </Accordion>
       )}
     </li>
   );

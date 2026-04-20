@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
@@ -20,19 +21,19 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
-  in_progress: 'Live',
+  in_progress: 'In Progress',
   final: 'Final',
   postponed: 'Postponed',
   cancelled: 'Cancelled',
 };
 
-const STATUS_INTENT = {
+const STATUS_INTENT: Record<GameStatus, 'neutral' | 'success' | 'warning' | 'danger'> = {
   scheduled: 'neutral',
   in_progress: 'warning',
   final: 'success',
   postponed: 'warning',
   cancelled: 'danger',
-} as const;
+};
 
 const formatSubtitle = (game: GameRecord): string => {
   const parts: string[] = [];
@@ -59,12 +60,14 @@ const formatRightContent = (game: GameRecord): ListItemRightContent => {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 interface Props {
+  leagueId: string;
   seasonId: string;
   seasonTeams: SeasonTeam[];
   isEnded: boolean;
 }
 
-const SeasonGamesTab = ({ seasonId, seasonTeams, isEnded }: Props) => {
+const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => {
+  const navigate = useNavigate();
   const { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames } = useGames({
     seasonId,
   });
@@ -132,24 +135,31 @@ const SeasonGamesTab = ({ seasonId, seasonTeams, isEnded }: Props) => {
                 subtitle={formatSubtitle(game)}
                 note={formatNote(game)}
                 rightContent={formatRightContent(game)}
-                actions={
-                  !isEnded
+                actions={[
+                  {
+                    icon: 'open_in_new',
+                    intent: 'neutral',
+                    tooltip: 'View game',
+                    onClick: () =>
+                      navigate(`/admin/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`),
+                  },
+                  ...(!isEnded
                     ? [
                         {
                           icon: 'edit',
-                          intent: 'neutral',
+                          intent: 'neutral' as const,
                           tooltip: 'Edit game',
                           onClick: () => handleEdit(game),
                         },
                         {
                           icon: 'delete',
-                          intent: 'danger',
+                          intent: 'danger' as const,
                           tooltip: 'Delete game',
                           onClick: () => setConfirmDelete(game),
                         },
                       ]
-                    : undefined
-                }
+                    : []),
+                ]}
               />
             ))}
           </ul>
