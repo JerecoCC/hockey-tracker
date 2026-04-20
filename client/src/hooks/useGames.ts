@@ -11,17 +11,10 @@ const apiError = (err: unknown, fallback: string) =>
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
-export type GameType   = 'preseason' | 'regular' | 'playoff';
-export type GameStatus = 'scheduled' | 'final' | 'postponed' | 'cancelled';
-export type PeriodType = 'regulation' | 'overtime' | 'shootout';
+export type GameType      = 'preseason' | 'regular' | 'playoff';
+export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed' | 'cancelled';
+export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
 export type SeriesStatus = 'upcoming' | 'active' | 'complete';
-
-export interface GamePeriod {
-  period:      number;
-  period_type: PeriodType;
-  home_goals:  number;
-  away_goals:  number;
-}
 
 export interface GameRecord {
   id:                    string;
@@ -49,8 +42,17 @@ export interface GameRecord {
   game_number:           number | null;
   notes:                 string | null;
   created_at:            string;
-  /** Present only on the detail endpoint. */
-  periods?:              GamePeriod[];
+  current_period?:       CurrentPeriod | null;
+  /** Period-by-period goal totals stored as static columns. */
+  p1_home_goals:         number;
+  p1_away_goals:         number;
+  p2_home_goals:         number;
+  p2_away_goals:         number;
+  p3_home_goals:         number;
+  p3_away_goals:         number;
+  season_name?:          string;
+  league_id?:            string;
+  league_name?:          string;
 }
 
 export interface PlayoffSeriesRecord {
@@ -181,21 +183,6 @@ const useGames = (filters: Filters = {}) => {
     }
   };
 
-  const updatePeriods = async (id: string, periods: GamePeriod[]): Promise<boolean> => {
-    setBusy(`periods-${id}`);
-    try {
-      await axios.put(`${API}/admin/games/${id}/periods`, { periods }, { headers: authHeaders() });
-      toast.success('Period scores saved!');
-      queryClient.invalidateQueries({ queryKey: ['games', id] });
-      return true;
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to save period scores'));
-      return false;
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const bulkCreateGames = async (data: CreateGameData[]): Promise<boolean> => {
     setBusy('bulk-creating');
     try {
@@ -215,8 +202,97 @@ const useGames = (filters: Filters = {}) => {
     }
   };
 
-  return { games, loading, busy, createGame, updateGame, deleteGame, updatePeriods, bulkCreateGames };
+  return { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames };
 };
 
 export default useGames;
+
+// ── Single-game detail hook ───────────────────────────────────────────────────
+
+export const useGameDetails = (id: string | undefined) => {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const { data: game = null, isLoading: loading } = useQuery<GameRecord | null>({
+    queryKey: ['games', id],
+    enabled: !!id,
+    queryFn: async () => {
+      if (!id) return null;
+      try {
+        const { data } = await axios.get<GameRecord>(`${API}/admin/games/${id}`, {
+          headers: authHeaders(),
+        });
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load game'));
+        return null;
+      }
+    },
+  });
+
+  const scoreGoal = async (period: 1 | 2 | 3, team: 'home' | 'away'): Promise<boolean> => {
+    if (!id || !game) return false;
+    setBusy('score-goal');
+    const col = `p${period}_${team}_goals` as keyof GameRecord;
+    const current = (game[col] as number) ?? 0;
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { [col]: current + 1 },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to score goal'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const advancePeriod = async (nextPeriod: CurrentPeriod): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('advance-period');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { current_period: nextPeriod },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to advance period'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const updateStatus = async (status: GameStatus): Promise<boolean> => {
+    if (!id) return false;
+    setBusy(status);
+    try {
+      await axios.patch(`${API}/admin/games/${id}`, { status }, { headers: authHeaders() });
+      const label =
+        status === 'in_progress' ? 'Game started!'
+        : status === 'final'      ? 'Game ended!'
+        : status === 'cancelled'  ? 'Game cancelled.'
+        : 'Status updated.';
+      toast.success(label);
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update game status'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { game, loading, busy, updateStatus, scoreGoal, advancePeriod };
+};
 

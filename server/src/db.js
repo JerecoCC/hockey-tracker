@@ -419,6 +419,20 @@ async function initSchema() {
     )
   `;
 
+  // Migration: track which period is actively being played
+  await sql`
+    ALTER TABLE games ADD COLUMN IF NOT EXISTS
+      current_period TEXT CHECK (current_period IN ('1', '2', '3', 'OT', 'SO'))
+  `;
+
+  // Migration: static period-by-period goal columns (replaces game_periods table)
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p1_home_goals SMALLINT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p1_away_goals SMALLINT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p2_home_goals SMALLINT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p2_away_goals SMALLINT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p3_home_goals SMALLINT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p3_away_goals SMALLINT NOT NULL DEFAULT 0`;
+
   // ── Game periods ──────────────────────────────────────────────────────────
   // Period-by-period scoring breakdown.
   // period: 1, 2, 3 = regulation; 4+ = OT periods; 0 = shootout round

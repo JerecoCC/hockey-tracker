@@ -32,7 +32,10 @@ router.get('/', async (req, res) => {
         g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
-        g.playoff_series_id, g.notes, g.created_at,
+        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.p1_home_goals, g.p1_away_goals,
+        g.p2_home_goals, g.p2_away_goals,
+        g.p3_home_goals, g.p3_away_goals,
         -- Home team
         g.home_team_id,
         ht.name  AS home_team_name,
@@ -77,45 +80,45 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const [rows, periods] = await Promise.all([
-      sql`
-        SELECT
-          g.id, g.season_id, g.game_type, g.status,
-          g.scheduled_at, g.venue,
-          g.home_score, g.away_score,
-          g.home_score_reg, g.away_score_reg,
-          g.overtime_periods, g.shootout,
-          g.game_number, g.game_number_in_series,
-          g.playoff_series_id, g.notes, g.created_at,
-          g.home_team_id,
-          ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-          g.away_team_id,
-          at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo
-        FROM games g
-        LEFT JOIN LATERAL (
-          SELECT name, code, logo FROM team_iterations
-          WHERE team_id = g.home_team_id
-          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-          LIMIT 1
-        ) ht ON true
-        LEFT JOIN LATERAL (
-          SELECT name, code, logo FROM team_iterations
-          WHERE team_id = g.away_team_id
-          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-          LIMIT 1
-        ) at ON true
-        WHERE g.id = ${id}
-      `,
-      sql`
-        SELECT period, period_type, home_goals, away_goals
-        FROM game_periods
-        WHERE game_id = ${id}
-        ORDER BY period ASC
-      `,
-    ]);
+    const rows = await sql`
+      SELECT
+        g.id, g.season_id, g.game_type, g.status,
+        g.scheduled_at, g.venue,
+        g.home_score, g.away_score,
+        g.home_score_reg, g.away_score_reg,
+        g.overtime_periods, g.shootout,
+        g.game_number, g.game_number_in_series,
+        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.p1_home_goals, g.p1_away_goals,
+        g.p2_home_goals, g.p2_away_goals,
+        g.p3_home_goals, g.p3_away_goals,
+        g.home_team_id,
+        ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
+        g.away_team_id,
+        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
+        s.name AS season_name,
+        l.id   AS league_id,
+        l.name AS league_name
+      FROM games g
+      JOIN seasons s ON s.id = g.season_id
+      JOIN leagues l ON l.id = s.league_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = g.home_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ht ON true
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = g.away_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) at ON true
+      WHERE g.id = ${id}
+    `;
 
     if (rows.length === 0) return res.status(404).json({ error: 'Game not found' });
-    return res.json({ ...rows[0], periods });
+    return res.json(rows[0]);
   } catch (err) {
     console.error('games get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -168,7 +171,10 @@ router.post('/', async (req, res) => {
         g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
-        g.playoff_series_id, g.notes, g.created_at,
+        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.p1_home_goals, g.p1_away_goals,
+        g.p2_home_goals, g.p2_away_goals,
+        g.p3_home_goals, g.p3_away_goals,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
         g.away_team_id,
@@ -207,7 +213,16 @@ router.patch('/:id', async (req, res) => {
     home_score, away_score, home_score_reg, away_score_reg,
     overtime_periods, shootout,
     playoff_series_id, game_number_in_series, game_number, notes,
+    current_period,
+    p1_home_goals, p1_away_goals,
+    p2_home_goals, p2_away_goals,
+    p3_home_goals, p3_away_goals,
   } = req.body;
+
+  // Automatically set current_period to '1' when a game is started
+  const effectivePeriod = status === 'in_progress' && current_period === undefined
+    ? '1'
+    : (current_period ?? null);
 
   try {
     const existing = await sql`SELECT id FROM games WHERE id = ${id}`;
@@ -228,7 +243,14 @@ router.patch('/:id', async (req, res) => {
         playoff_series_id     = COALESCE(${playoff_series_id     ?? null}, playoff_series_id),
         game_number_in_series = COALESCE(${game_number_in_series ?? null}, game_number_in_series),
         game_number           = COALESCE(${game_number           ?? null}, game_number),
-        notes                 = COALESCE(${notes                 ?? null}, notes)
+        notes                 = COALESCE(${notes                 ?? null}, notes),
+        current_period        = COALESCE(${effectivePeriod},             current_period),
+        p1_home_goals         = COALESCE(${p1_home_goals         ?? null}, p1_home_goals),
+        p1_away_goals         = COALESCE(${p1_away_goals         ?? null}, p1_away_goals),
+        p2_home_goals         = COALESCE(${p2_home_goals         ?? null}, p2_home_goals),
+        p2_away_goals         = COALESCE(${p2_away_goals         ?? null}, p2_away_goals),
+        p3_home_goals         = COALESCE(${p3_home_goals         ?? null}, p3_home_goals),
+        p3_away_goals         = COALESCE(${p3_away_goals         ?? null}, p3_away_goals)
       WHERE id = ${id}
     `;
     const updated = await sql`
@@ -238,7 +260,10 @@ router.patch('/:id', async (req, res) => {
         g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
-        g.playoff_series_id, g.notes, g.created_at,
+        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.p1_home_goals, g.p1_away_goals,
+        g.p2_home_goals, g.p2_away_goals,
+        g.p3_home_goals, g.p3_away_goals,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
         g.away_team_id,
@@ -277,49 +302,6 @@ router.delete('/:id', async (req, res) => {
     return res.status(204).send();
   } catch (err) {
     console.error('games delete error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// PUT /api/admin/games/:id/periods  – replace all period scores for a game
-// Body: { periods: [{ period, period_type, home_goals, away_goals }] }
-// ---------------------------------------------------------------------------
-router.put('/:id/periods', async (req, res) => {
-  const { id } = req.params;
-  const { periods } = req.body;
-
-  if (!Array.isArray(periods)) {
-    return res.status(400).json({ error: 'periods must be an array' });
-  }
-
-  try {
-    const existing = await sql`SELECT id FROM games WHERE id = ${id}`;
-    if (existing.length === 0) return res.status(404).json({ error: 'Game not found' });
-
-    await sql`DELETE FROM game_periods WHERE game_id = ${id}`;
-
-    if (periods.length > 0) {
-      await sql`
-        INSERT INTO game_periods (game_id, period, period_type, home_goals, away_goals)
-        SELECT * FROM UNNEST(
-          ${periods.map(() => id)}::uuid[],
-          ${periods.map((p) => p.period)}::smallint[],
-          ${periods.map((p) => p.period_type)}::text[],
-          ${periods.map((p) => p.home_goals ?? 0)}::smallint[],
-          ${periods.map((p) => p.away_goals ?? 0)}::smallint[]
-        )
-      `;
-    }
-
-    const saved = await sql`
-      SELECT period, period_type, home_goals, away_goals
-      FROM game_periods WHERE game_id = ${id} ORDER BY period ASC
-    `;
-    return res.json(saved);
-  } catch (err) {
-    if (err.code === '23514') return res.status(400).json({ error: 'Invalid period_type value' });
-    console.error('game periods update error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -30,8 +30,6 @@ const GAME = {
   playoff_series_id: null, notes: null, created_at: new Date().toISOString(),
 };
 
-const PERIOD = { period: 1, period_type: 'regulation', home_goals: 2, away_goals: 1 };
-
 const SERIES = {
   id: 'series-1', season_id: 'season-1', round: 1, series_letter: 'A',
   home_team_id: 'team-1', away_team_id: 'team-2',
@@ -74,21 +72,15 @@ describe('GET /api/admin/games', () => {
 // GET /api/admin/games/:id
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/games/:id', () => {
-  it('returns the game with its periods', async () => {
-    sql
-      .mockResolvedValueOnce([GAME])     // game SELECT
-      .mockResolvedValueOnce([PERIOD]);  // periods SELECT
+  it('returns the game record', async () => {
+    sql.mockResolvedValueOnce([GAME]);
     const res = await request(app).get('/api/admin/games/game-1');
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('game-1');
-    expect(res.body.periods).toHaveLength(1);
-    expect(res.body.periods[0].period).toBe(1);
   });
 
   it('returns 404 when game not found', async () => {
-    sql
-      .mockResolvedValueOnce([])   // game SELECT → empty
-      .mockResolvedValueOnce([]);  // periods SELECT
+    sql.mockResolvedValueOnce([]);
     const res = await request(app).get('/api/admin/games/nope');
     expect(res.status).toBe(404);
     expect(res.body.error).toMatch(/not found/i);
@@ -229,56 +221,7 @@ describe('DELETE /api/admin/games/:id', () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// PUT /api/admin/games/:id/periods
-// ---------------------------------------------------------------------------
-describe('PUT /api/admin/games/:id/periods', () => {
-  it('returns 400 when periods is not an array', async () => {
-    const res = await request(app).put('/api/admin/games/game-1/periods')
-      .send({ periods: 'bad' });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/must be an array/i);
-  });
 
-  it('returns 404 when game not found', async () => {
-    sql.mockResolvedValueOnce([]); // existence check → empty
-    const res = await request(app).put('/api/admin/games/nope/periods')
-      .send({ periods: [] });
-    expect(res.status).toBe(404);
-    expect(res.body.error).toMatch(/not found/i);
-  });
-
-  it('clears periods when an empty array is sent', async () => {
-    sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])  // existence check
-      .mockResolvedValueOnce([])                   // DELETE
-      .mockResolvedValueOnce([]);                  // SELECT saved → empty
-    const res = await request(app).put('/api/admin/games/game-1/periods')
-      .send({ periods: [] });
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
-  });
-
-  it('saves periods and returns them ordered', async () => {
-    sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])    // existence check
-      .mockResolvedValueOnce([])                     // DELETE
-      .mockResolvedValueOnce([])                     // INSERT UNNEST
-      .mockResolvedValueOnce([PERIOD]);              // SELECT saved
-    const res = await request(app).put('/api/admin/games/game-1/periods')
-      .send({ periods: [{ period: 1, period_type: 'regulation', home_goals: 2, away_goals: 1 }] });
-    expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
-    expect(res.body[0].period).toBe(1);
-  });
-
-  it('returns 500 on DB error', async () => {
-    sql.mockRejectedValueOnce(new Error('DB down'));
-    const res = await request(app).put('/api/admin/games/game-1/periods')
-      .send({ periods: [] });
-    expect(res.status).toBe(500);
-  });
-});
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/games/playoff-series
