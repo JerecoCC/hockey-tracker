@@ -1,0 +1,285 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Page loader ────────────────────────────────────────────────────────────────
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem $space-lg;
+  gap: $space-lg;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loaderText {
+  color: $text-dim;
+  font-size: $font-base;
+  margin: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ── Scoreboard card ────────────────────────────────────────────────────────────
+.scoreboardCard {
+  margin-bottom: $space-xl;
+}
+
+.scoreboard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-2xl;
+  padding: $space-xl 0;
+
+  @media (max-width: 640px) {
+    flex-direction: column;
+    gap: $space-xl;
+  }
+}
+
+.teamBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-xs;
+  flex: 1;
+}
+
+.teamBlockHome {
+  align-items: flex-end;
+}
+
+// ── Team logo / placeholder ────────────────────────────────────────────────────
+.teamLogo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  display: block;
+  margin-bottom: $space-sm;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
+}
+
+.teamLogoPlaceholder {
+  width: 72px;
+  height: 72px;
+  border-radius: $radius-md;
+  background: $bg-input;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-base;
+  font-weight: 700;
+  color: $text-dim;
+  letter-spacing: 0.04em;
+  margin-bottom: $space-sm;
+}
+
+.teamCode {
+  font-size: 2rem;
+  font-weight: 700;
+  color: $text-bright;
+  letter-spacing: 0.04em;
+}
+
+.teamName {
+  font-size: $font-base;
+  color: $text-body;
+}
+
+// ── Period scoring list ────────────────────────────────────────────────────────
+// ── Period scoring list (uses Accordion component) ────────────────────────────
+
+.periodList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+// Passed as className to Accordion to tint the border for the active period.
+.periodItemActive {
+  border-color: rgba($accent, 0.5);
+}
+
+// Passed as className to Accordion to dim completed periods.
+.periodItemDone {
+  opacity: 0.75;
+}
+
+// Passed as label slot content to give the period name a fixed-width column.
+.periodLabel {
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 96px;
+  flex-shrink: 0;
+}
+
+// Score text rendered inside Accordion's actions slot.
+.periodScore {
+  font-size: $font-sm;
+  color: $text-bright;
+  font-variant-numeric: tabular-nums;
+}
+
+.periodScoreMuted {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+// ── Goal scorer picker ────────────────────────────────────────────────────────
+
+.goalPickerActions {
+  display: flex;
+  gap: $space-md;
+
+  > * {
+    flex: 1;
+  }
+}
+
+.scoreBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
+.score {
+  font-size: 2.75rem;
+  font-weight: 700;
+  color: $text-bright;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.scoreSuffix {
+  font-size: $font-sm;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.scoreDate {
+  font-size: $font-sm;
+  color: $text-dim;
+  margin-top: $space-xs;
+}
+
+// ── Game actions row (above scoreboard card) ──────────────────────────────────
+.gameActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-sm;
+  margin-bottom: $space-lg;
+}
+
+// ── Tab content wrapper ────────────────────────────────────────────────────────
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+.emptyText {
+  margin: 0;
+  padding: $space-lg 0;
+  color: $text-dim;
+  font-size: $font-sm;
+  text-align: center;
+}
+
+// ── Info grid (inside Summary tab) ────────────────────────────────────────────
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: $space-xl;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoItemFull {
+  grid-column: 1 / -1;
+}
+
+.infoLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+.infoValueMuted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Period scores table ────────────────────────────────────────────────────────
+.periodsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-sm;
+}
+
+.thTeam,
+.tdTeam {
+  text-align: left;
+  padding: $space-sm $space-md $space-sm 0;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 52px;
+}
+
+.thPeriod,
+.tdGoals {
+  text-align: center;
+  padding: $space-sm $space-md;
+  color: $text-body;
+  border-left: 1px solid $border;
+}
+
+.thPeriod {
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.thTotal,
+.tdTotal {
+  text-align: center;
+  padding: $space-sm $space-md;
+  font-weight: 700;
+  color: $text-bright;
+  border-left: 2px solid $border;
+}
+
+tbody tr:not(:last-child) td {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
