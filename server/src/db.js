@@ -448,6 +448,33 @@ async function initSchema() {
     )
   `;
 
+  // ── Goals ─────────────────────────────────────────────────────────────────
+  // One row per goal scored. scorer_id / assist_1_id / assist_2_id FK to
+  // players so credit can be attributed even if roster data changes later.
+  // period: '1' | '2' | '3' | 'OT' | 'SO' — mirrors games.current_period.
+  // goal_type defaults to even-strength; own-goals have no assist columns.
+  await sql`
+    CREATE TABLE IF NOT EXISTS goals (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id      UUID NOT NULL REFERENCES games(id)    ON DELETE CASCADE,
+      team_id      UUID NOT NULL REFERENCES teams(id)    ON DELETE CASCADE,
+      period       TEXT NOT NULL CHECK (period IN ('1', '2', '3', 'OT', 'SO')),
+      goal_type    TEXT NOT NULL DEFAULT 'even-strength'
+                     CHECK (goal_type IN (
+                       'even-strength',
+                       'power-play',
+                       'shorthanded',
+                       'empty-net',
+                       'penalty-shot',
+                       'own'
+                     )),
+      scorer_id    UUID REFERENCES players(id) ON DELETE SET NULL,
+      assist_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      assist_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log('Database schema ready');
 }
 
