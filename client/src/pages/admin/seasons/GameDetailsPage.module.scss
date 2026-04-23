@@ -140,6 +140,14 @@
   color: $text-dim;
 }
 
+.noGoalsText {
+  margin: 0;
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
 // ── Goal scorer picker ────────────────────────────────────────────────────────
 
 .goalPickerActions {

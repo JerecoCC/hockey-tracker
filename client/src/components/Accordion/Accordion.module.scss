@@ -61,6 +61,12 @@
   }
 }
 
+.toggleDisabled {
+  opacity: 0;
+  pointer-events: none;
+  cursor: default;
+}
+
 .toggleIcon {
   transition: transform $transition-base;
   transform: rotate(-90deg);

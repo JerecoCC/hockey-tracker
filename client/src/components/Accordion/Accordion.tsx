@@ -28,6 +28,8 @@ interface Props {
   hoverActions?: AccordionAction[];
   /** Whether the body is expanded on first render. Defaults to true. */
   defaultOpen?: boolean;
+  /** When true the toggle button is inert — the row cannot be expanded or collapsed. */
+  toggleDisabled?: boolean;
   /** Extra class applied to the root element (for border-color overrides, etc.). */
   className?: string;
   /** Collapsible body content. */
@@ -39,6 +41,7 @@ const Accordion = ({
   headerRight,
   hoverActions,
   defaultOpen = true,
+  toggleDisabled = false,
   className,
   children,
 }: Props) => {
@@ -48,10 +51,14 @@ const Accordion = ({
     <div className={[styles.accordion, className].filter(Boolean).join(' ')}>
       <div className={[styles.row, !open ? styles.rowCollapsed : ''].filter(Boolean).join(' ')}>
         <button
-          className={styles.toggle}
-          onClick={() => setOpen((v) => !v)}
+          className={[styles.toggle, toggleDisabled ? styles.toggleDisabled : '']
+            .filter(Boolean)
+            .join(' ')}
+          onClick={() => !toggleDisabled && setOpen((v) => !v)}
           aria-label={open ? 'Collapse' : 'Expand'}
           aria-expanded={open}
+          aria-disabled={toggleDisabled}
+          tabIndex={toggleDisabled ? -1 : undefined}
         >
           <Icon
             name="expand_more"

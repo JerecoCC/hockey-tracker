@@ -253,6 +253,9 @@ const GameDetailsPage = () => {
                         const isActive = game.current_period === periodId;
                         const isDone = currentIdx > idx;
 
+                        const hasGoals = awayGoals > 0 || homeGoals > 0;
+                        const isPending = !isActive && !isDone;
+
                         return (
                           <Accordion
                             key={num}
@@ -264,6 +267,7 @@ const GameDetailsPage = () => {
                                 .filter(Boolean)
                                 .join(' ') || undefined
                             }
+                            toggleDisabled={isPending}
                             label={<span className={styles.periodLabel}>{label}</span>}
                             headerRight={
                               <span
@@ -297,7 +301,11 @@ const GameDetailsPage = () => {
                                   ].filter(Boolean) as AccordionAction[])
                                 : undefined
                             }
-                          />
+                          >
+                            {isActive && !hasGoals && (
+                              <p className={styles.noGoalsText}>No goals scored</p>
+                            )}
+                          </Accordion>
                         );
                       })}
                     </div>
