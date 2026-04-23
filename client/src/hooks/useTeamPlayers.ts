@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { type PlayerRecord, type CreatePlayerData } from './useLeaguePlayers';
+import { type PlayerRecord, type CreatePlayerData, type BulkPlayerInput } from './useLeaguePlayers';
 
 export interface PlayerRosterInput {
   player_id: string;
@@ -107,7 +107,47 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, updatePlayer, deletePlayer };
+  const createAndRosterPlayers = async (
+    tId: string,
+    sId: string,
+    players: Array<BulkPlayerInput & { jersey_number?: number | null }>,
+  ): Promise<boolean> => {
+    try {
+      // Step 1: bulk-create the new players
+      const { data: createData } = await axios.post(
+        `${API}/admin/players/bulk`,
+        { players: players.map(({ jersey_number: _jn, ...p }) => p) },
+        { headers: authHeaders() },
+      );
+      const created: Array<{ id: string }> = createData.created ?? [];
+
+      // Step 2: add them to the team roster for the season
+      if (created.length > 0) {
+        await axios.post(
+          `${API}/admin/player-teams/bulk`,
+          {
+            team_id: tId,
+            season_id: sId,
+            players: created.map((p, i) => ({
+              player_id: p.id,
+              jersey_number: players[i]?.jersey_number ?? null,
+            })),
+          },
+          { headers: authHeaders() },
+        );
+      }
+
+      const n = created.length;
+      toast.success(`${n} player${n !== 1 ? 's' : ''} created and added to roster!`);
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to create players'));
+      return false;
+    }
+  };
+
+  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, deletePlayer };
 };
 
 export default useTeamPlayers;

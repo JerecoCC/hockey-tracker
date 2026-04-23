@@ -1,0 +1,90 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.playerList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  max-height: 420px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  padding-right: $space-xs;
+  margin-right: -#{$space-xs};
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+}
+
+.headerRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 4rem 2rem;
+  gap: $space-md;
+  padding: 0 0 $space-xs;
+  border-bottom: 1px solid $border;
+  margin-bottom: $space-xs;
+}
+
+.headerCell {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.playerRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 4rem 2rem;
+  gap: $space-md;
+  align-items: end;
+  padding: $space-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: $text-dim;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+  margin-bottom: 1px;
+
+  &:hover:not(:disabled) {
+    color: $danger;
+    background: rgba($danger, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+}
+
+.addRow {
+  padding-top: $space-md;
+  border-top: 1px solid $border;
+  margin-top: $space-xs;
+}
+
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: $space-md;
+  margin-top: $space-lg;
+  padding-top: $space-md;
+  border-top: 1px solid $border;
+}

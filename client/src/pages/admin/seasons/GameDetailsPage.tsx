@@ -5,6 +5,7 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
+import ListItem from '../../../components/ListItem/ListItem';
 import Modal from '../../../components/Modal/Modal';
 import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
 import Select from '../../../components/Select/Select';
@@ -17,6 +18,8 @@ import {
   type GameType,
 } from '../../../hooks/useGames';
 import useTeamPlayers from '../../../hooks/useTeamPlayers';
+import LineupRosterModal from './LineupRosterModal';
+import LineupCreatePlayersModal from './LineupCreatePlayersModal';
 import styles from './GameDetailsPage.module.scss';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -87,8 +90,20 @@ const GameDetailsPage = () => {
   const [goalAssist2Id, setGoalAssist2Id] = useState('');
 
   // Fetch both rosters up-front; enabled only when team IDs are available.
-  const { players: awayPlayers } = useTeamPlayers(game?.away_team_id, seasonId);
-  const { players: homePlayers } = useTeamPlayers(game?.home_team_id, seasonId);
+  const {
+    players: awayPlayers,
+    addPlayersToRoster: addAwayToRoster,
+    createAndRosterPlayers: createAndRosterAway,
+  } = useTeamPlayers(game?.away_team_id, seasonId);
+  const {
+    players: homePlayers,
+    addPlayersToRoster: addHomeToRoster,
+    createAndRosterPlayers: createAndRosterHome,
+  } = useTeamPlayers(game?.home_team_id, seasonId);
+
+  // ── Lineup modal state ────────────────────────────────────────────────────
+  const [lineupAddTeam, setLineupAddTeam] = useState<'away' | 'home' | null>(null);
+  const [lineupCreateTeam, setLineupCreateTeam] = useState<'away' | 'home' | null>(null);
 
   const openGoalModal = (period: 1 | 2 | 3) => {
     setGoalPeriod(period);
@@ -445,9 +460,101 @@ const GameDetailsPage = () => {
             label: 'Lineup',
             content: (
               <div className={styles.tabContent}>
-                <Card title="Lineup">
-                  <p className={styles.emptyText}>Lineup tracking coming soon.</p>
-                </Card>
+                <div className={styles.lineupGrid}>
+                  {/* Away team panel */}
+                  <div className={styles.lineupPanel}>
+                    <div className={styles.lineupPanelHeader}>
+                      <span className={styles.lineupPanelTitle}>{game.away_team_name}</span>
+                      <div className={styles.lineupPanelActions}>
+                        <Button
+                          variant="outlined"
+                          intent="neutral"
+                          size="sm"
+                          icon="group_add"
+                          tooltip="Add from Roster"
+                          onClick={() => setLineupAddTeam('away')}
+                        />
+                        <Button
+                          variant="outlined"
+                          intent="neutral"
+                          size="sm"
+                          icon="person_add"
+                          tooltip="Create Player"
+                          onClick={() => setLineupCreateTeam('away')}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.lineupPanelBody}>
+                      {awayPlayers.length > 0 ? (
+                        <ul className={styles.lineupPlayerList}>
+                          {awayPlayers.map((p) => (
+                            <ListItem
+                              key={p.id}
+                              image={p.photo}
+                              image_shape="circle"
+                              name={`${p.first_name} ${p.last_name}`}
+                              placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                              rightContent={
+                                p.jersey_number != null
+                                  ? { type: 'code', value: `#${p.jersey_number}` }
+                                  : undefined
+                              }
+                            />
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className={styles.emptyText}>No players in lineup yet.</p>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Home team panel */}
+                  <div className={styles.lineupPanel}>
+                    <div className={styles.lineupPanelHeader}>
+                      <span className={styles.lineupPanelTitle}>{game.home_team_name}</span>
+                      <div className={styles.lineupPanelActions}>
+                        <Button
+                          variant="outlined"
+                          intent="neutral"
+                          size="sm"
+                          icon="group_add"
+                          tooltip="Add from Roster"
+                          onClick={() => setLineupAddTeam('home')}
+                        />
+                        <Button
+                          variant="outlined"
+                          intent="neutral"
+                          size="sm"
+                          icon="person_add"
+                          tooltip="Create Player"
+                          onClick={() => setLineupCreateTeam('home')}
+                        />
+                      </div>
+                    </div>
+                    <div className={styles.lineupPanelBody}>
+                      {homePlayers.length > 0 ? (
+                        <ul className={styles.lineupPlayerList}>
+                          {homePlayers.map((p) => (
+                            <ListItem
+                              key={p.id}
+                              image={p.photo}
+                              image_shape="circle"
+                              name={`${p.first_name} ${p.last_name}`}
+                              placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                              rightContent={
+                                p.jersey_number != null
+                                  ? { type: 'code', value: `#${p.jersey_number}` }
+                                  : undefined
+                              }
+                            />
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className={styles.emptyText}>No players in lineup yet.</p>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             ),
           },
@@ -574,6 +681,35 @@ const GameDetailsPage = () => {
           </Modal>
         );
       })()}
+
+      {/* ── Lineup: Add from Roster ── */}
+      {lineupAddTeam !== null && game && (
+        <LineupRosterModal
+          open={lineupAddTeam !== null}
+          onClose={() => setLineupAddTeam(null)}
+          teamId={lineupAddTeam === 'away' ? game.away_team_id : game.home_team_id}
+          seasonId={seasonId!}
+          teamName={lineupAddTeam === 'away' ? game.away_team_name : game.home_team_name}
+          existingPlayerIds={
+            new Set((lineupAddTeam === 'away' ? awayPlayers : homePlayers).map((p) => p.id))
+          }
+          addPlayersToRoster={lineupAddTeam === 'away' ? addAwayToRoster : addHomeToRoster}
+        />
+      )}
+
+      {/* ── Lineup: Create Player ── */}
+      {lineupCreateTeam !== null && game && (
+        <LineupCreatePlayersModal
+          open={lineupCreateTeam !== null}
+          onClose={() => setLineupCreateTeam(null)}
+          teamId={lineupCreateTeam === 'away' ? game.away_team_id : game.home_team_id}
+          seasonId={seasonId!}
+          teamName={lineupCreateTeam === 'away' ? game.away_team_name : game.home_team_name}
+          createAndRosterPlayers={
+            lineupCreateTeam === 'away' ? createAndRosterAway : createAndRosterHome
+          }
+        />
+      )}
     </>
   );
 };

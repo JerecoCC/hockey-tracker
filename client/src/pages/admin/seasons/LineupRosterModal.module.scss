@@ -1,0 +1,116 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.controls {
+  margin-bottom: $space-lg;
+}
+
+.searchWrap {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  height: 42px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: 0 $space-md;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+}
+
+.searchIcon {
+  flex-shrink: 0;
+  color: $text-dim;
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  color: $text-body;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: $space-xl;
+}
+
+.jerseyWrap {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
+.jerseyLabel {
+  font-size: $font-sm;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+.jerseyInput {
+  align-self: stretch;
+  aspect-ratio: 1 / 1;
+  min-width: 32px;
+  max-width: 52px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  padding: 0;
+  font-size: $font-base;
+  font-weight: 700;
+  color: $text-body;
+  outline: none;
+  text-align: center;
+
+  &:focus {
+    border-color: $accent;
+  }
+
+  &::-webkit-outer-spin-button,
+  &::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+  }
+
+  -moz-appearance: textfield;
+}
+
+.empty {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  text-align: center;
+  padding: $space-2xl 0;
+  margin-bottom: $space-xl;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-md;
+  padding-top: $space-lg;
+  border-top: 1px solid $border;
+}
+
+.footerCount {
+  font-size: $font-sm;
+  color: $text-dim;
+  margin-right: auto;
+}
