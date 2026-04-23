@@ -307,6 +307,83 @@ router.delete('/:id', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/games/:id/lineup  – get starting lineup for both teams
+// ---------------------------------------------------------------------------
+router.get('/:id/lineup', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        gl.id,
+        gl.game_id,
+        gl.team_id,
+        gl.player_id,
+        gl.position_slot,
+        p.first_name AS player_first_name,
+        p.last_name  AS player_last_name,
+        p.photo      AS player_photo,
+        pt.jersey_number
+      FROM game_lineups gl
+      JOIN players p ON p.id = gl.player_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = gl.player_id
+        AND pt.team_id  = gl.team_id
+        AND pt.end_date IS NULL
+      WHERE gl.game_id = ${id}
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('lineup get error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/lineup  – upsert starting lineup for one team
+// Body: { team_id, slots: [{ position_slot, player_id }] }
+// player_id null/empty clears the slot.
+// ---------------------------------------------------------------------------
+router.put('/:id/lineup', async (req, res) => {
+  const { id } = req.params;
+  const { team_id, slots } = req.body;
+  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
+  if (!Array.isArray(slots)) return res.status(400).json({ error: 'slots must be an array' });
+
+  try {
+    for (const { position_slot, player_id } of slots) {
+      if (player_id) {
+        await sql`
+          INSERT INTO game_lineups (game_id, team_id, player_id, position_slot)
+          VALUES (${id}, ${team_id}, ${player_id}, ${position_slot})
+          ON CONFLICT (game_id, team_id, position_slot)
+          DO UPDATE SET player_id = EXCLUDED.player_id
+        `;
+      } else {
+        await sql`
+          DELETE FROM game_lineups
+          WHERE game_id = ${id} AND team_id = ${team_id} AND position_slot = ${position_slot}
+        `;
+      }
+    }
+    const rows = await sql`
+      SELECT
+        gl.id, gl.game_id, gl.team_id, gl.player_id, gl.position_slot,
+        p.first_name AS player_first_name, p.last_name AS player_last_name,
+        p.photo AS player_photo, pt.jersey_number
+      FROM game_lineups gl
+      JOIN players p ON p.id = gl.player_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = gl.player_id AND pt.team_id = gl.team_id AND pt.end_date IS NULL
+      WHERE gl.game_id = ${id} AND gl.team_id = ${team_id}
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('lineup put error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/playoff-series  – list series (filter by season_id)
 // ---------------------------------------------------------------------------
 router.get('/playoff-series', async (req, res) => {

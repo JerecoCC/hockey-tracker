@@ -476,6 +476,21 @@ async function initSchema() {
     )
   `;
 
+  // ── Game lineups ───────────────────────────────────────────────────────────
+  // Starting lineup: one row per position slot per team per game.
+  // position_slot: C=Center, LW=Left Wing, RW=Right Wing, D1=Defence 1, D2=Defence 2, G=Goalie
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_lineups (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id        UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id        UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      player_id      UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      position_slot  TEXT NOT NULL CHECK (position_slot IN ('C', 'LW', 'RW', 'D1', 'D2', 'G')),
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, team_id, position_slot)
+    )
+  `;
+
   console.log('Database schema ready');
 }
 

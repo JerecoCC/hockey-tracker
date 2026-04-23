@@ -403,3 +403,46 @@ tbody tr:not(:last-child) td {
   margin: 0;
   padding: 0;
 }
+
+// ── Starting lineup slot grid ──────────────────────────────────────────────────
+
+.lineupSlots {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding: $space-sm 0;
+}
+
+.lineupSlotsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: $space-xs;
+}
+
+.lineupSlotsTitle {
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: $text-dim;
+}
+
+.lineupSlotRow {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  align-items: center;
+  gap: $space-md;
+}
+
+.lineupSlotLabel {
+  font-size: $font-sm;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+.lineupDivider {
+  height: 1px;
+  background: $border;
+  margin: $space-sm 0;
+}

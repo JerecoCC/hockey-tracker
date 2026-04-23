@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Badge from '../../../components/Badge/Badge';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -18,6 +18,7 @@ import {
   type GameType,
 } from '../../../hooks/useGames';
 import useTeamPlayers from '../../../hooks/useTeamPlayers';
+import useGameLineup, { type LineupPositionSlot } from '../../../hooks/useGameLineup';
 import LineupRosterModal from './LineupRosterModal';
 import LineupCreatePlayersModal from './LineupCreatePlayersModal';
 import styles from './GameDetailsPage.module.scss';
@@ -69,6 +70,25 @@ const GOAL_TYPES = [
   { value: 'own', label: 'Own Goal' },
 ];
 
+const POSITION_SLOTS: Array<{ slot: LineupPositionSlot; label: string }> = [
+  { slot: 'C', label: 'C – Center' },
+  { slot: 'LW', label: 'LW – Left Wing' },
+  { slot: 'RW', label: 'RW – Right Wing' },
+  { slot: 'D1', label: 'D1 – Defence' },
+  { slot: 'D2', label: 'D2 – Defence' },
+  { slot: 'G', label: 'G – Goalie' },
+];
+
+type LineupDraft = Record<LineupPositionSlot, string | null>;
+const emptyDraft = (): LineupDraft => ({
+  C: null,
+  LW: null,
+  RW: null,
+  D1: null,
+  D2: null,
+  G: null,
+});
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const GameDetailsPage = () => {
@@ -104,6 +124,40 @@ const GameDetailsPage = () => {
   // ── Lineup modal state ────────────────────────────────────────────────────
   const [lineupAddTeam, setLineupAddTeam] = useState<'away' | 'home' | null>(null);
   const [lineupCreateTeam, setLineupCreateTeam] = useState<'away' | 'home' | null>(null);
+
+  // ── Starting lineup state ──────────────────────────────────────────────────
+  const { lineup, saveTeamLineup } = useGameLineup(id);
+  const [awayLineupDraft, setAwayLineupDraft] = useState<LineupDraft>(emptyDraft);
+  const [homeLineupDraft, setHomeLineupDraft] = useState<LineupDraft>(emptyDraft);
+  const [lineupSaving, setLineupSaving] = useState<'away' | 'home' | null>(null);
+
+  useEffect(() => {
+    if (!lineup || !game) return;
+    const awayDraft = emptyDraft();
+    const homeDraft = emptyDraft();
+    lineup.forEach((entry) => {
+      if (entry.team_id === game.away_team_id) {
+        awayDraft[entry.position_slot] = entry.player_id;
+      } else if (entry.team_id === game.home_team_id) {
+        homeDraft[entry.position_slot] = entry.player_id;
+      }
+    });
+    setAwayLineupDraft(awayDraft);
+    setHomeLineupDraft(homeDraft);
+  }, [lineup, game?.away_team_id, game?.home_team_id]);
+
+  const handleSaveLineup = async (teamSide: 'away' | 'home') => {
+    if (!game) return;
+    const teamId = teamSide === 'away' ? game.away_team_id : game.home_team_id;
+    const draft = teamSide === 'away' ? awayLineupDraft : homeLineupDraft;
+    const slots = POSITION_SLOTS.map(({ slot }) => ({
+      position_slot: slot,
+      player_id: draft[slot] ?? null,
+    }));
+    setLineupSaving(teamSide);
+    await saveTeamLineup(teamId, slots);
+    setLineupSaving(null);
+  };
 
   const openGoalModal = (period: 1 | 2 | 3) => {
     setGoalPeriod(period);
@@ -479,25 +533,73 @@ const GameDetailsPage = () => {
                         },
                       ]}
                     >
-                      {awayPlayers.length > 0 ? (
-                        <ul className={styles.lineupPlayerList}>
-                          {awayPlayers.map((p) => (
-                            <ListItem
-                              key={p.id}
-                              image={p.photo}
-                              image_shape="circle"
-                              name={`${p.first_name} ${p.last_name}`}
-                              placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                              rightContent={
+                      {/* Starting lineup slots */}
+                      <div className={styles.lineupSlots}>
+                        <div className={styles.lineupSlotsHeader}>
+                          <span className={styles.lineupSlotsTitle}>Starting Lineup</span>
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            intent="accent"
+                            disabled={lineupSaving !== null}
+                            onClick={() => handleSaveLineup('away')}
+                          >
+                            {lineupSaving === 'away' ? 'Saving…' : 'Save'}
+                          </Button>
+                        </div>
+                        {POSITION_SLOTS.map(({ slot, label }) => {
+                          const options = [
+                            { value: '', label: '— None —' },
+                            ...awayPlayers.map((p) => ({
+                              value: p.id,
+                              label:
                                 p.jersey_number != null
-                                  ? { type: 'code', value: `#${p.jersey_number}` }
-                                  : undefined
-                              }
-                            />
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className={styles.noGoalsText}>No players in lineup yet.</p>
+                                  ? `#${p.jersey_number} ${p.first_name} ${p.last_name}`
+                                  : `${p.first_name} ${p.last_name}`,
+                            })),
+                          ];
+                          return (
+                            <div
+                              key={slot}
+                              className={styles.lineupSlotRow}
+                            >
+                              <span className={styles.lineupSlotLabel}>{label}</span>
+                              <Select
+                                value={awayLineupDraft[slot] ?? ''}
+                                options={options}
+                                placeholder="— None —"
+                                onChange={(val) =>
+                                  setAwayLineupDraft((prev) => ({ ...prev, [slot]: val || null }))
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Full roster list */}
+                      {awayPlayers.length > 0 && (
+                        <>
+                          <div className={styles.lineupDivider} />
+                          <ul className={styles.lineupPlayerList}>
+                            {awayPlayers.map((p) => (
+                              <ListItem
+                                key={p.id}
+                                image={p.photo}
+                                image_shape="circle"
+                                name={`${p.first_name} ${p.last_name}`}
+                                placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                                rightContent={
+                                  p.jersey_number != null
+                                    ? { type: 'code', value: `#${p.jersey_number}` }
+                                    : undefined
+                                }
+                              />
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      {awayPlayers.length === 0 && (
+                        <p className={styles.noGoalsText}>No players in roster yet.</p>
                       )}
                     </Accordion>
 
@@ -518,25 +620,73 @@ const GameDetailsPage = () => {
                         },
                       ]}
                     >
-                      {homePlayers.length > 0 ? (
-                        <ul className={styles.lineupPlayerList}>
-                          {homePlayers.map((p) => (
-                            <ListItem
-                              key={p.id}
-                              image={p.photo}
-                              image_shape="circle"
-                              name={`${p.first_name} ${p.last_name}`}
-                              placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                              rightContent={
+                      {/* Starting lineup slots */}
+                      <div className={styles.lineupSlots}>
+                        <div className={styles.lineupSlotsHeader}>
+                          <span className={styles.lineupSlotsTitle}>Starting Lineup</span>
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            intent="accent"
+                            disabled={lineupSaving !== null}
+                            onClick={() => handleSaveLineup('home')}
+                          >
+                            {lineupSaving === 'home' ? 'Saving…' : 'Save'}
+                          </Button>
+                        </div>
+                        {POSITION_SLOTS.map(({ slot, label }) => {
+                          const options = [
+                            { value: '', label: '— None —' },
+                            ...homePlayers.map((p) => ({
+                              value: p.id,
+                              label:
                                 p.jersey_number != null
-                                  ? { type: 'code', value: `#${p.jersey_number}` }
-                                  : undefined
-                              }
-                            />
-                          ))}
-                        </ul>
-                      ) : (
-                        <p className={styles.noGoalsText}>No players in lineup yet.</p>
+                                  ? `#${p.jersey_number} ${p.first_name} ${p.last_name}`
+                                  : `${p.first_name} ${p.last_name}`,
+                            })),
+                          ];
+                          return (
+                            <div
+                              key={slot}
+                              className={styles.lineupSlotRow}
+                            >
+                              <span className={styles.lineupSlotLabel}>{label}</span>
+                              <Select
+                                value={homeLineupDraft[slot] ?? ''}
+                                options={options}
+                                placeholder="— None —"
+                                onChange={(val) =>
+                                  setHomeLineupDraft((prev) => ({ ...prev, [slot]: val || null }))
+                                }
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {/* Full roster list */}
+                      {homePlayers.length > 0 && (
+                        <>
+                          <div className={styles.lineupDivider} />
+                          <ul className={styles.lineupPlayerList}>
+                            {homePlayers.map((p) => (
+                              <ListItem
+                                key={p.id}
+                                image={p.photo}
+                                image_shape="circle"
+                                name={`${p.first_name} ${p.last_name}`}
+                                placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                                rightContent={
+                                  p.jersey_number != null
+                                    ? { type: 'code', value: `#${p.jersey_number}` }
+                                    : undefined
+                                }
+                              />
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      {homePlayers.length === 0 && (
+                        <p className={styles.noGoalsText}>No players in roster yet.</p>
                       )}
                     </Accordion>
                   </div>
