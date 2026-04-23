@@ -148,14 +148,106 @@
   font-style: italic;
 }
 
-// ── Goal scorer picker ────────────────────────────────────────────────────────
+// ── Score goal form ───────────────────────────────────────────────────────────
 
-.goalPickerActions {
+.goalForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// Segmented team picker (connected buttons)
+.teamSegment {
+  display: flex;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+  width: 100%;
+}
+
+.teamSegmentBtn {
+  flex: 1;
+  padding: $space-sm $space-md;
+  background: transparent;
+  border: none;
+  border-right: 1px solid $border;
+  color: $text-dim;
+  font-size: $font-sm;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:hover:not(.teamSegmentBtnActive) {
+    background: rgba(255, 255, 255, 0.05);
+    color: $text-body;
+  }
+}
+
+.teamSegmentBtnActive {
+  background: $accent;
+  color: #fff;
+}
+
+// Individual form field (label + input/select)
+.goalFormField {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.goalFormLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.required {
+  color: $danger;
+  font-style: normal;
+}
+
+// MM:SS time input styled to match the design system Field component
+.timeInput {
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-body;
+  font-size: $font-base;
+  font-family: inherit;
+  padding: $space-sm $space-md;
+  width: 100%;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.08em;
+  box-sizing: border-box;
+
+  &::placeholder {
+    color: $text-dim;
+    letter-spacing: normal;
+  }
+
+  &:focus {
+    border-color: $accent;
+  }
+}
+
+// Side-by-side row for the two assist selects
+.goalFormRow {
   display: flex;
   gap: $space-md;
 
   > * {
     flex: 1;
+    min-width: 0;
   }
 }
 

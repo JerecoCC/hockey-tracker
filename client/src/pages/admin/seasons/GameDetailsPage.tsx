@@ -7,6 +7,7 @@ import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import Modal from '../../../components/Modal/Modal';
 import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
+import Select from '../../../components/Select/Select';
 import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import {
@@ -15,6 +16,7 @@ import {
   type GameStatus,
   type GameType,
 } from '../../../hooks/useGames';
+import useTeamPlayers from '../../../hooks/useTeamPlayers';
 import styles from './GameDetailsPage.module.scss';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -55,6 +57,15 @@ const GAME_TYPE_LABEL: Record<GameType, string> = {
   playoff: 'Playoffs',
 };
 
+const GOAL_TYPES = [
+  { value: 'even-strength', label: 'Even Strength' },
+  { value: 'power-play', label: 'Power Play' },
+  { value: 'shorthanded', label: 'Shorthanded' },
+  { value: 'empty-net', label: 'Empty Net' },
+  { value: 'penalty-shot', label: 'Penalty Shot' },
+  { value: 'own', label: 'Own Goal' },
+];
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const GameDetailsPage = () => {
@@ -65,7 +76,48 @@ const GameDetailsPage = () => {
   }>();
   const navigate = useNavigate();
   const { game, loading, busy, updateStatus, scoreGoal, advancePeriod } = useGameDetails(id);
+
+  // ── Goal form state ───────────────────────────────────────────────────────
   const [goalPeriod, setGoalPeriod] = useState<1 | 2 | 3 | null>(null);
+  const [goalTeam, setGoalTeam] = useState<'away' | 'home'>('away');
+  const [goalTime, setGoalTime] = useState('');
+  const [goalType, setGoalType] = useState('even-strength');
+  const [goalScorerId, setGoalScorerId] = useState('');
+  const [goalAssist1Id, setGoalAssist1Id] = useState('');
+  const [goalAssist2Id, setGoalAssist2Id] = useState('');
+
+  // Fetch both rosters up-front; enabled only when team IDs are available.
+  const { players: awayPlayers } = useTeamPlayers(game?.away_team_id, seasonId);
+  const { players: homePlayers } = useTeamPlayers(game?.home_team_id, seasonId);
+
+  const openGoalModal = (period: 1 | 2 | 3) => {
+    setGoalPeriod(period);
+    setGoalTeam('away');
+    setGoalTime('');
+    setGoalType('even-strength');
+    setGoalScorerId('');
+    setGoalAssist1Id('');
+    setGoalAssist2Id('');
+  };
+  const closeGoalModal = () => setGoalPeriod(null);
+
+  const handleTeamChange = (team: 'away' | 'home') => {
+    setGoalTeam(team);
+    setGoalScorerId('');
+    setGoalAssist1Id('');
+    setGoalAssist2Id('');
+  };
+
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
+    if (digits.length >= 2 && parseInt(digits.slice(0, 2), 10) > 20) return;
+    if (digits.length === 4) {
+      const mins = parseInt(digits.slice(0, 2), 10);
+      const secs = parseInt(digits.slice(2), 10);
+      if ((mins === 20 && secs > 0) || secs > 59) return;
+    }
+    setGoalTime(digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits);
+  };
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
 
@@ -286,7 +338,7 @@ const GameDetailsPage = () => {
                                       tooltip: 'Score Goal',
                                       intent: 'neutral' as const,
                                       disabled: !!busy,
-                                      onClick: () => setGoalPeriod(num as 1 | 2 | 3),
+                                      onClick: () => openGoalModal(num as 1 | 2 | 3),
                                     },
                                     num < 3
                                       ? {
@@ -402,39 +454,126 @@ const GameDetailsPage = () => {
         ]}
       />
 
-      {/* ── Goal Scorer Picker ── */}
-      <Modal
-        open={goalPeriod !== null}
-        title="Who scored?"
-        onClose={() => setGoalPeriod(null)}
-      >
-        <div className={styles.goalPickerActions}>
-          <Button
-            variant="outlined"
-            intent="neutral"
-            size="lg"
-            disabled={!!busy}
-            onClick={async () => {
-              await scoreGoal(goalPeriod!, 'away');
-              setGoalPeriod(null);
-            }}
+      {/* ── Score Goal Form ── */}
+      {(() => {
+        const teamPlayers = goalTeam === 'away' ? awayPlayers : homePlayers;
+        const playerOptions = teamPlayers.map((p) => ({
+          value: p.id,
+          label:
+            p.jersey_number != null
+              ? `#${p.jersey_number} ${p.first_name} ${p.last_name}`
+              : `${p.first_name} ${p.last_name}`,
+        }));
+
+        return (
+          <Modal
+            open={goalPeriod !== null}
+            title="Score Goal"
+            onClose={closeGoalModal}
+            footer={
+              <Button
+                variant="filled"
+                intent="accent"
+                disabled={!!busy || !goalScorerId}
+                onClick={async () => {
+                  await scoreGoal(goalPeriod!, goalTeam);
+                  closeGoalModal();
+                }}
+              >
+                Record Goal
+              </Button>
+            }
           >
-            {game.away_team_code}
-          </Button>
-          <Button
-            variant="outlined"
-            intent="neutral"
-            size="lg"
-            disabled={!!busy}
-            onClick={async () => {
-              await scoreGoal(goalPeriod!, 'home');
-              setGoalPeriod(null);
-            }}
-          >
-            {game.home_team_code}
-          </Button>
-        </div>
-      </Modal>
+            <div className={styles.goalForm}>
+              {/* Team segmented control */}
+              <div className={styles.teamSegment}>
+                <button
+                  type="button"
+                  className={[
+                    styles.teamSegmentBtn,
+                    goalTeam === 'away' ? styles.teamSegmentBtnActive : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => handleTeamChange('away')}
+                >
+                  {game.away_team_code}
+                </button>
+                <button
+                  type="button"
+                  className={[
+                    styles.teamSegmentBtn,
+                    goalTeam === 'home' ? styles.teamSegmentBtnActive : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => handleTeamChange('home')}
+                >
+                  {game.home_team_code}
+                </button>
+              </div>
+
+              {/* Period time */}
+              <div className={styles.goalFormField}>
+                <label className={styles.goalFormLabel}>Period Time</label>
+                <input
+                  type="text"
+                  className={styles.timeInput}
+                  placeholder="MM:SS"
+                  value={goalTime}
+                  onChange={handleTimeChange}
+                  inputMode="numeric"
+                />
+              </div>
+
+              {/* Goal type */}
+              <div className={styles.goalFormField}>
+                <label className={styles.goalFormLabel}>Goal Type</label>
+                <Select
+                  value={goalType}
+                  options={GOAL_TYPES}
+                  onChange={setGoalType}
+                />
+              </div>
+
+              {/* Scorer */}
+              <div className={styles.goalFormField}>
+                <label className={styles.goalFormLabel}>
+                  Scorer <span className={styles.required}>*</span>
+                </label>
+                <Select
+                  value={goalScorerId || null}
+                  options={playerOptions}
+                  placeholder="— Select scorer —"
+                  onChange={setGoalScorerId}
+                />
+              </div>
+
+              {/* Assists row */}
+              <div className={styles.goalFormRow}>
+                <div className={styles.goalFormField}>
+                  <label className={styles.goalFormLabel}>1st Assist</label>
+                  <Select
+                    value={goalAssist1Id || null}
+                    options={playerOptions}
+                    placeholder="— Optional —"
+                    onChange={setGoalAssist1Id}
+                  />
+                </div>
+                <div className={styles.goalFormField}>
+                  <label className={styles.goalFormLabel}>2nd Assist</label>
+                  <Select
+                    value={goalAssist2Id || null}
+                    options={playerOptions}
+                    placeholder="— Optional —"
+                    onChange={setGoalAssist2Id}
+                  />
+                </div>
+              </div>
+            </div>
+          </Modal>
+        );
+      })()}
     </>
   );
 };
