@@ -85,6 +85,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   delete: faTrash,
   edit: faPen,
   group_add: faUserPlus,
+  person_add: faUserPlus,
   history: faClockRotateLeft,
   manage_accounts: faUserGear,
   person_remove: faUserMinus,
