@@ -44,7 +44,13 @@ interface FormValues {
 type CreateAndRosterFn = (
   teamId: string,
   seasonId: string,
-  players: Array<{ first_name: string; last_name: string; position: PlayerPosition; shoots: PlayerShoots; jersey_number?: number | null }>,
+  players: Array<{
+    first_name: string;
+    last_name: string;
+    position: PlayerPosition;
+    shoots: PlayerShoots;
+    jersey_number?: number | null;
+  }>,
 ) => Promise<boolean>;
 
 interface Props {
@@ -57,7 +63,12 @@ interface Props {
 }
 
 const LineupCreatePlayersModal = ({
-  open, onClose, teamId, seasonId, teamName, createAndRosterPlayers,
+  open,
+  onClose,
+  teamId,
+  seasonId,
+  teamName,
+  createAndRosterPlayers,
 }: Props) => {
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -100,41 +111,114 @@ const LineupCreatePlayersModal = ({
 
   return (
     <>
-      <Modal open={open} title={`Create Players for ${teamName}`} size="lg" onClose={handleClose}>
+      <Modal
+        open={open}
+        title={`Create Players for ${teamName}`}
+        size="lg"
+        onClose={handleClose}
+      >
         <form onSubmit={onSubmit}>
           <div className={styles.headerRow}>
+            <span className={styles.headerCell}>#</span>
             <span className={styles.headerCell}>First Name</span>
             <span className={styles.headerCell}>Last Name</span>
             <span className={styles.headerCell}>Position</span>
             <span className={styles.headerCell}>Shoots</span>
-            <span className={styles.headerCell}>#</span>
             <span />
           </div>
 
           <div className={styles.playerList}>
             {fields.map((field, index) => (
-              <div key={field.id} className={styles.playerRow}>
-                <Field control={control} name={`players.${index}.first_name`} required rules={{ required: true }} placeholder="First name" disabled={isSubmitting} />
-                <Field control={control} name={`players.${index}.last_name`} required rules={{ required: true }} placeholder="Last name" disabled={isSubmitting} />
-                <Field type="select" control={control} name={`players.${index}.position`} options={POSITION_OPTIONS} required rules={{ required: true }} placeholder="Position" disabled={isSubmitting} />
-                <Field type="select" control={control} name={`players.${index}.shoots`} options={SHOOTS_OPTIONS} required rules={{ required: true }} placeholder="Shoots" disabled={isSubmitting} />
-                <Field control={control} name={`players.${index}.jersey_number`} placeholder="—" disabled={isSubmitting} />
-                <button type="button" className={styles.deleteBtn} onClick={() => handleDeleteClick(index)} disabled={isSubmitting} aria-label="Remove player">
-                  <Icon name="delete" size="1em" />
+              <div
+                key={field.id}
+                className={styles.playerRow}
+              >
+                <Field
+                  control={control}
+                  name={`players.${index}.jersey_number`}
+                  placeholder="—"
+                  disabled={isSubmitting}
+                />
+                <Field
+                  control={control}
+                  name={`players.${index}.first_name`}
+                  required
+                  rules={{ required: true }}
+                  placeholder="First name"
+                  disabled={isSubmitting}
+                />
+                <Field
+                  control={control}
+                  name={`players.${index}.last_name`}
+                  required
+                  rules={{ required: true }}
+                  placeholder="Last name"
+                  disabled={isSubmitting}
+                />
+                <Field
+                  type="select"
+                  control={control}
+                  name={`players.${index}.position`}
+                  options={POSITION_OPTIONS}
+                  required
+                  rules={{ required: true }}
+                  placeholder="Position"
+                  disabled={isSubmitting}
+                />
+                <Field
+                  type="select"
+                  control={control}
+                  name={`players.${index}.shoots`}
+                  options={SHOOTS_OPTIONS}
+                  required
+                  rules={{ required: true }}
+                  placeholder="Shoots"
+                  disabled={isSubmitting}
+                />
+                <button
+                  type="button"
+                  className={styles.deleteBtn}
+                  onClick={() => handleDeleteClick(index)}
+                  disabled={isSubmitting}
+                  aria-label="Remove player"
+                >
+                  <Icon
+                    name="delete"
+                    size="1em"
+                  />
                 </button>
               </div>
             ))}
           </div>
 
           <div className={styles.addRow}>
-            <Button type="button" variant="ghost" intent="neutral" icon="add" size="sm" disabled={isSubmitting} onClick={() => append({ ...EMPTY_ROW })}>
-              Add Row
+            <Button
+              type="button"
+              variant="ghost"
+              intent="neutral"
+              icon="add"
+              size="sm"
+              disabled={isSubmitting}
+              onClick={() => append({ ...EMPTY_ROW })}
+            >
+              Add Player
             </Button>
           </div>
 
           <div className={styles.formActions}>
-            <Button type="button" variant="outlined" intent="neutral" disabled={isSubmitting} onClick={handleClose}>Cancel</Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="button"
+              variant="outlined"
+              intent="neutral"
+              disabled={isSubmitting}
+              onClick={handleClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+            >
               Save {fields.length} Player{fields.length !== 1 ? 's' : ''}
             </Button>
           </div>
@@ -146,7 +230,12 @@ const LineupCreatePlayersModal = ({
         title="Remove player?"
         message="This row has data. Are you sure you want to remove it?"
         confirmLabel="Remove"
-        onConfirm={() => { if (confirmRemoveIndex !== null) { remove(confirmRemoveIndex); setConfirmRemoveIndex(null); } }}
+        onConfirm={() => {
+          if (confirmRemoveIndex !== null) {
+            remove(confirmRemoveIndex);
+            setConfirmRemoveIndex(null);
+          }
+        }}
         onCancel={() => setConfirmRemoveIndex(null)}
       />
     </>

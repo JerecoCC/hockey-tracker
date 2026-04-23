@@ -386,6 +386,7 @@ tbody tr:not(:last-child) td {
 
 // ── Lineup tab ────────────────────────────────────────────────────────────────
 
+// Two-column grid inside the Card body — each column is a static Accordion
 .lineupGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -396,45 +397,14 @@ tbody tr:not(:last-child) td {
   }
 }
 
-// Non-collapsible panel — mirrors Accordion visual container
-.lineupPanel {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  overflow: hidden;
-}
-
-.lineupPanelHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-sm $space-md;
-  border-bottom: 1px solid $border;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.lineupPanelTitle {
-  flex: 1;
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-body;
-  letter-spacing: 0.03em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
+// Always-visible action buttons rendered in Accordion headerRight
 .lineupPanelActions {
   display: flex;
   gap: $space-xs;
   flex-shrink: 0;
 }
 
-.lineupPanelBody {
-  padding: $space-xs 0;
-}
-
+// Player list rendered inside the static Accordion body
 .lineupPlayerList {
   list-style: none;
   margin: 0;

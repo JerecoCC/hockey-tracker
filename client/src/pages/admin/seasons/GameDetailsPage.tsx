@@ -460,31 +460,33 @@ const GameDetailsPage = () => {
             label: 'Lineup',
             content: (
               <div className={styles.tabContent}>
-                <div className={styles.lineupGrid}>
-                  {/* Away team panel */}
-                  <div className={styles.lineupPanel}>
-                    <div className={styles.lineupPanelHeader}>
-                      <span className={styles.lineupPanelTitle}>{game.away_team_name}</span>
-                      <div className={styles.lineupPanelActions}>
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          size="sm"
-                          icon="group_add"
-                          tooltip="Add from Roster"
-                          onClick={() => setLineupAddTeam('away')}
-                        />
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          size="sm"
-                          icon="person_add"
-                          tooltip="Create Player"
-                          onClick={() => setLineupCreateTeam('away')}
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.lineupPanelBody}>
+                <Card title="Lineup">
+                  <div className={styles.lineupGrid}>
+                    {/* Away team accordion */}
+                    <Accordion
+                      variant="static"
+                      label={game.away_team_name}
+                      headerRight={
+                        <div className={styles.lineupPanelActions}>
+                          <Button
+                            variant="outlined"
+                            intent="neutral"
+                            size="sm"
+                            icon="group_add"
+                            tooltip="Add from Roster"
+                            onClick={() => setLineupAddTeam('away')}
+                          />
+                          <Button
+                            variant="outlined"
+                            intent="neutral"
+                            size="sm"
+                            icon="person_add"
+                            tooltip="Create Player"
+                            onClick={() => setLineupCreateTeam('away')}
+                          />
+                        </div>
+                      }
+                    >
                       {awayPlayers.length > 0 ? (
                         <ul className={styles.lineupPlayerList}>
                           {awayPlayers.map((p) => (
@@ -503,35 +505,35 @@ const GameDetailsPage = () => {
                           ))}
                         </ul>
                       ) : (
-                        <p className={styles.emptyText}>No players in lineup yet.</p>
+                        <p className={styles.noGoalsText}>No players in lineup yet.</p>
                       )}
-                    </div>
-                  </div>
+                    </Accordion>
 
-                  {/* Home team panel */}
-                  <div className={styles.lineupPanel}>
-                    <div className={styles.lineupPanelHeader}>
-                      <span className={styles.lineupPanelTitle}>{game.home_team_name}</span>
-                      <div className={styles.lineupPanelActions}>
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          size="sm"
-                          icon="group_add"
-                          tooltip="Add from Roster"
-                          onClick={() => setLineupAddTeam('home')}
-                        />
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          size="sm"
-                          icon="person_add"
-                          tooltip="Create Player"
-                          onClick={() => setLineupCreateTeam('home')}
-                        />
-                      </div>
-                    </div>
-                    <div className={styles.lineupPanelBody}>
+                    {/* Home team accordion */}
+                    <Accordion
+                      variant="static"
+                      label={game.home_team_name}
+                      headerRight={
+                        <div className={styles.lineupPanelActions}>
+                          <Button
+                            variant="outlined"
+                            intent="neutral"
+                            size="sm"
+                            icon="group_add"
+                            tooltip="Add from Roster"
+                            onClick={() => setLineupAddTeam('home')}
+                          />
+                          <Button
+                            variant="outlined"
+                            intent="neutral"
+                            size="sm"
+                            icon="person_add"
+                            tooltip="Create Player"
+                            onClick={() => setLineupCreateTeam('home')}
+                          />
+                        </div>
+                      }
+                    >
                       {homePlayers.length > 0 ? (
                         <ul className={styles.lineupPlayerList}>
                           {homePlayers.map((p) => (
@@ -550,11 +552,11 @@ const GameDetailsPage = () => {
                           ))}
                         </ul>
                       ) : (
-                        <p className={styles.emptyText}>No players in lineup yet.</p>
+                        <p className={styles.noGoalsText}>No players in lineup yet.</p>
                       )}
-                    </div>
+                    </Accordion>
                   </div>
-                </div>
+                </Card>
               </div>
             ),
           },

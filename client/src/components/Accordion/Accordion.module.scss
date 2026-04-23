@@ -36,6 +36,15 @@
   border-bottom: none;
 }
 
+// Static variant — no hover highlight since there is no toggle to interact with
+.rowStatic {
+  cursor: default;
+
+  &:hover {
+    background: transparent;
+  }
+}
+
 // ── Toggle chevron ────────────────────────────────────────────────────────────
 
 .toggle {

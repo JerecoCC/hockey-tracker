@@ -19,7 +19,7 @@
 
 .headerRow {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 4rem 2rem;
+  grid-template-columns: 4rem 1fr 1fr 1fr 1fr 2rem;
   gap: $space-md;
   padding: 0 0 $space-xs;
   border-bottom: 1px solid $border;
@@ -36,7 +36,7 @@
 
 .playerRow {
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 4rem 2rem;
+  grid-template-columns: 4rem 1fr 1fr 1fr 1fr 2rem;
   gap: $space-md;
   align-items: end;
   padding: $space-xs 0;
