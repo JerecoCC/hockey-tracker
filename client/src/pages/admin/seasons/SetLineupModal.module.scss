@@ -1,0 +1,45 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  margin-bottom: $space-xl;
+}
+
+// Each row can hold one or two slot fields side-by-side
+.row {
+  display: flex;
+  gap: $space-md;
+
+  // Each slotField inside a row grows equally
+  > .slotField {
+    flex: 1;
+  }
+}
+
+// Label + dropdown for a single position slot
+.slotField {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.slotLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $text-dim;
+}
+
+// Footer with Cancel / Save buttons
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-md;
+  padding-top: $space-lg;
+  border-top: 1px solid $border;
+}

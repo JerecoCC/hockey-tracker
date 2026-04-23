@@ -384,6 +384,23 @@ router.put('/:id/lineup', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/lineup/:entryId  – remove one lineup entry
+// ---------------------------------------------------------------------------
+router.delete('/:id/lineup/:entryId', async (req, res) => {
+  const { id, entryId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM game_lineups WHERE id = ${entryId} AND game_id = ${id} RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Lineup entry not found' });
+    return res.status(204).send();
+  } catch (err) {
+    console.error('lineup delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/playoff-series  – list series (filter by season_id)
 // ---------------------------------------------------------------------------
 router.get('/playoff-series', async (req, res) => {
