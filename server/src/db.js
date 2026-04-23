@@ -468,6 +468,7 @@ async function initSchema() {
                        'penalty-shot',
                        'own'
                      )),
+      period_time  TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$'),
       scorer_id    UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       assist_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       assist_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
