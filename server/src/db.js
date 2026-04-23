@@ -468,7 +468,7 @@ async function initSchema() {
                        'penalty-shot',
                        'own'
                      )),
-      scorer_id    UUID REFERENCES players(id) ON DELETE SET NULL,
+      scorer_id    UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       assist_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       assist_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
