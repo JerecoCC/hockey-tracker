@@ -466,26 +466,18 @@ const GameDetailsPage = () => {
                     <Accordion
                       variant="static"
                       label={game.away_team_name}
-                      headerRight={
-                        <div className={styles.lineupPanelActions}>
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            size="sm"
-                            icon="group_add"
-                            tooltip="Add from Roster"
-                            onClick={() => setLineupAddTeam('away')}
-                          />
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            size="sm"
-                            icon="person_add"
-                            tooltip="Create Player"
-                            onClick={() => setLineupCreateTeam('away')}
-                          />
-                        </div>
-                      }
+                      hoverActions={[
+                        {
+                          icon: 'group_add',
+                          tooltip: 'Add from Roster',
+                          onClick: () => setLineupAddTeam('away'),
+                        },
+                        {
+                          icon: 'person_add',
+                          tooltip: 'Create Player',
+                          onClick: () => setLineupCreateTeam('away'),
+                        },
+                      ]}
                     >
                       {awayPlayers.length > 0 ? (
                         <ul className={styles.lineupPlayerList}>
@@ -513,26 +505,18 @@ const GameDetailsPage = () => {
                     <Accordion
                       variant="static"
                       label={game.home_team_name}
-                      headerRight={
-                        <div className={styles.lineupPanelActions}>
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            size="sm"
-                            icon="group_add"
-                            tooltip="Add from Roster"
-                            onClick={() => setLineupAddTeam('home')}
-                          />
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            size="sm"
-                            icon="person_add"
-                            tooltip="Create Player"
-                            onClick={() => setLineupCreateTeam('home')}
-                          />
-                        </div>
-                      }
+                      hoverActions={[
+                        {
+                          icon: 'group_add',
+                          tooltip: 'Add from Roster',
+                          onClick: () => setLineupAddTeam('home'),
+                        },
+                        {
+                          icon: 'person_add',
+                          tooltip: 'Create Player',
+                          onClick: () => setLineupCreateTeam('home'),
+                        },
+                      ]}
                     >
                       {homePlayers.length > 0 ? (
                         <ul className={styles.lineupPlayerList}>

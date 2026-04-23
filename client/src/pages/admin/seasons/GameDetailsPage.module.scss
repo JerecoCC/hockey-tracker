@@ -397,13 +397,6 @@ tbody tr:not(:last-child) td {
   }
 }
 
-// Always-visible action buttons rendered in Accordion headerRight
-.lineupPanelActions {
-  display: flex;
-  gap: $space-xs;
-  flex-shrink: 0;
-}
-
 // Player list rendered inside the static Accordion body
 .lineupPlayerList {
   list-style: none;
