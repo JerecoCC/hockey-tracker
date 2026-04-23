@@ -36,12 +36,18 @@
   border-bottom: none;
 }
 
-// Static variant — no hover highlight since there is no toggle to interact with
+// Static variant — no hover highlight since there is no toggle to interact with.
+// Hover actions are always visible since there is no collapse trigger to hover over.
 .rowStatic {
   cursor: default;
 
   &:hover {
     background: transparent;
+  }
+
+  .hoverActions {
+    opacity: 1;
+    pointer-events: auto;
   }
 }
 
@@ -91,6 +97,9 @@
 .label {
   flex: 1;
   min-width: 0;
+  font-size: $font-lg;
+  font-weight: 500;
+  color: $text-body;
 }
 
 // ── Always-visible right-side header content ──────────────────────────────────
