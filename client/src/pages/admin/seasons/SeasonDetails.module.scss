@@ -111,13 +111,6 @@
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-// Passed as className to Accordion label slot to set the group-name font size.
-.groupName {
-  font-size: $font-lg;
-  color: $text-body;
-  font-weight: 500;
-}
-
 // Padding wrapper for the nested sub-group list rendered inside Accordion body.
 .groupNestedList {
   padding: $space-sm $space-md $space-md;

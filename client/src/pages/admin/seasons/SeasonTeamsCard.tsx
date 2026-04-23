@@ -289,7 +289,7 @@ const GroupNode = (props: GroupNodeProps) => {
       ) : (
         <Accordion
           className={depth > 0 ? styles.groupItemChild : undefined}
-          label={<span className={styles.groupName}>{group.name}</span>}
+          label={group.name}
           headerRight={
             <Badge
               label={

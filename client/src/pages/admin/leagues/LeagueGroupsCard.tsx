@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
+import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
@@ -133,7 +133,6 @@ const GroupNode = (props: GroupNodeProps) => {
     onViewTeam,
     depth = 0,
   } = props;
-  const [open, setOpen] = useState(true);
   const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<GroupTeamRecord | null>(null);
   const [isDeletingTeam, setIsDeletingTeam] = useState(false);
 
@@ -146,11 +145,7 @@ const GroupNode = (props: GroupNodeProps) => {
   const isLeaf = children.length === 0;
 
   return (
-    <li
-      className={[styles.groupItem, depth > 0 ? styles.groupItemChild : '']
-        .filter(Boolean)
-        .join(' ')}
-    >
+    <li className={styles.groupItem}>
       {isEditing ? (
         <InlineInput
           initialValue={group.name}
@@ -158,102 +153,123 @@ const GroupNode = (props: GroupNodeProps) => {
           onCancel={onCancel}
         />
       ) : (
-        <div className={`${styles.groupRow} ${!open ? styles.groupRowCollapsed : ''}`}>
-          <button
-            className={styles.groupToggle}
-            onClick={() => setOpen((v) => !v)}
-            aria-label={open ? 'Collapse' : 'Expand'}
-            aria-expanded={open}
-          >
-            <Icon
-              name="expand_more"
-              size="0.8em"
-              className={open ? styles.groupToggleIconOpen : styles.groupToggleIcon}
-            />
-          </button>
-          <span className={styles.groupName}>{group.name}</span>
-          <ActionOverlay className={styles.groupActions}>
-            {depth === 0 && !isAddingChild && group.teams.length === 0 && (
+        <Accordion
+          className={depth > 0 ? styles.groupItemChild : undefined}
+          label={group.name}
+          hoverActions={
+            [
+              depth === 0 && !isAddingChild && group.teams.length === 0
+                ? {
+                    icon: 'folder_plus',
+                    intent: 'neutral' as const,
+                    tooltip: 'Create Sub-group',
+                    onClick: () => onStartAdd(group.id),
+                  }
+                : null,
+              {
+                icon: 'edit',
+                intent: 'accent' as const,
+                disabled: busy === group.id,
+                tooltip: 'Edit',
+                onClick: () => onStartEdit(group.id),
+              },
+              {
+                icon: 'delete',
+                intent: 'danger' as const,
+                disabled: busy === group.id,
+                tooltip: 'Delete',
+                onClick: () => onDelete(group),
+              },
+            ].filter(Boolean) as AccordionAction[]
+          }
+        >
+          {group.teams.length > 0 && (
+            <ul className={styles.teamList}>
+              {group.teams.map((t) => (
+                <ListItem
+                  key={t.id}
+                  image={t.logo}
+                  name={t.name}
+                  rightContent={{ type: 'code', value: t.code }}
+                  primaryColor={t.primary_color}
+                  textColor={t.text_color}
+                  actions={
+                    [
+                      {
+                        icon: 'open_in_new',
+                        intent: 'neutral',
+                        tooltip: 'View team',
+                        onClick: () => onViewTeam(t.id),
+                      },
+                      {
+                        icon: 'edit',
+                        intent: 'accent',
+                        tooltip: 'Edit team',
+                        onClick: () => onEditTeam(t.id),
+                      },
+                      {
+                        icon: 'delete',
+                        intent: 'danger',
+                        tooltip: 'Delete team',
+                        onClick: () => setConfirmDeleteTeam(t),
+                      },
+                    ] satisfies ListItemAction[]
+                  }
+                />
+              ))}
+            </ul>
+          )}
+
+          {isLeaf && !isAddingChild && (
+            <div className={styles.groupFooter}>
               <Button
+                icon="add"
+                size="sm"
                 variant="outlined"
                 intent="neutral"
-                icon="folder_plus"
-                size="sm"
-                tooltip="Create Sub-group"
-                onClick={() => onStartAdd(group.id)}
+                onClick={() => onAddTeam(group)}
+              >
+                Create Team
+              </Button>
+            </div>
+          )}
+
+          {isAddingChild && (
+            <div className={styles.groupItemNew}>
+              <InlineInput
+                placeholder="Sub-group name…"
+                onConfirm={onConfirm}
+                onCancel={onCancel}
               />
-            )}
-            <Button
-              variant="outlined"
-              intent="accent"
-              icon="edit"
-              size="sm"
-              disabled={busy === group.id}
-              tooltip="Edit"
-              onClick={() => onStartEdit(group.id)}
-            />
-            <Button
-              variant="outlined"
-              intent="danger"
-              icon="delete"
-              size="sm"
-              disabled={busy === group.id}
-              tooltip="Delete"
-              onClick={() => onDelete(group)}
-            />
-          </ActionOverlay>
-        </div>
-      )}
+            </div>
+          )}
 
-      {open && !isEditing && isLeaf && !isAddingChild && (
-        <div className={styles.groupFooter}>
-          <Button
-            icon="add"
-            size="sm"
-            variant="outlined"
-            intent="neutral"
-            onClick={() => onAddTeam(group)}
-          >
-            Create Team
-          </Button>
-        </div>
-      )}
-
-      {open && group.teams.length > 0 && !isEditing && (
-        <ul className={styles.teamList}>
-          {group.teams.map((t) => (
-            <ListItem
-              key={t.id}
-              image={t.logo}
-              name={t.name}
-              rightContent={{ type: 'code', value: t.code }}
-              primaryColor={t.primary_color}
-              textColor={t.text_color}
-              actions={
-                [
-                  {
-                    icon: 'open_in_new',
-                    intent: 'neutral',
-                    tooltip: 'View team',
-                    onClick: () => onViewTeam(t.id),
-                  },
-                  {
-                    icon: 'edit',
-                    intent: 'accent',
-                    tooltip: 'Edit team',
-                    onClick: () => onEditTeam(t.id),
-                  },
-                  {
-                    icon: 'delete',
-                    intent: 'danger',
-                    tooltip: 'Delete team',
-                    onClick: () => setConfirmDeleteTeam(t),
-                  },
-                ] satisfies ListItemAction[]
-              }
-            />
-          ))}
-        </ul>
+          {children.length > 0 && (
+            <div className={styles.groupNestedList}>
+              <ul className={styles.groupList}>
+                {children.map((child) => (
+                  <GroupNode
+                    key={child.id}
+                    group={child}
+                    allGroups={allGroups}
+                    busy={busy}
+                    inlineMode={inlineMode}
+                    onStartEdit={onStartEdit}
+                    onStartAdd={onStartAdd}
+                    onConfirm={onConfirm}
+                    onCancel={onCancel}
+                    onAddTeam={onAddTeam}
+                    onDelete={onDelete}
+                    onDeleteTeam={onDeleteTeam}
+                    onEditTeam={onEditTeam}
+                    onViewTeam={onViewTeam}
+                    depth={depth + 1}
+                  />
+                ))}
+              </ul>
+            </div>
+          )}
+        </Accordion>
       )}
 
       <ConfirmModal
@@ -278,39 +294,6 @@ const GroupNode = (props: GroupNodeProps) => {
           setConfirmDeleteTeam(null);
         }}
       />
-
-      {open && isAddingChild && (
-        <div className={`${styles.groupItem} ${styles.groupItemNew}`}>
-          <InlineInput
-            placeholder="Sub-group name…"
-            onConfirm={onConfirm}
-            onCancel={onCancel}
-          />
-        </div>
-      )}
-      {open && children.length > 0 && (
-        <ul className={styles.groupList}>
-          {children.map((child) => (
-            <GroupNode
-              key={child.id}
-              group={child}
-              allGroups={allGroups}
-              busy={busy}
-              inlineMode={inlineMode}
-              onStartEdit={onStartEdit}
-              onStartAdd={onStartAdd}
-              onConfirm={onConfirm}
-              onCancel={onCancel}
-              onAddTeam={onAddTeam}
-              onDelete={onDelete}
-              onDeleteTeam={onDeleteTeam}
-              onEditTeam={onEditTeam}
-              onViewTeam={onViewTeam}
-              depth={depth + 1}
-            />
-          ))}
-        </ul>
-      )}
     </li>
   );
 };

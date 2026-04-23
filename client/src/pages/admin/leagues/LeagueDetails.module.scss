@@ -273,18 +273,10 @@
   grid-column: 1 / -1;
 }
 
+// List-item wrapper — Accordion provides the visual border/radius.
 .groupItem {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  overflow: hidden;
-
-  // Nested subgroup list — inset from the parent's border
-  > .groupList {
-    padding: $space-sm $space-md $space-md;
-  }
 }
 
 // Child groups are indented and separated from siblings
@@ -297,71 +289,14 @@
   margin-right: 0;
 }
 
+// Passed as className to Accordion to tint the border for nested sub-groups.
 .groupItemChild {
   border-color: rgba(255, 255, 255, 0.06);
 }
 
-.groupRow {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-bottom: 1px solid $border;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-
-    .groupActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-}
-
-.groupToggle {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  background: transparent;
-  border: none;
-  color: $text-dim;
-  cursor: pointer;
-  padding: 0;
-  border-radius: $radius-sm;
-  transition:
-    color $transition-fast,
-    background $transition-fast;
-
-  &:hover {
-    color: $text-body;
-    background: rgba(255, 255, 255, 0.06);
-  }
-}
-
-.groupRowCollapsed {
-  border-bottom: none;
-}
-
-.groupToggleIcon {
-  transition: transform $transition-base;
-  transform: rotate(-90deg);
-}
-
-.groupToggleIconOpen {
-  transition: transform $transition-base;
-  transform: rotate(0deg);
-}
-
-.groupName {
-  font-size: $font-lg;
-  color: $text-body;
-  font-weight: 500;
-  flex-shrink: 0;
+// Padding wrapper for the nested sub-group list rendered inside Accordion body.
+.groupNestedList {
+  padding: $space-sm $space-md $space-md;
 }
 
 // Team chips inline in the row
@@ -393,10 +328,6 @@
   font-weight: 700;
   color: $text-body;
   flex-shrink: 0;
-}
-
-// Exists so .groupRow:hover can reference it; structural styles live in ActionOverlay
-.groupActions {
 }
 
 // ── Group "add team" selector list (used inside modal) ───────────────────
