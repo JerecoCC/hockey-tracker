@@ -41,12 +41,18 @@ router.get('/', async (req, res) => {
         ht.name  AS home_team_name,
         ht.code  AS home_team_code,
         ht.logo  AS home_team_logo,
+        t_home.primary_color AS home_team_primary_color,
+        t_home.text_color    AS home_team_text_color,
         -- Away team
         g.away_team_id,
         at.name  AS away_team_name,
         at.code  AS away_team_code,
-        at.logo  AS away_team_logo
+        at.logo  AS away_team_logo,
+        t_away.primary_color AS away_team_primary_color,
+        t_away.text_color    AS away_team_text_color
       FROM games g
+      JOIN teams t_home ON t_home.id = g.home_team_id
+      JOIN teams t_away ON t_away.id = g.away_team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -94,14 +100,20 @@ router.get('/:id', async (req, res) => {
         g.p3_home_goals, g.p3_away_goals,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
+        t_home.primary_color AS home_team_primary_color,
+        t_home.text_color    AS home_team_text_color,
         g.away_team_id,
         at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
+        t_away.primary_color AS away_team_primary_color,
+        t_away.text_color    AS away_team_text_color,
         s.name AS season_name,
         l.id   AS league_id,
         l.name AS league_name
       FROM games g
       JOIN seasons s ON s.id = g.season_id
       JOIN leagues l ON l.id = s.league_id
+      JOIN teams t_home ON t_home.id = g.home_team_id
+      JOIN teams t_away ON t_away.id = g.away_team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -177,9 +189,15 @@ router.post('/', async (req, res) => {
         g.p3_home_goals, g.p3_away_goals,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
+        t_home.primary_color AS home_team_primary_color,
+        t_home.text_color    AS home_team_text_color,
         g.away_team_id,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo
+        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
+        t_away.primary_color AS away_team_primary_color,
+        t_away.text_color    AS away_team_text_color
       FROM games g
+      JOIN teams t_home ON t_home.id = g.home_team_id
+      JOIN teams t_away ON t_away.id = g.away_team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -266,9 +284,15 @@ router.patch('/:id', async (req, res) => {
         g.p3_home_goals, g.p3_away_goals,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
+        t_home.primary_color AS home_team_primary_color,
+        t_home.text_color    AS home_team_text_color,
         g.away_team_id,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo
+        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
+        t_away.primary_color AS away_team_primary_color,
+        t_away.text_color    AS away_team_text_color
       FROM games g
+      JOIN teams t_home ON t_home.id = g.home_team_id
+      JOIN teams t_away ON t_away.id = g.away_team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id

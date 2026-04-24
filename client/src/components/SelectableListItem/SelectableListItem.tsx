@@ -13,6 +13,10 @@ export interface SelectableListItemProps {
   imageShape?: 'square' | 'circle';
   /** When true the image/avatar block is not rendered at all. */
   hideImage?: boolean;
+  /** Team primary color — used as placeholder background when no image is set. */
+  imagePrimaryColor?: string | null;
+  /** Team text color — used as placeholder text color when no image is set. */
+  imageTextColor?: string | null;
   name: string;
   subtitle?: string;
   /** Optional node rendered at the trailing edge of the row (e.g. a code badge or jersey input). */
@@ -26,6 +30,8 @@ const SelectableListItem = ({
   imagePlaceholder,
   imageShape = 'square',
   hideImage = false,
+  imagePrimaryColor,
+  imageTextColor,
   name,
   subtitle,
   rightContent,
@@ -40,7 +46,14 @@ const SelectableListItem = ({
     />
 
     {!hideImage && (
-      <div className={[styles.image, styles[imageShape]].join(' ')}>
+      <div
+        className={[styles.image, styles[imageShape]].join(' ')}
+        style={
+          !image && imagePrimaryColor
+            ? { background: imagePrimaryColor, color: imageTextColor ?? undefined }
+            : undefined
+        }
+      >
         {image ? (
           <img
             src={image}
