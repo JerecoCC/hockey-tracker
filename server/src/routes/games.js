@@ -717,6 +717,23 @@ router.post('/:id/goals', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/goals/:goalId  – delete a goal
+// ---------------------------------------------------------------------------
+router.delete('/:id/goals/:goalId', async (req, res) => {
+  const { id, goalId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM goals WHERE id = ${goalId} AND game_id = ${id} RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Goal not found' });
+    return res.status(204).send();
+  } catch (err) {
+    console.error('goals delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/playoff-series  – list series (filter by season_id)
 // ---------------------------------------------------------------------------
 router.get('/playoff-series', async (req, res) => {

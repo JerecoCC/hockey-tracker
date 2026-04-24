@@ -8,6 +8,7 @@ import {
   faCheck,
   faCircleMinus,
   faClipboardList,
+  faClock,
   faEllipsisVertical,
   faFlag,
   faGauge,
@@ -113,6 +114,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   stars: faStar,
   flag: faFlag,
   more_vert: faEllipsisVertical,
+  more_time: faClock,
 };
 
 interface IconProps {

@@ -112,17 +112,12 @@ const GOAL_TYPE_BADGE: Record<
 
 /**
  * Format a player name for goal/assist display.
- * Result: "#97 McDavid, C."  (or "McDavid, C." when no jersey)
+ * Result: "C. McDavid"  (or "McDavid" when no first name)
  */
-const formatPlayerName = (
-  jersey: number | null,
-  firstName: string | null,
-  lastName: string | null,
-): string => {
+const formatPlayerName = (firstName: string | null, lastName: string | null): string => {
   if (!lastName) return '';
-  const initial = firstName ? `${firstName.charAt(0)}.` : '';
-  const name = initial ? `${lastName}, ${initial}` : lastName;
-  return jersey != null ? `#${jersey} ${name}` : name;
+  const initial = firstName ? `${firstName.charAt(0)}. ` : '';
+  return `${initial}${lastName}`;
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -136,7 +131,7 @@ const GameDetailsPage = () => {
   const navigate = useNavigate();
   const { game, loading, busy, updateStatus, advancePeriod, endGame, updateGameInfo } =
     useGameDetails(id);
-  const { goals, addGoal } = useGameGoals(id);
+  const { goals, addGoal, deleteGoal } = useGameGoals(id);
 
   /**
    * Running goal/assist tallies per player, computed once in goal order
@@ -202,7 +197,7 @@ const GameDetailsPage = () => {
   }, [goals]);
 
   // ── Goal form state ───────────────────────────────────────────────────────
-  const [goalPeriod, setGoalPeriod] = useState<1 | 2 | 3 | null>(null);
+  const [goalPeriod, setGoalPeriod] = useState<1 | 2 | 3 | 'OT' | null>(null);
   const [goalTeam, setGoalTeam] = useState<'away' | 'home'>('away');
   const [goalTimeMins, setGoalTimeMins] = useState('');
   const [goalTimeSecs, setGoalTimeSecs] = useState('');
@@ -283,7 +278,7 @@ const GameDetailsPage = () => {
     setConfirmRemove(null);
   };
 
-  const openGoalModal = (period: 1 | 2 | 3) => {
+  const openGoalModal = (period: 1 | 2 | 3 | 'OT') => {
     setGoalPeriod(period);
     setGoalTeam('away');
     setGoalTimeMins('');
@@ -400,60 +395,6 @@ const GameDetailsPage = () => {
           />
         }
       />
-
-      {/* ── Game actions ── */}
-      {(game.status === 'scheduled' || game.status === 'in_progress') && (
-        <div className={styles.gameActions}>
-          {game.status === 'scheduled' && (
-            <>
-              <Button
-                variant="filled"
-                intent="accent"
-                icon="play_arrow"
-                size="sm"
-                disabled={!!busy}
-                onClick={() => updateStatus('in_progress')}
-              >
-                Start Game
-              </Button>
-              <MoreActionsMenu
-                disabled={!!busy}
-                items={[
-                  {
-                    label: 'Reschedule Game',
-                    icon: 'calendar',
-                    onClick: () => updateStatus('postponed'),
-                  },
-                  {
-                    label: 'Cancel Game',
-                    icon: 'close',
-                    intent: 'danger',
-                    onClick: () => updateStatus('cancelled'),
-                  },
-                ]}
-              />
-            </>
-          )}
-          {game.status === 'in_progress' &&
-            ['3', 'OT', 'SO'].includes(game.current_period ?? '') && (
-              <Button
-                variant="filled"
-                intent="accent"
-                icon="flag"
-                size="sm"
-                disabled={!!busy}
-                onClick={() => {
-                  setStar1Id('');
-                  setStar2Id('');
-                  setStar3Id('');
-                  setStarsModalOpen(true);
-                }}
-              >
-                End Game
-              </Button>
-            )}
-        </div>
-      )}
 
       {/* ── Scoreboard card ── */}
       <Card
@@ -693,7 +634,13 @@ const GameDetailsPage = () => {
                                               onClick: () =>
                                                 advancePeriod(String(num + 1) as CurrentPeriod),
                                             }
-                                          : null,
+                                          : {
+                                              icon: 'more_time',
+                                              tooltip: 'Go to Overtime',
+                                              intent: 'accent' as const,
+                                              disabled: !!busy,
+                                              onClick: () => advancePeriod('OT'),
+                                            },
                                       ].filter(Boolean) as AccordionAction[])
                                     : undefined
                                 }
@@ -712,14 +659,12 @@ const GameDetailsPage = () => {
                                         const tally = tallyByGoalId.get(goal.id);
                                         const scorerName =
                                           formatPlayerName(
-                                            goal.scorer_jersey_number,
                                             goal.scorer_first_name,
                                             goal.scorer_last_name,
                                           ) + (tally ? ` (${tally.scorerGoals})` : '');
                                         const assists = [
                                           goal.assist_1_id
                                             ? formatPlayerName(
-                                                goal.assist_1_jersey_number,
                                                 goal.assist_1_first_name,
                                                 goal.assist_1_last_name,
                                               ) +
@@ -729,7 +674,6 @@ const GameDetailsPage = () => {
                                             : null,
                                           goal.assist_2_id
                                             ? formatPlayerName(
-                                                goal.assist_2_jersey_number,
                                                 goal.assist_2_first_name,
                                                 goal.assist_2_last_name,
                                               ) +
@@ -792,11 +736,11 @@ const GameDetailsPage = () => {
                                               <span className={styles.goalScorer}>
                                                 {scorerName}
                                               </span>
-                                              {assists.length > 0 && (
-                                                <span className={styles.goalAssists}>
-                                                  {assists.join(', ')}
-                                                </span>
-                                              )}
+                                              <span className={styles.goalAssists}>
+                                                {assists.length > 0
+                                                  ? assists.join(', ')
+                                                  : 'Unassisted'}
+                                              </span>
                                             </div>
 
                                             {/* Goal type badge */}
@@ -806,6 +750,17 @@ const GameDetailsPage = () => {
                                                 intent={badge.intent}
                                               />
                                             )}
+
+                                            {/* Delete goal */}
+                                            <Button
+                                              variant="ghost"
+                                              intent="danger"
+                                              icon="delete"
+                                              size="sm"
+                                              tooltip="Delete goal"
+                                              className={styles.goalDeleteBtn}
+                                              onClick={() => deleteGoal(goal.id)}
+                                            />
                                           </li>
                                         );
                                       })}
@@ -815,6 +770,166 @@ const GameDetailsPage = () => {
                               </Accordion>
                             );
                           })}
+
+                          {/* ── Overtime accordion ── */}
+                          {(game.current_period === 'OT' ||
+                            goals.some((g) => g.period === 'OT') ||
+                            (isFinal && (game.overtime_periods ?? 0) > 0)) &&
+                            (() => {
+                              const isOTActive = !isFinal && game.current_period === 'OT';
+                              const isOTDone = isFinal;
+                              const otGoals = goals.filter((g) => g.period === 'OT');
+                              return (
+                                <Accordion
+                                  variant="static"
+                                  className={isOTActive ? styles.periodItemActive : undefined}
+                                  label={<span className={styles.periodLabel}>Overtime</span>}
+                                  hoverActions={
+                                    isOTActive
+                                      ? otGoals.length > 0
+                                        ? [
+                                            {
+                                              icon: 'flag',
+                                              tooltip: 'End Game',
+                                              intent: 'danger' as const,
+                                              disabled: !!busy,
+                                              onClick: () => {
+                                                setStar1Id('');
+                                                setStar2Id('');
+                                                setStar3Id('');
+                                                setStarsModalOpen(true);
+                                              },
+                                            },
+                                          ]
+                                        : [
+                                            {
+                                              icon: 'sports_hockey',
+                                              tooltip: 'Score Goal',
+                                              intent: 'neutral' as const,
+                                              disabled: !!busy,
+                                              onClick: () => openGoalModal('OT'),
+                                            },
+                                          ]
+                                      : undefined
+                                  }
+                                >
+                                  {(() => {
+                                    if (otGoals.length === 0) {
+                                      if (isOTActive || isOTDone) {
+                                        return (
+                                          <p className={styles.noGoalsText}>No goals scored</p>
+                                        );
+                                      }
+                                      return null;
+                                    }
+                                    return (
+                                      <ul className={styles.goalList}>
+                                        {otGoals.map((goal) => {
+                                          const tally = tallyByGoalId.get(goal.id);
+                                          const scorerName =
+                                            formatPlayerName(
+                                              goal.scorer_first_name,
+                                              goal.scorer_last_name,
+                                            ) + (tally ? ` (${tally.scorerGoals})` : '');
+                                          const assists = [
+                                            goal.assist_1_id
+                                              ? formatPlayerName(
+                                                  goal.assist_1_first_name,
+                                                  goal.assist_1_last_name,
+                                                ) +
+                                                (tally?.assist1Assists != null
+                                                  ? ` (${tally.assist1Assists})`
+                                                  : '')
+                                              : null,
+                                            goal.assist_2_id
+                                              ? formatPlayerName(
+                                                  goal.assist_2_first_name,
+                                                  goal.assist_2_last_name,
+                                                ) +
+                                                (tally?.assist2Assists != null
+                                                  ? ` (${tally.assist2Assists})`
+                                                  : '')
+                                              : null,
+                                          ].filter(Boolean) as string[];
+                                          const badge = GOAL_TYPE_BADGE[goal.goal_type] ?? null;
+                                          return (
+                                            <li
+                                              key={goal.id}
+                                              className={styles.goalItem}
+                                            >
+                                              <span className={styles.goalTime}>
+                                                {goal.period_time ?? '—'}
+                                              </span>
+                                              {goal.team_logo ? (
+                                                <img
+                                                  src={goal.team_logo}
+                                                  alt={goal.team_code}
+                                                  className={styles.goalTeamLogo}
+                                                />
+                                              ) : (
+                                                <span
+                                                  className={styles.goalTeamLogoPlaceholder}
+                                                  style={{
+                                                    background: goal.team_primary_color,
+                                                    color: goal.team_text_color,
+                                                  }}
+                                                >
+                                                  {goal.team_code?.slice(0, 1)}
+                                                </span>
+                                              )}
+                                              {goal.scorer_photo ? (
+                                                <img
+                                                  src={goal.scorer_photo}
+                                                  alt=""
+                                                  className={styles.goalScorerPhoto}
+                                                />
+                                              ) : (
+                                                <span
+                                                  className={styles.goalScorerPhotoPlaceholder}
+                                                  style={{
+                                                    background: goal.team_primary_color,
+                                                    color: goal.team_text_color,
+                                                  }}
+                                                >
+                                                  {goal.scorer_last_name?.charAt(0)}
+                                                </span>
+                                              )}
+                                              <div className={styles.goalInfo}>
+                                                <span className={styles.goalScorer}>
+                                                  {scorerName}
+                                                </span>
+                                                <span className={styles.goalAssists}>
+                                                  {assists.length > 0
+                                                    ? assists.join(', ')
+                                                    : 'Unassisted'}
+                                                </span>
+                                              </div>
+                                              {badge && (
+                                                <Badge
+                                                  label={badge.label}
+                                                  intent={badge.intent}
+                                                />
+                                              )}
+
+                                              {/* Delete goal */}
+                                              <Button
+                                                variant="ghost"
+                                                intent="danger"
+                                                icon="delete"
+                                                size="sm"
+                                                tooltip="Delete goal"
+                                                className={styles.goalDeleteBtn}
+                                                onClick={() => deleteGoal(goal.id)}
+                                              />
+                                            </li>
+                                          );
+                                        })}
+                                      </ul>
+                                    );
+                                  })()}
+                                </Accordion>
+                              );
+                            })()}
                         </div>
                       </Card>
                     </div>
@@ -867,7 +982,28 @@ const GameDetailsPage = () => {
                         </Card>
                       )}
 
-                      <Card title="Linescore">
+                      <Card
+                        title="Linescore"
+                        action={
+                          isInProgress && ['3', 'OT', 'SO'].includes(game.current_period ?? '') ? (
+                            <Button
+                              variant="filled"
+                              intent="danger"
+                              icon="flag"
+                              size="sm"
+                              disabled={!!busy}
+                              onClick={() => {
+                                setStar1Id('');
+                                setStar2Id('');
+                                setStar3Id('');
+                                setStarsModalOpen(true);
+                              }}
+                            >
+                              End Game
+                            </Button>
+                          ) : undefined
+                        }
+                      >
                         <table className={styles.periodsTable}>
                           <thead>
                             <tr>
@@ -972,14 +1108,46 @@ const GameDetailsPage = () => {
                   <Card
                     title="Game Info"
                     action={
-                      <Button
-                        variant="ghost"
-                        intent="neutral"
-                        icon="edit"
-                        size="sm"
-                        tooltip="Edit game info"
-                        onClick={openGameInfoEdit}
-                      />
+                      <>
+                        {game.status === 'scheduled' && (
+                          <>
+                            <Button
+                              variant="filled"
+                              intent="accent"
+                              icon="play_arrow"
+                              size="sm"
+                              disabled={!!busy}
+                              onClick={() => updateStatus('in_progress')}
+                            >
+                              Start Game
+                            </Button>
+                            <MoreActionsMenu
+                              disabled={!!busy}
+                              items={[
+                                {
+                                  label: 'Reschedule Game',
+                                  icon: 'calendar',
+                                  onClick: () => updateStatus('postponed'),
+                                },
+                                {
+                                  label: 'Cancel Game',
+                                  icon: 'close',
+                                  intent: 'danger',
+                                  onClick: () => updateStatus('cancelled'),
+                                },
+                              ]}
+                            />
+                          </>
+                        )}
+                        <Button
+                          variant="ghost"
+                          intent="neutral"
+                          icon="edit"
+                          size="sm"
+                          tooltip="Edit game info"
+                          onClick={openGameInfoEdit}
+                        />
+                      </>
                     }
                   >
                     <div className={styles.infoGrid}>

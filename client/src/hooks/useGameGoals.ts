@@ -98,7 +98,25 @@ const useGameGoals = (gameId: string | undefined) => {
     }
   };
 
-  return { goals, loading, addGoal };
+  const deleteGoal = async (goalId: string): Promise<boolean> => {
+    if (!gameId) return false;
+    try {
+      await axios.delete(
+        `${API}/admin/games/${gameId}/goals/${goalId}`,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['game-goals', gameId] });
+      // Refresh game so period scores and totals recalculate.
+      await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete goal'));
+      return false;
+    }
+  };
+
+  return { goals, loading, addGoal, deleteGoal };
 };
 
 export default useGameGoals;

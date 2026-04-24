@@ -72,6 +72,7 @@
   width: 52px;
   clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
   opacity: 0.85;
+  margin: -$space-lg 0;
 }
 
 .teamStripeHome {
@@ -225,6 +226,18 @@
   &:last-child {
     border-bottom: none;
   }
+
+  &:hover .goalDeleteBtn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.goalDeleteBtn {
+  flex-shrink: 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
 }
 
 // Period time (e.g. "12:34")
@@ -239,22 +252,22 @@
 
 // Small square team logo / placeholder
 .goalTeamLogo {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
 }
 
 .goalTeamLogoPlaceholder {
-  width: 24px;
-  height: 24px;
+  width: 36px;
+  height: 36px;
   border-radius: $radius-sm;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: $font-xs;
+  font-size: $font-sm;
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -476,15 +489,6 @@
 .scoreDate {
   font-size: $font-sm;
   color: $text-dim;
-}
-
-// ── Game actions row (above scoreboard card) ──────────────────────────────────
-.gameActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-sm;
-  margin-bottom: $space-lg;
 }
 
 // ── Tab content wrapper ────────────────────────────────────────────────────────
