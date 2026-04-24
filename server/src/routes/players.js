@@ -1,9 +1,43 @@
+const path = require('path');
 const express = require('express');
 const router = express.Router();
+const multer = require('multer');
+const { put } = require('@vercel/blob');
 const { sql } = require('../db');
 const { requireAdmin } = require('../middleware/auth');
 
+// ---------------------------------------------------------------------------
+// Multer – memory storage for player photo uploads
+// ---------------------------------------------------------------------------
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 2 * 1024 * 1024 }, // 2 MB
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) cb(null, true);
+    else cb(new Error('Only image files are allowed'));
+  },
+});
+
 router.use(requireAdmin);
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/players/upload  – upload a player photo to Vercel Blob
+// ---------------------------------------------------------------------------
+router.post('/upload', upload.single('photo'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+  try {
+    const ext = path.extname(req.file.originalname);
+    const filename = `players/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
+    const blob = await put(filename, req.file.buffer, {
+      access: 'public',
+      contentType: req.file.mimetype,
+    });
+    return res.json({ url: blob.url });
+  } catch (err) {
+    console.error('player photo upload error:', err);
+    return res.status(500).json({ error: 'Failed to upload image' });
+  }
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/players  – list all players
@@ -91,7 +125,8 @@ router.get('/', async (req, res) => {
             jersey_number, team_name, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name, p.photo,
+              p.id, p.first_name, p.last_name,
+              COALESCE(pt.photo, p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, p.position, p.shoots,

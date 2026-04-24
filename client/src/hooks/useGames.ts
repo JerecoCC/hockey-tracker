@@ -47,13 +47,11 @@ export interface GameRecord {
   notes:                 string | null;
   created_at:            string;
   current_period?:       CurrentPeriod | null;
-  /** Period-by-period goal totals stored as static columns. */
-  p1_home_goals:         number;
-  p1_away_goals:         number;
-  p2_home_goals:         number;
-  p2_away_goals:         number;
-  p3_home_goals:         number;
-  p3_away_goals:         number;
+  /** Period-by-period goal totals aggregated from the goals table. */
+  period_scores:         { period: string; home_goals: number; away_goals: number }[];
+  star_1_id:             string | null;
+  star_2_id:             string | null;
+  star_3_id:             string | null;
   season_name?:          string;
   league_id?:            string;
   league_name?:          string;
@@ -234,28 +232,6 @@ export const useGameDetails = (id: string | undefined) => {
     },
   });
 
-  const scoreGoal = async (period: 1 | 2 | 3, team: 'home' | 'away'): Promise<boolean> => {
-    if (!id || !game) return false;
-    setBusy('score-goal');
-    const col = `p${period}_${team}_goals` as keyof GameRecord;
-    const current = (game[col] as number) ?? 0;
-    try {
-      await axios.patch(
-        `${API}/admin/games/${id}`,
-        { [col]: current + 1 },
-        { headers: authHeaders() },
-      );
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
-      return true;
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to score goal'));
-      return false;
-    } finally {
-      setBusy(null);
-    }
-  };
-
   const advancePeriod = async (nextPeriod: CurrentPeriod): Promise<boolean> => {
     if (!id) return false;
     setBusy('advance-period');
@@ -297,6 +273,31 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, updateStatus, scoreGoal, advancePeriod };
+  const endGame = async (stars: {
+    star1: string;
+    star2: string;
+    star3: string;
+  }): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('final');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { status: 'final', star_1_id: stars.star1, star_2_id: stars.star2, star_3_id: stars.star3 },
+        { headers: authHeaders() },
+      );
+      toast.success('Game ended!');
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to end game'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { game, loading, busy, updateStatus, advancePeriod, endGame };
 };
 

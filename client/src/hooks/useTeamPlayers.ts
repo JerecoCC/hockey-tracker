@@ -92,6 +92,50 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
+  /** Upload a player photo file to Vercel Blob and return the public URL, or null on failure. */
+  const uploadPlayerPhoto = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    try {
+      const { data } = await axios.post<{ url: string }>(
+        `${API}/admin/players/upload`,
+        formData,
+        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
+      );
+      return data.url;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to upload player photo'));
+      return null;
+    }
+  };
+
+  /**
+   * Update jersey_number and/or photo on the active player_teams stint.
+   * Only the fields included in `payload` are changed.
+   */
+  const updatePlayerTeam = async (
+    playerId: string,
+    tId: string,
+    sId: string,
+    payload: { jersey_number?: number | null; photo?: string | null },
+  ): Promise<boolean> => {
+    setBusy(playerId);
+    try {
+      await axios.patch(
+        `${API}/admin/player-teams`,
+        { player_id: playerId, team_id: tId, season_id: sId, ...payload },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update player'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deletePlayer = async (playerId: string): Promise<void> => {
     setBusy(playerId);
     try {
@@ -176,7 +220,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, deletePlayer };
+  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer };
 };
 
 export default useTeamPlayers;

@@ -425,13 +425,13 @@ async function initSchema() {
       current_period TEXT CHECK (current_period IN ('1', '2', '3', 'OT', 'SO'))
   `;
 
-  // Migration: static period-by-period goal columns (replaces game_periods table)
-  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p1_home_goals SMALLINT NOT NULL DEFAULT 0`;
-  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p1_away_goals SMALLINT NOT NULL DEFAULT 0`;
-  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p2_home_goals SMALLINT NOT NULL DEFAULT 0`;
-  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p2_away_goals SMALLINT NOT NULL DEFAULT 0`;
-  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p3_home_goals SMALLINT NOT NULL DEFAULT 0`;
-  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS p3_away_goals SMALLINT NOT NULL DEFAULT 0`;
+  // Migration: drop redundant period-by-period goal columns (scores are now derived from the goals table)
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_home_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_away_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p2_home_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p2_away_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p3_home_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p3_away_goals`;
 
   // ── Game periods ──────────────────────────────────────────────────────────
   // Period-by-period scoring breakdown.
@@ -474,6 +474,18 @@ async function initSchema() {
       assist_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  // ── Game star-of-game columns ─────────────────────────────────────────────
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS star_1_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS star_2_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS star_3_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+
+  // ── Goals column migrations ────────────────────────────────────────────────
+  // period_time was added after the initial table creation; add it if absent.
+  await sql`
+    ALTER TABLE goals ADD COLUMN IF NOT EXISTS
+      period_time TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$')
   `;
 
   // ── Game lineups ───────────────────────────────────────────────────────────

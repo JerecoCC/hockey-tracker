@@ -50,8 +50,8 @@ const formatNote = (game: GameRecord): string | undefined => {
 
 const formatRightContent = (game: GameRecord): ListItemRightContent => {
   if (game.status === 'final') {
-    const away = game.away_score ?? 0;
-    const home = game.home_score ?? 0;
+    const away = game.period_scores.reduce((sum, ps) => sum + ps.away_goals, 0);
+    const home = game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0);
     return { type: 'tag', label: `${away} – ${home}`, intent: 'neutral' };
   }
   return { type: 'tag', label: STATUS_LABEL[game.status], intent: STATUS_INTENT[game.status] };

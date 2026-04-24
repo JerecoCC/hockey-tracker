@@ -40,26 +40,22 @@
 .scoreboard {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: $space-2xl;
+  justify-content: center;
+  gap: $space-4xl;
   padding: $space-xl 0;
 
   @media (max-width: 640px) {
     flex-direction: column;
-    gap: $space-xl;
+    gap: $space-3xl;
   }
 }
 
 .teamBlock {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   gap: $space-xs;
-  flex: 1;
-}
-
-.teamBlockHome {
-  align-items: flex-end;
+  width: fit-content;
 }
 
 .teamBlockClickable {
@@ -133,11 +129,6 @@
   border-color: rgba($accent, 0.5);
 }
 
-// Passed as className to Accordion to dim completed periods.
-.periodItemDone {
-  opacity: 0.75;
-}
-
 // Passed as label slot content to give the period name a fixed-width column.
 .periodLabel {
   font-size: $font-base;
@@ -165,6 +156,109 @@
   font-size: $font-sm;
   color: $text-dim;
   font-style: italic;
+}
+
+// ── Goal list (inside period accordion) ──────────────────────────────────────
+
+.goalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.goalItem {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+// Period time (e.g. "12:34")
+.goalTime {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  min-width: 2.75rem;
+  flex-shrink: 0;
+}
+
+// Small square team logo / placeholder
+.goalTeamLogo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.goalTeamLogoPlaceholder {
+  width: 24px;
+  height: 24px;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Circular scorer avatar
+.goalScorerPhoto {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.goalScorerPhotoPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Text column: scorer name + assists
+.goalInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.goalScorer {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goalAssists {
+  font-size: $font-xs;
+  color: $text-dim;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // ── Score goal form ───────────────────────────────────────────────────────────
@@ -314,19 +408,36 @@
   flex-shrink: 0;
 }
 
-.score {
+// Row holding the two score numbers and the separator dash.
+.scoreRow {
+  display: flex;
+  align-items: baseline;
+  gap: $space-md;
+}
+
+// Each individual team total (e.g. "3").
+.scoreNumber {
   font-size: 2.75rem;
   font-weight: 700;
   color: $text-bright;
   letter-spacing: 0.02em;
-  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  min-width: 1.75rem;
+  text-align: center;
+  transition: color 0.15s;
 }
 
-.scoreSuffix {
-  font-size: $font-sm;
+// Applied to the losing team's score when the game is final.
+.scoreNumberLoser {
   color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+}
+
+// The "–" separator between the two scores.
+.scoreDash {
+  font-size: 2rem;
+  font-weight: 400;
+  color: $text-dim;
+  line-height: 1;
 }
 
 .scoreDate {
@@ -530,4 +641,129 @@ tbody tr:not(:last-child) td {
   color: $text-dim;
   flex-shrink: 0;
   line-height: 1;
+}
+
+// ── Summary two-column grid ────────────────────────────────────────────────────
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: $space-xl;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Left column — Three Stars + Scoring cards stacked
+.summaryLeft {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// Right column — Game Info + Linescore stacked
+.summaryRight {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// ── Linescore team cell ────────────────────────────────────────────────────────
+.linescoreTeam {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.linescoreLogo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.linescoreLogoPlaceholder {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.linescoreCode {
+  font-weight: 600;
+  color: $text-body;
+  font-size: $font-sm;
+}
+
+// ── 3 Stars card ───────────────────────────────────────────────────────────────
+.starsRow {
+  display: flex;
+  gap: $space-lg;
+  justify-content: space-around;
+  flex-wrap: wrap;
+}
+
+.starItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+
+.starPhoto {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  border: 2px solid $border;
+  flex-shrink: 0;
+}
+
+.starPhotoPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xl;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 2px solid $border;
+}
+
+// Star icons row (replaces "1st / 2nd / 3rd" text).
+.starIcons {
+  display: flex;
+  gap: 3px;
+  color: #f59e0b; // amber-400 — classic gold star colour
+  font-size: $font-lg;
+  margin-top: $space-xs;
+}
+
+.starName {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  line-height: 1.3;
+}
+
+.starTeam {
+  font-size: $font-xs;
+  color: $text-dim;
+}
+
+.starStats {
+  font-size: $font-xs;
+  color: $text-dim;
 }
