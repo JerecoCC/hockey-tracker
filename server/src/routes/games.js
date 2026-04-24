@@ -401,6 +401,97 @@ router.delete('/:id/lineup/:entryId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/games/:id/roster  – get game-day roster for both teams
+// ---------------------------------------------------------------------------
+router.get('/:id/roster', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        gr.id,
+        gr.game_id,
+        gr.team_id,
+        gr.player_id,
+        p.first_name,
+        p.last_name,
+        p.photo,
+        p.position,
+        pt.jersey_number
+      FROM game_rosters gr
+      JOIN players p ON p.id = gr.player_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = gr.player_id
+        AND pt.team_id  = gr.team_id
+        AND pt.end_date IS NULL
+      WHERE gr.game_id = ${id}
+      ORDER BY pt.jersey_number ASC NULLS LAST, p.last_name ASC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('game roster get error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/:id/roster  – add players to game roster
+// Body: { team_id, player_ids: string[] }
+// ---------------------------------------------------------------------------
+router.post('/:id/roster', async (req, res) => {
+  const { id } = req.params;
+  const { team_id, player_ids } = req.body;
+  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
+  if (!Array.isArray(player_ids) || player_ids.length === 0) {
+    return res.status(400).json({ error: 'player_ids must be a non-empty array' });
+  }
+  try {
+    for (const player_id of player_ids) {
+      await sql`
+        INSERT INTO game_rosters (game_id, team_id, player_id)
+        VALUES (${id}, ${team_id}, ${player_id})
+        ON CONFLICT (game_id, team_id, player_id) DO NOTHING
+      `;
+    }
+    const rows = await sql`
+      SELECT
+        gr.id, gr.game_id, gr.team_id, gr.player_id,
+        p.first_name, p.last_name, p.photo, p.position,
+        pt.jersey_number
+      FROM game_rosters gr
+      JOIN players p ON p.id = gr.player_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = gr.player_id
+        AND pt.team_id  = gr.team_id
+        AND pt.end_date IS NULL
+      WHERE gr.game_id = ${id} AND gr.team_id = ${team_id}
+      ORDER BY pt.jersey_number ASC NULLS LAST, p.last_name ASC
+    `;
+    return res.status(201).json(rows);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or player_id' });
+    console.error('game roster post error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/roster/:rosterId  – remove one player from roster
+// ---------------------------------------------------------------------------
+router.delete('/:id/roster/:rosterId', async (req, res) => {
+  const { id, rosterId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM game_rosters WHERE id = ${rosterId} AND game_id = ${id} RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Roster entry not found' });
+    return res.status(204).send();
+  } catch (err) {
+    console.error('game roster delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/playoff-series  – list series (filter by season_id)
 // ---------------------------------------------------------------------------
 router.get('/playoff-series', async (req, res) => {

@@ -491,6 +491,21 @@ async function initSchema() {
     )
   `;
 
+  // ── Game rosters ───────────────────────────────────────────────────────────
+  // Game-day squad: which players are participating in a specific game.
+  // Decoupled from player_teams (the season-wide roster) so removing a player
+  // from a game does not affect their standing on the team for the season.
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_rosters (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id     UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id     UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      player_id   UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, team_id, player_id)
+    )
+  `;
+
   console.log('Database schema ready');
 }
 
