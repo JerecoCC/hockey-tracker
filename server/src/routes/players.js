@@ -253,8 +253,6 @@ router.post('/bulk', async (req, res) => {
       return res.status(400).json({ error: `Row ${i + 1}: last_name is required` });
     if (!position)
       return res.status(400).json({ error: `Row ${i + 1}: position is required` });
-    if (!shoots)
-      return res.status(400).json({ error: `Row ${i + 1}: shoots is required` });
   }
 
   try {
@@ -264,7 +262,7 @@ router.post('/bulk', async (req, res) => {
         INSERT INTO players (first_name, last_name, position, shoots, is_active)
         VALUES (
           ${first_name.trim()}, ${last_name.trim()},
-          ${position}, ${shoots}, true
+          ${position}, ${shoots ?? null}, true
         )
         RETURNING
           id, first_name, last_name, photo,

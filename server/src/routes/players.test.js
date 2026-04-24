@@ -219,16 +219,16 @@ describe('POST /api/admin/players/bulk', () => {
     expect(res.body.error).toMatch(/position/i);
   });
 
-  it('returns 400 when a row is missing shoots', async () => {
+  it('succeeds when shoots is omitted (optional field)', async () => {
+    sql.mockResolvedValueOnce([PLAYER]);
     const res = await request(app).post('/api/admin/players/bulk')
       .send({ players: [{ first_name: 'Wayne', last_name: 'Gretzky', position: 'C' }] });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/shoots/i);
+    expect(res.status).toBe(201);
   });
 
   it('includes row number in validation error message', async () => {
     const res = await request(app).post('/api/admin/players/bulk')
-      .send({ players: [validRow, { first_name: 'Mario', last_name: 'Lemieux', position: 'C' }] });
+      .send({ players: [validRow, { first_name: 'Mario', last_name: 'Lemieux' }] });
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/row 2/i);
   });
