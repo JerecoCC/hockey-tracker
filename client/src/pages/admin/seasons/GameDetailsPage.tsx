@@ -419,94 +419,114 @@ const GameDetailsPage = () => {
       )}
 
       {/* ── Scoreboard card ── */}
-      <Card className={styles.scoreboardCard}>
+      <Card
+        className={styles.scoreboardCard}
+        style={{ padding: 0 }}
+      >
         <div className={styles.scoreboard}>
-          <button
-            type="button"
-            className={`${styles.teamBlock} ${styles.teamBlockClickable}`}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team_id}`)}
-          >
-            {game.away_team_logo ? (
-              <img
-                src={game.away_team_logo}
-                alt={game.away_team_code}
-                className={styles.teamLogo}
-              />
-            ) : (
-              <span className={styles.teamLogoPlaceholder}>{game.away_team_code.slice(0, 3)}</span>
-            )}
-            <span className={styles.teamCode}>{game.away_team_code}</span>
-            <span className={styles.teamName}>{game.away_team_name}</span>
-          </button>
+          {/* ── Away side ── */}
+          <div className={styles.teamSide}>
+            <div
+              className={styles.teamStripe}
+              style={{ background: game.away_team_primary_color }}
+            />
+            <button
+              type="button"
+              className={styles.teamLogoBtn}
+              onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team_id}`)}
+            >
+              {game.away_team_logo ? (
+                <img
+                  src={game.away_team_logo}
+                  alt={game.away_team_code}
+                  className={styles.teamLogo}
+                />
+              ) : (
+                <span className={styles.teamLogoPlaceholder}>
+                  {game.away_team_code.slice(0, 3)}
+                </span>
+              )}
+              <div className={styles.teamInfo}>
+                <span className={styles.teamFullName}>{game.away_team_name}</span>
+                <span className={styles.teamSubInfo}>{game.away_team_code}</span>
+              </div>
+            </button>
+          </div>
 
-          <div className={styles.scoreBlock}>
-            {isFinal || isInProgress ? (
-              <>
-                <div className={styles.scoreRow}>
-                  <span
-                    className={[
-                      styles.scoreNumber,
-                      isFinal && liveAwayScore < liveHomeScore ? styles.scoreNumberLoser : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    {liveAwayScore}
-                  </span>
-                  <span className={styles.scoreDash}>–</span>
-                  <span
-                    className={[
-                      styles.scoreNumber,
-                      isFinal && liveHomeScore < liveAwayScore ? styles.scoreNumberLoser : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                  >
-                    {liveHomeScore}
-                  </span>
-                </div>
-                {isFinal ? (
-                  <Badge
-                    label={`Final${overtimeSuffix}`}
-                    intent="success"
-                  />
-                ) : (
-                  <Badge
-                    label={STATUS_LABEL[game.status]}
-                    intent={STATUS_INTENT[game.status]}
-                  />
-                )}
-              </>
-            ) : (
-              <Badge
-                label={STATUS_LABEL[game.status]}
-                intent={STATUS_INTENT[game.status]}
-              />
+          {/* ── Center: score + status ── */}
+          <div className={styles.scoreCenter}>
+            {(isFinal || isInProgress) && (
+              <span
+                className={[
+                  styles.scoreNumber,
+                  isFinal && liveAwayScore < liveHomeScore ? styles.scoreNumberLoser : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {liveAwayScore}
+              </span>
             )}
-            {game.scheduled_at && (
-              <span className={styles.scoreDate}>
-                {DATE_FMT.format(new Date(game.scheduled_at))}
+            <div className={styles.scoreBlock}>
+              {isFinal ? (
+                <Badge
+                  label={`Final${overtimeSuffix}`}
+                  intent="success"
+                />
+              ) : (
+                <Badge
+                  label={STATUS_LABEL[game.status]}
+                  intent={STATUS_INTENT[game.status]}
+                />
+              )}
+              {game.scheduled_at && (
+                <span className={styles.scoreDate}>
+                  {DATE_FMT.format(new Date(game.scheduled_at))}
+                </span>
+              )}
+            </div>
+            {(isFinal || isInProgress) && (
+              <span
+                className={[
+                  styles.scoreNumber,
+                  isFinal && liveHomeScore < liveAwayScore ? styles.scoreNumberLoser : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {liveHomeScore}
               </span>
             )}
           </div>
 
-          <button
-            type="button"
-            className={`${styles.teamBlock} ${styles.teamBlockHome} ${styles.teamBlockClickable}`}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team_id}`)}
-          >
-            {game.home_team_logo ? (
-              <img
-                src={game.home_team_logo}
-                alt={game.home_team_code}
-                className={styles.teamLogo}
-              />
-            ) : (
-              <span className={styles.teamLogoPlaceholder}>{game.home_team_code.slice(0, 3)}</span>
-            )}
-            <span className={styles.teamCode}>{game.home_team_code}</span>
-            <span className={styles.teamName}>{game.home_team_name}</span>
-          </button>
+          {/* ── Home side ── */}
+          <div className={`${styles.teamSide} ${styles.teamSideHome}`}>
+            <div
+              className={`${styles.teamStripe} ${styles.teamStripeHome}`}
+              style={{ background: game.home_team_primary_color }}
+            />
+            <button
+              type="button"
+              className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
+              onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team_id}`)}
+            >
+              <div className={`${styles.teamInfo} ${styles.teamInfoHome}`}>
+                <span className={styles.teamFullName}>{game.home_team_name}</span>
+                <span className={styles.teamSubInfo}>{game.home_team_code}</span>
+              </div>
+              {game.home_team_logo ? (
+                <img
+                  src={game.home_team_logo}
+                  alt={game.home_team_code}
+                  className={styles.teamLogo}
+                />
+              ) : (
+                <span className={styles.teamLogoPlaceholder}>
+                  {game.home_team_code.slice(0, 3)}
+                </span>
+              )}
+            </button>
+          </div>
         </div>
       </Card>
 

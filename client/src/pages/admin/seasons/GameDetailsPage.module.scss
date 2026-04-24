@@ -35,84 +35,130 @@
 // ── Scoreboard card ────────────────────────────────────────────────────────────
 .scoreboardCard {
   margin-bottom: $space-xl;
+  overflow: hidden;
 }
 
 .scoreboard {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-4xl;
-  padding: $space-xl 0;
+  align-items: stretch;
+  min-height: 80px;
 
   @media (max-width: 640px) {
     flex-direction: column;
-    gap: $space-3xl;
+    align-items: center;
+    gap: $space-lg;
+    padding: $space-lg 0;
   }
 }
 
-.teamBlock {
+// ── Team sides (away = left, home = right) ─────────────────────────────────────
+.teamSide {
   display: flex;
-  flex-direction: column;
   align-items: center;
-  gap: $space-xs;
-  width: fit-content;
+  gap: $space-md;
+  flex: 1;
+  padding: $space-lg 0;
 }
 
-.teamBlockClickable {
+// Home side: reverse order so logo+stripe are on the right
+.teamSideHome {
+  flex-direction: row-reverse;
+}
+
+// Diagonal stripe decoration
+.teamStripe {
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 52px;
+  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
+  opacity: 0.85;
+}
+
+.teamStripeHome {
+  clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+}
+
+// Logo button — clickable area wraps logo + team name/code
+.teamLogoBtn {
   background: none;
   border: none;
   padding: 0;
-  text-align: left;
   cursor: pointer;
   border-radius: $radius-md;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
   transition: opacity 0.15s ease;
 
   &:hover {
     opacity: 0.75;
   }
-
   &:focus-visible {
     outline: 2px solid $accent;
     outline-offset: 4px;
   }
 }
 
+// Home side button: info on the left, logo on the right (handled by DOM order)
+.teamLogoBtnHome {
+  flex-direction: row-reverse;
+}
+
 // ── Team logo / placeholder ────────────────────────────────────────────────────
 .teamLogo {
-  width: 72px;
-  height: 72px;
+  width: 52px;
+  height: 52px;
   object-fit: contain;
   display: block;
-  margin-bottom: $space-sm;
   filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
 }
 
 .teamLogoPlaceholder {
-  width: 72px;
-  height: 72px;
-  border-radius: $radius-md;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
   background: $bg-input;
   border: 1px solid $border;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: $font-base;
+  font-size: $font-sm;
   font-weight: 700;
   color: $text-dim;
   letter-spacing: 0.04em;
-  margin-bottom: $space-sm;
 }
 
-.teamCode {
-  font-size: 2rem;
+// Team name + code stacked block
+.teamInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.teamInfoHome {
+  align-items: flex-end;
+}
+
+.teamFullName {
+  font-size: $font-base;
   font-weight: 700;
   color: $text-bright;
-  letter-spacing: 0.04em;
+  line-height: 1.2;
 }
 
-.teamName {
-  font-size: $font-base;
-  color: $text-body;
+.teamSubInfo {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+// ── Center: score numbers flanking the status block ───────────────────────────
+.scoreCenter {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  flex-shrink: 0;
+  padding: $space-md $space-xl;
 }
 
 // ── Period scoring list ────────────────────────────────────────────────────────
@@ -400,6 +446,7 @@
   }
 }
 
+// Status + date column in the center of the scoreboard
 .scoreBlock {
   display: flex;
   flex-direction: column;
@@ -408,23 +455,17 @@
   flex-shrink: 0;
 }
 
-// Row holding the two score numbers and the separator dash.
-.scoreRow {
-  display: flex;
-  align-items: baseline;
-  gap: $space-md;
-}
-
-// Each individual team total (e.g. "3").
+// Each individual team score (e.g. "3").
 .scoreNumber {
   font-size: 2.75rem;
   font-weight: 700;
   color: $text-bright;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
-  min-width: 1.75rem;
+  min-width: 2rem;
   text-align: center;
   transition: color 0.15s;
+  line-height: 1;
 }
 
 // Applied to the losing team's score when the game is final.
@@ -432,18 +473,9 @@
   color: $text-dim;
 }
 
-// The "–" separator between the two scores.
-.scoreDash {
-  font-size: 2rem;
-  font-weight: 400;
-  color: $text-dim;
-  line-height: 1;
-}
-
 .scoreDate {
   font-size: $font-sm;
   color: $text-dim;
-  margin-top: $space-xs;
 }
 
 // ── Game actions row (above scoreboard card) ──────────────────────────────────
