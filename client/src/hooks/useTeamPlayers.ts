@@ -107,11 +107,16 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
+  /**
+   * Bulk-creates players then adds them to the season roster.
+   * Returns the array of created player IDs on success, or null on failure.
+   * The caller can use the IDs to also add the players to a game roster.
+   */
   const createAndRosterPlayers = async (
     tId: string,
     sId: string,
     players: Array<BulkPlayerInput & { jersey_number?: number | null }>,
-  ): Promise<boolean> => {
+  ): Promise<string[] | null> => {
     try {
       // Step 1: bulk-create the new players
       const { data: createData } = await axios.post(
@@ -140,10 +145,10 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
       const n = created.length;
       toast.success(`${n} player${n !== 1 ? 's' : ''} created and added to roster!`);
       await queryClient.invalidateQueries({ queryKey: ['players'] });
-      return true;
+      return created.map((p) => p.id);
     } catch (err) {
       toast.error(apiError(err, 'Failed to create players'));
-      return false;
+      return null;
     }
   };
 
