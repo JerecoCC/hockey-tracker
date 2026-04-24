@@ -19,7 +19,7 @@
 
 .headerRow {
   display: grid;
-  grid-template-columns: 4rem 1fr 1fr 1fr 1fr 2rem;
+  grid-template-columns: 4rem 1fr 1fr 1fr 2rem;
   gap: $space-md;
   padding: 0 0 $space-xs;
   border-bottom: 1px solid $border;
@@ -36,7 +36,7 @@
 
 .playerRow {
   display: grid;
-  grid-template-columns: 4rem 1fr 1fr 1fr 1fr 2rem;
+  grid-template-columns: 4rem 1fr 1fr 1fr 2rem;
   gap: $space-md;
   align-items: end;
   padding: $space-xs 0;
@@ -78,6 +78,12 @@
   padding-top: $space-md;
   border-top: 1px solid $border;
   margin-top: $space-xs;
+}
+
+.formError {
+  font-size: $font-sm;
+  color: $danger-light;
+  margin: $space-sm 0 0;
 }
 
 .formActions {

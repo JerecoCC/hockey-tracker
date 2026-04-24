@@ -5,27 +5,21 @@ import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import Field from '../../../components/Field/Field';
 import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
-import { type PlayerPosition, type PlayerShoots } from '../../../hooks/useLeaguePlayers';
+import { type PlayerPosition } from '../../../hooks/useLeaguePlayers';
 import styles from './LineupCreatePlayersModal.module.scss';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
   { value: 'LW', label: 'Left Wing' },
   { value: 'RW', label: 'Right Wing' },
-  { value: 'D', label: 'Defenseman' },
+  { value: 'D', label: 'Defense' },
   { value: 'G', label: 'Goalie' },
-];
-
-const SHOOTS_OPTIONS = [
-  { value: 'L', label: 'Left' },
-  { value: 'R', label: 'Right' },
 ];
 
 const EMPTY_ROW = {
   first_name: '',
   last_name: '',
   position: '' as PlayerPosition | '',
-  shoots: '' as PlayerShoots | '',
   jersey_number: '',
 };
 
@@ -33,7 +27,6 @@ interface RowValues {
   first_name: string;
   last_name: string;
   position: PlayerPosition | '';
-  shoots: PlayerShoots | '';
   jersey_number: string;
 }
 
@@ -48,10 +41,9 @@ type CreateAndRosterFn = (
     first_name: string;
     last_name: string;
     position: PlayerPosition;
-    shoots: PlayerShoots;
     jersey_number?: number | null;
   }>,
-) => Promise<boolean>;
+) => Promise<string[] | null>;
 
 interface Props {
   open: boolean;
@@ -60,6 +52,8 @@ interface Props {
   seasonId: string;
   teamName: string;
   createAndRosterPlayers: CreateAndRosterFn;
+  /** Called with the IDs of newly created players so caller can add them to the game roster */
+  onPlayersCreated?: (playerIds: string[]) => Promise<void>;
 }
 
 const LineupCreatePlayersModal = ({
@@ -69,11 +63,17 @@ const LineupCreatePlayersModal = ({
   seasonId,
   teamName,
   createAndRosterPlayers,
+  onPlayersCreated,
 }: Props) => {
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const { control, handleSubmit, reset } = useForm<FormValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitted },
+  } = useForm<FormValues>({
     defaultValues: { players: [{ ...EMPTY_ROW }] },
   });
 
@@ -82,7 +82,7 @@ const LineupCreatePlayersModal = ({
 
   const isRowDirty = (index: number) => {
     const row = watchedPlayers?.[index];
-    return !!(row?.first_name || row?.last_name || row?.position || row?.shoots);
+    return !!(row?.first_name || row?.last_name || row?.position);
   };
 
   const handleDeleteClick = (index: number) => {
@@ -101,12 +101,16 @@ const LineupCreatePlayersModal = ({
       first_name: row.first_name,
       last_name: row.last_name,
       position: row.position as PlayerPosition,
-      shoots: row.shoots as PlayerShoots,
       jersey_number: row.jersey_number !== '' ? Number(row.jersey_number) : null,
     }));
-    const ok = await createAndRosterPlayers(teamId, seasonId, payload);
+    const createdIds = await createAndRosterPlayers(teamId, seasonId, payload);
+    if (createdIds !== null) {
+      if (createdIds.length > 0 && onPlayersCreated) {
+        await onPlayersCreated(createdIds);
+      }
+      handleClose();
+    }
     setIsSubmitting(false);
-    if (ok) handleClose();
   });
 
   return (
@@ -123,7 +127,6 @@ const LineupCreatePlayersModal = ({
             <span className={styles.headerCell}>First Name</span>
             <span className={styles.headerCell}>Last Name</span>
             <span className={styles.headerCell}>Position</span>
-            <span className={styles.headerCell}>Shoots</span>
             <span />
           </div>
 
@@ -165,16 +168,6 @@ const LineupCreatePlayersModal = ({
                   placeholder="Position"
                   disabled={isSubmitting}
                 />
-                <Field
-                  type="select"
-                  control={control}
-                  name={`players.${index}.shoots`}
-                  options={SHOOTS_OPTIONS}
-                  required
-                  rules={{ required: true }}
-                  placeholder="Shoots"
-                  disabled={isSubmitting}
-                />
                 <button
                   type="button"
                   className={styles.deleteBtn}
@@ -204,6 +197,10 @@ const LineupCreatePlayersModal = ({
               Add Player
             </Button>
           </div>
+
+          {isSubmitted && errors.players && (
+            <p className={styles.formError}>Please fill in all required fields before saving.</p>
+          )}
 
           <div className={styles.formActions}>
             <Button
