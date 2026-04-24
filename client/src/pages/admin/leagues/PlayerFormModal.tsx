@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import {
@@ -154,8 +153,13 @@ const PlayerFormModal = ({
       open={open}
       title={editTarget ? 'Edit Player' : 'Create Player'}
       onClose={onClose}
+      confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Player'}
+      confirmForm="player-form"
+      confirmDisabled={isSubmitting}
+      busy={isSubmitting}
     >
       <form
+        id="player-form"
         className={styles.form}
         onSubmit={onSubmit}
       >
@@ -291,23 +295,6 @@ const PlayerFormModal = ({
             disabled={isSubmitting}
             rules={{ validate: (v) => !v || Number(v) >= 0 }}
           />
-        </div>
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            disabled={isSubmitting}
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Player'}
-          </Button>
         </div>
       </form>
     </Modal>

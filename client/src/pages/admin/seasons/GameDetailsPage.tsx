@@ -1192,37 +1192,31 @@ const GameDetailsPage = () => {
             open={goalPeriod !== null}
             title="Score Goal"
             onClose={closeGoalModal}
-            footer={
-              <Button
-                variant="filled"
-                intent="accent"
-                disabled={
-                  !!busy || goalSubmitting || !goalScorerId || !goalTimeMins || !goalTimeSecs
-                }
-                onClick={async () => {
-                  if (!goalPeriod || !game) return;
-                  const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
-                  const periodTime = `${goalTimeMins.padStart(2, '0')}:${goalTimeSecs.padStart(2, '0')}`;
-                  setGoalSubmitting(true);
-                  try {
-                    await addGoal({
-                      team_id: teamId,
-                      period: String(goalPeriod),
-                      goal_type: goalType,
-                      period_time: periodTime,
-                      scorer_id: goalScorerId,
-                      assist_1_id: goalAssist1Id || null,
-                      assist_2_id: goalAssist2Id || null,
-                    });
-                    closeGoalModal();
-                  } finally {
-                    setGoalSubmitting(false);
-                  }
-                }}
-              >
-                Record Goal
-              </Button>
+            confirmLabel={goalSubmitting ? 'Saving…' : 'Record Goal'}
+            confirmDisabled={
+              !!busy || goalSubmitting || !goalScorerId || !goalTimeMins || !goalTimeSecs
             }
+            busy={goalSubmitting}
+            onConfirm={async () => {
+              if (!goalPeriod || !game) return;
+              const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
+              const periodTime = `${goalTimeMins.padStart(2, '0')}:${goalTimeSecs.padStart(2, '0')}`;
+              setGoalSubmitting(true);
+              try {
+                await addGoal({
+                  team_id: teamId,
+                  period: String(goalPeriod),
+                  goal_type: goalType,
+                  period_time: periodTime,
+                  scorer_id: goalScorerId,
+                  assist_1_id: goalAssist1Id || null,
+                  assist_2_id: goalAssist2Id || null,
+                });
+                closeGoalModal();
+              } finally {
+                setGoalSubmitting(false);
+              }
+            }}
           >
             <div className={styles.goalForm}>
               {/* Team segmented control */}
@@ -1438,18 +1432,13 @@ const GameDetailsPage = () => {
         open={gameInfoEditOpen}
         title="Edit Game Info"
         onClose={() => setGameInfoEditOpen(false)}
-        footer={
-          <Button
-            variant="filled"
-            intent="accent"
-            disabled={gameInfoSubmitting || !!busy}
-            onClick={onGameInfoSubmit}
-          >
-            {gameInfoSubmitting || busy === 'update-info' ? 'Saving…' : 'Save'}
-          </Button>
-        }
+        confirmLabel={gameInfoSubmitting || busy === 'update-info' ? 'Saving…' : 'Save'}
+        confirmForm="game-info-edit-form"
+        confirmDisabled={gameInfoSubmitting || !!busy}
+        busy={gameInfoSubmitting || busy === 'update-info'}
       >
         <form
+          id="game-info-edit-form"
           className={styles.goalForm}
           onSubmit={onGameInfoSubmit}
         >
@@ -1493,19 +1482,12 @@ const GameDetailsPage = () => {
             open={starsModalOpen}
             title="End Game — 3 Stars"
             onClose={() => setStarsModalOpen(false)}
-            footer={
-              <Button
-                variant="filled"
-                intent="accent"
-                disabled={!canConfirm || !!busy}
-                onClick={async () => {
-                  const ok = await endGame({ star1: star1Id, star2: star2Id, star3: star3Id });
-                  if (ok) setStarsModalOpen(false);
-                }}
-              >
-                End Game
-              </Button>
-            }
+            confirmLabel="End Game"
+            confirmDisabled={!canConfirm || !!busy}
+            onConfirm={async () => {
+              const ok = await endGame({ star1: star1Id, star2: star2Id, star3: star3Id });
+              if (ok) setStarsModalOpen(false);
+            }}
           >
             <div className={styles.goalForm}>
               <div className={styles.goalFormField}>

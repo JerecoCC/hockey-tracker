@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
-import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
 import SelectableListItem from '../../../components/SelectableListItem/SelectableListItem';
@@ -111,6 +110,18 @@ const LineupRosterModal = ({
       title={`Add to ${teamName} Lineup`}
       onClose={handleClose}
       size="lg"
+      onConfirm={handleSubmit}
+      confirmLabel={submitting ? 'Adding…' : 'Add to Lineup'}
+      confirmIcon="group_add"
+      confirmDisabled={submitting || selectedCount === 0}
+      busy={submitting}
+      footerStart={
+        <span>
+          {selectedCount > 0
+            ? `${selectedCount} player${selectedCount !== 1 ? 's' : ''} selected`
+            : 'No players selected'}
+        </span>
+      }
     >
       <div className={styles.controls}>
         <div className={styles.searchWrap}>
@@ -165,30 +176,6 @@ const LineupRosterModal = ({
           </ul>
         </>
       )}
-
-      <div className={styles.footer}>
-        <span className={styles.footerCount}>
-          {selectedCount > 0
-            ? `${selectedCount} player${selectedCount !== 1 ? 's' : ''} selected`
-            : 'No players selected'}
-        </span>
-        <Button
-          variant="outlined"
-          intent="neutral"
-          onClick={handleClose}
-          disabled={submitting}
-        >
-          Cancel
-        </Button>
-        <Button
-          intent="accent"
-          icon="group_add"
-          onClick={handleSubmit}
-          disabled={submitting || selectedCount === 0}
-        >
-          {submitting ? 'Adding…' : 'Add to Lineup'}
-        </Button>
-      </div>
     </Modal>
   );
 };

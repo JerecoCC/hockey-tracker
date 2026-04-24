@@ -120,8 +120,17 @@ const LineupCreatePlayersModal = ({
         title={`Create Players for ${teamName}`}
         size="lg"
         onClose={handleClose}
+        confirmLabel={
+          isSubmitting ? 'Saving…' : `Save ${fields.length} Player${fields.length !== 1 ? 's' : ''}`
+        }
+        confirmForm="lineup-create-players-form"
+        confirmDisabled={isSubmitting}
+        busy={isSubmitting}
       >
-        <form onSubmit={onSubmit}>
+        <form
+          id="lineup-create-players-form"
+          onSubmit={onSubmit}
+        >
           <div className={styles.headerRow}>
             <span className={styles.headerCell}>#</span>
             <span className={styles.headerCell}>First Name</span>
@@ -201,31 +210,13 @@ const LineupCreatePlayersModal = ({
           {isSubmitted && errors.players && (
             <p className={styles.formError}>Please fill in all required fields before saving.</p>
           )}
-
-          <div className={styles.formActions}>
-            <Button
-              type="button"
-              variant="outlined"
-              intent="neutral"
-              disabled={isSubmitting}
-              onClick={handleClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-            >
-              Save {fields.length} Player{fields.length !== 1 ? 's' : ''}
-            </Button>
-          </div>
         </form>
       </Modal>
 
       <ConfirmModal
         open={confirmRemoveIndex !== null}
         title="Remove player?"
-        message="This row has data. Are you sure you want to remove it?"
+        body="This row has data. Are you sure you want to remove it?"
         confirmLabel="Remove"
         onConfirm={() => {
           if (confirmRemoveIndex !== null) {

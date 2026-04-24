@@ -69,6 +69,25 @@
   margin-top: $space-xl;
 }
 
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-md;
+}
+
+.footerStart {
+  flex: 1;
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
 .title {
   font-size: $font-xl;
   font-weight: 700;

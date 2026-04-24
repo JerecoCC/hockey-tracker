@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import Button from '../Button/Button';
 import type { ButtonIntent } from '../Button/Button';
 import Modal from '../Modal/Modal';
 import styles from './ConfirmModal.module.scss';
@@ -41,28 +40,13 @@ const ConfirmModal = (props: Props) => {
       open={open}
       title={title}
       onClose={onCancel}
+      onConfirm={onConfirm}
+      confirmLabel={confirmLabel}
+      confirmIcon={confirmIcon}
+      confirmIntent={variantIntent[variant]}
+      busy={busy}
     >
       <p className={styles.body}>{body}</p>
-      <div className={styles.actions}>
-        <Button
-          variant="outlined"
-          intent="neutral"
-          onClick={onCancel}
-          type="button"
-          disabled={busy}
-        >
-          Cancel
-        </Button>
-        <Button
-          intent={variantIntent[variant]}
-          icon={confirmIcon}
-          onClick={onConfirm}
-          type="button"
-          disabled={busy}
-        >
-          {confirmLabel}
-        </Button>
-      </div>
     </Modal>
   );
 };

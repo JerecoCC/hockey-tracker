@@ -12,7 +12,10 @@
   display: flex;
   gap: $space-xl;
 
-  > * { flex: 1; min-width: 0; }
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 // Date + Venue
@@ -20,8 +23,13 @@
   display: flex;
   gap: $space-xl;
 
-  > *:first-child { flex: 0 0 200px; }
-  > *:last-child  { flex: 1; min-width: 0; }
+  > *:first-child {
+    flex: 0 0 200px;
+  }
+  > *:last-child {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 // Game type + Status
@@ -29,7 +37,10 @@
   display: flex;
   gap: $space-xl;
 
-  > * { flex: 1; min-width: 0; }
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 // Away score / Home score / OT periods / Shootout
@@ -37,11 +48,8 @@
   display: flex;
   gap: $space-xl;
 
-  > * { flex: 1; min-width: 0; }
-}
-
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-md;
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
 }

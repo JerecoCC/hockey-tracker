@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
@@ -90,8 +89,13 @@ const LeagueFormModal = (props: Props) => {
       open={open}
       title={editTarget ? 'Edit League' : 'Create League'}
       onClose={onClose}
+      confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
+      confirmForm="league-form"
+      confirmDisabled={isSubmitting}
+      busy={isSubmitting}
     >
       <form
+        id="league-form"
         className={styles.form}
         onSubmit={onSubmit}
       >
@@ -131,22 +135,6 @@ const LeagueFormModal = (props: Props) => {
             control={control}
             name="text_color"
           />
-        </div>
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
-          </Button>
         </div>
       </form>
     </Modal>

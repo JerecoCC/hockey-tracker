@@ -106,8 +106,17 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
         title="Bulk Create Players"
         size="lg"
         onClose={handleClose}
+        confirmLabel={
+          isSubmitting ? 'Saving…' : `Save ${fields.length} Player${fields.length !== 1 ? 's' : ''}`
+        }
+        confirmForm="bulk-add-players-form"
+        confirmDisabled={isSubmitting}
+        busy={isSubmitting}
       >
-        <form onSubmit={onSubmit}>
+        <form
+          id="bulk-add-players-form"
+          onSubmit={onSubmit}
+        >
           {/* Column headers */}
           <div className={styles.headerRow}>
             <span className={styles.headerCell}>First Name</span>
@@ -186,24 +195,6 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
               onClick={() => append({ ...EMPTY_ROW })}
             >
               Create Player
-            </Button>
-          </div>
-
-          <div className={styles.formActions}>
-            <Button
-              type="button"
-              variant="outlined"
-              intent="neutral"
-              disabled={isSubmitting}
-              onClick={handleClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-            >
-              Save {fields.length} Player{fields.length !== 1 ? 's' : ''}
             </Button>
           </div>
         </form>

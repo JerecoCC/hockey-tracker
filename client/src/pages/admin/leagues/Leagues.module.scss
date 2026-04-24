@@ -72,11 +72,3 @@
   flex-direction: column;
   gap: $space-lg;
 }
-
-// ── Form actions ───────────────────────────────────────────────────────
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-md;
-  margin-top: $space-sm;
-}

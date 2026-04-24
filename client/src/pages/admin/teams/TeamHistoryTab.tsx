@@ -224,8 +224,14 @@ const TeamHistoryTab = ({
         open={modalOpen}
         title={isEditing ? 'Edit Team Version' : 'Record Version'}
         onClose={closeModal}
+        confirmLabel={isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Record Version'}
+        confirmIcon={isEditing ? 'edit' : 'history'}
+        confirmForm="team-history-form"
+        confirmDisabled={isSubmitting}
+        busy={isSubmitting}
       >
         <form
+          id="team-history-form"
           className={styles.historyForm}
           onSubmit={onSubmit}
         >
@@ -278,24 +284,6 @@ const TeamHistoryTab = ({
             placeholder="e.g. Rebranded after relocation"
             disabled={isSubmitting}
           />
-          <div className={styles.historyFormActions}>
-            <Button
-              type="button"
-              variant="outlined"
-              intent="neutral"
-              disabled={isSubmitting}
-              onClick={closeModal}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              icon={isEditing ? 'edit' : 'history'}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Record Version'}
-            </Button>
-          </div>
         </form>
       </Modal>
 

@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import Button from '../../../components/Button/Button';
 import Modal from '../../../components/Modal/Modal';
 import Select from '../../../components/Select/Select';
 import { type LineupEntry, type LineupPositionSlot } from '../../../hooks/useGameLineup';
@@ -120,6 +119,11 @@ const SetLineupModal = ({
       title={`Set Starting Lineup — ${teamName}`}
       onClose={handleClose}
       size="md"
+      onConfirm={handleSave}
+      confirmLabel={saving ? 'Saving…' : 'Save Lineup'}
+      confirmIcon="set_lineup"
+      confirmDisabled={saving || !allFilled}
+      busy={saving}
     >
       <div className={styles.grid}>
         {/* Row 1: Center */}
@@ -139,25 +143,6 @@ const SetLineupModal = ({
 
         {/* Row 4: Goalie */}
         <div className={styles.row}>{slotSelect('G', SLOT_LABEL.G)}</div>
-      </div>
-
-      <div className={styles.footer}>
-        <Button
-          variant="outlined"
-          intent="neutral"
-          onClick={handleClose}
-          disabled={saving}
-        >
-          Cancel
-        </Button>
-        <Button
-          intent="accent"
-          icon="set_lineup"
-          onClick={handleSave}
-          disabled={saving || !allFilled}
-        >
-          {saving ? 'Saving…' : 'Save Lineup'}
-        </Button>
       </div>
     </Modal>
   );

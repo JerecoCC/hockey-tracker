@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
@@ -113,8 +112,13 @@ const TeamPlayerEditModal = ({
       open={open}
       title="Edit Player"
       onClose={onClose}
+      confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
+      confirmForm="team-player-edit-form"
+      confirmDisabled={isSubmitting}
+      busy={isSubmitting}
     >
       <form
+        id="team-player-edit-form"
         className={styles.form}
         onSubmit={onSubmit}
       >
@@ -170,23 +174,6 @@ const TeamPlayerEditModal = ({
           rules={{ required: true }}
           disabled={isSubmitting}
         />
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            disabled={isSubmitting}
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving…' : 'Save Changes'}
-          </Button>
-        </div>
       </form>
     </Modal>
   );

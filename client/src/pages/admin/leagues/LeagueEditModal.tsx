@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
@@ -83,26 +82,10 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       open={open}
       title="Edit League"
       onClose={onClose}
-      footer={
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            disabled={isSubmitting}
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            form="league-edit-form"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving…' : 'Save Changes'}
-          </Button>
-        </div>
-      }
+      confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
+      confirmForm="league-edit-form"
+      confirmDisabled={isSubmitting}
+      busy={isSubmitting}
     >
       <form
         id="league-edit-form"
