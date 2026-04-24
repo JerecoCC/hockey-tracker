@@ -7,7 +7,7 @@
   gap: $space-lg;
 }
 
-// Side-by-side pair (e.g. First / Last Name, Position / Shoots, Height / Weight)
+// Side-by-side pair (e.g. Position / Shoots, Height / Weight)
 .row {
   display: flex;
   gap: $space-xl;
@@ -16,6 +16,13 @@
     flex: 1;
     min-width: 0;
   }
+}
+
+// Jersey # + First Name + Last Name — narrow fixed column for the number field
+.nameRowWithJersey {
+  display: grid;
+  grid-template-columns: 5rem 1fr 1fr;
+  gap: $space-xl;
 }
 
 // Height group: shared "Height" label above two compact ft / in inputs

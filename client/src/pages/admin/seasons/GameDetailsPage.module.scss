@@ -62,6 +62,25 @@
   align-items: flex-end;
 }
 
+.teamBlockClickable {
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  border-radius: $radius-md;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.75;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 4px;
+  }
+}
+
 // ── Team logo / placeholder ────────────────────────────────────────────────────
 .teamLogo {
   width: 72px;

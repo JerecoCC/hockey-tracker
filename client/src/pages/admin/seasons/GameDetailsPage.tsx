@@ -73,14 +73,12 @@ const GOAL_TYPES = [
   { value: 'own', label: 'Own Goal' },
 ];
 
-import { type BadgeIntent } from '../../../components/Badge/Badge';
-
-const POSITION_BADGE_INTENT: Record<string, BadgeIntent> = {
-  C: 'warning',
-  LW: 'warning',
-  RW: 'warning',
-  D: 'info',
-  G: 'success',
+const POSITION_LABEL: Record<string, string> = {
+  C: 'Center',
+  LW: 'Left Wing',
+  RW: 'Right Wing',
+  D: 'Defense',
+  G: 'Goalie',
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -280,7 +278,11 @@ const GameDetailsPage = () => {
       {/* ── Scoreboard card ── */}
       <Card className={styles.scoreboardCard}>
         <div className={styles.scoreboard}>
-          <div className={styles.teamBlock}>
+          <button
+            type="button"
+            className={`${styles.teamBlock} ${styles.teamBlockClickable}`}
+            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team_id}`)}
+          >
             {game.away_team_logo ? (
               <img
                 src={game.away_team_logo}
@@ -292,7 +294,7 @@ const GameDetailsPage = () => {
             )}
             <span className={styles.teamCode}>{game.away_team_code}</span>
             <span className={styles.teamName}>{game.away_team_name}</span>
-          </div>
+          </button>
 
           <div className={styles.scoreBlock}>
             {isFinal ? (
@@ -315,7 +317,11 @@ const GameDetailsPage = () => {
             )}
           </div>
 
-          <div className={`${styles.teamBlock} ${styles.teamBlockHome}`}>
+          <button
+            type="button"
+            className={`${styles.teamBlock} ${styles.teamBlockHome} ${styles.teamBlockClickable}`}
+            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team_id}`)}
+          >
             {game.home_team_logo ? (
               <img
                 src={game.home_team_logo}
@@ -327,7 +333,7 @@ const GameDetailsPage = () => {
             )}
             <span className={styles.teamCode}>{game.home_team_code}</span>
             <span className={styles.teamName}>{game.home_team_name}</span>
-          </div>
+          </button>
         </div>
       </Card>
 
@@ -561,22 +567,20 @@ const GameDetailsPage = () => {
 
                       const renderPlayer = (e: GameRosterEntry) => {
                         const isStarter = lineupMap.has(e.player_id);
+                        const jerseyPrefix = e.jersey_number != null ? `#${e.jersey_number} ` : '';
                         return (
                           <ListItem
                             key={e.id}
                             image={e.photo}
                             image_shape="circle"
-                            name={`${e.first_name} ${e.last_name}`}
-                            nameItalic={isStarter}
+                            name={`${jerseyPrefix}${e.last_name}, ${e.first_name}`}
                             placeholder={`${e.first_name[0]}${e.last_name[0]}`}
-                            subtitle={e.jersey_number != null ? `#${e.jersey_number}` : undefined}
+                            subtitle={
+                              e.position ? (POSITION_LABEL[e.position] ?? e.position) : undefined
+                            }
                             rightContent={
-                              e.position
-                                ? {
-                                    type: 'tag',
-                                    label: e.position,
-                                    intent: POSITION_BADGE_INTENT[e.position],
-                                  }
+                              isStarter
+                                ? { type: 'tag', label: 'Starter', intent: 'accent' }
                                 : undefined
                             }
                             actions={[
