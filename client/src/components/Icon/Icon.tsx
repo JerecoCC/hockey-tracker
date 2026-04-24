@@ -4,6 +4,7 @@ import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
   faArrowRotateRight,
+  faChartLine,
   faArrowUpRightFromSquare,
   faCheck,
   faCircleMinus,
@@ -109,6 +110,9 @@ const ICON_MAP: Record<string, IconDefinition> = {
   // page header
   apps: faGauge,
   logout: faRightFromBracket,
+
+  // stats
+  query_stats: faChartLine,
 
   // decorative
   sports_hockey: faHockeyPuck,

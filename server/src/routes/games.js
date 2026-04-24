@@ -35,6 +35,7 @@ router.get('/', async (req, res) => {
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
+        sh.period_shots,
         -- Home team
         g.home_team_id,
         ht.name  AS home_team_name,
@@ -82,6 +83,17 @@ router.get('/', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
+            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+          ),
+          '[]'::json
+        ) AS period_shots
+        FROM game_period_shots
+        WHERE game_id = g.id
+      ) sh ON true
       WHERE
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${team_id   ?? null}::uuid IS NULL OR g.home_team_id = ${team_id ?? null}::uuid
@@ -114,6 +126,7 @@ router.get('/:id', async (req, res) => {
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
+        sh.period_shots,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
         t_home.primary_color AS home_team_primary_color,
@@ -160,6 +173,17 @@ router.get('/:id', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
+            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+          ),
+          '[]'::json
+        ) AS period_shots
+        FROM game_period_shots
+        WHERE game_id = g.id
+      ) sh ON true
       WHERE g.id = ${id}
     `;
 
@@ -327,6 +351,7 @@ router.patch('/:id', async (req, res) => {
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
+        sh.period_shots,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
         t_home.primary_color AS home_team_primary_color,
@@ -368,6 +393,17 @@ router.patch('/:id', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
+            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+          ),
+          '[]'::json
+        ) AS period_shots
+        FROM game_period_shots
+        WHERE game_id = g.id
+      ) sh ON true
       WHERE g.id = ${id}
     `;
     return res.json(updated[0]);
@@ -729,6 +765,138 @@ router.delete('/:id/goals/:goalId', async (req, res) => {
     return res.status(204).send();
   } catch (err) {
     console.error('goals delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/games/:id/shots  – upsert shots on goal for one period
+// Body: { period, home_shots, away_shots }
+// ---------------------------------------------------------------------------
+router.patch('/:id/shots', async (req, res) => {
+  const { id } = req.params;
+  const { period, home_shots, away_shots } = req.body;
+
+  if (!period || home_shots == null || away_shots == null) {
+    return res.status(400).json({ error: 'period, home_shots, and away_shots are required' });
+  }
+
+  try {
+    await sql`
+      INSERT INTO game_period_shots (game_id, period, home_shots, away_shots)
+      VALUES (${id}, ${period}, ${home_shots}, ${away_shots})
+      ON CONFLICT (game_id, period)
+      DO UPDATE SET home_shots = EXCLUDED.home_shots, away_shots = EXCLUDED.away_shots
+    `;
+    const rows = await sql`
+      SELECT COALESCE(
+        json_agg(
+          json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
+          ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+        ),
+        '[]'::json
+      ) AS period_shots
+      FROM game_period_shots
+      WHERE game_id = ${id}
+    `;
+    return res.json({ period_shots: rows[0].period_shots });
+  } catch (err) {
+    if (err.code === '23514') return res.status(400).json({ error: 'Invalid period value' });
+    console.error('shots upsert error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/games/:id/goalie-stats  – list goalie stats for both teams
+// ---------------------------------------------------------------------------
+router.get('/:id/goalie-stats', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        gs.id,
+        gs.game_id,
+        gs.team_id,
+        gs.goalie_id,
+        gs.shots_against,
+        gs.saves,
+        gs.created_at,
+        p.first_name AS goalie_first_name,
+        p.last_name  AS goalie_last_name,
+        COALESCE(pt.photo, p.photo) AS goalie_photo,
+        pt.jersey_number AS goalie_jersey_number,
+        ti.name  AS team_name,
+        ti.code  AS team_code,
+        ti.logo  AS team_logo,
+        t.primary_color AS team_primary_color,
+        t.text_color    AS team_text_color
+      FROM game_goalie_stats gs
+      JOIN players p ON p.id = gs.goalie_id
+      JOIN teams t ON t.id = gs.team_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = gs.goalie_id
+        AND pt.team_id  = gs.team_id
+        AND pt.end_date IS NULL
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = gs.team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      WHERE gs.game_id = ${id}
+      ORDER BY ti.code ASC, pt.jersey_number ASC NULLS LAST
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('goalie stats get error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/goalie-stats  – upsert one goalie's stats
+// Body: { goalie_id, team_id, shots_against, saves }
+// ---------------------------------------------------------------------------
+router.put('/:id/goalie-stats', async (req, res) => {
+  const { id } = req.params;
+  const { goalie_id, team_id, shots_against, saves } = req.body;
+
+  if (!goalie_id || !team_id || shots_against == null || saves == null) {
+    return res.status(400).json({ error: 'goalie_id, team_id, shots_against, and saves are required' });
+  }
+
+  try {
+    await sql`
+      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, saves)
+      VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against}, ${saves})
+      ON CONFLICT (game_id, goalie_id)
+      DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against, saves = EXCLUDED.saves
+    `;
+    const [row] = await sql`
+      SELECT
+        gs.id, gs.game_id, gs.team_id, gs.goalie_id, gs.shots_against, gs.saves, gs.created_at,
+        p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
+        COALESCE(pt.photo, p.photo) AS goalie_photo, pt.jersey_number AS goalie_jersey_number,
+        ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
+        t.primary_color AS team_primary_color, t.text_color AS team_text_color
+      FROM game_goalie_stats gs
+      JOIN players p ON p.id = gs.goalie_id
+      JOIN teams t ON t.id = gs.team_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = gs.goalie_id AND pt.team_id = gs.team_id AND pt.end_date IS NULL
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = gs.team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      WHERE gs.game_id = ${id} AND gs.goalie_id = ${goalie_id}
+    `;
+    return res.json(row);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
+    console.error('goalie stats put error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

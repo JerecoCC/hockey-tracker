@@ -49,6 +49,8 @@ export interface GameRecord {
   current_period?:       CurrentPeriod | null;
   /** Period-by-period goal totals aggregated from the goals table. */
   period_scores:         { period: string; home_goals: number; away_goals: number }[];
+  /** Period-by-period shots on goal entered manually via the admin UI. */
+  period_shots:          { period: string; home_shots: number; away_shots: number }[];
   star_1_id:             string | null;
   star_2_id:             string | null;
   star_3_id:             string | null;
@@ -319,6 +321,29 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, updateStatus, advancePeriod, endGame, updateGameInfo };
+  const updatePeriodShots = async (
+    period: string,
+    home_shots: number,
+    away_shots: number,
+  ): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('shots');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}/shots`,
+        { period, home_shots, away_shots },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to save shots'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { game, loading, busy, updateStatus, advancePeriod, endGame, updateGameInfo, updatePeriodShots };
 };
 

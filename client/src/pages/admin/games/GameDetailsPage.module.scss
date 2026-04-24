@@ -601,6 +601,118 @@ tbody tr:not(:last-child) td {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
+// ── SOG row ──────────────────────────────────────────────────────────────────
+.trShots td {
+  padding-top: $space-xs;
+  padding-bottom: $space-xs;
+  color: $text-dim;
+  font-size: $font-xs;
+}
+
+.trShots:first-of-type td {
+  border-top: 1px solid $border;
+  padding-top: $space-sm;
+}
+
+.tdShotsLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-dim;
+}
+
+// ── Goalie Stats table ────────────────────────────────────────────────────────
+.goalieTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-sm;
+}
+
+.goalieThTeam {
+  text-align: left;
+  padding: $space-xs $space-md $space-xs 0;
+  color: $text-dim;
+  font-weight: 600;
+  font-size: $font-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.goalieTh {
+  text-align: center;
+  padding: $space-xs $space-md;
+  color: $text-dim;
+  font-weight: 600;
+  font-size: $font-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-left: 1px solid $border;
+}
+
+.goalieRow {
+  position: relative;
+
+  &:not(:last-child) td {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  &:hover .goalieActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.goalieTdName {
+  position: relative;
+  text-align: left;
+  padding: $space-sm $space-md $space-sm 0;
+}
+
+.goalieNameCell {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.goalieLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.goalieLogoPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.goalieNameLabel {
+  font-weight: 500;
+  color: $text-body;
+}
+
+.goalieTd {
+  text-align: center;
+  padding: $space-sm $space-md;
+  color: $text-body;
+  border-left: 1px solid $border;
+}
+
+.goalieActions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
 // ── Lineup tab ────────────────────────────────────────────────────────────────
 
 // Two-column grid inside the Card body — each column is a static Accordion

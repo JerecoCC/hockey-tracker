@@ -518,6 +518,36 @@ async function initSchema() {
     )
   `;
 
+  // ── Shots on goal per period ───────────────────────────────────────────────
+  // period mirrors goals.period: '1' | '2' | '3' | 'OT' | 'SO'
+  // home_shots / away_shots are entered manually by an admin.
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_period_shots (
+      game_id     UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+      period      TEXT NOT NULL CHECK (period IN ('1', '2', '3', 'OT', 'SO')),
+      home_shots  SMALLINT NOT NULL DEFAULT 0 CHECK (home_shots >= 0),
+      away_shots  SMALLINT NOT NULL DEFAULT 0 CHECK (away_shots >= 0),
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (game_id, period)
+    )
+  `;
+
+  // ── Goalie stats ───────────────────────────────────────────────────────────
+  // One row per goalie per game. shots_against and saves are entered manually.
+  // save_pct is derived client-side as saves / shots_against.
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_goalie_stats (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      goalie_id     UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      shots_against SMALLINT NOT NULL DEFAULT 0 CHECK (shots_against >= 0),
+      saves         SMALLINT NOT NULL DEFAULT 0 CHECK (saves >= 0),
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, goalie_id)
+    )
+  `;
+
   console.log('Database schema ready');
 }
 
