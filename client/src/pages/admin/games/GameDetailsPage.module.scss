@@ -65,18 +65,52 @@
   flex-direction: row-reverse;
 }
 
-// Diagonal stripe decoration
+// Diagonal stripe decoration — clipping container
 .teamStripe {
+  position: relative;
   align-self: stretch;
   flex-shrink: 0;
-  width: 52px;
+  width: 64px;
   clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
-  opacity: 0.85;
+  opacity: 0.9;
   margin: -$space-lg 0;
 }
 
 .teamStripeHome {
   clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+  // Mirror both secondary strips for the home side
+  .teamStripeSecondary {
+    clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
+  }
+
+  .teamStripeSecondary2 {
+    clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
+  }
+}
+
+// Primary fill — covers the full stripe area (parent clip handles the shape)
+.teamStripePrimary {
+  position: absolute;
+  inset: 0;
+}
+
+// Secondary strips: thin parallelograms inset from and parallel to the inner slanted edge.
+// Each strip is 8px wide (12.5% of 64px), separated by an 8px gap.
+// Away inner edge runs from (70%,0) to (100%,100%).
+
+// Strip 1 — 8px inset from inner edge
+.teamStripeSecondary {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(45% 0%, 57.5% 0%, 87.5% 100%, 75% 100%);
+}
+
+// Strip 2 — 24px inset (8px strip + 8px gap + starts here)
+.teamStripeSecondary2 {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(20% 0%, 32.5% 0%, 62.5% 100%, 50% 100%);
 }
 
 // Logo button — clickable area wraps logo + team name/code
@@ -103,16 +137,16 @@
 
 // ── Team logo / placeholder ────────────────────────────────────────────────────
 .teamLogo {
-  width: 52px;
-  height: 52px;
+  width: 68px;
+  height: 68px;
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
 }
 
 .teamLogoPlaceholder {
-  width: 52px;
-  height: 52px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   background: $bg-input;
   border: 1px solid $border;
@@ -397,7 +431,7 @@
   font-style: normal;
 }
 
-// Row that places Period Time (MM:SS) and Goal Type side by side
+// Row that places Period Time (MM:SS), Goal Type and EN toggle side by side
 .goalFormTimeRow {
   display: flex;
   gap: $space-md;
@@ -407,12 +441,12 @@
   > :first-child {
     flex-shrink: 0;
   }
+}
 
-  // Goal type — expands to fill remaining space
-  > :last-child {
-    flex: 1;
-    min-width: 0;
-  }
+// Goal type field inside goalFormTimeRow — expands to fill remaining space
+.goalTypeField {
+  flex: 1;
+  min-width: 0;
 }
 
 // Inline container for [MM] : [SS] inputs under a single label
@@ -467,6 +501,41 @@
     flex: 1;
     min-width: 0;
   }
+}
+
+// Square 42 × 42 icon button that toggles Empty Net — sits inline with Goal Type select
+.emptyNetToggle {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-dim;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: $accent;
+    color: $text-body;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.emptyNetToggleOn {
+  border-color: $accent;
+  color: $accent;
+  background: rgba($accent, 0.08);
 }
 
 // Status + date column in the center of the scoreboard
@@ -573,7 +642,6 @@
   text-align: center;
   padding: $space-sm $space-md;
   color: $text-body;
-  border-left: 1px solid $border;
 }
 
 .thPeriod {
@@ -583,17 +651,42 @@
   letter-spacing: 0.05em;
 }
 
+// Input cell used in the Edit Shots modal table
+.tdShotsInput {
+  text-align: center;
+  padding: $space-xs $space-xs;
+  width: 64px;
+
+  // Remove the label wrapper margin so the input sits flush
+  label {
+    margin-bottom: 0;
+  }
+
+  // Narrow the input to fit the column — keep default height/padding intact
+  input {
+    width: 52px;
+    min-width: 0;
+    text-align: center;
+  }
+}
+
+// Suppress all cell borders and row dividers inside the Edit Shots modal table
+.shotsEditTable {
+  .thPeriod {
+    border-left: none;
+  }
+
+  tbody tr:not(:last-child) td {
+    border-bottom: none;
+  }
+}
+
 .thTotal,
 .tdTotal {
   text-align: center;
   padding: $space-sm $space-md;
   font-weight: 700;
   color: $text-bright;
-  border-left: 2px solid $border;
-}
-
-tbody tr:not(:last-child) td {
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 // ── SOG row ──────────────────────────────────────────────────────────────────
@@ -642,15 +735,10 @@ tbody tr:not(:last-child) td {
   font-size: $font-xs;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  border-left: 1px solid $border;
 }
 
 .goalieRow {
   position: relative;
-
-  &:not(:last-child) td {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  }
 
   &:hover .goalieActions {
     opacity: 1;
@@ -668,6 +756,8 @@ tbody tr:not(:last-child) td {
   display: flex;
   align-items: center;
   gap: $space-sm;
+  flex: 1;
+  min-width: 0;
 }
 
 .goalieLogo {
@@ -698,7 +788,6 @@ tbody tr:not(:last-child) td {
   text-align: center;
   padding: $space-sm $space-md;
   color: $text-body;
-  border-left: 1px solid $border;
 }
 
 .goalieActions {
@@ -767,7 +856,8 @@ tbody tr:not(:last-child) td {
 
 .lineupDivider {
   height: 1px;
-  background: $border;
+  background: rgba(255, 255, 255, 0.07);
+  border: none;
   margin: $space-sm 0;
 }
 

@@ -433,20 +433,9 @@ async function initSchema() {
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p3_home_goals`;
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p3_away_goals`;
 
-  // ── Game periods ──────────────────────────────────────────────────────────
-  // Period-by-period scoring breakdown.
-  // period: 1, 2, 3 = regulation; 4+ = OT periods; 0 = shootout round
-  await sql`
-    CREATE TABLE IF NOT EXISTS game_periods (
-      game_id      UUID     NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-      period       SMALLINT NOT NULL,
-      period_type  TEXT     NOT NULL CHECK (period_type IN ('regulation', 'overtime', 'shootout')),
-      home_goals   SMALLINT NOT NULL DEFAULT 0,
-      away_goals   SMALLINT NOT NULL DEFAULT 0,
-      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (game_id, period)
-    )
-  `;
+  // Migration: game_periods table has been removed; scoring breakdown is derived
+  // from the goals table at query time. Drop if it still exists on older DBs.
+  await sql`DROP TABLE IF EXISTS game_periods`;
 
   // ── Goals ─────────────────────────────────────────────────────────────────
   // One row per goal scored. scorer_id / assist_1_id / assist_2_id FK to
@@ -487,6 +476,17 @@ async function initSchema() {
     ALTER TABLE goals ADD COLUMN IF NOT EXISTS
       period_time TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$')
   `;
+  // empty_net is a modifier independent of goal_type (e.g. a shorthanded empty-net goal).
+  await sql`
+    ALTER TABLE goals ADD COLUMN IF NOT EXISTS empty_net BOOLEAN NOT NULL DEFAULT FALSE
+  `;
+  // Migrate legacy 'empty-net' goal_type rows: mark empty_net = true and reclassify as
+  // 'even-strength' (the most common scenario — adjust if other strengths existed).
+  await sql`
+    UPDATE goals
+    SET empty_net = TRUE, goal_type = 'even-strength'
+    WHERE goal_type = 'empty-net'
+  `;
 
   // ── Game lineups ───────────────────────────────────────────────────────────
   // Starting lineup: one row per position slot per team per game.
@@ -518,19 +518,49 @@ async function initSchema() {
     )
   `;
 
-  // ── Shots on goal per period ───────────────────────────────────────────────
-  // period mirrors goals.period: '1' | '2' | '3' | 'OT' | 'SO'
-  // home_shots / away_shots are entered manually by an admin.
+  // ── Shots on goal per period (now stored inline on games) ─────────────────
+  // period_shots is a JSONB array: [{ period, home_shots, away_shots }, ...]
+  // Replaces the old game_period_shots table.
   await sql`
-    CREATE TABLE IF NOT EXISTS game_period_shots (
-      game_id     UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
-      period      TEXT NOT NULL CHECK (period IN ('1', '2', '3', 'OT', 'SO')),
-      home_shots  SMALLINT NOT NULL DEFAULT 0 CHECK (home_shots >= 0),
-      away_shots  SMALLINT NOT NULL DEFAULT 0 CHECK (away_shots >= 0),
-      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      PRIMARY KEY (game_id, period)
-    )
+    ALTER TABLE games ADD COLUMN IF NOT EXISTS
+      period_shots JSONB NOT NULL DEFAULT '[]'
   `;
+
+  // One-time data migration: copy rows from game_period_shots (if it still
+  // exists) into games.period_shots as a sorted JSONB array.
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'game_period_shots'
+      ) THEN
+        UPDATE games g
+        SET period_shots = COALESCE(
+          (
+            SELECT jsonb_agg(
+              jsonb_build_object(
+                'period',     gps.period,
+                'home_shots', gps.home_shots,
+                'away_shots', gps.away_shots
+              )
+              ORDER BY CASE gps.period
+                WHEN '1'  THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3
+                WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+            )
+            FROM game_period_shots gps
+            WHERE gps.game_id = g.id
+          ),
+          '[]'::jsonb
+        )
+        WHERE EXISTS (
+          SELECT 1 FROM game_period_shots gps WHERE gps.game_id = g.id
+        );
+      END IF;
+    END $$
+  `;
+
+  await sql`DROP TABLE IF EXISTS game_period_shots`;
 
   // ── Goalie stats ───────────────────────────────────────────────────────────
   // One row per goalie per game. shots_against and saves are entered manually.

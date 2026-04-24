@@ -35,7 +35,7 @@ router.get('/', async (req, res) => {
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
-        sh.period_shots,
+        g.period_shots,
         -- Home team
         g.home_team_id,
         ht.name  AS home_team_name,
@@ -83,17 +83,6 @@ router.get('/', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
-      LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          json_agg(
-            json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
-            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
-          ),
-          '[]'::json
-        ) AS period_shots
-        FROM game_period_shots
-        WHERE game_id = g.id
-      ) sh ON true
       WHERE
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${team_id   ?? null}::uuid IS NULL OR g.home_team_id = ${team_id ?? null}::uuid
@@ -126,15 +115,17 @@ router.get('/:id', async (req, res) => {
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
-        sh.period_shots,
+        g.period_shots,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-        t_home.primary_color AS home_team_primary_color,
-        t_home.text_color    AS home_team_text_color,
+        t_home.primary_color   AS home_team_primary_color,
+        t_home.secondary_color AS home_team_secondary_color,
+        t_home.text_color      AS home_team_text_color,
         g.away_team_id,
         at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
-        t_away.primary_color AS away_team_primary_color,
-        t_away.text_color    AS away_team_text_color,
+        t_away.primary_color   AS away_team_primary_color,
+        t_away.secondary_color AS away_team_secondary_color,
+        t_away.text_color      AS away_team_text_color,
         s.name AS season_name,
         l.id   AS league_id,
         l.name AS league_name
@@ -173,17 +164,6 @@ router.get('/:id', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
-      LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          json_agg(
-            json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
-            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
-          ),
-          '[]'::json
-        ) AS period_shots
-        FROM game_period_shots
-        WHERE game_id = g.id
-      ) sh ON true
       WHERE g.id = ${id}
     `;
 
@@ -351,7 +331,7 @@ router.patch('/:id', async (req, res) => {
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
-        sh.period_shots,
+        g.period_shots,
         g.home_team_id,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
         t_home.primary_color AS home_team_primary_color,
@@ -393,17 +373,6 @@ router.patch('/:id', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
-      LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          json_agg(
-            json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
-            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
-          ),
-          '[]'::json
-        ) AS period_shots
-        FROM game_period_shots
-        WHERE game_id = g.id
-      ) sh ON true
       WHERE g.id = ${id}
     `;
     return res.json(updated[0]);
@@ -627,6 +596,7 @@ router.get('/:id/goals', async (req, res) => {
         go.team_id,
         go.period,
         go.goal_type,
+        go.empty_net,
         go.period_time,
         go.scorer_id,
         go.assist_1_id,
@@ -652,8 +622,36 @@ router.get('/:id/goals', async (req, res) => {
         a2p.first_name                      AS assist_2_first_name,
         a2p.last_name                       AS assist_2_last_name,
         COALESCE(a2pt.photo, a2p.photo)     AS assist_2_photo,
-        a2pt.jersey_number                  AS assist_2_jersey_number
+        a2pt.jersey_number                  AS assist_2_jersey_number,
+        -- prior-game cumulative stats (finalized games in same season before this game)
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE g2.scorer_id = go.scorer_id
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS scorer_prior_goals,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE go.assist_1_id IS NOT NULL
+            AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS assist_1_prior_assists,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE go.assist_2_id IS NOT NULL
+            AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS assist_2_prior_assists
       FROM goals go
+      JOIN games g ON g.id = go.game_id
       JOIN players sp ON sp.id = go.scorer_id
       LEFT JOIN player_teams spt
         ON spt.player_id = go.scorer_id AND spt.team_id = go.team_id AND spt.end_date IS NULL
@@ -690,6 +688,7 @@ router.post('/:id/goals', async (req, res) => {
     team_id,
     period,
     goal_type = 'even-strength',
+    empty_net = false,
     period_time = null,
     scorer_id,
     assist_1_id = null,
@@ -710,8 +709,8 @@ router.post('/:id/goals', async (req, res) => {
 
     // Insert the goal record.
     const [goal] = await sql`
-      INSERT INTO goals (game_id, team_id, period, goal_type, period_time, scorer_id, assist_1_id, assist_2_id)
-      VALUES (${id}, ${team_id}, ${period}, ${goal_type}, ${period_time}, ${scorer_id}, ${assist_1_id}, ${assist_2_id})
+      INSERT INTO goals (game_id, team_id, period, goal_type, empty_net, period_time, scorer_id, assist_1_id, assist_2_id)
+      VALUES (${id}, ${team_id}, ${period}, ${goal_type}, ${!!empty_net}, ${period_time}, ${scorer_id}, ${assist_1_id}, ${assist_2_id})
       RETURNING id
     `;
 
@@ -753,6 +752,48 @@ router.post('/:id/goals', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/goals/:goalId  – update an existing goal
+// ---------------------------------------------------------------------------
+router.put('/:id/goals/:goalId', async (req, res) => {
+  const { id, goalId } = req.params;
+  const {
+    team_id,
+    period,
+    goal_type = 'even-strength',
+    empty_net = false,
+    period_time = null,
+    scorer_id,
+    assist_1_id = null,
+    assist_2_id = null,
+  } = req.body;
+
+  if (!team_id || !period || !scorer_id) {
+    return res.status(400).json({ error: 'team_id, period, and scorer_id are required' });
+  }
+
+  try {
+    const rows = await sql`
+      UPDATE goals
+      SET team_id     = ${team_id},
+          period      = ${period},
+          goal_type   = ${goal_type},
+          empty_net   = ${!!empty_net},
+          period_time = ${period_time},
+          scorer_id   = ${scorer_id},
+          assist_1_id = ${assist_1_id},
+          assist_2_id = ${assist_2_id}
+      WHERE id = ${goalId} AND game_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Goal not found' });
+    return res.json({ id: rows[0].id });
+  } catch (err) {
+    console.error('goals update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // DELETE /api/admin/games/:id/goals/:goalId  – delete a goal
 // ---------------------------------------------------------------------------
 router.delete('/:id/goals/:goalId', async (req, res) => {
@@ -782,26 +823,38 @@ router.patch('/:id/shots', async (req, res) => {
   }
 
   try {
-    await sql`
-      INSERT INTO game_period_shots (game_id, period, home_shots, away_shots)
-      VALUES (${id}, ${period}, ${home_shots}, ${away_shots})
-      ON CONFLICT (game_id, period)
-      DO UPDATE SET home_shots = EXCLUDED.home_shots, away_shots = EXCLUDED.away_shots
-    `;
+    // Upsert into the JSONB array: remove existing entry for this period (if
+    // any), append the new entry, then re-sort by period order.
     const rows = await sql`
-      SELECT COALESCE(
-        json_agg(
-          json_build_object('period', period, 'home_shots', home_shots, 'away_shots', away_shots)
-          ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
-        ),
-        '[]'::json
-      ) AS period_shots
-      FROM game_period_shots
-      WHERE game_id = ${id}
+      UPDATE games
+      SET period_shots = (
+        SELECT COALESCE(
+          jsonb_agg(
+            entry
+            ORDER BY CASE entry->>'period'
+              WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3
+              WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+          ),
+          '[]'::jsonb
+        )
+        FROM (
+          SELECT jsonb_build_object(
+            'period',     ${period}::text,
+            'home_shots', ${home_shots}::int,
+            'away_shots', ${away_shots}::int
+          ) AS entry
+          UNION ALL
+          SELECT elem AS entry
+          FROM jsonb_array_elements(period_shots) AS elem
+          WHERE elem->>'period' != ${period}::text
+        ) sub
+      )
+      WHERE id = ${id}
+      RETURNING period_shots
     `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Game not found' });
     return res.json({ period_shots: rows[0].period_shots });
   } catch (err) {
-    if (err.code === '23514') return res.status(400).json({ error: 'Invalid period value' });
     console.error('shots upsert error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

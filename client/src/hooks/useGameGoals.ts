@@ -19,6 +19,7 @@ export interface GoalRecord {
   team_id: string;
   period: string;
   goal_type: string;
+  empty_net: boolean;
   period_time: string | null;
   scorer_id: string;
   assist_1_id: string | null;
@@ -45,12 +46,17 @@ export interface GoalRecord {
   assist_2_last_name: string | null;
   assist_2_photo: string | null;
   assist_2_jersey_number: number | null;
+  // Prior-game cumulative stats (finalized games in same season before this game)
+  scorer_prior_goals: number;
+  assist_1_prior_assists: number;
+  assist_2_prior_assists: number;
 }
 
 export interface PostGoalData {
   team_id: string;
   period: string;
   goal_type?: string;
+  empty_net?: boolean;
   period_time?: string | null;
   scorer_id: string;
   assist_1_id?: string | null;
@@ -98,6 +104,24 @@ const useGameGoals = (gameId: string | undefined) => {
     }
   };
 
+  const updateGoal = async (goalId: string, data: PostGoalData): Promise<boolean> => {
+    if (!gameId) return false;
+    try {
+      await axios.put<GoalRecord>(
+        `${API}/admin/games/${gameId}/goals/${goalId}`,
+        data,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['game-goals', gameId] });
+      await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update goal'));
+      return false;
+    }
+  };
+
   const deleteGoal = async (goalId: string): Promise<boolean> => {
     if (!gameId) return false;
     try {
@@ -116,7 +140,7 @@ const useGameGoals = (gameId: string | undefined) => {
     }
   };
 
-  return { goals, loading, addGoal, deleteGoal };
+  return { goals, loading, addGoal, updateGoal, deleteGoal };
 };
 
 export default useGameGoals;

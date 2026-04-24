@@ -26,7 +26,7 @@ import {
 import useTeamPlayers from '../../../hooks/useTeamPlayers';
 import useGameLineup from '../../../hooks/useGameLineup';
 import useGameRoster, { type GameRosterEntry } from '../../../hooks/useGameRoster';
-import useGameGoals from '../../../hooks/useGameGoals';
+import useGameGoals, { type GoalRecord } from '../../../hooks/useGameGoals';
 import useGameGoalieStats from '../../../hooks/useGameGoalieStats';
 import LineupRosterModal from './LineupRosterModal';
 import LineupCreatePlayersModal from './LineupCreatePlayersModal';
@@ -93,7 +93,6 @@ const GOAL_TYPES = [
   { value: 'even-strength', label: 'Even Strength' },
   { value: 'power-play', label: 'Power Play' },
   { value: 'shorthanded', label: 'Shorthanded' },
-  { value: 'empty-net', label: 'Empty Net' },
   { value: 'penalty-shot', label: 'Penalty Shot' },
   { value: 'own', label: 'Own Goal' },
 ];
@@ -153,14 +152,17 @@ const GameDetailsPage = () => {
     updateGameInfo,
     updatePeriodShots,
   } = useGameDetails(id);
-  const { goals, addGoal, deleteGoal } = useGameGoals(id);
+  const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(id);
   const { goalieStats, upsertGoalieStat, busy: goalieStatsBusy } = useGameGoalieStats(id);
 
   /**
    * Running goal/assist tallies per player, computed once in goal order
    * (period ASC, created_at ASC). At each goal we record:
-   *   - how many goals the scorer has scored so far (including this one)
-   *   - how many assists each assistant has accumulated so far
+   *   - cumulative goals the scorer has scored including prior games + up to this goal
+   *   - cumulative assists each assistant has accumulated including prior games + up to this goal
+   *
+   * Prior-game baselines (finalized games in same season before this game's scheduled_at)
+   * are fetched from the server and seeded on first encounter of each player.
    *
    * Keyed by goal.id for O(1) lookup during render.
    */
@@ -178,19 +180,29 @@ const GameDetailsPage = () => {
     >();
 
     for (const goal of goals) {
-      const scorerGoals = (goalCounts.get(goal.scorer_id) ?? 0) + 1;
+      // Seed from prior-game baseline on first encounter
+      if (!goalCounts.has(goal.scorer_id)) {
+        goalCounts.set(goal.scorer_id, goal.scorer_prior_goals ?? 0);
+      }
+      const scorerGoals = goalCounts.get(goal.scorer_id)! + 1;
       goalCounts.set(goal.scorer_id, scorerGoals);
 
       let assist1Assists: number | null = null;
       if (goal.assist_1_id) {
-        const n = (assistCounts.get(goal.assist_1_id) ?? 0) + 1;
+        if (!assistCounts.has(goal.assist_1_id)) {
+          assistCounts.set(goal.assist_1_id, goal.assist_1_prior_assists ?? 0);
+        }
+        const n = assistCounts.get(goal.assist_1_id)! + 1;
         assistCounts.set(goal.assist_1_id, n);
         assist1Assists = n;
       }
 
       let assist2Assists: number | null = null;
       if (goal.assist_2_id) {
-        const n = (assistCounts.get(goal.assist_2_id) ?? 0) + 1;
+        if (!assistCounts.has(goal.assist_2_id)) {
+          assistCounts.set(goal.assist_2_id, goal.assist_2_prior_assists ?? 0);
+        }
+        const n = assistCounts.get(goal.assist_2_id)! + 1;
         assistCounts.set(goal.assist_2_id, n);
         assist2Assists = n;
       }
@@ -220,11 +232,14 @@ const GameDetailsPage = () => {
   }, [goals]);
 
   // ── Goal form state ───────────────────────────────────────────────────────
-  const [goalPeriod, setGoalPeriod] = useState<1 | 2 | 3 | 'OT' | null>(null);
+  const [goalPeriod, setGoalPeriod] = useState<string | null>(null);
+  /** non-null when editing an existing goal; null when adding a new one */
+  const [goalEditId, setGoalEditId] = useState<string | null>(null);
   const [goalTeam, setGoalTeam] = useState<'away' | 'home'>('away');
   const [goalTimeMins, setGoalTimeMins] = useState('');
   const [goalTimeSecs, setGoalTimeSecs] = useState('');
   const [goalType, setGoalType] = useState('even-strength');
+  const [goalEmptyNet, setGoalEmptyNet] = useState(false);
   const [goalScorerId, setGoalScorerId] = useState('');
   const [goalAssist1Id, setGoalAssist1Id] = useState('');
   const [goalAssist2Id, setGoalAssist2Id] = useState('');
@@ -508,16 +523,38 @@ const GameDetailsPage = () => {
   };
 
   const openGoalModal = (period: 1 | 2 | 3 | 'OT') => {
-    setGoalPeriod(period);
+    setGoalEditId(null);
+    setGoalPeriod(String(period));
     setGoalTeam('away');
     setGoalTimeMins('');
     setGoalTimeSecs('');
     setGoalType('even-strength');
+    setGoalEmptyNet(false);
     setGoalScorerId('');
     setGoalAssist1Id('');
     setGoalAssist2Id('');
   };
-  const closeGoalModal = () => setGoalPeriod(null);
+
+  const openEditGoalModal = (goal: GoalRecord) => {
+    if (!game) return;
+    setGoalEditId(goal.id);
+    setGoalPeriod(goal.period);
+    setGoalTeam(goal.team_id === game.away_team_id ? 'away' : 'home');
+    const [mins = '', secs = ''] = (goal.period_time ?? ':').split(':');
+    setGoalTimeMins(mins);
+    setGoalTimeSecs(secs);
+    // Legacy 'empty-net' goal_type → treat as even-strength + empty_net flag
+    setGoalType(goal.goal_type === 'empty-net' ? 'even-strength' : goal.goal_type);
+    setGoalEmptyNet(goal.empty_net || goal.goal_type === 'empty-net');
+    setGoalScorerId(goal.scorer_id);
+    setGoalAssist1Id(goal.assist_1_id ?? '');
+    setGoalAssist2Id(goal.assist_2_id ?? '');
+  };
+
+  const closeGoalModal = () => {
+    setGoalPeriod(null);
+    setGoalEditId(null);
+  };
 
   const handleTeamChange = (team: 'away' | 'home') => {
     setGoalTeam(team);
@@ -640,10 +677,20 @@ const GameDetailsPage = () => {
         <div className={styles.scoreboard}>
           {/* ── Away side ── */}
           <div className={styles.teamSide}>
-            <div
-              className={styles.teamStripe}
-              style={{ background: game.away_team_primary_color }}
-            />
+            <div className={styles.teamStripe}>
+              <div
+                className={styles.teamStripePrimary}
+                style={{ background: game.away_team_primary_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary}
+                style={{ background: game.away_team_secondary_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary2}
+                style={{ background: game.away_team_secondary_color }}
+              />
+            </div>
             <button
               type="button"
               className={styles.teamLogoBtn}
@@ -715,10 +762,20 @@ const GameDetailsPage = () => {
 
           {/* ── Home side ── */}
           <div className={`${styles.teamSide} ${styles.teamSideHome}`}>
-            <div
-              className={`${styles.teamStripe} ${styles.teamStripeHome}`}
-              style={{ background: game.home_team_primary_color }}
-            />
+            <div className={`${styles.teamStripe} ${styles.teamStripeHome}`}>
+              <div
+                className={styles.teamStripePrimary}
+                style={{ background: game.home_team_primary_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary}
+                style={{ background: game.home_team_secondary_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary2}
+                style={{ background: game.home_team_secondary_color }}
+              />
+            </div>
             <button
               type="button"
               className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
@@ -837,7 +894,18 @@ const GameDetailsPage = () => {
                                     </span>
                                     <span className={styles.starName}>{nameLabel}</span>
                                     <span className={styles.starTeam}>{subLabel}</span>
-                                    {player.position !== 'G' && (
+                                    {player.position === 'G' ? (
+                                      (() => {
+                                        const gs = goalieStats.find(
+                                          (s) => s.goalie_id === playerId,
+                                        );
+                                        return gs ? (
+                                          <span className={styles.starStats}>
+                                            SA: {gs.shots_against} | SV: {gs.saves}
+                                          </span>
+                                        ) : null;
+                                      })()
+                                    ) : (
                                       <span className={styles.starStats}>
                                         G: {stats.goals} | A: {stats.assists}
                                       </span>
@@ -963,7 +1031,12 @@ const GameDetailsPage = () => {
                                               : '')
                                           : null,
                                       ].filter(Boolean) as string[];
-                                      const badge = GOAL_TYPE_BADGE[goal.goal_type] ?? null;
+                                      const primaryBadge =
+                                        goal.goal_type === 'empty-net'
+                                          ? null
+                                          : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
+                                      const showEN =
+                                        goal.empty_net || goal.goal_type === 'empty-net';
                                       return (
                                         <li
                                           key={goal.id}
@@ -1022,19 +1095,35 @@ const GameDetailsPage = () => {
                                             </span>
                                           </div>
 
-                                          {/* Goal type badge */}
-                                          {badge && (
-                                            <Tooltip text={badge.tooltip}>
+                                          {/* Goal type badges */}
+                                          {primaryBadge && (
+                                            <Tooltip text={primaryBadge.tooltip}>
                                               <Badge
-                                                label={badge.label}
-                                                intent={badge.intent}
+                                                label={primaryBadge.label}
+                                                intent={primaryBadge.intent}
+                                              />
+                                            </Tooltip>
+                                          )}
+                                          {showEN && (
+                                            <Tooltip text="Empty Net">
+                                              <Badge
+                                                label="EN"
+                                                intent="neutral"
                                               />
                                             </Tooltip>
                                           )}
 
-                                          {/* Delete goal */}
+                                          {/* Edit / Delete goal — in-progress only */}
                                           {isInProgress && (
                                             <ActionOverlay className={styles.goalActions}>
+                                              <Button
+                                                variant="ghost"
+                                                intent="neutral"
+                                                icon="edit"
+                                                size="sm"
+                                                tooltip="Edit goal"
+                                                onClick={() => openEditGoalModal(goal)}
+                                              />
                                               <Button
                                                 variant="ghost"
                                                 intent="danger"
@@ -1128,7 +1217,12 @@ const GameDetailsPage = () => {
                                                 : '')
                                             : null,
                                         ].filter(Boolean) as string[];
-                                        const badge = GOAL_TYPE_BADGE[goal.goal_type] ?? null;
+                                        const primaryBadge =
+                                          goal.goal_type === 'empty-net'
+                                            ? null
+                                            : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
+                                        const showEN =
+                                          goal.empty_net || goal.goal_type === 'empty-net';
                                         return (
                                           <li
                                             key={goal.id}
@@ -1181,18 +1275,34 @@ const GameDetailsPage = () => {
                                                   : 'Unassisted'}
                                               </span>
                                             </div>
-                                            {badge && (
-                                              <Tooltip text={badge.tooltip}>
+                                            {primaryBadge && (
+                                              <Tooltip text={primaryBadge.tooltip}>
                                                 <Badge
-                                                  label={badge.label}
-                                                  intent={badge.intent}
+                                                  label={primaryBadge.label}
+                                                  intent={primaryBadge.intent}
+                                                />
+                                              </Tooltip>
+                                            )}
+                                            {showEN && (
+                                              <Tooltip text="Empty Net">
+                                                <Badge
+                                                  label="EN"
+                                                  intent="neutral"
                                                 />
                                               </Tooltip>
                                             )}
 
-                                            {/* Delete goal */}
+                                            {/* Edit / Delete goal — in-progress only */}
                                             {isInProgress && (
                                               <ActionOverlay className={styles.goalActions}>
+                                                <Button
+                                                  variant="ghost"
+                                                  intent="neutral"
+                                                  icon="edit"
+                                                  size="sm"
+                                                  tooltip="Edit goal"
+                                                  onClick={() => openEditGoalModal(goal)}
+                                                />
                                                 <Button
                                                   variant="ghost"
                                                   intent="danger"
@@ -1280,26 +1390,50 @@ const GameDetailsPage = () => {
                                     >
                                       <td className={styles.goalieTdName}>
                                         <span className={styles.goalieNameCell}>
+                                          {/* Team logo — same size as goal entries */}
                                           {teamLogo ? (
                                             <img
                                               src={teamLogo}
                                               alt={teamCode}
-                                              className={styles.goalieLogo}
+                                              className={styles.goalTeamLogo}
                                             />
                                           ) : (
                                             <span
-                                              className={styles.goalieLogoPlaceholder}
+                                              className={styles.goalTeamLogoPlaceholder}
                                               style={{ background: primaryColor, color: textColor }}
                                             >
                                               {teamCode?.slice(0, 1)}
                                             </span>
                                           )}
-                                          <span className={styles.goalieNameLabel}>
-                                            {goalie.jersey_number != null
-                                              ? `#${goalie.jersey_number} `
-                                              : ''}
-                                            {goalie.first_name} {goalie.last_name}
-                                          </span>
+                                          {/* Player photo */}
+                                          {goalie.photo ? (
+                                            <img
+                                              src={goalie.photo}
+                                              alt=""
+                                              className={styles.goalScorerPhoto}
+                                            />
+                                          ) : (
+                                            <span
+                                              className={styles.goalScorerPhotoPlaceholder}
+                                              style={{ background: primaryColor, color: textColor }}
+                                            >
+                                              {goalie.last_name?.charAt(0)}
+                                            </span>
+                                          )}
+                                          {/* Name + jersey */}
+                                          <div className={styles.goalInfo}>
+                                            <span className={styles.goalScorer}>
+                                              {formatPlayerName(
+                                                goalie.first_name,
+                                                goalie.last_name,
+                                              )}
+                                            </span>
+                                            {goalie.jersey_number != null && (
+                                              <span className={styles.goalAssists}>
+                                                #{goalie.jersey_number}
+                                              </span>
+                                            )}
+                                          </div>
                                         </span>
                                       </td>
                                       <td className={styles.goalieTd}>
@@ -1796,9 +1930,9 @@ const GameDetailsPage = () => {
         return (
           <Modal
             open={goalPeriod !== null}
-            title="Score Goal"
+            title={goalEditId ? 'Edit Goal' : 'Score Goal'}
             onClose={closeGoalModal}
-            confirmLabel={goalSubmitting ? 'Saving…' : 'Record Goal'}
+            confirmLabel={goalSubmitting ? 'Saving…' : goalEditId ? 'Save Changes' : 'Record Goal'}
             confirmDisabled={!!busy || goalSubmitting || !goalScorerId}
             busy={goalSubmitting}
             onConfirm={async () => {
@@ -1807,15 +1941,21 @@ const GameDetailsPage = () => {
               const periodTime = `${(goalTimeMins || '00').padStart(2, '0')}:${(goalTimeSecs || '00').padStart(2, '0')}`;
               setGoalSubmitting(true);
               try {
-                await addGoal({
+                const payload = {
                   team_id: teamId,
-                  period: String(goalPeriod),
+                  period: goalPeriod,
                   goal_type: goalType,
+                  empty_net: goalEmptyNet,
                   period_time: periodTime,
                   scorer_id: goalScorerId,
                   assist_1_id: goalAssist1Id || null,
                   assist_2_id: goalAssist2Id || null,
-                });
+                };
+                if (goalEditId) {
+                  await updateGoal(goalEditId, payload);
+                } else {
+                  await addGoal(payload);
+                }
                 closeGoalModal();
               } finally {
                 setGoalSubmitting(false);
@@ -1926,7 +2066,7 @@ const GameDetailsPage = () => {
                 </div>
 
                 {/* Goal type */}
-                <div className={styles.goalFormField}>
+                <div className={`${styles.goalFormField} ${styles.goalTypeField}`}>
                   <label className={styles.goalFormLabel}>Goal Type</label>
                   <Select
                     value={goalType}
@@ -1935,6 +2075,30 @@ const GameDetailsPage = () => {
                     disabled={goalSubmitting}
                   />
                 </div>
+
+                {/* Empty Net toggle — hidden for penalty shot / own goal */}
+                {goalType !== 'penalty-shot' && goalType !== 'own' && (
+                  <div className={styles.goalFormField}>
+                    <label className={styles.goalFormLabel}>EN</label>
+                    <button
+                      type="button"
+                      className={[
+                        styles.emptyNetToggle,
+                        goalEmptyNet ? styles.emptyNetToggleOn : '',
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                      onClick={() => setGoalEmptyNet((v) => !v)}
+                      disabled={goalSubmitting}
+                      title="Empty Net"
+                    >
+                      <Icon
+                        name={goalEmptyNet ? 'check_box' : 'check_box_outline_blank'}
+                        size="1.25rem"
+                      />
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Scorer */}
@@ -2371,25 +2535,46 @@ const GameDetailsPage = () => {
                   key={field.id}
                   className={styles.shotsGoalieRow}
                 >
-                  <span className={styles.shotsTeamInfo}>
+                  <span className={styles.goalieNameCell}>
+                    {/* Team logo */}
                     {logo ? (
                       <img
                         src={logo}
                         alt={code}
-                        className={styles.shotsTeamLogo}
+                        className={styles.goalTeamLogo}
                       />
                     ) : (
                       <span
-                        className={styles.shotsTeamLogoPlaceholder}
+                        className={styles.goalTeamLogoPlaceholder}
                         style={{ background: primary, color: text }}
                       >
                         {code?.slice(0, 1)}
                       </span>
                     )}
-                    <span className={styles.shotsTeamName}>
-                      {goalie.jersey_number != null ? `#${goalie.jersey_number} ` : ''}
-                      {goalie.first_name} {goalie.last_name}
-                    </span>
+                    {/* Player photo */}
+                    {goalie.photo ? (
+                      <img
+                        src={goalie.photo}
+                        alt=""
+                        className={styles.goalScorerPhoto}
+                      />
+                    ) : (
+                      <span
+                        className={styles.goalScorerPhotoPlaceholder}
+                        style={{ background: primary, color: text }}
+                      >
+                        {goalie.last_name?.charAt(0)}
+                      </span>
+                    )}
+                    {/* Name + jersey */}
+                    <div className={styles.goalInfo}>
+                      <span className={styles.goalScorer}>
+                        {formatPlayerName(goalie.first_name, goalie.last_name)}
+                      </span>
+                      {goalie.jersey_number != null && (
+                        <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
+                      )}
+                    </div>
                   </span>
                   <div className={styles.shotsGoalieInputs}>
                     <Field
@@ -2429,74 +2614,85 @@ const GameDetailsPage = () => {
           confirmDisabled={shotsEditSubmitting}
           busy={shotsEditSubmitting}
         >
-          <div className={styles.shotsModalBody}>
-            {shotsEditFields.map((field, i) => {
-              const periodId = shotsEditPeriodIds[i];
-              const periodLabel =
-                linescorePeriods.find((p) => p.id === periodId)?.label ?? periodId;
-              const teamRows = [
-                {
-                  key: 'away',
-                  logo: game.away_team_logo,
-                  code: game.away_team_code,
-                  name: game.away_team_name,
-                  primary: game.away_team_primary_color,
-                  text: game.away_team_text_color,
-                  fieldName: `periods.${i}.away_shots` as const,
-                },
-                {
-                  key: 'home',
-                  logo: game.home_team_logo,
-                  code: game.home_team_code,
-                  name: game.home_team_name,
-                  primary: game.home_team_primary_color,
-                  text: game.home_team_text_color,
-                  fieldName: `periods.${i}.home_shots` as const,
-                },
-              ];
-              return (
-                <div key={field.id}>
-                  {i > 0 && <hr className={styles.lineupDivider} />}
-                  <p className={styles.shotsEditPeriodLabel}>{periodLabel}</p>
-                  {teamRows.map((row) => (
-                    <div
-                      key={row.key}
-                      className={styles.shotsTeamRow}
+          <table className={`${styles.periodsTable} ${styles.shotsEditTable}`}>
+            <thead>
+              <tr>
+                <th className={styles.thTeam}></th>
+                {shotsEditFields.map((field, i) => {
+                  const periodId = shotsEditPeriodIds[i];
+                  const label = linescorePeriods.find((p) => p.id === periodId)?.label ?? periodId;
+                  return (
+                    <th
+                      key={field.id}
+                      className={styles.thPeriod}
                     >
-                      <span className={styles.shotsTeamInfo}>
-                        {row.logo ? (
-                          <img
-                            src={row.logo}
-                            alt={row.code}
-                            className={styles.shotsTeamLogo}
-                          />
-                        ) : (
-                          <span
-                            className={styles.shotsTeamLogoPlaceholder}
-                            style={{ background: row.primary, color: row.text }}
-                          >
-                            {row.code?.slice(0, 1)}
-                          </span>
-                        )}
-                        <span className={styles.shotsTeamName}>{row.name}</span>
-                      </span>
-                      <div className={styles.shotsFieldWrap}>
-                        <Field
-                          type="number"
-                          control={shotsEditControl}
-                          name={row.fieldName}
-                          placeholder="0"
-                          min={0}
-                          disabled={shotsEditSubmitting}
-                          transform={(v) => v.replace(/[^0-9]/g, '')}
+                      {label}
+                    </th>
+                  );
+                })}
+              </tr>
+            </thead>
+            <tbody>
+              {(
+                [
+                  {
+                    key: 'away',
+                    logo: game.away_team_logo,
+                    code: game.away_team_code,
+                    primary: game.away_team_primary_color,
+                    text: game.away_team_text_color,
+                    fieldKey: 'away_shots',
+                  },
+                  {
+                    key: 'home',
+                    logo: game.home_team_logo,
+                    code: game.home_team_code,
+                    primary: game.home_team_primary_color,
+                    text: game.home_team_text_color,
+                    fieldKey: 'home_shots',
+                  },
+                ] as const
+              ).map((row) => (
+                <tr key={row.key}>
+                  <td className={styles.tdTeam}>
+                    <span className={styles.linescoreTeam}>
+                      {row.logo ? (
+                        <img
+                          src={row.logo}
+                          alt={row.code}
+                          className={styles.linescoreLogo}
                         />
-                      </div>
-                    </div>
+                      ) : (
+                        <span
+                          className={styles.linescoreLogoPlaceholder}
+                          style={{ background: row.primary, color: row.text }}
+                        >
+                          {row.code?.slice(0, 1)}
+                        </span>
+                      )}
+                      <span className={styles.linescoreCode}>{row.code}</span>
+                    </span>
+                  </td>
+                  {shotsEditFields.map((field, i) => (
+                    <td
+                      key={field.id}
+                      className={styles.tdShotsInput}
+                    >
+                      <Field
+                        type="number"
+                        control={shotsEditControl}
+                        name={`periods.${i}.${row.fieldKey}` as const}
+                        placeholder="0"
+                        min={0}
+                        disabled={shotsEditSubmitting}
+                        transform={(v) => v.replace(/[^0-9]/g, '')}
+                      />
+                    </td>
                   ))}
-                </div>
-              );
-            })}
-          </div>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </Modal>
       )}
     </>
