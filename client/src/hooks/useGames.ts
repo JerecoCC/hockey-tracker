@@ -321,6 +321,31 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
+  const updateStars = async (stars: {
+    star1: string;
+    star2: string;
+    star3: string;
+  }): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('update-stars');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { star_1_id: stars.star1, star_2_id: stars.star2, star_3_id: stars.star3 },
+        { headers: authHeaders() },
+      );
+      toast.success('Three Stars updated!');
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update stars'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const updatePeriodShots = async (
     period: string,
     home_shots: number,
@@ -344,6 +369,6 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, updateStatus, advancePeriod, endGame, updateGameInfo, updatePeriodShots };
+  return { game, loading, busy, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots };
 };
 

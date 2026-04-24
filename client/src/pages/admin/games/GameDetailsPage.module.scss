@@ -101,11 +101,6 @@
   }
 }
 
-// Home side button: info on the left, logo on the right (handled by DOM order)
-.teamLogoBtnHome {
-  flex-direction: row-reverse;
-}
-
 // ── Team logo / placeholder ────────────────────────────────────────────────────
 .teamLogo {
   width: 52px;
@@ -935,5 +930,115 @@ tbody tr:not(:last-child) td {
 
 .starStats {
   font-size: $font-xs;
+  color: $text-dim;
+}
+
+// ── Record Shots modal ───────────────────────────────────────────────────────
+.shotsModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.shotsTeamRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs 0;
+}
+
+.shotsTeamInfo {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.shotsTeamLogo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.shotsTeamLogoPlaceholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.shotsTeamName {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shotsFieldWrap {
+  width: 80px;
+  flex-shrink: 0;
+
+  // Remove the label wrapper margin so the number input sits flush in the row
+  label {
+    margin-bottom: 0;
+  }
+}
+
+// Goalie rows inside the shots modal (logo + name | SA input | SV input)
+.shotsGoalieHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+
+  // Title ("Goalie Stats") fills the left
+  > span:first-child {
+    flex: 1;
+  }
+}
+
+.shotsGoalieColLabel {
+  width: 72px;
+  text-align: center;
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+}
+
+.shotsGoalieRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs 0;
+}
+
+.shotsGoalieInputs {
+  display: flex;
+  gap: $space-sm;
+  flex-shrink: 0;
+
+  label {
+    margin-bottom: 0;
+    width: 72px;
+  }
+}
+
+// ── Shots edit modal (all-period editor) ──────────────────────────────────────
+
+.shotsEditPeriodLabel {
+  margin: 0 0 $space-xs;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
   color: $text-dim;
 }
