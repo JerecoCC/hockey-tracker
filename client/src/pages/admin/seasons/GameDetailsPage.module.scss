@@ -234,17 +234,44 @@
   font-style: normal;
 }
 
-// MM:SS time input styled to match the design system Field component
-.timeInput {
+// Row that places Period Time (MM:SS) and Goal Type side by side
+.goalFormTimeRow {
+  display: flex;
+  gap: $space-md;
+  align-items: flex-start;
+
+  // Period time field — shrinks to its natural width
+  > :first-child {
+    flex-shrink: 0;
+  }
+
+  // Goal type — expands to fill remaining space
+  > :last-child {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+// Inline container for [MM] : [SS] inputs under a single label
+.timeInputRow {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+// Individual MM or SS segment input
+.timeSegmentInput {
   background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
   color: $text-body;
   font-size: $font-base;
   font-family: inherit;
-  padding: $space-sm $space-md;
-  width: 100%;
+  padding: 0 $space-md;
+  width: 3.5rem;
+  height: 42px;
   outline: none;
+  text-align: center;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.08em;
   box-sizing: border-box;
@@ -257,6 +284,15 @@
   &:focus {
     border-color: $accent;
   }
+}
+
+// Colon separator between MM and SS inputs
+.timeColon {
+  color: $text-dim;
+  font-size: $font-base;
+  font-weight: 600;
+  user-select: none;
+  padding-bottom: 1px; // optical alignment
 }
 
 // Side-by-side row for the two assist selects

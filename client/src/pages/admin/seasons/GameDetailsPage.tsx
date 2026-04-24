@@ -95,7 +95,8 @@ const GameDetailsPage = () => {
   // ── Goal form state ───────────────────────────────────────────────────────
   const [goalPeriod, setGoalPeriod] = useState<1 | 2 | 3 | null>(null);
   const [goalTeam, setGoalTeam] = useState<'away' | 'home'>('away');
-  const [goalTime, setGoalTime] = useState('');
+  const [goalTimeMins, setGoalTimeMins] = useState('');
+  const [goalTimeSecs, setGoalTimeSecs] = useState('');
   const [goalType, setGoalType] = useState('even-strength');
   const [goalScorerId, setGoalScorerId] = useState('');
   const [goalAssist1Id, setGoalAssist1Id] = useState('');
@@ -139,7 +140,8 @@ const GameDetailsPage = () => {
   const openGoalModal = (period: 1 | 2 | 3) => {
     setGoalPeriod(period);
     setGoalTeam('away');
-    setGoalTime('');
+    setGoalTimeMins('');
+    setGoalTimeSecs('');
     setGoalType('even-strength');
     setGoalScorerId('');
     setGoalAssist1Id('');
@@ -154,15 +156,16 @@ const GameDetailsPage = () => {
     setGoalAssist2Id('');
   };
 
-  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-    if (digits.length >= 2 && parseInt(digits.slice(0, 2), 10) > 20) return;
-    if (digits.length === 4) {
-      const mins = parseInt(digits.slice(0, 2), 10);
-      const secs = parseInt(digits.slice(2), 10);
-      if ((mins === 20 && secs > 0) || secs > 59) return;
-    }
-    setGoalTime(digits.length > 2 ? `${digits.slice(0, 2)}:${digits.slice(2)}` : digits);
+  const handleTimeMinsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+    if (val !== '' && parseInt(val, 10) > 20) return;
+    setGoalTimeMins(val);
+  };
+
+  const handleTimeSecsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
+    if (val !== '' && parseInt(val, 10) > 59) return;
+    setGoalTimeSecs(val);
   };
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
@@ -511,6 +514,8 @@ const GameDetailsPage = () => {
                 teamName: string,
                 teamCode: string,
                 teamLogo: string | null | undefined,
+                primaryColor: string,
+                textColor: string,
                 rosterEntries: GameRosterEntry[],
                 lineupMap: typeof awayLineupMap,
               ) => (
@@ -573,6 +578,8 @@ const GameDetailsPage = () => {
                             key={e.id}
                             image={e.photo}
                             image_shape="circle"
+                            primaryColor={primaryColor}
+                            textColor={textColor}
                             name={`${jerseyPrefix}${e.last_name}, ${e.first_name}`}
                             placeholder={`${e.first_name[0]}${e.last_name[0]}`}
                             subtitle={
@@ -624,6 +631,8 @@ const GameDetailsPage = () => {
                         game.away_team_name,
                         game.away_team_code,
                         game.away_team_logo,
+                        game.away_team_primary_color,
+                        game.away_team_text_color,
                         awayRoster,
                         awayLineupMap,
                       )}
@@ -632,6 +641,8 @@ const GameDetailsPage = () => {
                         game.home_team_name,
                         game.home_team_code,
                         game.home_team_logo,
+                        game.home_team_primary_color,
+                        game.home_team_text_color,
                         homeRoster,
                         homeLineupMap,
                       )}
@@ -664,7 +675,7 @@ const GameDetailsPage = () => {
               <Button
                 variant="filled"
                 intent="accent"
-                disabled={!!busy || !goalScorerId}
+                disabled={!!busy || !goalScorerId || !goalTimeMins || !goalTimeSecs}
                 onClick={async () => {
                   await scoreGoal(goalPeriod!, goalTeam);
                   closeGoalModal();
@@ -703,27 +714,45 @@ const GameDetailsPage = () => {
                 </button>
               </div>
 
-              {/* Period time */}
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>Period Time</label>
-                <input
-                  type="text"
-                  className={styles.timeInput}
-                  placeholder="MM:SS"
-                  value={goalTime}
-                  onChange={handleTimeChange}
-                  inputMode="numeric"
-                />
-              </div>
+              {/* Period time + Goal type row */}
+              <div className={styles.goalFormTimeRow}>
+                {/* Period time — one label, two inputs with colon */}
+                <div className={styles.goalFormField}>
+                  <label className={styles.goalFormLabel}>
+                    Period Time <span className={styles.required}>*</span>
+                  </label>
+                  <div className={styles.timeInputRow}>
+                    <input
+                      type="text"
+                      className={styles.timeSegmentInput}
+                      placeholder="MM"
+                      value={goalTimeMins}
+                      onChange={handleTimeMinsChange}
+                      inputMode="numeric"
+                      maxLength={2}
+                    />
+                    <span className={styles.timeColon}>:</span>
+                    <input
+                      type="text"
+                      className={styles.timeSegmentInput}
+                      placeholder="SS"
+                      value={goalTimeSecs}
+                      onChange={handleTimeSecsChange}
+                      inputMode="numeric"
+                      maxLength={2}
+                    />
+                  </div>
+                </div>
 
-              {/* Goal type */}
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>Goal Type</label>
-                <Select
-                  value={goalType}
-                  options={GOAL_TYPES}
-                  onChange={setGoalType}
-                />
+                {/* Goal type */}
+                <div className={styles.goalFormField}>
+                  <label className={styles.goalFormLabel}>Goal Type</label>
+                  <Select
+                    value={goalType}
+                    options={GOAL_TYPES}
+                    onChange={setGoalType}
+                  />
+                </div>
               </div>
 
               {/* Scorer */}
@@ -736,6 +765,7 @@ const GameDetailsPage = () => {
                   options={playerOptions}
                   placeholder="— Select scorer —"
                   onChange={setGoalScorerId}
+                  searchable
                 />
               </div>
 
@@ -748,6 +778,7 @@ const GameDetailsPage = () => {
                     options={playerOptions}
                     placeholder="— Optional —"
                     onChange={setGoalAssist1Id}
+                    searchable
                   />
                 </div>
                 <div className={styles.goalFormField}>
@@ -757,6 +788,7 @@ const GameDetailsPage = () => {
                     options={playerOptions}
                     placeholder="— Optional —"
                     onChange={setGoalAssist2Id}
+                    searchable
                   />
                 </div>
               </div>
