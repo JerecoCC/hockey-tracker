@@ -137,10 +137,6 @@
   gap: 2px;
 }
 
-.teamInfoHome {
-  align-items: flex-end;
-}
-
 .teamFullName {
   font-size: $font-base;
   font-weight: 700;
@@ -703,6 +699,13 @@ tbody tr:not(:last-child) td {
   display: flex;
   flex-direction: column;
   gap: $space-lg;
+}
+
+// ── Linescore card action row ──────────────────────────────────────────────────
+.linescoreActions {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-sm;
 }
 
 // ── Linescore team cell ────────────────────────────────────────────────────────

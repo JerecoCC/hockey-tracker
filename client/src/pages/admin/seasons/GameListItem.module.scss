@@ -1,0 +1,127 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Row ───────────────────────────────────────────────────────────────────────
+
+.item {
+  position: relative;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+
+    .actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+// ── Content column (matchup + subtitle) ───────────────────────────────────────
+
+.content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+// ── Matchup row: away | score | home ──────────────────────────────────────────
+
+.matchup {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.team {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.teamCode {
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-bright;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
+// ── Team logo / placeholder ───────────────────────────────────────────────────
+
+.logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.2));
+}
+
+.logoPlaceholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+// Losing team: dim logo + code together
+.teamLoser {
+  opacity: 0.45;
+}
+
+// ── Score area ────────────────────────────────────────────────────────────────
+
+.scoreArea {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.scoreNum {
+  font-size: $font-lg;
+  font-weight: 700;
+  color: $text-bright;
+  min-width: 1.2rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.scoreSep {
+  font-size: $font-sm;
+  color: $text-dim;
+  flex-shrink: 0;
+}
+
+// Losing team's score number
+.scoreLoser {
+  color: $text-dim;
+}
+
+// ── Subtitle (date · venue) ───────────────────────────────────────────────────
+
+.subtitle {
+  font-size: $font-xs;
+  color: $text-dim;
+  @include truncate;
+}
+
+// ── Hover-revealed actions slot ───────────────────────────────────────────────
+// Structural styles (position, opacity, gradient) live in ActionOverlay.module.scss.
+
+.actions {
+}

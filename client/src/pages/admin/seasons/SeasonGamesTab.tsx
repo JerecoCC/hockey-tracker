@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import ListItem, { type ListItemRightContent } from '../../../components/ListItem/ListItem';
 import useGames, { type GameRecord, type GameStatus } from '../../../hooks/useGames';
+import GameListItem from './GameListItem';
 import { type SeasonTeam } from '../../../hooks/useSeasonDetails';
 import type { SelectOption } from '../../../components/Select/Select';
 import BulkCreateGamesModal from './BulkCreateGamesModal';
@@ -42,19 +42,10 @@ const formatSubtitle = (game: GameRecord): string => {
   return parts.join(' • ') || 'No date set';
 };
 
-const formatNote = (game: GameRecord): string | undefined => {
-  if (game.status !== 'final') return undefined;
+const formatStatusLabel = (game: GameRecord): string => {
+  if (game.status !== 'final') return STATUS_LABEL[game.status];
   const suffix = game.shootout ? ' (SO)' : (game.overtime_periods ?? 0) > 0 ? ' (OT)' : '';
-  return `${game.game_type === 'regular' ? 'Regular' : game.game_type === 'playoff' ? 'Playoff' : 'Preseason'}${suffix}`;
-};
-
-const formatRightContent = (game: GameRecord): ListItemRightContent => {
-  if (game.status === 'final') {
-    const away = game.period_scores.reduce((sum, ps) => sum + ps.away_goals, 0);
-    const home = game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0);
-    return { type: 'tag', label: `${away} – ${home}`, intent: 'neutral' };
-  }
-  return { type: 'tag', label: STATUS_LABEL[game.status], intent: STATUS_INTENT[game.status] };
+  return `Final${suffix}`;
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -128,13 +119,27 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
         ) : (
           <ul className={styles.list}>
             {games.map((game) => (
-              <ListItem
+              <GameListItem
                 key={game.id}
-                hideImage
-                name={`${game.away_team_code} @ ${game.home_team_code}`}
+                awayTeam={{
+                  logo: game.away_team_logo,
+                  code: game.away_team_code,
+                  primaryColor: game.away_team_primary_color,
+                  textColor: game.away_team_text_color,
+                }}
+                homeTeam={{
+                  logo: game.home_team_logo,
+                  code: game.home_team_code,
+                  primaryColor: game.home_team_primary_color,
+                  textColor: game.home_team_text_color,
+                }}
+                awayScore={game.period_scores.reduce((s, ps) => s + ps.away_goals, 0)}
+                homeScore={game.period_scores.reduce((s, ps) => s + ps.home_goals, 0)}
+                showScore={game.status === 'final' || game.status === 'in_progress'}
+                isFinal={game.status === 'final'}
+                statusLabel={formatStatusLabel(game)}
+                statusIntent={STATUS_INTENT[game.status]}
                 subtitle={formatSubtitle(game)}
-                note={formatNote(game)}
-                rightContent={formatRightContent(game)}
                 actions={[
                   {
                     icon: 'open_in_new',

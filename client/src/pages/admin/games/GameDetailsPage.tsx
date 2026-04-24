@@ -39,6 +39,12 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
+const DATE_FMT_SHORT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
   in_progress: 'In Progress',
@@ -390,7 +396,14 @@ const GameDetailsPage = () => {
               { label: 'Leagues', path: '/admin/leagues' },
               { label: leagueName, path: leagueHref },
               { label: seasonName, path: seasonHref },
-              { label: `${game.away_team_code} @ ${game.home_team_code}` },
+              {
+                label: [
+                  `${game.away_team_code} @ ${game.home_team_code}`,
+                  game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · '),
+              },
             ]}
           />
         }
@@ -515,147 +528,309 @@ const GameDetailsPage = () => {
             label: 'Summary',
             content: (
               <div className={styles.tabContent}>
-                {isInProgress || isFinal ? (
-                  <div className={styles.summaryGrid}>
-                    {/* ── Left column: Three Stars + Scoring ── */}
-                    <div className={styles.summaryLeft}>
-                      {hasStars &&
-                        (() => {
-                          const starDefs = [
-                            { starCount: 1, playerId: game.star_1_id! },
-                            { starCount: 2, playerId: game.star_2_id! },
-                            { starCount: 3, playerId: game.star_3_id! },
-                          ];
-                          return (
-                            <Card title="Three Stars">
-                              <div className={styles.starsRow}>
-                                {starDefs.map(({ starCount, playerId }) => {
-                                  const player = roster.find((e) => e.player_id === playerId);
-                                  if (!player) return null;
-                                  const isAway = player.team_id === game.away_team_id;
-                                  const teamCode = isAway
-                                    ? game.away_team_code
-                                    : game.home_team_code;
-                                  const primaryColor = isAway
-                                    ? game.away_team_primary_color
-                                    : game.home_team_primary_color;
-                                  const textColor = isAway
-                                    ? game.away_team_text_color
-                                    : game.home_team_text_color;
-                                  const stats = playerGameStats.get(playerId) ?? {
-                                    goals: 0,
-                                    assists: 0,
-                                  };
-                                  const nameLabel = `${player.first_name} ${player.last_name}`;
-                                  const subLabel = [
-                                    player.jersey_number != null
-                                      ? `#${player.jersey_number}`
-                                      : null,
-                                    teamCode,
-                                    player.position ?? null,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' • ');
-                                  return (
-                                    <div
-                                      key={starCount}
-                                      className={styles.starItem}
-                                    >
-                                      {player.photo ? (
-                                        <img
-                                          src={player.photo}
-                                          alt=""
-                                          className={styles.starPhoto}
-                                        />
-                                      ) : (
-                                        <span
-                                          className={styles.starPhotoPlaceholder}
-                                          style={{ background: primaryColor, color: textColor }}
-                                        >
-                                          {player.first_name[0]}
-                                          {player.last_name[0]}
-                                        </span>
-                                      )}
-                                      <span className={styles.starIcons}>
-                                        {Array.from({ length: starCount }).map((_, i) => (
-                                          <Icon
-                                            key={i}
-                                            name="stars"
-                                          />
-                                        ))}
+                <div className={styles.summaryGrid}>
+                  {/* ── Left column: Three Stars + Scoring ── */}
+                  <div className={styles.summaryLeft}>
+                    {hasStars &&
+                      (() => {
+                        const starDefs = [
+                          { starCount: 1, playerId: game.star_1_id! },
+                          { starCount: 2, playerId: game.star_2_id! },
+                          { starCount: 3, playerId: game.star_3_id! },
+                        ];
+                        return (
+                          <Card title="Three Stars">
+                            <div className={styles.starsRow}>
+                              {starDefs.map(({ starCount, playerId }) => {
+                                const player = roster.find((e) => e.player_id === playerId);
+                                if (!player) return null;
+                                const isAway = player.team_id === game.away_team_id;
+                                const teamCode = isAway ? game.away_team_code : game.home_team_code;
+                                const primaryColor = isAway
+                                  ? game.away_team_primary_color
+                                  : game.home_team_primary_color;
+                                const textColor = isAway
+                                  ? game.away_team_text_color
+                                  : game.home_team_text_color;
+                                const stats = playerGameStats.get(playerId) ?? {
+                                  goals: 0,
+                                  assists: 0,
+                                };
+                                const nameLabel = `${player.first_name} ${player.last_name}`;
+                                const subLabel = [
+                                  player.jersey_number != null ? `#${player.jersey_number}` : null,
+                                  teamCode,
+                                  player.position ?? null,
+                                ]
+                                  .filter(Boolean)
+                                  .join(' • ');
+                                return (
+                                  <div
+                                    key={starCount}
+                                    className={styles.starItem}
+                                  >
+                                    {player.photo ? (
+                                      <img
+                                        src={player.photo}
+                                        alt=""
+                                        className={styles.starPhoto}
+                                      />
+                                    ) : (
+                                      <span
+                                        className={styles.starPhotoPlaceholder}
+                                        style={{ background: primaryColor, color: textColor }}
+                                      >
+                                        {player.first_name[0]}
+                                        {player.last_name[0]}
                                       </span>
-                                      <span className={styles.starName}>{nameLabel}</span>
-                                      <span className={styles.starTeam}>{subLabel}</span>
-                                      {player.position !== 'G' && (
-                                        <span className={styles.starStats}>
-                                          G: {stats.goals} | A: {stats.assists}
-                                        </span>
-                                      )}
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </Card>
+                                    )}
+                                    <span className={styles.starIcons}>
+                                      {Array.from({ length: starCount }).map((_, i) => (
+                                        <Icon
+                                          key={i}
+                                          name="stars"
+                                        />
+                                      ))}
+                                    </span>
+                                    <span className={styles.starName}>{nameLabel}</span>
+                                    <span className={styles.starTeam}>{subLabel}</span>
+                                    {player.position !== 'G' && (
+                                      <span className={styles.starStats}>
+                                        G: {stats.goals} | A: {stats.assists}
+                                      </span>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </Card>
+                        );
+                      })()}
+                    <Card title="Scoring">
+                      <div className={styles.periodList}>
+                        {PERIODS.map(({ num, label, periodId }, idx) => {
+                          const currentIdx = PERIOD_IDS.indexOf(
+                            game.current_period as '1' | '2' | '3',
                           );
-                        })()}
-                      <Card title="Scoring">
-                        <div className={styles.periodList}>
-                          {PERIODS.map(({ num, label, periodId }, idx) => {
-                            const currentIdx = PERIOD_IDS.indexOf(
-                              game.current_period as '1' | '2' | '3',
-                            );
-                            const isActive = !isFinal && game.current_period === periodId;
-                            const isDone = isFinal || currentIdx > idx;
+                          const isActive = !isFinal && game.current_period === periodId;
+                          const isDone = isFinal || currentIdx > idx;
 
-                            const isPending = !isActive && !isDone;
+                          const isPending = !isActive && !isDone;
 
+                          return (
+                            <Accordion
+                              key={num}
+                              variant="static"
+                              className={isActive ? styles.periodItemActive : undefined}
+                              label={<span className={styles.periodLabel}>{label}</span>}
+                              hoverActions={
+                                isActive
+                                  ? ([
+                                      {
+                                        icon: 'sports_hockey',
+                                        tooltip: 'Score Goal',
+                                        intent: 'neutral' as const,
+                                        disabled: !!busy,
+                                        onClick: () => openGoalModal(num as 1 | 2 | 3),
+                                      },
+                                      num < 3
+                                        ? {
+                                            icon: 'flag',
+                                            tooltip: 'End Period',
+                                            intent: 'accent' as const,
+                                            disabled: !!busy,
+                                            onClick: () =>
+                                              advancePeriod(String(num + 1) as CurrentPeriod),
+                                          }
+                                        : {
+                                            icon: 'more_time',
+                                            tooltip: 'Go to Overtime',
+                                            intent: 'accent' as const,
+                                            disabled: !!busy,
+                                            onClick: () => advancePeriod('OT'),
+                                          },
+                                    ].filter(Boolean) as AccordionAction[])
+                                  : undefined
+                              }
+                            >
+                              {(() => {
+                                const periodGoals = goals.filter((g) => g.period === periodId);
+                                if (periodGoals.length === 0) {
+                                  if (isActive || isDone) {
+                                    return <p className={styles.noGoalsText}>No goals scored</p>;
+                                  }
+                                  return null;
+                                }
+                                return (
+                                  <ul className={styles.goalList}>
+                                    {periodGoals.map((goal) => {
+                                      const tally = tallyByGoalId.get(goal.id);
+                                      const scorerName =
+                                        formatPlayerName(
+                                          goal.scorer_first_name,
+                                          goal.scorer_last_name,
+                                        ) + (tally ? ` (${tally.scorerGoals})` : '');
+                                      const assists = [
+                                        goal.assist_1_id
+                                          ? formatPlayerName(
+                                              goal.assist_1_first_name,
+                                              goal.assist_1_last_name,
+                                            ) +
+                                            (tally?.assist1Assists != null
+                                              ? ` (${tally.assist1Assists})`
+                                              : '')
+                                          : null,
+                                        goal.assist_2_id
+                                          ? formatPlayerName(
+                                              goal.assist_2_first_name,
+                                              goal.assist_2_last_name,
+                                            ) +
+                                            (tally?.assist2Assists != null
+                                              ? ` (${tally.assist2Assists})`
+                                              : '')
+                                          : null,
+                                      ].filter(Boolean) as string[];
+                                      const badge = GOAL_TYPE_BADGE[goal.goal_type] ?? null;
+                                      return (
+                                        <li
+                                          key={goal.id}
+                                          className={styles.goalItem}
+                                        >
+                                          {/* Time */}
+                                          <span className={styles.goalTime}>
+                                            {goal.period_time ?? '—'}
+                                          </span>
+
+                                          {/* Team logo */}
+                                          {goal.team_logo ? (
+                                            <img
+                                              src={goal.team_logo}
+                                              alt={goal.team_code}
+                                              className={styles.goalTeamLogo}
+                                            />
+                                          ) : (
+                                            <span
+                                              className={styles.goalTeamLogoPlaceholder}
+                                              style={{
+                                                background: goal.team_primary_color,
+                                                color: goal.team_text_color,
+                                              }}
+                                            >
+                                              {goal.team_code?.slice(0, 1)}
+                                            </span>
+                                          )}
+
+                                          {/* Scorer avatar */}
+                                          {goal.scorer_photo ? (
+                                            <img
+                                              src={goal.scorer_photo}
+                                              alt=""
+                                              className={styles.goalScorerPhoto}
+                                            />
+                                          ) : (
+                                            <span
+                                              className={styles.goalScorerPhotoPlaceholder}
+                                              style={{
+                                                background: goal.team_primary_color,
+                                                color: goal.team_text_color,
+                                              }}
+                                            >
+                                              {goal.scorer_last_name?.charAt(0)}
+                                            </span>
+                                          )}
+
+                                          {/* Name + assists */}
+                                          <div className={styles.goalInfo}>
+                                            <span className={styles.goalScorer}>{scorerName}</span>
+                                            <span className={styles.goalAssists}>
+                                              {assists.length > 0
+                                                ? assists.join(', ')
+                                                : 'Unassisted'}
+                                            </span>
+                                          </div>
+
+                                          {/* Goal type badge */}
+                                          {badge && (
+                                            <Badge
+                                              label={badge.label}
+                                              intent={badge.intent}
+                                            />
+                                          )}
+
+                                          {/* Delete goal */}
+                                          {isInProgress && (
+                                            <Button
+                                              variant="ghost"
+                                              intent="danger"
+                                              icon="delete"
+                                              size="sm"
+                                              tooltip="Delete goal"
+                                              className={styles.goalDeleteBtn}
+                                              onClick={() => deleteGoal(goal.id)}
+                                            />
+                                          )}
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                );
+                              })()}
+                            </Accordion>
+                          );
+                        })}
+
+                        {/* ── Overtime accordion ── */}
+                        {(game.current_period === 'OT' ||
+                          goals.some((g) => g.period === 'OT') ||
+                          (isFinal && (game.overtime_periods ?? 0) > 0)) &&
+                          (() => {
+                            const isOTActive = !isFinal && game.current_period === 'OT';
+                            const isOTDone = isFinal;
+                            const otGoals = goals.filter((g) => g.period === 'OT');
                             return (
                               <Accordion
-                                key={num}
                                 variant="static"
-                                className={isActive ? styles.periodItemActive : undefined}
-                                label={<span className={styles.periodLabel}>{label}</span>}
+                                className={isOTActive ? styles.periodItemActive : undefined}
+                                label={<span className={styles.periodLabel}>Overtime</span>}
                                 hoverActions={
-                                  isActive
-                                    ? ([
-                                        {
-                                          icon: 'sports_hockey',
-                                          tooltip: 'Score Goal',
-                                          intent: 'neutral' as const,
-                                          disabled: !!busy,
-                                          onClick: () => openGoalModal(num as 1 | 2 | 3),
-                                        },
-                                        num < 3
-                                          ? {
-                                              icon: 'flag',
-                                              tooltip: 'End Period',
-                                              intent: 'accent' as const,
-                                              disabled: !!busy,
-                                              onClick: () =>
-                                                advancePeriod(String(num + 1) as CurrentPeriod),
-                                            }
-                                          : {
-                                              icon: 'more_time',
-                                              tooltip: 'Go to Overtime',
-                                              intent: 'accent' as const,
-                                              disabled: !!busy,
-                                              onClick: () => advancePeriod('OT'),
+                                  isOTActive
+                                    ? otGoals.length > 0
+                                      ? [
+                                          {
+                                            icon: 'flag',
+                                            tooltip: 'End Game',
+                                            intent: 'danger' as const,
+                                            disabled: !!busy,
+                                            onClick: () => {
+                                              setStar1Id('');
+                                              setStar2Id('');
+                                              setStar3Id('');
+                                              setStarsModalOpen(true);
                                             },
-                                      ].filter(Boolean) as AccordionAction[])
+                                          },
+                                        ]
+                                      : [
+                                          {
+                                            icon: 'sports_hockey',
+                                            tooltip: 'Score Goal',
+                                            intent: 'neutral' as const,
+                                            disabled: !!busy,
+                                            onClick: () => openGoalModal('OT'),
+                                          },
+                                        ]
                                     : undefined
                                 }
                               >
                                 {(() => {
-                                  const periodGoals = goals.filter((g) => g.period === periodId);
-                                  if (periodGoals.length === 0) {
-                                    if (isActive || isDone) {
+                                  if (otGoals.length === 0) {
+                                    if (isOTActive || isOTDone) {
                                       return <p className={styles.noGoalsText}>No goals scored</p>;
                                     }
                                     return null;
                                   }
                                   return (
                                     <ul className={styles.goalList}>
-                                      {periodGoals.map((goal) => {
+                                      {otGoals.map((goal) => {
                                         const tally = tallyByGoalId.get(goal.id);
                                         const scorerName =
                                           formatPlayerName(
@@ -688,12 +863,9 @@ const GameDetailsPage = () => {
                                             key={goal.id}
                                             className={styles.goalItem}
                                           >
-                                            {/* Time */}
                                             <span className={styles.goalTime}>
                                               {goal.period_time ?? '—'}
                                             </span>
-
-                                            {/* Team logo */}
                                             {goal.team_logo ? (
                                               <img
                                                 src={goal.team_logo}
@@ -711,8 +883,6 @@ const GameDetailsPage = () => {
                                                 {goal.team_code?.slice(0, 1)}
                                               </span>
                                             )}
-
-                                            {/* Scorer avatar */}
                                             {goal.scorer_photo ? (
                                               <img
                                                 src={goal.scorer_photo}
@@ -730,8 +900,6 @@ const GameDetailsPage = () => {
                                                 {goal.scorer_last_name?.charAt(0)}
                                               </span>
                                             )}
-
-                                            {/* Name + assists */}
                                             <div className={styles.goalInfo}>
                                               <span className={styles.goalScorer}>
                                                 {scorerName}
@@ -742,8 +910,6 @@ const GameDetailsPage = () => {
                                                   : 'Unassisted'}
                                               </span>
                                             </div>
-
-                                            {/* Goal type badge */}
                                             {badge && (
                                               <Badge
                                                 label={badge.label}
@@ -752,166 +918,7 @@ const GameDetailsPage = () => {
                                             )}
 
                                             {/* Delete goal */}
-                                            <Button
-                                              variant="ghost"
-                                              intent="danger"
-                                              icon="delete"
-                                              size="sm"
-                                              tooltip="Delete goal"
-                                              className={styles.goalDeleteBtn}
-                                              onClick={() => deleteGoal(goal.id)}
-                                            />
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  );
-                                })()}
-                              </Accordion>
-                            );
-                          })}
-
-                          {/* ── Overtime accordion ── */}
-                          {(game.current_period === 'OT' ||
-                            goals.some((g) => g.period === 'OT') ||
-                            (isFinal && (game.overtime_periods ?? 0) > 0)) &&
-                            (() => {
-                              const isOTActive = !isFinal && game.current_period === 'OT';
-                              const isOTDone = isFinal;
-                              const otGoals = goals.filter((g) => g.period === 'OT');
-                              return (
-                                <Accordion
-                                  variant="static"
-                                  className={isOTActive ? styles.periodItemActive : undefined}
-                                  label={<span className={styles.periodLabel}>Overtime</span>}
-                                  hoverActions={
-                                    isOTActive
-                                      ? otGoals.length > 0
-                                        ? [
-                                            {
-                                              icon: 'flag',
-                                              tooltip: 'End Game',
-                                              intent: 'danger' as const,
-                                              disabled: !!busy,
-                                              onClick: () => {
-                                                setStar1Id('');
-                                                setStar2Id('');
-                                                setStar3Id('');
-                                                setStarsModalOpen(true);
-                                              },
-                                            },
-                                          ]
-                                        : [
-                                            {
-                                              icon: 'sports_hockey',
-                                              tooltip: 'Score Goal',
-                                              intent: 'neutral' as const,
-                                              disabled: !!busy,
-                                              onClick: () => openGoalModal('OT'),
-                                            },
-                                          ]
-                                      : undefined
-                                  }
-                                >
-                                  {(() => {
-                                    if (otGoals.length === 0) {
-                                      if (isOTActive || isOTDone) {
-                                        return (
-                                          <p className={styles.noGoalsText}>No goals scored</p>
-                                        );
-                                      }
-                                      return null;
-                                    }
-                                    return (
-                                      <ul className={styles.goalList}>
-                                        {otGoals.map((goal) => {
-                                          const tally = tallyByGoalId.get(goal.id);
-                                          const scorerName =
-                                            formatPlayerName(
-                                              goal.scorer_first_name,
-                                              goal.scorer_last_name,
-                                            ) + (tally ? ` (${tally.scorerGoals})` : '');
-                                          const assists = [
-                                            goal.assist_1_id
-                                              ? formatPlayerName(
-                                                  goal.assist_1_first_name,
-                                                  goal.assist_1_last_name,
-                                                ) +
-                                                (tally?.assist1Assists != null
-                                                  ? ` (${tally.assist1Assists})`
-                                                  : '')
-                                              : null,
-                                            goal.assist_2_id
-                                              ? formatPlayerName(
-                                                  goal.assist_2_first_name,
-                                                  goal.assist_2_last_name,
-                                                ) +
-                                                (tally?.assist2Assists != null
-                                                  ? ` (${tally.assist2Assists})`
-                                                  : '')
-                                              : null,
-                                          ].filter(Boolean) as string[];
-                                          const badge = GOAL_TYPE_BADGE[goal.goal_type] ?? null;
-                                          return (
-                                            <li
-                                              key={goal.id}
-                                              className={styles.goalItem}
-                                            >
-                                              <span className={styles.goalTime}>
-                                                {goal.period_time ?? '—'}
-                                              </span>
-                                              {goal.team_logo ? (
-                                                <img
-                                                  src={goal.team_logo}
-                                                  alt={goal.team_code}
-                                                  className={styles.goalTeamLogo}
-                                                />
-                                              ) : (
-                                                <span
-                                                  className={styles.goalTeamLogoPlaceholder}
-                                                  style={{
-                                                    background: goal.team_primary_color,
-                                                    color: goal.team_text_color,
-                                                  }}
-                                                >
-                                                  {goal.team_code?.slice(0, 1)}
-                                                </span>
-                                              )}
-                                              {goal.scorer_photo ? (
-                                                <img
-                                                  src={goal.scorer_photo}
-                                                  alt=""
-                                                  className={styles.goalScorerPhoto}
-                                                />
-                                              ) : (
-                                                <span
-                                                  className={styles.goalScorerPhotoPlaceholder}
-                                                  style={{
-                                                    background: goal.team_primary_color,
-                                                    color: goal.team_text_color,
-                                                  }}
-                                                >
-                                                  {goal.scorer_last_name?.charAt(0)}
-                                                </span>
-                                              )}
-                                              <div className={styles.goalInfo}>
-                                                <span className={styles.goalScorer}>
-                                                  {scorerName}
-                                                </span>
-                                                <span className={styles.goalAssists}>
-                                                  {assists.length > 0
-                                                    ? assists.join(', ')
-                                                    : 'Unassisted'}
-                                                </span>
-                                              </div>
-                                              {badge && (
-                                                <Badge
-                                                  label={badge.label}
-                                                  intent={badge.intent}
-                                                />
-                                              )}
-
-                                              {/* Delete goal */}
+                                            {isInProgress && (
                                               <Button
                                                 variant="ghost"
                                                 intent="danger"
@@ -921,261 +928,216 @@ const GameDetailsPage = () => {
                                                 className={styles.goalDeleteBtn}
                                                 onClick={() => deleteGoal(goal.id)}
                                               />
-                                            </li>
-                                          );
-                                        })}
-                                      </ul>
-                                    );
-                                  })()}
-                                </Accordion>
-                              );
-                            })()}
-                        </div>
-                      </Card>
-                    </div>
-                    {/* end summaryLeft */}
-
-                    {/* ── Right column: Game Info (final only) + Linescore ── */}
-                    <div className={styles.summaryRight}>
-                      {isFinal && (
-                        <Card
-                          title="Game Info"
-                          action={
-                            <Button
-                              variant="ghost"
-                              intent="neutral"
-                              icon="edit"
-                              size="sm"
-                              tooltip="Edit game info"
-                              onClick={openGameInfoEdit}
-                            />
-                          }
-                        >
-                          <div className={styles.infoGrid}>
-                            <div className={styles.infoItem}>
-                              <span className={styles.infoLabel}>Venue</span>
-                              <span
-                                className={game.venue ? styles.infoValue : styles.infoValueMuted}
-                              >
-                                {game.venue ?? '—'}
-                              </span>
-                            </div>
-                            <div className={styles.infoItem}>
-                              <span className={styles.infoLabel}>Type</span>
-                              <span className={styles.infoValue}>
-                                {GAME_TYPE_LABEL[game.game_type]}
-                              </span>
-                            </div>
-                            {game.game_number != null && (
-                              <div className={styles.infoItem}>
-                                <span className={styles.infoLabel}>Game #</span>
-                                <span className={styles.infoValue}>{game.game_number}</span>
-                              </div>
-                            )}
-                            {game.notes && (
-                              <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-                                <span className={styles.infoLabel}>Notes</span>
-                                <span className={styles.infoValue}>{game.notes}</span>
-                              </div>
-                            )}
-                          </div>
-                        </Card>
-                      )}
-
-                      <Card
-                        title="Linescore"
-                        action={
-                          isInProgress && ['3', 'OT', 'SO'].includes(game.current_period ?? '') ? (
-                            <Button
-                              variant="filled"
-                              intent="danger"
-                              icon="flag"
-                              size="sm"
-                              disabled={!!busy}
-                              onClick={() => {
-                                setStar1Id('');
-                                setStar2Id('');
-                                setStar3Id('');
-                                setStarsModalOpen(true);
-                              }}
-                            >
-                              End Game
-                            </Button>
-                          ) : undefined
-                        }
-                      >
-                        <table className={styles.periodsTable}>
-                          <thead>
-                            <tr>
-                              <th className={styles.thTeam}></th>
-                              {linescorePeriods.map((p) => (
-                                <th
-                                  key={p.id}
-                                  className={styles.thPeriod}
-                                >
-                                  {p.label}
-                                </th>
-                              ))}
-                              <th className={styles.thTotal}>T</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {(() => {
-                              const currentPeriodIdx = PERIOD_IDS.indexOf(
-                                game.current_period as '1' | '2' | '3',
-                              );
-                              return [
-                                {
-                                  teamId: game.away_team_id,
-                                  teamCode: game.away_team_code,
-                                  teamLogo: game.away_team_logo,
-                                  primaryColor: game.away_team_primary_color,
-                                  textColor: game.away_team_text_color,
-                                  total: liveAwayScore,
-                                  isLoser: isFinal && liveAwayScore < liveHomeScore,
-                                },
-                                {
-                                  teamId: game.home_team_id,
-                                  teamCode: game.home_team_code,
-                                  teamLogo: game.home_team_logo,
-                                  primaryColor: game.home_team_primary_color,
-                                  textColor: game.home_team_text_color,
-                                  total: liveHomeScore,
-                                  isLoser: isFinal && liveHomeScore < liveAwayScore,
-                                },
-                              ].map((row) => (
-                                <tr key={row.teamId}>
-                                  <td className={styles.tdTeam}>
-                                    <span className={styles.linescoreTeam}>
-                                      {row.teamLogo ? (
-                                        <img
-                                          src={row.teamLogo}
-                                          alt={row.teamCode}
-                                          className={styles.linescoreLogo}
-                                        />
-                                      ) : (
-                                        <span
-                                          className={styles.linescoreLogoPlaceholder}
-                                          style={{
-                                            background: row.primaryColor,
-                                            color: row.textColor,
-                                          }}
-                                        >
-                                          {row.teamCode?.slice(0, 1)}
-                                        </span>
-                                      )}
-                                      <span className={styles.linescoreCode}>{row.teamCode}</span>
-                                    </span>
-                                  </td>
-                                  {linescorePeriods.map((p) => {
-                                    const ps = game.period_scores.find((s) => s.period === p.id);
-                                    const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
-                                    // Period is "done" (played) when:
-                                    //   - game is final (all periods are done), OR
-                                    //   - it's a regular period whose index is before the current period, OR
-                                    //   - it's OT/SO (pIdx === -1) which only appears when it's been played
-                                    const isPeriodDone =
-                                      isFinal || (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
-                                    const rawGoals =
-                                      row.teamId === game.away_team_id
-                                        ? ps?.away_goals
-                                        : ps?.home_goals;
-                                    const goals = rawGoals ?? (isPeriodDone ? 0 : '—');
-                                    return (
-                                      <td
-                                        key={p.id}
-                                        className={styles.tdGoals}
-                                      >
-                                        {goals}
-                                      </td>
-                                    );
-                                  })}
-                                  <td
-                                    className={`${styles.tdTotal}${row.isLoser ? ` ${styles.scoreNumberLoser}` : ''}`}
-                                  >
-                                    {row.total}
-                                  </td>
-                                </tr>
-                              ));
-                            })()}
-                          </tbody>
-                        </table>
-                      </Card>
-                    </div>
+                                            )}
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  );
+                                })()}
+                              </Accordion>
+                            );
+                          })()}
+                      </div>
+                    </Card>
                   </div>
-                ) : (
-                  /* Scheduled / postponed / cancelled — just show Game Info */
-                  <Card
-                    title="Game Info"
-                    action={
-                      <>
-                        {game.status === 'scheduled' && (
-                          <>
-                            <Button
-                              variant="filled"
-                              intent="accent"
-                              icon="play_arrow"
-                              size="sm"
-                              disabled={!!busy}
-                              onClick={() => updateStatus('in_progress')}
-                            >
-                              Start Game
-                            </Button>
-                            <MoreActionsMenu
-                              disabled={!!busy}
-                              items={[
-                                {
-                                  label: 'Reschedule Game',
-                                  icon: 'calendar',
-                                  onClick: () => updateStatus('postponed'),
-                                },
-                                {
-                                  label: 'Cancel Game',
-                                  icon: 'close',
-                                  intent: 'danger',
-                                  onClick: () => updateStatus('cancelled'),
-                                },
-                              ]}
-                            />
-                          </>
-                        )}
+                  {/* end summaryLeft */}
+
+                  {/* ── Right column: Game Info (final only) + Linescore ── */}
+                  <div className={styles.summaryRight}>
+                    <Card
+                      title="Game Info"
+                      action={
                         <Button
-                          variant="ghost"
+                          variant="outlined"
                           intent="neutral"
                           icon="edit"
                           size="sm"
                           tooltip="Edit game info"
                           onClick={openGameInfoEdit}
                         />
-                      </>
-                    }
-                  >
-                    <div className={styles.infoGrid}>
-                      <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Venue</span>
-                        <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
-                          {game.venue ?? '—'}
-                        </span>
-                      </div>
-                      <div className={styles.infoItem}>
-                        <span className={styles.infoLabel}>Type</span>
-                        <span className={styles.infoValue}>{GAME_TYPE_LABEL[game.game_type]}</span>
-                      </div>
-                      {game.game_number != null && (
+                      }
+                    >
+                      <div className={styles.infoGrid}>
                         <div className={styles.infoItem}>
-                          <span className={styles.infoLabel}>Game #</span>
-                          <span className={styles.infoValue}>{game.game_number}</span>
+                          <span className={styles.infoLabel}>Venue</span>
+                          <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
+                            {game.venue ?? '—'}
+                          </span>
                         </div>
-                      )}
-                      {game.notes && (
-                        <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-                          <span className={styles.infoLabel}>Notes</span>
-                          <span className={styles.infoValue}>{game.notes}</span>
+                        <div className={styles.infoItem}>
+                          <span className={styles.infoLabel}>Type</span>
+                          <span className={styles.infoValue}>
+                            {GAME_TYPE_LABEL[game.game_type]}
+                          </span>
                         </div>
-                      )}
-                    </div>
-                  </Card>
-                )}
+                        {game.game_number != null && (
+                          <div className={styles.infoItem}>
+                            <span className={styles.infoLabel}>Game #</span>
+                            <span className={styles.infoValue}>{game.game_number}</span>
+                          </div>
+                        )}
+                        {game.notes && (
+                          <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+                            <span className={styles.infoLabel}>Notes</span>
+                            <span className={styles.infoValue}>{game.notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+
+                    <Card
+                      title="Linescore"
+                      action={
+                        <div className={styles.linescoreActions}>
+                          {game.status === 'scheduled' && (
+                            <>
+                              <Button
+                                variant="filled"
+                                intent="accent"
+                                icon="play_arrow"
+                                size="sm"
+                                tooltip="Start Game"
+                                disabled={!!busy}
+                                onClick={() => updateStatus('in_progress')}
+                              />
+                              <MoreActionsMenu
+                                disabled={!!busy}
+                                items={[
+                                  {
+                                    label: 'Reschedule Game',
+                                    icon: 'calendar',
+                                    onClick: () => updateStatus('postponed'),
+                                  },
+                                  {
+                                    label: 'Cancel Game',
+                                    icon: 'close',
+                                    intent: 'danger',
+                                    onClick: () => updateStatus('cancelled'),
+                                  },
+                                ]}
+                              />
+                            </>
+                          )}
+                          {isInProgress &&
+                            ['3', 'OT', 'SO'].includes(game.current_period ?? '') && (
+                              <Button
+                                variant="filled"
+                                intent="danger"
+                                icon="flag"
+                                size="sm"
+                                tooltip="End Game"
+                                disabled={!!busy}
+                                onClick={() => {
+                                  setStar1Id('');
+                                  setStar2Id('');
+                                  setStar3Id('');
+                                  setStarsModalOpen(true);
+                                }}
+                              />
+                            )}
+                        </div>
+                      }
+                    >
+                      <table className={styles.periodsTable}>
+                        <thead>
+                          <tr>
+                            <th className={styles.thTeam}></th>
+                            {linescorePeriods.map((p) => (
+                              <th
+                                key={p.id}
+                                className={styles.thPeriod}
+                              >
+                                {p.label}
+                              </th>
+                            ))}
+                            <th className={styles.thTotal}>T</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(() => {
+                            const currentPeriodIdx = PERIOD_IDS.indexOf(
+                              game.current_period as '1' | '2' | '3',
+                            );
+                            return [
+                              {
+                                teamId: game.away_team_id,
+                                teamCode: game.away_team_code,
+                                teamLogo: game.away_team_logo,
+                                primaryColor: game.away_team_primary_color,
+                                textColor: game.away_team_text_color,
+                                total: liveAwayScore,
+                                isLoser: isFinal && liveAwayScore < liveHomeScore,
+                              },
+                              {
+                                teamId: game.home_team_id,
+                                teamCode: game.home_team_code,
+                                teamLogo: game.home_team_logo,
+                                primaryColor: game.home_team_primary_color,
+                                textColor: game.home_team_text_color,
+                                total: liveHomeScore,
+                                isLoser: isFinal && liveHomeScore < liveAwayScore,
+                              },
+                            ].map((row) => (
+                              <tr key={row.teamId}>
+                                <td className={styles.tdTeam}>
+                                  <span className={styles.linescoreTeam}>
+                                    {row.teamLogo ? (
+                                      <img
+                                        src={row.teamLogo}
+                                        alt={row.teamCode}
+                                        className={styles.linescoreLogo}
+                                      />
+                                    ) : (
+                                      <span
+                                        className={styles.linescoreLogoPlaceholder}
+                                        style={{
+                                          background: row.primaryColor,
+                                          color: row.textColor,
+                                        }}
+                                      >
+                                        {row.teamCode?.slice(0, 1)}
+                                      </span>
+                                    )}
+                                    <span className={styles.linescoreCode}>{row.teamCode}</span>
+                                  </span>
+                                </td>
+                                {linescorePeriods.map((p) => {
+                                  const ps = game.period_scores.find((s) => s.period === p.id);
+                                  const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
+                                  // Period is "done" (played) when:
+                                  //   - game is final (all periods are done), OR
+                                  //   - it's a regular period whose index is before the current period, OR
+                                  //   - it's OT/SO (pIdx === -1) which only appears when it's been played
+                                  const isPeriodDone =
+                                    isFinal || (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
+                                  const rawGoals =
+                                    row.teamId === game.away_team_id
+                                      ? ps?.away_goals
+                                      : ps?.home_goals;
+                                  const goals = rawGoals ?? (isPeriodDone ? 0 : '—');
+                                  return (
+                                    <td
+                                      key={p.id}
+                                      className={styles.tdGoals}
+                                    >
+                                      {goals}
+                                    </td>
+                                  );
+                                })}
+                                <td
+                                  className={`${styles.tdTotal}${row.isLoser ? ` ${styles.scoreNumberLoser}` : ''}`}
+                                >
+                                  {row.total}
+                                </td>
+                              </tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </Card>
+                  </div>
+                </div>
               </div>
             ),
           },
