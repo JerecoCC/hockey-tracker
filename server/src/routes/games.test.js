@@ -20,7 +20,9 @@ const GAME = {
   id: 'game-1', season_id: 'season-1',
   home_team_id: 'team-1', away_team_id: 'team-2',
   home_team_name: 'Sharks', home_team_code: 'SJS', home_team_logo: null,
+  home_team_primary_color: '#006272', home_team_secondary_color: '#EA7200', home_team_text_color: '#ffffff',
   away_team_name: 'Kings',  away_team_code: 'LAK', away_team_logo: null,
+  away_team_primary_color: '#111111', away_team_secondary_color: '#A2AAAD', away_team_text_color: '#ffffff',
   game_type: 'regular', status: 'scheduled',
   scheduled_at: '2024-10-15T19:00:00Z', venue: 'SAP Center',
   home_score: null, away_score: null,
@@ -77,6 +79,14 @@ describe('GET /api/admin/games/:id', () => {
     const res = await request(app).get('/api/admin/games/game-1');
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('game-1');
+  });
+
+  it('includes home and away secondary_color fields', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+    const res = await request(app).get('/api/admin/games/game-1');
+    expect(res.status).toBe(200);
+    expect(res.body.home_team_secondary_color).toBe('#EA7200');
+    expect(res.body.away_team_secondary_color).toBe('#A2AAAD');
   });
 
   it('returns 404 when game not found', async () => {
@@ -286,6 +296,299 @@ describe('PATCH /api/admin/games/playoff-series/:seriesId', () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).patch('/api/admin/games/playoff-series/series-1')
       .send({ home_wins: 1 });
+    expect(res.status).toBe(500);
+  });
+});
+
+
+// ── Sub-resource fixtures ────────────────────────────────────────────────────
+
+const GOAL = {
+  id: 'goal-1', game_id: 'game-1', team_id: 'team-1',
+  period: '1', goal_type: 'even-strength', empty_net: false,
+  period_time: '10:23', scorer_id: 'player-1',
+  assist_1_id: 'player-2', assist_2_id: null, created_at: new Date().toISOString(),
+  team_name: 'Sharks', team_code: 'SJS', team_logo: null,
+  team_primary_color: '#006272', team_text_color: '#ffffff',
+  scorer_first_name: 'Joe', scorer_last_name: 'Smith',
+  scorer_photo: null, scorer_jersey_number: 39,
+  assist_1_first_name: 'Wayne', assist_1_last_name: 'Gretzky',
+  assist_1_photo: null, assist_1_jersey_number: 99,
+  assist_2_first_name: null, assist_2_last_name: null,
+  assist_2_photo: null, assist_2_jersey_number: null,
+  scorer_prior_goals: 2, assist_1_prior_assists: 5, assist_2_prior_assists: 0,
+};
+
+const GOALIE_STAT = {
+  id: 'gs-1', game_id: 'game-1', team_id: 'team-1', goalie_id: 'player-10',
+  shots_against: 30, saves: 28, created_at: new Date().toISOString(),
+  goalie_first_name: 'Martin', goalie_last_name: 'Jones',
+  goalie_photo: null, goalie_jersey_number: 31,
+  team_name: 'Sharks', team_code: 'SJS', team_logo: null,
+  team_primary_color: '#006272', team_text_color: '#ffffff',
+};
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/games/:id/goals
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/games/:id/goals', () => {
+  it('returns an array of goals with prior stats', async () => {
+    sql.mockResolvedValueOnce([GOAL]);
+    const res = await request(app).get('/api/admin/games/game-1/goals');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].id).toBe('goal-1');
+    expect(res.body[0].scorer_prior_goals).toBe(2);
+    expect(res.body[0].assist_1_prior_assists).toBe(5);
+  });
+
+  it('returns an empty array when no goals exist', async () => {
+    sql.mockResolvedValueOnce([]);
+    const res = await request(app).get('/api/admin/games/game-1/goals');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/games/game-1/goals');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/:id/goals
+// ---------------------------------------------------------------------------
+describe('POST /api/admin/games/:id/goals', () => {
+  it('returns 400 when required fields are missing', async () => {
+    const res = await request(app).post('/api/admin/games/game-1/goals')
+      .send({ team_id: 'team-1', period: '1' }); // missing scorer_id
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+  });
+
+  it('returns 404 when game does not exist', async () => {
+    sql.mockResolvedValueOnce([]); // game lookup → empty
+    const res = await request(app).post('/api/admin/games/nope/goals')
+      .send({ team_id: 'team-1', period: '1', scorer_id: 'player-1' });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('returns 400 when team is not a participant', async () => {
+    sql.mockResolvedValueOnce([{ home_team_id: 'team-1', away_team_id: 'team-2' }]);
+    const res = await request(app).post('/api/admin/games/game-1/goals')
+      .send({ team_id: 'team-99', period: '1', scorer_id: 'player-1' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/participant/i);
+  });
+
+  it('creates a goal and returns 201 with full record', async () => {
+    sql
+      .mockResolvedValueOnce([{ home_team_id: 'team-1', away_team_id: 'team-2' }]) // game lookup
+      .mockResolvedValueOnce([{ id: 'goal-1' }])   // INSERT RETURNING id
+      .mockResolvedValueOnce([GOAL]);               // SELECT full record
+    const res = await request(app).post('/api/admin/games/game-1/goals').send({
+      team_id: 'team-1', period: '1', scorer_id: 'player-1',
+      goal_type: 'power-play', empty_net: false, period_time: '10:23',
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe('goal-1');
+    expect(res.body.goal_type).toBe('even-strength'); // from fixture
+  });
+
+  it('returns 400 on FK violation', async () => {
+    sql.mockResolvedValueOnce([{ home_team_id: 'team-1', away_team_id: 'team-2' }]);
+    sql.mockRejectedValueOnce(Object.assign(new Error('fk'), { code: '23503' }));
+    const res = await request(app).post('/api/admin/games/game-1/goals')
+      .send({ team_id: 'team-1', period: '1', scorer_id: 'bad-player' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/invalid/i);
+  });
+
+  it('returns 500 on generic DB error', async () => {
+    sql.mockResolvedValueOnce([{ home_team_id: 'team-1', away_team_id: 'team-2' }]);
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).post('/api/admin/games/game-1/goals')
+      .send({ team_id: 'team-1', period: '1', scorer_id: 'player-1' });
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/goals/:goalId
+// ---------------------------------------------------------------------------
+describe('PUT /api/admin/games/:id/goals/:goalId', () => {
+  it('returns 400 when required fields are missing', async () => {
+    const res = await request(app).put('/api/admin/games/game-1/goals/goal-1')
+      .send({ team_id: 'team-1', period: '1' }); // missing scorer_id
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+  });
+
+  it('updates a goal and returns the goal id', async () => {
+    sql.mockResolvedValueOnce([{ id: 'goal-1' }]);
+    const res = await request(app).put('/api/admin/games/game-1/goals/goal-1').send({
+      team_id: 'team-1', period: '1', scorer_id: 'player-1',
+      goal_type: 'shorthanded', empty_net: false, period_time: '05:00',
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe('goal-1');
+  });
+
+  it('returns 404 when goal not found', async () => {
+    sql.mockResolvedValueOnce([]); // UPDATE RETURNING → empty
+    const res = await request(app).put('/api/admin/games/game-1/goals/nope')
+      .send({ team_id: 'team-1', period: '1', scorer_id: 'player-1' });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).put('/api/admin/games/game-1/goals/goal-1')
+      .send({ team_id: 'team-1', period: '1', scorer_id: 'player-1' });
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/goals/:goalId
+// ---------------------------------------------------------------------------
+describe('DELETE /api/admin/games/:id/goals/:goalId', () => {
+  it('deletes a goal and returns 204', async () => {
+    sql.mockResolvedValueOnce([{ id: 'goal-1' }]);
+    const res = await request(app).delete('/api/admin/games/game-1/goals/goal-1');
+    expect(res.status).toBe(204);
+  });
+
+  it('returns 404 when goal not found', async () => {
+    sql.mockResolvedValueOnce([]);
+    const res = await request(app).delete('/api/admin/games/game-1/goals/nope');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).delete('/api/admin/games/game-1/goals/goal-1');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/games/:id/shots
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/games/:id/shots', () => {
+  it('returns 400 when required fields are missing', async () => {
+    const res = await request(app).patch('/api/admin/games/game-1/shots')
+      .send({ period: '1', home_shots: 10 }); // missing away_shots
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+  });
+
+  it('upserts shots and returns period_shots', async () => {
+    const periodShots = [{ period: '1', home_shots: 10, away_shots: 8 }];
+    sql.mockResolvedValueOnce([{ period_shots: periodShots }]);
+    const res = await request(app).patch('/api/admin/games/game-1/shots')
+      .send({ period: '1', home_shots: 10, away_shots: 8 });
+    expect(res.status).toBe(200);
+    expect(res.body.period_shots).toHaveLength(1);
+    expect(res.body.period_shots[0].period).toBe('1');
+  });
+
+  it('returns 404 when game not found', async () => {
+    sql.mockResolvedValueOnce([]); // UPDATE RETURNING → empty
+    const res = await request(app).patch('/api/admin/games/nope/shots')
+      .send({ period: '1', home_shots: 5, away_shots: 5 });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).patch('/api/admin/games/game-1/shots')
+      .send({ period: '1', home_shots: 5, away_shots: 5 });
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/games/:id/goalie-stats
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/games/:id/goalie-stats', () => {
+  it('returns an array of goalie stats', async () => {
+    sql.mockResolvedValueOnce([GOALIE_STAT]);
+    const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0].id).toBe('gs-1');
+    expect(res.body[0].shots_against).toBe(30);
+    expect(res.body[0].saves).toBe(28);
+  });
+
+  it('returns an empty array when no goalie stats exist', async () => {
+    sql.mockResolvedValueOnce([]);
+    const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/goalie-stats
+// ---------------------------------------------------------------------------
+describe('PUT /api/admin/games/:id/goalie-stats', () => {
+  it('returns 400 when required fields are missing', async () => {
+    const res = await request(app).put('/api/admin/games/game-1/goalie-stats')
+      .send({ goalie_id: 'player-10', team_id: 'team-1' }); // missing shots_against, saves
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+  });
+
+  it('upserts goalie stats and returns the record', async () => {
+    sql
+      .mockResolvedValueOnce([]) // INSERT ON CONFLICT (no meaningful return)
+      .mockResolvedValueOnce([GOALIE_STAT]); // SELECT full record
+    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
+      goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe('gs-1');
+    expect(res.body.saves).toBe(28);
+  });
+
+  it('returns the inserted record keyed by goalie_id and game_id', async () => {
+    sql
+      .mockResolvedValueOnce([]) // INSERT
+      .mockResolvedValueOnce([GOALIE_STAT]); // SELECT
+    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
+      goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
+    });
+    expect(res.body.goalie_id).toBe('player-10');
+    expect(res.body.shots_against).toBe(30);
+  });
+
+  it('returns 400 on FK violation', async () => {
+    sql.mockRejectedValueOnce(Object.assign(new Error('fk'), { code: '23503' }));
+    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
+      goalie_id: 'bad-player', team_id: 'team-1', shots_against: 30, saves: 28,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/invalid/i);
+  });
+
+  it('returns 500 on generic DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
+      goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
+    });
     expect(res.status).toBe(500);
   });
 });

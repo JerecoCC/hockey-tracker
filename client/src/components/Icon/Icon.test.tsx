@@ -106,4 +106,14 @@ describe('Icon', () => {
     const { container } = render(<Icon name="stars" />);
     expect(container.querySelector('svg')).toBeInTheDocument();
   });
+
+  it('renders an SVG for check_box (faSquareCheck)', () => {
+    const { container } = render(<Icon name="check_box" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
+
+  it('renders an SVG for check_box_outline_blank (faSquare)', () => {
+    const { container } = render(<Icon name="check_box_outline_blank" />);
+    expect(container.querySelector('svg')).toBeInTheDocument();
+  });
 });
