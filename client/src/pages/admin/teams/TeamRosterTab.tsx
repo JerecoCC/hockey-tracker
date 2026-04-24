@@ -7,6 +7,7 @@ import SearchableList from '../../../components/SearchableList/SearchableList';
 import Select from '../../../components/Select/Select';
 import useSeasons from '../../../hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '../../../hooks/useTeamPlayers';
+import PlayerFormModal from '../leagues/PlayerFormModal';
 import AddPlayersModal from './AddPlayersModal';
 import styles from './TeamDetails.module.scss';
 
@@ -38,11 +39,17 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     }
   }, [leagueSeasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { players, loading, busy, addPlayersToRoster, deletePlayer } = useTeamPlayers(
-    teamId,
-    selectedSeasonId ?? undefined,
-  );
+  const {
+    players,
+    loading,
+    busy,
+    addPlayersToRoster,
+    updatePlayer,
+    updateJerseyNumber,
+    deletePlayer,
+  } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -100,6 +107,13 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                   actions={
                     [
                       {
+                        icon: 'edit',
+                        intent: 'neutral',
+                        tooltip: 'Edit player',
+                        disabled: busy === p.id,
+                        onClick: () => setEditTarget(p),
+                      },
+                      {
                         icon: 'delete',
                         intent: 'danger',
                         tooltip: 'Delete player',
@@ -128,6 +142,19 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
           noResultsMessage={(q) => `No players match "${q}".`}
         />
       </Card>
+
+      <PlayerFormModal
+        open={!!editTarget}
+        editTarget={editTarget}
+        onClose={() => setEditTarget(null)}
+        updatePlayer={updatePlayer}
+        updateJerseyNumber={
+          editTarget && selectedSeasonId
+            ? (jerseyNumber) =>
+                updateJerseyNumber(editTarget.id, teamId, selectedSeasonId, jerseyNumber)
+            : undefined
+        }
+      />
 
       <AddPlayersModal
         open={addModalOpen}

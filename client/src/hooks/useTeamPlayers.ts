@@ -68,6 +68,30 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
+  const updateJerseyNumber = async (
+    playerId: string,
+    teamId: string,
+    seasonId: string,
+    jerseyNumber: number | null,
+  ): Promise<boolean> => {
+    setBusy(playerId);
+    try {
+      await axios.patch(
+        `${API}/admin/player-teams`,
+        { player_id: playerId, team_id: teamId, season_id: seasonId, jersey_number: jerseyNumber },
+        { headers: authHeaders() },
+      );
+      toast.success('Jersey number updated!');
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update jersey number'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deletePlayer = async (playerId: string): Promise<void> => {
     setBusy(playerId);
     try {
@@ -152,7 +176,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, deletePlayer };
+  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, deletePlayer };
 };
 
 export default useTeamPlayers;
