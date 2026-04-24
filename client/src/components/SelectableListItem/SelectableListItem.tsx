@@ -11,6 +11,8 @@ export interface SelectableListItemProps {
   imagePlaceholder?: string;
   /** Shape of the image/placeholder. Defaults to 'square'. */
   imageShape?: 'square' | 'circle';
+  /** When true the image/avatar block is not rendered at all. */
+  hideImage?: boolean;
   name: string;
   subtitle?: string;
   /** Optional node rendered at the trailing edge of the row (e.g. a code badge or jersey input). */
@@ -23,6 +25,7 @@ const SelectableListItem = ({
   image,
   imagePlaceholder,
   imageShape = 'square',
+  hideImage = false,
   name,
   subtitle,
   rightContent,
@@ -31,11 +34,23 @@ const SelectableListItem = ({
     className={[styles.item, checked ? styles.checked : ''].filter(Boolean).join(' ')}
     onClick={onToggle}
   >
-    <Checkbox checked={checked} />
+    <Checkbox
+      checked={checked}
+      onChange={onToggle}
+    />
 
-    <div className={[styles.image, styles[imageShape]].join(' ')}>
-      {image ? <img src={image} alt="" /> : imagePlaceholder}
-    </div>
+    {!hideImage && (
+      <div className={[styles.image, styles[imageShape]].join(' ')}>
+        {image ? (
+          <img
+            src={image}
+            alt=""
+          />
+        ) : (
+          imagePlaceholder
+        )}
+      </div>
+    )}
 
     <div className={styles.info}>
       <div className={styles.name}>{name}</div>
