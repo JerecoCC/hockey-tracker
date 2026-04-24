@@ -92,12 +92,16 @@ const Select = (props: Props) => {
           : Math.max(currentIndex - 1, 0);
       if (visibleOptions[next]) onChange(visibleOptions[next].value);
     } else if (e.key === 'Enter' || (!searchable && e.key === ' ')) {
+      e.preventDefault();
       if (!open) {
         measureMenu();
         setOpen(true);
       } else if (searchable && visibleOptions.length === 1) {
         // Auto-select the only matching result on Enter.
         onChange(visibleOptions[0].value);
+        closeMenu();
+      } else {
+        // Confirm the current selection and close.
         closeMenu();
       }
     }
@@ -110,6 +114,11 @@ const Select = (props: Props) => {
       className={styles.wrapper}
       ref={ref}
       onKeyDown={handleKeyDown}
+      onBlur={(e) => {
+        if (!ref.current?.contains(e.relatedTarget as Node)) {
+          closeMenu();
+        }
+      }}
     >
       {searchable ? (
         /* ── Searchable trigger: styled div wrapping a text input ── */

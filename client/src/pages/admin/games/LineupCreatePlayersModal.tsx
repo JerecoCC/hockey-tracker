@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import Button from '../../../components/Button/Button';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
@@ -89,6 +89,26 @@ const LineupCreatePlayersModal = ({
   const { fields, append, remove } = useFieldArray({ control, name: 'players' });
   const watchedPlayers = useWatch({ control, name: 'players' });
 
+  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Focus first row's jersey input when the modal opens
+  useEffect(() => {
+    if (!open) return;
+    const id = setTimeout(() => {
+      rowRefs.current[0]?.querySelector<HTMLInputElement>('input')?.focus();
+    }, 0);
+    return () => clearTimeout(id);
+  }, [open]);
+
+  // Focus the jersey input of newly appended rows
+  const prevFieldsLength = useRef(fields.length);
+  useEffect(() => {
+    if (fields.length > prevFieldsLength.current) {
+      rowRefs.current[fields.length - 1]?.querySelector<HTMLInputElement>('input')?.focus();
+    }
+    prevFieldsLength.current = fields.length;
+  }, [fields.length]);
+
   const slotsLeft = MAX_ROSTER - existingCount;
   const canAddMore = fields.length < slotsLeft;
 
@@ -156,8 +176,8 @@ const LineupCreatePlayersModal = ({
         >
           <div className={styles.headerRow}>
             <span className={styles.headerCell}>#</span>
-            <span className={styles.headerCell}>First Name</span>
             <span className={styles.headerCell}>Last Name</span>
+            <span className={styles.headerCell}>First Name</span>
             <span className={styles.headerCell}>Position</span>
             <span />
           </div>
@@ -167,6 +187,9 @@ const LineupCreatePlayersModal = ({
               <div
                 key={field.id}
                 className={styles.playerRow}
+                ref={(el) => {
+                  rowRefs.current[index] = el;
+                }}
               >
                 <Field
                   control={control}
@@ -179,18 +202,18 @@ const LineupCreatePlayersModal = ({
                 />
                 <Field
                   control={control}
-                  name={`players.${index}.first_name`}
-                  required
-                  rules={{ required: true }}
-                  placeholder="First name"
-                  disabled={isSubmitting}
-                />
-                <Field
-                  control={control}
                   name={`players.${index}.last_name`}
                   required
                   rules={{ required: true }}
                   placeholder="Last name"
+                  disabled={isSubmitting}
+                />
+                <Field
+                  control={control}
+                  name={`players.${index}.first_name`}
+                  required
+                  rules={{ required: true }}
+                  placeholder="First name"
                   disabled={isSubmitting}
                 />
                 <Field

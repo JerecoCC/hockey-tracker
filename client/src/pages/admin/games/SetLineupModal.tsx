@@ -127,23 +127,19 @@ const SetLineupModal = ({
       busy={saving}
     >
       <div className={styles.grid}>
-        {/* Row 1: Center */}
-        <div className={styles.row}>{slotSelect('C', SLOT_LABEL.C)}</div>
+        {/* Center — spans both columns */}
+        <div className={styles.spanFull}>{slotSelect('C', SLOT_LABEL.C)}</div>
 
-        {/* Row 2: Left Wing + Right Wing */}
-        <div className={styles.row}>
-          {slotSelect('LW', SLOT_LABEL.LW)}
-          {slotSelect('RW', SLOT_LABEL.RW)}
-        </div>
+        {/* Left Wing + Right Wing — one column each */}
+        {slotSelect('LW', SLOT_LABEL.LW)}
+        {slotSelect('RW', SLOT_LABEL.RW)}
 
-        {/* Row 3: Defence 1 + Defence 2 */}
-        <div className={styles.row}>
-          {slotSelect('D1', `${SLOT_LABEL.D1} 1`)}
-          {slotSelect('D2', `${SLOT_LABEL.D2} 2`)}
-        </div>
+        {/* Defence 1 + Defence 2 — one column each */}
+        {slotSelect('D1', `${SLOT_LABEL.D1} 1`)}
+        {slotSelect('D2', `${SLOT_LABEL.D2} 2`)}
 
-        {/* Row 4: Goalie */}
-        <div className={styles.row}>{slotSelect('G', SLOT_LABEL.G)}</div>
+        {/* Goalie — spans both columns */}
+        <div className={styles.spanFull}>{slotSelect('G', SLOT_LABEL.G)}</div>
       </div>
     </Modal>
   );

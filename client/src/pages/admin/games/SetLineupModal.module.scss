@@ -2,21 +2,14 @@
 @use "../../../styles/mixins" as *;
 
 .grid {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: $space-md;
   margin-bottom: $space-xl;
 }
 
-// Each row can hold one or two slot fields side-by-side
-.row {
-  display: flex;
-  gap: $space-md;
-
-  // Each slotField inside a row grows equally
-  > .slotField {
-    flex: 1;
-  }
+.spanFull {
+  grid-column: 1 / -1;
 }
 
 // Label + dropdown for a single position slot
@@ -24,6 +17,7 @@
   display: flex;
   flex-direction: column;
   gap: $space-xs;
+  min-width: 0;
 }
 
 .slotLabel {

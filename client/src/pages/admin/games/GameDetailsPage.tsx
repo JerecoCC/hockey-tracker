@@ -1197,7 +1197,7 @@ const GameDetailsPage = () => {
                                   onClick: () => setLineupAddTeam(side),
                                 },
                                 {
-                                  icon: 'person_add',
+                                  icon: 'person_edit',
                                   tooltip: 'Create Player',
                                   onClick: () => setLineupCreateTeam(side),
                                 },
