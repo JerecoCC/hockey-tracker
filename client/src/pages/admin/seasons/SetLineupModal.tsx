@@ -57,17 +57,29 @@ const SLOT_LABEL: Record<LineupPositionSlot, string> = {
   G: 'Goalie',
 };
 
-const SetLineupModal = ({ open, onClose, teamId, teamName, players, lineup, saveTeamLineup }: Props) => {
+const SetLineupModal = ({
+  open,
+  onClose,
+  teamId,
+  teamName,
+  players,
+  lineup,
+  saveTeamLineup,
+}: Props) => {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [saving, setSaving] = useState(false);
+
+  const allFilled = (Object.values(draft) as (string | null)[]).every(Boolean);
 
   // Sync draft from existing lineup when modal opens or lineup data changes
   useEffect(() => {
     if (!open) return;
     const next = emptyDraft();
-    lineup.filter((e) => e.team_id === teamId).forEach((e) => {
-      next[e.position_slot] = e.player_id;
-    });
+    lineup
+      .filter((e) => e.team_id === teamId)
+      .forEach((e) => {
+        next[e.position_slot] = e.player_id;
+      });
     setDraft(next);
   }, [open, lineup, teamId]);
 
@@ -75,6 +87,7 @@ const SetLineupModal = ({ open, onClose, teamId, teamName, players, lineup, save
     setDraft((prev) => ({ ...prev, [slot]: val || null }));
 
   const handleSave = async () => {
+    if (!allFilled) return;
     setSaving(true);
     const slots = (Object.keys(draft) as LineupPositionSlot[]).map((slot) => ({
       position_slot: slot,
@@ -95,14 +108,19 @@ const SetLineupModal = ({ open, onClose, teamId, teamName, players, lineup, save
       <Select
         value={draft[slot] ?? ''}
         options={buildOptions(slot, players)}
-        placeholder="— None —"
+        placeholder="— Required —"
         onChange={(val) => set(slot, val)}
       />
     </div>
   );
 
   return (
-    <Modal open={open} title={`Set Starting Lineup — ${teamName}`} onClose={handleClose} size="md">
+    <Modal
+      open={open}
+      title={`Set Starting Lineup — ${teamName}`}
+      onClose={handleClose}
+      size="md"
+    >
       <div className={styles.grid}>
         {/* Row 1: Center */}
         <div className={styles.row}>{slotSelect('C', SLOT_LABEL.C)}</div>
@@ -124,10 +142,20 @@ const SetLineupModal = ({ open, onClose, teamId, teamName, players, lineup, save
       </div>
 
       <div className={styles.footer}>
-        <Button variant="outlined" intent="neutral" onClick={handleClose} disabled={saving}>
+        <Button
+          variant="outlined"
+          intent="neutral"
+          onClick={handleClose}
+          disabled={saving}
+        >
           Cancel
         </Button>
-        <Button intent="accent" icon="set_lineup" onClick={handleSave} disabled={saving}>
+        <Button
+          intent="accent"
+          icon="set_lineup"
+          onClick={handleSave}
+          disabled={saving || !allFilled}
+        >
           {saving ? 'Saving…' : 'Save Lineup'}
         </Button>
       </div>
