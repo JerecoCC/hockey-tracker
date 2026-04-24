@@ -5,6 +5,18 @@
   margin-bottom: $space-lg;
 }
 
+.selectAllRow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.listDivider {
+  height: 1px;
+  background: $border;
+  margin: $space-xs 0;
+}
+
 .searchWrap {
   display: flex;
   align-items: center;
