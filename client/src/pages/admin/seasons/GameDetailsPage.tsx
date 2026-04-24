@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import Badge from '../../../components/Badge/Badge';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
@@ -8,6 +9,7 @@ import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import ListItem from '../../../components/ListItem/ListItem';
+import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
 import Select from '../../../components/Select/Select';
@@ -65,6 +67,10 @@ const GAME_TYPE_LABEL: Record<GameType, string> = {
   regular: 'Regular Season',
   playoff: 'Playoffs',
 };
+
+const GAME_TYPE_OPTIONS = (Object.entries(GAME_TYPE_LABEL) as [GameType, string][]).map(
+  ([value, label]) => ({ value, label }),
+);
 
 const PERIOD_LABEL: Record<string, string> = {
   '1': '1st',
@@ -128,7 +134,8 @@ const GameDetailsPage = () => {
     id: string;
   }>();
   const navigate = useNavigate();
-  const { game, loading, busy, updateStatus, advancePeriod, endGame } = useGameDetails(id);
+  const { game, loading, busy, updateStatus, advancePeriod, endGame, updateGameInfo } =
+    useGameDetails(id);
   const { goals, addGoal } = useGameGoals(id);
 
   /**
@@ -210,6 +217,36 @@ const GameDetailsPage = () => {
   const [star1Id, setStar1Id] = useState('');
   const [star2Id, setStar2Id] = useState('');
   const [star3Id, setStar3Id] = useState('');
+
+  // ── Game Info edit modal ──────────────────────────────────────────────────
+  const [gameInfoEditOpen, setGameInfoEditOpen] = useState(false);
+  const {
+    control: gameInfoControl,
+    handleSubmit: handleGameInfoSubmit,
+    reset: resetGameInfoForm,
+    formState: { isSubmitting: gameInfoSubmitting },
+  } = useForm<{ venue: string; scheduled_date: string; game_type: GameType }>({
+    defaultValues: { venue: '', scheduled_date: '', game_type: 'regular' },
+  });
+
+  const openGameInfoEdit = () => {
+    if (!game) return;
+    resetGameInfoForm({
+      venue: game.venue ?? '',
+      scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
+      game_type: game.game_type,
+    });
+    setGameInfoEditOpen(true);
+  };
+
+  const onGameInfoSubmit = handleGameInfoSubmit(async (data) => {
+    const ok = await updateGameInfo({
+      venue: data.venue || null,
+      scheduled_at: data.scheduled_date || null,
+      game_type: data.game_type,
+    });
+    if (ok) setGameInfoEditOpen(false);
+  });
 
   // Season rosters — used as player pool for "Add from Roster" / "Create Player" modals
   const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
@@ -555,9 +592,9 @@ const GameDetailsPage = () => {
                                   const player = roster.find((e) => e.player_id === playerId);
                                   if (!player) return null;
                                   const isAway = player.team_id === game.away_team_id;
-                                  const teamName = isAway
-                                    ? game.away_team_name
-                                    : game.home_team_name;
+                                  const teamCode = isAway
+                                    ? game.away_team_code
+                                    : game.home_team_code;
                                   const primaryColor = isAway
                                     ? game.away_team_primary_color
                                     : game.home_team_primary_color;
@@ -568,10 +605,16 @@ const GameDetailsPage = () => {
                                     goals: 0,
                                     assists: 0,
                                   };
-                                  const nameLabel =
+                                  const nameLabel = `${player.first_name} ${player.last_name}`;
+                                  const subLabel = [
                                     player.jersey_number != null
-                                      ? `${player.first_name} ${player.last_name} (#${player.jersey_number})`
-                                      : `${player.first_name} ${player.last_name}`;
+                                      ? `#${player.jersey_number}`
+                                      : null,
+                                    teamCode,
+                                    player.position ?? null,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(' • ');
                                   return (
                                     <div
                                       key={starCount}
@@ -601,7 +644,7 @@ const GameDetailsPage = () => {
                                         ))}
                                       </span>
                                       <span className={styles.starName}>{nameLabel}</span>
-                                      <span className={styles.starTeam}>{teamName}</span>
+                                      <span className={styles.starTeam}>{subLabel}</span>
                                       {player.position !== 'G' && (
                                         <span className={styles.starStats}>
                                           G: {stats.goals} | A: {stats.assists}
@@ -780,7 +823,19 @@ const GameDetailsPage = () => {
                     {/* ── Right column: Game Info (final only) + Linescore ── */}
                     <div className={styles.summaryRight}>
                       {isFinal && (
-                        <Card title="Game Info">
+                        <Card
+                          title="Game Info"
+                          action={
+                            <Button
+                              variant="ghost"
+                              intent="neutral"
+                              icon="edit"
+                              size="sm"
+                              tooltip="Edit game info"
+                              onClick={openGameInfoEdit}
+                            />
+                          }
+                        >
                           <div className={styles.infoGrid}>
                             <div className={styles.infoItem}>
                               <span className={styles.infoLabel}>Venue</span>
@@ -914,7 +969,19 @@ const GameDetailsPage = () => {
                   </div>
                 ) : (
                   /* Scheduled / postponed / cancelled — just show Game Info */
-                  <Card title="Game Info">
+                  <Card
+                    title="Game Info"
+                    action={
+                      <Button
+                        variant="ghost"
+                        intent="neutral"
+                        icon="edit"
+                        size="sm"
+                        tooltip="Edit game info"
+                        onClick={openGameInfoEdit}
+                      />
+                    }
+                  >
                     <div className={styles.infoGrid}>
                       <div className={styles.infoItem}>
                         <span className={styles.infoLabel}>Venue</span>
@@ -1365,6 +1432,51 @@ const GameDetailsPage = () => {
         onConfirm={handleConfirmRemove}
         onCancel={() => setConfirmRemove(null)}
       />
+
+      {/* ── Game Info edit modal ── */}
+      <Modal
+        open={gameInfoEditOpen}
+        title="Edit Game Info"
+        onClose={() => setGameInfoEditOpen(false)}
+        footer={
+          <Button
+            variant="filled"
+            intent="accent"
+            disabled={gameInfoSubmitting || !!busy}
+            onClick={onGameInfoSubmit}
+          >
+            {gameInfoSubmitting || busy === 'update-info' ? 'Saving…' : 'Save'}
+          </Button>
+        }
+      >
+        <form
+          className={styles.goalForm}
+          onSubmit={onGameInfoSubmit}
+        >
+          <Field
+            label="Venue"
+            control={gameInfoControl}
+            name="venue"
+            placeholder="e.g. Scotiabank Arena"
+            disabled={gameInfoSubmitting}
+          />
+          <Field
+            label="Date"
+            type="datepicker"
+            control={gameInfoControl}
+            name="scheduled_date"
+            placeholder="Select date…"
+          />
+          <Field
+            label="Game Type"
+            type="select"
+            control={gameInfoControl}
+            name="game_type"
+            options={GAME_TYPE_OPTIONS}
+            disabled={gameInfoSubmitting}
+          />
+        </form>
+      </Modal>
 
       {/* ── 3 Stars modal ── */}
       {(() => {

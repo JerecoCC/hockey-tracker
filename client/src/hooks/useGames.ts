@@ -298,6 +298,27 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, updateStatus, advancePeriod, endGame };
+  const updateGameInfo = async (data: {
+    venue?: string | null;
+    scheduled_at?: string | null;
+    game_type?: GameType;
+  }): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('update-info');
+    try {
+      await axios.patch(`${API}/admin/games/${id}`, data, { headers: authHeaders() });
+      toast.success('Game updated!');
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update game'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { game, loading, busy, updateStatus, advancePeriod, endGame, updateGameInfo };
 };
 
