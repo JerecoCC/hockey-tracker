@@ -5,6 +5,7 @@ import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
+import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import ListItem from '../../../components/ListItem/ListItem';
 import Modal from '../../../components/Modal/Modal';
 import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
@@ -19,6 +20,7 @@ import {
 } from '../../../hooks/useGames';
 import useTeamPlayers from '../../../hooks/useTeamPlayers';
 import useGameLineup from '../../../hooks/useGameLineup';
+import useGameRoster, { type GameRosterEntry } from '../../../hooks/useGameRoster';
 import LineupRosterModal from './LineupRosterModal';
 import LineupCreatePlayersModal from './LineupCreatePlayersModal';
 import SetLineupModal from './SetLineupModal';
@@ -71,6 +73,16 @@ const GOAL_TYPES = [
   { value: 'own', label: 'Own Goal' },
 ];
 
+import { type BadgeIntent } from '../../../components/Badge/Badge';
+
+const POSITION_BADGE_INTENT: Record<string, BadgeIntent> = {
+  C: 'warning',
+  LW: 'warning',
+  RW: 'warning',
+  D: 'info',
+  G: 'success',
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const GameDetailsPage = () => {
@@ -91,25 +103,40 @@ const GameDetailsPage = () => {
   const [goalAssist1Id, setGoalAssist1Id] = useState('');
   const [goalAssist2Id, setGoalAssist2Id] = useState('');
 
-  // Fetch both rosters up-front; enabled only when team IDs are available.
-  const {
-    players: awayPlayers,
-    addPlayersToRoster: addAwayToRoster,
-    createAndRosterPlayers: createAndRosterAway,
-  } = useTeamPlayers(game?.away_team_id, seasonId);
-  const {
-    players: homePlayers,
-    addPlayersToRoster: addHomeToRoster,
-    createAndRosterPlayers: createAndRosterHome,
-  } = useTeamPlayers(game?.home_team_id, seasonId);
+  // Season rosters — used as player pool for "Add from Roster" / "Create Player" modals
+  const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
+    game?.away_team_id,
+    seasonId,
+  );
+  const { createAndRosterPlayers: createAndRosterHome } = useTeamPlayers(
+    game?.home_team_id,
+    seasonId,
+  );
+
+  // ── Game-day rosters ───────────────────────────────────────────────────────
+  const { roster, addToRoster, removeFromRoster } = useGameRoster(id);
+  const awayRoster = roster.filter((e) => e.team_id === game?.away_team_id);
+  const homeRoster = roster.filter((e) => e.team_id === game?.home_team_id);
 
   // ── Lineup modal state ────────────────────────────────────────────────────
   const [lineupAddTeam, setLineupAddTeam] = useState<'away' | 'home' | null>(null);
   const [lineupCreateTeam, setLineupCreateTeam] = useState<'away' | 'home' | null>(null);
   const [lineupSetTeam, setLineupSetTeam] = useState<'away' | 'home' | null>(null);
+  const [confirmRemove, setConfirmRemove] = useState<{
+    entry: GameRosterEntry;
+  } | null>(null);
+  const [removingFromRoster, setRemovingFromRoster] = useState(false);
 
   // ── Starting lineup data ───────────────────────────────────────────────────
-  const { lineup, saveTeamLineup, removeFromLineup } = useGameLineup(id);
+  const { lineup, saveTeamLineup } = useGameLineup(id);
+
+  const handleConfirmRemove = async () => {
+    if (!confirmRemove) return;
+    setRemovingFromRoster(true);
+    await removeFromRoster(confirmRemove.entry.id);
+    setRemovingFromRoster(false);
+    setConfirmRemove(null);
+  };
 
   const openGoalModal = (period: 1 | 2 | 3) => {
     setGoalPeriod(period);
@@ -465,7 +492,7 @@ const GameDetailsPage = () => {
           {
             label: 'Lineup',
             content: (() => {
-              // Build a quick lookup: player_id → lineup entry (for this game)
+              // Lookup: player_id → starting lineup entry (for italic + position_slot info)
               const awayLineupMap = new Map(
                 lineup.filter((e) => e.team_id === game.away_team_id).map((e) => [e.player_id, e]),
               );
@@ -475,14 +502,30 @@ const GameDetailsPage = () => {
 
               const renderTeamAccordion = (
                 side: 'away' | 'home',
-                teamId: string,
                 teamName: string,
-                players: typeof awayPlayers,
+                teamCode: string,
+                teamLogo: string | null | undefined,
+                rosterEntries: GameRosterEntry[],
                 lineupMap: typeof awayLineupMap,
               ) => (
                 <Accordion
                   variant="static"
-                  label={teamName}
+                  label={
+                    <span className={styles.accordionTeamLabel}>
+                      {teamLogo ? (
+                        <img
+                          src={teamLogo}
+                          alt={teamCode}
+                          className={styles.accordionTeamLogo}
+                        />
+                      ) : (
+                        <span className={styles.accordionTeamLogoPlaceholder}>
+                          {teamCode.slice(0, 3)}
+                        </span>
+                      )}
+                      {teamName}
+                    </span>
+                  }
                   hoverActions={[
                     {
                       icon: 'set_lineup',
@@ -501,34 +544,67 @@ const GameDetailsPage = () => {
                     },
                   ]}
                 >
-                  {players.length > 0 ? (
-                    <ul className={styles.lineupPlayerList}>
-                      {players.map((p) => {
-                        const entry = lineupMap.get(p.id);
+                  {rosterEntries.length > 0 ? (
+                    (() => {
+                      const byJersey = (a: GameRosterEntry, b: GameRosterEntry) => {
+                        if (a.jersey_number == null && b.jersey_number == null) return 0;
+                        if (a.jersey_number == null) return 1;
+                        if (b.jersey_number == null) return -1;
+                        return a.jersey_number - b.jersey_number;
+                      };
+                      const skaters = rosterEntries
+                        .filter((e) => e.position !== 'G')
+                        .sort(byJersey);
+                      const goalies = rosterEntries
+                        .filter((e) => e.position === 'G')
+                        .sort(byJersey);
+
+                      const renderPlayer = (e: GameRosterEntry) => {
+                        const isStarter = lineupMap.has(e.player_id);
                         return (
                           <ListItem
-                            key={p.id}
-                            image={p.photo}
+                            key={e.id}
+                            image={e.photo}
                             image_shape="circle"
-                            name={`${p.first_name} ${p.last_name}`}
-                            nameItalic={!!entry}
-                            placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                            subtitle={p.jersey_number != null ? `#${p.jersey_number}` : undefined}
+                            name={`${e.first_name} ${e.last_name}`}
+                            nameItalic={isStarter}
+                            placeholder={`${e.first_name[0]}${e.last_name[0]}`}
+                            subtitle={e.jersey_number != null ? `#${e.jersey_number}` : undefined}
                             rightContent={
-                              p.position ? { type: 'tag', label: p.position } : undefined
+                              e.position
+                                ? {
+                                    type: 'tag',
+                                    label: e.position,
+                                    intent: POSITION_BADGE_INTENT[e.position],
+                                  }
+                                : undefined
                             }
                             actions={[
-                              !!entry && {
-                                icon: 'remove',
+                              {
+                                icon: 'person_remove',
                                 intent: 'danger',
-                                tooltip: 'Remove from lineup',
-                                onClick: () => removeFromLineup(entry.id),
+                                tooltip: 'Remove from game roster',
+                                onClick: () => setConfirmRemove({ entry: e }),
                               },
                             ]}
                           />
                         );
-                      })}
-                    </ul>
+                      };
+
+                      return (
+                        <>
+                          <ul className={styles.lineupPlayerList}>{skaters.map(renderPlayer)}</ul>
+                          {goalies.length > 0 && (
+                            <>
+                              <div className={styles.lineupDivider} />
+                              <ul className={styles.lineupPlayerList}>
+                                {goalies.map(renderPlayer)}
+                              </ul>
+                            </>
+                          )}
+                        </>
+                      );
+                    })()
                   ) : (
                     <p className={styles.noGoalsText}>No players in roster yet.</p>
                   )}
@@ -541,16 +617,18 @@ const GameDetailsPage = () => {
                     <div className={styles.lineupGrid}>
                       {renderTeamAccordion(
                         'away',
-                        game.away_team_id,
                         game.away_team_name,
-                        awayPlayers,
+                        game.away_team_code,
+                        game.away_team_logo,
+                        awayRoster,
                         awayLineupMap,
                       )}
                       {renderTeamAccordion(
                         'home',
-                        game.home_team_id,
                         game.home_team_name,
-                        homePlayers,
+                        game.home_team_code,
+                        game.home_team_logo,
+                        homeRoster,
                         homeLineupMap,
                       )}
                     </div>
@@ -564,13 +642,13 @@ const GameDetailsPage = () => {
 
       {/* ── Score Goal Form ── */}
       {(() => {
-        const teamPlayers = goalTeam === 'away' ? awayPlayers : homePlayers;
-        const playerOptions = teamPlayers.map((p) => ({
-          value: p.id,
+        const teamRoster = goalTeam === 'away' ? awayRoster : homeRoster;
+        const playerOptions = teamRoster.map((e) => ({
+          value: e.player_id,
           label:
-            p.jersey_number != null
-              ? `#${p.jersey_number} ${p.first_name} ${p.last_name}`
-              : `${p.first_name} ${p.last_name}`,
+            e.jersey_number != null
+              ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
+              : `${e.first_name} ${e.last_name}`,
         }));
 
         return (
@@ -689,12 +767,13 @@ const GameDetailsPage = () => {
           open={lineupAddTeam !== null}
           onClose={() => setLineupAddTeam(null)}
           teamId={lineupAddTeam === 'away' ? game.away_team_id : game.home_team_id}
-          seasonId={seasonId!}
           teamName={lineupAddTeam === 'away' ? game.away_team_name : game.home_team_name}
           existingPlayerIds={
-            new Set((lineupAddTeam === 'away' ? awayPlayers : homePlayers).map((p) => p.id))
+            new Set((lineupAddTeam === 'away' ? awayRoster : homeRoster).map((e) => e.player_id))
           }
-          addPlayersToRoster={lineupAddTeam === 'away' ? addAwayToRoster : addHomeToRoster}
+          addToGameRoster={(playerIds) =>
+            addToRoster(lineupAddTeam === 'away' ? game.away_team_id : game.home_team_id, playerIds)
+          }
         />
       )}
 
@@ -709,21 +788,61 @@ const GameDetailsPage = () => {
           createAndRosterPlayers={
             lineupCreateTeam === 'away' ? createAndRosterAway : createAndRosterHome
           }
+          onPlayersCreated={(playerIds) =>
+            addToRoster(
+              lineupCreateTeam === 'away' ? game.away_team_id : game.home_team_id,
+              playerIds,
+            ).then(() => {})
+          }
         />
       )}
 
       {/* ── Lineup: Set Starting Lineup ── */}
-      {lineupSetTeam !== null && game && (
-        <SetLineupModal
-          open={lineupSetTeam !== null}
-          onClose={() => setLineupSetTeam(null)}
-          teamId={lineupSetTeam === 'away' ? game.away_team_id : game.home_team_id}
-          teamName={lineupSetTeam === 'away' ? game.away_team_name : game.home_team_name}
-          players={lineupSetTeam === 'away' ? awayPlayers : homePlayers}
-          lineup={lineup}
-          saveTeamLineup={saveTeamLineup}
-        />
-      )}
+      {lineupSetTeam !== null &&
+        game &&
+        (() => {
+          // Map game roster entries to the shape SetLineupModal expects (id = player_id)
+          const rosterForSide = (lineupSetTeam === 'away' ? awayRoster : homeRoster).map((e) => ({
+            ...e,
+            id: e.player_id,
+          }));
+          return (
+            <SetLineupModal
+              open={lineupSetTeam !== null}
+              onClose={() => setLineupSetTeam(null)}
+              teamId={lineupSetTeam === 'away' ? game.away_team_id : game.home_team_id}
+              teamName={lineupSetTeam === 'away' ? game.away_team_name : game.home_team_name}
+              players={rosterForSide as unknown as Parameters<typeof SetLineupModal>[0]['players']}
+              lineup={lineup}
+              saveTeamLineup={saveTeamLineup}
+            />
+          );
+        })()}
+
+      {/* ── Lineup: Remove from Game Roster (confirm) ── */}
+      <ConfirmModal
+        open={!!confirmRemove}
+        title="Remove from Roster"
+        body={
+          confirmRemove ? (
+            <>
+              Remove{' '}
+              <strong>
+                {confirmRemove.entry.first_name} {confirmRemove.entry.last_name}
+              </strong>{' '}
+              from this game&apos;s roster?
+            </>
+          ) : (
+            ''
+          )
+        }
+        confirmLabel="Remove"
+        confirmIcon="person_remove"
+        variant="danger"
+        busy={removingFromRoster}
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setConfirmRemove(null)}
+      />
     </>
   );
 };

@@ -446,3 +446,33 @@ tbody tr:not(:last-child) td {
   background: $border;
   margin: $space-sm 0;
 }
+
+// Accordion header label with team logo
+.accordionTeamLabel {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.accordionTeamLogo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.accordionTeamLogoPlaceholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: $bg-card;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  flex-shrink: 0;
+  line-height: 1;
+}
