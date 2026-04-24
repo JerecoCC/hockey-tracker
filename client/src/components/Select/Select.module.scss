@@ -38,6 +38,10 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
+
+  &.triggerError {
+    border-color: $danger-light;
+  }
 }
 
 .placeholder {
@@ -73,6 +77,15 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.emptyMessage {
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+  text-align: center;
+  list-style: none;
 }
 
 .option {

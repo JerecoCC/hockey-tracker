@@ -86,7 +86,8 @@ const Field = (props: FieldProps) => {
       control={ctrl}
       name={name}
       rules={rules}
-      render={({ field }) => {
+      render={({ field, fieldState }) => {
+        const hasError = !!fieldState.error;
         const getField = () => {
           if (props.type === 'textarea') {
             /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -106,7 +107,7 @@ const Field = (props: FieldProps) => {
               : (e: ChangeEvent<HTMLTextAreaElement>) => field.onChange(e.target.value);
             return (
               <textarea
-                className={cn(styles.field, styles.textarea)}
+                className={cn(styles.field, styles.textarea, hasError && styles.fieldError)}
                 required={required}
                 {...rest}
                 value={(field.value as string) ?? ''}
@@ -126,6 +127,7 @@ const Field = (props: FieldProps) => {
                   onChangeProp?.(val);
                 }}
                 disabled={disabled}
+                error={hasError}
               />
             );
           } else if (props.type === 'custom') {
@@ -196,7 +198,11 @@ const Field = (props: FieldProps) => {
             const hasSuffix = !isPassword && !!suffix;
             const input = (
               <input
-                className={cn(styles.field, hasSuffix && styles.fieldWithSuffix)}
+                className={cn(
+                  styles.field,
+                  hasSuffix && styles.fieldWithSuffix,
+                  hasError && styles.fieldError,
+                )}
                 required={required}
                 {...rest}
                 type={isPassword ? (showPassword ? 'text' : 'password') : rest.type}

@@ -14,12 +14,24 @@ interface Props {
   value: string | null;
   options: SelectOption[];
   placeholder?: string;
+  /** Message shown inside the dropdown when options is empty. */
+  emptyMessage?: string;
   onChange: (value: string) => void;
   disabled?: boolean;
+  /** When true the trigger renders with a red error border. */
+  error?: boolean;
 }
 
 const Select = (props: Props) => {
-  const { value, options, placeholder = '— Select —', onChange, disabled = false } = props;
+  const {
+    value,
+    options,
+    placeholder = '— Select —',
+    emptyMessage = 'No options available',
+    onChange,
+    disabled = false,
+    error = false,
+  } = props;
   const [open, setOpen] = useState(false);
   const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const ref = useRef<HTMLDivElement>(null);
@@ -83,6 +95,7 @@ const Select = (props: Props) => {
           styles.trigger,
           open && styles.triggerOpen,
           disabled && styles.triggerDisabled,
+          error && !open && styles.triggerError,
         )}
         onClick={() => {
           if (disabled) return;
@@ -121,34 +134,38 @@ const Select = (props: Props) => {
           className={styles.menu}
           style={menuStyle}
         >
-          {options.map((opt) => (
-            <li
-              key={opt.value}
-              role="option"
-              aria-selected={value === opt.value}
-            >
-              <button
-                type="button"
-                tabIndex={-1}
-                className={cn(styles.option, value === opt.value && styles.optionActive)}
-                onClick={() => {
-                  onChange(opt.value);
-                  setOpen(false);
-                }}
+          {options.length === 0 ? (
+            <li className={styles.emptyMessage}>{emptyMessage}</li>
+          ) : (
+            options.map((opt) => (
+              <li
+                key={opt.value}
+                role="option"
+                aria-selected={value === opt.value}
               >
-                {opt.logo ? (
-                  <img
-                    src={opt.logo}
-                    alt=""
-                    className={styles.optionLogo}
-                  />
-                ) : opt.code ? (
-                  <span className={styles.optionNoLogo}>{opt.code.slice(0, 1)}</span>
-                ) : null}
-                {opt.label}
-              </button>
-            </li>
-          ))}
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  className={cn(styles.option, value === opt.value && styles.optionActive)}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                >
+                  {opt.logo ? (
+                    <img
+                      src={opt.logo}
+                      alt=""
+                      className={styles.optionLogo}
+                    />
+                  ) : opt.code ? (
+                    <span className={styles.optionNoLogo}>{opt.code.slice(0, 1)}</span>
+                  ) : null}
+                  {opt.label}
+                </button>
+              </li>
+            ))
+          )}
         </ul>
       )}
     </div>
