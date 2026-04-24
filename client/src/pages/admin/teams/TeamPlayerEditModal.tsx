@@ -11,7 +11,7 @@ const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
   { value: 'LW', label: 'Left Wing' },
   { value: 'RW', label: 'Right Wing' },
-  { value: 'D', label: 'Defenseman' },
+  { value: 'D', label: 'Defense' },
   { value: 'G', label: 'Goalie' },
 ];
 
