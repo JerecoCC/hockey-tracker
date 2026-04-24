@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
+import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Badge from '../../../components/Badge/Badge';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Icon from '../../../components/Icon/Icon';
@@ -649,6 +650,20 @@ const GameDetailsPage = () => {
                                             disabled: !!busy,
                                             onClick: () => advancePeriod('OT'),
                                           },
+                                      num === 3
+                                        ? {
+                                            icon: 'flag',
+                                            tooltip: 'End Game',
+                                            intent: 'danger' as const,
+                                            disabled: !!busy,
+                                            onClick: () => {
+                                              setStar1Id('');
+                                              setStar2Id('');
+                                              setStar3Id('');
+                                              setStarsModalOpen(true);
+                                            },
+                                          }
+                                        : null,
                                     ].filter(Boolean) as AccordionAction[])
                                   : undefined
                               }
@@ -759,15 +774,16 @@ const GameDetailsPage = () => {
 
                                           {/* Delete goal */}
                                           {isInProgress && (
-                                            <Button
-                                              variant="ghost"
-                                              intent="danger"
-                                              icon="delete"
-                                              size="sm"
-                                              tooltip="Delete goal"
-                                              className={styles.goalDeleteBtn}
-                                              onClick={() => deleteGoal(goal.id)}
-                                            />
+                                            <ActionOverlay className={styles.goalActions}>
+                                              <Button
+                                                variant="ghost"
+                                                intent="danger"
+                                                icon="delete"
+                                                size="sm"
+                                                tooltip="Delete goal"
+                                                onClick={() => deleteGoal(goal.id)}
+                                              />
+                                            </ActionOverlay>
                                           )}
                                         </li>
                                       );
@@ -919,15 +935,16 @@ const GameDetailsPage = () => {
 
                                             {/* Delete goal */}
                                             {isInProgress && (
-                                              <Button
-                                                variant="ghost"
-                                                intent="danger"
-                                                icon="delete"
-                                                size="sm"
-                                                tooltip="Delete goal"
-                                                className={styles.goalDeleteBtn}
-                                                onClick={() => deleteGoal(goal.id)}
-                                              />
+                                              <ActionOverlay className={styles.goalActions}>
+                                                <Button
+                                                  variant="ghost"
+                                                  intent="danger"
+                                                  icon="delete"
+                                                  size="sm"
+                                                  tooltip="Delete goal"
+                                                  onClick={() => deleteGoal(goal.id)}
+                                                />
+                                              </ActionOverlay>
                                             )}
                                           </li>
                                         );
@@ -1364,6 +1381,23 @@ const GameDetailsPage = () => {
                   disabled={goalSubmitting}
                   onClick={() => handleTeamChange('away')}
                 >
+                  {game.away_team_logo ? (
+                    <img
+                      src={game.away_team_logo}
+                      alt={game.away_team_code}
+                      className={styles.teamSegmentLogo}
+                    />
+                  ) : (
+                    <span
+                      className={styles.teamSegmentLogoPlaceholder}
+                      style={{
+                        background: game.away_team_primary_color,
+                        color: game.away_team_text_color,
+                      }}
+                    >
+                      {game.away_team_code.slice(0, 1)}
+                    </span>
+                  )}
                   {game.away_team_code}
                 </button>
                 <button
@@ -1377,6 +1411,23 @@ const GameDetailsPage = () => {
                   disabled={goalSubmitting}
                   onClick={() => handleTeamChange('home')}
                 >
+                  {game.home_team_logo ? (
+                    <img
+                      src={game.home_team_logo}
+                      alt={game.home_team_code}
+                      className={styles.teamSegmentLogo}
+                    />
+                  ) : (
+                    <span
+                      className={styles.teamSegmentLogoPlaceholder}
+                      style={{
+                        background: game.home_team_primary_color,
+                        color: game.home_team_text_color,
+                      }}
+                    >
+                      {game.home_team_code.slice(0, 1)}
+                    </span>
+                  )}
                   {game.home_team_code}
                 </button>
               </div>

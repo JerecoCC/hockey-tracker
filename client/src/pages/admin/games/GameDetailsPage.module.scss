@@ -213,6 +213,7 @@
 }
 
 .goalItem {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $space-sm;
@@ -223,17 +224,10 @@
     border-bottom: none;
   }
 
-  &:hover .goalDeleteBtn {
+  &:hover .goalActions {
     opacity: 1;
     pointer-events: auto;
   }
-}
-
-.goalDeleteBtn {
-  flex-shrink: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
 }
 
 // Period time (e.g. "12:34")
@@ -344,6 +338,10 @@
   font-weight: 700;
   letter-spacing: 0.06em;
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
   transition:
     background 0.15s,
     color 0.15s;
@@ -356,6 +354,27 @@
     background: rgba(255, 255, 255, 0.05);
     color: $text-body;
   }
+}
+
+.teamSegmentLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.teamSegmentLogoPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
 }
 
 .teamSegmentBtnActive {
