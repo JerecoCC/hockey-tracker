@@ -1327,14 +1327,12 @@ const GameDetailsPage = () => {
             title="Score Goal"
             onClose={closeGoalModal}
             confirmLabel={goalSubmitting ? 'Saving…' : 'Record Goal'}
-            confirmDisabled={
-              !!busy || goalSubmitting || !goalScorerId || !goalTimeMins || !goalTimeSecs
-            }
+            confirmDisabled={!!busy || goalSubmitting || !goalScorerId}
             busy={goalSubmitting}
             onConfirm={async () => {
               if (!goalPeriod || !game) return;
               const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
-              const periodTime = `${goalTimeMins.padStart(2, '0')}:${goalTimeSecs.padStart(2, '0')}`;
+              const periodTime = `${(goalTimeMins || '00').padStart(2, '0')}:${(goalTimeSecs || '00').padStart(2, '0')}`;
               setGoalSubmitting(true);
               try {
                 await addGoal({
@@ -1394,7 +1392,7 @@ const GameDetailsPage = () => {
                     <input
                       type="text"
                       className={styles.timeSegmentInput}
-                      placeholder="MM"
+                      placeholder="00"
                       value={goalTimeMins}
                       onChange={handleTimeMinsChange}
                       onBlur={() => {
@@ -1408,7 +1406,7 @@ const GameDetailsPage = () => {
                     <input
                       type="text"
                       className={styles.timeSegmentInput}
-                      placeholder="SS"
+                      placeholder="00"
                       value={goalTimeSecs}
                       onChange={handleTimeSecsChange}
                       onBlur={() => {
@@ -1613,8 +1611,8 @@ const GameDetailsPage = () => {
           value: e.player_id,
           label:
             e.jersey_number != null
-              ? `#${e.jersey_number} ${e.last_name}, ${e.first_name.charAt(0)}.`
-              : `${e.last_name}, ${e.first_name.charAt(0)}.`,
+              ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
+              : `${e.first_name} ${e.last_name}`,
         }));
         const canConfirm = !!star1Id && !!star2Id && !!star3Id;
         return (

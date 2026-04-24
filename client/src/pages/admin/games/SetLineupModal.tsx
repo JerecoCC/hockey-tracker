@@ -109,6 +109,7 @@ const SetLineupModal = ({
         options={buildOptions(slot, players)}
         placeholder="— Required —"
         onChange={(val) => set(slot, val)}
+        searchable
       />
     </div>
   );
