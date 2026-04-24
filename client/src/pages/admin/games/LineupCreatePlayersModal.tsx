@@ -45,12 +45,19 @@ type CreateAndRosterFn = (
   }>,
 ) => Promise<string[] | null>;
 
+const MAX_ROSTER = 23;
+const MAX_GOALIES = 3;
+
 interface Props {
   open: boolean;
   onClose: () => void;
   teamId: string;
   seasonId: string;
   teamName: string;
+  /** Current number of players already in this team's game roster. */
+  existingCount: number;
+  /** Number of goalies already in this team's game roster. */
+  existingGoalieCount: number;
   createAndRosterPlayers: CreateAndRosterFn;
   /** Called with the IDs of newly created players so caller can add them to the game roster */
   onPlayersCreated?: (playerIds: string[]) => Promise<void>;
@@ -62,6 +69,8 @@ const LineupCreatePlayersModal = ({
   teamId,
   seasonId,
   teamName,
+  existingCount,
+  existingGoalieCount,
   createAndRosterPlayers,
   onPlayersCreated,
 }: Props) => {
@@ -79,6 +88,20 @@ const LineupCreatePlayersModal = ({
 
   const { fields, append, remove } = useFieldArray({ control, name: 'players' });
   const watchedPlayers = useWatch({ control, name: 'players' });
+
+  const slotsLeft = MAX_ROSTER - existingCount;
+  const canAddMore = fields.length < slotsLeft;
+
+  const goaliesInForm = (watchedPlayers ?? []).filter((p) => p?.position === 'G').length;
+  const goalieCapReached = existingGoalieCount + goaliesInForm >= MAX_GOALIES;
+
+  const getPositionOptions = (index: number) => {
+    const rowIsGoalie = watchedPlayers?.[index]?.position === 'G';
+    if (goalieCapReached && !rowIsGoalie) {
+      return POSITION_OPTIONS.filter((o) => o.value !== 'G');
+    }
+    return POSITION_OPTIONS;
+  };
 
   const isRowDirty = (index: number) => {
     const row = watchedPlayers?.[index];
@@ -150,6 +173,9 @@ const LineupCreatePlayersModal = ({
                   name={`players.${index}.jersey_number`}
                   placeholder="—"
                   disabled={isSubmitting}
+                  inputMode="numeric"
+                  maxLength={2}
+                  transform={(val) => val.replace(/[^0-9]/g, '').slice(0, 2)}
                 />
                 <Field
                   control={control}
@@ -171,7 +197,7 @@ const LineupCreatePlayersModal = ({
                   type="select"
                   control={control}
                   name={`players.${index}.position`}
-                  options={POSITION_OPTIONS}
+                  options={getPositionOptions(index)}
                   required
                   rules={{ required: true }}
                   placeholder="Position"
@@ -183,6 +209,7 @@ const LineupCreatePlayersModal = ({
                   onClick={() => handleDeleteClick(index)}
                   disabled={isSubmitting}
                   aria-label="Remove player"
+                  style={{ visibility: fields.length === 1 ? 'hidden' : undefined }}
                 >
                   <Icon
                     name="delete"
@@ -200,11 +227,14 @@ const LineupCreatePlayersModal = ({
               intent="neutral"
               icon="add"
               size="sm"
-              disabled={isSubmitting}
+              disabled={isSubmitting || !canAddMore}
               onClick={() => append({ ...EMPTY_ROW })}
             >
               Add Player
             </Button>
+            <span className={styles.slotCounter}>
+              {existingCount + fields.length} / {MAX_ROSTER} players
+            </span>
           </div>
 
           {isSubmitted && errors.players && (

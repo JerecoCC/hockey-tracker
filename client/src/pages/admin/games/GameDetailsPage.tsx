@@ -1189,16 +1189,20 @@ const GameDetailsPage = () => {
                             tooltip: 'Set Starting Lineup',
                             onClick: () => setLineupSetTeam(side),
                           },
-                          {
-                            icon: 'group_add',
-                            tooltip: 'Add from Roster',
-                            onClick: () => setLineupAddTeam(side),
-                          },
-                          {
-                            icon: 'person_add',
-                            tooltip: 'Create Player',
-                            onClick: () => setLineupCreateTeam(side),
-                          },
+                          ...(rosterEntries.length < 23
+                            ? [
+                                {
+                                  icon: 'group_add',
+                                  tooltip: 'Add from Roster',
+                                  onClick: () => setLineupAddTeam(side),
+                                },
+                                {
+                                  icon: 'person_add',
+                                  tooltip: 'Create Player',
+                                  onClick: () => setLineupCreateTeam(side),
+                                },
+                              ]
+                            : []),
                         ]
                   }
                 >
@@ -1498,6 +1502,12 @@ const GameDetailsPage = () => {
           teamId={lineupCreateTeam === 'away' ? game.away_team_id : game.home_team_id}
           seasonId={seasonId!}
           teamName={lineupCreateTeam === 'away' ? game.away_team_name : game.home_team_name}
+          existingCount={(lineupCreateTeam === 'away' ? awayRoster : homeRoster).length}
+          existingGoalieCount={
+            (lineupCreateTeam === 'away' ? awayRoster : homeRoster).filter(
+              (e) => e.position === 'G',
+            ).length
+          }
           createAndRosterPlayers={
             lineupCreateTeam === 'away' ? createAndRosterAway : createAndRosterHome
           }

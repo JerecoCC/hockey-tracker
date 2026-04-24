@@ -78,6 +78,14 @@
   padding-top: $space-md;
   border-top: 1px solid $border;
   margin-top: $space-xs;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.slotCounter {
+  font-size: $font-xs;
+  color: $text-dim;
 }
 
 .formError {
