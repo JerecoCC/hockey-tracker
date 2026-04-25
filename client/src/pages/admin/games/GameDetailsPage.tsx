@@ -145,6 +145,7 @@ const GameDetailsPage = () => {
     game,
     loading,
     busy,
+    startGame,
     updateStatus,
     advancePeriod,
     endGame,
@@ -298,6 +299,31 @@ const GameDetailsPage = () => {
     setShotsEditSubmitting(false);
     setShotsEditModalOpen(false);
   };
+
+  // ── Start Game modal ──────────────────────────────────────────────────────
+  const [startGameModalOpen, setStartGameModalOpen] = useState(false);
+  const {
+    control: startGameControl,
+    handleSubmit: handleStartGameSubmit,
+    reset: resetStartGameForm,
+    formState: { isSubmitting: startGameSubmitting },
+  } = useForm<{ start_time: string }>({ defaultValues: { start_time: '' } });
+
+  const openStartGameModal = () => {
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
+    resetStartGameForm({ start_time: `${hh}:${mm}` });
+    setStartGameModalOpen(true);
+  };
+
+  const onStartGameSubmit = handleStartGameSubmit(async (data) => {
+    // Build a full ISO timestamp from today's date + the entered time.
+    const today = new Date().toISOString().slice(0, 10);
+    const timeStart = new Date(`${today}T${data.start_time}`).toISOString();
+    const ok = await startGame(timeStart);
+    if (ok) setStartGameModalOpen(false);
+  });
 
   // ── Game Info edit modal ──────────────────────────────────────────────────
   const [gameInfoEditOpen, setGameInfoEditOpen] = useState(false);
@@ -1557,7 +1583,7 @@ const GameDetailsPage = () => {
                                 size="sm"
                                 tooltip="Start Game"
                                 disabled={!!busy}
-                                onClick={() => updateStatus('in_progress')}
+                                onClick={openStartGameModal}
                               />
                               <MoreActionsMenu
                                 disabled={!!busy}
@@ -2365,6 +2391,33 @@ const GameDetailsPage = () => {
         onConfirm={handleConfirmRemove}
         onCancel={() => setConfirmRemove(null)}
       />
+
+      {/* ── Start Game modal ── */}
+      <Modal
+        open={startGameModalOpen}
+        title="Start Game"
+        onClose={() => setStartGameModalOpen(false)}
+        confirmLabel={startGameSubmitting || busy === 'in_progress' ? 'Starting…' : 'Start Game'}
+        confirmIcon="play_arrow"
+        confirmIntent="success"
+        confirmForm="start-game-form"
+        confirmDisabled={startGameSubmitting || !!busy}
+        busy={startGameSubmitting || busy === 'in_progress'}
+      >
+        <form
+          id="start-game-form"
+          className={styles.goalForm}
+          onSubmit={onStartGameSubmit}
+        >
+          <Field
+            label="Start Time"
+            type="timepicker"
+            control={startGameControl}
+            name="start_time"
+            placeholder="Select time…"
+          />
+        </form>
+      </Modal>
 
       {/* ── Game Info edit modal ── */}
       <Modal

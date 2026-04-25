@@ -261,6 +261,31 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
+  /**
+   * Start the game: sets status to in_progress and records the actual kick-off
+   * time in time_start. Sends a single PATCH so both fields are consistent.
+   */
+  const startGame = async (time_start: string): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('in_progress');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { status: 'in_progress', time_start },
+        { headers: authHeaders() },
+      );
+      toast.success('Game started!');
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to start game'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const updateStatus = async (status: GameStatus): Promise<boolean> => {
     if (!id) return false;
     setBusy(status);
@@ -380,6 +405,6 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots };
+  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots };
 };
 
