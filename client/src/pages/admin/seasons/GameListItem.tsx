@@ -82,7 +82,7 @@ const GameListItem = ({
   const awayLost = isFinal && awayScore < homeScore;
   const homeLost = isFinal && homeScore < awayScore;
 
-  const dateLine = [date, time].filter(Boolean).join(' · ');
+  const dateLine = [date, time].filter(Boolean).join(' • ');
 
   return (
     <li className={styles.item}>

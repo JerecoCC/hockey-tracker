@@ -62,47 +62,21 @@
   padding: $space-lg 0;
 
   @media (max-width: 900px) {
-    position: relative; // anchor for the absolute-positioned right stripe
+    position: relative; // anchor for the absolutely-positioned right stripe
     order: 0; // away row sits at the top of the stack
-    // Left padding accommodates the left stripe (bleeds through $space-lg).
-    // Right padding reserves space so content never slides under the right stripe.
-    padding: $space-md calc(52px + #{$space-md}) $space-md $space-lg;
+    // Right padding = gap($space-md) + stripe(52px); stripe bleeds to card edge (no extra inset).
+    padding: $space-md calc(#{$space-md} + 52px) $space-md $space-lg;
     width: 100%;
     box-sizing: border-box;
     border-bottom: 1px solid $border;
-
-    // Right-side stripe — absolutely positioned so it never overflows the card.
-    // clip-path gives the same top-right → bottom-left slant as the left stripe (mirrored).
-    // Gradient uses "to left" so the accent bars sit on the inner (left) slanted edge.
-    &::after {
-      content: "";
-      position: absolute;
-      right: 0;
-      top: 0;
-      bottom: 0;
-      width: 52px;
-      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
-      background: linear-gradient(
-        to left,
-        var(--team-primary) 62%,
-        var(--team-text) 62% 77%,
-        var(--team-primary) 77% 83%,
-        var(--team-text) 83% 98%,
-        var(--team-primary) 98%
-      );
-      opacity: 0.9;
-    }
+    overflow: hidden;
   }
 }
 
-// Loser row in stacked mode — dim only content (button + score); stripes keep their full color
+// Loser row in stacked mode — dim only content (button); stripes keep their full color
 .teamSideLoser {
   @media (max-width: 900px) {
     .teamLogoBtn {
-      opacity: 0.45;
-    }
-
-    .teamSideMobileScore {
       opacity: 0.45;
     }
   }
@@ -133,17 +107,19 @@
     // Reversed slant: top-right → bottom-left (right edge from 100% at top to 70% at bottom)
     clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
     width: 52px;
-    margin: -$space-md 0 -$space-md -$space-lg;
+    // Bleed vertically to fill the row height; sit naturally inside the card padding.
+    margin-left: -$space-lg;
 
-    // Accent strips redrawn as parallelograms parallel to the reversed slant edge.
-    // Strip 1 — 12.5% inset from outer (right) edge, 12.5% wide
+    // Accent strips: each 12.5% wide, with a 12.5% gap between the outer edge and strip 1,
+    // and a 12.5% gap between strip 1 and strip 2 — matching the desktop proportions.
+    // Strip 1 — 12.5% gap from outer edge, then 12.5% wide
     .teamStripeSecondary {
-      clip-path: polygon(87.5% 0, 100% 0, 70% 100%, 57.5% 100%);
+      clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
     }
 
-    // Strip 2 — 25% inset from outer edge, 12.5% wide
+    // Strip 2 — 12.5% gap from strip 1, then 12.5% wide
     .teamStripeSecondary2 {
-      clip-path: polygon(62.5% 0, 75% 0, 45% 100%, 32.5% 100%);
+      clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
     }
   }
 }
@@ -160,16 +136,48 @@
     clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
   }
 
-  // In stacked mode the home stripe uses the same reversed slant as away
+  // In stacked mode the home stripe uses the same reversed slant and strip spacing as away
   @media (max-width: 900px) {
     clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+    margin-left: -$space-lg;
 
     .teamStripeSecondary {
-      clip-path: polygon(87.5% 0, 100% 0, 70% 100%, 57.5% 100%);
+      clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
     }
 
     .teamStripeSecondary2 {
-      clip-path: polygon(62.5% 0, 75% 0, 45% 100%, 32.5% 100%);
+      clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
+    }
+  }
+}
+
+// Right stripe in stacked mode — mirrors the left stripe, positioned absolutely.
+// Hidden on desktop; only rendered at ≤900px via the media query.
+.teamStripeRight {
+  display: none;
+
+  @media (max-width: 900px) {
+    display: block;
+    position: absolute;
+    right: 0; // bleed flush to the right card edge
+    top: 0;
+    bottom: 0;
+    margin: 0; // override .teamStripe top/bottom margins (absolute handles height)
+    width: 52px;
+    // Same top-right → bottom-left slant as the left stripe, mirrored horizontally.
+    // Inner (left) edge: from (30%,0) at top to (0%,100%) at bottom.
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+    // Secondary strips parallel to the inner slanted edge.
+    // Same rule: 12.5% gap from inner edge, 12.5% wide, 12.5% gap between strips.
+    // Strip 1 — 12.5% gap from inner edge, then 12.5% wide
+    .teamStripeSecondary {
+      clip-path: polygon(42.5% 0, 55% 0, 25% 100%, 12.5% 100%);
+    }
+
+    // Strip 2 — 12.5% gap from strip 1, then 12.5% wide
+    .teamStripeSecondary2 {
+      clip-path: polygon(67.5% 0, 80% 0, 50% 100%, 37.5% 100%);
     }
   }
 }
@@ -687,31 +695,13 @@
   line-height: 1;
 
   @media (max-width: 900px) {
-    display: none; // scores are shown inline beside each team row in stacked mode
+    font-size: 2rem; // slightly smaller than desktop (2.75rem) for the compact center row
   }
 }
 
 // Applied to the losing team's score when the game is final.
 .scoreNumberLoser {
   color: $text-dim;
-}
-
-// Inline score shown beside each team row in stacked mode only.
-.teamSideMobileScore {
-  display: none;
-
-  @media (max-width: 900px) {
-    display: block;
-    font-size: 1.75rem;
-    font-weight: 700;
-    color: $text-bright;
-    font-variant-numeric: tabular-nums;
-    min-width: 2rem;
-    text-align: right;
-    line-height: 1;
-    // No margin-left: auto — the right stripe (::after) acts as the right boundary
-    flex-shrink: 0;
-  }
 }
 
 .scoreDate {

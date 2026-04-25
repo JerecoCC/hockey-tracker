@@ -739,19 +739,21 @@ const GameDetailsPage = () => {
                 <span className={styles.teamSubInfo}>{game.away_team_code}</span>
               </div>
             </button>
-            {/* Mobile-only score beside away team */}
-            {(isFinal || isInProgress) && (
-              <span
-                className={[
-                  styles.teamSideMobileScore,
-                  isFinal && liveAwayScore < liveHomeScore ? styles.scoreNumberLoser : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                {liveAwayScore}
-              </span>
-            )}
+            {/* Right stripe — stacked mode only, mirrors the left stripe */}
+            <div className={`${styles.teamStripe} ${styles.teamStripeRight}`}>
+              <div
+                className={styles.teamStripePrimary}
+                style={{ background: game.away_team_primary_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary}
+                style={{ background: game.away_team_text_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary2}
+                style={{ background: game.away_team_text_color }}
+              />
+            </div>
           </div>
 
           {/* ── Center: score + status ── */}
@@ -851,19 +853,21 @@ const GameDetailsPage = () => {
                 </span>
               )}
             </button>
-            {/* Mobile-only score beside home team */}
-            {(isFinal || isInProgress) && (
-              <span
-                className={[
-                  styles.teamSideMobileScore,
-                  isFinal && liveHomeScore < liveAwayScore ? styles.scoreNumberLoser : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                {liveHomeScore}
-              </span>
-            )}
+            {/* Right stripe — stacked mode only, mirrors the left stripe */}
+            <div className={`${styles.teamStripe} ${styles.teamStripeRight}`}>
+              <div
+                className={styles.teamStripePrimary}
+                style={{ background: game.home_team_primary_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary}
+                style={{ background: game.home_team_text_color }}
+              />
+              <div
+                className={styles.teamStripeSecondary2}
+                style={{ background: game.home_team_text_color }}
+              />
+            </div>
           </div>
         </div>
       </Card>
