@@ -360,6 +360,21 @@
   font-style: italic;
 }
 
+.autoFillBanner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-sm;
+  padding: $space-sm $space-md $space-md;
+}
+
+.autoFillBannerText {
+  margin: 0;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
 // ── Goal list (inside period accordion) ──────────────────────────────────────
 
 .goalList {

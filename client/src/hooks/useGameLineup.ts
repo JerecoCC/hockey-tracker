@@ -23,6 +23,8 @@ export interface LineupEntry {
   player_last_name: string;
   player_photo: string | null;
   jersey_number: number | null;
+  /** True when pre-populated from the last finished game; not yet saved to this game. */
+  inherited?: boolean;
 }
 
 const useGameLineup = (gameId: string | undefined) => {

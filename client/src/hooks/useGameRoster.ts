@@ -23,6 +23,8 @@ export interface GameRosterEntry {
   photo: string | null;
   position: string | null;
   jersey_number: number | null;
+  /** True when pre-populated from the last finished game; not yet saved to this game. */
+  inherited?: boolean;
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────

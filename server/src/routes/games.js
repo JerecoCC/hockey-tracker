@@ -409,30 +409,73 @@ router.delete('/:id', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games/:id/lineup  – get starting lineup for both teams
+// Falls back to the most-recent finished game's lineup per team when the
+// current game has no lineup set yet, tagging those rows inherited:true.
 // ---------------------------------------------------------------------------
 router.get('/:id/lineup', async (req, res) => {
   const { id } = req.params;
   try {
-    const rows = await sql`
+    // 1. Resolve the game's two team IDs.
+    const gameRows = await sql`SELECT home_team_id, away_team_id FROM games WHERE id = ${id}`;
+    if (gameRows.length === 0) return res.status(404).json({ error: 'Game not found' });
+    const { home_team_id, away_team_id } = gameRows[0];
+
+    // 2. Fetch any existing lineup entries for this game.
+    const current = await sql`
       SELECT
-        gl.id,
-        gl.game_id,
-        gl.team_id,
-        gl.player_id,
-        gl.position_slot,
-        p.first_name AS player_first_name,
-        p.last_name  AS player_last_name,
-        COALESCE(pt.photo, p.photo) AS player_photo,
-        pt.jersey_number
+        gl.id, gl.game_id, gl.team_id, gl.player_id, gl.position_slot,
+        p.first_name AS player_first_name, p.last_name AS player_last_name,
+        COALESCE(pt.photo, p.photo) AS player_photo, pt.jersey_number,
+        false AS inherited
       FROM game_lineups gl
       JOIN players p ON p.id = gl.player_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gl.player_id
-        AND pt.team_id  = gl.team_id
-        AND pt.end_date IS NULL
+        ON pt.player_id = gl.player_id AND pt.team_id = gl.team_id AND pt.end_date IS NULL
       WHERE gl.game_id = ${id}
     `;
-    return res.json(rows);
+
+    // 3. Determine which teams still need a lineup (none set yet for that team).
+    const teamsCovered = new Set(current.map((r) => r.team_id));
+    const teamsToInherit = [home_team_id, away_team_id].filter((t) => !teamsCovered.has(t));
+
+    // 4. For each uncovered team, find their most-recent finished game (home OR
+    //    away, any opponent) then pull that game's lineup for the team.
+    //    Queries are per-team to avoid JS array → ANY() which the Neon HTTP
+    //    driver does not support.
+    const inheritedRows = [];
+    for (const teamId of teamsToInherit) {
+      // Step A: find the most-recent finished game this team participated in.
+      const lastGameRows = await sql`
+        SELECT id AS game_id
+        FROM games
+        WHERE (home_team_id = ${teamId} OR away_team_id = ${teamId})
+          AND status = 'final'
+          AND id <> ${id}
+        ORDER BY scheduled_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      `;
+      if (lastGameRows.length === 0) continue;
+
+      const lastGameId = lastGameRows[0].game_id;
+
+      // Step B: fetch that game's lineup for this team.
+      const rows = await sql`
+        SELECT
+          gl.id, ${id}::uuid AS game_id, gl.team_id, gl.player_id, gl.position_slot,
+          p.first_name AS player_first_name, p.last_name AS player_last_name,
+          COALESCE(pt.photo, p.photo) AS player_photo, pt.jersey_number,
+          true AS inherited
+        FROM game_lineups gl
+        JOIN players p ON p.id = gl.player_id
+        LEFT JOIN player_teams pt
+          ON pt.player_id = gl.player_id AND pt.team_id = gl.team_id AND pt.end_date IS NULL
+        WHERE gl.game_id = ${lastGameId} AND gl.team_id = ${teamId}
+      `;
+      inheritedRows.push(...rows);
+    }
+    const inherited = inheritedRows;
+
+    return res.json([...current, ...inherited]);
   } catch (err) {
     console.error('lineup get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -503,31 +546,72 @@ router.delete('/:id/lineup/:entryId', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games/:id/roster  – get game-day roster for both teams
+// Falls back to the most-recent finished game's roster per team (home OR away)
+// when the current game has no roster entries yet, tagging those rows inherited:true.
 // ---------------------------------------------------------------------------
 router.get('/:id/roster', async (req, res) => {
   const { id } = req.params;
   try {
-    const rows = await sql`
+    // 1. Resolve the game's two team IDs.
+    const gameRows = await sql`SELECT home_team_id, away_team_id FROM games WHERE id = ${id}`;
+    if (gameRows.length === 0) return res.status(404).json({ error: 'Game not found' });
+    const { home_team_id, away_team_id } = gameRows[0];
+
+    // 2. Fetch any existing roster entries for this game.
+    const current = await sql`
       SELECT
-        gr.id,
-        gr.game_id,
-        gr.team_id,
-        gr.player_id,
-        p.first_name,
-        p.last_name,
+        gr.id, gr.game_id, gr.team_id, gr.player_id,
+        p.first_name, p.last_name,
         COALESCE(pt.photo, p.photo) AS photo,
-        p.position,
-        pt.jersey_number
+        p.position, pt.jersey_number,
+        false AS inherited
       FROM game_rosters gr
       JOIN players p ON p.id = gr.player_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gr.player_id
-        AND pt.team_id  = gr.team_id
-        AND pt.end_date IS NULL
+        ON pt.player_id = gr.player_id AND pt.team_id = gr.team_id AND pt.end_date IS NULL
       WHERE gr.game_id = ${id}
       ORDER BY pt.jersey_number ASC NULLS LAST, p.last_name ASC
     `;
-    return res.json(rows);
+
+    // 3. Determine which teams still need a roster.
+    const teamsCovered = new Set(current.map((r) => r.team_id));
+    const teamsToInherit = [home_team_id, away_team_id].filter((t) => !teamsCovered.has(t));
+
+    // 4. For each uncovered team, inherit the roster from their most-recent finished game.
+    //    Queries are per-team to avoid JS array → ANY() which the Neon HTTP driver does not support.
+    const inheritedRows = [];
+    for (const teamId of teamsToInherit) {
+      // Step A: find the most-recent finished game this team played in (home OR away).
+      const lastGameRows = await sql`
+        SELECT id AS game_id
+        FROM games
+        WHERE (home_team_id = ${teamId} OR away_team_id = ${teamId})
+          AND status = 'final'
+          AND id <> ${id}
+        ORDER BY scheduled_at DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      `;
+      if (lastGameRows.length === 0) continue;
+
+      // Step B: fetch that game's roster for this team.
+      const rows = await sql`
+        SELECT
+          gr.id, ${id}::uuid AS game_id, gr.team_id, gr.player_id,
+          p.first_name, p.last_name,
+          COALESCE(pt.photo, p.photo) AS photo,
+          p.position, pt.jersey_number,
+          true AS inherited
+        FROM game_rosters gr
+        JOIN players p ON p.id = gr.player_id
+        LEFT JOIN player_teams pt
+          ON pt.player_id = gr.player_id AND pt.team_id = gr.team_id AND pt.end_date IS NULL
+        WHERE gr.game_id = ${lastGameRows[0].game_id} AND gr.team_id = ${teamId}
+        ORDER BY pt.jersey_number ASC NULLS LAST, p.last_name ASC
+      `;
+      inheritedRows.push(...rows);
+    }
+
+    return res.json([...current, ...inheritedRows]);
   } catch (err) {
     console.error('game roster get error:', err);
     return res.status(500).json({ error: 'Internal server error' });

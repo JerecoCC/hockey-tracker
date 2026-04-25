@@ -506,8 +506,21 @@ const GameDetailsPage = () => {
 
   // ── Game-day rosters ───────────────────────────────────────────────────────
   const { roster, addToRoster, removeFromRoster } = useGameRoster(id);
-  const awayRoster = roster.filter((e) => e.team_id === game?.away_team_id);
-  const homeRoster = roster.filter((e) => e.team_id === game?.home_team_id);
+  // Real entries are persisted to this game; inherited entries are pre-populated
+  // from the last finished game and not yet saved.
+  const awayRoster = roster.filter((e) => e.team_id === game?.away_team_id && !e.inherited);
+  const homeRoster = roster.filter((e) => e.team_id === game?.home_team_id && !e.inherited);
+  const awayRosterInherited = roster.filter(
+    (e) => e.team_id === game?.away_team_id && !!e.inherited,
+  );
+  const homeRosterInherited = roster.filter(
+    (e) => e.team_id === game?.home_team_id && !!e.inherited,
+  );
+
+  const [autoFillBusy, setAutoFillBusy] = useState<{ away: boolean; home: boolean }>({
+    away: false,
+    home: false,
+  });
 
   // ── Lineup modal state ────────────────────────────────────────────────────
   const [lineupAddTeam, setLineupAddTeam] = useState<'away' | 'home' | null>(null);
@@ -1854,6 +1867,7 @@ const GameDetailsPage = () => {
                 textColor: string,
                 rosterEntries: GameRosterEntry[],
                 lineupMap: typeof awayLineupMap,
+                inheritedEntries: GameRosterEntry[],
               ) => (
                 <Accordion
                   variant="static"
@@ -1964,6 +1978,29 @@ const GameDetailsPage = () => {
                         </>
                       );
                     })()
+                  ) : inheritedEntries.length > 0 ? (
+                    <div className={styles.autoFillBanner}>
+                      <p className={styles.autoFillBannerText}>
+                        {inheritedEntries.length} players available from last game
+                      </p>
+                      <Button
+                        intent="accent"
+                        icon="group_add"
+                        size="sm"
+                        disabled={autoFillBusy[side]}
+                        onClick={async () => {
+                          const teamId = side === 'away' ? game.away_team_id : game.home_team_id;
+                          setAutoFillBusy((prev) => ({ ...prev, [side]: true }));
+                          await addToRoster(
+                            teamId,
+                            inheritedEntries.map((e) => e.player_id),
+                          );
+                          setAutoFillBusy((prev) => ({ ...prev, [side]: false }));
+                        }}
+                      >
+                        Auto-fill from last game
+                      </Button>
+                    </div>
                   ) : (
                     <p className={styles.noGoalsText}>No players in roster yet.</p>
                   )}
@@ -1983,6 +2020,7 @@ const GameDetailsPage = () => {
                         game.away_team_text_color,
                         awayRoster,
                         awayLineupMap,
+                        awayRosterInherited,
                       )}
                       {renderTeamAccordion(
                         'home',
@@ -1993,6 +2031,7 @@ const GameDetailsPage = () => {
                         game.home_team_text_color,
                         homeRoster,
                         homeLineupMap,
+                        homeRosterInherited,
                       )}
                     </div>
                   </Card>
