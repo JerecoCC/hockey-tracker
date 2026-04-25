@@ -428,6 +428,10 @@ async function initSchema() {
   // Migration: separate time-of-day for the game (stored as TEXT, e.g. "19:30")
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS scheduled_time TEXT`;
 
+  // Migration: actual game start / end timestamps (distinct from the pre-game scheduled_at)
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_start TIMESTAMPTZ`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_end   TIMESTAMPTZ`;
+
   // Migration: drop redundant period-by-period goal columns (scores are now derived from the goals table)
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_home_goals`;
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_away_goals`;

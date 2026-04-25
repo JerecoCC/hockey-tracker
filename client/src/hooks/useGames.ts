@@ -24,6 +24,10 @@ export interface GameRecord {
   scheduled_at:          string | null;
   scheduled_time:        string | null;
   venue:                 string | null;
+  /** Actual kick-off timestamp (set when the game starts, distinct from scheduled_at). */
+  time_start:            string | null;
+  /** Actual end timestamp (set when the game is finalised). */
+  time_end:              string | null;
   home_team_id:            string;
   home_team_name:          string;
   home_team_code:          string;
@@ -309,6 +313,8 @@ export const useGameDetails = (id: string | undefined) => {
     scheduled_at?: string | null;
     scheduled_time?: string | null;
     game_type?: GameType;
+    time_start?: string | null;
+    time_end?: string | null;
   }): Promise<boolean> => {
     if (!id) return false;
     setBusy('update-info');

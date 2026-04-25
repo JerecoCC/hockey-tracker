@@ -108,6 +108,7 @@ router.get('/:id', async (req, res) => {
       SELECT
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
+        g.time_start, g.time_end,
         g.home_score, g.away_score,
         g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
@@ -218,6 +219,7 @@ router.post('/', async (req, res) => {
       SELECT
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
+        g.time_start, g.time_end,
         g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
@@ -283,6 +285,7 @@ router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
     scheduled_at, scheduled_time, venue, game_type, status,
+    time_start, time_end,
     home_score, away_score, home_score_reg, away_score_reg,
     overtime_periods, shootout,
     playoff_series_id, game_number_in_series, game_number, notes,
@@ -327,13 +330,16 @@ router.patch('/:id', async (req, res) => {
         current_period        = COALESCE(${effectivePeriod},             current_period),
         star_1_id             = COALESCE(${star_1_id             ?? null}, star_1_id),
         star_2_id             = COALESCE(${star_2_id             ?? null}, star_2_id),
-        star_3_id             = COALESCE(${star_3_id             ?? null}, star_3_id)
+        star_3_id             = COALESCE(${star_3_id             ?? null}, star_3_id),
+        time_start            = COALESCE(${time_start            ?? null}, time_start),
+        time_end              = COALESCE(${time_end              ?? null}, time_end)
       WHERE id = ${id}
     `;
     const updated = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
+        g.time_start, g.time_end,
         g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
