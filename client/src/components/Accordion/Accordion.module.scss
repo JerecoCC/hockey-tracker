@@ -1,6 +1,10 @@
 @use "../../styles/colors" as *;
 @use "../../styles/mixins" as *;
 
+// Slightly lighter than $bg-card so the header reads as an elevated surface
+// above the body (which shows through to the parent card's $bg-card background).
+$_header-bg: mix(white, $bg-card, 8%);
+
 // ── Root container ────────────────────────────────────────────────────────────
 
 .accordion {
@@ -19,12 +23,12 @@
   align-items: center;
   gap: $space-sm;
   padding: $space-sm $space-md;
-  background: $bg-card;
+  background: $_header-bg;
   border-bottom: 1px solid $border;
   transition: background $transition-fast;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: mix(white, $_header-bg, 5%);
 
     .hoverActions {
       opacity: 1;
@@ -43,7 +47,7 @@
   cursor: default;
 
   &:hover {
-    background: transparent;
+    background: $_header-bg;
   }
 
   .hoverActions {
@@ -123,7 +127,7 @@
   align-items: center;
   gap: $space-xs;
   padding: 0 $space-md;
-  background: $bg-card;
+  background: $_header-bg;
   border-radius: 0 $radius-md $radius-md 0;
   opacity: 0;
   pointer-events: none;
@@ -136,7 +140,7 @@
     top: 0;
     bottom: 0;
     width: 3rem;
-    background: linear-gradient(to right, transparent, $bg-card);
+    background: linear-gradient(to right, transparent, $_header-bg);
     pointer-events: none;
   }
 }
@@ -144,5 +148,5 @@
 // ── Collapsible body ──────────────────────────────────────────────────────────
 
 .body {
-  background: $bg-page;
+  // Consumers style the content directly; this is just a structural wrapper.
 }

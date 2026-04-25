@@ -2,8 +2,6 @@
 @use "../../styles/mixins" as *;
 
 .root {
-  --overlay-bg: #{$bg-card};
-
   position: absolute;
   right: 0;
   top: 0;
@@ -12,7 +10,7 @@
   align-items: center;
   gap: $space-xs;
   padding: 0 $space-md;
-  background: var(--overlay-bg);
+  background: $bg-card;
   border-radius: 0 $radius-md $radius-md 0;
   opacity: 0;
   pointer-events: none;
@@ -26,7 +24,7 @@
     top: 0;
     bottom: 0;
     width: 3rem;
-    background: linear-gradient(to right, transparent, var(--overlay-bg));
+    background: linear-gradient(to right, transparent, $bg-card);
     pointer-events: none;
   }
 }
