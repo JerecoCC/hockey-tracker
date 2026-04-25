@@ -48,6 +48,12 @@ type CreateAndRosterFn = (
 const MAX_ROSTER = 23;
 const MAX_GOALIES = 3;
 
+export interface ExistingRosterEntry {
+  first_name: string;
+  last_name: string;
+  jersey_number: number | null;
+}
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -58,6 +64,8 @@ interface Props {
   existingCount: number;
   /** Number of goalies already in this team's game roster. */
   existingGoalieCount: number;
+  /** Existing roster entries used for duplicate validation. */
+  existingRoster?: ExistingRosterEntry[];
   createAndRosterPlayers: CreateAndRosterFn;
   /** Called with the IDs of newly created players so caller can add them to the game roster */
   onPlayersCreated?: (playerIds: string[]) => Promise<void>;
@@ -71,11 +79,13 @@ const LineupCreatePlayersModal = ({
   teamName,
   existingCount,
   existingGoalieCount,
+  existingRoster = [],
   createAndRosterPlayers,
   onPlayersCreated,
 }: Props) => {
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [duplicateErrors, setDuplicateErrors] = useState<string[]>([]);
 
   const {
     control,
@@ -135,10 +145,58 @@ const LineupCreatePlayersModal = ({
 
   const handleClose = () => {
     reset({ players: [{ ...EMPTY_ROW }] });
+    setDuplicateErrors([]);
     onClose();
   };
 
   const onSubmit = handleSubmit(async (data) => {
+    // ── Duplicate validation ──────────────────────────────────────────────────
+    const errors: string[] = [];
+
+    // Normalise existing roster for quick lookup
+    const rosterNames = new Set(
+      existingRoster.map(
+        (r) => `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
+      ),
+    );
+    const rosterJerseys = new Set(
+      existingRoster.filter((r) => r.jersey_number != null).map((r) => r.jersey_number!),
+    );
+
+    // Also track within the form itself to catch row-vs-row duplicates
+    const formNames = new Set<string>();
+    const formJerseys = new Set<number>();
+
+    for (const row of data.players) {
+      const nameKey = `${row.first_name.trim().toLowerCase()} ${row.last_name.trim().toLowerCase()}`;
+      const jerseyNum = row.jersey_number !== '' ? Number(row.jersey_number) : null;
+
+      if (rosterNames.has(nameKey)) {
+        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" is already on the roster.`);
+      } else if (formNames.has(nameKey)) {
+        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" appears more than once.`);
+      } else {
+        formNames.add(nameKey);
+      }
+
+      if (jerseyNum != null) {
+        if (rosterJerseys.has(jerseyNum)) {
+          errors.push(`Jersey #${jerseyNum} is already in use on this roster.`);
+        } else if (formJerseys.has(jerseyNum)) {
+          errors.push(`Jersey #${jerseyNum} is listed more than once.`);
+        } else {
+          formJerseys.add(jerseyNum);
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      setDuplicateErrors(errors);
+      return;
+    }
+    setDuplicateErrors([]);
+
+    // ── Submit ────────────────────────────────────────────────────────────────
     setIsSubmitting(true);
     const payload = data.players.map((row) => ({
       first_name: row.first_name,
@@ -262,6 +320,13 @@ const LineupCreatePlayersModal = ({
 
           {isSubmitted && errors.players && (
             <p className={styles.formError}>Please fill in all required fields before saving.</p>
+          )}
+          {duplicateErrors.length > 0 && (
+            <ul className={styles.duplicateErrors}>
+              {duplicateErrors.map((msg, i) => (
+                <li key={i}>{msg}</li>
+              ))}
+            </ul>
           )}
         </form>
       </Modal>

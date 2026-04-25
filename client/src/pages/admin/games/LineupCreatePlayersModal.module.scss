@@ -93,3 +93,15 @@
   color: $danger-light;
   margin: $space-sm 0 0;
 }
+
+.duplicateErrors {
+  margin: $space-sm 0 0;
+  padding-left: 1.25rem;
+  list-style: disc;
+
+  li {
+    font-size: $font-sm;
+    color: $danger-light;
+    margin-bottom: 0.2rem;
+  }
+}
