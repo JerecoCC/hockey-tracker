@@ -306,8 +306,13 @@ const GameDetailsPage = () => {
     handleSubmit: handleGameInfoSubmit,
     reset: resetGameInfoForm,
     formState: { isSubmitting: gameInfoSubmitting },
-  } = useForm<{ venue: string; scheduled_date: string; game_type: GameType }>({
-    defaultValues: { venue: '', scheduled_date: '', game_type: 'regular' },
+  } = useForm<{
+    venue: string;
+    scheduled_date: string;
+    scheduled_time: string;
+    game_type: GameType;
+  }>({
+    defaultValues: { venue: '', scheduled_date: '', scheduled_time: '', game_type: 'regular' },
   });
 
   const openGameInfoEdit = () => {
@@ -315,6 +320,7 @@ const GameDetailsPage = () => {
     resetGameInfoForm({
       venue: game.venue ?? '',
       scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
+      scheduled_time: game.scheduled_time ?? '',
       game_type: game.game_type,
     });
     setGameInfoEditOpen(true);
@@ -324,6 +330,7 @@ const GameDetailsPage = () => {
     const ok = await updateGameInfo({
       venue: data.venue || null,
       scheduled_at: data.scheduled_date || null,
+      scheduled_time: data.scheduled_time || null,
       game_type: data.game_type,
     });
     if (ok) setGameInfoEditOpen(false);
@@ -691,11 +698,11 @@ const GameDetailsPage = () => {
               />
               <div
                 className={styles.teamStripeSecondary}
-                style={{ background: game.away_team_secondary_color }}
+                style={{ background: game.away_team_text_color }}
               />
               <div
                 className={styles.teamStripeSecondary2}
-                style={{ background: game.away_team_secondary_color }}
+                style={{ background: game.away_team_text_color }}
               />
             </div>
             <button
@@ -776,11 +783,11 @@ const GameDetailsPage = () => {
               />
               <div
                 className={styles.teamStripeSecondary}
-                style={{ background: game.home_team_secondary_color }}
+                style={{ background: game.home_team_text_color }}
               />
               <div
                 className={styles.teamStripeSecondary2}
-                style={{ background: game.home_team_secondary_color }}
+                style={{ background: game.home_team_text_color }}
               />
             </div>
             <button
@@ -1338,7 +1345,11 @@ const GameDetailsPage = () => {
                         const goalies = [...awayRoster, ...homeRoster].filter(
                           (e) => e.position === 'G',
                         );
-                        if (goalies.length === 0) return null;
+                        // Only show the card if at least one goalie has recorded stats
+                        const goaliesWithStats = goalies.filter((g) =>
+                          goalieStats.some((gs) => gs.goalie_id === g.player_id),
+                        );
+                        if (goaliesWithStats.length === 0) return null;
                         return (
                           <Card
                             title="Goalie Stats"
@@ -1369,6 +1380,8 @@ const GameDetailsPage = () => {
                                   const stat = goalieStats.find(
                                     (gs) => gs.goalie_id === goalie.player_id,
                                   );
+                                  // Only show goalies that have recorded SA/SVS for this game
+                                  if (!stat) return null;
                                   const isAway = goalie.team_id === game.away_team_id;
                                   const primaryColor = isAway
                                     ? game.away_team_primary_color
@@ -1459,49 +1472,8 @@ const GameDetailsPage = () => {
                   </div>
                   {/* end summaryLeft */}
 
-                  {/* ── Right column: Game Info (final only) + Linescore ── */}
+                  {/* ── Right column: Linescore + Shots + Game Info ── */}
                   <div className={styles.summaryRight}>
-                    <Card
-                      title="Game Info"
-                      action={
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          icon="edit"
-                          size="sm"
-                          tooltip="Edit game info"
-                          onClick={openGameInfoEdit}
-                        />
-                      }
-                    >
-                      <div className={styles.infoGrid}>
-                        <div className={styles.infoItem}>
-                          <span className={styles.infoLabel}>Venue</span>
-                          <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
-                            {game.venue ?? '—'}
-                          </span>
-                        </div>
-                        <div className={styles.infoItem}>
-                          <span className={styles.infoLabel}>Type</span>
-                          <span className={styles.infoValue}>
-                            {GAME_TYPE_LABEL[game.game_type]}
-                          </span>
-                        </div>
-                        {game.game_number != null && (
-                          <div className={styles.infoItem}>
-                            <span className={styles.infoLabel}>Game #</span>
-                            <span className={styles.infoValue}>{game.game_number}</span>
-                          </div>
-                        )}
-                        {game.notes && (
-                          <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-                            <span className={styles.infoLabel}>Notes</span>
-                            <span className={styles.infoValue}>{game.notes}</span>
-                          </div>
-                        )}
-                      </div>
-                    </Card>
-
                     <Card
                       title="Linescore"
                       action={
@@ -1510,7 +1482,7 @@ const GameDetailsPage = () => {
                             <>
                               <Button
                                 variant="filled"
-                                intent="accent"
+                                intent="success"
                                 icon="play_arrow"
                                 size="sm"
                                 tooltip="Start Game"
@@ -1749,6 +1721,57 @@ const GameDetailsPage = () => {
                         </table>
                       </Card>
                     )}
+
+                    <Card
+                      title="Game Info"
+                      action={
+                        <Button
+                          variant="outlined"
+                          intent="neutral"
+                          icon="edit"
+                          size="sm"
+                          tooltip="Edit game info"
+                          onClick={openGameInfoEdit}
+                        />
+                      }
+                    >
+                      <div className={styles.infoGrid}>
+                        <div className={styles.infoItem}>
+                          <span className={styles.infoLabel}>Venue</span>
+                          <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
+                            {game.venue ?? '—'}
+                          </span>
+                        </div>
+                        <div className={styles.infoItem}>
+                          <span className={styles.infoLabel}>Time</span>
+                          <span
+                            className={
+                              game.scheduled_time ? styles.infoValue : styles.infoValueMuted
+                            }
+                          >
+                            {game.scheduled_time ?? '—'}
+                          </span>
+                        </div>
+                        <div className={styles.infoItem}>
+                          <span className={styles.infoLabel}>Type</span>
+                          <span className={styles.infoValue}>
+                            {GAME_TYPE_LABEL[game.game_type]}
+                          </span>
+                        </div>
+                        {game.game_number != null && (
+                          <div className={styles.infoItem}>
+                            <span className={styles.infoLabel}>Game #</span>
+                            <span className={styles.infoValue}>{game.game_number}</span>
+                          </div>
+                        )}
+                        {game.notes && (
+                          <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+                            <span className={styles.infoLabel}>Notes</span>
+                            <span className={styles.infoValue}>{game.notes}</span>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
                   </div>
                 </div>
               </div>
@@ -2183,6 +2206,11 @@ const GameDetailsPage = () => {
               (e) => e.position === 'G',
             ).length
           }
+          existingRoster={(lineupCreateTeam === 'away' ? awayRoster : homeRoster).map((e) => ({
+            first_name: e.first_name,
+            last_name: e.last_name,
+            jersey_number: e.jersey_number ?? null,
+          }))}
           createAndRosterPlayers={
             lineupCreateTeam === 'away' ? createAndRosterAway : createAndRosterHome
           }
@@ -2270,6 +2298,12 @@ const GameDetailsPage = () => {
             control={gameInfoControl}
             name="scheduled_date"
             placeholder="Select date…"
+          />
+          <Field
+            label="Time"
+            type="timepicker"
+            control={gameInfoControl}
+            name="scheduled_time"
           />
           <Field
             label="Game Type"
