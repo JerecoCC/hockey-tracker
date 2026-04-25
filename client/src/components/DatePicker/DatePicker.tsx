@@ -6,6 +6,7 @@ interface Props {
   value: string; // YYYY-MM-DD or ''
   onChange: (val: string) => void;
   placeholder?: string;
+  disabled?: boolean;
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -108,7 +109,7 @@ const buildDisplay = (
 };
 
 const DatePicker = (props: Props) => {
-  const { value, onChange } = props;
+  const { value, onChange, disabled } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
   const parsed = parseISO(value);
@@ -396,7 +397,7 @@ const DatePicker = (props: Props) => {
       {/* ── Trigger ── */}
       <div
         ref={triggerRef}
-        className={styles.trigger}
+        className={[styles.trigger, disabled && styles.triggerDisabled].filter(Boolean).join(' ')}
       >
         <button
           type="button"
@@ -404,6 +405,7 @@ const DatePicker = (props: Props) => {
           onClick={openPicker}
           tabIndex={-1}
           aria-label="Open calendar"
+          disabled={disabled}
         >
           <Icon
             name="calendar_today"
@@ -418,12 +420,13 @@ const DatePicker = (props: Props) => {
           value={displayValue}
           data-empty={!cYear && !cMonth && !cDay}
           onChange={() => {}}
-          onClick={handleInputClick}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          onClick={!disabled ? handleInputClick : undefined}
+          onKeyDown={!disabled ? handleKeyDown : undefined}
+          onFocus={!disabled ? handleFocus : undefined}
+          onBlur={!disabled ? handleBlur : undefined}
+          readOnly={disabled}
         />
-        {value && (
+        {value && !disabled && (
           <span
             className={styles.clear}
             onClick={clearDate}

@@ -43,11 +43,12 @@
   align-items: stretch;
   min-height: 80px;
 
-  @media (max-width: 640px) {
+  @media (max-width: 900px) {
     flex-direction: column;
-    align-items: center;
-    gap: $space-lg;
-    padding: $space-lg 0;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    min-height: unset;
   }
 }
 
@@ -57,12 +58,65 @@
   align-items: center;
   gap: $space-md;
   flex: 1;
+  min-width: 0; // allow flex shrinking so scoreCenter is never pushed out
   padding: $space-lg 0;
+
+  @media (max-width: 900px) {
+    position: relative; // anchor for the absolute-positioned right stripe
+    order: 0; // away row sits at the top of the stack
+    // Left padding accommodates the left stripe (bleeds through $space-lg).
+    // Right padding reserves space so content never slides under the right stripe.
+    padding: $space-md calc(52px + #{$space-md}) $space-md $space-lg;
+    width: 100%;
+    box-sizing: border-box;
+    border-bottom: 1px solid $border;
+
+    // Right-side stripe — absolutely positioned so it never overflows the card.
+    // clip-path gives the same top-right → bottom-left slant as the left stripe (mirrored).
+    // Gradient uses "to left" so the accent bars sit on the inner (left) slanted edge.
+    &::after {
+      content: "";
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 52px;
+      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+      background: linear-gradient(
+        to left,
+        var(--team-primary) 62%,
+        var(--team-text) 62% 77%,
+        var(--team-primary) 77% 83%,
+        var(--team-text) 83% 98%,
+        var(--team-primary) 98%
+      );
+      opacity: 0.9;
+    }
+  }
+}
+
+// Loser row in stacked mode — dim only content (button + score); stripes keep their full color
+.teamSideLoser {
+  @media (max-width: 900px) {
+    .teamLogoBtn {
+      opacity: 0.45;
+    }
+
+    .teamSideMobileScore {
+      opacity: 0.45;
+    }
+  }
 }
 
 // Home side: reverse order so logo+stripe are on the right
 .teamSideHome {
   flex-direction: row-reverse;
+
+  @media (max-width: 900px) {
+    flex-direction: row; // undo reversal — same left-to-right order as away
+    order: 2; // visually last
+    border-bottom: none; // home row is the last row, no bottom separator needed
+  }
 }
 
 // Diagonal stripe decoration — clipping container
@@ -74,18 +128,49 @@
   clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
   opacity: 0.9;
   margin: -$space-lg 0;
+
+  @media (max-width: 900px) {
+    // Reversed slant: top-right → bottom-left (right edge from 100% at top to 70% at bottom)
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+    width: 52px;
+    margin: -$space-md 0 -$space-md -$space-lg;
+
+    // Accent strips redrawn as parallelograms parallel to the reversed slant edge.
+    // Strip 1 — 12.5% inset from outer (right) edge, 12.5% wide
+    .teamStripeSecondary {
+      clip-path: polygon(87.5% 0, 100% 0, 70% 100%, 57.5% 100%);
+    }
+
+    // Strip 2 — 25% inset from outer edge, 12.5% wide
+    .teamStripeSecondary2 {
+      clip-path: polygon(62.5% 0, 75% 0, 45% 100%, 32.5% 100%);
+    }
+  }
 }
 
 .teamStripeHome {
   clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
 
-  // Mirror both secondary strips for the home side
+  // Mirror both secondary strips for the home side (desktop — angled toward left edge)
   .teamStripeSecondary {
     clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
   }
 
   .teamStripeSecondary2 {
     clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
+  }
+
+  // In stacked mode the home stripe uses the same reversed slant as away
+  @media (max-width: 900px) {
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+
+    .teamStripeSecondary {
+      clip-path: polygon(87.5% 0, 100% 0, 70% 100%, 57.5% 100%);
+    }
+
+    .teamStripeSecondary2 {
+      clip-path: polygon(62.5% 0, 75% 0, 45% 100%, 32.5% 100%);
+    }
   }
 }
 
@@ -120,7 +205,8 @@
   padding: 0;
   cursor: pointer;
   border-radius: $radius-md;
-  flex-shrink: 0;
+  flex-shrink: 1; // allow the button to shrink so it doesn't crowd the score center
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: $space-md;
@@ -133,6 +219,19 @@
     outline: 2px solid $accent;
     outline-offset: 4px;
   }
+
+  @media (max-width: 900px) {
+    flex: 1; // fills available space so the score span stays pinned to the right
+    min-width: 0;
+  }
+}
+
+// On mobile, reverse the home button's child order ([name,logo] → [logo,name])
+// to match the away button layout without changing the DOM.
+.teamLogoBtnHome {
+  @media (max-width: 900px) {
+    flex-direction: row-reverse;
+  }
 }
 
 // ── Team logo / placeholder ────────────────────────────────────────────────────
@@ -142,6 +241,11 @@
   object-fit: contain;
   display: block;
   filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
+
+  @media (max-width: 900px) {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 .teamLogoPlaceholder {
@@ -157,6 +261,11 @@
   font-weight: 700;
   color: $text-dim;
   letter-spacing: 0.04em;
+
+  @media (max-width: 900px) {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 // Team name + code stacked block
@@ -164,6 +273,7 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0; // allow text children to truncate inside a shrinking flex parent
 }
 
 .teamFullName {
@@ -171,6 +281,9 @@
   font-weight: 700;
   color: $text-bright;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .teamSubInfo {
@@ -185,6 +298,15 @@
   gap: $space-lg;
   flex-shrink: 0;
   padding: $space-md $space-xl;
+
+  @media (max-width: 900px) {
+    order: 1; // sits between the away row (order:0) and home row (order:2)
+    justify-content: center;
+    padding: $space-md $space-lg;
+    border-bottom: 1px solid $border;
+    width: 100%;
+    box-sizing: border-box;
+  }
 }
 
 // ── Period scoring list ────────────────────────────────────────────────────────
@@ -481,6 +603,11 @@
   &:focus {
     border-color: $accent;
   }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
 }
 
 // Colon separator between MM and SS inputs
@@ -558,11 +685,33 @@
   text-align: center;
   transition: color 0.15s;
   line-height: 1;
+
+  @media (max-width: 900px) {
+    display: none; // scores are shown inline beside each team row in stacked mode
+  }
 }
 
 // Applied to the losing team's score when the game is final.
 .scoreNumberLoser {
   color: $text-dim;
+}
+
+// Inline score shown beside each team row in stacked mode only.
+.teamSideMobileScore {
+  display: none;
+
+  @media (max-width: 900px) {
+    display: block;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: $text-bright;
+    font-variant-numeric: tabular-nums;
+    min-width: 2rem;
+    text-align: right;
+    line-height: 1;
+    // No margin-left: auto — the right stripe (::after) acts as the right boundary
+    flex-shrink: 0;
+  }
 }
 
 .scoreDate {

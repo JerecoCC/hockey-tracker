@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import useGames, { type GameRecord, type GameStatus } from '../../../hooks/useGames';
+import useGames, { type GameRecord, type GameStatus, type GameType } from '../../../hooks/useGames';
 import GameListItem from './GameListItem';
+import Select from '../../../components/Select/Select';
 import { type SeasonTeam } from '../../../hooks/useSeasonDetails';
 import type { SelectOption } from '../../../components/Select/Select';
 import BulkCreateGamesModal from './BulkCreateGamesModal';
@@ -18,6 +19,18 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   year: 'numeric',
 });
+
+/** Converts a stored "HH:MM" string to "h:mm AM/PM ET" for display. */
+const formatTime = (hhmm: string): string => {
+  const [hStr, mStr] = hhmm.split(':');
+  const h = parseInt(hStr, 10);
+  const m = parseInt(mStr, 10);
+  if (isNaN(h) || isNaN(m)) return hhmm;
+  const period = h < 12 ? 'AM' : 'PM';
+  const hour12 = h % 12 === 0 ? 12 : h % 12;
+  const min = String(m).padStart(2, '0');
+  return `${hour12}:${min} ${period} ET`;
+};
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
@@ -35,13 +48,6 @@ const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warnin
   cancelled: 'danger',
 };
 
-const formatSubtitle = (game: GameRecord): string => {
-  const parts: string[] = [];
-  if (game.scheduled_at) parts.push(DATE_FMT.format(new Date(game.scheduled_at)));
-  if (game.venue) parts.push(game.venue);
-  return parts.join(' • ') || 'No date set';
-};
-
 const formatStatusLabel = (game: GameRecord): string => {
   if (game.status !== 'final') return STATUS_LABEL[game.status];
   // Prefer period_scores (source of truth) but fall back to stored columns for
@@ -51,6 +57,17 @@ const formatStatusLabel = (game: GameRecord): string => {
     return 'Final/OT';
   return 'Final';
 };
+
+// ── Filter options ────────────────────────────────────────────────────────────
+
+const GAME_TYPE_OPTIONS: SelectOption[] = [
+  { value: '', label: 'All Types' },
+  { value: 'preseason', label: 'Pre-season' },
+  { value: 'regular', label: 'Regular Season' },
+  { value: 'playoff', label: 'Playoffs' },
+];
+
+const MONTH_FMT = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' });
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -71,6 +88,41 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     value: t.id,
     label: `${t.name} (${t.code})`,
   }));
+
+  // ── Filter state ───────────────────────────────────────────────────────────
+  const [gameTypeFilter, setGameTypeFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState('');
+
+  /** Month options derived from the fetched games (only months that have games). */
+  const monthOptions = useMemo<SelectOption[]>(() => {
+    const seen = new Set<string>();
+    const months: SelectOption[] = [];
+    [...games]
+      .filter((g) => g.scheduled_at)
+      .sort((a, b) => (a.scheduled_at! < b.scheduled_at! ? -1 : 1))
+      .forEach((g) => {
+        const ym = g.scheduled_at!.slice(0, 7); // "YYYY-MM"
+        if (!seen.has(ym)) {
+          seen.add(ym);
+          const [y, m] = ym.split('-');
+          const label = MONTH_FMT.format(new Date(Number(y), Number(m) - 1, 1));
+          months.push({ value: ym, label });
+        }
+      });
+    return [{ value: '', label: 'All Months' }, ...months];
+  }, [games]);
+
+  /** Games after both filters are applied. */
+  const filteredGames = useMemo(
+    () =>
+      games.filter((g) => {
+        if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
+        if (monthFilter && (g.scheduled_at?.slice(0, 7) ?? '') !== monthFilter) return false;
+        return true;
+      }),
+    [games, gameTypeFilter, monthFilter],
+  );
+
   const [formOpen, setFormOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
@@ -116,13 +168,29 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
           )
         }
       >
+        {/* ── Filters ── */}
+        <div className={styles.filters}>
+          <Select
+            value={gameTypeFilter}
+            options={GAME_TYPE_OPTIONS}
+            onChange={setGameTypeFilter}
+          />
+          <Select
+            value={monthFilter}
+            options={monthOptions}
+            onChange={setMonthFilter}
+          />
+        </div>
+
         {loading ? (
           <p className={styles.empty}>Loading…</p>
         ) : games.length === 0 ? (
           <p className={styles.empty}>No games scheduled yet.</p>
+        ) : filteredGames.length === 0 ? (
+          <p className={styles.empty}>No games match the selected filters.</p>
         ) : (
           <ul className={styles.list}>
-            {games.map((game) => (
+            {filteredGames.map((game) => (
               <GameListItem
                 key={game.id}
                 awayTeam={{
@@ -143,7 +211,9 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 isFinal={game.status === 'final'}
                 statusLabel={formatStatusLabel(game)}
                 statusIntent={STATUS_INTENT[game.status]}
-                subtitle={formatSubtitle(game)}
+                date={game.scheduled_at ? DATE_FMT.format(new Date(game.scheduled_at)) : undefined}
+                time={game.scheduled_time ? formatTime(game.scheduled_time) : undefined}
+                venue={game.venue ?? undefined}
                 actions={[
                   {
                     icon: 'open_in_new',

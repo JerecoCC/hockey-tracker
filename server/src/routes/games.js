@@ -89,7 +89,7 @@ router.get('/', async (req, res) => {
                                                 OR g.away_team_id = ${team_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type   = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status      = ${status    ?? null})
-      ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC
+      ORDER BY g.scheduled_at DESC NULLS LAST, g.scheduled_time DESC NULLS LAST, g.created_at DESC
     `;
     return res.json(games);
   } catch (err) {

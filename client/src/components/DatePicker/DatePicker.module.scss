@@ -29,6 +29,12 @@
   }
 }
 
+.triggerDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 // Calendar icon — transparent button, just a clickable hit-target
 .calIconBtn {
   display: flex;

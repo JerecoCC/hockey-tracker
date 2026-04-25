@@ -690,7 +690,20 @@ const GameDetailsPage = () => {
       >
         <div className={styles.scoreboard}>
           {/* ── Away side ── */}
-          <div className={styles.teamSide}>
+          <div
+            className={[
+              styles.teamSide,
+              isFinal && liveAwayScore < liveHomeScore ? styles.teamSideLoser : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={
+              {
+                '--team-primary': game.away_team_primary_color,
+                '--team-text': game.away_team_text_color,
+              } as React.CSSProperties
+            }
+          >
             <div className={styles.teamStripe}>
               <div
                 className={styles.teamStripePrimary}
@@ -726,6 +739,19 @@ const GameDetailsPage = () => {
                 <span className={styles.teamSubInfo}>{game.away_team_code}</span>
               </div>
             </button>
+            {/* Mobile-only score beside away team */}
+            {(isFinal || isInProgress) && (
+              <span
+                className={[
+                  styles.teamSideMobileScore,
+                  isFinal && liveAwayScore < liveHomeScore ? styles.scoreNumberLoser : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {liveAwayScore}
+              </span>
+            )}
           </div>
 
           {/* ── Center: score + status ── */}
@@ -775,7 +801,21 @@ const GameDetailsPage = () => {
           </div>
 
           {/* ── Home side ── */}
-          <div className={`${styles.teamSide} ${styles.teamSideHome}`}>
+          <div
+            className={[
+              styles.teamSide,
+              styles.teamSideHome,
+              isFinal && liveHomeScore < liveAwayScore ? styles.teamSideLoser : '',
+            ]
+              .filter(Boolean)
+              .join(' ')}
+            style={
+              {
+                '--team-primary': game.home_team_primary_color,
+                '--team-text': game.home_team_text_color,
+              } as React.CSSProperties
+            }
+          >
             <div className={`${styles.teamStripe} ${styles.teamStripeHome}`}>
               <div
                 className={styles.teamStripePrimary}
@@ -811,6 +851,19 @@ const GameDetailsPage = () => {
                 </span>
               )}
             </button>
+            {/* Mobile-only score beside home team */}
+            {(isFinal || isInProgress) && (
+              <span
+                className={[
+                  styles.teamSideMobileScore,
+                  isFinal && liveHomeScore < liveAwayScore ? styles.scoreNumberLoser : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {liveHomeScore}
+              </span>
+            )}
           </div>
         </div>
       </Card>

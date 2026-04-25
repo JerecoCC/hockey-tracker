@@ -55,11 +55,13 @@ type CustomProps = BaseProps & {
 type DatePickerProps = BaseProps & {
   type: 'datepicker';
   placeholder?: string;
+  disabled?: boolean;
 };
 
 type TimePickerProps = BaseProps & {
   type: 'timepicker';
   placeholder?: string;
+  disabled?: boolean;
 };
 
 type ColorProps = BaseProps & {
@@ -145,6 +147,7 @@ const Field = (props: FieldProps) => {
                 value={(field.value as string) ?? ''}
                 onChange={field.onChange}
                 placeholder={props.placeholder}
+                disabled={props.disabled}
               />
             );
           } else if (props.type === 'timepicker') {
@@ -153,6 +156,7 @@ const Field = (props: FieldProps) => {
                 value={(field.value as string) ?? ''}
                 onChange={field.onChange}
                 placeholder={props.placeholder}
+                disabled={props.disabled}
               />
             );
           } else if (props.type === 'richtext') {

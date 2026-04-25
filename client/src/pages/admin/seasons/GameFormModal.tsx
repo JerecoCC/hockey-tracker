@@ -37,24 +37,6 @@ interface Props {
   onClose: () => void;
 }
 
-const GAME_TYPE_OPTIONS: SelectOption[] = [
-  { value: 'regular', label: 'Regular Season' },
-  { value: 'preseason', label: 'Preseason' },
-  { value: 'playoff', label: 'Playoff' },
-];
-
-const STATUS_OPTIONS: SelectOption[] = [
-  { value: 'scheduled', label: 'Scheduled' },
-  { value: 'final', label: 'Final' },
-  { value: 'postponed', label: 'Postponed' },
-  { value: 'cancelled', label: 'Cancelled' },
-];
-
-const SHOOTOUT_OPTIONS: SelectOption[] = [
-  { value: 'false', label: 'No' },
-  { value: 'true', label: 'Yes' },
-];
-
 const GameFormModal = ({
   open,
   seasonId,
@@ -68,7 +50,6 @@ const GameFormModal = ({
     control,
     handleSubmit,
     reset,
-    watch,
     setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
@@ -88,8 +69,8 @@ const GameFormModal = ({
     },
   });
 
-  const status = watch('status');
-  const showScores = status === 'final';
+  // Fields are locked once the game has started — only venue and time remain editable
+  const isStarted = editTarget?.status === 'in_progress' || editTarget?.status === 'final';
 
   const handleHomeTeamChange = (teamId: string | null) => {
     const team = seasonTeams.find((t) => t.id === teamId);
@@ -147,10 +128,9 @@ const GameFormModal = ({
       scheduled_at: data.scheduled_date || null,
       scheduled_time: data.scheduled_time || null,
       venue: data.venue || null,
-      home_score: showScores && data.home_score !== '' ? Number(data.home_score) : null,
-      away_score: showScores && data.away_score !== '' ? Number(data.away_score) : null,
-      overtime_periods:
-        showScores && data.overtime_periods !== '' ? Number(data.overtime_periods) : null,
+      home_score: data.home_score !== '' ? Number(data.home_score) : null,
+      away_score: data.away_score !== '' ? Number(data.away_score) : null,
+      overtime_periods: data.overtime_periods !== '' ? Number(data.overtime_periods) : null,
       shootout: data.shootout === 'true',
       notes: data.notes || null,
     };
@@ -164,7 +144,7 @@ const GameFormModal = ({
     <Modal
       open={open}
       title={editTarget ? 'Edit Game' : 'Create Game'}
-      size="lg"
+      size="md"
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Game'}
       confirmForm="game-form"
@@ -176,6 +156,7 @@ const GameFormModal = ({
         className={styles.form}
         onSubmit={onSubmit}
       >
+        {/* Row 1: Away team | Home team */}
         <div className={styles.teamRow}>
           <Field
             label="Away Team"
@@ -186,7 +167,7 @@ const GameFormModal = ({
             rules={{ required: true }}
             options={teamOptions}
             placeholder="— Select away team —"
-            disabled={isSubmitting}
+            disabled={isStarted || isSubmitting}
           />
           <Field
             label="Home Team"
@@ -197,17 +178,20 @@ const GameFormModal = ({
             rules={{ required: true }}
             options={teamOptions}
             placeholder="— Select home team —"
-            disabled={isSubmitting}
-            onChange={handleHomeTeamChange}
+            disabled={isStarted || isSubmitting}
+            onChange={!isStarted ? handleHomeTeamChange : undefined}
           />
         </div>
-        <div className={styles.metaRow}>
+
+        {/* Row 2: Date | Time */}
+        <div className={styles.dateTimeRow}>
           <Field
             label="Date"
             type="datepicker"
             control={control}
             name="scheduled_date"
             placeholder="Select date…"
+            disabled={isStarted || isSubmitting}
           />
           <Field
             label="Time"
@@ -215,77 +199,14 @@ const GameFormModal = ({
             control={control}
             name="scheduled_time"
           />
-          <Field
-            label="Venue"
-            control={control}
-            name="venue"
-            placeholder="e.g. Scotiabank Arena"
-            disabled={isSubmitting}
-          />
         </div>
-        <div className={styles.typeRow}>
-          <Field
-            label="Game Type"
-            type="select"
-            control={control}
-            name="game_type"
-            options={GAME_TYPE_OPTIONS}
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Status"
-            type="select"
-            control={control}
-            name="status"
-            options={STATUS_OPTIONS}
-            disabled={isSubmitting}
-          />
-        </div>
-        {showScores && (
-          <div className={styles.scoreRow}>
-            <Field
-              label="Away Score"
-              type="number"
-              control={control}
-              name="away_score"
-              min={0}
-              placeholder="0"
-              disabled={isSubmitting}
-            />
-            <Field
-              label="Home Score"
-              type="number"
-              control={control}
-              name="home_score"
-              min={0}
-              placeholder="0"
-              disabled={isSubmitting}
-            />
-            <Field
-              label="OT Periods"
-              type="number"
-              control={control}
-              name="overtime_periods"
-              min={0}
-              placeholder="0"
-              disabled={isSubmitting}
-            />
-            <Field
-              label="Shootout"
-              type="select"
-              control={control}
-              name="shootout"
-              options={SHOOTOUT_OPTIONS}
-              disabled={isSubmitting}
-            />
-          </div>
-        )}
+
+        {/* Row 3: Venue — full width */}
         <Field
-          label="Notes"
-          type="textarea"
+          label="Venue"
           control={control}
-          name="notes"
-          placeholder="Optional game notes…"
+          name="venue"
+          placeholder="e.g. Scotiabank Arena"
           disabled={isSubmitting}
         />
       </form>

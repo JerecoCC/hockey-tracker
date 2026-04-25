@@ -1,6 +1,16 @@
 @use "../../../styles/colors" as *;
 @use "../../../styles/mixins" as *;
 
+.filters {
+  display: flex;
+  gap: $space-md;
+  margin-bottom: $space-lg;
+
+  > * {
+    flex: 0 0 160px;
+  }
+}
+
 .list {
   list-style: none;
   padding: 0;

@@ -28,13 +28,18 @@ interface Props {
   /** Scores derived from period_scores totals. */
   awayScore: number;
   homeScore: number;
-  /** When true the scores are rendered; false shows a 'vs' separator instead. */
+  /** When true the scores are rendered; false hides the score column. */
   showScore: boolean;
   /** When true winner/loser dimming is applied based on score comparison. */
   isFinal: boolean;
   statusLabel: string;
   statusIntent: BadgeIntent;
-  subtitle?: string;
+  /** Formatted date string e.g. "Oct 5, 2024" */
+  date?: string;
+  /** Time string as stored e.g. "19:30" */
+  time?: string;
+  /** Venue / arena name */
+  venue?: string;
   actions?: (GameListItemAction | false | null | undefined)[];
 }
 
@@ -67,7 +72,9 @@ const GameListItem = ({
   isFinal,
   statusLabel,
   statusIntent,
-  subtitle,
+  date,
+  time,
+  venue,
   actions,
 }: Props) => {
   const visibleActions = actions?.filter((a): a is GameListItemAction => Boolean(a)) ?? [];
@@ -75,53 +82,45 @@ const GameListItem = ({
   const awayLost = isFinal && awayScore < homeScore;
   const homeLost = isFinal && homeScore < awayScore;
 
+  const dateLine = [date, time].filter(Boolean).join(' · ');
+
   return (
     <li className={styles.item}>
-      {/* Main content: matchup + subtitle */}
-      <div className={styles.content}>
-        <div className={styles.matchup}>
-          {/* Away */}
-          <div className={[styles.team, awayLost && styles.teamLoser].filter(Boolean).join(' ')}>
-            <TeamLogo {...awayTeam} />
-            <span className={styles.teamCode}>{awayTeam.code}</span>
-          </div>
+      {/* Main: date line + stacked teams */}
+      <div className={styles.main}>
+        {dateLine && <span className={styles.dateLine}>{dateLine}</span>}
 
-          {/* Score or 'vs' */}
-          <div className={styles.scoreArea}>
-            {showScore ? (
-              <>
-                <span
-                  className={[styles.scoreNum, awayLost && styles.scoreLoser]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  {awayScore}
-                </span>
-                <span className={styles.scoreSep}>–</span>
-                <span
-                  className={[styles.scoreNum, homeLost && styles.scoreLoser]
-                    .filter(Boolean)
-                    .join(' ')}
-                >
-                  {homeScore}
-                </span>
-              </>
-            ) : (
-              <span className={styles.scoreSep}>vs</span>
-            )}
-          </div>
-
-          {/* Home */}
-          <div className={[styles.team, homeLost && styles.teamLoser].filter(Boolean).join(' ')}>
-            <TeamLogo {...homeTeam} />
-            <span className={styles.teamCode}>{homeTeam.code}</span>
-          </div>
+        {/* Away row */}
+        <div className={[styles.teamRow, awayLost && styles.teamLoser].filter(Boolean).join(' ')}>
+          <TeamLogo {...awayTeam} />
+          <span className={styles.teamCode}>{awayTeam.code}</span>
+          {showScore && (
+            <span
+              className={[styles.scoreNum, awayLost && styles.scoreLoser].filter(Boolean).join(' ')}
+            >
+              {awayScore}
+            </span>
+          )}
         </div>
 
-        {subtitle && <span className={styles.subtitle}>{subtitle}</span>}
+        {/* Home row */}
+        <div className={[styles.teamRow, homeLost && styles.teamLoser].filter(Boolean).join(' ')}>
+          <TeamLogo {...homeTeam} />
+          <span className={styles.teamCode}>{homeTeam.code}</span>
+          {showScore && (
+            <span
+              className={[styles.scoreNum, homeLost && styles.scoreLoser].filter(Boolean).join(' ')}
+            >
+              {homeScore}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* Status badge */}
+      {/* Venue — between teams and status */}
+      {venue && <span className={styles.venue}>{venue}</span>}
+
+      {/* Status badge — rightmost */}
       <Badge
         label={statusLabel}
         intent={statusIntent}

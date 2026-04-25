@@ -29,6 +29,12 @@
   }
 }
 
+.triggerDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
 .clockIconBtn {
   display: flex;
   align-items: center;
