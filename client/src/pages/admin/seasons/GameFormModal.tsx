@@ -18,6 +18,7 @@ interface FormValues {
   game_type: GameType;
   status: GameStatus;
   scheduled_date: string;
+  scheduled_time: string;
   venue: string;
   home_score: string;
   away_score: string;
@@ -77,6 +78,7 @@ const GameFormModal = ({
       game_type: 'regular',
       status: 'scheduled',
       scheduled_date: '',
+      scheduled_time: '',
       venue: '',
       home_score: '',
       away_score: '',
@@ -103,6 +105,7 @@ const GameFormModal = ({
         game_type: editTarget.game_type,
         status: editTarget.status,
         scheduled_date: editTarget.scheduled_at ? editTarget.scheduled_at.slice(0, 10) : '',
+        scheduled_time: editTarget.scheduled_time ?? '',
         venue: editTarget.venue ?? '',
         home_score: editTarget.home_score != null ? String(editTarget.home_score) : '',
         away_score: editTarget.away_score != null ? String(editTarget.away_score) : '',
@@ -118,6 +121,7 @@ const GameFormModal = ({
         game_type: 'regular',
         status: 'scheduled',
         scheduled_date: '',
+        scheduled_time: '',
         venue: '',
         home_score: '',
         away_score: '',
@@ -141,6 +145,7 @@ const GameFormModal = ({
       game_type: data.game_type,
       status: data.status,
       scheduled_at: data.scheduled_date || null,
+      scheduled_time: data.scheduled_time || null,
       venue: data.venue || null,
       home_score: showScores && data.home_score !== '' ? Number(data.home_score) : null,
       away_score: showScores && data.away_score !== '' ? Number(data.away_score) : null,
@@ -203,6 +208,12 @@ const GameFormModal = ({
             control={control}
             name="scheduled_date"
             placeholder="Select date…"
+          />
+          <Field
+            label="Time"
+            type="timepicker"
+            control={control}
+            name="scheduled_time"
           />
           <Field
             label="Venue"

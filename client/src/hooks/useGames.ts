@@ -22,6 +22,7 @@ export interface GameRecord {
   game_type:             GameType;
   status:                GameStatus;
   scheduled_at:          string | null;
+  scheduled_time:        string | null;
   venue:                 string | null;
   home_team_id:            string;
   home_team_name:          string;
@@ -89,6 +90,7 @@ export interface CreateGameData {
   game_type?:            GameType;
   status?:               GameStatus;
   scheduled_at?:         string | null;
+  scheduled_time?:       string | null;
   venue?:                string | null;
   home_score?:           number | null;
   away_score?:           number | null;
@@ -305,6 +307,7 @@ export const useGameDetails = (id: string | undefined) => {
   const updateGameInfo = async (data: {
     venue?: string | null;
     scheduled_at?: string | null;
+    scheduled_time?: string | null;
     game_type?: GameType;
   }): Promise<boolean> => {
     if (!id) return false;

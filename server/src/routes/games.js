@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
     const games = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
-        g.scheduled_at, g.venue,
+        g.scheduled_at, g.scheduled_time, g.venue,
         g.home_score, g.away_score,
         g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
@@ -107,7 +107,7 @@ router.get('/:id', async (req, res) => {
     const rows = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
-        g.scheduled_at, g.venue,
+        g.scheduled_at, g.scheduled_time, g.venue,
         g.home_score, g.away_score,
         g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
@@ -181,7 +181,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const {
     season_id, home_team_id, away_team_id,
-    scheduled_at = null, venue = null,
+    scheduled_at = null, scheduled_time = null, venue = null,
     game_type = 'regular', status = 'scheduled',
     home_score = null, away_score = null,
     home_score_reg = null, away_score_reg = null,
@@ -201,13 +201,13 @@ router.post('/', async (req, res) => {
     const rows = await sql`
       INSERT INTO games (
         season_id, home_team_id, away_team_id,
-        scheduled_at, venue, game_type, status,
+        scheduled_at, scheduled_time, venue, game_type, status,
         home_score, away_score, home_score_reg, away_score_reg,
         overtime_periods, shootout,
         playoff_series_id, game_number_in_series, game_number, notes
       ) VALUES (
         ${season_id}, ${home_team_id}, ${away_team_id},
-        ${scheduled_at}, ${venue}, ${game_type}, ${status},
+        ${scheduled_at}, ${scheduled_time}, ${venue}, ${game_type}, ${status},
         ${home_score}, ${away_score}, ${home_score_reg}, ${away_score_reg},
         ${overtime_periods}, ${shootout},
         ${playoff_series_id}, ${game_number_in_series}, ${game_number}, ${notes}
@@ -217,7 +217,7 @@ router.post('/', async (req, res) => {
     const game = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
-        g.scheduled_at, g.venue,
+        g.scheduled_at, g.scheduled_time, g.venue,
         g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
@@ -282,7 +282,7 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
-    scheduled_at, venue, game_type, status,
+    scheduled_at, scheduled_time, venue, game_type, status,
     home_score, away_score, home_score_reg, away_score_reg,
     overtime_periods, shootout,
     playoff_series_id, game_number_in_series, game_number, notes,
@@ -302,6 +302,7 @@ router.patch('/:id', async (req, res) => {
     await sql`
       UPDATE games SET
         scheduled_at          = COALESCE(${scheduled_at          ?? null}, scheduled_at),
+        scheduled_time        = COALESCE(${scheduled_time        ?? null}, scheduled_time),
         venue                 = COALESCE(${venue                 ?? null}, venue),
         game_type             = COALESCE(${game_type             ?? null}, game_type),
         status                = COALESCE(${status                ?? null}, status),
@@ -310,14 +311,14 @@ router.patch('/:id', async (req, res) => {
         home_score_reg        = COALESCE(${home_score_reg        ?? null}, home_score_reg),
         away_score_reg        = COALESCE(${away_score_reg        ?? null}, away_score_reg),
         overtime_periods      = CASE
-                                  WHEN ${status ?? null} = 'final' AND ${overtime_periods ?? null} IS NULL
+                                  WHEN ${status ?? null} = 'final' AND ${overtime_periods ?? null}::smallint IS NULL
                                   THEN CASE WHEN current_period IN ('OT', 'SO') THEN 1 ELSE overtime_periods END
-                                  ELSE COALESCE(${overtime_periods ?? null}, overtime_periods)
+                                  ELSE COALESCE(${overtime_periods ?? null}::smallint, overtime_periods)
                                 END,
         shootout              = CASE
-                                  WHEN ${status ?? null} = 'final' AND ${shootout ?? null} IS NULL
+                                  WHEN ${status ?? null} = 'final' AND ${shootout ?? null}::boolean IS NULL
                                   THEN (current_period = 'SO')
-                                  ELSE COALESCE(${shootout ?? null}, shootout)
+                                  ELSE COALESCE(${shootout ?? null}::boolean, shootout)
                                 END,
         playoff_series_id     = COALESCE(${playoff_series_id     ?? null}, playoff_series_id),
         game_number_in_series = COALESCE(${game_number_in_series ?? null}, game_number_in_series),
@@ -332,7 +333,7 @@ router.patch('/:id', async (req, res) => {
     const updated = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
-        g.scheduled_at, g.venue,
+        g.scheduled_at, g.scheduled_time, g.venue,
         g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,

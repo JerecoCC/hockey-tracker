@@ -425,6 +425,9 @@ async function initSchema() {
       current_period TEXT CHECK (current_period IN ('1', '2', '3', 'OT', 'SO'))
   `;
 
+  // Migration: separate time-of-day for the game (stored as TEXT, e.g. "19:30")
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS scheduled_time TEXT`;
+
   // Migration: drop redundant period-by-period goal columns (scores are now derived from the goals table)
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_home_goals`;
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_away_goals`;
