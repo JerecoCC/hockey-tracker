@@ -168,8 +168,19 @@ const BulkCreateGamesModal = ({
         title="Bulk Create Games"
         size="xl"
         onClose={handleClose}
+        confirmForm="bulk-create-games-form"
+        confirmLabel={
+          isSubmitting
+            ? 'Creating…'
+            : `Create ${fields.length} Game${fields.length !== 1 ? 's' : ''}`
+        }
+        confirmDisabled={isSubmitting}
+        busy={isSubmitting}
       >
-        <form onSubmit={onSubmit}>
+        <form
+          id="bulk-create-games-form"
+          onSubmit={onSubmit}
+        >
           <div className={styles.headerRow}>
             <span className={styles.headerCell}>Away Team</span>
             <span className={styles.headerCell}>Home Team</span>
@@ -204,26 +215,6 @@ const BulkCreateGamesModal = ({
               onClick={() => append({ ...EMPTY_ROW })}
             >
               Add Row
-            </Button>
-          </div>
-
-          <div className={styles.formActions}>
-            <Button
-              type="button"
-              variant="outlined"
-              intent="neutral"
-              disabled={isSubmitting}
-              onClick={handleClose}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-            >
-              {isSubmitting
-                ? 'Creating…'
-                : `Create ${fields.length} Game${fields.length !== 1 ? 's' : ''}`}
             </Button>
           </div>
         </form>

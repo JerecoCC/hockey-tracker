@@ -48,6 +48,52 @@ const DATE_FMT_SHORT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
+/** Formats an ISO timestamp as "7:05 PM" (ET). */
+const TIME_FMT = new Intl.DateTimeFormat('en-US', {
+  hour: 'numeric',
+  minute: '2-digit',
+  timeZone: 'America/New_York',
+});
+
+/** Converts a stored "HH:MM" 24-hour string to "h:mm AM/PM". */
+const formatScheduledTime = (t: string): string => {
+  const [hStr, mStr] = t.split(':');
+  const h = parseInt(hStr, 10);
+  const m = mStr ?? '00';
+  const suffix = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 === 0 ? 12 : h % 12;
+  return `${h12}:${m} ${suffix}`;
+};
+
+/** Converts an ISO timestamp to "HH:mm" in Eastern Time (for time picker pre-fill). */
+const isoToETHHMM = (iso: string): string => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  return `${parts.find((p) => p.type === 'hour')!.value}:${parts.find((p) => p.type === 'minute')!.value}`;
+};
+
+/** Treats an "HH:mm" string as Eastern Time and returns a UTC ISO string. */
+const etHHMMtoISO = (hhmm: string): string => {
+  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
+    new Date(),
+  );
+  // Probe the ET offset (handles DST: EDT = -04:00, EST = -05:00)
+  const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
+  const tzName =
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      timeZoneName: 'short',
+    })
+      .formatToParts(probe)
+      .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
+  const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
+  return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
+};
+
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
   in_progress: 'In Progress',
@@ -318,10 +364,7 @@ const GameDetailsPage = () => {
   };
 
   const onStartGameSubmit = handleStartGameSubmit(async (data) => {
-    // Build a full ISO timestamp from today's date + the entered time.
-    const today = new Date().toISOString().slice(0, 10);
-    const timeStart = new Date(`${today}T${data.start_time}`).toISOString();
-    const ok = await startGame(timeStart);
+    const ok = await startGame(etHHMMtoISO(data.start_time));
     if (ok) setStartGameModalOpen(false);
   });
 
@@ -337,8 +380,17 @@ const GameDetailsPage = () => {
     scheduled_date: string;
     scheduled_time: string;
     game_type: GameType;
+    time_start: string;
+    time_end: string;
   }>({
-    defaultValues: { venue: '', scheduled_date: '', scheduled_time: '', game_type: 'regular' },
+    defaultValues: {
+      venue: '',
+      scheduled_date: '',
+      scheduled_time: '',
+      game_type: 'regular',
+      time_start: '',
+      time_end: '',
+    },
   });
 
   const openGameInfoEdit = () => {
@@ -348,6 +400,8 @@ const GameDetailsPage = () => {
       scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
       scheduled_time: game.scheduled_time ?? '',
       game_type: game.game_type,
+      time_start: game.time_start ? isoToETHHMM(game.time_start) : '',
+      time_end: game.time_end ? isoToETHHMM(game.time_end) : '',
     });
     setGameInfoEditOpen(true);
   };
@@ -358,6 +412,8 @@ const GameDetailsPage = () => {
       scheduled_at: data.scheduled_date || null,
       scheduled_time: data.scheduled_time || null,
       game_type: data.game_type,
+      time_start: data.time_start ? etHHMMtoISO(data.time_start) : null,
+      time_end: data.time_end ? etHHMMtoISO(data.time_end) : null,
     });
     if (ok) setGameInfoEditOpen(false);
   });
@@ -1839,13 +1895,29 @@ const GameDetailsPage = () => {
                           </span>
                         </div>
                         <div className={styles.infoItem}>
-                          <span className={styles.infoLabel}>Time</span>
+                          <span className={styles.infoLabel}>Scheduled Time</span>
                           <span
                             className={
                               game.scheduled_time ? styles.infoValue : styles.infoValueMuted
                             }
                           >
-                            {game.scheduled_time ?? '—'}
+                            {game.scheduled_time ? formatScheduledTime(game.scheduled_time) : '—'}
+                          </span>
+                        </div>
+                        <div className={styles.infoItem}>
+                          <span className={styles.infoLabel}>Start Time</span>
+                          <span
+                            className={game.time_start ? styles.infoValue : styles.infoValueMuted}
+                          >
+                            {game.time_start ? TIME_FMT.format(new Date(game.time_start)) : '—'}
+                          </span>
+                        </div>
+                        <div className={styles.infoItem}>
+                          <span className={styles.infoLabel}>End Time</span>
+                          <span
+                            className={game.time_end ? styles.infoValue : styles.infoValueMuted}
+                          >
+                            {game.time_end ? TIME_FMT.format(new Date(game.time_end)) : '—'}
                           </span>
                         </div>
                         <div className={styles.infoItem}>
@@ -2453,6 +2525,20 @@ const GameDetailsPage = () => {
             type="timepicker"
             control={gameInfoControl}
             name="scheduled_time"
+          />
+          <Field
+            label="Start Time"
+            type="timepicker"
+            control={gameInfoControl}
+            name="time_start"
+            disabled={gameInfoSubmitting || game.status === 'scheduled'}
+          />
+          <Field
+            label="End Time"
+            type="timepicker"
+            control={gameInfoControl}
+            name="time_end"
+            disabled={gameInfoSubmitting || game.status !== 'final'}
           />
           <Field
             label="Game Type"
