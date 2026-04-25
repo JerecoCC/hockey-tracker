@@ -491,6 +491,16 @@
   gap: $space-lg;
 }
 
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-lg $space-xl;
+}
+
+.formFieldFull {
+  grid-column: 1 / -1;
+}
+
 // Segmented team picker (connected buttons)
 .teamSegment {
   display: flex;
@@ -741,8 +751,8 @@
 // ── Info grid (inside Summary tab) ────────────────────────────────────────────
 .infoGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: $space-xl;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-xl $space-2xl;
 }
 
 .infoItem {

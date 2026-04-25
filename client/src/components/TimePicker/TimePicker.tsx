@@ -3,54 +3,74 @@ import Icon from '../Icon/Icon';
 import styles from './TimePicker.module.scss';
 
 interface Props {
-  value: string; // HH:MM or ''
+  value: string; // HH:MM (24-hour) or ''
   onChange: (val: string) => void;
   placeholder?: string;
   disabled?: boolean;
 }
 
-type Segment = 'hour' | 'minute';
+type Segment = 'hour' | 'minute' | 'ampm';
 
+// Display format: "hh:mm AM" (8 chars)
+// Positions: hour=0-1, ':' at 2, minute=3-4, ' ' at 5, ampm=6-7
 const SEGMENT_INFO: Record<
   Segment,
   { start: number; end: number; placeholder: string; maxLen: number }
 > = {
-  hour: { start: 0, end: 2, placeholder: 'HH', maxLen: 2 },
-  minute: { start: 3, end: 5, placeholder: 'MM', maxLen: 2 },
+  hour: { start: 0, end: 2, placeholder: '--', maxLen: 2 },
+  minute: { start: 3, end: 5, placeholder: '--', maxLen: 2 },
+  ampm: { start: 6, end: 8, placeholder: '--', maxLen: 2 },
 };
-const SEGMENT_ORDER: Segment[] = ['hour', 'minute'];
+const SEGMENT_ORDER: Segment[] = ['hour', 'minute', 'ampm'];
 
-const parseTime = (val: string) => {
+/** 24-hour → 12-hour + AM/PM. */
+const to12h = (h24: number): { h12: number; ampm: 'AM' | 'PM' } => ({
+  h12: h24 % 12 === 0 ? 12 : h24 % 12,
+  ampm: h24 < 12 ? 'AM' : 'PM',
+});
+
+/** 12-hour + AM/PM → 24-hour. */
+const to24h = (h12: number, ampm: 'AM' | 'PM'): number => {
+  if (ampm === 'AM') return h12 === 12 ? 0 : h12;
+  return h12 === 12 ? 12 : h12 + 12;
+};
+
+const parseTime = (val: string): { h24: number; m: number } | null => {
   if (!val) return null;
   const [h, m] = val.split(':').map(Number);
   if (isNaN(h) || isNaN(m)) return null;
-  return { h, m };
+  return { h24: h, m };
 };
 
-const toHHMM = (h: number, m: number) =>
-  `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+const toHHMM = (h24: number, m: number) =>
+  `${String(h24).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
 
 const buildDisplay = (
-  cHour: number | null,
+  cHour12: number | null,
   cMinute: number | null,
+  cAmPm: 'AM' | 'PM' | null,
   activeSeg: Segment | null,
   buf: string,
 ): string => {
-  const seg = (s: Segment, committed: number | null): string => {
+  const seg = (s: Segment, val: string | null): string => {
     const info = SEGMENT_INFO[s];
     if (s === activeSeg && buf.length > 0) return buf + info.placeholder.slice(buf.length);
-    return committed !== null ? String(committed).padStart(info.maxLen, '0') : info.placeholder;
+    return val !== null ? val : info.placeholder;
   };
-  return `${seg('hour', cHour)}:${seg('minute', cMinute)}`;
+  const hourStr = cHour12 !== null ? String(cHour12).padStart(2, '0') : null;
+  const minStr = cMinute !== null ? String(cMinute).padStart(2, '0') : null;
+  return `${seg('hour', hourStr)}:${seg('minute', minStr)} ${seg('ampm', cAmPm)}`;
 };
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1–12
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 
 const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
   const parsed = parseTime(value);
-  const [cHour, setCHour] = useState<number | null>(parsed?.h ?? null);
+  const init12 = parsed ? to12h(parsed.h24) : null;
+  const [cHour12, setCHour12] = useState<number | null>(init12?.h12 ?? null);
   const [cMinute, setCMinute] = useState<number | null>(parsed?.m ?? null);
+  const [cAmPm, setCAmPm] = useState<'AM' | 'PM' | null>(init12?.ampm ?? null);
   const [activeSeg, setActiveSeg] = useState<Segment | null>(null);
   const [buf, setBuf] = useState('');
   const [open, setOpen] = useState(false);
@@ -74,11 +94,14 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
   useEffect(() => {
     const p = parseTime(value);
     if (p) {
-      setCHour(p.h);
+      const { h12, ampm } = to12h(p.h24);
+      setCHour12(h12);
       setCMinute(p.m);
+      setCAmPm(ampm);
     } else {
-      setCHour(null);
+      setCHour12(null);
       setCMinute(null);
+      setCAmPm(null);
     }
     setActiveSeg(null);
     setBuf('');
@@ -96,8 +119,8 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
   // Scroll selected item into view when dropdown opens
   useEffect(() => {
     if (!open) return;
-    if (cHour != null && hourColRef.current) {
-      const btn = hourColRef.current.querySelector(`[data-val="${cHour}"]`) as HTMLElement | null;
+    if (cHour12 != null && hourColRef.current) {
+      const btn = hourColRef.current.querySelector(`[data-val="${cHour12}"]`) as HTMLElement | null;
       btn?.scrollIntoView({ block: 'center' });
     }
     if (cMinute != null && minColRef.current) {
@@ -105,7 +128,7 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
       const btn = minColRef.current.querySelector(`[data-val="${rounded}"]`) as HTMLElement | null;
       btn?.scrollIntoView({ block: 'center' });
     }
-  }, [open, cHour, cMinute]);
+  }, [open, cHour12, cMinute]);
 
   const measureDropdown = () => {
     if (!triggerRef.current) return;
@@ -113,9 +136,9 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     setDropdownStyle({ top: r.bottom + 6, left: r.left });
   };
 
-  const emitChange = (h: number | null, m: number | null) => {
-    if (h !== null && m !== null) {
-      const hhmm = toHHMM(h, m);
+  const emitChange = (h12: number | null, m: number | null, ap: 'AM' | 'PM' | null) => {
+    if (h12 !== null && m !== null && ap !== null) {
+      const hhmm = toHHMM(to24h(h12, ap), m);
       if (hhmm !== value) onChange(hhmm);
     } else if (value !== '') {
       onChange('');
@@ -130,8 +153,9 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
   const clearTime = (e?: React.MouseEvent) => {
     e?.stopPropagation();
     onChange('');
-    setCHour(null);
+    setCHour12(null);
     setCMinute(null);
+    setCAmPm(null);
     setBuf('');
     setActiveSeg(null);
   };
@@ -144,7 +168,9 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
 
   const handleInputClick = () => {
     const pos = inputRef.current?.selectionStart ?? 0;
-    activateSegment(pos <= 2 ? 'hour' : 'minute');
+    if (pos <= 2) activateSegment('hour');
+    else if (pos <= 5) activateSegment('minute');
+    else activateSegment('ampm');
   };
 
   const handleFocus = () => {
@@ -168,38 +194,68 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
       pendingSelRef.current = [SEGMENT_INFO[s].start, SEGMENT_INFO[s].end];
     };
 
+    // AM/PM segment: letter keys + arrow toggle, no digit buffering
+    if (seg === 'ampm') {
+      if (e.key.toLowerCase() === 'a') {
+        e.preventDefault();
+        setCAmPm('AM');
+        emitChange(cHour12, cMinute, 'AM');
+      } else if (e.key.toLowerCase() === 'p') {
+        e.preventDefault();
+        setCAmPm('PM');
+        emitChange(cHour12, cMinute, 'PM');
+      } else if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        const next = cAmPm === 'AM' ? 'PM' : 'AM';
+        setCAmPm(next);
+        emitChange(cHour12, cMinute, next);
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault();
+        setCAmPm(null);
+        if (value !== '') onChange('');
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        goToSeg('minute');
+      } else if (e.key === 'Tab' && e.shiftKey) {
+        e.preventDefault();
+        goToSeg('minute');
+      }
+      pendingSelRef.current = [info.start, info.end];
+      return;
+    }
+
     if (e.key >= '0' && e.key <= '9') {
       e.preventDefault();
       const newBuf = buf + e.key;
       let shouldCommit = newBuf.length === info.maxLen;
       if (!shouldCommit) {
         const v = parseInt(newBuf, 10);
-        // hour: first digit > 2 means can't be valid 2-digit 24h (30+)
-        if (seg === 'hour' && v > 2) shouldCommit = true;
+        // hour (12h): first digit > 1 can't form a valid 2-digit 12h hour (20+)
+        if (seg === 'hour' && v > 1) shouldCommit = true;
         // minute: first digit > 5 means can't be valid (60+)
         if (seg === 'minute' && v > 5) shouldCommit = true;
       }
       if (shouldCommit) {
         const v = parseInt(newBuf.padStart(info.maxLen, '0'), 10);
         let valid = true;
-        if (seg === 'hour' && (v < 0 || v > 23)) valid = false;
+        if (seg === 'hour' && (v < 1 || v > 12)) valid = false;
         if (seg === 'minute' && (v < 0 || v > 59)) valid = false;
         if (!valid) {
           setBuf('');
           pendingSelRef.current = [info.start, info.end];
           return;
         }
-        let newH = cHour,
+        let newH = cHour12,
           newM = cMinute;
         if (seg === 'hour') {
-          setCHour(v);
+          setCHour12(v);
           newH = v;
         } else {
           setCMinute(v);
           newM = v;
         }
         setBuf('');
-        emitChange(newH, newM);
+        emitChange(newH, newM, cAmPm);
         const nextSeg = SEGMENT_ORDER[segIdx + 1];
         if (nextSeg) {
           setActiveSeg(nextSeg);
@@ -213,13 +269,14 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
       e.preventDefault();
       const delta = e.key === 'ArrowUp' ? 1 : -1;
       if (seg === 'hour') {
-        const next = ((cHour ?? 0) + delta + 24) % 24;
-        setCHour(next);
-        emitChange(next, cMinute);
+        // cycle 1–12
+        const next = (((cHour12 ?? 1) - 1 + delta + 12) % 12) + 1;
+        setCHour12(next);
+        emitChange(next, cMinute, cAmPm);
       } else {
         const next = ((cMinute ?? 0) + delta + 60) % 60;
         setCMinute(next);
-        emitChange(cHour, next);
+        emitChange(cHour12, next, cAmPm);
       }
       pendingSelRef.current = [info.start, info.end];
     } else if (e.key === 'Backspace' || e.key === 'Delete') {
@@ -228,11 +285,11 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
         setBuf(buf.slice(0, -1));
       } else {
         if (seg === 'hour') {
-          setCHour(null);
-          emitChange(null, cMinute);
+          setCHour12(null);
+          emitChange(null, cMinute, cAmPm);
         } else {
           setCMinute(null);
-          emitChange(cHour, null);
+          emitChange(cHour12, null, cAmPm);
         }
       }
       pendingSelRef.current = [info.start, info.end];
@@ -266,19 +323,26 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
   };
 
   const selectHour = (h: number) => {
-    setCHour(h);
-    emitChange(h, cMinute);
+    setCHour12(h);
+    emitChange(h, cMinute, cAmPm);
     if (cMinute === null) activateSegment('minute');
   };
 
   const selectMinute = (m: number) => {
     setCMinute(m);
-    emitChange(cHour, m);
+    emitChange(cHour12, m, cAmPm);
+    if (cAmPm === null) activateSegment('ampm');
+    else setOpen(false);
+  };
+
+  const selectAmPm = (ap: 'AM' | 'PM') => {
+    setCAmPm(ap);
+    emitChange(cHour12, cMinute, ap);
     setOpen(false);
   };
 
-  const displayValue = buildDisplay(cHour, cMinute, activeSeg, buf);
-  const isEmpty = cHour === null && cMinute === null;
+  const displayValue = buildDisplay(cHour12, cMinute, cAmPm, activeSeg, buf);
+  const isEmpty = cHour12 === null && cMinute === null && cAmPm === null;
 
   return (
     <div
@@ -341,12 +405,12 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
                 ref={hourColRef}
                 className={styles.column}
               >
-                {HOURS.map((h) => (
+                {HOURS_12.map((h) => (
                   <button
                     key={h}
                     type="button"
                     data-val={h}
-                    className={`${styles.timeBtn}${cHour === h ? ` ${styles.selected}` : ''}`}
+                    className={`${styles.timeBtn}${cHour12 === h ? ` ${styles.selected}` : ''}`}
                     onMouseDown={(e) => {
                       e.preventDefault();
                       selectHour(h);
@@ -380,6 +444,26 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
                 ))}
               </div>
             </div>
+            <div className={styles.columnDivider} />
+            <div className={styles.columnWrap}>
+              <div className={styles.columnLabel}>AM/PM</div>
+              <div className={styles.column}>
+                {(['AM', 'PM'] as const).map((ap) => (
+                  <button
+                    key={ap}
+                    type="button"
+                    data-val={ap}
+                    className={`${styles.timeBtn}${cAmPm === ap ? ` ${styles.selected}` : ''}`}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selectAmPm(ap);
+                    }}
+                  >
+                    {ap}
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           <div className={styles.footer}>
             <button
@@ -388,11 +472,11 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
               onMouseDown={(e) => {
                 e.preventDefault();
                 const now = new Date();
-                selectMinute(0);
-                selectHour(now.getHours());
-                onChange(toHHMM(now.getHours(), now.getMinutes()));
-                setCHour(now.getHours());
+                const { h12, ampm } = to12h(now.getHours());
+                setCHour12(h12);
                 setCMinute(now.getMinutes());
+                setCAmPm(ampm);
+                onChange(toHHMM(now.getHours(), now.getMinutes()));
                 setOpen(false);
               }}
             >

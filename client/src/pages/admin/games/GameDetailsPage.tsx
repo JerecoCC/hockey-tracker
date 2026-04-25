@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
@@ -200,7 +200,7 @@ const GameDetailsPage = () => {
     updatePeriodShots,
   } = useGameDetails(id);
   const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(id);
-  const { goalieStats, upsertGoalieStat, busy: goalieStatsBusy } = useGameGoalieStats(id);
+  const { goalieStats, upsertGoalieStat } = useGameGoalieStats(id);
 
   /**
    * Running goal/assist tallies per player, computed once in goal order
@@ -709,7 +709,6 @@ const GameDetailsPage = () => {
 
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
-  const hasPeriods = isFinal && game.period_scores.length > 0;
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
   const awayScore = game.away_score ?? 0;
   const homeScore = game.home_score ?? 0;
@@ -1091,8 +1090,6 @@ const GameDetailsPage = () => {
                           );
                           const isActive = !isFinal && game.current_period === periodId;
                           const isDone = isFinal || currentIdx > idx;
-
-                          const isPending = !isActive && !isDone;
 
                           return (
                             <Accordion
@@ -1888,6 +1885,14 @@ const GameDetailsPage = () => {
                       }
                     >
                       <div className={styles.infoGrid}>
+                        {/* Row 1 — Game Type (full width) */}
+                        <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+                          <span className={styles.infoLabel}>Type</span>
+                          <span className={styles.infoValue}>
+                            {GAME_TYPE_LABEL[game.game_type]}
+                          </span>
+                        </div>
+                        {/* Row 2 — Venue | Scheduled Time */}
                         <div className={styles.infoItem}>
                           <span className={styles.infoLabel}>Venue</span>
                           <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
@@ -1904,6 +1909,7 @@ const GameDetailsPage = () => {
                             {game.scheduled_time ? formatScheduledTime(game.scheduled_time) : '—'}
                           </span>
                         </div>
+                        {/* Row 3 — Start Time | End Time */}
                         <div className={styles.infoItem}>
                           <span className={styles.infoLabel}>Start Time</span>
                           <span
@@ -1920,12 +1926,7 @@ const GameDetailsPage = () => {
                             {game.time_end ? TIME_FMT.format(new Date(game.time_end)) : '—'}
                           </span>
                         </div>
-                        <div className={styles.infoItem}>
-                          <span className={styles.infoLabel}>Type</span>
-                          <span className={styles.infoValue}>
-                            {GAME_TYPE_LABEL[game.game_type]}
-                          </span>
-                        </div>
+                        {/* Optional extras */}
                         {game.game_number != null && (
                           <div className={styles.infoItem}>
                             <span className={styles.infoLabel}>Game #</span>
@@ -2503,9 +2504,31 @@ const GameDetailsPage = () => {
       >
         <form
           id="game-info-edit-form"
-          className={styles.goalForm}
+          className={styles.formGrid}
           onSubmit={onGameInfoSubmit}
         >
+          {/* Row 1 — Game Type (full width) */}
+          <div className={styles.formFieldFull}>
+            <Field
+              label="Game Type"
+              type="select"
+              control={gameInfoControl}
+              name="game_type"
+              options={GAME_TYPE_OPTIONS}
+              disabled={gameInfoSubmitting}
+            />
+          </div>
+          {/* Row 2 — Date (full width, sets context for scheduled time) */}
+          <div className={styles.formFieldFull}>
+            <Field
+              label="Date"
+              type="datepicker"
+              control={gameInfoControl}
+              name="scheduled_date"
+              placeholder="Select date…"
+            />
+          </div>
+          {/* Row 3 — Venue | Scheduled Time (mirrors card row 2) */}
           <Field
             label="Venue"
             control={gameInfoControl}
@@ -2514,18 +2537,12 @@ const GameDetailsPage = () => {
             disabled={gameInfoSubmitting}
           />
           <Field
-            label="Date"
-            type="datepicker"
-            control={gameInfoControl}
-            name="scheduled_date"
-            placeholder="Select date…"
-          />
-          <Field
-            label="Time"
+            label="Scheduled Time"
             type="timepicker"
             control={gameInfoControl}
             name="scheduled_time"
           />
+          {/* Row 4 — Start Time | End Time (mirrors card row 3) */}
           <Field
             label="Start Time"
             type="timepicker"
@@ -2539,14 +2556,6 @@ const GameDetailsPage = () => {
             control={gameInfoControl}
             name="time_end"
             disabled={gameInfoSubmitting || game.status !== 'final'}
-          />
-          <Field
-            label="Game Type"
-            type="select"
-            control={gameInfoControl}
-            name="game_type"
-            options={GAME_TYPE_OPTIONS}
-            disabled={gameInfoSubmitting}
           />
         </form>
       </Modal>
