@@ -27,8 +27,8 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_INTENT: Record<GameStatus, 'neutral' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'neutral',
+const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
+  scheduled: 'info',
   in_progress: 'warning',
   final: 'success',
   postponed: 'warning',
@@ -44,8 +44,12 @@ const formatSubtitle = (game: GameRecord): string => {
 
 const formatStatusLabel = (game: GameRecord): string => {
   if (game.status !== 'final') return STATUS_LABEL[game.status];
-  const suffix = game.shootout ? ' (SO)' : (game.overtime_periods ?? 0) > 0 ? ' (OT)' : '';
-  return `Final${suffix}`;
+  // Prefer period_scores (source of truth) but fall back to stored columns for
+  // legacy games that were created before goal tracking was introduced.
+  if (game.shootout || game.period_scores.some((ps) => ps.period === 'SO')) return 'Final/SO';
+  if ((game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT'))
+    return 'Final/OT';
+  return 'Final';
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────

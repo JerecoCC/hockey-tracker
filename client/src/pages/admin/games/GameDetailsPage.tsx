@@ -56,8 +56,8 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_INTENT: Record<GameStatus, 'neutral' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'neutral',
+const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
+  scheduled: 'info',
   in_progress: 'warning',
   final: 'success',
   postponed: 'warning',
@@ -623,7 +623,14 @@ const GameDetailsPage = () => {
       ? game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0)
       : homeScore;
 
-  const overtimeSuffix = game.shootout ? ' (SO)' : (game.overtime_periods ?? 0) > 0 ? ' (OT)' : '';
+  // Derive OT/SO from period_scores (source of truth); stored columns are a fallback
+  // for legacy games created before goal tracking was introduced.
+  const overtimeSuffix =
+    game.shootout || game.period_scores.some((ps) => ps.period === 'SO')
+      ? '/SO'
+      : (game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT')
+        ? '/OT'
+        : '';
 
   // Period columns for the Linescore table (always 1–3, plus OT/SO if applicable).
   const linescorePeriods: { id: string; label: string }[] = [
@@ -2451,25 +2458,46 @@ const GameDetailsPage = () => {
                           key={field.id}
                           className={styles.shotsGoalieRow}
                         >
-                          <span className={styles.shotsTeamInfo}>
+                          <span className={styles.goalieNameCell}>
+                            {/* Team logo */}
                             {logo ? (
                               <img
                                 src={logo}
                                 alt={code}
-                                className={styles.shotsTeamLogo}
+                                className={styles.goalTeamLogo}
                               />
                             ) : (
                               <span
-                                className={styles.shotsTeamLogoPlaceholder}
+                                className={styles.goalTeamLogoPlaceholder}
                                 style={{ background: primary, color: text }}
                               >
                                 {code?.slice(0, 1)}
                               </span>
                             )}
-                            <span className={styles.shotsTeamName}>
-                              {goalie.jersey_number != null ? `#${goalie.jersey_number} ` : ''}
-                              {goalie.first_name} {goalie.last_name}
-                            </span>
+                            {/* Player photo */}
+                            {goalie.photo ? (
+                              <img
+                                src={goalie.photo}
+                                alt=""
+                                className={styles.goalScorerPhoto}
+                              />
+                            ) : (
+                              <span
+                                className={styles.goalScorerPhotoPlaceholder}
+                                style={{ background: primary, color: text }}
+                              >
+                                {goalie.last_name?.charAt(0)}
+                              </span>
+                            )}
+                            {/* Name + jersey */}
+                            <div className={styles.goalInfo}>
+                              <span className={styles.goalScorer}>
+                                {formatPlayerName(goalie.first_name, goalie.last_name)}
+                              </span>
+                              {goalie.jersey_number != null && (
+                                <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
+                              )}
+                            </div>
                           </span>
                           <div className={styles.shotsGoalieInputs}>
                             <Field
