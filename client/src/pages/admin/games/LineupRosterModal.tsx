@@ -52,12 +52,27 @@ const LineupRosterModal = ({
     enabled: open,
   });
 
-  const available = allPlayers.filter((p) => !existingPlayerIds.has(p.id));
+  const available = allPlayers
+    .filter((p) => !existingPlayerIds.has(p.id))
+    .sort((a, b) => {
+      // Jersey numbers first (null last), then alphabetically
+      if (a.jersey_number != null && b.jersey_number != null)
+        return a.jersey_number - b.jersey_number;
+      if (a.jersey_number != null) return -1;
+      if (b.jersey_number != null) return 1;
+      return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+    });
+
   const filtered = query.trim()
     ? available.filter((p) => {
         const q = query.trim().toLowerCase();
         const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-        return name.includes(q) || (p.position ?? '').toLowerCase().includes(q);
+        const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
+        return (
+          name.includes(q) ||
+          (p.position ?? '').toLowerCase().includes(q) ||
+          jersey.startsWith(q.replace('#', ''))
+        );
       })
     : available;
 
@@ -168,9 +183,8 @@ const LineupRosterModal = ({
                 imageShape="circle"
                 imagePrimaryColor={p.primary_color}
                 imageTextColor={p.text_color}
-                name={`${p.first_name} ${p.last_name}`}
+                name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.last_name}, ${p.first_name}`}
                 subtitle={p.position ? POSITION_LABELS[p.position] : undefined}
-                rightContent={undefined}
               />
             ))}
           </ul>
