@@ -10,6 +10,7 @@ import { Controller, type Control, type RegisterOptions } from 'react-hook-form'
 import Icon from '../Icon/Icon';
 import cn from 'classnames';
 import DatePicker from '../DatePicker/DatePicker';
+import TimePicker from '../TimePicker/TimePicker';
 import RichTextEditor from '../RichTextEditor/RichTextEditor';
 import Select, { SelectOption } from '../Select/Select';
 import styles from './Field.module.scss';
@@ -56,6 +57,11 @@ type DatePickerProps = BaseProps & {
   placeholder?: string;
 };
 
+type TimePickerProps = BaseProps & {
+  type: 'timepicker';
+  placeholder?: string;
+};
+
 type ColorProps = BaseProps & {
   type: 'color';
 };
@@ -71,6 +77,7 @@ export type FieldProps =
   | SelectProps
   | CustomProps
   | DatePickerProps
+  | TimePickerProps
   | ColorProps
   | RichTextProps;
 
@@ -135,6 +142,14 @@ const Field = (props: FieldProps) => {
           } else if (props.type === 'datepicker') {
             return (
               <DatePicker
+                value={(field.value as string) ?? ''}
+                onChange={field.onChange}
+                placeholder={props.placeholder}
+              />
+            );
+          } else if (props.type === 'timepicker') {
+            return (
+              <TimePicker
                 value={(field.value as string) ?? ''}
                 onChange={field.onChange}
                 placeholder={props.placeholder}

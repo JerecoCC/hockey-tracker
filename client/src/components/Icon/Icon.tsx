@@ -125,6 +125,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   flag: faFlag,
   more_vert: faEllipsisVertical,
   more_time: faClock,
+  schedule: faClock,
 };
 
 interface IconProps {
