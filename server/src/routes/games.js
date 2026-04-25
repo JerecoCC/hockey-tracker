@@ -89,7 +89,7 @@ router.get('/', async (req, res) => {
                                                 OR g.away_team_id = ${team_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type   = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status      = ${status    ?? null})
-      ORDER BY g.scheduled_at ASC NULLS LAST, g.created_at ASC
+      ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC
     `;
     return res.json(games);
   } catch (err) {
@@ -309,8 +309,16 @@ router.patch('/:id', async (req, res) => {
         away_score            = COALESCE(${away_score            ?? null}, away_score),
         home_score_reg        = COALESCE(${home_score_reg        ?? null}, home_score_reg),
         away_score_reg        = COALESCE(${away_score_reg        ?? null}, away_score_reg),
-        overtime_periods      = COALESCE(${overtime_periods      ?? null}, overtime_periods),
-        shootout              = COALESCE(${shootout              ?? null}, shootout),
+        overtime_periods      = CASE
+                                  WHEN ${status ?? null} = 'final' AND ${overtime_periods ?? null} IS NULL
+                                  THEN CASE WHEN current_period IN ('OT', 'SO') THEN 1 ELSE overtime_periods END
+                                  ELSE COALESCE(${overtime_periods ?? null}, overtime_periods)
+                                END,
+        shootout              = CASE
+                                  WHEN ${status ?? null} = 'final' AND ${shootout ?? null} IS NULL
+                                  THEN (current_period = 'SO')
+                                  ELSE COALESCE(${shootout ?? null}, shootout)
+                                END,
         playoff_series_id     = COALESCE(${playoff_series_id     ?? null}, playoff_series_id),
         game_number_in_series = COALESCE(${game_number_in_series ?? null}, game_number_in_series),
         game_number           = COALESCE(${game_number           ?? null}, game_number),
