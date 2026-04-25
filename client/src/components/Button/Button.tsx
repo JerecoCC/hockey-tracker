@@ -5,7 +5,7 @@ import Tooltip from '../Tooltip/Tooltip';
 import styles from './Button.module.scss';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'ghost';
-export type ButtonIntent = 'accent' | 'danger' | 'info' | 'neutral';
+export type ButtonIntent = 'accent' | 'success' | 'danger' | 'info' | 'neutral';
 export type ButtonSize = 'sm' | 'md' | 'lg';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -28,18 +28,21 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 const VARIANT_INTENT: Record<ButtonVariant, Record<ButtonIntent, string>> = {
   filled: {
     accent: styles.filledAccent,
+    success: styles.filledSuccess,
     danger: styles.filledDanger,
     info: styles.filledInfo,
     neutral: styles.filledNeutral,
   },
   outlined: {
     accent: styles.outlinedAccent,
+    success: styles.outlinedSuccess,
     danger: styles.outlinedDanger,
     info: styles.outlinedInfo,
     neutral: styles.outlinedNeutral,
   },
   ghost: {
     accent: styles.ghostAccent,
+    success: styles.ghostSuccess,
     danger: styles.ghostDanger,
     info: styles.ghostInfo,
     neutral: styles.ghostNeutral,

@@ -66,6 +66,15 @@
   }
 }
 
+.filledSuccess {
+  background: $success;
+  color: #fff;
+  border: none;
+  &:hover:not(:disabled) {
+    background: $success-hover;
+  }
+}
+
 .filledDanger {
   background: $danger;
   color: #fff;
@@ -100,6 +109,15 @@
   border: 1px solid rgba($accent, 0.33);
   &:hover:not(:disabled) {
     background: rgba($accent, 0.15);
+  }
+}
+
+.outlinedSuccess {
+  background: transparent;
+  color: $success-light;
+  border: 1px solid rgba($success, 0.4);
+  &:hover:not(:disabled) {
+    background: rgba($success, 0.15);
   }
 }
 
@@ -138,6 +156,15 @@
   border: none;
   &:hover:not(:disabled) {
     background: rgba($accent, 0.12);
+  }
+}
+
+.ghostSuccess {
+  background: transparent;
+  color: $success-light;
+  border: none;
+  &:hover:not(:disabled) {
+    background: rgba($success, 0.12);
   }
 }
 
