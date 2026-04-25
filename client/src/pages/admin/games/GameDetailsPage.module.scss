@@ -403,6 +403,10 @@
   }
 }
 
+.goalActions {
+  --overlay-bg: #{$bg-page};
+}
+
 // Period time (e.g. "12:34")
 .goalTime {
   font-size: $font-sm;
@@ -590,65 +594,19 @@
   display: flex;
   gap: $space-md;
   align-items: flex-start;
+}
 
-  // Period time field — shrinks to its natural width
-  > :first-child {
-    flex-shrink: 0;
-  }
+// Period time field — fixed narrow width so it doesn't grow and the clear
+// button appearing/disappearing never shifts the layout
+.goalPeriodTimeField {
+  flex-shrink: 0;
+  width: 128px;
 }
 
 // Goal type field inside goalFormTimeRow — expands to fill remaining space
 .goalTypeField {
   flex: 1;
   min-width: 0;
-}
-
-// Inline container for [MM] : [SS] inputs under a single label
-.timeInputRow {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-}
-
-// Individual MM or SS segment input
-.timeSegmentInput {
-  background: $bg-input;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  color: $text-body;
-  font-size: $font-base;
-  font-family: inherit;
-  padding: 0 $space-md;
-  width: 3.5rem;
-  height: 42px;
-  outline: none;
-  text-align: center;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.08em;
-  box-sizing: border-box;
-
-  &::placeholder {
-    color: $text-dim;
-    letter-spacing: normal;
-  }
-
-  &:focus {
-    border-color: $accent;
-  }
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-}
-
-// Colon separator between MM and SS inputs
-.timeColon {
-  color: $text-dim;
-  font-size: $font-base;
-  font-weight: 600;
-  user-select: none;
-  padding-bottom: 1px; // optical alignment
 }
 
 // Side-by-side row for the two assist selects

@@ -183,7 +183,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
   const createAndRosterPlayers = async (
     tId: string,
     sId: string,
-    players: Array<BulkPlayerInput & { jersey_number?: number | null }>,
+    players: Array<Omit<BulkPlayerInput, 'shoots'> & { shoots?: BulkPlayerInput['shoots']; jersey_number?: number | null }>,
   ): Promise<string[] | null> => {
     try {
       // Step 1: bulk-create the new players

@@ -78,10 +78,17 @@
   padding: 0 2px;
   border-radius: $radius-sm;
   transition: color $transition-fast;
+  flex-shrink: 0;
 
   &:hover {
     color: $text-body;
   }
+}
+
+// Reserve the clear button's space even when hidden so the trigger width never shifts
+.clearHidden {
+  visibility: hidden;
+  pointer-events: none;
 }
 
 // ── Dropdown ─────────────────────────────────────────────────────────────

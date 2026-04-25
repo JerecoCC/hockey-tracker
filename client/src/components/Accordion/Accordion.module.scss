@@ -19,6 +19,7 @@
   align-items: center;
   gap: $space-sm;
   padding: $space-sm $space-md;
+  background: $bg-card;
   border-bottom: 1px solid $border;
   transition: background $transition-fast;
 
@@ -30,10 +31,10 @@
       pointer-events: auto;
     }
   }
-}
 
-.rowCollapsed {
-  border-bottom: none;
+  &.rowCollapsed {
+    border-bottom: none;
+  }
 }
 
 // Static variant — no hover highlight since there is no toggle to interact with.
@@ -143,5 +144,5 @@
 // ── Collapsible body ──────────────────────────────────────────────────────────
 
 .body {
-  // Consumers style the content directly; this is just a structural wrapper.
+  background: $bg-page;
 }

@@ -15,6 +15,7 @@ import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
 import Select from '../../../components/Select/Select';
+import TimePicker from '../../../components/TimePicker/TimePicker';
 import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import {
@@ -283,8 +284,7 @@ const GameDetailsPage = () => {
   /** non-null when editing an existing goal; null when adding a new one */
   const [goalEditId, setGoalEditId] = useState<string | null>(null);
   const [goalTeam, setGoalTeam] = useState<'away' | 'home'>('away');
-  const [goalTimeMins, setGoalTimeMins] = useState('');
-  const [goalTimeSecs, setGoalTimeSecs] = useState('');
+  const [goalPeriodTime, setGoalPeriodTime] = useState('');
   const [goalType, setGoalType] = useState('even-strength');
   const [goalEmptyNet, setGoalEmptyNet] = useState(false);
   const [goalScorerId, setGoalScorerId] = useState('');
@@ -426,6 +426,7 @@ const GameDetailsPage = () => {
   type ShotsModalFormValues = {
     away_shots: string;
     home_shots: string;
+    end_time: string;
     goalies: Array<{ shots_against: string; saves: string }>;
   };
 
@@ -440,8 +441,9 @@ const GameDetailsPage = () => {
     control: shotsControl,
     reset: resetShotsForm,
     getValues: getShotsFormValues,
+    watch: watchShots,
   } = useForm<ShotsModalFormValues>({
-    defaultValues: { away_shots: '', home_shots: '', goalies: [] },
+    defaultValues: { away_shots: '', home_shots: '', end_time: '', goalies: [] },
   });
   const { fields: shotsGoalieFields } = useFieldArray({ control: shotsControl, name: 'goalies' });
 
@@ -451,9 +453,13 @@ const GameDetailsPage = () => {
     const goalies = showGoalies
       ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
       : [];
+    const now = new Date();
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mm = String(now.getMinutes()).padStart(2, '0');
     resetShotsForm({
       away_shots: existing ? String(existing.away_shots) : '',
       home_shots: existing ? String(existing.home_shots) : '',
+      end_time: nextAction.type === 'end-game' ? `${hh}:${mm}` : '',
       goalies: goalies.map((g) => {
         const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
         return {
@@ -470,7 +476,7 @@ const GameDetailsPage = () => {
 
   const handleShotsConfirm = async () => {
     if (!shotsPeriod || !shotsNextAction || !game) return;
-    const { away_shots, home_shots, goalies: goalieFormValues } = getShotsFormValues();
+    const { away_shots, home_shots, end_time, goalies: goalieFormValues } = getShotsFormValues();
     const away = parseInt(away_shots, 10);
     const home = parseInt(home_shots, 10);
     if (isNaN(away) || isNaN(home)) return;
@@ -500,6 +506,10 @@ const GameDetailsPage = () => {
           }
         }
       }
+    }
+    // Save end time when ending the game
+    if (shotsNextAction.type === 'end-game' && end_time) {
+      await updateGameInfo({ time_end: etHHMMtoISO(end_time) });
     }
     setShotsSubmitting(false);
     setShotsPeriod(null);
@@ -628,8 +638,7 @@ const GameDetailsPage = () => {
     setGoalEditId(null);
     setGoalPeriod(String(period));
     setGoalTeam('away');
-    setGoalTimeMins('');
-    setGoalTimeSecs('');
+    setGoalPeriodTime('');
     setGoalType('even-strength');
     setGoalEmptyNet(false);
     setGoalScorerId('');
@@ -642,9 +651,7 @@ const GameDetailsPage = () => {
     setGoalEditId(goal.id);
     setGoalPeriod(goal.period);
     setGoalTeam(goal.team_id === game.away_team_id ? 'away' : 'home');
-    const [mins = '', secs = ''] = (goal.period_time ?? ':').split(':');
-    setGoalTimeMins(mins);
-    setGoalTimeSecs(secs);
+    setGoalPeriodTime(goal.period_time ?? '');
     // Legacy 'empty-net' goal_type → treat as even-strength + empty_net flag
     setGoalType(goal.goal_type === 'empty-net' ? 'even-strength' : goal.goal_type);
     setGoalEmptyNet(goal.empty_net || goal.goal_type === 'empty-net');
@@ -663,18 +670,6 @@ const GameDetailsPage = () => {
     setGoalScorerId('');
     setGoalAssist1Id('');
     setGoalAssist2Id('');
-  };
-
-  const handleTimeMinsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
-    if (val !== '' && parseInt(val, 10) > 20) return;
-    setGoalTimeMins(val);
-  };
-
-  const handleTimeSecsChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 2);
-    if (val !== '' && parseInt(val, 10) > 59) return;
-    setGoalTimeSecs(val);
   };
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
@@ -1892,11 +1887,15 @@ const GameDetailsPage = () => {
                             {GAME_TYPE_LABEL[game.game_type]}
                           </span>
                         </div>
-                        {/* Row 2 — Venue | Scheduled Time */}
+                        {/* Row 2 — Scheduled Date | Scheduled Time */}
                         <div className={styles.infoItem}>
-                          <span className={styles.infoLabel}>Venue</span>
-                          <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
-                            {game.venue ?? '—'}
+                          <span className={styles.infoLabel}>Scheduled Date</span>
+                          <span
+                            className={game.scheduled_at ? styles.infoValue : styles.infoValueMuted}
+                          >
+                            {game.scheduled_at
+                              ? DATE_FMT_SHORT.format(new Date(game.scheduled_at))
+                              : '—'}
                           </span>
                         </div>
                         <div className={styles.infoItem}>
@@ -1924,6 +1923,13 @@ const GameDetailsPage = () => {
                             className={game.time_end ? styles.infoValue : styles.infoValueMuted}
                           >
                             {game.time_end ? TIME_FMT.format(new Date(game.time_end)) : '—'}
+                          </span>
+                        </div>
+                        {/* Row 4 — Venue (full width) */}
+                        <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+                          <span className={styles.infoLabel}>Venue</span>
+                          <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
+                            {game.venue ?? '—'}
                           </span>
                         </div>
                         {/* Optional extras */}
@@ -2163,7 +2169,7 @@ const GameDetailsPage = () => {
             onConfirm={async () => {
               if (!goalPeriod || !game) return;
               const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
-              const periodTime = `${(goalTimeMins || '00').padStart(2, '0')}:${(goalTimeSecs || '00').padStart(2, '0')}`;
+              const periodTime = goalPeriodTime || '00:00';
               setGoalSubmitting(true);
               try {
                 const payload = {
@@ -2254,40 +2260,17 @@ const GameDetailsPage = () => {
 
               {/* Period time + Goal type row */}
               <div className={styles.goalFormTimeRow}>
-                {/* Period time — one label, two inputs with colon */}
-                <div className={styles.goalFormField}>
+                {/* Period time — MM:SS duration picker */}
+                <div className={`${styles.goalFormField} ${styles.goalPeriodTimeField}`}>
                   <label className={styles.goalFormLabel}>
                     Period Time <span className={styles.required}>*</span>
                   </label>
-                  <div className={styles.timeInputRow}>
-                    <input
-                      type="text"
-                      className={styles.timeSegmentInput}
-                      placeholder="00"
-                      value={goalTimeMins}
-                      onChange={handleTimeMinsChange}
-                      onBlur={() => {
-                        if (goalTimeMins) setGoalTimeMins(goalTimeMins.padStart(2, '0'));
-                      }}
-                      inputMode="numeric"
-                      maxLength={2}
-                      disabled={goalSubmitting}
-                    />
-                    <span className={styles.timeColon}>:</span>
-                    <input
-                      type="text"
-                      className={styles.timeSegmentInput}
-                      placeholder="00"
-                      value={goalTimeSecs}
-                      onChange={handleTimeSecsChange}
-                      onBlur={() => {
-                        if (goalTimeSecs) setGoalTimeSecs(goalTimeSecs.padStart(2, '0'));
-                      }}
-                      inputMode="numeric"
-                      maxLength={2}
-                      disabled={goalSubmitting}
-                    />
-                  </div>
+                  <TimePicker
+                    mode="duration"
+                    value={goalPeriodTime}
+                    onChange={setGoalPeriodTime}
+                    disabled={goalSubmitting}
+                  />
                 </div>
 
                 {/* Goal type */}
@@ -2518,23 +2501,13 @@ const GameDetailsPage = () => {
               disabled={gameInfoSubmitting}
             />
           </div>
-          {/* Row 2 — Date (full width, sets context for scheduled time) */}
-          <div className={styles.formFieldFull}>
-            <Field
-              label="Date"
-              type="datepicker"
-              control={gameInfoControl}
-              name="scheduled_date"
-              placeholder="Select date…"
-            />
-          </div>
-          {/* Row 3 — Venue | Scheduled Time (mirrors card row 2) */}
+          {/* Row 2 — Date | Scheduled Time */}
           <Field
-            label="Venue"
+            label="Date"
+            type="datepicker"
             control={gameInfoControl}
-            name="venue"
-            placeholder="e.g. Scotiabank Arena"
-            disabled={gameInfoSubmitting}
+            name="scheduled_date"
+            placeholder="Select date…"
           />
           <Field
             label="Scheduled Time"
@@ -2542,7 +2515,7 @@ const GameDetailsPage = () => {
             control={gameInfoControl}
             name="scheduled_time"
           />
-          {/* Row 4 — Start Time | End Time (mirrors card row 3) */}
+          {/* Row 3 — Start Time | End Time */}
           <Field
             label="Start Time"
             type="timepicker"
@@ -2557,6 +2530,16 @@ const GameDetailsPage = () => {
             name="time_end"
             disabled={gameInfoSubmitting || game.status !== 'final'}
           />
+          {/* Row 4 — Venue (full width) */}
+          <div className={styles.formFieldFull}>
+            <Field
+              label="Venue"
+              control={gameInfoControl}
+              name="venue"
+              placeholder="e.g. Scotiabank Arena"
+              disabled={gameInfoSubmitting}
+            />
+          </div>
         </form>
       </Modal>
 
@@ -2631,11 +2614,17 @@ const GameDetailsPage = () => {
       {shotsPeriod !== null &&
         game &&
         (() => {
+          const isEndGame = shotsNextAction?.type === 'end-game';
+
           const shotsConfirmLabel = shotsSubmitting
             ? 'Saving…'
-            : shotsNextAction?.type === 'end-game'
+            : isEndGame
               ? 'Award Three Stars'
               : (shotsNextAction?.label ?? 'Confirm');
+
+          // Reactive form values for validation
+          const goalieFormValues = watchShots('goalies');
+          const endTimeValue = watchShots('end_time');
 
           const teamRows = [
             {
@@ -2662,18 +2651,56 @@ const GameDetailsPage = () => {
             ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
             : [];
 
+          // Goalie validation: at least 1 goalie per team must have both SA and SV filled
+          const goalieStatsValid =
+            !shotsShowGoalies ||
+            goalieRosterList.length === 0 ||
+            (goalieRosterList.some(
+              (g, i) =>
+                g.team_id === game.away_team_id &&
+                goalieFormValues[i]?.shots_against !== '' &&
+                goalieFormValues[i]?.saves !== '',
+            ) &&
+              goalieRosterList.some(
+                (g, i) =>
+                  g.team_id === game.home_team_id &&
+                  goalieFormValues[i]?.shots_against !== '' &&
+                  goalieFormValues[i]?.saves !== '',
+              ));
+
+          const endTimeValid = !isEndGame || !!endTimeValue;
+
           return (
             <Modal
               open={shotsPeriod !== null}
-              title={`Record Shots — ${PERIOD_LABEL[shotsPeriod] ?? shotsPeriod} Period`}
+              title={
+                isEndGame
+                  ? 'End Game'
+                  : `Record Shots — ${PERIOD_LABEL[shotsPeriod] ?? shotsPeriod} Period`
+              }
               onClose={() => setShotsPeriod(null)}
               confirmLabel={shotsConfirmLabel}
-              confirmIcon={shotsNextAction?.type === 'end-game' ? 'star' : 'flag'}
+              confirmIcon={isEndGame ? 'star' : 'flag'}
               onConfirm={handleShotsConfirm}
-              confirmDisabled={shotsSubmitting}
+              confirmDisabled={shotsSubmitting || !goalieStatsValid || !endTimeValid}
               busy={shotsSubmitting}
             >
               <div className={styles.shotsModalBody}>
+                {/* End Time — required when ending the game */}
+                {isEndGame && (
+                  <>
+                    <Field
+                      label="End Time"
+                      required
+                      type="timepicker"
+                      control={shotsControl}
+                      name="end_time"
+                      disabled={shotsSubmitting}
+                    />
+                    <hr className={styles.lineupDivider} />
+                  </>
+                )}
+
                 {teamRows.map((row) => (
                   <div
                     key={row.key}

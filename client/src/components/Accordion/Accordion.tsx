@@ -60,7 +60,7 @@ const Accordion = ({
       <div
         className={[
           styles.row,
-          !bodyVisible ? styles.rowCollapsed : '',
+          !(bodyVisible && children != null) ? styles.rowCollapsed : '',
           isStatic ? styles.rowStatic : '',
         ]
           .filter(Boolean)

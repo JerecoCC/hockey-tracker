@@ -3,10 +3,13 @@ import Icon from '../Icon/Icon';
 import styles from './TimePicker.module.scss';
 
 interface Props {
-  value: string; // HH:MM (24-hour) or ''
+  value: string; // HH:MM (24-hour) or '' in clock mode; MM:SS or '' in duration mode
   onChange: (val: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  /** 'clock' (default) — wall-clock time in 12h AM/PM format (HH:MM 24h internally).
+   *  'duration' — period elapsed time as MM:SS (0–20 min, 0–59 sec). */
+  mode?: 'clock' | 'duration';
 }
 
 type Segment = 'hour' | 'minute' | 'ampm';
@@ -63,12 +66,34 @@ const buildDisplay = (
 };
 
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1–12
-const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, …, 55
+const PERIOD_MINS = Array.from({ length: 21 }, (_, i) => i); // 0–20
+const PERIOD_SECS = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, …, 55
 
-const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
+/** Display for duration (MM:SS) mode. */
+const buildDurationDisplay = (
+  cMins: number | null,
+  cSecs: number | null,
+  activeSeg: Segment | null,
+  buf: string,
+): string => {
+  const seg = (s: Segment, val: string | null): string => {
+    const info = SEGMENT_INFO[s];
+    if (s === activeSeg && buf.length > 0) return buf + info.placeholder.slice(buf.length);
+    return val !== null ? val : info.placeholder;
+  };
+  const minStr = cMins !== null ? String(cMins).padStart(2, '0') : null;
+  const secStr = cSecs !== null ? String(cSecs).padStart(2, '0') : null;
+  return `${seg('hour', minStr)}:${seg('minute', secStr)}`;
+};
+
+const TimePicker = ({ value, onChange, placeholder, disabled, mode = 'clock' }: Props) => {
   const parsed = parseTime(value);
-  const init12 = parsed ? to12h(parsed.h24) : null;
-  const [cHour12, setCHour12] = useState<number | null>(init12?.h12 ?? null);
+  const init12 = parsed && mode === 'clock' ? to12h(parsed.h24) : null;
+  // In duration mode: cHour12 = elapsed minutes (0–20), cMinute = elapsed seconds (0–59), cAmPm unused.
+  const [cHour12, setCHour12] = useState<number | null>(
+    mode === 'duration' ? (parsed?.h24 ?? null) : (init12?.h12 ?? null),
+  );
   const [cMinute, setCMinute] = useState<number | null>(parsed?.m ?? null);
   const [cAmPm, setCAmPm] = useState<'AM' | 'PM' | null>(init12?.ampm ?? null);
   const [activeSeg, setActiveSeg] = useState<Segment | null>(null);
@@ -91,13 +116,22 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     }
   });
 
+  // Computed segment order — duration has no ampm segment.
+  const segmentOrder: Segment[] = mode === 'duration' ? ['hour', 'minute'] : SEGMENT_ORDER;
+
   useEffect(() => {
     const p = parseTime(value);
     if (p) {
-      const { h12, ampm } = to12h(p.h24);
-      setCHour12(h12);
-      setCMinute(p.m);
-      setCAmPm(ampm);
+      if (mode === 'duration') {
+        setCHour12(p.h24); // reuse slot for elapsed minutes
+        setCMinute(p.m); // reuse slot for elapsed seconds
+        setCAmPm(null);
+      } else {
+        const { h12, ampm } = to12h(p.h24);
+        setCHour12(h12);
+        setCMinute(p.m);
+        setCAmPm(ampm);
+      }
     } else {
       setCHour12(null);
       setCMinute(null);
@@ -105,7 +139,7 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     }
     setActiveSeg(null);
     setBuf('');
-  }, [value]);
+  }, [value, mode]);
 
   useEffect(() => {
     if (!open) return;
@@ -124,11 +158,12 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
       btn?.scrollIntoView({ block: 'center' });
     }
     if (cMinute != null && minColRef.current) {
-      const rounded = MINUTES.includes(cMinute) ? cMinute : 0;
+      const steps = mode === 'duration' ? PERIOD_SECS : MINUTES;
+      const rounded = steps.includes(cMinute) ? cMinute : 0;
       const btn = minColRef.current.querySelector(`[data-val="${rounded}"]`) as HTMLElement | null;
       btn?.scrollIntoView({ block: 'center' });
     }
-  }, [open, cHour12, cMinute]);
+  }, [open, cHour12, cMinute, mode]);
 
   const measureDropdown = () => {
     if (!triggerRef.current) return;
@@ -136,12 +171,21 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     setDropdownStyle({ top: r.bottom + 6, left: r.left });
   };
 
-  const emitChange = (h12: number | null, m: number | null, ap: 'AM' | 'PM' | null) => {
-    if (h12 !== null && m !== null && ap !== null) {
-      const hhmm = toHHMM(to24h(h12, ap), m);
-      if (hhmm !== value) onChange(hhmm);
-    } else if (value !== '') {
-      onChange('');
+  const emitChange = (first: number | null, second: number | null, ap: 'AM' | 'PM' | null) => {
+    if (mode === 'duration') {
+      if (first !== null && second !== null) {
+        const mmss = `${String(first).padStart(2, '0')}:${String(second).padStart(2, '0')}`;
+        if (mmss !== value) onChange(mmss);
+      } else if (value !== '') {
+        onChange('');
+      }
+    } else {
+      if (first !== null && second !== null && ap !== null) {
+        const hhmm = toHHMM(to24h(first, ap), second);
+        if (hhmm !== value) onChange(hhmm);
+      } else if (value !== '') {
+        onChange('');
+      }
     }
   };
 
@@ -170,7 +214,8 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     const pos = inputRef.current?.selectionStart ?? 0;
     if (pos <= 2) activateSegment('hour');
     else if (pos <= 5) activateSegment('minute');
-    else activateSegment('ampm');
+    else if (mode === 'clock') activateSegment('ampm');
+    // duration: clicking after "MM:SS" (len=5) stays in minute/second segment
   };
 
   const handleFocus = () => {
@@ -186,13 +231,15 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     const seg = activeSeg;
     if (!seg) return;
     const info = SEGMENT_INFO[seg];
-    const segIdx = SEGMENT_ORDER.indexOf(seg);
+    const segIdx = segmentOrder.indexOf(seg);
 
     const goToSeg = (s: Segment) => {
       setActiveSeg(s);
       setBuf('');
       pendingSelRef.current = [SEGMENT_INFO[s].start, SEGMENT_INFO[s].end];
     };
+
+    // Duration mode has no ampm segment — skip that entire branch.
 
     // AM/PM segment: letter keys + arrow toggle, no digit buffering
     if (seg === 'ampm') {
@@ -230,16 +277,23 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
       let shouldCommit = newBuf.length === info.maxLen;
       if (!shouldCommit) {
         const v = parseInt(newBuf, 10);
-        // hour (12h): first digit > 1 can't form a valid 2-digit 12h hour (20+)
-        if (seg === 'hour' && v > 1) shouldCommit = true;
-        // minute: first digit > 5 means can't be valid (60+)
+        if (seg === 'hour') {
+          // clock: first digit > 1 → can't form valid 12h hour
+          // duration: first digit > 2 → can't form valid minute 0-20
+          if (mode === 'clock' ? v > 1 : v > 2) shouldCommit = true;
+        }
+        // minute/second: first digit > 5 means can't be valid (60+)
         if (seg === 'minute' && v > 5) shouldCommit = true;
       }
       if (shouldCommit) {
         const v = parseInt(newBuf.padStart(info.maxLen, '0'), 10);
         let valid = true;
-        if (seg === 'hour' && (v < 1 || v > 12)) valid = false;
+        if (seg === 'hour') {
+          if (mode === 'clock' ? v < 1 || v > 12 : v > 20) valid = false;
+        }
         if (seg === 'minute' && (v < 0 || v > 59)) valid = false;
+        // duration cap: seconds must be 0 when minutes = 20
+        if (mode === 'duration' && seg === 'minute' && cHour12 === 20 && v > 0) valid = false;
         if (!valid) {
           setBuf('');
           pendingSelRef.current = [info.start, info.end];
@@ -250,6 +304,11 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
         if (seg === 'hour') {
           setCHour12(v);
           newH = v;
+          // entering minutes=20 clamps existing seconds to 0
+          if (mode === 'duration' && v === 20 && (cMinute ?? 0) > 0) {
+            setCMinute(0);
+            newM = 0;
+          }
         } else {
           setCMinute(v);
           newM = v;
@@ -269,14 +328,26 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
       e.preventDefault();
       const delta = e.key === 'ArrowUp' ? 1 : -1;
       if (seg === 'hour') {
-        // cycle 1–12
-        const next = (((cHour12 ?? 1) - 1 + delta + 12) % 12) + 1;
-        setCHour12(next);
-        emitChange(next, cMinute, cAmPm);
+        if (mode === 'duration') {
+          // cycle 0–20
+          const next = ((cHour12 ?? 0) + delta + 21) % 21;
+          // cycling to 20 clamps seconds to 0
+          const newSecs = next === 20 && (cMinute ?? 0) > 0 ? 0 : cMinute;
+          setCHour12(next);
+          if (newSecs !== cMinute) setCMinute(newSecs ?? 0);
+          emitChange(next, newSecs ?? cMinute, null);
+        } else {
+          // cycle 1–12
+          const next = (((cHour12 ?? 1) - 1 + delta + 12) % 12) + 1;
+          setCHour12(next);
+          emitChange(next, cMinute, cAmPm);
+        }
       } else {
-        const next = ((cMinute ?? 0) + delta + 60) % 60;
+        // seconds/minutes — clamp seconds to 0 when minutes = 20
+        const raw = ((cMinute ?? 0) + delta + 60) % 60;
+        const next = mode === 'duration' && cHour12 === 20 ? 0 : raw;
         setCMinute(next);
-        emitChange(cHour12, next, cAmPm);
+        emitChange(cHour12, next, mode === 'clock' ? cAmPm : null);
       }
       pendingSelRef.current = [info.start, info.end];
     } else if (e.key === 'Backspace' || e.key === 'Delete') {
@@ -296,22 +367,22 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       setBuf('');
-      const prev = SEGMENT_ORDER[segIdx - 1];
+      const prev = segmentOrder[segIdx - 1];
       if (prev) goToSeg(prev);
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
       setBuf('');
-      const next = SEGMENT_ORDER[segIdx + 1];
+      const next = segmentOrder[segIdx + 1];
       if (next) goToSeg(next);
     } else if (e.key === 'Tab') {
       if (!e.shiftKey) {
-        const next = SEGMENT_ORDER[segIdx + 1];
+        const next = segmentOrder[segIdx + 1];
         if (next) {
           e.preventDefault();
           goToSeg(next);
         }
       } else {
-        const prev = SEGMENT_ORDER[segIdx - 1];
+        const prev = segmentOrder[segIdx - 1];
         if (prev) {
           e.preventDefault();
           goToSeg(prev);
@@ -324,15 +395,30 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
 
   const selectHour = (h: number) => {
     setCHour12(h);
-    emitChange(h, cMinute, cAmPm);
-    if (cMinute === null) activateSegment('minute');
+    // duration cap: selecting 20 min clamps existing seconds to 0
+    const newSecs = mode === 'duration' && h === 20 && (cMinute ?? 0) > 0 ? 0 : cMinute;
+    if (mode === 'duration' && newSecs !== cMinute) setCMinute(newSecs ?? 0);
+    emitChange(
+      h,
+      mode === 'duration' ? (newSecs ?? cMinute) : cMinute,
+      mode === 'clock' ? cAmPm : null,
+    );
+    if ((mode === 'duration' ? (newSecs ?? cMinute) : cMinute) === null) activateSegment('minute');
+    else if (mode === 'duration') setOpen(false);
   };
 
   const selectMinute = (m: number) => {
-    setCMinute(m);
-    emitChange(cHour12, m, cAmPm);
-    if (cAmPm === null) activateSegment('ampm');
-    else setOpen(false);
+    // duration cap: disallow seconds > 0 when minutes = 20
+    const clamped = mode === 'duration' && cHour12 === 20 ? 0 : m;
+    setCMinute(clamped);
+    emitChange(cHour12, clamped, mode === 'clock' ? cAmPm : null);
+    if (mode === 'duration') {
+      setOpen(false);
+    } else if (cAmPm === null) {
+      activateSegment('ampm');
+    } else {
+      setOpen(false);
+    }
   };
 
   const selectAmPm = (ap: 'AM' | 'PM') => {
@@ -341,8 +427,11 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
     setOpen(false);
   };
 
-  const displayValue = buildDisplay(cHour12, cMinute, cAmPm, activeSeg, buf);
-  const isEmpty = cHour12 === null && cMinute === null && cAmPm === null;
+  const displayValue =
+    mode === 'duration'
+      ? buildDurationDisplay(cHour12, cMinute, activeSeg, buf)
+      : buildDisplay(cHour12, cMinute, cAmPm, activeSeg, buf);
+  const isEmpty = cHour12 === null && cMinute === null && (mode === 'duration' || cAmPm === null);
 
   return (
     <div
@@ -381,12 +470,12 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
           onBlur={!disabled ? handleBlur : undefined}
           readOnly={disabled}
         />
-        {value && !disabled && (
+        {!disabled && (
           <span
-            className={styles.clear}
-            onClick={clearTime}
-            role="button"
-            aria-label="Clear"
+            className={[styles.clear, !value && styles.clearHidden].filter(Boolean).join(' ')}
+            onClick={value ? clearTime : undefined}
+            role={value ? 'button' : undefined}
+            aria-label={value ? 'Clear' : undefined}
           >
             ×
           </span>
@@ -399,13 +488,14 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
           style={dropdownStyle}
         >
           <div className={styles.columns}>
+            {/* ── Column 1: Hour (clock) or Minute (duration) ── */}
             <div className={styles.columnWrap}>
-              <div className={styles.columnLabel}>Hour</div>
+              <div className={styles.columnLabel}>{mode === 'duration' ? 'Min' : 'Hour'}</div>
               <div
                 ref={hourColRef}
                 className={styles.column}
               >
-                {HOURS_12.map((h) => (
+                {(mode === 'duration' ? PERIOD_MINS : HOURS_12).map((h) => (
                   <button
                     key={h}
                     type="button"
@@ -422,66 +512,79 @@ const TimePicker = ({ value, onChange, placeholder, disabled }: Props) => {
               </div>
             </div>
             <div className={styles.columnDivider} />
+            {/* ── Column 2: Minute (clock) or Second (duration) ── */}
             <div className={styles.columnWrap}>
-              <div className={styles.columnLabel}>Min</div>
+              <div className={styles.columnLabel}>{mode === 'duration' ? 'Sec' : 'Min'}</div>
               <div
                 ref={minColRef}
                 className={styles.column}
               >
-                {MINUTES.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    data-val={m}
-                    className={`${styles.timeBtn}${cMinute === m ? ` ${styles.selected}` : ''}`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      selectMinute(m);
-                    }}
-                  >
-                    {String(m).padStart(2, '0')}
-                  </button>
-                ))}
+                {(mode === 'duration' ? PERIOD_SECS : MINUTES).map((m) => {
+                  // duration cap: seconds > 0 are unavailable when minutes = 20
+                  const disabledSec = mode === 'duration' && cHour12 === 20 && m > 0;
+                  return (
+                    <button
+                      key={m}
+                      type="button"
+                      data-val={m}
+                      disabled={disabledSec}
+                      className={`${styles.timeBtn}${cMinute === m ? ` ${styles.selected}` : ''}`}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        selectMinute(m);
+                      }}
+                    >
+                      {String(m).padStart(2, '0')}
+                    </button>
+                  );
+                })}
               </div>
             </div>
-            <div className={styles.columnDivider} />
-            <div className={styles.columnWrap}>
-              <div className={styles.columnLabel}>AM/PM</div>
-              <div className={styles.column}>
-                {(['AM', 'PM'] as const).map((ap) => (
-                  <button
-                    key={ap}
-                    type="button"
-                    data-val={ap}
-                    className={`${styles.timeBtn}${cAmPm === ap ? ` ${styles.selected}` : ''}`}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      selectAmPm(ap);
-                    }}
-                  >
-                    {ap}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* ── Column 3: AM/PM — clock mode only ── */}
+            {mode === 'clock' && (
+              <>
+                <div className={styles.columnDivider} />
+                <div className={styles.columnWrap}>
+                  <div className={styles.columnLabel}>AM/PM</div>
+                  <div className={styles.column}>
+                    {(['AM', 'PM'] as const).map((ap) => (
+                      <button
+                        key={ap}
+                        type="button"
+                        data-val={ap}
+                        className={`${styles.timeBtn}${cAmPm === ap ? ` ${styles.selected}` : ''}`}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selectAmPm(ap);
+                        }}
+                      >
+                        {ap}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
           </div>
           <div className={styles.footer}>
-            <button
-              type="button"
-              className={styles.footerBtn}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                const now = new Date();
-                const { h12, ampm } = to12h(now.getHours());
-                setCHour12(h12);
-                setCMinute(now.getMinutes());
-                setCAmPm(ampm);
-                onChange(toHHMM(now.getHours(), now.getMinutes()));
-                setOpen(false);
-              }}
-            >
-              Now
-            </button>
+            {mode === 'clock' && (
+              <button
+                type="button"
+                className={styles.footerBtn}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const now = new Date();
+                  const { h12, ampm } = to12h(now.getHours());
+                  setCHour12(h12);
+                  setCMinute(now.getMinutes());
+                  setCAmPm(ampm);
+                  onChange(toHHMM(now.getHours(), now.getMinutes()));
+                  setOpen(false);
+                }}
+              >
+                Now
+              </button>
+            )}
             {value && (
               <button
                 type="button"
