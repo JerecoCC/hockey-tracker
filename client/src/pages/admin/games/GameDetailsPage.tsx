@@ -182,10 +182,10 @@ const formatPlayerName = (firstName: string | null, lastName: string | null): st
 };
 
 /**
- * Compute W-OTW-OTL-L form record string from a last-five array.
+ * Compute W-OTW-OTL-L form record counts from a last-five array.
  * Wins/losses in overtime or shootout count as OTW/OTL; all others are regulation W/L.
  */
-const buildFormRecord = (games: LastFiveGame[]): string => {
+const buildFormRecord = (games: LastFiveGame[]) => {
   let w = 0,
     otw = 0,
     otl = 0,
@@ -198,7 +198,7 @@ const buildFormRecord = (games: LastFiveGame[]): string => {
       isExtra ? otl++ : l++;
     }
   }
-  return `${w}-${otw}-${otl}-${l}`;
+  return { w, otw, otl, l };
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -643,6 +643,9 @@ const GameDetailsPage = () => {
   // ── Starting lineup data ───────────────────────────────────────────────────
   const { lineup, saveTeamLineup } = useGameLineup(id);
 
+  // Both teams must have at least one persisted (non-inherited) roster entry.
+  const rosterReady = awayRoster.length > 0 && homeRoster.length > 0;
+
   // Both teams must have all 6 position slots covered (inherited entries from the
   // last game count — they represent a real lineup that can be used as-is).
   const lineupsReady = (() => {
@@ -663,7 +666,7 @@ const GameDetailsPage = () => {
     setConfirmRemove(null);
   };
 
-  const openGoalModal = (period: 1 | 2 | 3 | 'OT') => {
+  const openGoalModal = (period: 1 | 2 | 3 | 'OT' | 'SO') => {
     setGoalEditId(null);
     setGoalPeriod(String(period));
     setGoalTeam('away');
@@ -752,10 +755,15 @@ const GameDetailsPage = () => {
     { id: '1', label: '1st' },
     { id: '2', label: '2nd' },
     { id: '3', label: '3rd' },
-    ...(game.period_scores.some((ps) => ps.period === 'OT') || (game.overtime_periods ?? 0) > 0
+    ...(game.period_scores.some((ps) => ps.period === 'OT') ||
+    (game.overtime_periods ?? 0) > 0 ||
+    game.current_period === 'OT' ||
+    game.current_period === 'SO'
       ? [{ id: 'OT', label: 'OT' }]
       : []),
-    ...(game.period_scores.some((ps) => ps.period === 'SO') || game.shootout
+    ...(game.period_scores.some((ps) => ps.period === 'SO') ||
+    game.shootout ||
+    game.current_period === 'SO'
       ? [{ id: 'SO', label: 'SO' }]
       : []),
   ];
@@ -1104,8 +1112,12 @@ const GameDetailsPage = () => {
                           const currentIdx = PERIOD_IDS.indexOf(
                             game.current_period as '1' | '2' | '3',
                           );
+                          // currentIdx is -1 when current_period is 'OT' or 'SO' (not in PERIOD_IDS).
+                          // In that case all regular periods are past, so mark them done.
+                          const isPostRegulation =
+                            game.current_period === 'OT' || game.current_period === 'SO';
                           const isActive = !isFinal && game.current_period === periodId;
-                          const isDone = isFinal || currentIdx > idx;
+                          const isDone = isFinal || isPostRegulation || currentIdx > idx;
 
                           return (
                             <Accordion
@@ -1155,7 +1167,7 @@ const GameDetailsPage = () => {
                                                   label: 'Go to Overtime',
                                                   next: 'OT',
                                                 },
-                                                true,
+                                                false,
                                               ),
                                           }
                                         : null,
@@ -1346,6 +1358,24 @@ const GameDetailsPage = () => {
                                           disabled: !!busy,
                                           onClick: () => openGoalModal('OT'),
                                         },
+                                        otGoals.length === 0
+                                          ? {
+                                              icon: 'flag',
+                                              tooltip: 'Go to Shootouts',
+                                              intent: 'info' as const,
+                                              disabled: !!busy,
+                                              onClick: () =>
+                                                openShotsModal(
+                                                  'OT',
+                                                  {
+                                                    type: 'advance',
+                                                    label: 'Go to Shootouts',
+                                                    next: 'SO',
+                                                  },
+                                                  false,
+                                                ),
+                                            }
+                                          : null,
                                         otGoals.length > 0
                                           ? {
                                               icon: 'flag',
@@ -1472,6 +1502,181 @@ const GameDetailsPage = () => {
                                             )}
 
                                             {/* Edit / Delete goal — in-progress only */}
+                                            {isInProgress && (
+                                              <ActionOverlay className={styles.goalActions}>
+                                                <Button
+                                                  variant="ghost"
+                                                  intent="neutral"
+                                                  icon="edit"
+                                                  size="sm"
+                                                  tooltip="Edit goal"
+                                                  onClick={() => openEditGoalModal(goal)}
+                                                />
+                                                <Button
+                                                  variant="ghost"
+                                                  intent="danger"
+                                                  icon="delete"
+                                                  size="sm"
+                                                  tooltip="Delete goal"
+                                                  onClick={() => deleteGoal(goal.id)}
+                                                />
+                                              </ActionOverlay>
+                                            )}
+                                          </li>
+                                        );
+                                      })}
+                                    </ul>
+                                  );
+                                })()}
+                              </Accordion>
+                            );
+                          })()}
+
+                        {/* ── Shootouts accordion ── */}
+                        {(game.current_period === 'SO' ||
+                          goals.some((g) => g.period === 'SO') ||
+                          (isFinal && game.shootout)) &&
+                          (() => {
+                            const isSOActive = !isFinal && game.current_period === 'SO';
+                            const isSODone = isFinal;
+                            const soGoals = goals.filter((g) => g.period === 'SO');
+                            return (
+                              <Accordion
+                                variant="static"
+                                className={isSOActive ? styles.periodItemActive : undefined}
+                                label={<span className={styles.periodLabel}>Shootout</span>}
+                                hoverActions={
+                                  isSOActive
+                                    ? ([
+                                        {
+                                          icon: 'sports_hockey',
+                                          tooltip: 'Score Goal',
+                                          intent: 'success' as const,
+                                          disabled: !!busy,
+                                          onClick: () => openGoalModal('SO'),
+                                        },
+                                        {
+                                          icon: 'flag',
+                                          tooltip: 'End Game',
+                                          intent: 'danger' as const,
+                                          disabled: !!busy,
+                                          onClick: () =>
+                                            openShotsModal('SO', { type: 'end-game' }, true),
+                                        },
+                                      ] as AccordionAction[])
+                                    : undefined
+                                }
+                              >
+                                {(() => {
+                                  if (soGoals.length === 0) {
+                                    if (isSOActive || isSODone) {
+                                      return <p className={styles.noGoalsText}>No goals scored</p>;
+                                    }
+                                    return null;
+                                  }
+                                  return (
+                                    <ul className={styles.goalList}>
+                                      {soGoals.map((goal) => {
+                                        const tally = tallyByGoalId.get(goal.id);
+                                        const scorerName =
+                                          formatPlayerName(
+                                            goal.scorer_first_name,
+                                            goal.scorer_last_name,
+                                          ) + (tally ? ` (${tally.scorerGoals})` : '');
+                                        const assists = [
+                                          goal.assist_1_id
+                                            ? formatPlayerName(
+                                                goal.assist_1_first_name,
+                                                goal.assist_1_last_name,
+                                              ) +
+                                              (tally?.assist1Assists != null
+                                                ? ` (${tally.assist1Assists})`
+                                                : '')
+                                            : null,
+                                          goal.assist_2_id
+                                            ? formatPlayerName(
+                                                goal.assist_2_first_name,
+                                                goal.assist_2_last_name,
+                                              ) +
+                                              (tally?.assist2Assists != null
+                                                ? ` (${tally.assist2Assists})`
+                                                : '')
+                                            : null,
+                                        ].filter(Boolean) as string[];
+                                        const primaryBadge =
+                                          goal.goal_type === 'empty-net'
+                                            ? null
+                                            : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
+                                        const showEN =
+                                          goal.empty_net || goal.goal_type === 'empty-net';
+                                        return (
+                                          <li
+                                            key={goal.id}
+                                            className={styles.goalItem}
+                                          >
+                                            <span className={styles.goalTime}>
+                                              {goal.period_time ?? '—'}
+                                            </span>
+                                            {goal.team_logo ? (
+                                              <img
+                                                src={goal.team_logo}
+                                                alt={goal.team_code}
+                                                className={styles.goalTeamLogo}
+                                              />
+                                            ) : (
+                                              <span
+                                                className={styles.goalTeamLogoPlaceholder}
+                                                style={{
+                                                  background: goal.team_primary_color,
+                                                  color: goal.team_text_color,
+                                                }}
+                                              >
+                                                {goal.team_code?.slice(0, 1)}
+                                              </span>
+                                            )}
+                                            {goal.scorer_photo ? (
+                                              <img
+                                                src={goal.scorer_photo}
+                                                alt=""
+                                                className={styles.goalScorerPhoto}
+                                              />
+                                            ) : (
+                                              <span
+                                                className={styles.goalScorerPhotoPlaceholder}
+                                                style={{
+                                                  background: goal.team_primary_color,
+                                                  color: goal.team_text_color,
+                                                }}
+                                              >
+                                                {goal.scorer_last_name?.charAt(0)}
+                                              </span>
+                                            )}
+                                            <div className={styles.goalInfo}>
+                                              <span className={styles.goalScorer}>
+                                                {scorerName}
+                                              </span>
+                                              <span className={styles.goalAssists}>
+                                                {assists.length > 0
+                                                  ? assists.join(', ')
+                                                  : 'Unassisted'}
+                                              </span>
+                                            </div>
+                                            {primaryBadge && (
+                                              <Tooltip text={primaryBadge.tooltip}>
+                                                <Badge
+                                                  label={primaryBadge.label}
+                                                  intent={primaryBadge.intent}
+                                                />
+                                              </Tooltip>
+                                            )}
+                                            {showEN && (
+                                              <Tooltip text="Empty Net">
+                                                <Badge
+                                                  label="EN"
+                                                  intent="neutral"
+                                                />
+                                              </Tooltip>
+                                            )}
                                             {isInProgress && (
                                               <ActionOverlay className={styles.goalActions}>
                                                 <Button
@@ -1649,8 +1854,7 @@ const GameDetailsPage = () => {
                           const isOT = lg.overtime_periods != null && lg.overtime_periods > 0;
                           const isSO = lg.shootout;
                           const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
-                          const teamScore = lg.is_home ? lg.home_score : lg.away_score;
-                          const oppScore = lg.is_home ? lg.away_score : lg.home_score;
+
                           return (
                             <div
                               key={lg.game_id}
@@ -1684,30 +1888,32 @@ const GameDetailsPage = () => {
                                   {DATE_FMT_SHORT.format(new Date(lg.scheduled_at))}
                                 </span>
                               )}
-                              <span
-                                className={`${styles.lastFiveLogoCircle} ${lg.is_home ? styles.lastFiveLogoCircleHome : styles.lastFiveLogoCircleAway}`}
-                                style={
-                                  lg.is_home
-                                    ? ({ '--circle-text': teamText } as React.CSSProperties)
-                                    : undefined
-                                }
-                              >
-                                {lg.opponent_logo ? (
-                                  <img
-                                    src={lg.opponent_logo}
-                                    alt={lg.opponent_code}
-                                    className={styles.lastFiveOpponentLogo}
-                                  />
-                                ) : (
-                                  <span className={styles.lastFiveOpponentPlaceholder}>
-                                    {lg.opponent_code?.slice(0, 3)}
-                                  </span>
-                                )}
-                              </span>
+                              <Tooltip text={lg.opponent_name ?? lg.opponent_code}>
+                                <span
+                                  className={`${styles.lastFiveLogoCircle} ${lg.is_home ? styles.lastFiveLogoCircleHome : styles.lastFiveLogoCircleAway}`}
+                                  style={
+                                    lg.is_home
+                                      ? ({ '--circle-text': teamText } as React.CSSProperties)
+                                      : undefined
+                                  }
+                                >
+                                  {lg.opponent_logo ? (
+                                    <img
+                                      src={lg.opponent_logo}
+                                      alt={lg.opponent_code}
+                                      className={styles.lastFiveOpponentLogo}
+                                    />
+                                  ) : (
+                                    <span className={styles.lastFiveOpponentPlaceholder}>
+                                      {lg.opponent_code?.slice(0, 3)}
+                                    </span>
+                                  )}
+                                </span>
+                              </Tooltip>
                               <div className={styles.lastFiveScore}>
                                 <span className={styles.lastFiveResult}>{lg.result}</span>
                                 <span className={styles.lastFiveScoreText}>
-                                  {teamScore}-{oppScore}
+                                  {lg.away_score}-{lg.home_score}
                                 </span>
                                 {suffix && <span className={styles.lastFiveOT}>{suffix}</span>}
                               </div>
@@ -1744,9 +1950,28 @@ const GameDetailsPage = () => {
                                 <span>{label}</span>
                               </span>
                             }
-                            headerRight={
-                              <span className={styles.lastFiveForm}>{buildFormRecord(games)}</span>
-                            }
+                            headerRight={(() => {
+                              const { w, otw, otl, l } = buildFormRecord(games);
+                              return (
+                                <span className={styles.lastFiveForm}>
+                                  <Tooltip text="Wins">
+                                    <span>{w}</span>
+                                  </Tooltip>
+                                  <span className={styles.lastFiveFormSep}>-</span>
+                                  <Tooltip text="OT/SO Wins">
+                                    <span>{otw}</span>
+                                  </Tooltip>
+                                  <span className={styles.lastFiveFormSep}>-</span>
+                                  <Tooltip text="OT/SO Losses">
+                                    <span>{otl}</span>
+                                  </Tooltip>
+                                  <span className={styles.lastFiveFormSep}>-</span>
+                                  <Tooltip text="Losses">
+                                    <span>{l}</span>
+                                  </Tooltip>
+                                </span>
+                              );
+                            })()}
                           >
                             <div
                               className={[
@@ -1805,12 +2030,14 @@ const GameDetailsPage = () => {
                                 icon="play_arrow"
                                 size="sm"
                                 tooltip={
-                                  lineupsReady
-                                    ? 'Start Game'
-                                    : 'Set starting lineups for both teams'
+                                  !rosterReady
+                                    ? 'Set game rosters for both teams first'
+                                    : !lineupsReady
+                                      ? 'Set starting lineups for both teams'
+                                      : 'Start Game'
                                 }
-                                tooltipIntent={lineupsReady ? undefined : 'error'}
-                                disabled={!!busy || !lineupsReady}
+                                tooltipIntent={rosterReady && lineupsReady ? undefined : 'error'}
+                                disabled={!!busy || !rosterReady || !lineupsReady}
                                 onClick={openStartGameModal}
                               />
                               <MoreActionsMenu

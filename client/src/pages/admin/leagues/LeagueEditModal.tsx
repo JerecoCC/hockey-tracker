@@ -7,6 +7,18 @@ import { type LeagueFullRecord } from '../../../hooks/useLeagueDetails';
 import { type CreateLeagueData } from '../../../hooks/useLeagues';
 import styles from './LeagueEditModal.module.scss';
 
+const BEST_OF_OPTIONS = [
+  { value: '3', label: 'Best of 3' },
+  { value: '5', label: 'Best of 5' },
+  { value: '7', label: 'Best of 7' },
+];
+
+const SHOOTOUT_OPTIONS = [
+  { value: '3', label: '3 rounds' },
+  { value: '5', label: '5 rounds' },
+  { value: '7', label: '7 rounds' },
+];
+
 interface FormValues {
   logo: File | string | null;
   name: string;
@@ -14,6 +26,8 @@ interface FormValues {
   primary_color: string;
   text_color: string;
   description: string | null;
+  best_of_playoff: string;
+  best_of_shootout: string;
 }
 
 const normalizeDescription = (html: string | null | undefined): string | null => {
@@ -43,6 +57,8 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       primary_color: '#334155',
       text_color: '#ffffff',
       description: null,
+      best_of_playoff: '7',
+      best_of_shootout: '3',
     },
   });
 
@@ -55,6 +71,8 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       primary_color: league.primary_color,
       text_color: league.text_color,
       description: league.description ?? null,
+      best_of_playoff: String(league.best_of_playoff ?? 7),
+      best_of_shootout: String(league.best_of_shootout ?? 3),
     });
   }, [open, league, reset]);
 
@@ -72,6 +90,8 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       primary_color: data.primary_color,
       text_color: data.text_color,
       description: normalizeDescription(data.description) ?? undefined,
+      best_of_playoff: parseInt(data.best_of_playoff, 10),
+      best_of_shootout: parseInt(data.best_of_shootout, 10),
     };
     const ok = await updateLeague(league.id, payload);
     if (ok) onClose();
@@ -134,6 +154,22 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             disabled={isSubmitting}
           />
         </div>
+        <Field
+          label="Playoff Series Format"
+          type="select"
+          control={control}
+          name="best_of_playoff"
+          options={BEST_OF_OPTIONS}
+          disabled={isSubmitting}
+        />
+        <Field
+          label="Shootout Rounds"
+          type="select"
+          control={control}
+          name="best_of_shootout"
+          options={SHOOTOUT_OPTIONS}
+          disabled={isSubmitting}
+        />
         <Field
           label="Description"
           type="richtext"

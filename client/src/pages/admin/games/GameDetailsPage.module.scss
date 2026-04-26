@@ -1047,13 +1047,22 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   gap: $space-sm;
 }
 
-// Form record string shown in accordion headerRight: W-OTW-OTL-L
+// Form record shown in accordion headerRight: W - OTW - OTL - L
 .lastFiveForm {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
   font-size: $font-sm;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: $text-body;
   white-space: nowrap;
+}
+
+.lastFiveFormSep {
+  color: $text-dim;
+  font-weight: 400;
+  user-select: none;
 }
 
 // Flex row of game squares inside accordion body

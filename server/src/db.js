@@ -361,6 +361,35 @@ async function initSchema() {
         REFERENCES seasons(id) ON DELETE SET NULL
   `;
 
+  // best_of_playoff: default series length for this league's playoffs (3, 5, or 7 total games).
+  // Renamed from best_of — handle both old and new column names idempotently.
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'leagues' AND column_name = 'best_of'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'leagues' AND column_name = 'best_of_playoff'
+      ) THEN
+        ALTER TABLE leagues RENAME COLUMN best_of TO best_of_playoff;
+      END IF;
+    END $$
+  `;
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS best_of_playoff SMALLINT NOT NULL DEFAULT 7
+        CHECK (best_of_playoff IN (3, 5, 7))
+  `;
+
+  // best_of_shootout: number of rounds before sudden death in a shootout (3, 5, or 7).
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS best_of_shootout SMALLINT NOT NULL DEFAULT 3
+        CHECK (best_of_shootout IN (3, 5, 7))
+  `;
+
   // ── Playoff series ────────────────────────────────────────────────────────
   // One row per best-of-N playoff matchup. Games reference this via FK.
   // round: 1=First Round / Wild Card, 2=Second Round, 3=Conference Finals, 4=Stanley Cup Final
