@@ -498,6 +498,10 @@ router.delete('/:id', async (req, res) => {
 // GET /api/admin/games/:id/lineup  – get starting lineup for both teams
 // Falls back to the most-recent finished game's lineup per team when the
 // current game has no lineup set yet, tagging those rows inherited:true.
+//
+// game_starting_lineup stores one row per team with a column per slot.
+// CROSS JOIN LATERAL unpivots those 6 columns into one row per filled slot,
+// preserving the LineupEntry shape the client expects.
 // ---------------------------------------------------------------------------
 router.get('/:id/lineup', async (req, res) => {
   const { id } = req.params;
@@ -507,62 +511,89 @@ router.get('/:id/lineup', async (req, res) => {
     if (gameRows.length === 0) return res.status(404).json({ error: 'Game not found' });
     const { home_team_id, away_team_id } = gameRows[0];
 
-    // 2. Fetch any existing lineup entries for this game.
-    const current = await sql`
-      SELECT
-        gl.id, gl.game_id, gl.team_id, gl.player_id, gl.position_slot,
-        p.first_name AS player_first_name, p.last_name AS player_last_name,
-        COALESCE(pt.photo, p.photo) AS player_photo, pt.jersey_number,
-        false AS inherited
-      FROM game_lineups gl
-      JOIN players p ON p.id = gl.player_id
-      LEFT JOIN player_teams pt
-        ON pt.player_id = gl.player_id AND pt.team_id = gl.team_id AND pt.end_date IS NULL
-      WHERE gl.game_id = ${id}
+    // 2a. Determine which teams already have a saved lineup row for this game.
+    //     Use row existence — not slot content — so a team whose saved lineup
+    //     had players deleted (ON DELETE SET NULL) is still treated as covered
+    //     and does not accidentally inherit from a previous game.
+    const coveredRows = await sql`
+      SELECT team_id FROM game_starting_lineup WHERE game_id = ${id}
     `;
-
-    // 3. Determine which teams still need a lineup (none set yet for that team).
-    const teamsCovered = new Set(current.map((r) => r.team_id));
+    const teamsCovered = new Set(coveredRows.map((r) => r.team_id));
     const teamsToInherit = [home_team_id, away_team_id].filter((t) => !teamsCovered.has(t));
 
-    // 4. For each uncovered team, find their most-recent finished game (home OR
-    //    away, any opponent) then pull that game's lineup for the team.
-    //    Queries are per-team to avoid JS array → ANY() which the Neon HTTP
-    //    driver does not support.
+    // 2b. Fetch and unpivot the saved slots for covered teams.
+    const current = await sql`
+      SELECT
+        sl.id::text || '-' || slot.position_slot AS id,
+        sl.game_id,
+        sl.team_id,
+        slot.player_id,
+        slot.position_slot,
+        p.first_name  AS player_first_name,
+        p.last_name   AS player_last_name,
+        COALESCE(pt.photo, p.photo) AS player_photo,
+        pt.jersey_number,
+        false AS inherited
+      FROM game_starting_lineup sl
+      CROSS JOIN LATERAL (VALUES
+        ('C',  sl.center_id),
+        ('LW', sl.left_wing_id),
+        ('RW', sl.right_wing_id),
+        ('D1', sl.defense_1_id),
+        ('D2', sl.defense_2_id),
+        ('G',  sl.goalie_id)
+      ) AS slot(position_slot, player_id)
+      JOIN players p ON p.id = slot.player_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = slot.player_id AND pt.team_id = sl.team_id AND pt.end_date IS NULL
+      WHERE sl.game_id = ${id}
+        AND slot.player_id IS NOT NULL
+    `;
+
+    // 4. For each uncovered team, inherit the lineup from their most-recent
+    //    finished game that has a saved starting lineup.  We skip games that
+    //    were played without ever setting a lineup (no row in
+    //    game_starting_lineup), so the chain correctly reaches the last game
+    //    where a lineup was actually recorded — even if several consecutive
+    //    games in between had no saved lineup.
     const inheritedRows = [];
     for (const teamId of teamsToInherit) {
-      // Step A: find the most-recent finished game this team participated in.
-      const lastGameRows = await sql`
-        SELECT id AS game_id
-        FROM games
-        WHERE (home_team_id = ${teamId} OR away_team_id = ${teamId})
-          AND status = 'final'
-          AND id <> ${id}
-        ORDER BY scheduled_at DESC NULLS LAST, created_at DESC
-        LIMIT 1
-      `;
-      if (lastGameRows.length === 0) continue;
-
-      const lastGameId = lastGameRows[0].game_id;
-
-      // Step B: fetch that game's lineup for this team.
       const rows = await sql`
         SELECT
-          gl.id, ${id}::uuid AS game_id, gl.team_id, gl.player_id, gl.position_slot,
-          p.first_name AS player_first_name, p.last_name AS player_last_name,
-          COALESCE(pt.photo, p.photo) AS player_photo, pt.jersey_number,
+          sl.id::text || '-' || slot.position_slot AS id,
+          ${id}::uuid AS game_id,
+          sl.team_id,
+          slot.player_id,
+          slot.position_slot,
+          p.first_name  AS player_first_name,
+          p.last_name   AS player_last_name,
+          COALESCE(pt.photo, p.photo) AS player_photo,
+          pt.jersey_number,
           true AS inherited
-        FROM game_lineups gl
-        JOIN players p ON p.id = gl.player_id
+        FROM games g
+        JOIN game_starting_lineup sl ON sl.game_id = g.id AND sl.team_id = ${teamId}
+        CROSS JOIN LATERAL (VALUES
+          ('C',  sl.center_id),
+          ('LW', sl.left_wing_id),
+          ('RW', sl.right_wing_id),
+          ('D1', sl.defense_1_id),
+          ('D2', sl.defense_2_id),
+          ('G',  sl.goalie_id)
+        ) AS slot(position_slot, player_id)
+        JOIN players p ON p.id = slot.player_id
         LEFT JOIN player_teams pt
-          ON pt.player_id = gl.player_id AND pt.team_id = gl.team_id AND pt.end_date IS NULL
-        WHERE gl.game_id = ${lastGameId} AND gl.team_id = ${teamId}
+          ON pt.player_id = slot.player_id AND pt.team_id = sl.team_id AND pt.end_date IS NULL
+        WHERE (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
+          AND g.status = 'final'
+          AND g.id <> ${id}
+          AND slot.player_id IS NOT NULL
+        ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC
+        LIMIT 6
       `;
       inheritedRows.push(...rows);
     }
-    const inherited = inheritedRows;
 
-    return res.json([...current, ...inherited]);
+    return res.json([...current, ...inheritedRows]);
   } catch (err) {
     console.error('lineup get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -572,7 +603,7 @@ router.get('/:id/lineup', async (req, res) => {
 // ---------------------------------------------------------------------------
 // PUT /api/admin/games/:id/lineup  – upsert starting lineup for one team
 // Body: { team_id, slots: [{ position_slot, player_id }] }
-// player_id null/empty clears the slot.
+// Writes a single row into game_starting_lineup (one row per team per game).
 // ---------------------------------------------------------------------------
 router.put('/:id/lineup', async (req, res) => {
   const { id } = req.params;
@@ -581,31 +612,61 @@ router.put('/:id/lineup', async (req, res) => {
   if (!Array.isArray(slots)) return res.status(400).json({ error: 'slots must be an array' });
 
   try {
+    // Build a map from position_slot → player_id (null = clear that slot).
+    const slotMap = {};
     for (const { position_slot, player_id } of slots) {
-      if (player_id) {
-        await sql`
-          INSERT INTO game_lineups (game_id, team_id, player_id, position_slot)
-          VALUES (${id}, ${team_id}, ${player_id}, ${position_slot})
-          ON CONFLICT (game_id, team_id, position_slot)
-          DO UPDATE SET player_id = EXCLUDED.player_id
-        `;
-      } else {
-        await sql`
-          DELETE FROM game_lineups
-          WHERE game_id = ${id} AND team_id = ${team_id} AND position_slot = ${position_slot}
-        `;
-      }
+      slotMap[position_slot] = player_id || null;
     }
+
+    const centerId    = slotMap['C']  ?? null;
+    const leftWingId  = slotMap['LW'] ?? null;
+    const rightWingId = slotMap['RW'] ?? null;
+    const defense1Id  = slotMap['D1'] ?? null;
+    const defense2Id  = slotMap['D2'] ?? null;
+    const goalieId    = slotMap['G']  ?? null;
+
+    // Single UPSERT — one row per (game, team).
+    await sql`
+      INSERT INTO game_starting_lineup
+        (game_id, team_id, center_id, left_wing_id, right_wing_id, defense_1_id, defense_2_id, goalie_id)
+      VALUES
+        (${id}, ${team_id}, ${centerId}, ${leftWingId}, ${rightWingId}, ${defense1Id}, ${defense2Id}, ${goalieId})
+      ON CONFLICT (game_id, team_id) DO UPDATE SET
+        center_id     = EXCLUDED.center_id,
+        left_wing_id  = EXCLUDED.left_wing_id,
+        right_wing_id = EXCLUDED.right_wing_id,
+        defense_1_id  = EXCLUDED.defense_1_id,
+        defense_2_id  = EXCLUDED.defense_2_id,
+        goalie_id     = EXCLUDED.goalie_id
+    `;
+
+    // Return the saved slots in unpivoted LineupEntry shape.
     const rows = await sql`
       SELECT
-        gl.id, gl.game_id, gl.team_id, gl.player_id, gl.position_slot,
-        p.first_name AS player_first_name, p.last_name AS player_last_name,
-        COALESCE(pt.photo, p.photo) AS player_photo, pt.jersey_number
-      FROM game_lineups gl
-      JOIN players p ON p.id = gl.player_id
+        sl.id::text || '-' || slot.position_slot AS id,
+        sl.game_id,
+        sl.team_id,
+        slot.player_id,
+        slot.position_slot,
+        p.first_name  AS player_first_name,
+        p.last_name   AS player_last_name,
+        COALESCE(pt.photo, p.photo) AS player_photo,
+        pt.jersey_number
+      FROM game_starting_lineup sl
+      CROSS JOIN LATERAL (VALUES
+        ('C',  sl.center_id),
+        ('LW', sl.left_wing_id),
+        ('RW', sl.right_wing_id),
+        ('D1', sl.defense_1_id),
+        ('D2', sl.defense_2_id),
+        ('G',  sl.goalie_id)
+      ) AS slot(position_slot, player_id)
+      JOIN players p ON p.id = slot.player_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gl.player_id AND pt.team_id = gl.team_id AND pt.end_date IS NULL
-      WHERE gl.game_id = ${id} AND gl.team_id = ${team_id}
+        ON pt.player_id = slot.player_id AND pt.team_id = sl.team_id AND pt.end_date IS NULL
+      WHERE sl.game_id = ${id}
+        AND sl.team_id = ${team_id}
+        AND slot.player_id IS NOT NULL
     `;
     return res.json(rows);
   } catch (err) {
@@ -615,15 +676,18 @@ router.put('/:id/lineup', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// DELETE /api/admin/games/:id/lineup/:entryId  – remove one lineup entry
+// DELETE /api/admin/games/:id/lineup/:teamId  – clear a team's starting lineup
+// Removes the single game_starting_lineup row for this (game, team) pair.
 // ---------------------------------------------------------------------------
-router.delete('/:id/lineup/:entryId', async (req, res) => {
-  const { id, entryId } = req.params;
+router.delete('/:id/lineup/:teamId', async (req, res) => {
+  const { id, teamId } = req.params;
   try {
     const rows = await sql`
-      DELETE FROM game_lineups WHERE id = ${entryId} AND game_id = ${id} RETURNING id
+      DELETE FROM game_starting_lineup
+      WHERE game_id = ${id} AND team_id = ${teamId}
+      RETURNING id
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Lineup entry not found' });
+    if (rows.length === 0) return res.status(404).json({ error: 'Lineup not found' });
     return res.status(204).send();
   } catch (err) {
     console.error('lineup delete error:', err);

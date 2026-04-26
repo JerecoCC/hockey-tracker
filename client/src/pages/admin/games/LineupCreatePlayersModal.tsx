@@ -172,7 +172,7 @@ const LineupCreatePlayersModal = ({
       const jerseyNum = row.jersey_number !== '' ? Number(row.jersey_number) : null;
 
       if (rosterNames.has(nameKey)) {
-        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" is already on the roster.`);
+        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" is already in the lineup.`);
       } else if (formNames.has(nameKey)) {
         errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" appears more than once.`);
       } else {
@@ -181,7 +181,7 @@ const LineupCreatePlayersModal = ({
 
       if (jerseyNum != null) {
         if (rosterJerseys.has(jerseyNum)) {
-          errors.push(`Jersey #${jerseyNum} is already in use on this roster.`);
+          errors.push(`Jersey #${jerseyNum} is already in use in this lineup.`);
         } else if (formJerseys.has(jerseyNum)) {
           errors.push(`Jersey #${jerseyNum} is listed more than once.`);
         } else {
