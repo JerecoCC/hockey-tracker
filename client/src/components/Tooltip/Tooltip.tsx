@@ -5,13 +5,15 @@ interface TooltipProps {
   text: string;
   children: ReactNode;
   className?: string;
+  /** Visual intent. 'error' renders the tip in danger/red colours. Default: 'default'. */
+  intent?: 'default' | 'error';
 }
 
 const MARGIN = 8; // min gap from viewport edge (px)
 const GAP = 8; // gap between trigger and tip (px)
 
 const Tooltip = (props: TooltipProps) => {
-  const { text, children, className = '' } = props;
+  const { text, children, className = '', intent = 'default' } = props;
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(false);
@@ -55,7 +57,12 @@ const Tooltip = (props: TooltipProps) => {
     setBelow(false);
   };
 
-  const tipClass = [styles.tip, visible && styles.tipVisible, below && styles.tipBelow]
+  const tipClass = [
+    styles.tip,
+    visible && styles.tipVisible,
+    below && styles.tipBelow,
+    intent === 'error' && styles.tipError,
+  ]
     .filter(Boolean)
     .join(' ');
 

@@ -628,6 +628,18 @@ const GameDetailsPage = () => {
   // ── Starting lineup data ───────────────────────────────────────────────────
   const { lineup, saveTeamLineup } = useGameLineup(id);
 
+  // Both teams must have all 6 position slots covered (inherited entries from the
+  // last game count — they represent a real lineup that can be used as-is).
+  const lineupsReady = (() => {
+    if (!game) return false;
+    const SLOTS = ['C', 'LW', 'RW', 'D1', 'D2', 'G'] as const;
+    const hasAll = (teamId: string) => {
+      const entries = lineup.filter((e) => e.team_id === teamId);
+      return SLOTS.every((slot) => entries.some((e) => e.position_slot === slot));
+    };
+    return hasAll(game.away_team_id) && hasAll(game.home_team_id);
+  })();
+
   const handleConfirmRemove = async () => {
     if (!confirmRemove) return;
     setRemovingFromRoster(true);
@@ -1633,8 +1645,13 @@ const GameDetailsPage = () => {
                                 intent="success"
                                 icon="play_arrow"
                                 size="sm"
-                                tooltip="Start Game"
-                                disabled={!!busy}
+                                tooltip={
+                                  lineupsReady
+                                    ? 'Start Game'
+                                    : 'Set starting lineups for both teams'
+                                }
+                                tooltipIntent={lineupsReady ? undefined : 'error'}
+                                disabled={!!busy || !lineupsReady}
                                 onClick={openStartGameModal}
                               />
                               <MoreActionsMenu

@@ -23,6 +23,8 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   tooltip?: string;
   /** Optional className forwarded to the Tooltip wrapper span. */
   tooltipClassName?: string;
+  /** Intent forwarded to the Tooltip. Use 'error' for danger/red styling. */
+  tooltipIntent?: 'default' | 'error';
 }
 
 const VARIANT_INTENT: Record<ButtonVariant, Record<ButtonIntent, string>> = {
@@ -73,6 +75,7 @@ const Button = (props: ButtonProps) => {
     iconSize,
     tooltip,
     tooltipClassName,
+    tooltipIntent,
     children,
     className = '',
     ...rest
@@ -107,6 +110,7 @@ const Button = (props: ButtonProps) => {
       <Tooltip
         text={tooltip}
         className={tooltipClassName}
+        intent={tooltipIntent}
       >
         {btn}
       </Tooltip>

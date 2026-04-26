@@ -47,6 +47,22 @@
   transform: translateY(0);
 }
 
+// ── Error intent ─────────────────────────────────────────────────────────
+.tipError {
+  background: $danger;
+  color: #fff;
+  border-color: rgba($danger-light, 0.3);
+
+  &::after {
+    border-top-color: $danger;
+  }
+
+  &.tipBelow::after {
+    border-top-color: transparent;
+    border-bottom-color: $danger;
+  }
+}
+
 // ── Flipped below ────────────────────────────────────────────────────────
 .tipBelow {
   transform: translateY(-4px); // slide-in from below
