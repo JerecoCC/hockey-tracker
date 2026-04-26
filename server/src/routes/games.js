@@ -28,8 +28,6 @@ router.get('/', async (req, res) => {
       SELECT
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
-        g.home_score, g.away_score,
-        g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
@@ -109,8 +107,6 @@ router.get('/:id', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
-        g.home_score, g.away_score,
-        g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
@@ -129,7 +125,9 @@ router.get('/:id', async (req, res) => {
         t_away.text_color      AS away_team_text_color,
         s.name AS season_name,
         l.id   AS league_id,
-        l.name AS league_name
+        l.name AS league_name,
+        home_l5.home_last_five,
+        away_l5.away_last_five
       FROM games g
       JOIN seasons s ON s.id = g.season_id
       JOIN leagues l ON l.id = s.league_id
@@ -165,6 +163,104 @@ router.get('/:id', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
+      -- Last 5 final games for the home team within this season
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'game_id',          lg.id,
+              'scheduled_at',     lg.scheduled_at,
+              'home_score',       lg.home_score,
+              'away_score',       lg.away_score,
+              'overtime_periods', lg.overtime_periods,
+              'shootout',         lg.shootout,
+              'result', CASE
+                WHEN (lg.home_team_id = g.home_team_id AND lg.home_score > lg.away_score)
+                  OR (lg.away_team_id = g.home_team_id AND lg.away_score > lg.home_score) THEN 'W'
+                WHEN (lg.home_team_id = g.home_team_id AND lg.home_score < lg.away_score)
+                  OR (lg.away_team_id = g.home_team_id AND lg.away_score < lg.home_score) THEN 'L'
+                ELSE 'T'
+              END,
+              'opponent_team_id', CASE WHEN lg.home_team_id = g.home_team_id THEN lg.away_team_id ELSE lg.home_team_id END,
+              'opponent_name',    opp_ti.name,
+              'opponent_code',    opp_ti.code,
+              'opponent_logo',    opp_ti.logo,
+              'is_home',          (lg.home_team_id = g.home_team_id)
+            ) ORDER BY lg.scheduled_at DESC NULLS LAST, lg.created_at DESC
+          ),
+          '[]'::json
+        ) AS home_last_five
+        FROM (
+          SELECT
+            g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
+            g2.home_team_id, g2.away_team_id,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_score,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_score
+          FROM games g2
+          WHERE g2.season_id = g.season_id
+            AND g2.id != g.id
+            AND g2.status = 'final'
+            AND (g2.home_team_id = g.home_team_id OR g2.away_team_id = g.home_team_id)
+            AND g2.scheduled_at < g.scheduled_at
+          ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
+          LIMIT 5
+        ) lg
+        LEFT JOIN LATERAL (
+          SELECT name, code, logo FROM team_iterations
+          WHERE team_id = CASE WHEN lg.home_team_id = g.home_team_id THEN lg.away_team_id ELSE lg.home_team_id END
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) opp_ti ON true
+      ) home_l5 ON true
+      -- Last 5 final games for the away team within this season
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'game_id',          lg.id,
+              'scheduled_at',     lg.scheduled_at,
+              'home_score',       lg.home_score,
+              'away_score',       lg.away_score,
+              'overtime_periods', lg.overtime_periods,
+              'shootout',         lg.shootout,
+              'result', CASE
+                WHEN (lg.home_team_id = g.away_team_id AND lg.home_score > lg.away_score)
+                  OR (lg.away_team_id = g.away_team_id AND lg.away_score > lg.home_score) THEN 'W'
+                WHEN (lg.home_team_id = g.away_team_id AND lg.home_score < lg.away_score)
+                  OR (lg.away_team_id = g.away_team_id AND lg.away_score < lg.home_score) THEN 'L'
+                ELSE 'T'
+              END,
+              'opponent_team_id', CASE WHEN lg.home_team_id = g.away_team_id THEN lg.away_team_id ELSE lg.home_team_id END,
+              'opponent_name',    opp_ti.name,
+              'opponent_code',    opp_ti.code,
+              'opponent_logo',    opp_ti.logo,
+              'is_home',          (lg.home_team_id = g.away_team_id)
+            ) ORDER BY lg.scheduled_at DESC NULLS LAST, lg.created_at DESC
+          ),
+          '[]'::json
+        ) AS away_last_five
+        FROM (
+          SELECT
+            g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
+            g2.home_team_id, g2.away_team_id,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_score,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_score
+          FROM games g2
+          WHERE g2.season_id = g.season_id
+            AND g2.id != g.id
+            AND g2.status = 'final'
+            AND (g2.home_team_id = g.away_team_id OR g2.away_team_id = g.away_team_id)
+            AND g2.scheduled_at < g.scheduled_at
+          ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
+          LIMIT 5
+        ) lg
+        LEFT JOIN LATERAL (
+          SELECT name, code, logo FROM team_iterations
+          WHERE team_id = CASE WHEN lg.home_team_id = g.away_team_id THEN lg.away_team_id ELSE lg.home_team_id END
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) opp_ti ON true
+      ) away_l5 ON true
       WHERE g.id = ${id}
     `;
 
@@ -184,8 +280,6 @@ router.post('/', async (req, res) => {
     season_id, home_team_id, away_team_id,
     scheduled_at = null, scheduled_time = null, venue = null,
     game_type = 'regular', status = 'scheduled',
-    home_score = null, away_score = null,
-    home_score_reg = null, away_score_reg = null,
     overtime_periods = null, shootout = false,
     playoff_series_id = null, game_number_in_series = null,
     game_number = null, notes = null,
@@ -203,13 +297,11 @@ router.post('/', async (req, res) => {
       INSERT INTO games (
         season_id, home_team_id, away_team_id,
         scheduled_at, scheduled_time, venue, game_type, status,
-        home_score, away_score, home_score_reg, away_score_reg,
         overtime_periods, shootout,
         playoff_series_id, game_number_in_series, game_number, notes
       ) VALUES (
         ${season_id}, ${home_team_id}, ${away_team_id},
         ${scheduled_at}, ${scheduled_time}, ${venue}, ${game_type}, ${status},
-        ${home_score}, ${away_score}, ${home_score_reg}, ${away_score_reg},
         ${overtime_periods}, ${shootout},
         ${playoff_series_id}, ${game_number_in_series}, ${game_number}, ${notes}
       )
@@ -220,7 +312,6 @@ router.post('/', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
-        g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
@@ -286,7 +377,6 @@ router.patch('/:id', async (req, res) => {
   const {
     scheduled_at, scheduled_time, venue, game_type, status,
     time_start, time_end,
-    home_score, away_score, home_score_reg, away_score_reg,
     overtime_periods, shootout,
     playoff_series_id, game_number_in_series, game_number, notes,
     current_period,
@@ -309,10 +399,6 @@ router.patch('/:id', async (req, res) => {
         venue                 = COALESCE(${venue                 ?? null}, venue),
         game_type             = COALESCE(${game_type             ?? null}, game_type),
         status                = COALESCE(${status                ?? null}, status),
-        home_score            = COALESCE(${home_score            ?? null}, home_score),
-        away_score            = COALESCE(${away_score            ?? null}, away_score),
-        home_score_reg        = COALESCE(${home_score_reg        ?? null}, home_score_reg),
-        away_score_reg        = COALESCE(${away_score_reg        ?? null}, away_score_reg),
         overtime_periods      = CASE
                                   WHEN ${status ?? null} = 'final' AND ${overtime_periods ?? null}::smallint IS NULL
                                   THEN CASE WHEN current_period IN ('OT', 'SO') THEN 1 ELSE overtime_periods END
@@ -340,7 +426,6 @@ router.patch('/:id', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
-        g.home_score, g.away_score, g.home_score_reg, g.away_score_reg,
         g.overtime_periods, g.shootout,
         g.game_number, g.game_number_in_series,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,

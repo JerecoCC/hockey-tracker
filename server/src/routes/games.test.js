@@ -16,6 +16,13 @@ app.use('/api/admin/games', gamesRouter);
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
+const LAST_FIVE_GAME = {
+  game_id: 'game-0', scheduled_at: '2024-10-10T19:00:00Z',
+  home_score: 3, away_score: 1,
+  overtime_periods: null, shootout: false,
+  result: 'W', opponent_code: 'LAK', opponent_logo: null, is_home: true,
+};
+
 const GAME = {
   id: 'game-1', season_id: 'season-1',
   home_team_id: 'team-1', away_team_id: 'team-2',
@@ -25,11 +32,11 @@ const GAME = {
   away_team_primary_color: '#111111', away_team_secondary_color: '#A2AAAD', away_team_text_color: '#ffffff',
   game_type: 'regular', status: 'scheduled',
   scheduled_at: '2024-10-15T19:00:00Z', venue: 'SAP Center',
-  home_score: null, away_score: null,
-  home_score_reg: null, away_score_reg: null,
   overtime_periods: null, shootout: false,
   game_number: null, game_number_in_series: null,
   playoff_series_id: null, notes: null, created_at: new Date().toISOString(),
+  home_last_five: [LAST_FIVE_GAME],
+  away_last_five: [],
 };
 
 const SERIES = {
@@ -87,6 +94,31 @@ describe('GET /api/admin/games/:id', () => {
     expect(res.status).toBe(200);
     expect(res.body.home_team_secondary_color).toBe('#EA7200');
     expect(res.body.away_team_secondary_color).toBe('#A2AAAD');
+  });
+
+  it('includes home_last_five and away_last_five arrays', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+    const res = await request(app).get('/api/admin/games/game-1');
+    expect(res.status).toBe(200);
+    expect(Array.isArray(res.body.home_last_five)).toBe(true);
+    expect(Array.isArray(res.body.away_last_five)).toBe(true);
+    expect(res.body.home_last_five).toHaveLength(1);
+    expect(res.body.away_last_five).toHaveLength(0);
+  });
+
+  it('home_last_five entries have expected shape (game_id, result, scores, is_home)', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+    const res = await request(app).get('/api/admin/games/game-1');
+    expect(res.status).toBe(200);
+    const entry = res.body.home_last_five[0];
+    expect(entry).toMatchObject({
+      game_id: 'game-0',
+      result: 'W',
+      home_score: 3,
+      away_score: 1,
+      is_home: true,
+      scheduled_at: '2024-10-10T19:00:00Z',
+    });
   });
 
   it('returns 404 when game not found', async () => {

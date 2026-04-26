@@ -20,8 +20,6 @@ interface FormValues {
   scheduled_date: string;
   scheduled_time: string;
   venue: string;
-  home_score: string;
-  away_score: string;
   overtime_periods: string;
   shootout: string;
   notes: string;
@@ -61,8 +59,6 @@ const GameFormModal = ({
       scheduled_date: '',
       scheduled_time: '',
       venue: '',
-      home_score: '',
-      away_score: '',
       overtime_periods: '',
       shootout: 'false',
       notes: '',
@@ -88,8 +84,6 @@ const GameFormModal = ({
         scheduled_date: editTarget.scheduled_at ? editTarget.scheduled_at.slice(0, 10) : '',
         scheduled_time: editTarget.scheduled_time ?? '',
         venue: editTarget.venue ?? '',
-        home_score: editTarget.home_score != null ? String(editTarget.home_score) : '',
-        away_score: editTarget.away_score != null ? String(editTarget.away_score) : '',
         overtime_periods:
           editTarget.overtime_periods != null ? String(editTarget.overtime_periods) : '',
         shootout: editTarget.shootout ? 'true' : 'false',
@@ -104,8 +98,6 @@ const GameFormModal = ({
         scheduled_date: '',
         scheduled_time: '',
         venue: '',
-        home_score: '',
-        away_score: '',
         overtime_periods: '',
         shootout: 'false',
         notes: '',
@@ -128,8 +120,6 @@ const GameFormModal = ({
       scheduled_at: data.scheduled_date || null,
       scheduled_time: data.scheduled_time || null,
       venue: data.venue || null,
-      home_score: data.home_score !== '' ? Number(data.home_score) : null,
-      away_score: data.away_score !== '' ? Number(data.away_score) : null,
       overtime_periods: data.overtime_periods !== '' ? Number(data.overtime_periods) : null,
       shootout: data.shootout === 'true',
       notes: data.notes || null,

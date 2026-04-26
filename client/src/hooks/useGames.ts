@@ -16,6 +16,24 @@ export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed' 
 export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
 export type SeriesStatus = 'upcoming' | 'active' | 'complete';
 
+/** A single entry in a team's last-five-games form guide. */
+export interface LastFiveGame {
+  game_id:          string;
+  scheduled_at:     string | null;
+  home_score:       number;
+  away_score:       number;
+  overtime_periods: number | null;
+  shootout:         boolean;
+  /** Result from the perspective of the team whose last-five list this belongs to. */
+  result:           'W' | 'L' | 'T';
+  /** True if the team was the home team in that historical game (determines square background color). */
+  is_home:          boolean;
+  opponent_team_id: string;
+  opponent_name:    string;
+  opponent_code:    string;
+  opponent_logo:    string | null;
+}
+
 export interface GameRecord {
   id:                    string;
   season_id:             string;
@@ -42,10 +60,6 @@ export interface GameRecord {
   away_team_primary_color:   string;
   away_team_secondary_color: string;
   away_team_text_color:      string;
-  home_score:            number | null;
-  away_score:            number | null;
-  home_score_reg:        number | null;
-  away_score_reg:        number | null;
   overtime_periods:      number | null;
   shootout:              boolean;
   playoff_series_id:     string | null;
@@ -64,6 +78,10 @@ export interface GameRecord {
   season_name?:          string;
   league_id?:            string;
   league_name?:          string;
+  /** Last 5 final games for the home team within the same season (detail endpoint only). */
+  home_last_five?:       LastFiveGame[];
+  /** Last 5 final games for the away team within the same season (detail endpoint only). */
+  away_last_five?:       LastFiveGame[];
 }
 
 export interface PlayoffSeriesRecord {
@@ -96,10 +114,6 @@ export interface CreateGameData {
   scheduled_at?:         string | null;
   scheduled_time?:       string | null;
   venue?:                string | null;
-  home_score?:           number | null;
-  away_score?:           number | null;
-  home_score_reg?:       number | null;
-  away_score_reg?:       number | null;
   overtime_periods?:     number | null;
   shootout?:             boolean;
   playoff_series_id?:    string | null;

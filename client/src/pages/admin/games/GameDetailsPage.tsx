@@ -23,6 +23,7 @@ import {
   type CurrentPeriod,
   type GameStatus,
   type GameType,
+  type LastFiveGame,
 } from '../../../hooks/useGames';
 import useTeamPlayers from '../../../hooks/useTeamPlayers';
 import useGameLineup from '../../../hooks/useGameLineup';
@@ -178,6 +179,26 @@ const formatPlayerName = (firstName: string | null, lastName: string | null): st
   if (!lastName) return '';
   const initial = firstName ? `${firstName.charAt(0)}. ` : '';
   return `${initial}${lastName}`;
+};
+
+/**
+ * Compute W-OTW-OTL-L form record string from a last-five array.
+ * Wins/losses in overtime or shootout count as OTW/OTL; all others are regulation W/L.
+ */
+const buildFormRecord = (games: LastFiveGame[]): string => {
+  let w = 0,
+    otw = 0,
+    otl = 0,
+    l = 0;
+  for (const g of games) {
+    const isExtra = (g.overtime_periods != null && g.overtime_periods > 0) || g.shootout;
+    if (g.result === 'W') {
+      isExtra ? otw++ : w++;
+    } else if (g.result === 'L') {
+      isExtra ? otl++ : l++;
+    }
+  }
+  return `${w}-${otw}-${otl}-${l}`;
 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -713,19 +734,9 @@ const GameDetailsPage = () => {
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
-  const awayScore = game.away_score ?? 0;
-  const homeScore = game.home_score ?? 0;
-
-  // Derive totals from goals table (period_scores) for both in-progress and final games.
-  // Stored away_score/home_score columns are NOT auto-updated, so never rely on them for live data.
-  const liveAwayScore =
-    isInProgress || isFinal
-      ? game.period_scores.reduce((sum, ps) => sum + ps.away_goals, 0)
-      : awayScore;
-  const liveHomeScore =
-    isInProgress || isFinal
-      ? game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0)
-      : homeScore;
+  // Scores are always derived from the goals table (period_scores); the DB columns were removed.
+  const liveAwayScore = game.period_scores.reduce((sum, ps) => sum + ps.away_goals, 0);
+  const liveHomeScore = game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0);
 
   // Derive OT/SO from period_scores (source of truth); stored columns are a fallback
   // for legacy games created before goal tracking was introduced.
@@ -1620,6 +1631,160 @@ const GameDetailsPage = () => {
                                 })}
                               </tbody>
                             </table>
+                          </Card>
+                        );
+                      })()}
+
+                    {/* ── Last 5 Games card ── */}
+                    {(game.home_last_five || game.away_last_five) &&
+                      (() => {
+                        const awayGames = game.away_last_five ?? [];
+                        const homeGames = game.home_last_five ?? [];
+
+                        const renderSquare = (
+                          lg: LastFiveGame,
+                          teamPrimary: string,
+                          teamText: string,
+                        ) => {
+                          const isOT = lg.overtime_periods != null && lg.overtime_periods > 0;
+                          const isSO = lg.shootout;
+                          const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
+                          const teamScore = lg.is_home ? lg.home_score : lg.away_score;
+                          const oppScore = lg.is_home ? lg.away_score : lg.home_score;
+                          return (
+                            <div
+                              key={lg.game_id}
+                              className={[
+                                styles.lastFiveSquare,
+                                lg.is_home ? styles.lastFiveSquareHome : '',
+                              ]
+                                .filter(Boolean)
+                                .join(' ')}
+                              style={
+                                lg.is_home
+                                  ? ({ '--square-primary': teamPrimary } as React.CSSProperties)
+                                  : undefined
+                              }
+                              role="button"
+                              tabIndex={0}
+                              onClick={() =>
+                                navigate(
+                                  `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ')
+                                  navigate(
+                                    `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
+                                  );
+                              }}
+                            >
+                              {lg.scheduled_at && (
+                                <span className={styles.lastFiveDate}>
+                                  {DATE_FMT_SHORT.format(new Date(lg.scheduled_at))}
+                                </span>
+                              )}
+                              <span
+                                className={`${styles.lastFiveLogoCircle} ${lg.is_home ? styles.lastFiveLogoCircleHome : styles.lastFiveLogoCircleAway}`}
+                                style={
+                                  lg.is_home
+                                    ? ({ '--circle-text': teamText } as React.CSSProperties)
+                                    : undefined
+                                }
+                              >
+                                {lg.opponent_logo ? (
+                                  <img
+                                    src={lg.opponent_logo}
+                                    alt={lg.opponent_code}
+                                    className={styles.lastFiveOpponentLogo}
+                                  />
+                                ) : (
+                                  <span className={styles.lastFiveOpponentPlaceholder}>
+                                    {lg.opponent_code?.slice(0, 3)}
+                                  </span>
+                                )}
+                              </span>
+                              <div className={styles.lastFiveScore}>
+                                <span className={styles.lastFiveResult}>{lg.result}</span>
+                                <span className={styles.lastFiveScoreText}>
+                                  {teamScore}-{oppScore}
+                                </span>
+                                {suffix && <span className={styles.lastFiveOT}>{suffix}</span>}
+                              </div>
+                            </div>
+                          );
+                        };
+
+                        const renderTeamAccordion = (
+                          label: string,
+                          logo: string | null,
+                          code: string,
+                          primary: string,
+                          text: string,
+                          games: LastFiveGame[],
+                        ) => (
+                          <Accordion
+                            variant="static"
+                            label={
+                              <span className={styles.linescoreTeam}>
+                                {logo ? (
+                                  <img
+                                    src={logo}
+                                    alt={code}
+                                    className={styles.linescoreLogo}
+                                  />
+                                ) : (
+                                  <span
+                                    className={styles.goalTeamLogoPlaceholder}
+                                    style={{ background: primary, color: text }}
+                                  >
+                                    {code?.slice(0, 1)}
+                                  </span>
+                                )}
+                                <span>{label}</span>
+                              </span>
+                            }
+                            headerRight={
+                              <span className={styles.lastFiveForm}>{buildFormRecord(games)}</span>
+                            }
+                          >
+                            <div
+                              className={[
+                                styles.lastFiveGames,
+                                games.length === 0 ? styles.lastFiveGamesEmpty : '',
+                              ]
+                                .join(' ')
+                                .trim()}
+                            >
+                              {games.length === 0 ? (
+                                <p className={styles.noGoalsText}>No recent games</p>
+                              ) : (
+                                games.map((lg) => renderSquare(lg, primary, text))
+                              )}
+                            </div>
+                          </Accordion>
+                        );
+
+                        return (
+                          <Card title="Last 5 Games">
+                            <div className={styles.lastFiveList}>
+                              {renderTeamAccordion(
+                                game.away_team_name,
+                                game.away_team_logo,
+                                game.away_team_code,
+                                game.away_team_primary_color,
+                                game.away_team_text_color,
+                                awayGames,
+                              )}
+                              {renderTeamAccordion(
+                                game.home_team_name,
+                                game.home_team_logo,
+                                game.home_team_code,
+                                game.home_team_primary_color,
+                                game.home_team_text_color,
+                                homeGames,
+                              )}
+                            </div>
                           </Card>
                         );
                       })()}

@@ -432,6 +432,12 @@ async function initSchema() {
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_start TIMESTAMPTZ`;
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_end   TIMESTAMPTZ`;
 
+  // Migration: drop stored score columns — scores are always derived from the goals table at query time.
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS home_score`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS away_score`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS home_score_reg`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS away_score_reg`;
+
   // Migration: drop redundant period-by-period goal columns (scores are now derived from the goals table)
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_home_goals`;
   await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_away_goals`;
