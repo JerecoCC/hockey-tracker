@@ -1,13 +1,13 @@
 @use "../../styles/colors" as *;
 @use "../../styles/mixins" as *;
 
-// Slightly lighter than $bg-card so the header reads as an elevated surface
-// above the body (which shows through to the parent card's $bg-card background).
-$_header-bg: mix(white, $bg-card, 8%);
-
 // ── Root container ────────────────────────────────────────────────────────────
 
 .accordion {
+  // CSS custom property so consumers can tint the header to match a coloured border
+  // by overriding --accordion-header-bg on the root element via className.
+  --accordion-header-bg: #{$border};
+
   display: flex;
   flex-direction: column;
   border: 1px solid $border;
@@ -23,12 +23,12 @@ $_header-bg: mix(white, $bg-card, 8%);
   align-items: center;
   gap: $space-sm;
   padding: $space-sm $space-md;
-  background: $_header-bg;
+  background: var(--accordion-header-bg);
   border-bottom: 1px solid $border;
   transition: background $transition-fast;
 
   &:hover {
-    background: mix(white, $_header-bg, 5%);
+    background: color-mix(in srgb, var(--accordion-header-bg), white 6%);
 
     .hoverActions {
       opacity: 1;
@@ -47,7 +47,7 @@ $_header-bg: mix(white, $bg-card, 8%);
   cursor: default;
 
   &:hover {
-    background: $_header-bg;
+    background: var(--accordion-header-bg);
   }
 
   .hoverActions {
@@ -127,7 +127,7 @@ $_header-bg: mix(white, $bg-card, 8%);
   align-items: center;
   gap: $space-xs;
   padding: 0 $space-md;
-  background: $_header-bg;
+  background: var(--accordion-header-bg);
   border-radius: 0 $radius-md $radius-md 0;
   opacity: 0;
   pointer-events: none;
@@ -140,7 +140,7 @@ $_header-bg: mix(white, $bg-card, 8%);
     top: 0;
     bottom: 0;
     width: 3rem;
-    background: linear-gradient(to right, transparent, $_header-bg);
+    background: linear-gradient(to right, transparent, var(--accordion-header-bg));
     pointer-events: none;
   }
 }

@@ -325,9 +325,13 @@
   gap: $space-sm;
 }
 
-// Passed as className to Accordion to tint the border for the active period.
+// Passed as className to Accordion to tint the border AND header for the active period.
+// Fully opaque: mix accent 50% into the card background so both surfaces match
+// exactly with no transparency bleed or compositing differences.
+$_active-period-color: mix($accent, $bg-card, 50%);
 .periodItemActive {
-  border-color: rgba($accent, 0.5);
+  border-color: $_active-period-color;
+  --accordion-header-bg: #{$_active-period-color};
 }
 
 // Passed as label slot content to give the period name a fixed-width column.
@@ -1219,6 +1223,19 @@
   font-weight: 600;
   color: $text-dim;
   text-transform: uppercase;
+}
+
+// Column header above the SOG number input in the Period Shots section.
+// Width matches .shotsFieldWrap so the label sits directly above the input.
+.shotsSectionColLabel {
+  width: 80px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
 }
 
 .shotsGoalieRow {

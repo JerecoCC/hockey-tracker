@@ -2720,6 +2720,12 @@ const GameDetailsPage = () => {
                   </>
                 )}
 
+                {/* Period Shots section label */}
+                <div className={styles.shotsGoalieHeader}>
+                  <span className={styles.goalFormLabel}>Period Shots</span>
+                  <span className={styles.shotsSectionColLabel}>SOG</span>
+                </div>
+
                 {teamRows.map((row, rowIdx) => (
                   <div
                     key={row.key}
