@@ -66,6 +66,12 @@
   gap: 1px;
 }
 
+.eyebrow {
+  font-size: $font-xs;
+  color: $text-dim;
+  @include truncate;
+}
+
 .name {
   font-size: $font-base;
   color: $text-body;

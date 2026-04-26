@@ -1291,7 +1291,7 @@ const GameDetailsPage = () => {
                                         ? {
                                             icon: 'flag',
                                             tooltip: 'End Period',
-                                            intent: 'info' as const,
+                                            intent: 'danger' as const,
                                             disabled: !!busy,
                                             onClick: () =>
                                               openShotsModal(
@@ -2129,19 +2129,19 @@ const GameDetailsPage = () => {
                                               {goalie.last_name?.charAt(0)}
                                             </span>
                                           )}
-                                          {/* Name + jersey */}
+                                          {/* Jersey + name */}
                                           <div className={styles.goalInfo}>
+                                            {goalie.jersey_number != null && (
+                                              <span className={styles.goalAssists}>
+                                                #{goalie.jersey_number}
+                                              </span>
+                                            )}
                                             <span className={styles.goalScorer}>
                                               {formatPlayerName(
                                                 goalie.first_name,
                                                 goalie.last_name,
                                               )}
                                             </span>
-                                            {goalie.jersey_number != null && (
-                                              <span className={styles.goalAssists}>
-                                                #{goalie.jersey_number}
-                                              </span>
-                                            )}
                                           </div>
                                         </span>
                                       </td>
@@ -2740,6 +2740,7 @@ const GameDetailsPage = () => {
                           {
                             icon: 'set_lineup',
                             tooltip: 'Set Starting Lineup',
+                            intent: 'info' as const,
                             onClick: () => setLineupSetTeam(side),
                           },
                           ...(rosterEntries.length < 23
@@ -2747,11 +2748,13 @@ const GameDetailsPage = () => {
                                 {
                                   icon: 'group_add',
                                   tooltip: 'Add from Roster',
+                                  intent: 'neutral' as const,
                                   onClick: () => setLineupAddTeam(side),
                                 },
                                 {
                                   icon: 'person_edit',
                                   tooltip: 'Create Player',
+                                  intent: 'neutral' as const,
                                   onClick: () => setLineupCreateTeam(side),
                                 },
                               ]
@@ -2776,7 +2779,12 @@ const GameDetailsPage = () => {
 
                       const renderPlayer = (e: GameRosterEntry) => {
                         const isStarter = lineupMap.has(e.player_id);
-                        const jerseyPrefix = e.jersey_number != null ? `#${e.jersey_number} ` : '';
+                        const jerseyPart = e.jersey_number != null ? `#${e.jersey_number}` : null;
+                        const positionPart = e.position
+                          ? (POSITION_LABEL[e.position] ?? e.position)
+                          : null;
+                        const eyebrow =
+                          [jerseyPart, positionPart].filter(Boolean).join(' · ') || undefined;
                         return (
                           <ListItem
                             key={e.id}
@@ -2784,11 +2792,9 @@ const GameDetailsPage = () => {
                             image_shape="circle"
                             primaryColor={primaryColor}
                             textColor={textColor}
-                            name={`${jerseyPrefix}${e.last_name}, ${e.first_name}`}
+                            eyebrow={eyebrow}
+                            name={`${e.last_name}, ${e.first_name}`}
                             placeholder={`${e.first_name[0]}${e.last_name[0]}`}
-                            subtitle={
-                              e.position ? (POSITION_LABEL[e.position] ?? e.position) : undefined
-                            }
                             rightContent={
                               isStarter
                                 ? { type: 'tag', label: 'Starter', intent: 'accent' }
@@ -3808,14 +3814,14 @@ const GameDetailsPage = () => {
                                 {goalie.last_name?.charAt(0)}
                               </span>
                             )}
-                            {/* Name + jersey */}
+                            {/* Jersey + name */}
                             <div className={styles.goalInfo}>
-                              <span className={styles.goalScorer}>
-                                {formatPlayerName(goalie.first_name, goalie.last_name)}
-                              </span>
                               {goalie.jersey_number != null && (
                                 <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
                               )}
+                              <span className={styles.goalScorer}>
+                                {formatPlayerName(goalie.first_name, goalie.last_name)}
+                              </span>
                             </div>
                           </span>
                           <div className={styles.shotsGoalieInputs}>
@@ -3913,14 +3919,14 @@ const GameDetailsPage = () => {
                         {goalie.last_name?.charAt(0)}
                       </span>
                     )}
-                    {/* Name + jersey */}
+                    {/* Jersey + name */}
                     <div className={styles.goalInfo}>
-                      <span className={styles.goalScorer}>
-                        {formatPlayerName(goalie.first_name, goalie.last_name)}
-                      </span>
                       {goalie.jersey_number != null && (
                         <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
                       )}
+                      <span className={styles.goalScorer}>
+                        {formatPlayerName(goalie.first_name, goalie.last_name)}
+                      </span>
                     </div>
                   </span>
                   <div className={styles.shotsGoalieInputs}>

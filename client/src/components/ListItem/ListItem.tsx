@@ -37,6 +37,8 @@ interface Props {
   primaryColor?: string | null;
   /** Team text color — used as placeholder text color when no image is set. */
   textColor?: string | null;
+  /** Optional line shown above the name (e.g. jersey number + position). */
+  eyebrow?: string;
   /** Optional secondary line shown below the name (e.g. season label + recorded date). */
   subtitle?: string;
   /** Optional third line shown below the subtitle (e.g. a version note). */
@@ -63,6 +65,7 @@ const ListItem = ({
   rightContent,
   primaryColor,
   textColor,
+  eyebrow,
   subtitle,
   note,
   actions,
@@ -98,6 +101,7 @@ const ListItem = ({
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}
       <div className={styles.info}>
+        {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
         <span className={[styles.name, nameItalic && styles.nameItalic].filter(Boolean).join(' ')}>
           {name}
         </span>

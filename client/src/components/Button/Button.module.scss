@@ -106,46 +106,50 @@
 .outlinedAccent {
   background: transparent;
   color: $accent-light;
-  border: 1px solid rgba($accent, 0.33);
+  border: 1px solid rgba($accent-light, 0.5);
   &:hover:not(:disabled) {
     background: rgba($accent, 0.15);
+    border-color: $accent-light;
   }
 }
 
 .outlinedSuccess {
   background: transparent;
   color: $success-light;
-  border: 1px solid rgba($success, 0.4);
+  border: 1px solid rgba($success-light, 0.5);
   &:hover:not(:disabled) {
     background: rgba($success, 0.15);
+    border-color: $success-light;
   }
 }
 
 .outlinedDanger {
   background: transparent;
   color: $danger-light;
-  border: 1px solid rgba($danger, 0.33);
+  border: 1px solid rgba($danger-light, 0.5);
   &:hover:not(:disabled) {
     background: rgba($danger, 0.15);
+    border-color: $danger-light;
   }
 }
 
 .outlinedInfo {
   background: transparent;
   color: $info-light;
-  border: 1px solid rgba($info, 0.33);
+  border: 1px solid rgba($info-light, 0.5);
   &:hover:not(:disabled) {
     background: rgba($info, 0.15);
+    border-color: $info-light;
   }
 }
 
 .outlinedNeutral {
   background: transparent;
-  color: $text-dim;
-  border: 1px solid $border;
+  color: $text-light;
+  border: 1px solid rgba($text-light, 0.5);
   &:hover:not(:disabled) {
     color: $text-bright;
-    border-color: $text-dim;
+    border-color: $text-light;
   }
 }
 
