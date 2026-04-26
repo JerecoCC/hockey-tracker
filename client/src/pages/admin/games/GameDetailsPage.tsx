@@ -358,10 +358,7 @@ const GameDetailsPage = () => {
   } = useForm<{ start_time: string }>({ defaultValues: { start_time: '' } });
 
   const openStartGameModal = () => {
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
-    resetStartGameForm({ start_time: `${hh}:${mm}` });
+    resetStartGameForm({ start_time: '' });
     setStartGameModalOpen(true);
   };
 
@@ -455,13 +452,10 @@ const GameDetailsPage = () => {
     const goalies = showGoalies
       ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
       : [];
-    const now = new Date();
-    const hh = String(now.getHours()).padStart(2, '0');
-    const mm = String(now.getMinutes()).padStart(2, '0');
     resetShotsForm({
       away_shots: existing ? String(existing.away_shots) : '',
       home_shots: existing ? String(existing.home_shots) : '',
-      end_time: nextAction.type === 'end-game' ? `${hh}:${mm}` : '',
+      end_time: '',
       goalies: goalies.map((g) => {
         const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
         return {
@@ -1114,7 +1108,7 @@ const GameDetailsPage = () => {
                                       {
                                         icon: 'sports_hockey',
                                         tooltip: 'Score Goal',
-                                        intent: 'neutral' as const,
+                                        intent: 'success' as const,
                                         disabled: !!busy,
                                         onClick: () => openGoalModal(num as 1 | 2 | 3),
                                       },
@@ -1122,7 +1116,7 @@ const GameDetailsPage = () => {
                                         ? {
                                             icon: 'flag',
                                             tooltip: 'End Period',
-                                            intent: 'accent' as const,
+                                            intent: 'info' as const,
                                             disabled: !!busy,
                                             onClick: () =>
                                               openShotsModal(
@@ -1337,7 +1331,7 @@ const GameDetailsPage = () => {
                                         {
                                           icon: 'sports_hockey',
                                           tooltip: 'Score Goal',
-                                          intent: 'neutral' as const,
+                                          intent: 'success' as const,
                                           disabled: !!busy,
                                           onClick: () => openGoalModal('OT'),
                                         },
@@ -2492,6 +2486,7 @@ const GameDetailsPage = () => {
             control={startGameControl}
             name="start_time"
             placeholder="Select time…"
+            autoFocus
           />
         </form>
       </Modal>

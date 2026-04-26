@@ -10,6 +10,8 @@ interface Props {
   /** 'clock' (default) — wall-clock time in 12h AM/PM format (HH:MM 24h internally).
    *  'duration' — period elapsed time as MM:SS (0–20 min, 0–59 sec). */
   mode?: 'clock' | 'duration';
+  /** When true, focuses the text input and activates the hour segment on mount. */
+  autoFocus?: boolean;
 }
 
 type Segment = 'hour' | 'minute' | 'ampm';
@@ -87,7 +89,14 @@ const buildDurationDisplay = (
   return `${seg('hour', minStr)}:${seg('minute', secStr)}`;
 };
 
-const TimePicker = ({ value, onChange, placeholder, disabled, mode = 'clock' }: Props) => {
+const TimePicker = ({
+  value,
+  onChange,
+  placeholder,
+  disabled,
+  mode = 'clock',
+  autoFocus,
+}: Props) => {
   const parsed = parseTime(value);
   const init12 = parsed && mode === 'clock' ? to12h(parsed.h24) : null;
   // In duration mode: cHour12 = elapsed minutes (0–20), cMinute = elapsed seconds (0–59), cAmPm unused.
@@ -164,6 +173,17 @@ const TimePicker = ({ value, onChange, placeholder, disabled, mode = 'clock' }: 
       btn?.scrollIntoView({ block: 'center' });
     }
   }, [open, cHour12, cMinute, mode]);
+
+  // Auto-focus the text input on mount when requested
+  useEffect(() => {
+    if (autoFocus) {
+      inputRef.current?.focus();
+      // Explicitly activate the hour segment so handleKeyDown can process
+      // keypresses immediately — same race-condition fix as DatePicker.
+      activateSegment('hour');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const measureDropdown = () => {
     if (!triggerRef.current) return;

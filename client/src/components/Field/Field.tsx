@@ -65,6 +65,7 @@ type TimePickerProps = BaseProps & {
   placeholder?: string;
   disabled?: boolean;
   mode?: 'clock' | 'duration';
+  autoFocus?: boolean;
 };
 
 type ColorProps = BaseProps & {
@@ -163,6 +164,7 @@ const Field = (props: FieldProps) => {
                 placeholder={props.placeholder}
                 disabled={props.disabled}
                 mode={props.mode}
+                autoFocus={props.autoFocus}
               />
             );
           } else if (props.type === 'richtext') {

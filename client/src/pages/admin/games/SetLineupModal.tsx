@@ -66,9 +66,13 @@ const SetLineupModal = ({
   saveTeamLineup,
 }: Props) => {
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const [savedDraft, setSavedDraft] = useState<Draft>(emptyDraft);
   const [saving, setSaving] = useState(false);
 
   const allFilled = (Object.values(draft) as (string | null)[]).every(Boolean);
+  const hasChanges = (Object.keys(draft) as LineupPositionSlot[]).some(
+    (slot) => draft[slot] !== savedDraft[slot],
+  );
 
   // Sync draft from existing lineup when modal opens or lineup data changes
   useEffect(() => {
@@ -80,6 +84,7 @@ const SetLineupModal = ({
         next[e.position_slot] = e.player_id;
       });
     setDraft(next);
+    setSavedDraft(next);
   }, [open, lineup, teamId]);
 
   const set = (slot: LineupPositionSlot, val: string) =>
@@ -123,7 +128,7 @@ const SetLineupModal = ({
       onConfirm={handleSave}
       confirmLabel={saving ? 'Saving…' : 'Save Lineup'}
       confirmIcon="set_lineup"
-      confirmDisabled={saving || !allFilled}
+      confirmDisabled={saving || !allFilled || !hasChanges}
       busy={saving}
     >
       <div className={styles.grid}>
