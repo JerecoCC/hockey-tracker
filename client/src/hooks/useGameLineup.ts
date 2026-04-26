@@ -47,15 +47,15 @@ const useGameLineup = (gameId: string | undefined) => {
     enabled: !!gameId,
   });
 
-  const removeFromLineup = async (entryId: string): Promise<boolean> => {
+  const clearTeamLineup = async (teamId: string): Promise<boolean> => {
     try {
-      await axios.delete(`${API}/admin/games/${gameId}/lineup/${entryId}`, {
+      await axios.delete(`${API}/admin/games/${gameId}/lineup/${teamId}`, {
         headers: authHeaders(),
       });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup', gameId] });
       return true;
     } catch (err) {
-      toast.error(apiError(err, 'Failed to remove player from lineup'));
+      toast.error(apiError(err, 'Failed to clear lineup'));
       return false;
     }
   };
@@ -79,7 +79,7 @@ const useGameLineup = (gameId: string | undefined) => {
     }
   };
 
-  return { lineup, loading, saveTeamLineup, removeFromLineup };
+  return { lineup, loading, saveTeamLineup, clearTeamLineup };
 };
 
 export default useGameLineup;

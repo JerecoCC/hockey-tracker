@@ -536,20 +536,54 @@ async function initSchema() {
     WHERE goal_type = 'empty-net'
   `;
 
-  // ── Game lineups ───────────────────────────────────────────────────────────
-  // Starting lineup: one row per position slot per team per game.
-  // position_slot: C=Center, LW=Left Wing, RW=Right Wing, D1=Defence 1, D2=Defence 2, G=Goalie
+  // ── Game starting lineup ───────────────────────────────────────────────────
+  // One row per team per game. Each position slot is a nullable FK to players.
+  // Replaces game_lineups (6 rows per team) with a single compact row per team.
+  // Slots: center, left_wing, right_wing, defense_1, defense_2, goalie.
   await sql`
-    CREATE TABLE IF NOT EXISTS game_lineups (
-      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      game_id        UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
-      team_id        UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
-      player_id      UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-      position_slot  TEXT NOT NULL CHECK (position_slot IN ('C', 'LW', 'RW', 'D1', 'D2', 'G')),
-      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (game_id, team_id, position_slot)
+    CREATE TABLE IF NOT EXISTS game_starting_lineup (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      center_id     UUID REFERENCES players(id) ON DELETE SET NULL,
+      left_wing_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      right_wing_id UUID REFERENCES players(id) ON DELETE SET NULL,
+      defense_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      defense_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      goalie_id     UUID REFERENCES players(id) ON DELETE SET NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, team_id)
     )
   `;
+
+  // One-time data migration: pivot game_lineups rows (one per slot) into
+  // game_starting_lineup rows (one per team per game), then drop the old table.
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'game_lineups'
+      ) THEN
+        INSERT INTO game_starting_lineup
+          (game_id, team_id, center_id, left_wing_id, right_wing_id, defense_1_id, defense_2_id, goalie_id)
+        SELECT
+          game_id,
+          team_id,
+          MAX(CASE WHEN position_slot = 'C'  THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot = 'LW' THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot = 'RW' THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot = 'D1' THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot = 'D2' THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot = 'G'  THEN player_id::text END)::uuid
+        FROM game_lineups
+        GROUP BY game_id, team_id
+        ON CONFLICT (game_id, team_id) DO NOTHING;
+      END IF;
+    END $$
+  `;
+
+  await sql`DROP TABLE IF EXISTS game_lineups`;
 
   // ── Game rosters ───────────────────────────────────────────────────────────
   // Game-day squad: which players are participating in a specific game.

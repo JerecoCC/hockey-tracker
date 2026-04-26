@@ -42,7 +42,7 @@ const useGameRoster = (gameId: string | undefined) => {
         );
         return data;
       } catch (err) {
-        toast.error(apiError(err, 'Failed to load game roster'));
+        toast.error(apiError(err, 'Failed to load lineup'));
         return [];
       }
     },
@@ -57,11 +57,11 @@ const useGameRoster = (gameId: string | undefined) => {
         { team_id: teamId, player_ids: playerIds },
         { headers: authHeaders() },
       );
-      toast.success(`${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} added to roster`);
+      toast.success(`${playerIds.length} player${playerIds.length !== 1 ? 's' : ''} added to lineup`);
       await queryClient.invalidateQueries({ queryKey: ['game-roster', gameId] });
       return true;
     } catch (err) {
-      toast.error(apiError(err, 'Failed to add players to roster'));
+      toast.error(apiError(err, 'Failed to add players to lineup'));
       return false;
     }
   };
@@ -77,7 +77,7 @@ const useGameRoster = (gameId: string | undefined) => {
       await queryClient.invalidateQueries({ queryKey: ['game-lineup', gameId] });
       return true;
     } catch (err) {
-      toast.error(apiError(err, 'Failed to remove player from roster'));
+      toast.error(apiError(err, 'Failed to remove player from lineup'));
       return false;
     }
   };

@@ -440,6 +440,12 @@ const GameDetailsPage = () => {
   const [starsModalOpen, setStarsModalOpen] = useState(false);
   /** true = editing stars on a final game; false = ending the game */
   const [starsEditMode, setStarsEditMode] = useState(false);
+  /**
+   * True when the end-game shots/goalie modal was submitted but the 3-stars
+   * modal was closed before awarding stars. Clicking "End Game" again will
+   * skip the shots modal and go straight to the 3-stars modal.
+   */
+  const [endGameReadyForStars, setEndGameReadyForStars] = useState(false);
   const [star1Id, setStar1Id] = useState('');
   const [star2Id, setStar2Id] = useState('');
   const [star3Id, setStar3Id] = useState('');
@@ -680,6 +686,7 @@ const GameDetailsPage = () => {
       setStar2Id('');
       setStar3Id('');
       setStarsEditMode(false);
+      setEndGameReadyForStars(true);
       setStarsModalOpen(true);
     }
   };
@@ -770,6 +777,10 @@ const GameDetailsPage = () => {
   );
 
   const [autoFillBusy, setAutoFillBusy] = useState<{ away: boolean; home: boolean }>({
+    away: false,
+    home: false,
+  });
+  const [lineupInheritBusy, setLineupInheritBusy] = useState<{ away: boolean; home: boolean }>({
     away: false,
     home: false,
   });
@@ -2350,7 +2361,7 @@ const GameDetailsPage = () => {
                                 size="sm"
                                 tooltip={
                                   !rosterReady
-                                    ? 'Set game rosters for both teams first'
+                                    ? 'Set lineups for both teams first'
                                     : !lineupsReady
                                       ? 'Set starting lineups for both teams'
                                       : 'Start Game'
@@ -2387,13 +2398,18 @@ const GameDetailsPage = () => {
                                 size="sm"
                                 tooltip="End Game"
                                 disabled={!!busy}
-                                onClick={() =>
-                                  openShotsModal(
-                                    game.current_period ?? '3',
-                                    { type: 'end-game' },
-                                    true,
-                                  )
-                                }
+                                onClick={() => {
+                                  if (endGameReadyForStars) {
+                                    setStarsEditMode(false);
+                                    setStarsModalOpen(true);
+                                  } else {
+                                    openShotsModal(
+                                      game.current_period ?? '3',
+                                      { type: 'end-game' },
+                                      true,
+                                    );
+                                  }
+                                }}
                               />
                             )}
                         </div>
@@ -2696,12 +2712,27 @@ const GameDetailsPage = () => {
           {
             label: 'Lineup',
             content: (() => {
-              // Lookup: player_id → starting lineup entry (for italic + position_slot info)
+              // Saved lineup entries for this game (non-inherited).
               const awayLineupMap = new Map(
-                lineup.filter((e) => e.team_id === game.away_team_id).map((e) => [e.player_id, e]),
+                lineup
+                  .filter((e) => e.team_id === game.away_team_id && !e.inherited)
+                  .map((e) => [e.player_id, e]),
               );
               const homeLineupMap = new Map(
-                lineup.filter((e) => e.team_id === game.home_team_id).map((e) => [e.player_id, e]),
+                lineup
+                  .filter((e) => e.team_id === game.home_team_id && !e.inherited)
+                  .map((e) => [e.player_id, e]),
+              );
+              // Inherited lineup entries (from the team's last finished game).
+              const awayInheritedLineupMap = new Map(
+                lineup
+                  .filter((e) => e.team_id === game.away_team_id && !!e.inherited)
+                  .map((e) => [e.player_id, e]),
+              );
+              const homeInheritedLineupMap = new Map(
+                lineup
+                  .filter((e) => e.team_id === game.home_team_id && !!e.inherited)
+                  .map((e) => [e.player_id, e]),
               );
 
               const renderTeamAccordion = (
@@ -2713,6 +2744,7 @@ const GameDetailsPage = () => {
                 textColor: string,
                 rosterEntries: GameRosterEntry[],
                 lineupMap: typeof awayLineupMap,
+                inheritedLineupMap: typeof awayInheritedLineupMap,
                 inheritedEntries: GameRosterEntry[],
               ) => (
                 <Accordion
@@ -2743,11 +2775,35 @@ const GameDetailsPage = () => {
                             intent: 'info' as const,
                             onClick: () => setLineupSetTeam(side),
                           },
+                          ...(inheritedLineupMap.size > 0 && lineupMap.size === 0
+                            ? [
+                                {
+                                  icon: 'history',
+                                  tooltip: "Use Last Game's Lineup",
+                                  intent: 'accent' as const,
+                                  disabled: lineupInheritBusy[side],
+                                  onClick: () => {
+                                    const teamId =
+                                      side === 'away' ? game.away_team_id : game.home_team_id;
+                                    const slots = Array.from(inheritedLineupMap.values()).map(
+                                      (e) => ({
+                                        position_slot: e.position_slot,
+                                        player_id: e.player_id,
+                                      }),
+                                    );
+                                    setLineupInheritBusy((prev) => ({ ...prev, [side]: true }));
+                                    saveTeamLineup(teamId, slots).finally(() =>
+                                      setLineupInheritBusy((prev) => ({ ...prev, [side]: false })),
+                                    );
+                                  },
+                                },
+                              ]
+                            : []),
                           ...(rosterEntries.length < 23
                             ? [
                                 {
                                   icon: 'group_add',
-                                  tooltip: 'Add from Roster',
+                                  tooltip: 'Add from Season Roster',
                                   intent: 'neutral' as const,
                                   onClick: () => setLineupAddTeam(side),
                                 },
@@ -2779,6 +2835,8 @@ const GameDetailsPage = () => {
 
                       const renderPlayer = (e: GameRosterEntry) => {
                         const isStarter = lineupMap.has(e.player_id);
+                        const isInheritedStarter =
+                          !isStarter && inheritedLineupMap.has(e.player_id);
                         const jerseyPart = e.jersey_number != null ? `#${e.jersey_number}` : null;
                         const positionPart = e.position
                           ? (POSITION_LABEL[e.position] ?? e.position)
@@ -2798,7 +2856,9 @@ const GameDetailsPage = () => {
                             rightContent={
                               isStarter
                                 ? { type: 'tag', label: 'Starter', intent: 'accent' }
-                                : undefined
+                                : isInheritedStarter
+                                  ? { type: 'tag', label: 'Last Game', intent: 'neutral' }
+                                  : undefined
                             }
                             actions={
                               isFinal
@@ -2807,7 +2867,7 @@ const GameDetailsPage = () => {
                                     {
                                       icon: 'person_remove',
                                       intent: 'danger',
-                                      tooltip: 'Remove from game roster',
+                                      tooltip: 'Remove from lineup',
                                       onClick: () => setConfirmRemove({ entry: e }),
                                     },
                                   ]
@@ -2833,7 +2893,7 @@ const GameDetailsPage = () => {
                   ) : inheritedEntries.length > 0 ? (
                     <div className={styles.autoFillBanner}>
                       <p className={styles.autoFillBannerText}>
-                        {inheritedEntries.length} players available from last game
+                        {inheritedEntries.length} players available from last game's lineup
                       </p>
                       <Button
                         intent="accent"
@@ -2854,7 +2914,7 @@ const GameDetailsPage = () => {
                       </Button>
                     </div>
                   ) : (
-                    <p className={styles.noGoalsText}>No players in roster yet.</p>
+                    <p className={styles.noGoalsText}>No players in lineup yet.</p>
                   )}
                 </Accordion>
               );
@@ -2872,6 +2932,7 @@ const GameDetailsPage = () => {
                         game.away_team_text_color,
                         awayRoster,
                         awayLineupMap,
+                        awayInheritedLineupMap,
                         awayRosterInherited,
                       )}
                       {renderTeamAccordion(
@@ -2883,6 +2944,7 @@ const GameDetailsPage = () => {
                         game.home_team_text_color,
                         homeRoster,
                         homeLineupMap,
+                        homeInheritedLineupMap,
                         homeRosterInherited,
                       )}
                     </div>
@@ -3354,10 +3416,10 @@ const GameDetailsPage = () => {
           );
         })()}
 
-      {/* ── Lineup: Remove from Game Roster (confirm) ── */}
+      {/* ── Lineup: Remove from Lineup (confirm) ── */}
       <ConfirmModal
         open={!!confirmRemove}
-        title="Remove from Roster"
+        title="Remove from Lineup"
         body={
           confirmRemove ? (
             <>
@@ -3365,7 +3427,7 @@ const GameDetailsPage = () => {
               <strong>
                 {confirmRemove.entry.first_name} {confirmRemove.entry.last_name}
               </strong>{' '}
-              from this game&apos;s roster?
+              from this game&apos;s lineup?
             </>
           ) : (
             ''
@@ -3500,7 +3562,10 @@ const GameDetailsPage = () => {
                 if (ok) setStarsModalOpen(false);
               } else {
                 const ok = await endGame({ star1: star1Id, star2: star2Id, star3: star3Id });
-                if (ok) setStarsModalOpen(false);
+                if (ok) {
+                  setEndGameReadyForStars(false);
+                  setStarsModalOpen(false);
+                }
               }
             }}
           >
