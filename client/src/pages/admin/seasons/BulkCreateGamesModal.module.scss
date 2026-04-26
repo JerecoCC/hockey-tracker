@@ -1,8 +1,8 @@
 @use "../../../styles/colors" as *;
 @use "../../../styles/mixins" as *;
 
-// Away | Home | Date | Arena | delete
-$cols: 1.4fr 1.4fr 1fr 1.2fr 2rem;
+// Date | Time | Away | Home | Venue | delete
+$cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
 
 .headerRow {
   display: grid;
@@ -41,7 +41,7 @@ $cols: 1.4fr 1.4fr 1fr 1.2fr 2rem;
   display: grid;
   grid-template-columns: $cols;
   gap: $space-md;
-  align-items: end;
+  align-items: center;
   padding: $space-xs 0;
 
   &:not(:last-child) {

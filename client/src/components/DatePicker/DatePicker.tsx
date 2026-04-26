@@ -7,6 +7,7 @@ interface Props {
   onChange: (val: string) => void;
   placeholder?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -109,7 +110,7 @@ const buildDisplay = (
 };
 
 const DatePicker = (props: Props) => {
-  const { value, onChange, disabled } = props;
+  const { value, onChange, disabled, autoFocus } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
   const parsed = parseISO(value);
@@ -178,6 +179,12 @@ const DatePicker = (props: Props) => {
     setActiveSeg(null);
     setBuf('');
   }, [value]);
+
+  // Auto-focus the text input on mount when requested
+  useEffect(() => {
+    if (autoFocus) inputRef.current?.focus();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Close on outside click
   useEffect(() => {

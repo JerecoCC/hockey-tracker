@@ -115,7 +115,7 @@ const GameFormModal = ({
 
   const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
     value: t.id,
-    label: `${t.name} (${t.code})`,
+    label: t.name,
   }));
 
   const onSubmit = handleSubmit(async (data) => {
@@ -156,7 +156,26 @@ const GameFormModal = ({
         className={styles.form}
         onSubmit={onSubmit}
       >
-        {/* Row 1: Away team | Home team */}
+        {/* Row 1: Date | Time */}
+        <div className={styles.dateTimeRow}>
+          <Field
+            label="Date"
+            type="datepicker"
+            control={control}
+            name="scheduled_date"
+            placeholder="Select date…"
+            disabled={isStarted || isSubmitting}
+            autoFocus
+          />
+          <Field
+            label="Time"
+            type="timepicker"
+            control={control}
+            name="scheduled_time"
+          />
+        </div>
+
+        {/* Row 2: Away team | Home team */}
         <div className={styles.teamRow}>
           <Field
             label="Away Team"
@@ -168,6 +187,7 @@ const GameFormModal = ({
             options={teamOptions}
             placeholder="— Select away team —"
             disabled={isStarted || isSubmitting}
+            searchable
           />
           <Field
             label="Home Team"
@@ -179,25 +199,8 @@ const GameFormModal = ({
             options={teamOptions}
             placeholder="— Select home team —"
             disabled={isStarted || isSubmitting}
+            searchable
             onChange={!isStarted ? handleHomeTeamChange : undefined}
-          />
-        </div>
-
-        {/* Row 2: Date | Time */}
-        <div className={styles.dateTimeRow}>
-          <Field
-            label="Date"
-            type="datepicker"
-            control={control}
-            name="scheduled_date"
-            placeholder="Select date…"
-            disabled={isStarted || isSubmitting}
-          />
-          <Field
-            label="Time"
-            type="timepicker"
-            control={control}
-            name="scheduled_time"
           />
         </div>
 
@@ -206,7 +209,7 @@ const GameFormModal = ({
           label="Venue"
           control={control}
           name="venue"
-          placeholder="e.g. Scotiabank Arena"
+          placeholder="Arena"
           disabled={isSubmitting}
         />
       </form>

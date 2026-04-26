@@ -43,6 +43,7 @@ type SelectProps = BaseProps & {
   options: SelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  searchable?: boolean;
   /** Called with the new value whenever the user picks an option (fires synchronously, alongside field.onChange). */
   onChange?: (value: string | null) => void;
 };
@@ -56,6 +57,7 @@ type DatePickerProps = BaseProps & {
   type: 'datepicker';
   placeholder?: string;
   disabled?: boolean;
+  autoFocus?: boolean;
 };
 
 type TimePickerProps = BaseProps & {
@@ -126,7 +128,7 @@ const Field = (props: FieldProps) => {
               />
             );
           } else if (props.type === 'select') {
-            const { options, placeholder, disabled, onChange: onChangeProp } = props;
+            const { options, placeholder, disabled, searchable, onChange: onChangeProp } = props;
             return (
               <Select
                 value={(field.value as string) ?? null}
@@ -137,6 +139,7 @@ const Field = (props: FieldProps) => {
                   onChangeProp?.(val);
                 }}
                 disabled={disabled}
+                searchable={searchable}
                 error={hasError}
               />
             );
@@ -149,6 +152,7 @@ const Field = (props: FieldProps) => {
                 onChange={field.onChange}
                 placeholder={props.placeholder}
                 disabled={props.disabled}
+                autoFocus={props.autoFocus}
               />
             );
           } else if (props.type === 'timepicker') {

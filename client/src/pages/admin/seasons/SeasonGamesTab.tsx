@@ -86,7 +86,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
 
   const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
     value: t.id,
-    label: `${t.name} (${t.code})`,
+    label: t.name,
   }));
 
   // ── Filter state ───────────────────────────────────────────────────────────

@@ -16,6 +16,7 @@ interface RowValues {
   away_team_id: string | null;
   home_team_id: string | null;
   scheduled_date: string;
+  scheduled_time: string;
   venue: string;
 }
 
@@ -27,6 +28,7 @@ const EMPTY_ROW: RowValues = {
   away_team_id: null,
   home_team_id: null,
   scheduled_date: '',
+  scheduled_time: '',
   venue: '',
 };
 
@@ -39,6 +41,7 @@ interface GameRowProps {
   seasonTeams: SeasonTeam[];
   teamOptions: SelectOption[];
   isSubmitting: boolean;
+  autoFocus?: boolean;
   onDelete: () => void;
 }
 
@@ -49,6 +52,7 @@ const GameRow = ({
   seasonTeams,
   teamOptions,
   isSubmitting,
+  autoFocus,
   onDelete,
 }: GameRowProps) => {
   const handleHomeTeamChange = (teamId: string | null) => {
@@ -59,14 +63,29 @@ const GameRow = ({
   return (
     <div className={styles.gameRow}>
       <Field
+        type="datepicker"
+        control={control}
+        name={`games.${index}.scheduled_date`}
+        placeholder="Date…"
+        disabled={isSubmitting}
+        autoFocus={autoFocus}
+      />
+      <Field
+        type="timepicker"
+        control={control}
+        name={`games.${index}.scheduled_time`}
+        disabled={isSubmitting}
+      />
+      <Field
         type="select"
         control={control}
         name={`games.${index}.away_team_id`}
         required
         rules={{ required: true }}
         options={teamOptions}
-        placeholder="Away team"
+        placeholder="— Select away team —"
         disabled={isSubmitting}
+        searchable
       />
       <Field
         type="select"
@@ -75,15 +94,10 @@ const GameRow = ({
         required
         rules={{ required: true }}
         options={teamOptions}
-        placeholder="Home team"
+        placeholder="— Select home team —"
         disabled={isSubmitting}
+        searchable
         onChange={handleHomeTeamChange}
-      />
-      <Field
-        type="datepicker"
-        control={control}
-        name={`games.${index}.scheduled_date`}
-        placeholder="Date…"
       />
       <Field
         control={control}
@@ -128,6 +142,7 @@ const BulkCreateGamesModal = ({
 }: Props) => {
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [autoFocusIndex, setAutoFocusIndex] = useState(0);
 
   const { control, handleSubmit, reset, setValue } = useForm<FormValues>({
     defaultValues: { games: [{ ...EMPTY_ROW }] },
@@ -137,6 +152,7 @@ const BulkCreateGamesModal = ({
 
   const handleClose = () => {
     reset({ games: [{ ...EMPTY_ROW }] });
+    setAutoFocusIndex(0);
     onClose();
   };
 
@@ -154,6 +170,7 @@ const BulkCreateGamesModal = ({
       game_type: 'regular',
       status: 'scheduled',
       scheduled_at: row.scheduled_date || null,
+      scheduled_time: row.scheduled_time || null,
       venue: row.venue || null,
     }));
     const ok = await bulkCreateGames(payload);
@@ -182,10 +199,11 @@ const BulkCreateGamesModal = ({
           onSubmit={onSubmit}
         >
           <div className={styles.headerRow}>
+            <span className={styles.headerCell}>Date</span>
+            <span className={styles.headerCell}>Time</span>
             <span className={styles.headerCell}>Away Team</span>
             <span className={styles.headerCell}>Home Team</span>
-            <span className={styles.headerCell}>Date</span>
-            <span className={styles.headerCell}>Arena</span>
+            <span className={styles.headerCell}>Venue</span>
             <span />
           </div>
 
@@ -199,6 +217,7 @@ const BulkCreateGamesModal = ({
                 seasonTeams={seasonTeams}
                 teamOptions={teamOptions}
                 isSubmitting={isSubmitting}
+                autoFocus={index === autoFocusIndex}
                 onDelete={() => handleDeleteClick(index)}
               />
             ))}
@@ -212,9 +231,12 @@ const BulkCreateGamesModal = ({
               icon="add"
               size="sm"
               disabled={isSubmitting}
-              onClick={() => append({ ...EMPTY_ROW })}
+              onClick={() => {
+                setAutoFocusIndex(fields.length);
+                append({ ...EMPTY_ROW });
+              }}
             >
-              Add Row
+              Add Game
             </Button>
           </div>
         </form>
