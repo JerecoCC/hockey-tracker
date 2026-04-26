@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Icon from '../../../../components/Icon/Icon';
 import Modal from '../../../../components/Modal/Modal';
+import SegmentedControl from '../../../../components/SegmentedControl/SegmentedControl';
 import Select from '../../../../components/Select/Select';
 import TimePicker from '../../../../components/TimePicker/TimePicker';
 import { type GameRecord } from '../../../../hooks/useGames';
@@ -88,38 +89,34 @@ const ScoreGoalModal = ({
         : `${e.first_name} ${e.last_name}`,
   }));
 
-  const renderTeamBtn = (side: 'away' | 'home') => {
+  const teamOptions = (['away', 'home'] as const).map((side) => {
     const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
     const code = side === 'away' ? game.away_team_code : game.home_team_code;
     const primary = side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
     const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
-    return (
-      <button
-        type="button"
-        className={[styles.teamSegmentBtn, goalTeam === side ? styles.teamSegmentBtnActive : '']
-          .filter(Boolean)
-          .join(' ')}
-        disabled={submitting}
-        onClick={() => handleTeamChange(side)}
-      >
-        {logo ? (
-          <img
-            src={logo}
-            alt={code}
-            className={styles.teamSegmentLogo}
-          />
-        ) : (
-          <span
-            className={styles.teamSegmentLogoPlaceholder}
-            style={{ background: primary, color: text }}
-          >
-            {code.slice(0, 1)}
-          </span>
-        )}
-        {code}
-      </button>
-    );
-  };
+    return {
+      value: side,
+      label: (
+        <>
+          {logo ? (
+            <img
+              src={logo}
+              alt={code}
+              className={styles.teamSegmentLogo}
+            />
+          ) : (
+            <span
+              className={styles.teamSegmentLogoPlaceholder}
+              style={{ background: primary, color: text }}
+            >
+              {code.slice(0, 1)}
+            </span>
+          )}
+          {code}
+        </>
+      ),
+    };
+  });
 
   const handleConfirm = async () => {
     const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
@@ -157,10 +154,12 @@ const ScoreGoalModal = ({
       onConfirm={handleConfirm}
     >
       <div className={styles.goalForm}>
-        <div className={styles.teamSegment}>
-          {renderTeamBtn('away')}
-          {renderTeamBtn('home')}
-        </div>
+        <SegmentedControl
+          value={goalTeam}
+          onChange={(v) => handleTeamChange(v as 'away' | 'home')}
+          options={teamOptions}
+          disabled={submitting}
+        />
         <div className={styles.goalFormTimeRow}>
           <div className={`${styles.goalFormField} ${styles.goalPeriodTimeField}`}>
             <label className={styles.goalFormLabel}>
