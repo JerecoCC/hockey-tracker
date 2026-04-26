@@ -29,7 +29,6 @@ router.get('/', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.overtime_periods, g.shootout,
-        g.game_number, g.game_number_in_series,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
@@ -107,8 +106,7 @@ router.get('/:id', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
-        g.overtime_periods, g.shootout,
-        g.game_number, g.game_number_in_series,
+        g.overtime_periods, g.shootout, g.shootout_first_team_id,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
@@ -126,6 +124,7 @@ router.get('/:id', async (req, res) => {
         s.name AS season_name,
         l.id   AS league_id,
         l.name AS league_name,
+        l.best_of_shootout,
         home_l5.home_last_five,
         away_l5.away_last_five
       FROM games g
@@ -281,8 +280,7 @@ router.post('/', async (req, res) => {
     scheduled_at = null, scheduled_time = null, venue = null,
     game_type = 'regular', status = 'scheduled',
     overtime_periods = null, shootout = false,
-    playoff_series_id = null, game_number_in_series = null,
-    game_number = null, notes = null,
+    playoff_series_id = null, notes = null,
   } = req.body;
 
   if (!season_id || !home_team_id || !away_team_id) {
@@ -298,12 +296,12 @@ router.post('/', async (req, res) => {
         season_id, home_team_id, away_team_id,
         scheduled_at, scheduled_time, venue, game_type, status,
         overtime_periods, shootout,
-        playoff_series_id, game_number_in_series, game_number, notes
+        playoff_series_id, notes
       ) VALUES (
         ${season_id}, ${home_team_id}, ${away_team_id},
         ${scheduled_at}, ${scheduled_time}, ${venue}, ${game_type}, ${status},
         ${overtime_periods}, ${shootout},
-        ${playoff_series_id}, ${game_number_in_series}, ${game_number}, ${notes}
+        ${playoff_series_id}, ${notes}
       )
       RETURNING id
     `;
@@ -313,7 +311,6 @@ router.post('/', async (req, res) => {
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
         g.overtime_periods, g.shootout,
-        g.game_number, g.game_number_in_series,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
@@ -378,9 +375,10 @@ router.patch('/:id', async (req, res) => {
     scheduled_at, scheduled_time, venue, game_type, status,
     time_start, time_end,
     overtime_periods, shootout,
-    playoff_series_id, game_number_in_series, game_number, notes,
+    playoff_series_id, notes,
     current_period,
     star_1_id, star_2_id, star_3_id,
+    shootout_first_team_id,
   } = req.body;
 
   // Automatically set current_period to '1' when a game is started
@@ -410,15 +408,14 @@ router.patch('/:id', async (req, res) => {
                                   ELSE COALESCE(${shootout ?? null}::boolean, shootout)
                                 END,
         playoff_series_id     = COALESCE(${playoff_series_id     ?? null}, playoff_series_id),
-        game_number_in_series = COALESCE(${game_number_in_series ?? null}, game_number_in_series),
-        game_number           = COALESCE(${game_number           ?? null}, game_number),
         notes                 = COALESCE(${notes                 ?? null}, notes),
         current_period        = COALESCE(${effectivePeriod},             current_period),
         star_1_id             = COALESCE(${star_1_id             ?? null}, star_1_id),
         star_2_id             = COALESCE(${star_2_id             ?? null}, star_2_id),
-        star_3_id             = COALESCE(${star_3_id             ?? null}, star_3_id),
-        time_start            = COALESCE(${time_start            ?? null}, time_start),
-        time_end              = COALESCE(${time_end              ?? null}, time_end)
+        star_3_id                = COALESCE(${star_3_id                ?? null}, star_3_id),
+        time_start               = COALESCE(${time_start               ?? null}, time_start),
+        time_end                 = COALESCE(${time_end                 ?? null}, time_end),
+        shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)
       WHERE id = ${id}
     `;
     const updated = await sql`
@@ -426,8 +423,7 @@ router.patch('/:id', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
-        g.overtime_periods, g.shootout,
-        g.game_number, g.game_number_in_series,
+        g.overtime_periods, g.shootout, g.shootout_first_team_id,
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
@@ -1231,6 +1227,141 @@ router.patch('/playoff-series/:seriesId', async (req, res) => {
     return res.json(rows[0]);
   } catch (err) {
     console.error('playoff series update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Shared query helper — returns full shootout attempt rows with player/team info
+// ---------------------------------------------------------------------------
+const fetchAttempts = (gameId) => sql`
+  SELECT
+    sa.id,
+    sa.game_id,
+    sa.team_id,
+    sa.shooter_id,
+    sa.scored,
+    sa.attempt_order,
+    sa.created_at,
+    p.first_name   AS shooter_first_name,
+    p.last_name    AS shooter_last_name,
+    COALESCE(pt.photo, p.photo) AS shooter_photo,
+    pt.jersey_number            AS shooter_jersey_number,
+    ti.name  AS team_name,
+    ti.code  AS team_code,
+    ti.logo  AS team_logo,
+    t.primary_color AS team_primary_color,
+    t.text_color    AS team_text_color
+  FROM shootout_attempts sa
+  JOIN players p  ON p.id  = sa.shooter_id
+  JOIN teams   t  ON t.id  = sa.team_id
+  LEFT JOIN player_teams pt
+    ON pt.player_id = sa.shooter_id
+    AND pt.team_id  = sa.team_id
+    AND pt.end_date IS NULL
+  LEFT JOIN LATERAL (
+    SELECT name, code, logo FROM team_iterations
+    WHERE team_id = sa.team_id
+    ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+    LIMIT 1
+  ) ti ON true
+  WHERE sa.game_id = ${gameId}
+  ORDER BY sa.attempt_order ASC
+`;
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/games/:id/shootout-attempts
+// ---------------------------------------------------------------------------
+router.get('/:id/shootout-attempts', async (req, res) => {
+  try {
+    const rows = await fetchAttempts(req.params.id);
+    return res.json(rows);
+  } catch (err) {
+    console.error('shootout attempts get error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/:id/shootout-attempts
+// Body: { team_id, shooter_id, scored? }
+// ---------------------------------------------------------------------------
+router.post('/:id/shootout-attempts', async (req, res) => {
+  const { id } = req.params;
+  const { team_id, shooter_id, scored = false } = req.body;
+
+  if (!team_id || !shooter_id) {
+    return res.status(400).json({ error: 'team_id and shooter_id are required' });
+  }
+
+  try {
+    // Determine next attempt_order for this game (global sequence across both teams)
+    const [{ max_order }] = await sql`
+      SELECT COALESCE(MAX(attempt_order), 0) AS max_order
+      FROM shootout_attempts WHERE game_id = ${id}
+    `;
+    const attemptOrder = (max_order ?? 0) + 1;
+
+    const [attempt] = await sql`
+      INSERT INTO shootout_attempts (game_id, team_id, shooter_id, scored, attempt_order)
+      VALUES (${id}, ${team_id}, ${shooter_id}, ${!!scored}, ${attemptOrder})
+      RETURNING id
+    `;
+
+    const all = await fetchAttempts(id);
+    const full = all.find((r) => r.id === attempt.id);
+    return res.status(201).json(full);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or player_id' });
+    console.error('shootout attempts post error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/shootout-attempts/:attemptId
+// Body: { team_id?, shooter_id?, scored? }
+// ---------------------------------------------------------------------------
+router.put('/:id/shootout-attempts/:attemptId', async (req, res) => {
+  const { id, attemptId } = req.params;
+  const { team_id, shooter_id, scored } = req.body;
+
+  try {
+    const rows = await sql`
+      UPDATE shootout_attempts
+      SET
+        team_id    = COALESCE(${team_id    ?? null}, team_id),
+        shooter_id = COALESCE(${shooter_id ?? null}, shooter_id),
+        scored     = COALESCE(${scored     != null ? !!scored : null}, scored)
+      WHERE id = ${attemptId} AND game_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Attempt not found' });
+
+    const all = await fetchAttempts(id);
+    const updated = all.find((r) => r.id === attemptId);
+    return res.json(updated);
+  } catch (err) {
+    console.error('shootout attempts put error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/shootout-attempts/:attemptId
+// ---------------------------------------------------------------------------
+router.delete('/:id/shootout-attempts/:attemptId', async (req, res) => {
+  const { id, attemptId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM shootout_attempts
+      WHERE id = ${attemptId} AND game_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Attempt not found' });
+    return res.status(204).send();
+  } catch (err) {
+    console.error('shootout attempts delete error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

@@ -32,7 +32,7 @@ const GAME = {
   away_team_primary_color: '#111111', away_team_secondary_color: '#A2AAAD', away_team_text_color: '#ffffff',
   game_type: 'regular', status: 'scheduled',
   scheduled_at: '2024-10-15T19:00:00Z', venue: 'SAP Center',
-  overtime_periods: null, shootout: false,
+  overtime_periods: null, shootout: false, shootout_first_team_id: null,
   game_number: null, game_number_in_series: null,
   playoff_series_id: null, notes: null, created_at: new Date().toISOString(),
   home_last_five: [LAST_FIVE_GAME],

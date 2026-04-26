@@ -454,6 +454,12 @@ async function initSchema() {
       current_period TEXT CHECK (current_period IN ('1', '2', '3', 'OT', 'SO'))
   `;
 
+  // Migration: track which team shoots first in a shootout (NULL = not applicable / not yet set)
+  await sql`
+    ALTER TABLE games ADD COLUMN IF NOT EXISTS
+      shootout_first_team_id UUID REFERENCES teams(id) ON DELETE SET NULL
+  `;
+
   // Migration: separate time-of-day for the game (stored as TEXT, e.g. "19:30")
   await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS scheduled_time TEXT`;
 
@@ -617,6 +623,21 @@ async function initSchema() {
       saves         SMALLINT NOT NULL DEFAULT 0 CHECK (saves >= 0),
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (game_id, goalie_id)
+    )
+  `;
+
+  // ── Shootout attempts ──────────────────────────────────────────────────────
+  // One row per shot attempt in a shootout (both scored and missed).
+  // attempt_order is the overall sequence number across both teams (1-based).
+  await sql`
+    CREATE TABLE IF NOT EXISTS shootout_attempts (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      shooter_id    UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      scored        BOOLEAN NOT NULL DEFAULT FALSE,
+      attempt_order INT NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
 

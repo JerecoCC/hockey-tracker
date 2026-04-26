@@ -60,9 +60,11 @@ export interface GameRecord {
   away_team_primary_color:   string;
   away_team_secondary_color: string;
   away_team_text_color:      string;
-  overtime_periods:      number | null;
-  shootout:              boolean;
-  playoff_series_id:     string | null;
+  overtime_periods:         number | null;
+  shootout:                 boolean;
+  /** UUID of the team that shoots first in a shootout, or null if not applicable. */
+  shootout_first_team_id:   string | null;
+  playoff_series_id:        string | null;
   game_number_in_series: number | null;
   game_number:           number | null;
   notes:                 string | null;
@@ -82,6 +84,8 @@ export interface GameRecord {
   home_last_five?:       LastFiveGame[];
   /** Last 5 final games for the away team within the same season (detail endpoint only). */
   away_last_five?:       LastFiveGame[];
+  /** Number of regulation shootout rounds before sudden death (from the league settings). */
+  best_of_shootout:      number;
 }
 
 export interface PlayoffSeriesRecord {
@@ -354,6 +358,7 @@ export const useGameDetails = (id: string | undefined) => {
     game_type?: GameType;
     time_start?: string | null;
     time_end?: string | null;
+    shootout_first_team_id?: string | null;
   }): Promise<boolean> => {
     if (!id) return false;
     setBusy('update-info');
