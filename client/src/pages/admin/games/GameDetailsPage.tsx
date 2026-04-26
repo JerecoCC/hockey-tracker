@@ -2352,7 +2352,7 @@ const GameDetailsPage = () => {
             ),
           },
           {
-            label: 'Lineup',
+            label: 'Lineups',
             content: (() => {
               // Saved lineup entries for this game (non-inherited).
               const awayLineupMap = new Map(
@@ -2422,7 +2422,7 @@ const GameDetailsPage = () => {
                                 {
                                   icon: 'history',
                                   tooltip: "Use Last Game's Lineup",
-                                  intent: 'accent' as const,
+                                  intent: 'warning' as const,
                                   disabled: lineupInheritBusy[side],
                                   onClick: () => {
                                     const teamId =
@@ -2563,7 +2563,7 @@ const GameDetailsPage = () => {
 
               return (
                 <div className={styles.tabContent}>
-                  <Card title="Lineup">
+                  <Card title="Lineups">
                     <div className={styles.lineupGrid}>
                       {renderTeamAccordion(
                         'away',
@@ -2637,6 +2637,7 @@ const GameDetailsPage = () => {
           open={lineupAddTeam !== null}
           onClose={() => setLineupAddTeam(null)}
           teamId={lineupAddTeam === 'away' ? game.away_team_id : game.home_team_id}
+          seasonId={seasonId!}
           teamName={lineupAddTeam === 'away' ? game.away_team_name : game.home_team_name}
           existingPlayerIds={
             new Set((lineupAddTeam === 'away' ? awayRoster : homeRoster).map((e) => e.player_id))

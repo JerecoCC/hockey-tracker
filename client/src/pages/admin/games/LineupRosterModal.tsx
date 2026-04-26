@@ -22,6 +22,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   teamId: string;
+  seasonId: string;
   teamName: string;
   existingPlayerIds: Set<string>;
   /** Called with selected player IDs to add them to the game roster */
@@ -32,6 +33,7 @@ const LineupRosterModal = ({
   open,
   onClose,
   teamId,
+  seasonId,
   teamName,
   existingPlayerIds,
   addToGameRoster,
@@ -41,11 +43,11 @@ const LineupRosterModal = ({
   const [submitting, setSubmitting] = useState(false);
 
   const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId }],
+    queryKey: ['players', { team_id: teamId, season_id: seasonId }],
     queryFn: async () => {
       const { data } = await axios.get<TeamPlayerRecord[]>(`${API}/admin/players`, {
         headers: authHeaders(),
-        params: { team_id: teamId },
+        params: { team_id: teamId, season_id: seasonId },
       });
       return data;
     },
@@ -174,20 +176,25 @@ const LineupRosterModal = ({
           </ul>
           <div className={styles.listDivider} />
           <ul className={styles.list}>
-            {filtered.map((p) => (
-              <SelectableListItem
-                key={p.id}
-                checked={selected.has(p.id)}
-                onToggle={() => toggle(p.id)}
-                image={p.photo}
-                imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
-                imageShape="circle"
-                imagePrimaryColor={p.primary_color}
-                imageTextColor={p.text_color}
-                name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.last_name}, ${p.first_name}`}
-                subtitle={p.position ? POSITION_LABELS[p.position] : undefined}
-              />
-            ))}
+            {filtered.map((p) => {
+              const jerseyPart = p.jersey_number != null ? `#${p.jersey_number}` : null;
+              const positionPart = p.position ? (POSITION_LABELS[p.position] ?? p.position) : null;
+              const eyebrow = [jerseyPart, positionPart].filter(Boolean).join(' · ') || undefined;
+              return (
+                <SelectableListItem
+                  key={p.id}
+                  checked={selected.has(p.id)}
+                  onToggle={() => toggle(p.id)}
+                  image={p.photo}
+                  imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
+                  imageShape="circle"
+                  imagePrimaryColor={p.primary_color}
+                  imageTextColor={p.text_color}
+                  eyebrow={eyebrow}
+                  name={`${p.last_name}, ${p.first_name}`}
+                />
+              );
+            })}
           </ul>
         </>
       )}

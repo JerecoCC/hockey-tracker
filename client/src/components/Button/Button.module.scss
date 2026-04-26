@@ -75,6 +75,15 @@
   }
 }
 
+.filledWarning {
+  background: $warning;
+  color: #fff;
+  border: none;
+  &:hover:not(:disabled) {
+    background: $warning-hover;
+  }
+}
+
 .filledDanger {
   background: $danger;
   color: #fff;
@@ -120,6 +129,16 @@
   &:hover:not(:disabled) {
     background: rgba($success, 0.15);
     border-color: $success-light;
+  }
+}
+
+.outlinedWarning {
+  background: transparent;
+  color: $warning-light;
+  border: 1px solid rgba($warning-light, 0.5);
+  &:hover:not(:disabled) {
+    background: rgba($warning, 0.15);
+    border-color: $warning-light;
   }
 }
 
@@ -169,6 +188,15 @@
   border: none;
   &:hover:not(:disabled) {
     background: rgba($success, 0.12);
+  }
+}
+
+.ghostWarning {
+  background: transparent;
+  color: $warning-light;
+  border: none;
+  &:hover:not(:disabled) {
+    background: rgba($warning, 0.12);
   }
 }
 
