@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import React, { useState, useMemo } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Badge from '../../../components/Badge/Badge';
@@ -10,13 +9,8 @@ import Icon from '../../../components/Icon/Icon';
 import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
 import Button from '../../../components/Button/Button';
 import Card from '../../../components/Card/Card';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
 import ListItem from '../../../components/ListItem/ListItem';
-import Field from '../../../components/Field/Field';
-import Modal from '../../../components/Modal/Modal';
 import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
-import Select from '../../../components/Select/Select';
-import TimePicker from '../../../components/TimePicker/TimePicker';
 import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import {
@@ -36,6 +30,15 @@ import useTabState from '../../../hooks/useTabState';
 import LineupRosterModal from './LineupRosterModal';
 import LineupCreatePlayersModal from './LineupCreatePlayersModal';
 import SetLineupModal from './SetLineupModal';
+import RemoveFromLineupModal from './game-details/RemoveFromLineupModal';
+import StartGameModal from './game-details/StartGameModal';
+import GameInfoEditModal from './game-details/GameInfoEditModal';
+import ThreeStarsModal from './game-details/ThreeStarsModal';
+import ScoreGoalModal from './game-details/ScoreGoalModal';
+import ShootoutAttemptModal from './game-details/ShootoutAttemptModal';
+import GoalieStatsEditModal from './game-details/GoalieStatsEditModal';
+import ShotsEditModal from './game-details/ShotsEditModal';
+import RecordShotsModal, { type ShotsNextAction } from './game-details/RecordShotsModal';
 import styles from './GameDetailsPage.module.scss';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -70,35 +73,6 @@ const formatScheduledTime = (t: string): string => {
   return `${h12}:${m} ${suffix}`;
 };
 
-/** Converts an ISO timestamp to "HH:mm" in Eastern Time (for time picker pre-fill). */
-const isoToETHHMM = (iso: string): string => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  return `${parts.find((p) => p.type === 'hour')!.value}:${parts.find((p) => p.type === 'minute')!.value}`;
-};
-
-/** Treats an "HH:mm" string as Eastern Time and returns a UTC ISO string. */
-const etHHMMtoISO = (hhmm: string): string => {
-  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    new Date(),
-  );
-  // Probe the ET offset (handles DST: EDT = -04:00, EST = -05:00)
-  const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
-  const tzName =
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      timeZoneName: 'short',
-    })
-      .formatToParts(probe)
-      .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
-  const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
-};
-
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
   in_progress: 'In Progress',
@@ -127,26 +101,6 @@ const GAME_TYPE_LABEL: Record<GameType, string> = {
   regular: 'Regular Season',
   playoff: 'Playoffs',
 };
-
-const GAME_TYPE_OPTIONS = (Object.entries(GAME_TYPE_LABEL) as [GameType, string][]).map(
-  ([value, label]) => ({ value, label }),
-);
-
-const PERIOD_LABEL: Record<string, string> = {
-  '1': '1st',
-  '2': '2nd',
-  '3': '3rd',
-  OT: 'OT',
-  SO: 'SO',
-};
-
-const GOAL_TYPES = [
-  { value: 'even-strength', label: 'Even Strength' },
-  { value: 'power-play', label: 'Power Play' },
-  { value: 'shorthanded', label: 'Shorthanded' },
-  { value: 'penalty-shot', label: 'Penalty Shot' },
-  { value: 'own', label: 'Own Goal' },
-];
 
 const POSITION_LABEL: Record<string, string> = {
   C: 'Center',
@@ -386,31 +340,19 @@ const GameDetailsPage = () => {
     }
   }, [game, attempts]);
 
-  // ── Goal form state ───────────────────────────────────────────────────────
+  // ── Goal modal state ──────────────────────────────────────────────────────
   const [goalPeriod, setGoalPeriod] = useState<string | null>(null);
-  /** non-null when editing an existing goal; null when adding a new one */
-  const [goalEditId, setGoalEditId] = useState<string | null>(null);
-  const [goalTeam, setGoalTeam] = useState<'away' | 'home'>('away');
-  const [goalPeriodTime, setGoalPeriodTime] = useState('');
-  const [goalType, setGoalType] = useState('even-strength');
-  const [goalEmptyNet, setGoalEmptyNet] = useState(false);
-  const [goalScorerId, setGoalScorerId] = useState('');
-  const [goalAssist1Id, setGoalAssist1Id] = useState('');
-  const [goalAssist2Id, setGoalAssist2Id] = useState('');
-  const [goalSubmitting, setGoalSubmitting] = useState(false);
+  const [editGoal, setEditGoal] = useState<GoalRecord | null>(null);
 
-  // ── Add / Edit Shootout Attempt modal ────────────────────────────────────
+  // ── Shootout Attempt modal state ──────────────────────────────────────────
   /** null = closed; 'add' = adding new attempt; non-null string = editing attempt with that id */
   const [attemptModalMode, setAttemptModalMode] = useState<null | 'add' | string>(null);
-  const [attemptTeam, setAttemptTeam] = useState<'away' | 'home'>('away');
-  const [attemptShooterId, setAttemptShooterId] = useState('');
-  const [attemptScored, setAttemptScored] = useState(false);
-  const [attemptSubmitting, setAttemptSubmitting] = useState(false);
+  const [attemptInitialTeam, setAttemptInitialTeam] = useState<'away' | 'home'>('away');
+  const [attemptInitialShooterId, setAttemptInitialShooterId] = useState('');
+  const [attemptInitialScored, setAttemptInitialScored] = useState(false);
 
   const openAttemptModal = () => {
     if (!game) return;
-    // Determine which team shoots next: alternates firstSide → secondSide → firstSide …
-    // based on total recorded attempts (even index = firstSide, odd index = secondSide).
     const firstTeamId = game.shootout_first_team_id;
     const fSide: 'away' | 'home' =
       firstTeamId === game.away_team_id
@@ -420,18 +362,18 @@ const GameDetailsPage = () => {
           : 'away';
     const nextSide: 'away' | 'home' =
       attempts.length % 2 === 0 ? fSide : fSide === 'away' ? 'home' : 'away';
-    setAttemptTeam(nextSide);
+    setAttemptInitialTeam(nextSide);
+    setAttemptInitialShooterId('');
+    setAttemptInitialScored(false);
     setAttemptModalMode('add');
-    setAttemptShooterId('');
-    setAttemptScored(false);
   };
 
   const openEditAttemptModal = (attempt: ShootoutAttempt) => {
     if (!game) return;
+    setAttemptInitialTeam(attempt.team_id === game.away_team_id ? 'away' : 'home');
+    setAttemptInitialShooterId(attempt.shooter_id);
+    setAttemptInitialScored(attempt.scored);
     setAttemptModalMode(attempt.id);
-    setAttemptTeam(attempt.team_id === game.away_team_id ? 'away' : 'home');
-    setAttemptShooterId(attempt.shooter_id);
-    setAttemptScored(attempt.scored);
   };
 
   const closeAttemptModal = () => setAttemptModalMode(null);
@@ -446,156 +388,23 @@ const GameDetailsPage = () => {
    * skip the shots modal and go straight to the 3-stars modal.
    */
   const [endGameReadyForStars, setEndGameReadyForStars] = useState(false);
-  const [star1Id, setStar1Id] = useState('');
-  const [star2Id, setStar2Id] = useState('');
-  const [star3Id, setStar3Id] = useState('');
 
-  // ── Shots edit modal (all periods at once, only for final games) ──────────
-  type ShotsEditFormValues = { periods: Array<{ away_shots: string; home_shots: string }> };
+  // ── Shots edit modal ──────────────────────────────────────────────────────
   const [shotsEditModalOpen, setShotsEditModalOpen] = useState(false);
-  const [shotsEditPeriodIds, setShotsEditPeriodIds] = useState<string[]>([]);
-  const [shotsEditSubmitting, setShotsEditSubmitting] = useState(false);
-  const {
-    control: shotsEditControl,
-    reset: resetShotsEditForm,
-    getValues: getShotsEditFormValues,
-  } = useForm<ShotsEditFormValues>({ defaultValues: { periods: [] } });
-  const { fields: shotsEditFields } = useFieldArray({ control: shotsEditControl, name: 'periods' });
-
-  const openShotsEditModal = () => {
-    if (!game) return;
-    const periods = linescorePeriods;
-    resetShotsEditForm({
-      periods: periods.map((p) => {
-        const ps = game.period_shots.find((s) => s.period === p.id);
-        return {
-          away_shots: ps ? String(ps.away_shots) : '',
-          home_shots: ps ? String(ps.home_shots) : '',
-        };
-      }),
-    });
-    setShotsEditPeriodIds(periods.map((p) => p.id));
-    setShotsEditModalOpen(true);
-  };
-
-  const handleShotsEditConfirm = async () => {
-    if (!game) return;
-    const { periods } = getShotsEditFormValues();
-    setShotsEditSubmitting(true);
-    for (let i = 0; i < shotsEditPeriodIds.length; i++) {
-      const periodId = shotsEditPeriodIds[i];
-      const row = periods[i];
-      if (!row) continue;
-      const away = parseInt(row.away_shots, 10);
-      const home = parseInt(row.home_shots, 10);
-      if (!isNaN(away) && !isNaN(home)) {
-        await updatePeriodShots(periodId, home, away);
-      }
-    }
-    setShotsEditSubmitting(false);
-    setShotsEditModalOpen(false);
-  };
 
   // ── Start Game modal ──────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
-  const {
-    control: startGameControl,
-    handleSubmit: handleStartGameSubmit,
-    reset: resetStartGameForm,
-    formState: { isSubmitting: startGameSubmitting },
-  } = useForm<{ start_time: string }>({ defaultValues: { start_time: '' } });
-
-  const openStartGameModal = () => {
-    resetStartGameForm({ start_time: '' });
-    setStartGameModalOpen(true);
-  };
-
-  const onStartGameSubmit = handleStartGameSubmit(async (data) => {
-    const ok = await startGame(etHHMMtoISO(data.start_time));
-    if (ok) setStartGameModalOpen(false);
-  });
+  const openStartGameModal = () => setStartGameModalOpen(true);
 
   // ── Game Info edit modal ──────────────────────────────────────────────────
   const [gameInfoEditOpen, setGameInfoEditOpen] = useState(false);
-  const {
-    control: gameInfoControl,
-    handleSubmit: handleGameInfoSubmit,
-    reset: resetGameInfoForm,
-    formState: { isSubmitting: gameInfoSubmitting },
-  } = useForm<{
-    venue: string;
-    scheduled_date: string;
-    scheduled_time: string;
-    game_type: GameType;
-    time_start: string;
-    time_end: string;
-  }>({
-    defaultValues: {
-      venue: '',
-      scheduled_date: '',
-      scheduled_time: '',
-      game_type: 'regular',
-      time_start: '',
-      time_end: '',
-    },
-  });
+  const openGameInfoEdit = () => setGameInfoEditOpen(true);
 
-  const openGameInfoEdit = () => {
-    if (!game) return;
-    resetGameInfoForm({
-      venue: game.venue ?? '',
-      scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
-      scheduled_time: game.scheduled_time ?? '',
-      game_type: game.game_type,
-      time_start: game.time_start ? isoToETHHMM(game.time_start) : '',
-      time_end: game.time_end ? isoToETHHMM(game.time_end) : '',
-    });
-    setGameInfoEditOpen(true);
-  };
-
-  const onGameInfoSubmit = handleGameInfoSubmit(async (data) => {
-    const ok = await updateGameInfo({
-      venue: data.venue || null,
-      scheduled_at: data.scheduled_date || null,
-      scheduled_time: data.scheduled_time || null,
-      game_type: data.game_type,
-      time_start: data.time_start ? etHHMMtoISO(data.time_start) : null,
-      time_end: data.time_end ? etHHMMtoISO(data.time_end) : null,
-    });
-    if (ok) setGameInfoEditOpen(false);
-  });
-
-  // ── Shots modal state ─────────────────────────────────────────────────────
-  type ShotsNextAction =
-    | { type: 'advance'; label: string; next: CurrentPeriod }
-    | { type: 'end-game' };
-
-  type ShotsModalFormValues = {
-    away_shots: string;
-    home_shots: string;
-    end_time: string;
-    goalies: Array<{ shots_against: string; saves: string }>;
-  };
-
+  // ── Record Shots modal state ──────────────────────────────────────────────
   const [shotsPeriod, setShotsPeriod] = useState<string | null>(null);
-  const [shotsSubmitting, setShotsSubmitting] = useState(false);
   const [shotsNextAction, setShotsNextAction] = useState<ShotsNextAction | null>(null);
   const [shotsShowGoalies, setShotsShowGoalies] = useState(false);
   const [shotsShowShootsFirst, setShotsShowShootsFirst] = useState(false);
-  /** Which team shoots first — 'away' | 'home' | null (only relevant when shotsShowShootsFirst) */
-  const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>(null);
-  // goalie player_ids in the same order as shotsGoalieFields for cross-referencing
-  const [shotsGoalieIds, setShotsGoalieIds] = useState<string[]>([]);
-
-  const {
-    control: shotsControl,
-    reset: resetShotsForm,
-    getValues: getShotsFormValues,
-    watch: watchShots,
-  } = useForm<ShotsModalFormValues>({
-    defaultValues: { away_shots: '', home_shots: '', end_time: '', goalies: [] },
-  });
-  const { fields: shotsGoalieFields } = useFieldArray({ control: shotsControl, name: 'goalies' });
 
   const openShotsModal = (
     period: string,
@@ -603,155 +412,14 @@ const GameDetailsPage = () => {
     showGoalies: boolean,
     showShootsFirst = false,
   ) => {
-    if (!game) return;
-    const existing = game.period_shots.find((ps) => ps.period === period);
-    const goalies = showGoalies
-      ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
-      : [];
-    resetShotsForm({
-      away_shots: existing ? String(existing.away_shots) : '',
-      home_shots: existing ? String(existing.home_shots) : '',
-      end_time: '',
-      goalies: goalies.map((g) => {
-        const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-        return {
-          shots_against: stat ? String(stat.shots_against) : '',
-          saves: stat ? String(stat.saves) : '',
-        };
-      }),
-    });
-    setShotsGoalieIds(goalies.map((g) => g.player_id));
     setShotsNextAction(nextAction);
     setShotsShowGoalies(showGoalies);
     setShotsShowShootsFirst(showShootsFirst);
-    setSoFirstTeam(null);
     setShotsPeriod(period);
   };
 
-  const handleShotsConfirm = async () => {
-    if (!shotsPeriod || !shotsNextAction || !game) return;
-    const { away_shots, home_shots, end_time, goalies: goalieFormValues } = getShotsFormValues();
-    const isSOEndGame = shotsPeriod === 'SO' && shotsNextAction.type === 'end-game';
-    setShotsSubmitting(true);
-    // Skip shots save for SO end-game — the period has no shot counts
-    if (!isSOEndGame) {
-      const away = parseInt(away_shots, 10);
-      const home = parseInt(home_shots, 10);
-      if (isNaN(away) || isNaN(home)) {
-        setShotsSubmitting(false);
-        return;
-      }
-      const ok = await updatePeriodShots(shotsPeriod, home, away);
-      if (!ok) {
-        setShotsSubmitting(false);
-        return;
-      }
-    }
-    if (shotsShowGoalies) {
-      const rosterGoalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
-      for (let i = 0; i < shotsGoalieIds.length; i++) {
-        const goalieId = shotsGoalieIds[i];
-        const formVal = goalieFormValues[i];
-        if (!formVal) continue;
-        const shots = parseInt(formVal.shots_against, 10);
-        const saves = parseInt(formVal.saves, 10);
-        if (!isNaN(shots) && !isNaN(saves)) {
-          const entry = rosterGoalies.find((g) => g.player_id === goalieId);
-          if (entry) {
-            await upsertGoalieStat({
-              goalie_id: goalieId,
-              team_id: entry.team_id,
-              shots_against: shots,
-              saves,
-            });
-          }
-        }
-      }
-    }
-    // Save end time when ending the game
-    if (shotsNextAction.type === 'end-game' && end_time) {
-      await updateGameInfo({ time_end: etHHMMtoISO(end_time) });
-    }
-    // Save which team shoots first when advancing to the shootout
-    if (shotsShowShootsFirst && soFirstTeam) {
-      const firstTeamId = soFirstTeam === 'away' ? game.away_team_id : game.home_team_id;
-      await updateGameInfo({ shootout_first_team_id: firstTeamId });
-    }
-    setShotsSubmitting(false);
-    setShotsPeriod(null);
-    if (shotsNextAction.type === 'advance') {
-      advancePeriod(shotsNextAction.next);
-    } else {
-      setStar1Id('');
-      setStar2Id('');
-      setStar3Id('');
-      setStarsEditMode(false);
-      setEndGameReadyForStars(true);
-      setStarsModalOpen(true);
-    }
-  };
-
-  // ── Goalie stats modal state ───────────────────────────────────────────────
-  type GoalieStatsFormValues = {
-    goalies: Array<{ shots_against: string; saves: string }>;
-  };
-
+  // ── Goalie stats edit modal ───────────────────────────────────────────────
   const [goalieStatsModalOpen, setGoalieStatsModalOpen] = useState(false);
-  const [goalieStatsGoalieIds, setGoalieStatsGoalieIds] = useState<string[]>([]);
-  const [goalieStatsSubmitting, setGoalieStatsSubmitting] = useState(false);
-
-  const {
-    control: goalieStatsControl,
-    reset: resetGoalieStatsForm,
-    getValues: getGoalieStatsFormValues,
-  } = useForm<GoalieStatsFormValues>({ defaultValues: { goalies: [] } });
-  const { fields: goalieStatsFields } = useFieldArray({
-    control: goalieStatsControl,
-    name: 'goalies',
-  });
-
-  const openGoalieStatsModal = () => {
-    if (!game) return;
-    const allGoalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
-    resetGoalieStatsForm({
-      goalies: allGoalies.map((g) => {
-        const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-        return {
-          shots_against: stat ? String(stat.shots_against) : '',
-          saves: stat ? String(stat.saves) : '',
-        };
-      }),
-    });
-    setGoalieStatsGoalieIds(allGoalies.map((g) => g.player_id));
-    setGoalieStatsModalOpen(true);
-  };
-
-  const handleGoalieStatsConfirm = async () => {
-    if (!game) return;
-    const { goalies: goalieFormValues } = getGoalieStatsFormValues();
-    const rosterGoalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
-    setGoalieStatsSubmitting(true);
-    for (let i = 0; i < goalieStatsGoalieIds.length; i++) {
-      const goalieId = goalieStatsGoalieIds[i];
-      const formVal = goalieFormValues[i];
-      if (!formVal) continue;
-      const shots = parseInt(formVal.shots_against, 10);
-      const saves = parseInt(formVal.saves, 10);
-      if (!isNaN(shots) && !isNaN(saves)) {
-        const entry = rosterGoalies.find((g) => g.player_id === goalieId);
-        if (entry) {
-          await upsertGoalieStat({
-            goalie_id: goalieId,
-            team_id: entry.team_id,
-            shots_against: shots,
-            saves,
-          });
-        }
-      }
-    }
-    setGoalieStatsSubmitting(false);
-    setGoalieStatsModalOpen(false);
-  };
 
   // Season rosters — used as player pool for "Add from Roster" / "Create Player" modals
   const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
@@ -821,41 +489,18 @@ const GameDetailsPage = () => {
   };
 
   const openGoalModal = (period: 1 | 2 | 3 | 'OT' | 'SO') => {
-    setGoalEditId(null);
+    setEditGoal(null);
     setGoalPeriod(String(period));
-    setGoalTeam('away');
-    setGoalPeriodTime('');
-    setGoalType('even-strength');
-    setGoalEmptyNet(false);
-    setGoalScorerId('');
-    setGoalAssist1Id('');
-    setGoalAssist2Id('');
   };
 
   const openEditGoalModal = (goal: GoalRecord) => {
-    if (!game) return;
-    setGoalEditId(goal.id);
+    setEditGoal(goal);
     setGoalPeriod(goal.period);
-    setGoalTeam(goal.team_id === game.away_team_id ? 'away' : 'home');
-    setGoalPeriodTime(goal.period_time ?? '');
-    // Legacy 'empty-net' goal_type → treat as even-strength + empty_net flag
-    setGoalType(goal.goal_type === 'empty-net' ? 'even-strength' : goal.goal_type);
-    setGoalEmptyNet(goal.empty_net || goal.goal_type === 'empty-net');
-    setGoalScorerId(goal.scorer_id);
-    setGoalAssist1Id(goal.assist_1_id ?? '');
-    setGoalAssist2Id(goal.assist_2_id ?? '');
   };
 
   const closeGoalModal = () => {
     setGoalPeriod(null);
-    setGoalEditId(null);
-  };
-
-  const handleTeamChange = (team: 'away' | 'home') => {
-    setGoalTeam(team);
-    setGoalScorerId('');
-    setGoalAssist1Id('');
-    setGoalAssist2Id('');
+    setEditGoal(null);
   };
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
@@ -1182,9 +827,6 @@ const GameDetailsPage = () => {
                                   size="sm"
                                   tooltip="Edit three stars"
                                   onClick={() => {
-                                    setStar1Id(game.star_1_id ?? '');
-                                    setStar2Id(game.star_2_id ?? '');
-                                    setStar3Id(game.star_3_id ?? '');
                                     setStarsEditMode(true);
                                     setStarsModalOpen(true);
                                   }}
@@ -2061,7 +1703,7 @@ const GameDetailsPage = () => {
                                   icon="edit"
                                   size="sm"
                                   tooltip="Edit goalie stats"
-                                  onClick={openGoalieStatsModal}
+                                  onClick={() => setGoalieStatsModalOpen(true)}
                                 />
                               ) : undefined
                             }
@@ -2535,7 +2177,7 @@ const GameDetailsPage = () => {
                               icon="edit"
                               size="sm"
                               tooltip="Edit shots"
-                              onClick={openShotsEditModal}
+                              onClick={() => setShotsEditModalOpen(true)}
                             />
                           ) : undefined
                         }
@@ -2893,7 +2535,7 @@ const GameDetailsPage = () => {
                   ) : inheritedEntries.length > 0 ? (
                     <div className={styles.autoFillBanner}>
                       <p className={styles.autoFillBannerText}>
-                        {inheritedEntries.length} players available from last game's lineup
+                        {inheritedEntries.length} players available from last game&apos;s lineup
                       </p>
                       <Button
                         intent="accent"
@@ -2957,395 +2599,37 @@ const GameDetailsPage = () => {
       />
 
       {/* ── Score Goal Form ── */}
-      {(() => {
-        const teamRoster = goalTeam === 'away' ? awayRoster : homeRoster;
-        const playerOptions = teamRoster.map((e) => ({
-          value: e.player_id,
-          label:
-            e.jersey_number != null
-              ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
-              : `${e.first_name} ${e.last_name}`,
-        }));
-
-        return (
-          <Modal
-            open={goalPeriod !== null}
-            title={goalEditId ? 'Edit Goal' : 'Score Goal'}
-            onClose={closeGoalModal}
-            confirmLabel={goalSubmitting ? 'Saving…' : goalEditId ? 'Save Changes' : 'Record Goal'}
-            confirmDisabled={!!busy || goalSubmitting || !goalScorerId}
-            busy={goalSubmitting}
-            onConfirm={async () => {
-              if (!goalPeriod || !game) return;
-              const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
-              const periodTime = goalPeriodTime || '00:00';
-              setGoalSubmitting(true);
-              try {
-                const payload = {
-                  team_id: teamId,
-                  period: goalPeriod,
-                  goal_type: goalType,
-                  empty_net: goalEmptyNet,
-                  period_time: periodTime,
-                  scorer_id: goalScorerId,
-                  assist_1_id: goalAssist1Id || null,
-                  assist_2_id: goalAssist2Id || null,
-                };
-                if (goalEditId) {
-                  await updateGoal(goalEditId, payload);
-                } else {
-                  await addGoal(payload);
-                }
-                closeGoalModal();
-              } finally {
-                setGoalSubmitting(false);
-              }
-            }}
-          >
-            <div className={styles.goalForm}>
-              {/* Team segmented control */}
-              <div className={styles.teamSegment}>
-                <button
-                  type="button"
-                  className={[
-                    styles.teamSegmentBtn,
-                    goalTeam === 'away' ? styles.teamSegmentBtnActive : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  disabled={goalSubmitting}
-                  onClick={() => handleTeamChange('away')}
-                >
-                  {game.away_team_logo ? (
-                    <img
-                      src={game.away_team_logo}
-                      alt={game.away_team_code}
-                      className={styles.teamSegmentLogo}
-                    />
-                  ) : (
-                    <span
-                      className={styles.teamSegmentLogoPlaceholder}
-                      style={{
-                        background: game.away_team_primary_color,
-                        color: game.away_team_text_color,
-                      }}
-                    >
-                      {game.away_team_code.slice(0, 1)}
-                    </span>
-                  )}
-                  {game.away_team_code}
-                </button>
-                <button
-                  type="button"
-                  className={[
-                    styles.teamSegmentBtn,
-                    goalTeam === 'home' ? styles.teamSegmentBtnActive : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  disabled={goalSubmitting}
-                  onClick={() => handleTeamChange('home')}
-                >
-                  {game.home_team_logo ? (
-                    <img
-                      src={game.home_team_logo}
-                      alt={game.home_team_code}
-                      className={styles.teamSegmentLogo}
-                    />
-                  ) : (
-                    <span
-                      className={styles.teamSegmentLogoPlaceholder}
-                      style={{
-                        background: game.home_team_primary_color,
-                        color: game.home_team_text_color,
-                      }}
-                    >
-                      {game.home_team_code.slice(0, 1)}
-                    </span>
-                  )}
-                  {game.home_team_code}
-                </button>
-              </div>
-
-              {/* Period time + Goal type row */}
-              <div className={styles.goalFormTimeRow}>
-                {/* Period time — MM:SS duration picker */}
-                <div className={`${styles.goalFormField} ${styles.goalPeriodTimeField}`}>
-                  <label className={styles.goalFormLabel}>
-                    Period Time <span className={styles.required}>*</span>
-                  </label>
-                  <TimePicker
-                    mode="duration"
-                    value={goalPeriodTime}
-                    onChange={setGoalPeriodTime}
-                    disabled={goalSubmitting}
-                    autoFocus
-                  />
-                </div>
-
-                {/* Goal type */}
-                <div className={`${styles.goalFormField} ${styles.goalTypeField}`}>
-                  <label className={styles.goalFormLabel}>Goal Type</label>
-                  <Select
-                    value={goalType}
-                    options={GOAL_TYPES}
-                    onChange={setGoalType}
-                    disabled={goalSubmitting}
-                  />
-                </div>
-
-                {/* Empty Net toggle — hidden for penalty shot / own goal */}
-                {goalType !== 'penalty-shot' && goalType !== 'own' && (
-                  <div className={styles.goalFormField}>
-                    <label className={styles.goalFormLabel}>EN</label>
-                    <button
-                      type="button"
-                      className={[
-                        styles.emptyNetToggle,
-                        goalEmptyNet ? styles.emptyNetToggleOn : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      onClick={() => setGoalEmptyNet((v) => !v)}
-                      disabled={goalSubmitting}
-                      title="Empty Net"
-                    >
-                      <Icon
-                        name={goalEmptyNet ? 'check_box' : 'check_box_outline_blank'}
-                        size="1.25rem"
-                      />
-                    </button>
-                  </div>
-                )}
-              </div>
-
-              {/* Scorer */}
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>
-                  Scorer <span className={styles.required}>*</span>
-                </label>
-                <Select
-                  value={goalScorerId || null}
-                  options={playerOptions}
-                  placeholder="— Select scorer —"
-                  onChange={setGoalScorerId}
-                  searchable
-                  disabled={goalSubmitting}
-                />
-              </div>
-
-              {/* Assists row */}
-              <div className={styles.goalFormRow}>
-                <div className={styles.goalFormField}>
-                  <label className={styles.goalFormLabel}>1st Assist</label>
-                  <Select
-                    value={goalAssist1Id || null}
-                    options={playerOptions}
-                    placeholder="— Optional —"
-                    onChange={setGoalAssist1Id}
-                    searchable
-                    disabled={goalSubmitting}
-                  />
-                </div>
-                <div className={styles.goalFormField}>
-                  <label className={styles.goalFormLabel}>2nd Assist</label>
-                  <Select
-                    value={goalAssist2Id || null}
-                    options={playerOptions}
-                    placeholder="— Optional —"
-                    onChange={setGoalAssist2Id}
-                    searchable
-                    disabled={goalSubmitting}
-                  />
-                </div>
-              </div>
-            </div>
-          </Modal>
-        );
-      })()}
+      {goalPeriod !== null && game && (
+        <ScoreGoalModal
+          open={goalPeriod !== null}
+          period={goalPeriod}
+          editGoal={editGoal}
+          game={game}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          busy={!!busy}
+          onClose={closeGoalModal}
+          onAdd={addGoal}
+          onUpdate={updateGoal}
+        />
+      )}
 
       {/* ── Add / Edit Shootout Attempt ── */}
-      {(() => {
-        if (!game) return null;
-        const isEditMode = attemptModalMode !== null && attemptModalMode !== 'add';
-        const attemptRoster =
-          attemptTeam === 'away'
-            ? awayRoster.filter((e) => e.position !== 'G')
-            : homeRoster.filter((e) => e.position !== 'G');
-        const shooterOptions = attemptRoster.map((e) => ({
-          value: e.player_id,
-          label:
-            e.jersey_number != null
-              ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
-              : `${e.first_name} ${e.last_name}`,
-        }));
-        const attemptTeamName = attemptTeam === 'away' ? game.away_team_name : game.home_team_name;
-        return (
-          <Modal
-            open={attemptModalMode !== null}
-            title={isEditMode ? 'Edit Attempt' : `Add Attempt — ${attemptTeamName}`}
-            onClose={closeAttemptModal}
-            confirmLabel={
-              attemptSubmitting ? 'Saving…' : isEditMode ? 'Save Changes' : 'Record Attempt'
-            }
-            confirmDisabled={!!busy || attemptSubmitting || !attemptShooterId}
-            busy={attemptSubmitting}
-            onConfirm={async () => {
-              if (!game) return;
-              setAttemptSubmitting(true);
-              try {
-                const teamId = attemptTeam === 'away' ? game.away_team_id : game.home_team_id;
-                if (isEditMode) {
-                  await updateAttempt(attemptModalMode as string, {
-                    team_id: teamId,
-                    shooter_id: attemptShooterId,
-                    scored: attemptScored,
-                  });
-                } else {
-                  await addAttempt({
-                    team_id: teamId,
-                    shooter_id: attemptShooterId,
-                    scored: attemptScored,
-                  });
-                }
-                closeAttemptModal();
-              } finally {
-                setAttemptSubmitting(false);
-              }
-            }}
-          >
-            <div className={styles.goalForm}>
-              {/* In edit mode show team selector; in add mode team is auto-determined */}
-              {isEditMode && (
-                <div className={styles.teamSegment}>
-                  <button
-                    type="button"
-                    className={[
-                      styles.teamSegmentBtn,
-                      attemptTeam === 'away' ? styles.teamSegmentBtnActive : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    disabled={attemptSubmitting}
-                    onClick={() => {
-                      setAttemptTeam('away');
-                      setAttemptShooterId('');
-                    }}
-                  >
-                    {game.away_team_logo ? (
-                      <img
-                        src={game.away_team_logo}
-                        alt={game.away_team_code}
-                        className={styles.teamSegmentLogo}
-                      />
-                    ) : (
-                      <span
-                        className={styles.teamSegmentLogoPlaceholder}
-                        style={{
-                          background: game.away_team_primary_color,
-                          color: game.away_team_text_color,
-                        }}
-                      >
-                        {game.away_team_code.slice(0, 1)}
-                      </span>
-                    )}
-                    {game.away_team_code}
-                  </button>
-                  <button
-                    type="button"
-                    className={[
-                      styles.teamSegmentBtn,
-                      attemptTeam === 'home' ? styles.teamSegmentBtnActive : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    disabled={attemptSubmitting}
-                    onClick={() => {
-                      setAttemptTeam('home');
-                      setAttemptShooterId('');
-                    }}
-                  >
-                    {game.home_team_logo ? (
-                      <img
-                        src={game.home_team_logo}
-                        alt={game.home_team_code}
-                        className={styles.teamSegmentLogo}
-                      />
-                    ) : (
-                      <span
-                        className={styles.teamSegmentLogoPlaceholder}
-                        style={{
-                          background: game.home_team_primary_color,
-                          color: game.home_team_text_color,
-                        }}
-                      >
-                        {game.home_team_code.slice(0, 1)}
-                      </span>
-                    )}
-                    {game.home_team_code}
-                  </button>
-                </div>
-              )}
-
-              {/* Shooter */}
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>
-                  Shooter <span className={styles.required}>*</span>
-                </label>
-                <Select
-                  options={shooterOptions}
-                  value={attemptShooterId}
-                  onChange={setAttemptShooterId}
-                  placeholder="Select shooter…"
-                  searchable
-                  disabled={attemptSubmitting}
-                />
-              </div>
-
-              {/* Scored toggle */}
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>Result</label>
-                <div className={styles.teamSegment}>
-                  <button
-                    type="button"
-                    className={[
-                      styles.teamSegmentBtn,
-                      !attemptScored ? styles.teamSegmentBtnActive : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    disabled={attemptSubmitting}
-                    onClick={() => setAttemptScored(false)}
-                  >
-                    <Icon
-                      name="cancel"
-                      size="1rem"
-                    />
-                    Miss
-                  </button>
-                  <button
-                    type="button"
-                    className={[
-                      styles.teamSegmentBtn,
-                      attemptScored ? styles.teamSegmentBtnActive : '',
-                    ]
-                      .filter(Boolean)
-                      .join(' ')}
-                    disabled={attemptSubmitting}
-                    onClick={() => setAttemptScored(true)}
-                  >
-                    <Icon
-                      name="check_circle"
-                      size="1rem"
-                    />
-                    Goal
-                  </button>
-                </div>
-              </div>
-            </div>
-          </Modal>
-        );
-      })()}
+      {game && (
+        <ShootoutAttemptModal
+          mode={attemptModalMode}
+          initialTeam={attemptInitialTeam}
+          initialShooterId={attemptInitialShooterId}
+          initialScored={attemptInitialScored}
+          game={game}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          busy={!!busy}
+          onClose={closeAttemptModal}
+          onAdd={addAttempt}
+          onUpdate={updateAttempt}
+        />
+      )}
 
       {/* ── Lineup: Add from Roster ── */}
       {lineupAddTeam !== null && game && (
@@ -3417,701 +2701,107 @@ const GameDetailsPage = () => {
         })()}
 
       {/* ── Lineup: Remove from Lineup (confirm) ── */}
-      <ConfirmModal
-        open={!!confirmRemove}
-        title="Remove from Lineup"
-        body={
-          confirmRemove ? (
-            <>
-              Remove{' '}
-              <strong>
-                {confirmRemove.entry.first_name} {confirmRemove.entry.last_name}
-              </strong>{' '}
-              from this game&apos;s lineup?
-            </>
-          ) : (
-            ''
-          )
-        }
-        confirmLabel="Remove"
-        confirmIcon="person_remove"
-        variant="danger"
+      <RemoveFromLineupModal
+        entry={confirmRemove?.entry ?? null}
         busy={removingFromRoster}
         onConfirm={handleConfirmRemove}
         onCancel={() => setConfirmRemove(null)}
       />
 
       {/* ── Start Game modal ── */}
-      <Modal
+      <StartGameModal
         open={startGameModalOpen}
-        title="Start Game"
+        isStarting={busy === 'in_progress'}
+        disabled={!!busy}
         onClose={() => setStartGameModalOpen(false)}
-        confirmLabel={startGameSubmitting || busy === 'in_progress' ? 'Starting…' : 'Start Game'}
-        confirmIcon="play_arrow"
-        confirmIntent="success"
-        confirmForm="start-game-form"
-        confirmDisabled={startGameSubmitting || !!busy}
-        busy={startGameSubmitting || busy === 'in_progress'}
-      >
-        <form
-          id="start-game-form"
-          className={styles.goalForm}
-          onSubmit={onStartGameSubmit}
-        >
-          <Field
-            label="Start Time"
-            type="timepicker"
-            control={startGameControl}
-            name="start_time"
-            placeholder="Select time…"
-            autoFocus
-          />
-        </form>
-      </Modal>
+        onStart={startGame}
+      />
 
       {/* ── Game Info edit modal ── */}
-      <Modal
+      <GameInfoEditModal
         open={gameInfoEditOpen}
-        title="Edit Game Info"
+        game={game}
+        isSaving={busy === 'update-info'}
+        disabled={!!busy}
         onClose={() => setGameInfoEditOpen(false)}
-        confirmLabel={gameInfoSubmitting || busy === 'update-info' ? 'Saving…' : 'Save'}
-        confirmForm="game-info-edit-form"
-        confirmDisabled={gameInfoSubmitting || !!busy}
-        busy={gameInfoSubmitting || busy === 'update-info'}
-      >
-        <form
-          id="game-info-edit-form"
-          className={styles.formGrid}
-          onSubmit={onGameInfoSubmit}
-        >
-          {/* Row 1 — Game Type (full width) */}
-          <div className={styles.formFieldFull}>
-            <Field
-              label="Game Type"
-              type="select"
-              control={gameInfoControl}
-              name="game_type"
-              options={GAME_TYPE_OPTIONS}
-              disabled={gameInfoSubmitting}
-            />
-          </div>
-          {/* Row 2 — Date | Scheduled Time */}
-          <Field
-            label="Date"
-            type="datepicker"
-            control={gameInfoControl}
-            name="scheduled_date"
-            placeholder="Select date…"
-            autoFocus
-          />
-          <Field
-            label="Scheduled Time"
-            type="timepicker"
-            control={gameInfoControl}
-            name="scheduled_time"
-          />
-          {/* Row 3 — Start Time | End Time */}
-          <Field
-            label="Start Time"
-            type="timepicker"
-            control={gameInfoControl}
-            name="time_start"
-            disabled={gameInfoSubmitting || game.status === 'scheduled'}
-          />
-          <Field
-            label="End Time"
-            type="timepicker"
-            control={gameInfoControl}
-            name="time_end"
-            disabled={gameInfoSubmitting || game.status !== 'final'}
-          />
-          {/* Row 4 — Venue (full width) */}
-          <div className={styles.formFieldFull}>
-            <Field
-              label="Venue"
-              control={gameInfoControl}
-              name="venue"
-              placeholder="e.g. Scotiabank Arena"
-              disabled={gameInfoSubmitting}
-            />
-          </div>
-        </form>
-      </Modal>
+        onSave={updateGameInfo}
+      />
 
       {/* ── 3 Stars modal ── */}
-      {(() => {
-        const allPlayerOptions = roster.map((e) => ({
-          value: e.player_id,
-          label:
-            e.jersey_number != null
-              ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
-              : `${e.first_name} ${e.last_name}`,
-        }));
-        const canConfirm = !!star1Id && !!star2Id && !!star3Id;
-        return (
-          <Modal
-            open={starsModalOpen}
-            title={starsEditMode ? 'Edit Three Stars' : 'End Game — 3 Stars'}
-            onClose={() => setStarsModalOpen(false)}
-            confirmLabel={starsEditMode ? (busy ? 'Saving…' : 'Save') : 'End Game'}
-            confirmIcon={starsEditMode ? 'save' : undefined}
-            confirmDisabled={!canConfirm || !!busy}
-            onConfirm={async () => {
-              if (starsEditMode) {
-                const ok = await updateStars({ star1: star1Id, star2: star2Id, star3: star3Id });
-                if (ok) setStarsModalOpen(false);
-              } else {
-                const ok = await endGame({ star1: star1Id, star2: star2Id, star3: star3Id });
-                if (ok) {
-                  setEndGameReadyForStars(false);
-                  setStarsModalOpen(false);
-                }
+      <ThreeStarsModal
+        open={starsModalOpen}
+        editMode={starsEditMode}
+        roster={roster}
+        busy={!!busy}
+        initialStars={
+          starsEditMode && game
+            ? {
+                star1: game.star_1_id ?? '',
+                star2: game.star_2_id ?? '',
+                star3: game.star_3_id ?? '',
               }
-            }}
-          >
-            <div className={styles.goalForm}>
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>1st Star</label>
-                <Select
-                  value={star1Id || null}
-                  options={allPlayerOptions}
-                  placeholder="— Select player —"
-                  onChange={setStar1Id}
-                  searchable
-                  disabled={!!busy}
-                />
-              </div>
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>2nd Star</label>
-                <Select
-                  value={star2Id || null}
-                  options={allPlayerOptions}
-                  placeholder="— Select player —"
-                  onChange={setStar2Id}
-                  searchable
-                  disabled={!!busy}
-                />
-              </div>
-              <div className={styles.goalFormField}>
-                <label className={styles.goalFormLabel}>3rd Star</label>
-                <Select
-                  value={star3Id || null}
-                  options={allPlayerOptions}
-                  placeholder="— Select player —"
-                  onChange={setStar3Id}
-                  searchable
-                  disabled={!!busy}
-                />
-              </div>
-            </div>
-          </Modal>
-        );
-      })()}
+            : undefined
+        }
+        onClose={() => setStarsModalOpen(false)}
+        onSave={updateStars}
+        onEndGame={async (payload) => {
+          const ok = await endGame(payload);
+          if (ok) setEndGameReadyForStars(false);
+          return ok;
+        }}
+      />
 
       {/* ── Record Shots modal ── */}
-      {shotsPeriod !== null &&
-        game &&
-        (() => {
-          const isEndGame = shotsNextAction?.type === 'end-game';
-
-          const shotsConfirmLabel = shotsSubmitting
-            ? 'Saving…'
-            : isEndGame
-              ? 'Award Three Stars'
-              : (shotsNextAction?.label ?? 'Confirm');
-
-          // Reactive form values for validation
-          const goalieFormValues = watchShots('goalies');
-          const endTimeValue = watchShots('end_time');
-
-          const teamRows = [
-            {
-              key: 'away',
-              logo: game.away_team_logo,
-              code: game.away_team_code,
-              name: game.away_team_name,
-              primaryColor: game.away_team_primary_color,
-              textColor: game.away_team_text_color,
-              fieldName: 'away_shots' as const,
-            },
-            {
-              key: 'home',
-              logo: game.home_team_logo,
-              code: game.home_team_code,
-              name: game.home_team_name,
-              primaryColor: game.home_team_primary_color,
-              textColor: game.home_team_text_color,
-              fieldName: 'home_shots' as const,
-            },
-          ];
-
-          const goalieRosterList = shotsShowGoalies
-            ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
-            : [];
-
-          // Goalie validation: at least 1 goalie per team must have both SA and SV filled
-          const goalieStatsValid =
-            !shotsShowGoalies ||
-            goalieRosterList.length === 0 ||
-            (goalieRosterList.some(
-              (g, i) =>
-                g.team_id === game.away_team_id &&
-                goalieFormValues[i]?.shots_against !== '' &&
-                goalieFormValues[i]?.saves !== '',
-            ) &&
-              goalieRosterList.some(
-                (g, i) =>
-                  g.team_id === game.home_team_id &&
-                  goalieFormValues[i]?.shots_against !== '' &&
-                  goalieFormValues[i]?.saves !== '',
-              ));
-
-          const endTimeValid = !isEndGame || !!endTimeValue;
-          const shootsFirstValid = !shotsShowShootsFirst || !!soFirstTeam;
-
-          const modalTitle = shotsShowShootsFirst
-            ? 'Go To Shootout'
-            : isEndGame
-              ? 'End Game'
-              : `Record Shots — ${PERIOD_LABEL[shotsPeriod] ?? shotsPeriod} Period`;
-
-          return (
-            <Modal
-              open={shotsPeriod !== null}
-              title={modalTitle}
-              onClose={() => setShotsPeriod(null)}
-              confirmLabel={shotsConfirmLabel}
-              confirmIcon={isEndGame ? 'star' : 'flag'}
-              onConfirm={handleShotsConfirm}
-              confirmDisabled={
-                shotsSubmitting || !goalieStatsValid || !endTimeValid || !shootsFirstValid
-              }
-              busy={shotsSubmitting}
-            >
-              <div className={styles.shotsModalBody}>
-                {/* End Time — required when ending the game */}
-                {isEndGame && (
-                  <Field
-                    label="End Time"
-                    required
-                    type="timepicker"
-                    control={shotsControl}
-                    name="end_time"
-                    disabled={shotsSubmitting}
-                    autoFocus
-                  />
-                )}
-
-                {/* Period Shots — hidden when ending a shootout (SO has no shot counts) */}
-                {!(isEndGame && shotsPeriod === 'SO') && (
-                  <>
-                    <hr className={styles.lineupDivider} />
-                    <div className={styles.shotsGoalieHeader}>
-                      <span className={styles.goalFormLabel}>Period Shots</span>
-                      <span className={styles.shotsSectionColLabel}>SOG</span>
-                    </div>
-
-                    {teamRows.map((row, rowIdx) => (
-                      <div
-                        key={row.key}
-                        className={styles.shotsTeamRow}
-                      >
-                        <span className={styles.shotsTeamInfo}>
-                          {row.logo ? (
-                            <img
-                              src={row.logo}
-                              alt={row.code}
-                              className={styles.shotsTeamLogo}
-                            />
-                          ) : (
-                            <span
-                              className={styles.shotsTeamLogoPlaceholder}
-                              style={{ background: row.primaryColor, color: row.textColor }}
-                            >
-                              {row.code?.slice(0, 1)}
-                            </span>
-                          )}
-                          <span className={styles.shotsTeamName}>{row.name}</span>
-                        </span>
-                        <div className={styles.shotsFieldWrap}>
-                          <Field
-                            type="number"
-                            control={shotsControl}
-                            name={row.fieldName}
-                            placeholder="0"
-                            min={0}
-                            disabled={shotsSubmitting}
-                            transform={(v) => v.replace(/[^0-9]/g, '')}
-                            autoFocus={!isEndGame && rowIdx === 0}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                  </>
-                )}
-
-                {/* Who Shoots First — only shown when advancing to shootout */}
-                {shotsShowShootsFirst && (
-                  <>
-                    <hr className={styles.lineupDivider} />
-                    <span className={styles.goalFormLabel}>Who Shoots First</span>
-                    <div className={styles.teamSegment}>
-                      {/* Away team */}
-                      <button
-                        type="button"
-                        className={[
-                          styles.teamSegmentBtn,
-                          soFirstTeam === 'away' ? styles.teamSegmentBtnActive : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                        disabled={shotsSubmitting}
-                        onClick={() => setSoFirstTeam('away')}
-                      >
-                        {game.away_team_logo ? (
-                          <img
-                            src={game.away_team_logo}
-                            alt={game.away_team_code}
-                            className={styles.teamSegmentLogo}
-                          />
-                        ) : (
-                          <span
-                            className={styles.teamSegmentLogoPlaceholder}
-                            style={{
-                              background: game.away_team_primary_color,
-                              color: game.away_team_text_color,
-                            }}
-                          >
-                            {game.away_team_code.slice(0, 1)}
-                          </span>
-                        )}
-                        {game.away_team_code}
-                      </button>
-                      {/* Home team */}
-                      <button
-                        type="button"
-                        className={[
-                          styles.teamSegmentBtn,
-                          soFirstTeam === 'home' ? styles.teamSegmentBtnActive : '',
-                        ]
-                          .filter(Boolean)
-                          .join(' ')}
-                        disabled={shotsSubmitting}
-                        onClick={() => setSoFirstTeam('home')}
-                      >
-                        {game.home_team_logo ? (
-                          <img
-                            src={game.home_team_logo}
-                            alt={game.home_team_code}
-                            className={styles.teamSegmentLogo}
-                          />
-                        ) : (
-                          <span
-                            className={styles.teamSegmentLogoPlaceholder}
-                            style={{
-                              background: game.home_team_primary_color,
-                              color: game.home_team_text_color,
-                            }}
-                          >
-                            {game.home_team_code.slice(0, 1)}
-                          </span>
-                        )}
-                        {game.home_team_code}
-                      </button>
-                    </div>
-                  </>
-                )}
-
-                {goalieRosterList.length > 0 && (
-                  <>
-                    <hr className={styles.lineupDivider} />
-                    {/* Header row: title on left, SA/SV column labels aligned with inputs */}
-                    <div className={styles.shotsGoalieHeader}>
-                      <span className={styles.goalFormLabel}>Goalie Stats</span>
-                      <div className={styles.shotsGoalieInputs}>
-                        <span className={styles.shotsGoalieColLabel}>SA</span>
-                        <span className={styles.shotsGoalieColLabel}>SV</span>
-                      </div>
-                    </div>
-                    {shotsGoalieFields.map((field, i) => {
-                      const goalie = goalieRosterList[i];
-                      if (!goalie) return null;
-                      const isAway = goalie.team_id === game.away_team_id;
-                      const logo = isAway ? game.away_team_logo : game.home_team_logo;
-                      const code = isAway ? game.away_team_code : game.home_team_code;
-                      const primary = isAway
-                        ? game.away_team_primary_color
-                        : game.home_team_primary_color;
-                      const text = isAway ? game.away_team_text_color : game.home_team_text_color;
-                      return (
-                        <div
-                          key={field.id}
-                          className={styles.shotsGoalieRow}
-                        >
-                          <span className={styles.goalieNameCell}>
-                            {/* Team logo */}
-                            {logo ? (
-                              <img
-                                src={logo}
-                                alt={code}
-                                className={styles.goalTeamLogo}
-                              />
-                            ) : (
-                              <span
-                                className={styles.goalTeamLogoPlaceholder}
-                                style={{ background: primary, color: text }}
-                              >
-                                {code?.slice(0, 1)}
-                              </span>
-                            )}
-                            {/* Player photo */}
-                            {goalie.photo ? (
-                              <img
-                                src={goalie.photo}
-                                alt=""
-                                className={styles.goalScorerPhoto}
-                              />
-                            ) : (
-                              <span
-                                className={styles.goalScorerPhotoPlaceholder}
-                                style={{ background: primary, color: text }}
-                              >
-                                {goalie.last_name?.charAt(0)}
-                              </span>
-                            )}
-                            {/* Jersey + name */}
-                            <div className={styles.goalInfo}>
-                              {goalie.jersey_number != null && (
-                                <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                              )}
-                              <span className={styles.goalScorer}>
-                                {formatPlayerName(goalie.first_name, goalie.last_name)}
-                              </span>
-                            </div>
-                          </span>
-                          <div className={styles.shotsGoalieInputs}>
-                            <Field
-                              type="number"
-                              control={shotsControl}
-                              name={`goalies.${i}.shots_against`}
-                              placeholder="0"
-                              min={0}
-                              disabled={shotsSubmitting}
-                              transform={(v) => v.replace(/[^0-9]/g, '')}
-                            />
-                            <Field
-                              type="number"
-                              control={shotsControl}
-                              name={`goalies.${i}.saves`}
-                              placeholder="0"
-                              min={0}
-                              disabled={shotsSubmitting}
-                              transform={(v) => v.replace(/[^0-9]/g, '')}
-                            />
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </>
-                )}
-              </div>
-            </Modal>
-          );
-        })()}
+      {shotsPeriod !== null && game && shotsNextAction && (
+        <RecordShotsModal
+          open={shotsPeriod !== null}
+          period={shotsPeriod}
+          nextAction={shotsNextAction}
+          showGoalies={shotsShowGoalies}
+          showShootsFirst={shotsShowShootsFirst}
+          game={game}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          goalieStats={goalieStats}
+          onClose={() => setShotsPeriod(null)}
+          updatePeriodShots={updatePeriodShots}
+          upsertGoalieStat={async (data) => {
+            await upsertGoalieStat(data);
+          }}
+          updateGameInfo={updateGameInfo}
+          onAdvancePeriod={advancePeriod}
+          onEndGameReady={() => {
+            setEndGameReadyForStars(true);
+            setStarsEditMode(false);
+            setStarsModalOpen(true);
+          }}
+        />
+      )}
 
       {/* ── Goalie Stats edit modal ── */}
       {goalieStatsModalOpen && game && (
-        <Modal
+        <GoalieStatsEditModal
           open={goalieStatsModalOpen}
-          title="Goalie Stats"
+          game={game}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          goalieStats={goalieStats}
           onClose={() => setGoalieStatsModalOpen(false)}
-          confirmLabel={goalieStatsSubmitting ? 'Saving…' : 'Save'}
-          onConfirm={handleGoalieStatsConfirm}
-          confirmDisabled={goalieStatsSubmitting}
-          busy={goalieStatsSubmitting}
-        >
-          <div className={styles.shotsModalBody}>
-            {/* Column headers */}
-            <div className={styles.shotsGoalieHeader}>
-              <span />
-              <div className={styles.shotsGoalieInputs}>
-                <span className={styles.shotsGoalieColLabel}>SA</span>
-                <span className={styles.shotsGoalieColLabel}>SV</span>
-              </div>
-            </div>
-            {goalieStatsFields.map((field, i) => {
-              const goalieId = goalieStatsGoalieIds[i];
-              const goalie = [...awayRoster, ...homeRoster].find((r) => r.player_id === goalieId);
-              if (!goalie) return null;
-              const isAway = goalie.team_id === game.away_team_id;
-              const logo = isAway ? game.away_team_logo : game.home_team_logo;
-              const code = isAway ? game.away_team_code : game.home_team_code;
-              const primary = isAway ? game.away_team_primary_color : game.home_team_primary_color;
-              const text = isAway ? game.away_team_text_color : game.home_team_text_color;
-              return (
-                <div
-                  key={field.id}
-                  className={styles.shotsGoalieRow}
-                >
-                  <span className={styles.goalieNameCell}>
-                    {/* Team logo */}
-                    {logo ? (
-                      <img
-                        src={logo}
-                        alt={code}
-                        className={styles.goalTeamLogo}
-                      />
-                    ) : (
-                      <span
-                        className={styles.goalTeamLogoPlaceholder}
-                        style={{ background: primary, color: text }}
-                      >
-                        {code?.slice(0, 1)}
-                      </span>
-                    )}
-                    {/* Player photo */}
-                    {goalie.photo ? (
-                      <img
-                        src={goalie.photo}
-                        alt=""
-                        className={styles.goalScorerPhoto}
-                      />
-                    ) : (
-                      <span
-                        className={styles.goalScorerPhotoPlaceholder}
-                        style={{ background: primary, color: text }}
-                      >
-                        {goalie.last_name?.charAt(0)}
-                      </span>
-                    )}
-                    {/* Jersey + name */}
-                    <div className={styles.goalInfo}>
-                      {goalie.jersey_number != null && (
-                        <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                      )}
-                      <span className={styles.goalScorer}>
-                        {formatPlayerName(goalie.first_name, goalie.last_name)}
-                      </span>
-                    </div>
-                  </span>
-                  <div className={styles.shotsGoalieInputs}>
-                    <Field
-                      type="number"
-                      control={goalieStatsControl}
-                      name={`goalies.${i}.shots_against`}
-                      placeholder="0"
-                      min={0}
-                      disabled={goalieStatsSubmitting}
-                      transform={(v) => v.replace(/[^0-9]/g, '')}
-                    />
-                    <Field
-                      type="number"
-                      control={goalieStatsControl}
-                      name={`goalies.${i}.saves`}
-                      placeholder="0"
-                      min={0}
-                      disabled={goalieStatsSubmitting}
-                      transform={(v) => v.replace(/[^0-9]/g, '')}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </Modal>
+          upsertGoalieStat={async (data) => {
+            await upsertGoalieStat(data);
+          }}
+        />
       )}
 
       {/* ── Shots edit modal (all periods) ── */}
       {shotsEditModalOpen && game && (
-        <Modal
+        <ShotsEditModal
           open={shotsEditModalOpen}
-          title="Edit Shots"
+          game={game}
+          periods={linescorePeriods}
           onClose={() => setShotsEditModalOpen(false)}
-          confirmLabel={shotsEditSubmitting ? 'Saving…' : 'Save'}
-          onConfirm={handleShotsEditConfirm}
-          confirmDisabled={shotsEditSubmitting}
-          busy={shotsEditSubmitting}
-        >
-          <table className={`${styles.periodsTable} ${styles.shotsEditTable}`}>
-            <thead>
-              <tr>
-                <th className={styles.thTeam}></th>
-                {shotsEditFields.map((field, i) => {
-                  const periodId = shotsEditPeriodIds[i];
-                  const label = linescorePeriods.find((p) => p.id === periodId)?.label ?? periodId;
-                  return (
-                    <th
-                      key={field.id}
-                      className={styles.thPeriod}
-                    >
-                      {label}
-                    </th>
-                  );
-                })}
-              </tr>
-            </thead>
-            <tbody>
-              {(
-                [
-                  {
-                    key: 'away',
-                    logo: game.away_team_logo,
-                    code: game.away_team_code,
-                    primary: game.away_team_primary_color,
-                    text: game.away_team_text_color,
-                    fieldKey: 'away_shots',
-                  },
-                  {
-                    key: 'home',
-                    logo: game.home_team_logo,
-                    code: game.home_team_code,
-                    primary: game.home_team_primary_color,
-                    text: game.home_team_text_color,
-                    fieldKey: 'home_shots',
-                  },
-                ] as const
-              ).map((row) => (
-                <tr key={row.key}>
-                  <td className={styles.tdTeam}>
-                    <span className={styles.linescoreTeam}>
-                      {row.logo ? (
-                        <img
-                          src={row.logo}
-                          alt={row.code}
-                          className={styles.linescoreLogo}
-                        />
-                      ) : (
-                        <span
-                          className={styles.linescoreLogoPlaceholder}
-                          style={{ background: row.primary, color: row.text }}
-                        >
-                          {row.code?.slice(0, 1)}
-                        </span>
-                      )}
-                      <span className={styles.linescoreCode}>{row.code}</span>
-                    </span>
-                  </td>
-                  {shotsEditFields.map((field, i) => (
-                    <td
-                      key={field.id}
-                      className={styles.tdShotsInput}
-                    >
-                      <Field
-                        type="number"
-                        control={shotsEditControl}
-                        name={`periods.${i}.${row.fieldKey}` as const}
-                        placeholder="0"
-                        min={0}
-                        disabled={shotsEditSubmitting}
-                        transform={(v) => v.replace(/[^0-9]/g, '')}
-                      />
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </Modal>
+          updatePeriodShots={updatePeriodShots}
+        />
       )}
     </>
   );
