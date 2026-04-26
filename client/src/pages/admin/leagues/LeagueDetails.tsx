@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
 import Button from '../../../components/Button/Button';
 import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
@@ -17,14 +17,15 @@ import TeamFormModal from '../teams/TeamFormModal';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useLeagueDetails, { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
 import useLeaguePlayers, { type PlayerRecord } from '../../../hooks/useLeaguePlayers';
+import useTabState from '../../../hooks/useTabState';
 import { type TeamRecord } from '../../../hooks/useTeams';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
   const navigate = useNavigate();
-  const { state } = useLocation();
   const { id } = useParams<{ id: string }>();
+  const [activeTab, handleTabChange] = useTabState('tab:league-details');
   const {
     league,
     teams,
@@ -114,7 +115,8 @@ const LeagueDetailsPage = () => {
       />
 
       <Tabs
-        defaultIndex={(state as { activeTab?: number } | null)?.activeTab ?? 0}
+        activeIndex={activeTab}
+        onTabChange={handleTabChange}
         tabs={[
           {
             label: 'Info',

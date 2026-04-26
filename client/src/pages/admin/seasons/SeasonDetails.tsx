@@ -10,6 +10,7 @@ import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeasonDetails';
 import { type SeasonRecord } from '../../../hooks/useSeasons';
+import useTabState from '../../../hooks/useTabState';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
@@ -32,6 +33,7 @@ const formatEndDate = (d: string | null, isCurrent: boolean) =>
 const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
   const navigate = useNavigate();
+  const [activeTab, handleTabChange] = useTabState('tab:season-details');
 
   const {
     season,
@@ -106,6 +108,8 @@ const SeasonDetailsPage = () => {
       />
 
       <Tabs
+        activeIndex={activeTab}
+        onTabChange={handleTabChange}
         tabs={[
           {
             label: 'Info',

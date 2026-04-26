@@ -29,6 +29,7 @@ import useGameLineup from '../../../hooks/useGameLineup';
 import useGameRoster, { type GameRosterEntry } from '../../../hooks/useGameRoster';
 import useGameGoals, { type GoalRecord } from '../../../hooks/useGameGoals';
 import useGameGoalieStats from '../../../hooks/useGameGoalieStats';
+import useTabState from '../../../hooks/useTabState';
 import LineupRosterModal from './LineupRosterModal';
 import LineupCreatePlayersModal from './LineupCreatePlayersModal';
 import SetLineupModal from './SetLineupModal';
@@ -202,6 +203,7 @@ const GameDetailsPage = () => {
   } = useGameDetails(id);
   const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(id);
   const { goalieStats, upsertGoalieStat } = useGameGoalieStats(id);
+  const [activeTab, handleTabChange] = useTabState('tab:game-details');
 
   /**
    * Running goal/assist tallies per player, computed once in goal order
@@ -963,6 +965,8 @@ const GameDetailsPage = () => {
 
       {/* ── Tabs ── */}
       <Tabs
+        activeIndex={activeTab}
+        onTabChange={handleTabChange}
         tabs={[
           {
             label: 'Summary',

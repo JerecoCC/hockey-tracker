@@ -5,6 +5,7 @@ import Tabs from '../../../components/Tabs/Tabs';
 import TitleRow from '../../../components/TitleRow/TitleRow';
 import useTeamDetails from '../../../hooks/useTeamDetails';
 import useLeagueGroups from '../../../hooks/useLeagueGroups';
+import useTabState from '../../../hooks/useTabState';
 import TeamInfoTab from './TeamInfoTab';
 import TeamGamesTab from './TeamGamesTab';
 import TeamRosterTab from './TeamRosterTab';
@@ -17,6 +18,7 @@ const TeamDetailsPage = () => {
   const { id, leagueId } = useParams<{ id: string; leagueId: string }>();
   const { team, loading, uploadLogo, updateTeam } = useTeamDetails(id);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
+  const [activeTab, handleTabChange] = useTabState('tab:team-details');
   const breadcrumbItems = [
     { label: 'Leagues', path: '/admin/leagues' },
     { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
@@ -48,13 +50,15 @@ const TeamDetailsPage = () => {
             intent="neutral"
             icon="arrow_back"
             tooltip={backTooltip}
-            onClick={() => navigate(backPath, { state: { activeTab: 1 } })}
+            onClick={() => navigate(backPath)}
           />
         }
         right={<Breadcrumbs items={breadcrumbItems} />}
       />
 
       <Tabs
+        activeIndex={activeTab}
+        onTabChange={handleTabChange}
         tabs={[
           {
             label: 'Info',
