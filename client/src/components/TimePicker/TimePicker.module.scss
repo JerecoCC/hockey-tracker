@@ -1,0 +1,212 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Wrapper ──────────────────────────────────────────────────────────────
+.wrapper {
+  position: relative;
+  width: 100%;
+}
+
+// ── Trigger ───────────────────────────────────────────────────────────────
+.trigger {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  width: 100%;
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  height: 42px;
+  padding: 0 $space-lg;
+  transition: border-color $transition-base;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+
+  &:hover {
+    border-color: lighten($border, 10%);
+  }
+}
+
+.triggerDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.clockIconBtn {
+  display: flex;
+  align-items: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:focus {
+    outline: none;
+  }
+}
+
+.clockIcon {
+  color: $text-dim;
+}
+
+.textInput {
+  flex: 1;
+  min-width: 0;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  font-family: inherit;
+  color: $text-body;
+  cursor: text;
+  letter-spacing: 0.03em;
+
+  &[data-empty="true"] {
+    color: $text-dim;
+  }
+}
+
+.clear {
+  color: $text-dim;
+  font-size: 1.1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  border-radius: $radius-sm;
+  transition: color $transition-fast;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $text-body;
+  }
+}
+
+// Reserve the clear button's space even when hidden so the trigger width never shifts
+.clearHidden {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+// ── Dropdown ─────────────────────────────────────────────────────────────
+.dropdown {
+  position: fixed;
+  z-index: 200;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  padding: $space-md $space-lg $space-lg;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+}
+
+// ── Two-column layout ─────────────────────────────────────────────────────
+.columns {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+}
+
+.columnWrap {
+  display: flex;
+  flex-direction: column;
+  width: 68px;
+}
+
+.columnLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-align: center;
+  padding-bottom: $space-sm;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  max-height: 192px;
+  overflow-y: auto;
+  gap: 2px;
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+  &::-webkit-scrollbar-thumb {
+    background: $border;
+    border-radius: 2px;
+  }
+}
+
+.columnDivider {
+  width: 1px;
+  background: $border;
+  margin: 0 $space-sm;
+  align-self: stretch;
+}
+
+.timeBtn {
+  background: none;
+  border: 1px solid transparent;
+  color: $text-body;
+  font-size: $font-sm;
+  font-family: inherit;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  padding: $space-xs 0;
+  text-align: center;
+  width: 100%;
+  flex-shrink: 0;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.07);
+    color: $text-bright;
+  }
+}
+
+.selected {
+  background: $accent;
+  color: #fff;
+  font-weight: 600;
+
+  &:hover {
+    background: $accent-hover;
+  }
+}
+
+// ── Footer ────────────────────────────────────────────────────────────────
+.footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: $space-md;
+  padding-top: $space-md;
+  border-top: 1px solid $border;
+}
+
+.footerBtn {
+  background: none;
+  border: none;
+  color: $accent-light;
+  font-size: $font-sm;
+  font-family: inherit;
+  cursor: pointer;
+  padding: 0 $space-xs;
+  border-radius: $radius-sm;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $text-bright;
+  }
+}
+
+.footerBtnClear {
+  color: $text-dim;
+}

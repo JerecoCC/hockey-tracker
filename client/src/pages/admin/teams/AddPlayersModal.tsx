@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Button from '../../../components/Button/Button';
 import Icon from '../../../components/Icon/Icon';
 import Modal from '../../../components/Modal/Modal';
 import Select, { type SelectOption } from '../../../components/Select/Select';
@@ -19,7 +18,7 @@ const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
-  D: 'Defenseman',
+  D: 'Defense',
   G: 'Goalie',
 };
 
@@ -124,6 +123,18 @@ const AddPlayersModal = ({
       title="Add Players to Roster"
       onClose={handleClose}
       size="lg"
+      onConfirm={handleSubmit}
+      confirmLabel={submitting ? 'Adding…' : 'Add to Roster'}
+      confirmIcon="group_add"
+      confirmDisabled={submitting || selectedCount === 0}
+      busy={submitting}
+      footerStart={
+        <span>
+          {selectedCount > 0
+            ? `${selectedCount} player${selectedCount !== 1 ? 's' : ''} selected`
+            : 'No players selected'}
+        </span>
+      }
     >
       <div className={styles.controls}>
         <div className={styles.searchWrap}>
@@ -138,6 +149,7 @@ const AddPlayersModal = ({
             placeholder="Search players…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            autoFocus
           />
         </div>
 
@@ -167,6 +179,8 @@ const AddPlayersModal = ({
                 image={p.photo}
                 imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
                 imageShape="circle"
+                imagePrimaryColor={p.primary_color}
+                imageTextColor={p.text_color}
                 name={`${p.first_name} ${p.last_name}`}
                 subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                 rightContent={
@@ -193,30 +207,6 @@ const AddPlayersModal = ({
           })}
         </ul>
       )}
-
-      <div className={styles.footer}>
-        <span className={styles.footerCount}>
-          {selectedCount > 0
-            ? `${selectedCount} player${selectedCount !== 1 ? 's' : ''} selected`
-            : 'No players selected'}
-        </span>
-        <Button
-          variant="outlined"
-          intent="neutral"
-          onClick={handleClose}
-          disabled={submitting}
-        >
-          Cancel
-        </Button>
-        <Button
-          intent="accent"
-          icon="group_add"
-          onClick={handleSubmit}
-          disabled={submitting || selectedCount === 0}
-        >
-          {submitting ? 'Adding…' : 'Add to Roster'}
-        </Button>
-      </div>
     </Modal>
   );
 };

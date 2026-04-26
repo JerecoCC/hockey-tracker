@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { type PlayerRecord, type CreatePlayerData } from './useLeaguePlayers';
+import { type PlayerRecord, type CreatePlayerData, type BulkPlayerInput } from './useLeaguePlayers';
 
 export interface PlayerRosterInput {
   player_id: string;
@@ -68,6 +68,74 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
+  const updateJerseyNumber = async (
+    playerId: string,
+    teamId: string,
+    seasonId: string,
+    jerseyNumber: number | null,
+  ): Promise<boolean> => {
+    setBusy(playerId);
+    try {
+      await axios.patch(
+        `${API}/admin/player-teams`,
+        { player_id: playerId, team_id: teamId, season_id: seasonId, jersey_number: jerseyNumber },
+        { headers: authHeaders() },
+      );
+      toast.success('Jersey number updated!');
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update jersey number'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Upload a player photo file to Vercel Blob and return the public URL, or null on failure. */
+  const uploadPlayerPhoto = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    try {
+      const { data } = await axios.post<{ url: string }>(
+        `${API}/admin/players/upload`,
+        formData,
+        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
+      );
+      return data.url;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to upload player photo'));
+      return null;
+    }
+  };
+
+  /**
+   * Update jersey_number and/or photo on the active player_teams stint.
+   * Only the fields included in `payload` are changed.
+   */
+  const updatePlayerTeam = async (
+    playerId: string,
+    tId: string,
+    sId: string,
+    payload: { jersey_number?: number | null; photo?: string | null },
+  ): Promise<boolean> => {
+    setBusy(playerId);
+    try {
+      await axios.patch(
+        `${API}/admin/player-teams`,
+        { player_id: playerId, team_id: tId, season_id: sId, ...payload },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update player'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deletePlayer = async (playerId: string): Promise<void> => {
     setBusy(playerId);
     try {
@@ -107,7 +175,52 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, updatePlayer, deletePlayer };
+  /**
+   * Bulk-creates players then adds them to the season roster.
+   * Returns the array of created player IDs on success, or null on failure.
+   * The caller can use the IDs to also add the players to a game roster.
+   */
+  const createAndRosterPlayers = async (
+    tId: string,
+    sId: string,
+    players: Array<Omit<BulkPlayerInput, 'shoots'> & { shoots?: BulkPlayerInput['shoots']; jersey_number?: number | null }>,
+  ): Promise<string[] | null> => {
+    try {
+      // Step 1: bulk-create the new players
+      const { data: createData } = await axios.post(
+        `${API}/admin/players/bulk`,
+        { players: players.map(({ jersey_number: _jn, ...p }) => p) },
+        { headers: authHeaders() },
+      );
+      const created: Array<{ id: string }> = createData.created ?? [];
+
+      // Step 2: add them to the team roster for the season
+      if (created.length > 0) {
+        await axios.post(
+          `${API}/admin/player-teams/bulk`,
+          {
+            team_id: tId,
+            season_id: sId,
+            players: created.map((p, i) => ({
+              player_id: p.id,
+              jersey_number: players[i]?.jersey_number ?? null,
+            })),
+          },
+          { headers: authHeaders() },
+        );
+      }
+
+      const n = created.length;
+      toast.success(`${n} player${n !== 1 ? 's' : ''} created and added to roster!`);
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return created.map((p) => p.id);
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to create players'));
+      return null;
+    }
+  };
+
+  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer };
 };
 
 export default useTeamPlayers;

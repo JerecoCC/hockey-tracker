@@ -51,6 +51,10 @@
     cursor: not-allowed;
   }
 
+  &.fieldError {
+    border-color: $danger-light;
+  }
+
   // Remove spinner arrows on number inputs
   &[type="number"] {
     -moz-appearance: textfield;

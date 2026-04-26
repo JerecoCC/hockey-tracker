@@ -18,7 +18,9 @@ app.use('/api/admin/leagues', leaguesRouter);
 
 const LEAGUE = {
   id: 'league-1', name: 'NHL', code: 'NHL', description: null,
-  logo: null, primary_color: '#334155', text_color: '#ffffff', created_at: new Date().toISOString(),
+  logo: null, primary_color: '#334155', text_color: '#ffffff',
+  best_of_playoff: 7, best_of_shootout: 3,
+  created_at: new Date().toISOString(),
 };
 
 afterEach(() => jest.clearAllMocks());

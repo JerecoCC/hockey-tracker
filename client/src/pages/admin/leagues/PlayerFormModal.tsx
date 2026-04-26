@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import {
@@ -15,7 +14,7 @@ const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
   { value: 'LW', label: 'Left Wing' },
   { value: 'RW', label: 'Right Wing' },
-  { value: 'D', label: 'Defenseman' },
+  { value: 'D', label: 'Defense' },
   { value: 'G', label: 'Goalie' },
 ];
 
@@ -50,17 +49,27 @@ interface FormValues {
   height_ft: string;
   height_in: string;
   weight_lbs: string;
+  jersey_number: string;
 }
 
 interface Props {
   open: boolean;
   editTarget: PlayerRecord | null;
   onClose: () => void;
-  addPlayer: (data: CreatePlayerData) => Promise<boolean>;
+  addPlayer?: (data: CreatePlayerData) => Promise<boolean>;
   updatePlayer: (id: string, data: Partial<CreatePlayerData>) => Promise<boolean>;
+  /** When provided, the Jersey Number field is shown and saved via this callback on edit. */
+  updateJerseyNumber?: (jerseyNumber: number | null) => Promise<boolean>;
 }
 
-const PlayerFormModal = ({ open, editTarget, onClose, addPlayer, updatePlayer }: Props) => {
+const PlayerFormModal = ({
+  open,
+  editTarget,
+  onClose,
+  addPlayer,
+  updatePlayer,
+  updateJerseyNumber,
+}: Props) => {
   const {
     control,
     handleSubmit,
@@ -79,6 +88,7 @@ const PlayerFormModal = ({ open, editTarget, onClose, addPlayer, updatePlayer }:
       height_ft: '',
       height_in: '',
       weight_lbs: '',
+      jersey_number: '',
     },
   });
 
@@ -100,6 +110,7 @@ const PlayerFormModal = ({ open, editTarget, onClose, addPlayer, updatePlayer }:
       height_ft: ft != null ? String(ft) : '',
       height_in: inches != null ? String(inches) : '',
       weight_lbs: editTarget?.weight_lbs != null ? String(editTarget.weight_lbs) : '',
+      jersey_number: editTarget?.jersey_number != null ? String(editTarget.jersey_number) : '',
     });
   }, [open, editTarget, reset]);
 
@@ -122,8 +133,19 @@ const PlayerFormModal = ({ open, editTarget, onClose, addPlayer, updatePlayer }:
       height_cm,
       weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
     };
-    const ok = editTarget ? await updatePlayer(editTarget.id, payload) : await addPlayer(payload);
-    if (ok) onClose();
+    const ok = editTarget
+      ? await updatePlayer(editTarget.id, payload)
+      : addPlayer
+        ? await addPlayer(payload)
+        : false;
+    if (!ok) return;
+
+    if (editTarget && updateJerseyNumber) {
+      const newJersey = data.jersey_number ? Number(data.jersey_number) : null;
+      await updateJerseyNumber(newJersey);
+    }
+
+    onClose();
   });
 
   return (
@@ -131,12 +153,33 @@ const PlayerFormModal = ({ open, editTarget, onClose, addPlayer, updatePlayer }:
       open={open}
       title={editTarget ? 'Edit Player' : 'Create Player'}
       onClose={onClose}
+      confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Player'}
+      confirmForm="player-form"
+      confirmDisabled={isSubmitting}
+      busy={isSubmitting}
     >
       <form
+        id="player-form"
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <div className={styles.row}>
+        <div className={updateJerseyNumber ? styles.nameRowWithJersey : styles.row}>
+          {updateJerseyNumber && (
+            <Field
+              type="number"
+              label="Jersey #"
+              control={control}
+              name="jersey_number"
+              placeholder="e.g. 97"
+              min={0}
+              max={99}
+              disabled={isSubmitting}
+              rules={{
+                validate: (v) =>
+                  !v || (Number(v) >= 0 && Number(v) <= 99 && Number.isInteger(Number(v))),
+              }}
+            />
+          )}
           <Field
             label="First Name"
             required
@@ -172,12 +215,10 @@ const PlayerFormModal = ({ open, editTarget, onClose, addPlayer, updatePlayer }:
           <Field
             type="select"
             label="Shoots"
-            required
             control={control}
             name="shoots"
             options={SHOOTS_OPTIONS}
             placeholder="Select side"
-            rules={{ required: true }}
             disabled={isSubmitting}
           />
         </div>
@@ -254,23 +295,6 @@ const PlayerFormModal = ({ open, editTarget, onClose, addPlayer, updatePlayer }:
             disabled={isSubmitting}
             rules={{ validate: (v) => !v || Number(v) >= 0 }}
           />
-        </div>
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            disabled={isSubmitting}
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Player'}
-          </Button>
         </div>
       </form>
     </Modal>

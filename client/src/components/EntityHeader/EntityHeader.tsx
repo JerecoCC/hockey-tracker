@@ -1,8 +1,5 @@
-import type { Control, FieldValues } from 'react-hook-form';
 import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
-import Field from '../Field/Field';
-import LogoUpload from '../LogoUpload/LogoUpload';
 import styles from './EntityHeader.module.scss';
 
 interface Swatch {
@@ -10,7 +7,7 @@ interface Swatch {
   color: string;
 }
 
-interface Props<T extends FieldValues = FieldValues> {
+interface Props {
   logo: string | null;
   name: string;
   code: string;
@@ -18,111 +15,17 @@ interface Props<T extends FieldValues = FieldValues> {
   textColor: string;
   swatches?: Swatch[];
   onEdit?: () => void;
-  // Edit mode — provide all four together when isEditing=true
-  isEditing?: boolean;
-  control?: Control<T>;
-  formId?: string;
-  onCancel?: () => void;
-  isSubmitting?: boolean;
-  /** When true, renders the Secondary Color picker in edit mode. Default: false. */
-  showSecondaryColor?: boolean;
 }
 
-function EntityHeader<T extends FieldValues = FieldValues>(props: Props<T>) {
-  const {
-    logo,
-    name,
-    code,
-    primaryColor,
-    textColor,
-    swatches = [],
-    onEdit,
-    isEditing = false,
-    control,
-    formId,
-    onCancel,
-    isSubmitting = false,
-    showSecondaryColor = false,
-  } = props;
-
-  if (isEditing) {
-    return (
-      <div className={styles.editHeader}>
-        <div className={styles.editLogoCell}>
-          <LogoUpload
-            control={control!}
-            name="logo"
-            label="Logo"
-            disabled={isSubmitting}
-          />
-        </div>
-        <div className={styles.editTopRow}>
-          <div className={styles.editNameSlot}>
-            <Field
-              label="Name"
-              required
-              control={control!}
-              name="name"
-              rules={{ required: true }}
-              disabled={isSubmitting}
-            />
-          </div>
-          <div className={styles.editActionsSlot}>
-            <Button
-              type="button"
-              variant="outlined"
-              intent="neutral"
-              disabled={isSubmitting}
-              onClick={onCancel!}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="submit"
-              form={formId!}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Saving…' : 'Save Changes'}
-            </Button>
-          </div>
-        </div>
-        <div className={styles.editBottomRow}>
-          <Field
-            label="Code"
-            required
-            control={control!}
-            name="code"
-            rules={{ required: true }}
-            transform={(v: string) => v.toUpperCase()}
-            disabled={isSubmitting}
-          />
-          <div className={styles.editColorsSlot}>
-            <Field
-              type="color"
-              label="Primary Color"
-              control={control!}
-              name="primary_color"
-            />
-            {showSecondaryColor && (
-              <Field
-                type="color"
-                label="Secondary Color"
-                control={control!}
-                name="secondary_color"
-              />
-            )}
-            <Field
-              type="color"
-              label="Text Color"
-              control={control!}
-              name="text_color"
-            />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+const EntityHeader = ({
+  logo,
+  name,
+  code,
+  primaryColor,
+  textColor,
+  swatches = [],
+  onEdit,
+}: Props) => {
   return (
     <div className={styles.header}>
       <div className={styles.logoWrapper}>
@@ -174,6 +77,6 @@ function EntityHeader<T extends FieldValues = FieldValues>(props: Props<T>) {
       )}
     </div>
   );
-}
+};
 
 export default EntityHeader;

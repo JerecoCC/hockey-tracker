@@ -103,18 +103,3 @@
   padding: $space-2xl 0;
   margin-bottom: $space-xl;
 }
-
-.footer {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-md;
-  padding-top: $space-lg;
-  border-top: 1px solid $border;
-}
-
-.footerCount {
-  font-size: $font-sm;
-  color: $text-dim;
-  margin-right: auto;
-}

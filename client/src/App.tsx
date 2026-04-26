@@ -11,6 +11,7 @@ import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
 import TeamDetailsPage from './pages/admin/teams/TeamDetails';
 import SeasonDetailsPage from './pages/admin/seasons/SeasonDetails';
+import GameDetailsPage from './pages/admin/games/GameDetailsPage';
 import AuthCallbackPage from './pages/auth/callback/AuthCallback';
 
 const PrivateRoute = (props: { children: ReactNode }) => {
@@ -118,6 +119,10 @@ const router = createBrowserRouter([
       { path: '/admin/leagues/:id', element: <LeagueDetailsPage /> },
       { path: '/admin/leagues/:leagueId/teams/:id', element: <TeamDetailsPage /> },
       { path: '/admin/leagues/:leagueId/seasons/:id', element: <SeasonDetailsPage /> },
+      {
+        path: '/admin/leagues/:leagueId/seasons/:seasonId/games/:id',
+        element: <GameDetailsPage />,
+      },
     ],
   },
   {

@@ -1,0 +1,1626 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Page loader ────────────────────────────────────────────────────────────────
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem $space-lg;
+  gap: $space-lg;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loaderText {
+  color: $text-dim;
+  font-size: $font-base;
+  margin: 0;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+// ── Scoreboard card ────────────────────────────────────────────────────────────
+.scoreboardCard {
+  margin-bottom: $space-xl;
+  overflow: hidden;
+}
+
+.scoreboard {
+  display: flex;
+  align-items: stretch;
+  min-height: 80px;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    min-height: unset;
+  }
+}
+
+// ── Team sides (away = left, home = right) ─────────────────────────────────────
+.teamSide {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  flex: 1;
+  min-width: 0; // allow flex shrinking so scoreCenter is never pushed out
+  padding: $space-lg 0;
+
+  @media (max-width: 900px) {
+    position: relative; // anchor for the absolutely-positioned right stripe
+    order: 0; // away row sits at the top of the stack
+    // Right padding = gap($space-md) + stripe(52px); stripe bleeds to card edge (no extra inset).
+    padding: $space-md calc(#{$space-md} + 52px) $space-md $space-lg;
+    width: 100%;
+    box-sizing: border-box;
+    border-bottom: 1px solid $border;
+    overflow: hidden;
+  }
+}
+
+// Loser row in stacked mode — dim only content (button); stripes keep their full color
+.teamSideLoser {
+  @media (max-width: 900px) {
+    .teamLogoBtn {
+      opacity: 0.45;
+    }
+  }
+}
+
+// Home side: reverse order so logo+stripe are on the right
+.teamSideHome {
+  flex-direction: row-reverse;
+
+  @media (max-width: 900px) {
+    flex-direction: row; // undo reversal — same left-to-right order as away
+    order: 2; // visually last
+    border-bottom: none; // home row is the last row, no bottom separator needed
+  }
+}
+
+// Diagonal stripe decoration — clipping container
+.teamStripe {
+  position: relative;
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 64px;
+  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
+  opacity: 0.9;
+  margin: -$space-lg 0;
+
+  @media (max-width: 900px) {
+    // Reversed slant: top-right → bottom-left (right edge from 100% at top to 70% at bottom)
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+    width: 52px;
+    // Bleed vertically to fill the row height; sit naturally inside the card padding.
+    margin-left: -$space-lg;
+
+    // Accent strips: each 12.5% wide, with a 12.5% gap between the outer edge and strip 1,
+    // and a 12.5% gap between strip 1 and strip 2 — matching the desktop proportions.
+    // Strip 1 — 12.5% gap from outer edge, then 12.5% wide
+    .teamStripeSecondary {
+      clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
+    }
+
+    // Strip 2 — 12.5% gap from strip 1, then 12.5% wide
+    .teamStripeSecondary2 {
+      clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
+    }
+  }
+}
+
+.teamStripeHome {
+  clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+  // Mirror both secondary strips for the home side (desktop — angled toward left edge)
+  .teamStripeSecondary {
+    clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
+  }
+
+  .teamStripeSecondary2 {
+    clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
+  }
+
+  // In stacked mode the home stripe uses the same reversed slant and strip spacing as away
+  @media (max-width: 900px) {
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+    margin-left: -$space-lg;
+
+    .teamStripeSecondary {
+      clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
+    }
+
+    .teamStripeSecondary2 {
+      clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
+    }
+  }
+}
+
+// Right stripe in stacked mode — mirrors the left stripe, positioned absolutely.
+// Hidden on desktop; only rendered at ≤900px via the media query.
+.teamStripeRight {
+  display: none;
+
+  @media (max-width: 900px) {
+    display: block;
+    position: absolute;
+    right: 0; // bleed flush to the right card edge
+    top: 0;
+    bottom: 0;
+    margin: 0; // override .teamStripe top/bottom margins (absolute handles height)
+    width: 52px;
+    // Same top-right → bottom-left slant as the left stripe, mirrored horizontally.
+    // Inner (left) edge: from (30%,0) at top to (0%,100%) at bottom.
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+    // Secondary strips parallel to the inner slanted edge.
+    // Same rule: 12.5% gap from inner edge, 12.5% wide, 12.5% gap between strips.
+    // Strip 1 — 12.5% gap from inner edge, then 12.5% wide
+    .teamStripeSecondary {
+      clip-path: polygon(42.5% 0, 55% 0, 25% 100%, 12.5% 100%);
+    }
+
+    // Strip 2 — 12.5% gap from strip 1, then 12.5% wide
+    .teamStripeSecondary2 {
+      clip-path: polygon(67.5% 0, 80% 0, 50% 100%, 37.5% 100%);
+    }
+  }
+}
+
+// Primary fill — covers the full stripe area (parent clip handles the shape)
+.teamStripePrimary {
+  position: absolute;
+  inset: 0;
+}
+
+// Secondary strips: thin parallelograms inset from and parallel to the inner slanted edge.
+// Each strip is 8px wide (12.5% of 64px), separated by an 8px gap.
+// Away inner edge runs from (70%,0) to (100%,100%).
+
+// Strip 1 — 8px inset from inner edge
+.teamStripeSecondary {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(45% 0%, 57.5% 0%, 87.5% 100%, 75% 100%);
+}
+
+// Strip 2 — 24px inset (8px strip + 8px gap + starts here)
+.teamStripeSecondary2 {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(20% 0%, 32.5% 0%, 62.5% 100%, 50% 100%);
+}
+
+// Logo button — clickable area wraps logo + team name/code
+.teamLogoBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: $radius-md;
+  flex-shrink: 1; // allow the button to shrink so it doesn't crowd the score center
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.75;
+  }
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 4px;
+  }
+
+  @media (max-width: 900px) {
+    flex: 1; // fills available space so the score span stays pinned to the right
+    min-width: 0;
+  }
+}
+
+// On mobile, reverse the home button's child order ([name,logo] → [logo,name])
+// to match the away button layout without changing the DOM.
+.teamLogoBtnHome {
+  @media (max-width: 900px) {
+    flex-direction: row-reverse;
+  }
+}
+
+// ── Team logo / placeholder ────────────────────────────────────────────────────
+.teamLogo {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
+
+  @media (max-width: 900px) {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.teamLogoPlaceholder {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: $bg-input;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-dim;
+  letter-spacing: 0.04em;
+
+  @media (max-width: 900px) {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+// Team name + code stacked block
+.teamInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0; // allow text children to truncate inside a shrinking flex parent
+}
+
+.teamFullName {
+  font-size: $font-base;
+  font-weight: 700;
+  color: $text-bright;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teamSubInfo {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+// ── Center: score numbers flanking the status block ───────────────────────────
+.scoreCenter {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  flex-shrink: 0;
+  padding: $space-md $space-xl;
+
+  @media (max-width: 900px) {
+    order: 1; // sits between the away row (order:0) and home row (order:2)
+    justify-content: center;
+    padding: $space-md $space-lg;
+    border-bottom: 1px solid $border;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+// ── Period scoring list ────────────────────────────────────────────────────────
+// ── Period scoring list (uses Accordion component) ────────────────────────────
+
+.periodList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+// Passed as className to Accordion to tint the border AND header for the active period.
+// Fully opaque: mix accent 50% into the card background so both surfaces match
+// exactly with no transparency bleed or compositing differences.
+$_active-period-color: mix($accent, $bg-card, 50%);
+.periodItemActive {
+  border-color: $_active-period-color;
+  --accordion-header-bg: #{$_active-period-color};
+}
+
+// Passed as label slot content to give the period name a fixed-width column.
+.periodLabel {
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 96px;
+  flex-shrink: 0;
+}
+
+// Score text rendered inside Accordion's actions slot.
+.periodScore {
+  font-size: $font-sm;
+  color: $text-bright;
+  font-variant-numeric: tabular-nums;
+}
+
+.periodScoreMuted {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.noGoalsText {
+  margin: 0;
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.autoFillBanner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: $space-sm;
+  padding: $space-sm $space-md $space-md;
+}
+
+.autoFillBannerText {
+  margin: 0;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Goal list (inside period accordion) ──────────────────────────────────────
+
+.goalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.goalItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover .goalActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// Period time (e.g. "12:34")
+.goalTime {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  min-width: 2.75rem;
+  flex-shrink: 0;
+}
+
+// Small square team logo / placeholder
+.goalTeamLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.goalTeamLogoPlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Circular scorer avatar
+.goalScorerPhoto {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.goalScorerPhotoPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Text column: scorer name + assists
+.goalInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.goalScorer {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goalAssists {
+  font-size: $font-xs;
+  color: $text-dim;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ── Score goal form ───────────────────────────────────────────────────────────
+
+.goalForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-lg $space-xl;
+}
+
+.formFieldFull {
+  grid-column: 1 / -1;
+}
+
+// Segmented team picker (connected buttons)
+.teamSegment {
+  display: flex;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+  width: 100%;
+}
+
+.teamSegmentBtn {
+  flex: 1;
+  padding: $space-sm $space-md;
+  background: transparent;
+  border: none;
+  border-right: 1px solid $border;
+  color: $text-dim;
+  font-size: $font-sm;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
+  transition:
+    background 0.15s,
+    color 0.15s;
+
+  &:last-child {
+    border-right: none;
+  }
+
+  &:hover:not(.teamSegmentBtnActive) {
+    background: rgba(255, 255, 255, 0.05);
+    color: $text-body;
+  }
+}
+
+.teamSegmentLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.teamSegmentLogoPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.teamSegmentBtnActive {
+  background: $accent;
+  color: #fff;
+}
+
+// Individual form field (label + input/select)
+.goalFormField {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.goalFormLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.required {
+  color: $danger;
+  font-style: normal;
+}
+
+// Row that places Period Time (MM:SS), Goal Type and EN toggle side by side
+.goalFormTimeRow {
+  display: flex;
+  gap: $space-md;
+  align-items: flex-start;
+}
+
+// Period time field — fixed narrow width so it doesn't grow and the clear
+// button appearing/disappearing never shifts the layout
+.goalPeriodTimeField {
+  flex-shrink: 0;
+  width: 128px;
+}
+
+// Goal type field inside goalFormTimeRow — expands to fill remaining space
+.goalTypeField {
+  flex: 1;
+  min-width: 0;
+}
+
+// Side-by-side row for the two assist selects
+.goalFormRow {
+  display: flex;
+  gap: $space-md;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+// Square 42 × 42 icon button that toggles Empty Net — sits inline with Goal Type select
+.emptyNetToggle {
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: transparent;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-dim;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s,
+    background 0.15s;
+
+  &:hover:not(:disabled) {
+    border-color: $accent;
+    color: $text-body;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.emptyNetToggleOn {
+  border-color: $accent;
+  color: $accent;
+  background: rgba($accent, 0.08);
+}
+
+// Status + date column in the center of the scoreboard
+.scoreBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
+// Each individual team score (e.g. "3").
+.scoreNumber {
+  font-size: 2.75rem;
+  font-weight: 700;
+  color: $text-bright;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  min-width: 2rem;
+  text-align: center;
+  transition: color 0.15s;
+  line-height: 1;
+
+  @media (max-width: 900px) {
+    font-size: 2rem; // slightly smaller than desktop (2.75rem) for the compact center row
+  }
+}
+
+// Applied to the losing team's score when the game is final.
+.scoreNumberLoser {
+  color: $text-dim;
+}
+
+.scoreDate {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+// ── Tab content wrapper ────────────────────────────────────────────────────────
+.tabContent {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+.emptyText {
+  margin: 0;
+  padding: $space-lg 0;
+  color: $text-dim;
+  font-size: $font-sm;
+  text-align: center;
+}
+
+// ── Info grid (inside Summary tab) ────────────────────────────────────────────
+.infoGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-xl $space-2xl;
+}
+
+.infoItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoItemFull {
+  grid-column: 1 / -1;
+}
+
+.infoLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+.infoValueMuted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Period scores table ────────────────────────────────────────────────────────
+.periodsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-sm;
+}
+
+.thTeam,
+.tdTeam {
+  text-align: left;
+  padding: $space-sm $space-md $space-sm 0;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 52px;
+}
+
+.thPeriod,
+.tdGoals {
+  text-align: center;
+  padding: $space-sm $space-md;
+  color: $text-body;
+}
+
+.thPeriod {
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+// Input cell used in the Edit Shots modal table
+.tdShotsInput {
+  text-align: center;
+  padding: $space-xs $space-xs;
+  width: 64px;
+
+  // Remove the label wrapper margin so the input sits flush
+  label {
+    margin-bottom: 0;
+  }
+
+  // Narrow the input to fit the column — keep default height/padding intact
+  input {
+    width: 52px;
+    min-width: 0;
+    text-align: center;
+  }
+}
+
+// Suppress all cell borders and row dividers inside the Edit Shots modal table
+.shotsEditTable {
+  .thPeriod {
+    border-left: none;
+  }
+
+  tbody tr:not(:last-child) td {
+    border-bottom: none;
+  }
+}
+
+.thTotal,
+.tdTotal {
+  text-align: center;
+  padding: $space-sm $space-md;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+// ── SOG row ──────────────────────────────────────────────────────────────────
+.trShots td {
+  padding-top: $space-xs;
+  padding-bottom: $space-xs;
+  color: $text-dim;
+  font-size: $font-xs;
+}
+
+.trShots:first-of-type td {
+  border-top: 1px solid $border;
+  padding-top: $space-sm;
+}
+
+.tdShotsLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-dim;
+}
+
+// ── Goalie Stats table ────────────────────────────────────────────────────────
+.goalieTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-sm;
+}
+
+.goalieThTeam {
+  text-align: left;
+  padding: $space-xs $space-md $space-xs 0;
+  color: $text-dim;
+  font-weight: 600;
+  font-size: $font-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.goalieTh {
+  text-align: center;
+  padding: $space-xs $space-md;
+  color: $text-dim;
+  font-weight: 600;
+  font-size: $font-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.goalieRow {
+  position: relative;
+
+  &:hover .goalieActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.goalieTdName {
+  position: relative;
+  text-align: left;
+  padding: $space-sm $space-md $space-sm 0;
+}
+
+.goalieNameCell {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.goalieLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.goalieLogoPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.goalieNameLabel {
+  font-weight: 500;
+  color: $text-body;
+}
+
+.goalieTd {
+  text-align: center;
+  padding: $space-sm $space-md;
+  color: $text-body;
+}
+
+.goalieActions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+}
+
+// ── Lineup tab ────────────────────────────────────────────────────────────────
+
+// Two-column grid inside the Card body — each column is a static Accordion
+.lineupGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-lg;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Player list rendered inside the static Accordion body
+.lineupPlayerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+// ── Starting lineup slot grid ──────────────────────────────────────────────────
+
+.lineupSlots {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding: $space-sm 0;
+}
+
+.lineupSlotsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: $space-xs;
+}
+
+.lineupSlotsTitle {
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: $text-dim;
+}
+
+.lineupSlotRow {
+  display: grid;
+  grid-template-columns: 9rem 1fr;
+  align-items: center;
+  gap: $space-md;
+}
+
+.lineupSlotLabel {
+  font-size: $font-sm;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+.lineupDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.07);
+  border: none;
+  margin: $space-sm 0;
+}
+
+// Accordion header label with team logo
+.accordionTeamLabel {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.accordionTeamLogo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.accordionTeamLogoPlaceholder {
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  background: $bg-card;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+// ── Summary two-column grid ────────────────────────────────────────────────────
+.summaryGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: $space-xl;
+  align-items: start;
+
+  @media (max-width: 860px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Left column — Three Stars + Scoring cards stacked
+.summaryLeft {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// Right column — Game Info + Linescore stacked
+.summaryRight {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// ── Last 5 Games card ─────────────────────────────────────────────────────────
+
+// Two accordions stacked with a gap between them
+.lastFiveList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+// Form record shown in accordion headerRight: W - OTW - OTL - L
+.lastFiveForm {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-sm;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: $text-body;
+  white-space: nowrap;
+}
+
+.lastFiveFormSep {
+  color: $text-dim;
+  font-weight: 400;
+  user-select: none;
+}
+
+// Flex row of game squares inside accordion body
+.lastFiveGames {
+  display: flex;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  flex-wrap: wrap;
+}
+
+.lastFiveGamesEmpty {
+  padding: 0;
+}
+
+// Individual game square
+.lastFiveSquare {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 80px;
+  height: 108px;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+  padding: $space-sm $space-xs;
+  overflow: hidden;
+  flex-shrink: 0;
+  color: $text-body;
+  cursor: pointer;
+  transition: opacity $transition-fast;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+// Home game square — bg is a mix of accordion header + team primary; border uses primary
+.lastFiveSquareHome {
+  background: color-mix(in srgb, #{$border}, var(--square-primary) 35%);
+  border-color: var(--square-primary);
+
+  .lastFiveDate {
+    color: color-mix(in srgb, #{$text-body}, var(--square-primary) 25%);
+  }
+}
+
+// Circle frame around the opponent logo
+.lastFiveLogoCircle {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lastFiveLogoCircleAway {
+  background: $border;
+  border-color: #475569;
+
+  .lastFiveOpponentPlaceholder {
+    color: $text-body;
+  }
+}
+
+.lastFiveLogoCircleHome {
+  background: color-mix(in srgb, #{$border}, var(--circle-text) 35%);
+  border-color: color-mix(in srgb, #{$border}, var(--circle-text) 55%);
+
+  .lastFiveOpponentPlaceholder {
+    color: $text-body;
+  }
+}
+
+// Opponent logo inside the circle
+.lastFiveOpponentLogo {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
+}
+
+// Placeholder text inside the circle (no logo available)
+.lastFiveOpponentPlaceholder {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+// Bottom row: W/L  score  (OT)/(SO)
+.lastFiveScore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  width: 100%;
+}
+
+// Date shown above the circle
+.lastFiveDate {
+  font-size: 9px;
+  font-weight: 600;
+  color: $text-dim;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.lastFiveResult {
+  font-size: $font-xs;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.lastFiveScoreText {
+  font-size: $font-xs;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.lastFiveOT {
+  font-size: $font-xs;
+  font-weight: 600;
+  line-height: 1;
+}
+
+// ── Linescore card action row ──────────────────────────────────────────────────
+.linescoreActions {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-sm;
+}
+
+// ── Linescore team cell ────────────────────────────────────────────────────────
+.linescoreTeam {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.linescoreLogo {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.linescoreLogoPlaceholder {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 11px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.linescoreCode {
+  font-weight: 600;
+  color: $text-body;
+  font-size: $font-sm;
+}
+
+// ── 3 Stars card ───────────────────────────────────────────────────────────────
+.starsRow {
+  display: flex;
+  gap: $space-lg;
+  justify-content: space-around;
+  flex-wrap: wrap;
+}
+
+.starItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  flex: 1;
+  min-width: 120px;
+  text-align: center;
+}
+
+.starPhoto {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
+  border: 2px solid $border;
+  flex-shrink: 0;
+}
+
+.starPhotoPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xl;
+  font-weight: 700;
+  flex-shrink: 0;
+  border: 2px solid $border;
+}
+
+// Star icons row (replaces "1st / 2nd / 3rd" text).
+.starIcons {
+  display: flex;
+  gap: 3px;
+  color: #f59e0b; // amber-400 — classic gold star colour
+  font-size: $font-lg;
+  margin-top: $space-xs;
+}
+
+.starName {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  line-height: 1.3;
+}
+
+.starTeam {
+  font-size: $font-xs;
+  color: $text-dim;
+}
+
+.starStats {
+  font-size: $font-xs;
+  color: $text-dim;
+}
+
+// ── Record Shots modal ───────────────────────────────────────────────────────
+.shotsModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.shotsTeamRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs 0;
+}
+
+.shotsTeamInfo {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.shotsTeamLogo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.shotsTeamLogoPlaceholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.shotsTeamName {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.shotsFieldWrap {
+  width: 80px;
+  flex-shrink: 0;
+
+  // Remove the label wrapper margin so the number input sits flush in the row
+  label {
+    margin-bottom: 0;
+  }
+}
+
+// Goalie rows inside the shots modal (logo + name | SA input | SV input)
+.shotsGoalieHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+
+  // Title ("Goalie Stats") fills the left
+  > span:first-child {
+    flex: 1;
+  }
+}
+
+.shotsGoalieColLabel {
+  width: 72px;
+  text-align: center;
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+}
+
+// Column header above the SOG number input in the Period Shots section.
+// Width matches .shotsFieldWrap so the label sits directly above the input.
+.shotsSectionColLabel {
+  width: 80px;
+  flex-shrink: 0;
+  text-align: center;
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.shotsGoalieRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs 0;
+}
+
+.shotsGoalieInputs {
+  display: flex;
+  gap: $space-sm;
+  flex-shrink: 0;
+
+  label {
+    margin-bottom: 0;
+    width: 72px;
+  }
+}
+
+// ── Shootout attempt grid ─────────────────────────────────────────────────────
+
+.soAttemptGrid {
+  display: flex;
+  flex-direction: column;
+}
+
+.soAttemptHeaderRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: $space-xs $space-md;
+  border-bottom: 1px solid $border;
+  gap: $space-sm;
+}
+
+.soAttemptColHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-dim;
+}
+
+.soAttemptColHeaderAway {
+  justify-content: flex-end;
+  flex-direction: row-reverse;
+}
+
+.soAttemptColLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.soAttemptColLogoPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.soAttemptRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  gap: 0;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.soAttemptRoundCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-xs $space-sm;
+}
+
+.soAttemptRoundLabel {
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-dim;
+}
+
+.soAttemptCell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-right: 1px solid #334155;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.soAttemptCellAway {
+  justify-content: flex-end;
+}
+
+.soAttemptCellEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  border-right: 1px solid $border;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.soAttemptPhoto {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.soAttemptPhotoPlaceholder {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.soAttemptPlayerInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.soAttemptPlayerInfoAway {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.soAttemptJersey {
+  font-size: $font-xs;
+  color: $text-dim;
+  line-height: 1.2;
+}
+
+.soAttemptName {
+  font-size: $font-sm;
+  font-weight: 500;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.soResultBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: $radius-sm;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.soResultBadgeScored {
+  background: $success;
+  color: $text-bright;
+}
+
+.soResultBadgeMissed {
+  background: $danger;
+  color: $text-bright;
+}
+
+.soAttemptTotalsRow {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 1fr;
+  align-items: center;
+  border-top: 2px solid $border;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.soAttemptTotalsLabel {
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-dim;
+}
+
+.soAttemptTotalCell {
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-body;
+  border-right: 1px solid $border;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+// ── Shots edit modal (all-period editor) ──────────────────────────────────────
+
+.shotsEditPeriodLabel {
+  margin: 0 0 $space-xs;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-dim;
+}

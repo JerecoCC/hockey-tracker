@@ -3,6 +3,7 @@
 
 .wrapper {
   position: relative;
+  min-width: 0;
 }
 
 .trigger {
@@ -36,6 +37,38 @@
 
   &.triggerDisabled {
     opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.triggerError {
+    border-color: $danger-light;
+  }
+}
+
+// Modifier applied to the div wrapper when searchable=true — overrides cursor.
+.searchTrigger {
+  cursor: text;
+}
+
+// Text input that lives inside .searchTrigger — transparent so the trigger
+// styles (background, border, height) come from the parent div.
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: $text-body;
+  font-size: $font-base;
+  font-family: inherit;
+  padding: 0;
+  cursor: inherit;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+
+  &:disabled {
     cursor: not-allowed;
   }
 }
@@ -73,6 +106,15 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+}
+
+.emptyMessage {
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+  text-align: center;
+  list-style: none;
 }
 
 .option {

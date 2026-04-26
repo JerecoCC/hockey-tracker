@@ -19,14 +19,15 @@ const createWrapper = () => {
 const ITER = {
   id: 'iter-1',
   team_id: 'team-1',
-  season_id: null,
   name: 'Leafs',
   code: 'TOR',
   logo: null,
   note: null,
   recorded_at: '2024-01-01T00:00:00Z',
-  season_start_date: null,
-  season_end_date: null,
+  start_season_id: null,
+  start_season_name: null,
+  latest_season_id: null,
+  latest_season_name: null,
 };
 
 beforeEach(() => {

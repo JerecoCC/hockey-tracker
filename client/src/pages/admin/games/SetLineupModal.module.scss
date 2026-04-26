@@ -1,0 +1,29 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-md;
+  margin-bottom: $space-xl;
+}
+
+.spanFull {
+  grid-column: 1 / -1;
+}
+
+// Label + dropdown for a single position slot
+.slotField {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+}
+
+.slotLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: $text-dim;
+}

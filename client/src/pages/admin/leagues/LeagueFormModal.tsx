@@ -1,11 +1,22 @@
 import { useEffect } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import LogoUpload from '../../../components/LogoUpload/LogoUpload';
 import Modal from '../../../components/Modal/Modal';
 import { type CreateLeagueData, type LeagueRecord } from '../../../hooks/useLeagues';
 import styles from './Leagues.module.scss';
+
+const BEST_OF_OPTIONS = [
+  { value: '3', label: 'Best of 3' },
+  { value: '5', label: 'Best of 5' },
+  { value: '7', label: 'Best of 7' },
+];
+
+const SHOOTOUT_OPTIONS = [
+  { value: '3', label: '3 rounds' },
+  { value: '5', label: '5 rounds' },
+  { value: '7', label: '7 rounds' },
+];
 
 interface FormValues {
   name: string;
@@ -13,6 +24,8 @@ interface FormValues {
   logo: File | string | null;
   primary_color: string;
   text_color: string;
+  best_of_playoff: string;
+  best_of_shootout: string;
 }
 
 interface Props {
@@ -39,6 +52,8 @@ const LeagueFormModal = (props: Props) => {
       logo: null,
       primary_color: '#334155',
       text_color: '#ffffff',
+      best_of_playoff: '7',
+      best_of_shootout: '3',
     },
   });
 
@@ -64,6 +79,8 @@ const LeagueFormModal = (props: Props) => {
       logo: editTarget?.logo ?? null,
       primary_color: editTarget?.primary_color ?? '#334155',
       text_color: editTarget?.text_color ?? '#ffffff',
+      best_of_playoff: String(editTarget?.best_of_playoff ?? 7),
+      best_of_shootout: String(editTarget?.best_of_shootout ?? 3),
     });
   }, [open, editTarget, reset]);
 
@@ -80,6 +97,8 @@ const LeagueFormModal = (props: Props) => {
       logo: logoUrl,
       primary_color: data.primary_color,
       text_color: data.text_color,
+      best_of_playoff: parseInt(data.best_of_playoff, 10),
+      best_of_shootout: parseInt(data.best_of_shootout, 10),
     };
     const ok = editTarget ? await updateLeague(editTarget.id, payload) : await addLeague(payload);
     if (ok) onClose();
@@ -90,8 +109,13 @@ const LeagueFormModal = (props: Props) => {
       open={open}
       title={editTarget ? 'Edit League' : 'Create League'}
       onClose={onClose}
+      confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
+      confirmForm="league-form"
+      confirmDisabled={isSubmitting}
+      busy={isSubmitting}
     >
       <form
+        id="league-form"
         className={styles.form}
         onSubmit={onSubmit}
       >
@@ -132,22 +156,20 @@ const LeagueFormModal = (props: Props) => {
             name="text_color"
           />
         </div>
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
-          </Button>
-        </div>
+        <Field
+          label="Playoff Series Format"
+          type="select"
+          control={control}
+          name="best_of_playoff"
+          options={BEST_OF_OPTIONS}
+        />
+        <Field
+          label="Shootout Rounds"
+          type="select"
+          control={control}
+          name="best_of_shootout"
+          options={SHOOTOUT_OPTIONS}
+        />
       </form>
     </Modal>
   );

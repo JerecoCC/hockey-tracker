@@ -1,0 +1,28 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.filters {
+  display: flex;
+  gap: $space-md;
+  margin-bottom: $space-lg;
+
+  > * {
+    flex: 0 0 160px;
+  }
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.empty {
+  color: $text-dim;
+  font-size: $font-sm;
+  padding: $space-lg 0;
+  text-align: center;
+}

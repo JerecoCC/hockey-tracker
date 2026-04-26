@@ -18,11 +18,18 @@
   padding: $space-2xl;
   width: 100%;
   max-width: 480px;
+  max-height: 90vh;
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
 }
 
 .modalLg {
   max-width: 800px;
+}
+
+.modalXl {
+  max-width: 1100px;
 }
 
 .header {
@@ -30,6 +37,55 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: $space-2xl;
+  flex-shrink: 0;
+}
+
+.body {
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  // Extra padding on all sides lets absolutely-positioned children (e.g. the
+  // logo upload clear button at top:-6px / right:-6px) bleed out without
+  // being clipped by the overflow context. Negative margin compensates so
+  // the content alignment is unchanged.
+  padding: 8px;
+  margin: -8px;
+  // Re-apply right-side scrollbar padding on top of the 8px base so the
+  // scrollbar track sits just inside the modal edge.
+  padding-right: calc(8px + #{$space-xs});
+  margin-right: calc(-8px - #{$space-xs});
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+}
+
+.footer {
+  flex-shrink: 0;
+  padding-top: $space-xl;
+  border-top: 1px solid $border;
+  margin-top: $space-xl;
+}
+
+.footerRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-md;
+}
+
+.footerStart {
+  flex: 1;
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
 }
 
 .title {

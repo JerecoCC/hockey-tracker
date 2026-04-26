@@ -47,6 +47,7 @@ export interface SeasonTeam extends LeagueTeam {
   primary_color: string;
   text_color: string;
   secondary_color: string;
+  home_arena: string | null;
   /** true when the team was inherited from the previous season (not explicitly set for this one) */
   inherited: boolean;
 }

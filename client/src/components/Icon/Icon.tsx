@@ -4,9 +4,14 @@ import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
   faArrowRotateRight,
+  faChartLine,
   faArrowUpRightFromSquare,
   faCheck,
   faCircleMinus,
+  faSquare,
+  faSquareCheck,
+  faClipboardList,
+  faClock,
   faEllipsisVertical,
   faFlag,
   faGauge,
@@ -25,6 +30,7 @@ import {
   faMagnifyingGlass,
   faPen,
   faPeopleGroup,
+  faPlay,
   faPlus,
   faRightFromBracket,
   faShield,
@@ -36,6 +42,7 @@ import {
   faTrophy,
   faUserGear,
   faUserMinus,
+  faUserPen,
   faUserPlus,
   faUsers,
   faXmark,
@@ -76,12 +83,19 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // actions
   add: faPlus,
+  calendar: faCalendarDays,
+  play_arrow: faPlay,
   folder_plus: faFolderPlus,
   check: faCheck,
+  check_box: faSquareCheck,
+  check_box_outline_blank: faSquare,
   close: faXmark,
   delete: faTrash,
   edit: faPen,
   group_add: faUserPlus,
+  person_add: faUserPlus,
+  person_edit: faUserPen,
+  set_lineup: faClipboardList,
   history: faClockRotateLeft,
   manage_accounts: faUserGear,
   person_remove: faUserMinus,
@@ -101,12 +115,17 @@ const ICON_MAP: Record<string, IconDefinition> = {
   apps: faGauge,
   logout: faRightFromBracket,
 
+  // stats
+  query_stats: faChartLine,
+
   // decorative
   sports_hockey: faHockeyPuck,
   celebration: faStar,
   stars: faStar,
   flag: faFlag,
   more_vert: faEllipsisVertical,
+  more_time: faClock,
+  schedule: faClock,
 };
 
 interface IconProps {

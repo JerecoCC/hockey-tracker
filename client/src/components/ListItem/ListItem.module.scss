@@ -72,6 +72,10 @@
   @include truncate;
 }
 
+.nameItalic {
+  font-style: italic;
+}
+
 .subtitle {
   font-size: $font-xs;
   color: $text-dim;

@@ -12,6 +12,10 @@ export interface LeagueRecord {
   logo: string | null;
   primary_color: string;
   text_color: string;
+  /** Default playoff series length for this league — 3, 5, or 7 total games. */
+  best_of_playoff: number;
+  /** Number of shootout rounds before sudden death for this league — 3, 5, or 7. */
+  best_of_shootout: number;
 }
 
 export interface CreateLeagueData {
@@ -21,6 +25,8 @@ export interface CreateLeagueData {
   logo?: string | null;
   primary_color?: string;
   text_color?: string;
+  best_of_playoff?: number;
+  best_of_shootout?: number;
 }
 
 const authHeaders = () => {

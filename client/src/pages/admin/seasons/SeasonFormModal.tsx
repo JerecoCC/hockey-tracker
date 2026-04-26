@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import { type SelectOption } from '../../../components/Select/Select';
@@ -63,8 +62,13 @@ const SeasonFormModal = (props: Props) => {
       open={open}
       title={editTarget ? 'Edit Season' : 'Create Season'}
       onClose={onClose}
+      confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Season'}
+      confirmForm="season-form"
+      confirmDisabled={isSubmitting}
+      busy={isSubmitting}
     >
       <form
+        id="season-form"
         className={styles.form}
         onSubmit={onSubmit}
       >
@@ -87,6 +91,7 @@ const SeasonFormModal = (props: Props) => {
           name="name"
           rules={{ required: 'Name is required' }}
           placeholder="e.g. NHL 2024–25"
+          autoFocus
         />
         <div className={styles.dateRow}>
           <Field
@@ -103,22 +108,6 @@ const SeasonFormModal = (props: Props) => {
             name="end_date"
             placeholder="Select end date…"
           />
-        </div>
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Season'}
-          </Button>
         </div>
       </form>
     </Modal>

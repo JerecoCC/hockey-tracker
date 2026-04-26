@@ -8,13 +8,14 @@ import Select from '../../../components/Select/Select';
 import useSeasons from '../../../hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '../../../hooks/useTeamPlayers';
 import AddPlayersModal from './AddPlayersModal';
+import TeamPlayerEditModal from './TeamPlayerEditModal';
 import styles from './TeamDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
-  D: 'Defenseman',
+  D: 'Defense',
   G: 'Goalie',
 };
 
@@ -38,11 +39,18 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     }
   }, [leagueSeasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const { players, loading, busy, addPlayersToRoster, deletePlayer } = useTeamPlayers(
-    teamId,
-    selectedSeasonId ?? undefined,
-  );
+  const {
+    players,
+    loading,
+    busy,
+    addPlayersToRoster,
+    updatePlayer,
+    updatePlayerTeam,
+    uploadPlayerPhoto,
+    deletePlayer,
+  } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -80,38 +88,53 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
             const pos = (p.position ?? '').toLowerCase();
             return name.includes(q.toLowerCase()) || pos.includes(q.toLowerCase());
           }}
-          renderItems={(filtered) => (
-            <ul className={styles.rosterList}>
-              {filtered.map((p) => (
-                <ListItem
-                  key={p.id}
-                  image={p.photo}
-                  image_shape="circle"
-                  name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
-                  placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                  primaryColor={p.primary_color ?? undefined}
-                  textColor={p.text_color ?? undefined}
-                  subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
-                  rightContent={{
-                    type: 'tag',
-                    label: p.is_active ? 'Active' : 'Inactive',
-                    intent: p.is_active ? 'success' : 'neutral',
-                  }}
-                  actions={
-                    [
-                      {
-                        icon: 'delete',
-                        intent: 'danger',
-                        tooltip: 'Delete player',
-                        disabled: busy === p.id,
-                        onClick: () => setConfirmDelete(p),
-                      },
-                    ] satisfies ListItemAction[]
-                  }
-                />
-              ))}
-            </ul>
-          )}
+          renderItems={(filtered) => {
+            const sorted = [...filtered].sort((a, b) => {
+              if (a.jersey_number == null && b.jersey_number == null) return 0;
+              if (a.jersey_number == null) return 1;
+              if (b.jersey_number == null) return -1;
+              return a.jersey_number - b.jersey_number;
+            });
+            return (
+              <ul className={styles.rosterList}>
+                {sorted.map((p) => (
+                  <ListItem
+                    key={p.id}
+                    image={p.photo}
+                    image_shape="circle"
+                    name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
+                    placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                    primaryColor={p.primary_color ?? undefined}
+                    textColor={p.text_color ?? undefined}
+                    subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+                    rightContent={{
+                      type: 'tag',
+                      label: p.is_active ? 'Active' : 'Inactive',
+                      intent: p.is_active ? 'success' : 'neutral',
+                    }}
+                    actions={
+                      [
+                        {
+                          icon: 'edit',
+                          intent: 'neutral',
+                          tooltip: 'Edit player',
+                          disabled: busy === p.id,
+                          onClick: () => setEditTarget(p),
+                        },
+                        {
+                          icon: 'delete',
+                          intent: 'danger',
+                          tooltip: 'Delete player',
+                          disabled: busy === p.id,
+                          onClick: () => setConfirmDelete(p),
+                        },
+                      ] satisfies ListItemAction[]
+                    }
+                  />
+                ))}
+              </ul>
+            );
+          }}
           placeholder="Search players…"
           actions={
             <Button
@@ -128,6 +151,17 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
           noResultsMessage={(q) => `No players match "${q}".`}
         />
       </Card>
+
+      <TeamPlayerEditModal
+        open={!!editTarget}
+        editTarget={editTarget}
+        teamId={teamId}
+        seasonId={selectedSeasonId}
+        onClose={() => setEditTarget(null)}
+        updatePlayer={updatePlayer}
+        updatePlayerTeam={updatePlayerTeam}
+        uploadPlayerPhoto={uploadPlayerPhoto}
+      />
 
       <AddPlayersModal
         open={addModalOpen}

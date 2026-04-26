@@ -16,7 +16,8 @@
   background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
-  padding: $space-md $space-lg;
+  height: 42px;
+  padding: 0 $space-lg;
   transition: border-color $transition-base;
 
   &:focus-within {
@@ -26,6 +27,12 @@
   &:hover {
     border-color: lighten($border, 10%);
   }
+}
+
+.triggerDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 // Calendar icon — transparent button, just a clickable hit-target
@@ -81,9 +88,7 @@
 
 // ── Dropdown calendar ────────────────────────────────────────────────────
 .dropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
+  position: fixed;
   z-index: 200;
   background: $bg-card;
   border: 1px solid $border;

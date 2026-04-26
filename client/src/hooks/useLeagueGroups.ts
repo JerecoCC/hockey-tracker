@@ -30,6 +30,7 @@ export interface GroupRecord {
   name: string;
   sort_order: number;
   created_at: string;
+  is_auto: boolean;
   teams: GroupTeamRecord[];
 }
 

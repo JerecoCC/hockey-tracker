@@ -1,6 +1,5 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
 import Field from '../../../components/Field/Field';
 import Modal from '../../../components/Modal/Modal';
 import styles from './SeasonFormModal.module.scss';
@@ -42,8 +41,14 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
       open={open}
       title="End Season"
       onClose={onClose}
+      confirmLabel={isSubmitting || busy ? 'Saving…' : 'End Season'}
+      confirmForm="season-end-form"
+      confirmIntent="danger"
+      confirmDisabled={isSubmitting || busy}
+      busy={isSubmitting || busy}
     >
       <form
+        id="season-end-form"
         className={styles.form}
         onSubmit={onSubmit}
       >
@@ -54,24 +59,8 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
           name="end_date"
           rules={{ required: 'End date is required' }}
           placeholder="Select end date…"
+          autoFocus
         />
-        <div className={styles.formActions}>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            intent="danger"
-            disabled={isSubmitting || busy}
-          >
-            {isSubmitting || busy ? 'Saving…' : 'End Season'}
-          </Button>
-        </div>
       </form>
     </Modal>
   );

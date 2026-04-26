@@ -1,0 +1,152 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Root container ────────────────────────────────────────────────────────────
+
+.accordion {
+  // CSS custom property so consumers can tint the header to match a coloured border
+  // by overriding --accordion-header-bg on the root element via className.
+  --accordion-header-bg: #{$border};
+
+  display: flex;
+  flex-direction: column;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  overflow: hidden;
+}
+
+// ── Header row ────────────────────────────────────────────────────────────────
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  background: var(--accordion-header-bg);
+  border-bottom: 1px solid $border;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: color-mix(in srgb, var(--accordion-header-bg), white 6%);
+
+    .hoverActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  &.rowCollapsed {
+    border-bottom: none;
+  }
+}
+
+// Static variant — no hover highlight since there is no toggle to interact with.
+// Hover actions are always visible since there is no collapse trigger to hover over.
+.rowStatic {
+  cursor: default;
+
+  &:hover {
+    background: var(--accordion-header-bg);
+  }
+
+  .hoverActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// ── Toggle chevron ────────────────────────────────────────────────────────────
+
+.toggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  background: transparent;
+  border: none;
+  color: $text-dim;
+  cursor: pointer;
+  padding: 0;
+  border-radius: $radius-sm;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $text-body;
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.toggleDisabled {
+  opacity: 0;
+  pointer-events: none;
+  cursor: default;
+}
+
+.toggleIcon {
+  transition: transform $transition-base;
+  transform: rotate(-90deg);
+}
+
+.toggleIconOpen {
+  transition: transform $transition-base;
+  transform: rotate(0deg);
+}
+
+// ── Label area ────────────────────────────────────────────────────────────────
+
+.label {
+  flex: 1;
+  min-width: 0;
+  font-size: $font-lg;
+  font-weight: 500;
+  color: $text-body;
+}
+
+// ── Always-visible right-side header content ──────────────────────────────────
+
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex-shrink: 0;
+}
+
+// ── Hover-revealed action overlay (replaces ActionOverlay) ────────────────────
+
+.hoverActions {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: 0 $space-md;
+  background: var(--accordion-header-bg);
+  border-radius: 0 $radius-md $radius-md 0;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+
+  &::before {
+    content: "";
+    position: absolute;
+    right: 100%;
+    top: 0;
+    bottom: 0;
+    width: 3rem;
+    background: linear-gradient(to right, transparent, var(--accordion-header-bg));
+    pointer-events: none;
+  }
+}
+
+// ── Collapsible body ──────────────────────────────────────────────────────────
+
+.body {
+  // Consumers style the content directly; this is just a structural wrapper.
+}

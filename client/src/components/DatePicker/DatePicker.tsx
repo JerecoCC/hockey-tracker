@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import Icon from '../Icon/Icon';
 import styles from './DatePicker.module.scss';
 
@@ -6,6 +6,8 @@ interface Props {
   value: string; // YYYY-MM-DD or ''
   onChange: (val: string) => void;
   placeholder?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -108,7 +110,7 @@ const buildDisplay = (
 };
 
 const DatePicker = (props: Props) => {
-  const { value, onChange } = props;
+  const { value, onChange, disabled, autoFocus } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
   const parsed = parseISO(value);
@@ -125,7 +127,15 @@ const DatePicker = (props: Props) => {
   const [buf, setBuf] = useState('');
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const [dropdownStyle, setDropdownStyle] = useState<CSSProperties>({});
+
+  const measureDropdown = () => {
+    if (!triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    setDropdownStyle({ top: r.bottom + 6, left: r.left });
+  };
   /** Selection range [start, end] to restore after the next render. */
   const pendingSelRef = useRef<[number, number] | null>(null);
 
@@ -170,6 +180,20 @@ const DatePicker = (props: Props) => {
     setBuf('');
   }, [value]);
 
+  // Auto-focus the text input on mount when requested
+  useEffect(() => {
+    if (autoFocus) {
+      inputRef.current?.focus();
+      // Explicitly activate the year segment so handleKeyDown can process
+      // keypresses immediately. Calling focus() alone only triggers handleFocus
+      // which schedules a state update — but by the time the user types the
+      // state update may not be committed yet, leaving activeSeg null and
+      // causing typed characters to be swallowed.
+      activateSegment('year');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Close on outside click
   useEffect(() => {
     if (!open) return;
@@ -182,6 +206,7 @@ const DatePicker = (props: Props) => {
 
   const openPicker = () => {
     setView('day');
+    if (!open) measureDropdown();
     setOpen((o) => !o);
   };
   const prevMonth = () => {
@@ -385,13 +410,17 @@ const DatePicker = (props: Props) => {
       className={styles.wrapper}
     >
       {/* ── Trigger ── */}
-      <div className={styles.trigger}>
+      <div
+        ref={triggerRef}
+        className={[styles.trigger, disabled && styles.triggerDisabled].filter(Boolean).join(' ')}
+      >
         <button
           type="button"
           className={styles.calIconBtn}
           onClick={openPicker}
           tabIndex={-1}
           aria-label="Open calendar"
+          disabled={disabled}
         >
           <Icon
             name="calendar_today"
@@ -406,12 +435,13 @@ const DatePicker = (props: Props) => {
           value={displayValue}
           data-empty={!cYear && !cMonth && !cDay}
           onChange={() => {}}
-          onClick={handleInputClick}
-          onKeyDown={handleKeyDown}
-          onFocus={handleFocus}
-          onBlur={handleBlur}
+          onClick={!disabled ? handleInputClick : undefined}
+          onKeyDown={!disabled ? handleKeyDown : undefined}
+          onFocus={!disabled ? handleFocus : undefined}
+          onBlur={!disabled ? handleBlur : undefined}
+          readOnly={disabled}
         />
-        {value && (
+        {value && !disabled && (
           <span
             className={styles.clear}
             onClick={clearDate}
@@ -424,7 +454,10 @@ const DatePicker = (props: Props) => {
       </div>
 
       {open && (
-        <div className={styles.dropdown}>
+        <div
+          className={styles.dropdown}
+          style={dropdownStyle}
+        >
           {/* ── Day view ── */}
           {view === 'day' && (
             <>

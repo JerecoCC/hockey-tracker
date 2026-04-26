@@ -361,6 +361,286 @@ async function initSchema() {
         REFERENCES seasons(id) ON DELETE SET NULL
   `;
 
+  // best_of_playoff: default series length for this league's playoffs (3, 5, or 7 total games).
+  // Renamed from best_of — handle both old and new column names idempotently.
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'leagues' AND column_name = 'best_of'
+      ) AND NOT EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'leagues' AND column_name = 'best_of_playoff'
+      ) THEN
+        ALTER TABLE leagues RENAME COLUMN best_of TO best_of_playoff;
+      END IF;
+    END $$
+  `;
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS best_of_playoff SMALLINT NOT NULL DEFAULT 7
+        CHECK (best_of_playoff IN (3, 5, 7))
+  `;
+
+  // best_of_shootout: number of rounds before sudden death in a shootout (3, 5, or 7).
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS best_of_shootout SMALLINT NOT NULL DEFAULT 3
+        CHECK (best_of_shootout IN (3, 5, 7))
+  `;
+
+  // ── Playoff series ────────────────────────────────────────────────────────
+  // One row per best-of-N playoff matchup. Games reference this via FK.
+  // round: 1=First Round / Wild Card, 2=Second Round, 3=Conference Finals, 4=Stanley Cup Final
+  // games_to_win: 4 for best-of-7 (the standard), 3 for best-of-5, etc.
+  await sql`
+    CREATE TABLE IF NOT EXISTS playoff_series (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      season_id      UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      round          SMALLINT NOT NULL CHECK (round BETWEEN 1 AND 4),
+      series_letter  TEXT,
+      home_team_id   UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      away_team_id   UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      games_to_win   SMALLINT NOT NULL DEFAULT 4,
+      home_wins      SMALLINT NOT NULL DEFAULT 0,
+      away_wins      SMALLINT NOT NULL DEFAULT 0,
+      status         TEXT NOT NULL DEFAULT 'upcoming'
+                       CHECK (status IN ('upcoming', 'active', 'complete')),
+      winner_team_id UUID REFERENCES teams(id) ON DELETE SET NULL,
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT playoff_series_different_teams CHECK (home_team_id != away_team_id)
+    )
+  `;
+
+  // ── Games ─────────────────────────────────────────────────────────────────
+  // Core game record. Team identity (name/code/logo) is resolved at query time
+  // from team_iterations, consistent with the rest of the data model.
+  //
+  // overtime_periods: 0 = regulation, 1 = 1 OT period, 2 = 2 OT, etc.
+  // home/away_score_reg: score at end of regulation (for OT/SO detection).
+  // game_number: sequential number within the regular season.
+  // game_number_in_series: which game within a playoff series (1–7).
+  await sql`
+    CREATE TABLE IF NOT EXISTS games (
+      id                    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      season_id             UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      home_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      away_team_id          UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      scheduled_at          TIMESTAMPTZ,
+      venue                 TEXT,
+      game_type             TEXT NOT NULL DEFAULT 'regular'
+                              CHECK (game_type IN ('preseason', 'regular', 'playoff')),
+      status                TEXT NOT NULL DEFAULT 'scheduled'
+                              CHECK (status IN ('scheduled', 'in_progress', 'final', 'postponed', 'cancelled')),
+      home_score            SMALLINT,
+      away_score            SMALLINT,
+      home_score_reg        SMALLINT,
+      away_score_reg        SMALLINT,
+      overtime_periods      SMALLINT,
+      shootout              BOOLEAN NOT NULL DEFAULT false,
+      playoff_series_id     UUID REFERENCES playoff_series(id) ON DELETE SET NULL,
+      game_number_in_series SMALLINT,
+      game_number           SMALLINT,
+      notes                 TEXT,
+      created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      CONSTRAINT games_different_teams CHECK (home_team_id != away_team_id)
+    )
+  `;
+
+  // Migration: track which period is actively being played
+  await sql`
+    ALTER TABLE games ADD COLUMN IF NOT EXISTS
+      current_period TEXT CHECK (current_period IN ('1', '2', '3', 'OT', 'SO'))
+  `;
+
+  // Migration: track which team shoots first in a shootout (NULL = not applicable / not yet set)
+  await sql`
+    ALTER TABLE games ADD COLUMN IF NOT EXISTS
+      shootout_first_team_id UUID REFERENCES teams(id) ON DELETE SET NULL
+  `;
+
+  // Migration: separate time-of-day for the game (stored as TEXT, e.g. "19:30")
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS scheduled_time TEXT`;
+
+  // Migration: actual game start / end timestamps (distinct from the pre-game scheduled_at)
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_start TIMESTAMPTZ`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS time_end   TIMESTAMPTZ`;
+
+  // Migration: drop stored score columns — scores are always derived from the goals table at query time.
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS home_score`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS away_score`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS home_score_reg`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS away_score_reg`;
+
+  // Migration: drop redundant period-by-period goal columns (scores are now derived from the goals table)
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_home_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p1_away_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p2_home_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p2_away_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p3_home_goals`;
+  await sql`ALTER TABLE games DROP COLUMN IF EXISTS p3_away_goals`;
+
+  // Migration: game_periods table has been removed; scoring breakdown is derived
+  // from the goals table at query time. Drop if it still exists on older DBs.
+  await sql`DROP TABLE IF EXISTS game_periods`;
+
+  // ── Goals ─────────────────────────────────────────────────────────────────
+  // One row per goal scored. scorer_id / assist_1_id / assist_2_id FK to
+  // players so credit can be attributed even if roster data changes later.
+  // period: '1' | '2' | '3' | 'OT' | 'SO' — mirrors games.current_period.
+  // goal_type defaults to even-strength; own-goals have no assist columns.
+  await sql`
+    CREATE TABLE IF NOT EXISTS goals (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id      UUID NOT NULL REFERENCES games(id)    ON DELETE CASCADE,
+      team_id      UUID NOT NULL REFERENCES teams(id)    ON DELETE CASCADE,
+      period       TEXT NOT NULL CHECK (period IN ('1', '2', '3', 'OT', 'SO')),
+      goal_type    TEXT NOT NULL DEFAULT 'even-strength'
+                     CHECK (goal_type IN (
+                       'even-strength',
+                       'power-play',
+                       'shorthanded',
+                       'empty-net',
+                       'penalty-shot',
+                       'own'
+                     )),
+      period_time  TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$'),
+      scorer_id    UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      assist_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      assist_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ── Game star-of-game columns ─────────────────────────────────────────────
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS star_1_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS star_2_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+  await sql`ALTER TABLE games ADD COLUMN IF NOT EXISTS star_3_id UUID REFERENCES players(id) ON DELETE SET NULL`;
+
+  // ── Goals column migrations ────────────────────────────────────────────────
+  // period_time was added after the initial table creation; add it if absent.
+  await sql`
+    ALTER TABLE goals ADD COLUMN IF NOT EXISTS
+      period_time TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$')
+  `;
+  // empty_net is a modifier independent of goal_type (e.g. a shorthanded empty-net goal).
+  await sql`
+    ALTER TABLE goals ADD COLUMN IF NOT EXISTS empty_net BOOLEAN NOT NULL DEFAULT FALSE
+  `;
+  // Migrate legacy 'empty-net' goal_type rows: mark empty_net = true and reclassify as
+  // 'even-strength' (the most common scenario — adjust if other strengths existed).
+  await sql`
+    UPDATE goals
+    SET empty_net = TRUE, goal_type = 'even-strength'
+    WHERE goal_type = 'empty-net'
+  `;
+
+  // ── Game lineups ───────────────────────────────────────────────────────────
+  // Starting lineup: one row per position slot per team per game.
+  // position_slot: C=Center, LW=Left Wing, RW=Right Wing, D1=Defence 1, D2=Defence 2, G=Goalie
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_lineups (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id        UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id        UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      player_id      UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      position_slot  TEXT NOT NULL CHECK (position_slot IN ('C', 'LW', 'RW', 'D1', 'D2', 'G')),
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, team_id, position_slot)
+    )
+  `;
+
+  // ── Game rosters ───────────────────────────────────────────────────────────
+  // Game-day squad: which players are participating in a specific game.
+  // Decoupled from player_teams (the season-wide roster) so removing a player
+  // from a game does not affect their standing on the team for the season.
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_rosters (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id     UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id     UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      player_id   UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, team_id, player_id)
+    )
+  `;
+
+  // ── Shots on goal per period (now stored inline on games) ─────────────────
+  // period_shots is a JSONB array: [{ period, home_shots, away_shots }, ...]
+  // Replaces the old game_period_shots table.
+  await sql`
+    ALTER TABLE games ADD COLUMN IF NOT EXISTS
+      period_shots JSONB NOT NULL DEFAULT '[]'
+  `;
+
+  // One-time data migration: copy rows from game_period_shots (if it still
+  // exists) into games.period_shots as a sorted JSONB array.
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'game_period_shots'
+      ) THEN
+        UPDATE games g
+        SET period_shots = COALESCE(
+          (
+            SELECT jsonb_agg(
+              jsonb_build_object(
+                'period',     gps.period,
+                'home_shots', gps.home_shots,
+                'away_shots', gps.away_shots
+              )
+              ORDER BY CASE gps.period
+                WHEN '1'  THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3
+                WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+            )
+            FROM game_period_shots gps
+            WHERE gps.game_id = g.id
+          ),
+          '[]'::jsonb
+        )
+        WHERE EXISTS (
+          SELECT 1 FROM game_period_shots gps WHERE gps.game_id = g.id
+        );
+      END IF;
+    END $$
+  `;
+
+  await sql`DROP TABLE IF EXISTS game_period_shots`;
+
+  // ── Goalie stats ───────────────────────────────────────────────────────────
+  // One row per goalie per game. shots_against and saves are entered manually.
+  // save_pct is derived client-side as saves / shots_against.
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_goalie_stats (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      goalie_id     UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      shots_against SMALLINT NOT NULL DEFAULT 0 CHECK (shots_against >= 0),
+      saves         SMALLINT NOT NULL DEFAULT 0 CHECK (saves >= 0),
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, goalie_id)
+    )
+  `;
+
+  // ── Shootout attempts ──────────────────────────────────────────────────────
+  // One row per shot attempt in a shootout (both scored and missed).
+  // attempt_order is the overall sequence number across both teams (1-based).
+  await sql`
+    CREATE TABLE IF NOT EXISTS shootout_attempts (
+      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      shooter_id    UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      scored        BOOLEAN NOT NULL DEFAULT FALSE,
+      attempt_order INT NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
   console.log('Database schema ready');
 }
 

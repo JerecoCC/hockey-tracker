@@ -41,6 +41,8 @@ interface Props {
   subtitle?: string;
   /** Optional third line shown below the subtitle (e.g. a version note). */
   note?: string;
+  /** When true, renders the name in italic (e.g. to mark a player as a starter). */
+  nameItalic?: boolean;
   /** When true, suppresses the image and placeholder entirely. */
   hideImage?: boolean;
   /**
@@ -56,6 +58,7 @@ const ListItem = ({
   image_shape = 'square',
   hideImage = false,
   name,
+  nameItalic = false,
   placeholder,
   rightContent,
   primaryColor,
@@ -95,7 +98,9 @@ const ListItem = ({
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}
       <div className={styles.info}>
-        <span className={styles.name}>{name}</span>
+        <span className={[styles.name, nameItalic && styles.nameItalic].filter(Boolean).join(' ')}>
+          {name}
+        </span>
         {hasExtra && (
           <>
             {subtitle && <span className={styles.subtitle}>{subtitle}</span>}

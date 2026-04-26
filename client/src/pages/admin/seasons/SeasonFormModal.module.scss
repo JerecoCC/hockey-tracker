@@ -10,12 +10,5 @@
 .dateRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $space-lg;
-}
-
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-md;
-  margin-top: $space-sm;
+  gap: $space-xl;
 }

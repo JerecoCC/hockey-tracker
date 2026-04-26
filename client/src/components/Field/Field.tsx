@@ -10,6 +10,8 @@ import { Controller, type Control, type RegisterOptions } from 'react-hook-form'
 import Icon from '../Icon/Icon';
 import cn from 'classnames';
 import DatePicker from '../DatePicker/DatePicker';
+import TimePicker from '../TimePicker/TimePicker';
+import RichTextEditor from '../RichTextEditor/RichTextEditor';
 import Select, { SelectOption } from '../Select/Select';
 import styles from './Field.module.scss';
 
@@ -41,6 +43,9 @@ type SelectProps = BaseProps & {
   options: SelectOption[];
   placeholder?: string;
   disabled?: boolean;
+  searchable?: boolean;
+  /** Called with the new value whenever the user picks an option (fires synchronously, alongside field.onChange). */
+  onChange?: (value: string | null) => void;
 };
 
 type CustomProps = BaseProps & {
@@ -51,10 +56,25 @@ type CustomProps = BaseProps & {
 type DatePickerProps = BaseProps & {
   type: 'datepicker';
   placeholder?: string;
+  disabled?: boolean;
+  autoFocus?: boolean;
+};
+
+type TimePickerProps = BaseProps & {
+  type: 'timepicker';
+  placeholder?: string;
+  disabled?: boolean;
+  mode?: 'clock' | 'duration';
+  autoFocus?: boolean;
 };
 
 type ColorProps = BaseProps & {
   type: 'color';
+};
+
+type RichTextProps = BaseProps & {
+  type: 'richtext';
+  disabled?: boolean;
 };
 
 export type FieldProps =
@@ -63,7 +83,9 @@ export type FieldProps =
   | SelectProps
   | CustomProps
   | DatePickerProps
-  | ColorProps;
+  | TimePickerProps
+  | ColorProps
+  | RichTextProps;
 
 const Field = (props: FieldProps) => {
   const { label, required, control, name, rules } = props;
@@ -77,7 +99,8 @@ const Field = (props: FieldProps) => {
       control={ctrl}
       name={name}
       rules={rules}
-      render={({ field }) => {
+      render={({ field, fieldState }) => {
+        const hasError = !!fieldState.error;
         const getField = () => {
           if (props.type === 'textarea') {
             /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -97,7 +120,7 @@ const Field = (props: FieldProps) => {
               : (e: ChangeEvent<HTMLTextAreaElement>) => field.onChange(e.target.value);
             return (
               <textarea
-                className={cn(styles.field, styles.textarea)}
+                className={cn(styles.field, styles.textarea, hasError && styles.fieldError)}
                 required={required}
                 {...rest}
                 value={(field.value as string) ?? ''}
@@ -106,14 +129,19 @@ const Field = (props: FieldProps) => {
               />
             );
           } else if (props.type === 'select') {
-            const { options, placeholder, disabled } = props;
+            const { options, placeholder, disabled, searchable, onChange: onChangeProp } = props;
             return (
               <Select
                 value={(field.value as string) ?? null}
                 options={options}
                 placeholder={placeholder}
-                onChange={field.onChange}
+                onChange={(val) => {
+                  field.onChange(val);
+                  onChangeProp?.(val);
+                }}
                 disabled={disabled}
+                searchable={searchable}
+                error={hasError}
               />
             );
           } else if (props.type === 'custom') {
@@ -124,6 +152,28 @@ const Field = (props: FieldProps) => {
                 value={(field.value as string) ?? ''}
                 onChange={field.onChange}
                 placeholder={props.placeholder}
+                disabled={props.disabled}
+                autoFocus={props.autoFocus}
+              />
+            );
+          } else if (props.type === 'timepicker') {
+            return (
+              <TimePicker
+                value={(field.value as string) ?? ''}
+                onChange={field.onChange}
+                placeholder={props.placeholder}
+                disabled={props.disabled}
+                mode={props.mode}
+                autoFocus={props.autoFocus}
+              />
+            );
+          } else if (props.type === 'richtext') {
+            return (
+              <RichTextEditor
+                content={(field.value as string) ?? ''}
+                onChange={field.onChange}
+                autoFocus={false}
+                editable={!props.disabled}
               />
             );
           } else if (props.type === 'color') {
@@ -175,7 +225,11 @@ const Field = (props: FieldProps) => {
             const hasSuffix = !isPassword && !!suffix;
             const input = (
               <input
-                className={cn(styles.field, hasSuffix && styles.fieldWithSuffix)}
+                className={cn(
+                  styles.field,
+                  hasSuffix && styles.fieldWithSuffix,
+                  hasError && styles.fieldError,
+                )}
                 required={required}
                 {...rest}
                 type={isPassword ? (showPassword ? 'text' : 'password') : rest.type}
