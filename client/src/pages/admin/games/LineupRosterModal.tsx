@@ -151,6 +151,7 @@ const LineupRosterModal = ({
             placeholder="Search players…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            autoFocus
           />
         </div>
       </div>

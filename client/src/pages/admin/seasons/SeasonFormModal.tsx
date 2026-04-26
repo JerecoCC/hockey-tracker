@@ -91,6 +91,7 @@ const SeasonFormModal = (props: Props) => {
           name="name"
           rules={{ required: 'Name is required' }}
           placeholder="e.g. NHL 2024–25"
+          autoFocus
         />
         <div className={styles.dateRow}>
           <Field

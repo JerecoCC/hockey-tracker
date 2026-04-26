@@ -139,6 +139,7 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
                   rules={{ required: true }}
                   placeholder="First name"
                   disabled={isSubmitting}
+                  autoFocus={index === 0}
                 />
                 <Field
                   control={control}

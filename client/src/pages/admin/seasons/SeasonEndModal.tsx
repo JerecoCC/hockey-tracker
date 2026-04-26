@@ -59,6 +59,7 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
           name="end_date"
           rules={{ required: 'End date is required' }}
           placeholder="Select end date…"
+          autoFocus
         />
       </form>
     </Modal>

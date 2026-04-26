@@ -2285,6 +2285,7 @@ const GameDetailsPage = () => {
                     value={goalPeriodTime}
                     onChange={setGoalPeriodTime}
                     disabled={goalSubmitting}
+                    autoFocus
                   />
                 </div>
 
@@ -2524,6 +2525,7 @@ const GameDetailsPage = () => {
             control={gameInfoControl}
             name="scheduled_date"
             placeholder="Select date…"
+            autoFocus
           />
           <Field
             label="Scheduled Time"
@@ -2712,12 +2714,13 @@ const GameDetailsPage = () => {
                       control={shotsControl}
                       name="end_time"
                       disabled={shotsSubmitting}
+                      autoFocus
                     />
                     <hr className={styles.lineupDivider} />
                   </>
                 )}
 
-                {teamRows.map((row) => (
+                {teamRows.map((row, rowIdx) => (
                   <div
                     key={row.key}
                     className={styles.shotsTeamRow}
@@ -2748,6 +2751,7 @@ const GameDetailsPage = () => {
                         min={0}
                         disabled={shotsSubmitting}
                         transform={(v) => v.replace(/[^0-9]/g, '')}
+                        autoFocus={!isEndGame && rowIdx === 0}
                       />
                     </div>
                   </div>
