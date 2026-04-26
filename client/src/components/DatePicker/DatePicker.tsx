@@ -182,7 +182,15 @@ const DatePicker = (props: Props) => {
 
   // Auto-focus the text input on mount when requested
   useEffect(() => {
-    if (autoFocus) inputRef.current?.focus();
+    if (autoFocus) {
+      inputRef.current?.focus();
+      // Explicitly activate the year segment so handleKeyDown can process
+      // keypresses immediately. Calling focus() alone only triggers handleFocus
+      // which schedules a state update — but by the time the user types the
+      // state update may not be committed yet, leaving activeSeg null and
+      // causing typed characters to be swallowed.
+      activateSegment('year');
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
