@@ -505,44 +505,7 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   grid-column: 1 / -1;
 }
 
-// Segmented team picker (connected buttons)
-.teamSegment {
-  display: flex;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  overflow: hidden;
-  width: 100%;
-}
-
-.teamSegmentBtn {
-  flex: 1;
-  padding: $space-sm $space-md;
-  background: transparent;
-  border: none;
-  border-right: 1px solid $border;
-  color: $text-dim;
-  font-size: $font-sm;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-sm;
-  transition:
-    background 0.15s,
-    color 0.15s;
-
-  &:last-child {
-    border-right: none;
-  }
-
-  &:hover:not(.teamSegmentBtnActive) {
-    background: rgba(255, 255, 255, 0.05);
-    color: $text-body;
-  }
-}
-
+// Team logo inside SegmentedControl options
 .teamSegmentLogo {
   width: 20px;
   height: 20px;
@@ -562,11 +525,6 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   font-size: $font-xs;
   font-weight: 700;
   text-transform: uppercase;
-}
-
-.teamSegmentBtnActive {
-  background: $accent;
-  color: #fff;
 }
 
 // Individual form field (label + input/select)

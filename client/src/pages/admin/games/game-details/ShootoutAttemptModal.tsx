@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import Icon from '../../../../components/Icon/Icon';
 import Modal from '../../../../components/Modal/Modal';
+import SegmentedControl from '../../../../components/SegmentedControl/SegmentedControl';
 import Select from '../../../../components/Select/Select';
 import { type GameRecord } from '../../../../hooks/useGames';
 import { type GameRosterEntry } from '../../../../hooks/useGameRoster';
@@ -64,41 +65,61 @@ const ShootoutAttemptModal = ({
   }));
   const attemptTeamName = team === 'away' ? game.away_team_name : game.home_team_name;
 
-  const renderTeamBtn = (side: 'away' | 'home') => {
+  const teamOptions = (['away', 'home'] as const).map((side) => {
     const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
     const code = side === 'away' ? game.away_team_code : game.home_team_code;
     const primary = side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
     const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
-    return (
-      <button
-        type="button"
-        className={[styles.teamSegmentBtn, team === side ? styles.teamSegmentBtnActive : '']
-          .filter(Boolean)
-          .join(' ')}
-        disabled={submitting}
-        onClick={() => {
-          setTeam(side);
-          setShooterId('');
-        }}
-      >
-        {logo ? (
-          <img
-            src={logo}
-            alt={code}
-            className={styles.teamSegmentLogo}
-          />
-        ) : (
-          <span
-            className={styles.teamSegmentLogoPlaceholder}
-            style={{ background: primary, color: text }}
-          >
-            {code.slice(0, 1)}
-          </span>
-        )}
-        {code}
-      </button>
-    );
-  };
+    return {
+      value: side,
+      label: (
+        <>
+          {logo ? (
+            <img
+              src={logo}
+              alt={code}
+              className={styles.teamSegmentLogo}
+            />
+          ) : (
+            <span
+              className={styles.teamSegmentLogoPlaceholder}
+              style={{ background: primary, color: text }}
+            >
+              {code.slice(0, 1)}
+            </span>
+          )}
+          {code}
+        </>
+      ),
+    };
+  });
+
+  const resultOptions = [
+    {
+      value: 'miss',
+      label: (
+        <>
+          <Icon
+            name="cancel"
+            size="1rem"
+          />{' '}
+          Miss
+        </>
+      ),
+    },
+    {
+      value: 'goal',
+      label: (
+        <>
+          <Icon
+            name="check_circle"
+            size="1rem"
+          />{' '}
+          Goal
+        </>
+      ),
+    },
+  ];
 
   const handleConfirm = async () => {
     const teamId = team === 'away' ? game.away_team_id : game.home_team_id;
@@ -127,10 +148,15 @@ const ShootoutAttemptModal = ({
     >
       <div className={styles.goalForm}>
         {isEditMode && (
-          <div className={styles.teamSegment}>
-            {renderTeamBtn('away')}
-            {renderTeamBtn('home')}
-          </div>
+          <SegmentedControl
+            value={team}
+            onChange={(v) => {
+              setTeam(v as 'away' | 'home');
+              setShooterId('');
+            }}
+            options={teamOptions}
+            disabled={submitting}
+          />
         )}
         <div className={styles.goalFormField}>
           <label className={styles.goalFormLabel}>
@@ -147,36 +173,12 @@ const ShootoutAttemptModal = ({
         </div>
         <div className={styles.goalFormField}>
           <label className={styles.goalFormLabel}>Result</label>
-          <div className={styles.teamSegment}>
-            <button
-              type="button"
-              className={[styles.teamSegmentBtn, !scored ? styles.teamSegmentBtnActive : '']
-                .filter(Boolean)
-                .join(' ')}
-              disabled={submitting}
-              onClick={() => setScored(false)}
-            >
-              <Icon
-                name="cancel"
-                size="1rem"
-              />{' '}
-              Miss
-            </button>
-            <button
-              type="button"
-              className={[styles.teamSegmentBtn, scored ? styles.teamSegmentBtnActive : '']
-                .filter(Boolean)
-                .join(' ')}
-              disabled={submitting}
-              onClick={() => setScored(true)}
-            >
-              <Icon
-                name="check_circle"
-                size="1rem"
-              />{' '}
-              Goal
-            </button>
-          </div>
+          <SegmentedControl
+            value={scored ? 'goal' : 'miss'}
+            onChange={(v) => setScored(v === 'goal')}
+            options={resultOptions}
+            disabled={submitting}
+          />
         </div>
       </div>
     </Modal>

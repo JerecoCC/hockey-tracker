@@ -1,0 +1,53 @@
+import type { ReactNode } from 'react';
+import styles from './SegmentedControl.module.scss';
+
+export interface SegmentedControlOption {
+  value: string;
+  label: ReactNode;
+}
+
+interface SegmentedControlProps {
+  /** Currently selected value. */
+  value: string;
+  /** Called with the new value when the user selects an option. */
+  onChange: (value: string) => void;
+  /** The options to render. Supports any number of items. */
+  options: SegmentedControlOption[];
+  /** Disables all option buttons. */
+  disabled?: boolean;
+  /** Moves focus to the first option button on mount. */
+  autoFocus?: boolean;
+}
+
+/**
+ * Segmented control — a connected button group that acts like a radio input.
+ * Supports any number of options and accepts arbitrary ReactNode labels so
+ * callers can include icons, logos, or plain text.
+ */
+const SegmentedControl = ({
+  value,
+  onChange,
+  options,
+  disabled = false,
+  autoFocus = false,
+}: SegmentedControlProps) => (
+  <div className={styles.segmentedControl}>
+    {options.map((opt, i) => (
+      <button
+        key={opt.value}
+        type="button"
+        className={[styles.option, value === opt.value ? styles.active : '']
+          .filter(Boolean)
+          .join(' ')}
+        disabled={disabled}
+        onClick={() => onChange(opt.value)}
+        // eslint-disable-next-line jsx-a11y/no-autofocus
+        autoFocus={autoFocus && i === 0}
+      >
+        {opt.label}
+      </button>
+    ))}
+  </div>
+);
+
+export default SegmentedControl;

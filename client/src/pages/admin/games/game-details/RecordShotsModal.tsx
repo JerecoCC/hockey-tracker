@@ -3,6 +3,7 @@ import type { Control, FieldArrayWithId } from 'react-hook-form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '../../../../components/Field/Field';
 import Modal from '../../../../components/Modal/Modal';
+import SegmentedControl from '../../../../components/SegmentedControl/SegmentedControl';
 import { type GameRecord, type CurrentPeriod } from '../../../../hooks/useGames';
 import { type GameRosterEntry } from '../../../../hooks/useGameRoster';
 import { type GoalieStatRecord } from '../../../../hooks/useGameGoalieStats';
@@ -357,39 +358,34 @@ const RecordShotsBody = ({
         <>
           <hr className={styles.lineupDivider} />
           <span className={styles.goalFormLabel}>Who Shoots First</span>
-          <div className={styles.teamSegment}>
-            {(['away', 'home'] as const).map((side) => {
+          <SegmentedControl
+            value={soFirstTeam ?? ''}
+            onChange={(v) => setSoFirstTeam(v as 'away' | 'home')}
+            options={(['away', 'home'] as const).map((side) => {
               const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
               const code = side === 'away' ? game.away_team_code : game.home_team_code;
               const primary =
                 side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
               const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
-              return (
-                <button
-                  key={side}
-                  type="button"
-                  className={[
-                    styles.teamSegmentBtn,
-                    soFirstTeam === side ? styles.teamSegmentBtnActive : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  disabled={submitting}
-                  onClick={() => setSoFirstTeam(side)}
-                >
-                  {renderTeamLogo(
-                    logo,
-                    code,
-                    primary,
-                    text,
-                    styles.teamSegmentLogo,
-                    styles.teamSegmentLogoPlaceholder,
-                  )}
-                  {code}
-                </button>
-              );
+              return {
+                value: side,
+                label: (
+                  <>
+                    {renderTeamLogo(
+                      logo,
+                      code,
+                      primary,
+                      text,
+                      styles.teamSegmentLogo,
+                      styles.teamSegmentLogoPlaceholder,
+                    )}
+                    {code}
+                  </>
+                ),
+              };
             })}
-          </div>
+            disabled={submitting}
+          />
         </>
       )}
       {goalieFields.length > 0 && (
