@@ -67,8 +67,10 @@ describe('Modal', () => {
         onClose={onClose}
       />,
     );
-    // The close button has no label text; find it by role
-    const closeBtn = screen.getByRole('button');
+    // The X close button is icon-only (no text); Cancel button also exists,
+    // so use getAllByRole and find the icon-only one by its absence of text content.
+    const allBtns = screen.getAllByRole('button');
+    const closeBtn = allBtns.find((b) => !b.textContent?.trim())!;
     fireEvent.click(closeBtn);
     expect(onClose).toHaveBeenCalledTimes(1);
   });

@@ -41,7 +41,7 @@ const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
   const navigate = useNavigate();
   const [activeTab, handleTabChange] = useTabState('tab:season-details');
-  const [statsSubTab, handleStatsSubTabChange] = useTabState('tab:season-stats');
+  const [statsSubTab, setStatsSubTab] = useState('Summary');
 
   const {
     season,
@@ -464,249 +464,245 @@ const SeasonDetailsPage = () => {
           {
             label: 'Stats',
             content: (
-              <Tabs
-                className={styles.statsSubTabs}
-                activeIndex={statsSubTab}
-                onTabChange={handleStatsSubTabChange}
-                tabs={[
-                  {
-                    label: 'Summary',
-                    content: (
-                      <div className={styles.statsLeadersPage}>
-                        {/* ── Skaters (Forwards) card ── */}
-                        <Card
-                          title="Skaters"
-                          action={
-                            <SegmentedControl
-                              value={summarySkaterStat}
-                              onChange={(v) => {
-                                setSummarySkaterStat(v as SkaterStatType);
-                                setHoveredSkaterIdx(0);
-                              }}
-                              options={STAT_OPTIONS}
-                              className={styles.statsSegmentedControl}
-                            />
-                          }
-                        >
-                          {summarySkaters.length > 0 ? (
-                            <StatsLeaderCard
-                              items={summarySkaters}
-                              featuredIdx={hoveredSkaterIdx}
-                              onHover={setHoveredSkaterIdx}
-                              tieRanks={skaterTieRanks}
-                              statLabel={
-                                STAT_OPTIONS.find((o) => o.value === summarySkaterStat)?.label ??
-                                summarySkaterStat
-                              }
-                              getFeaturedStat={(s) => s[summarySkaterStat] ?? 0}
-                              getRowStat={(s) => s[summarySkaterStat] ?? 0}
-                              onAllLeaders={() => handleStatsSubTabChange(1)}
-                            />
-                          ) : (
-                            !statsLoading && (
-                              <p className={styles.tabPlaceholder}>No skater stats yet.</p>
-                            )
-                          )}
-                        </Card>
+              <div className={styles.statsSubTabs}>
+                <SegmentedControl
+                  value={statsSubTab}
+                  onChange={setStatsSubTab}
+                  options={[
+                    { value: 'Summary', label: 'Summary' },
+                    { value: 'Skaters', label: 'Skaters' },
+                    { value: 'Defense', label: 'Defense' },
+                    { value: 'Goalies', label: 'Goalies' },
+                    { value: 'Teams', label: 'Teams' },
+                  ]}
+                />
 
-                        {/* ── Defense card ── */}
-                        <Card
-                          title="Defense"
-                          action={
-                            <SegmentedControl
-                              value={summaryDefStat}
-                              onChange={(v) => {
-                                setSummaryDefStat(v as SkaterStatType);
-                                setHoveredDefIdx(0);
-                              }}
-                              options={STAT_OPTIONS}
-                              className={styles.statsSegmentedControl}
-                            />
+                {statsSubTab === 'Summary' && (
+                  <div className={styles.statsLeadersPage}>
+                    {/* ── Skaters (Forwards) card ── */}
+                    <Card
+                      title="Skaters"
+                      action={
+                        <SegmentedControl
+                          value={summarySkaterStat}
+                          onChange={(v) => {
+                            setSummarySkaterStat(v as SkaterStatType);
+                            setHoveredSkaterIdx(0);
+                          }}
+                          options={STAT_OPTIONS}
+                          className={styles.statsSegmentedControl}
+                        />
+                      }
+                    >
+                      {summarySkaters.length > 0 ? (
+                        <StatsLeaderCard
+                          items={summarySkaters}
+                          featuredIdx={hoveredSkaterIdx}
+                          onHover={setHoveredSkaterIdx}
+                          tieRanks={skaterTieRanks}
+                          statLabel={
+                            STAT_OPTIONS.find((o) => o.value === summarySkaterStat)?.label ??
+                            summarySkaterStat
                           }
-                        >
-                          {summaryDefensemen.length > 0 ? (
-                            <StatsLeaderCard
-                              items={summaryDefensemen}
-                              featuredIdx={hoveredDefIdx}
-                              onHover={setHoveredDefIdx}
-                              tieRanks={defTieRanks}
-                              statLabel={
-                                STAT_OPTIONS.find((o) => o.value === summaryDefStat)?.label ??
-                                summaryDefStat
-                              }
-                              getFeaturedStat={(s) => s[summaryDefStat] ?? 0}
-                              getRowStat={(s) => s[summaryDefStat] ?? 0}
-                              onAllLeaders={() => handleStatsSubTabChange(2)}
-                            />
-                          ) : (
-                            !statsLoading && (
-                              <p className={styles.tabPlaceholder}>No defense stats yet.</p>
-                            )
-                          )}
-                        </Card>
+                          getFeaturedStat={(s) => s[summarySkaterStat] ?? 0}
+                          getRowStat={(s) => s[summarySkaterStat] ?? 0}
+                          onAllLeaders={() => setStatsSubTab('Skaters')}
+                        />
+                      ) : (
+                        !statsLoading && (
+                          <p className={styles.tabPlaceholder}>No skater stats yet.</p>
+                        )
+                      )}
+                    </Card>
 
-                        {/* ── Goalies card ── */}
-                        <Card
-                          title="Goalies"
-                          action={
-                            <SegmentedControl
-                              value={summaryGoalieStat}
-                              onChange={(v) => {
-                                setSummaryGoalieStat(v as GoalieLeaderStat);
-                                setHoveredGoalieIdx(0);
-                              }}
-                              options={GOALIE_OPTIONS}
-                              className={styles.statsSegmentedControl}
-                            />
+                    {/* ── Defense card ── */}
+                    <Card
+                      title="Defense"
+                      action={
+                        <SegmentedControl
+                          value={summaryDefStat}
+                          onChange={(v) => {
+                            setSummaryDefStat(v as SkaterStatType);
+                            setHoveredDefIdx(0);
+                          }}
+                          options={STAT_OPTIONS}
+                          className={styles.statsSegmentedControl}
+                        />
+                      }
+                    >
+                      {summaryDefensemen.length > 0 ? (
+                        <StatsLeaderCard
+                          items={summaryDefensemen}
+                          featuredIdx={hoveredDefIdx}
+                          onHover={setHoveredDefIdx}
+                          tieRanks={defTieRanks}
+                          statLabel={
+                            STAT_OPTIONS.find((o) => o.value === summaryDefStat)?.label ??
+                            summaryDefStat
                           }
+                          getFeaturedStat={(s) => s[summaryDefStat] ?? 0}
+                          getRowStat={(s) => s[summaryDefStat] ?? 0}
+                          onAllLeaders={() => setStatsSubTab('Defense')}
+                        />
+                      ) : (
+                        !statsLoading && (
+                          <p className={styles.tabPlaceholder}>No defense stats yet.</p>
+                        )
+                      )}
+                    </Card>
+
+                    {/* ── Goalies card ── */}
+                    <Card
+                      title="Goalies"
+                      action={
+                        <SegmentedControl
+                          value={summaryGoalieStat}
+                          onChange={(v) => {
+                            setSummaryGoalieStat(v as GoalieLeaderStat);
+                            setHoveredGoalieIdx(0);
+                          }}
+                          options={GOALIE_OPTIONS}
+                          className={styles.statsSegmentedControl}
+                        />
+                      }
+                    >
+                      {summaryGoalies.length > 0 ? (
+                        <StatsLeaderCard
+                          items={summaryGoalies}
+                          featuredIdx={hoveredGoalieIdx}
+                          onHover={setHoveredGoalieIdx}
+                          tieRanks={goalieTieRanks}
+                          statLabel={
+                            GOALIE_OPTIONS.find((o) => o.value === summaryGoalieStat)?.label ??
+                            summaryGoalieStat
+                          }
+                          getFeaturedStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
+                          getRowStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
+                          onAllLeaders={() => setStatsSubTab('Goalies')}
+                        />
+                      ) : (
+                        !statsLoading && (
+                          <p className={styles.tabPlaceholder}>No goalie stats yet.</p>
+                        )
+                      )}
+                    </Card>
+                  </div>
+                )}
+
+                {statsSubTab === 'Skaters' && (
+                  <Card>
+                    <Table
+                      columns={skaterColumns}
+                      data={pagedForwards}
+                      rowKey={(r) => r.player_id}
+                      loading={statsLoading}
+                      emptyMessage="No forward stats recorded yet."
+                      activeSortKey={fwdSort.key}
+                      sortDir={fwdSort.dir}
+                      onSort={handleFwdSort}
+                    />
+                    {fwdPageCount > 1 && (
+                      <div className={styles.statsPagination}>
+                        <button
+                          className={styles.statsPageBtn}
+                          onClick={() => setFwdPage((p) => p - 1)}
+                          disabled={fwdPage === 1}
                         >
-                          {summaryGoalies.length > 0 ? (
-                            <StatsLeaderCard
-                              items={summaryGoalies}
-                              featuredIdx={hoveredGoalieIdx}
-                              onHover={setHoveredGoalieIdx}
-                              tieRanks={goalieTieRanks}
-                              statLabel={
-                                GOALIE_OPTIONS.find((o) => o.value === summaryGoalieStat)?.label ??
-                                summaryGoalieStat
-                              }
-                              getFeaturedStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
-                              getRowStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
-                              onAllLeaders={() => handleStatsSubTabChange(3)}
-                            />
-                          ) : (
-                            !statsLoading && (
-                              <p className={styles.tabPlaceholder}>No goalie stats yet.</p>
-                            )
-                          )}
-                        </Card>
+                          ‹
+                        </button>
+                        <span className={styles.statsPageInfo}>
+                          {fwdPage} / {fwdPageCount}
+                        </span>
+                        <button
+                          className={styles.statsPageBtn}
+                          onClick={() => setFwdPage((p) => p + 1)}
+                          disabled={fwdPage === fwdPageCount}
+                        >
+                          ›
+                        </button>
                       </div>
-                    ),
-                  },
-                  {
-                    label: 'Skaters',
-                    content: (
-                      <Card>
-                        <Table
-                          columns={skaterColumns}
-                          data={pagedForwards}
-                          rowKey={(r) => r.player_id}
-                          loading={statsLoading}
-                          emptyMessage="No forward stats recorded yet."
-                          activeSortKey={fwdSort.key}
-                          sortDir={fwdSort.dir}
-                          onSort={handleFwdSort}
-                        />
-                        {fwdPageCount > 1 && (
-                          <div className={styles.statsPagination}>
-                            <button
-                              className={styles.statsPageBtn}
-                              onClick={() => setFwdPage((p) => p - 1)}
-                              disabled={fwdPage === 1}
-                            >
-                              ‹
-                            </button>
-                            <span className={styles.statsPageInfo}>
-                              {fwdPage} / {fwdPageCount}
-                            </span>
-                            <button
-                              className={styles.statsPageBtn}
-                              onClick={() => setFwdPage((p) => p + 1)}
-                              disabled={fwdPage === fwdPageCount}
-                            >
-                              ›
-                            </button>
-                          </div>
-                        )}
-                      </Card>
-                    ),
-                  },
-                  {
-                    label: 'Defense',
-                    content: (
-                      <Card>
-                        <Table
-                          columns={skaterColumns}
-                          data={pagedDefensemen}
-                          rowKey={(r) => r.player_id}
-                          loading={statsLoading}
-                          emptyMessage="No defense stats recorded yet."
-                          activeSortKey={defSort.key}
-                          sortDir={defSort.dir}
-                          onSort={handleDefSort}
-                        />
-                        {defPageCount > 1 && (
-                          <div className={styles.statsPagination}>
-                            <button
-                              className={styles.statsPageBtn}
-                              onClick={() => setDefPage((p) => p - 1)}
-                              disabled={defPage === 1}
-                            >
-                              ‹
-                            </button>
-                            <span className={styles.statsPageInfo}>
-                              {defPage} / {defPageCount}
-                            </span>
-                            <button
-                              className={styles.statsPageBtn}
-                              onClick={() => setDefPage((p) => p + 1)}
-                              disabled={defPage === defPageCount}
-                            >
-                              ›
-                            </button>
-                          </div>
-                        )}
-                      </Card>
-                    ),
-                  },
-                  {
-                    label: 'Goalies',
-                    content: (
-                      <Card>
-                        <Table
-                          columns={goalieColumns}
-                          data={pagedGoalies}
-                          rowKey={(r) => r.player_id}
-                          loading={statsLoading}
-                          emptyMessage="No goalie stats recorded yet."
-                          activeSortKey={goalieSort.key}
-                          sortDir={goalieSort.dir}
-                          onSort={handleGoalieSort}
-                        />
-                        {goaliePageCount > 1 && (
-                          <div className={styles.statsPagination}>
-                            <button
-                              className={styles.statsPageBtn}
-                              onClick={() => setGoaliePage((p) => p - 1)}
-                              disabled={goaliePage === 1}
-                            >
-                              ‹
-                            </button>
-                            <span className={styles.statsPageInfo}>
-                              {goaliePage} / {goaliePageCount}
-                            </span>
-                            <button
-                              className={styles.statsPageBtn}
-                              onClick={() => setGoaliePage((p) => p + 1)}
-                              disabled={goaliePage === goaliePageCount}
-                            >
-                              ›
-                            </button>
-                          </div>
-                        )}
-                      </Card>
-                    ),
-                  },
-                  {
-                    label: 'Teams',
-                    content: (
-                      <Card>
-                        <p className={styles.tabPlaceholder}>Teams coming soon.</p>
-                      </Card>
-                    ),
-                  },
-                ]}
-              />
+                    )}
+                  </Card>
+                )}
+
+                {statsSubTab === 'Defense' && (
+                  <Card>
+                    <Table
+                      columns={skaterColumns}
+                      data={pagedDefensemen}
+                      rowKey={(r) => r.player_id}
+                      loading={statsLoading}
+                      emptyMessage="No defense stats recorded yet."
+                      activeSortKey={defSort.key}
+                      sortDir={defSort.dir}
+                      onSort={handleDefSort}
+                    />
+                    {defPageCount > 1 && (
+                      <div className={styles.statsPagination}>
+                        <button
+                          className={styles.statsPageBtn}
+                          onClick={() => setDefPage((p) => p - 1)}
+                          disabled={defPage === 1}
+                        >
+                          ‹
+                        </button>
+                        <span className={styles.statsPageInfo}>
+                          {defPage} / {defPageCount}
+                        </span>
+                        <button
+                          className={styles.statsPageBtn}
+                          onClick={() => setDefPage((p) => p + 1)}
+                          disabled={defPage === defPageCount}
+                        >
+                          ›
+                        </button>
+                      </div>
+                    )}
+                  </Card>
+                )}
+
+                {statsSubTab === 'Goalies' && (
+                  <Card>
+                    <Table
+                      columns={goalieColumns}
+                      data={pagedGoalies}
+                      rowKey={(r) => r.player_id}
+                      loading={statsLoading}
+                      emptyMessage="No goalie stats recorded yet."
+                      activeSortKey={goalieSort.key}
+                      sortDir={goalieSort.dir}
+                      onSort={handleGoalieSort}
+                    />
+                    {goaliePageCount > 1 && (
+                      <div className={styles.statsPagination}>
+                        <button
+                          className={styles.statsPageBtn}
+                          onClick={() => setGoaliePage((p) => p - 1)}
+                          disabled={goaliePage === 1}
+                        >
+                          ‹
+                        </button>
+                        <span className={styles.statsPageInfo}>
+                          {goaliePage} / {goaliePageCount}
+                        </span>
+                        <button
+                          className={styles.statsPageBtn}
+                          onClick={() => setGoaliePage((p) => p + 1)}
+                          disabled={goaliePage === goaliePageCount}
+                        >
+                          ›
+                        </button>
+                      </div>
+                    )}
+                  </Card>
+                )}
+
+                {statsSubTab === 'Teams' && (
+                  <Card>
+                    <p className={styles.tabPlaceholder}>Teams coming soon.</p>
+                  </Card>
+                )}
+              </div>
             ),
           },
           {

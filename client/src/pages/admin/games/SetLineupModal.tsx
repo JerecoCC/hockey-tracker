@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Button from '../../../components/Button/Button';
 import Modal from '../../../components/Modal/Modal';
 import Select from '../../../components/Select/Select';
 import { type LineupEntry, type LineupPositionSlot } from '../../../hooks/useGameLineup';
@@ -106,6 +107,9 @@ const SetLineupModal = ({
     if (!saving) onClose();
   };
 
+  const isDraftEmpty = (Object.values(draft) as (string | null)[]).every((v) => v === null);
+  const handleClear = () => setDraft(emptyDraft());
+
   const slotSelect = (slot: LineupPositionSlot, label: string) => (
     <div className={styles.slotField}>
       <span className={styles.slotLabel}>{label}</span>
@@ -130,6 +134,17 @@ const SetLineupModal = ({
       confirmIcon="set_lineup"
       confirmDisabled={saving || !allFilled || !hasChanges}
       busy={saving}
+      footerStart={
+        <Button
+          variant="outlined"
+          intent="neutral"
+          icon="clear_all"
+          onClick={handleClear}
+          disabled={saving || isDraftEmpty}
+        >
+          Clear
+        </Button>
+      }
     >
       <div className={styles.grid}>
         {/* Center — spans both columns */}
