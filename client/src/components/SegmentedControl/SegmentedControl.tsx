@@ -7,8 +7,8 @@ export interface SegmentedControlOption {
 }
 
 interface SegmentedControlProps {
-  /** Currently selected value. */
-  value: string;
+  /** Currently selected value. Pass `null` to render with no option selected. */
+  value: string | null;
   /** Called with the new value when the user selects an option. */
   onChange: (value: string) => void;
   /** The options to render. Supports any number of items. */

@@ -1159,16 +1159,18 @@ const GameDetailsPage = () => {
                                 hoverActions={
                                   isOTActive
                                     ? ([
-                                        {
-                                          icon: 'sports_hockey',
-                                          tooltip: 'Score Goal',
-                                          intent: 'success' as const,
-                                          disabled: !!busy,
-                                          onClick: () => openGoalModal('OT'),
-                                        },
                                         otGoals.length === 0
                                           ? {
-                                              icon: 'flag',
+                                              icon: 'sports_hockey',
+                                              tooltip: 'Score Goal',
+                                              intent: 'success' as const,
+                                              disabled: !!busy,
+                                              onClick: () => openGoalModal('OT'),
+                                            }
+                                          : null,
+                                        otGoals.length === 0
+                                          ? {
+                                              icon: 'play_arrow',
                                               tooltip: 'Go to Shootouts',
                                               intent: 'info' as const,
                                               disabled: !!busy,
@@ -2032,7 +2034,9 @@ const GameDetailsPage = () => {
                           )}
                           {isInProgress &&
                             ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
-                            (game.current_period !== 'SO' || soComplete) && (
+                            (game.current_period !== 'SO' || soComplete) &&
+                            (game.current_period !== 'OT' ||
+                              goals.some((g) => g.period === 'OT')) && (
                               <Button
                                 variant="filled"
                                 intent="danger"
@@ -2411,17 +2415,33 @@ const GameDetailsPage = () => {
                     isFinal
                       ? undefined
                       : [
-                          {
-                            icon: 'set_lineup',
-                            tooltip: 'Set Starting Lineup',
-                            intent: 'info' as const,
-                            onClick: () => setLineupSetTeam(side),
-                          },
-                          ...(inheritedLineupMap.size > 0 && lineupMap.size === 0
+                          ...(inheritedEntries.length > 0 && rosterEntries.length === 0
+                            ? [
+                                {
+                                  icon: 'clone',
+                                  tooltip: 'Auto-fill from Last Game',
+                                  intent: 'accent' as const,
+                                  disabled: autoFillBusy[side],
+                                  onClick: async () => {
+                                    const teamId =
+                                      side === 'away' ? game.away_team_id : game.home_team_id;
+                                    setAutoFillBusy((prev) => ({ ...prev, [side]: true }));
+                                    await addToRoster(
+                                      teamId,
+                                      inheritedEntries.map((e) => e.player_id),
+                                    );
+                                    setAutoFillBusy((prev) => ({ ...prev, [side]: false }));
+                                  },
+                                },
+                              ]
+                            : []),
+                          ...(inheritedLineupMap.size > 0 &&
+                          lineupMap.size === 0 &&
+                          rosterEntries.length > 0
                             ? [
                                 {
                                   icon: 'history',
-                                  tooltip: "Use Last Game's Lineup",
+                                  tooltip: "Apply Last Game's Starting Lineup",
                                   intent: 'warning' as const,
                                   disabled: lineupInheritBusy[side],
                                   onClick: () => {
@@ -2435,9 +2455,22 @@ const GameDetailsPage = () => {
                                     );
                                     setLineupInheritBusy((prev) => ({ ...prev, [side]: true }));
                                     saveTeamLineup(teamId, slots).finally(() =>
-                                      setLineupInheritBusy((prev) => ({ ...prev, [side]: false })),
+                                      setLineupInheritBusy((prev) => ({
+                                        ...prev,
+                                        [side]: false,
+                                      })),
                                     );
                                   },
+                                },
+                              ]
+                            : []),
+                          ...(rosterEntries.length > 0
+                            ? [
+                                {
+                                  icon: 'set_lineup',
+                                  tooltip: 'Set Starting Lineup',
+                                  intent: 'info' as const,
+                                  onClick: () => setLineupSetTeam(side),
                                 },
                               ]
                             : []),
@@ -2532,29 +2565,6 @@ const GameDetailsPage = () => {
                         </>
                       );
                     })()
-                  ) : inheritedEntries.length > 0 ? (
-                    <div className={styles.autoFillBanner}>
-                      <p className={styles.autoFillBannerText}>
-                        {inheritedEntries.length} players available from last game&apos;s lineup
-                      </p>
-                      <Button
-                        intent="accent"
-                        icon="group_add"
-                        size="sm"
-                        disabled={autoFillBusy[side]}
-                        onClick={async () => {
-                          const teamId = side === 'away' ? game.away_team_id : game.home_team_id;
-                          setAutoFillBusy((prev) => ({ ...prev, [side]: true }));
-                          await addToRoster(
-                            teamId,
-                            inheritedEntries.map((e) => e.player_id),
-                          );
-                          setAutoFillBusy((prev) => ({ ...prev, [side]: false }));
-                        }}
-                      >
-                        Auto-fill from last game
-                      </Button>
-                    </div>
                   ) : (
                     <p className={styles.noGoalsText}>No players in lineup yet.</p>
                   )}
@@ -2605,6 +2615,7 @@ const GameDetailsPage = () => {
           period={goalPeriod}
           editGoal={editGoal}
           game={game}
+          goals={goals}
           awayRoster={awayRoster}
           homeRoster={homeRoster}
           busy={!!busy}

@@ -363,6 +363,16 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   font-style: italic;
 }
 
+.otLimitNote {
+  margin: 0;
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $warning;
+  background: rgba($warning, 0.08);
+  border: 1px solid rgba($warning, 0.25);
+  border-radius: $radius-sm;
+}
+
 .autoFillBanner {
   display: flex;
   flex-direction: column;
