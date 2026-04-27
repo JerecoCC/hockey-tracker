@@ -211,6 +211,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 isFinal={game.status === 'final'}
                 statusLabel={formatStatusLabel(game)}
                 statusIntent={STATUS_INTENT[game.status]}
+                gameType={game.game_type}
                 date={game.scheduled_at ? DATE_FMT.format(new Date(game.scheduled_at)) : undefined}
                 time={game.scheduled_time ? formatTime(game.scheduled_time) : undefined}
                 venue={game.venue ?? undefined}
