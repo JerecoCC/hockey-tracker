@@ -161,11 +161,6 @@ const ScoreGoalModal = ({
       onConfirm={handleConfirm}
     >
       <div className={styles.goalForm}>
-        {otGoalExists && (
-          <p className={styles.otLimitNote}>
-            An overtime goal has already been recorded. Only one goal is allowed per OT period.
-          </p>
-        )}
         <div className={styles.goalFormField}>
           <label className={styles.goalFormLabel}>Scoring Team</label>
           <SegmentedControl
