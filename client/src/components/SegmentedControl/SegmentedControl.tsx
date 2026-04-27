@@ -4,6 +4,8 @@ import styles from './SegmentedControl.module.scss';
 export interface SegmentedControlOption {
   value: string;
   label: ReactNode;
+  /** When provided, replaces the default `.active` class when this option is selected. */
+  activeClassName?: string;
 }
 
 interface SegmentedControlProps {
@@ -36,7 +38,10 @@ const SegmentedControl = ({
       <button
         key={opt.value}
         type="button"
-        className={[styles.option, value === opt.value ? styles.active : '']
+        className={[
+          styles.option,
+          value === opt.value ? (opt.activeClassName ?? styles.active) : '',
+        ]
           .filter(Boolean)
           .join(' ')}
         disabled={disabled}

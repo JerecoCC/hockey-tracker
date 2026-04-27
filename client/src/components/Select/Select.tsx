@@ -22,6 +22,8 @@ interface Props {
   error?: boolean;
   /** When true, the trigger becomes a text input that filters options as the user types. */
   searchable?: boolean;
+  /** Moves focus to the trigger on mount. */
+  autoFocus?: boolean;
 }
 
 const Select = (props: Props) => {
@@ -34,6 +36,7 @@ const Select = (props: Props) => {
     disabled = false,
     error = false,
     searchable = false,
+    autoFocus = false,
   } = props;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -56,6 +59,15 @@ const Select = (props: Props) => {
     setOpen(false);
     setQuery('');
   };
+
+  // Defer autoFocus until after layout so getBoundingClientRect() returns correct dimensions.
+  useEffect(() => {
+    if (!autoFocus || !searchable) return;
+    const frame = requestAnimationFrame(() => {
+      searchRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(frame);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!open) return;

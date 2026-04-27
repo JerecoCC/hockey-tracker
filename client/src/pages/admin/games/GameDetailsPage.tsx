@@ -349,7 +349,7 @@ const GameDetailsPage = () => {
   const [attemptModalMode, setAttemptModalMode] = useState<null | 'add' | string>(null);
   const [attemptInitialTeam, setAttemptInitialTeam] = useState<'away' | 'home'>('away');
   const [attemptInitialShooterId, setAttemptInitialShooterId] = useState('');
-  const [attemptInitialScored, setAttemptInitialScored] = useState(false);
+  const [attemptInitialScored, setAttemptInitialScored] = useState<boolean | null>(null);
 
   const openAttemptModal = () => {
     if (!game) return;
@@ -364,7 +364,7 @@ const GameDetailsPage = () => {
       attempts.length % 2 === 0 ? fSide : fSide === 'away' ? 'home' : 'away';
     setAttemptInitialTeam(nextSide);
     setAttemptInitialShooterId('');
-    setAttemptInitialScored(false);
+    setAttemptInitialScored(null);
     setAttemptModalMode('add');
   };
 
@@ -1557,35 +1557,55 @@ const GameDetailsPage = () => {
                                       {photo}
                                     </>
                                   )}
-                                  {isInProgress && (
-                                    <ActionOverlay className={styles.goalActions}>
-                                      <Button
-                                        variant="ghost"
-                                        intent="neutral"
-                                        icon="edit"
-                                        size="sm"
-                                        tooltip="Edit attempt"
-                                        onClick={() => openEditAttemptModal(attempt)}
-                                      />
-                                      <Button
-                                        variant="ghost"
-                                        intent="danger"
-                                        icon="delete"
-                                        size="sm"
-                                        tooltip="Delete attempt"
-                                        onClick={() => deleteAttempt(attempt.id)}
-                                      />
-                                    </ActionOverlay>
-                                  )}
+                                  {isInProgress &&
+                                    attempt.attempt_order ===
+                                      Math.max(...attempts.map((a) => a.attempt_order)) && (
+                                      <ActionOverlay className={styles.goalActions}>
+                                        <Button
+                                          variant="ghost"
+                                          intent="neutral"
+                                          icon="edit"
+                                          size="sm"
+                                          tooltip="Edit attempt"
+                                          onClick={() => openEditAttemptModal(attempt)}
+                                        />
+                                        <Button
+                                          variant="ghost"
+                                          intent="danger"
+                                          icon="delete"
+                                          size="sm"
+                                          tooltip="Delete attempt"
+                                          onClick={() => deleteAttempt(attempt.id)}
+                                        />
+                                      </ActionOverlay>
+                                    )}
                                 </div>
                               );
                             };
+
+                            const awayAttempts =
+                              firstSide === 'away' ? firstTeamAttempts : secondTeamAttempts;
+                            const homeAttempts =
+                              firstSide === 'home' ? firstTeamAttempts : secondTeamAttempts;
+                            const soLabelSummary =
+                              attempts.length > 0
+                                ? `${awayAttempts.filter((a) => a.scored).length}/${awayAttempts.length} – ${homeAttempts.filter((a) => a.scored).length}/${homeAttempts.length}`
+                                : null;
 
                             return (
                               <Accordion
                                 variant="static"
                                 className={isSOActive ? styles.periodItemActive : undefined}
-                                label={<span className={styles.periodLabel}>Shootout</span>}
+                                label={
+                                  <span className={styles.periodLabel}>
+                                    Shootout
+                                    {soLabelSummary && (
+                                      <span className={styles.soLabelSummary}>
+                                        {soLabelSummary}
+                                      </span>
+                                    )}
+                                  </span>
+                                }
                                 hoverActions={
                                   isSOActive
                                     ? ([
@@ -1642,6 +1662,9 @@ const GameDetailsPage = () => {
                                           </span>
                                         )}
                                         <span>{firstTeamInfo.code}</span>
+                                        <span className={styles.soFirstShooterBadge}>
+                                          shoots first
+                                        </span>
                                       </div>
                                       <div
                                         className={[
@@ -2150,21 +2173,32 @@ const GameDetailsPage = () => {
                                   //   - it's OT/SO (pIdx === -1) which only appears when it's been played
                                   const isPeriodDone =
                                     isFinal || (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
+
+                                  // SO column: show goals/attempts instead of the raw goal value
+                                  if (p.id === 'SO') {
+                                    const teamAttempts = attempts.filter(
+                                      (a) => a.team_id === row.teamId,
+                                    );
+                                    const soDisplay =
+                                      teamAttempts.length > 0
+                                        ? `${teamAttempts.filter((a) => a.scored).length}/${teamAttempts.length}`
+                                        : '—';
+                                    return (
+                                      <td
+                                        key={p.id}
+                                        className={styles.tdGoals}
+                                      >
+                                        {soDisplay}
+                                      </td>
+                                    );
+                                  }
+
                                   const rawGoals =
                                     row.teamId === game.away_team_id
                                       ? ps?.away_goals
                                       : ps?.home_goals;
-                                  // SO winner gets 1, loser gets 0. The winner is derived from
-                                  // attempts because no goal row is written to the goals table for SO.
-                                  // This applies for both in-progress and final states.
-                                  let goals: number | string = rawGoals ?? (isPeriodDone ? 0 : '—');
-                                  if (p.id === 'SO' && soWinnerSide && !ps) {
-                                    goals =
-                                      (row.teamId === game.away_team_id) ===
-                                      (soWinnerSide === 'away')
-                                        ? 1
-                                        : 0;
-                                  }
+                                  const goals: number | string =
+                                    rawGoals ?? (isPeriodDone ? 0 : '—');
                                   return (
                                     <td
                                       key={p.id}
