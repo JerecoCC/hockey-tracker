@@ -97,7 +97,7 @@ const SetLineupModal = ({
       position_slot: slot,
       player_id: draft[slot] ?? null,
     }));
-    const ok = await saveTeamLineup(teamId, slots);
+    const ok = await saveTeamLineup(teamId, slots, teamName);
     setSaving(false);
     if (ok) onClose();
   };
