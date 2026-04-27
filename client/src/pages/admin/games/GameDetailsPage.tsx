@@ -560,9 +560,9 @@ const GameDetailsPage = () => {
 
   // Period columns for the Linescore table (always 1–3, plus OT/SO if applicable).
   const linescorePeriods: { id: string; label: string }[] = [
-    { id: '1', label: '1st' },
-    { id: '2', label: '2nd' },
-    { id: '3', label: '3rd' },
+    { id: '1', label: '1' },
+    { id: '2', label: '2' },
+    { id: '3', label: '3' },
     ...(game.period_scores.some((ps) => ps.period === 'OT') ||
     (game.overtime_periods ?? 0) > 0 ||
     game.current_period === 'OT' ||
@@ -1456,7 +1456,23 @@ const GameDetailsPage = () => {
                             ) => {
                               const isAway = side === 'away';
                               if (!attempt) {
-                                return <div className={styles.soAttemptCellEmpty}>—</div>;
+                                return (
+                                  <div
+                                    className={`${styles.soAttemptCell} ${styles.soAttemptCellEmpty}`}
+                                  >
+                                    {isAway ? (
+                                      <>
+                                        <span className={styles.soAttemptEmptyDash}>—</span>
+                                        <span className={styles.soAttemptEmptySquare} />
+                                      </>
+                                    ) : (
+                                      <>
+                                        <span className={styles.soAttemptEmptySquare} />
+                                        <span className={styles.soAttemptEmptyDash}>—</span>
+                                      </>
+                                    )}
+                                  </div>
+                                );
                               }
                               const shooterName = formatPlayerName(
                                 attempt.shooter_first_name,
@@ -2448,6 +2464,8 @@ const GameDetailsPage = () => {
                                   onClick: () => {
                                     const teamId =
                                       side === 'away' ? game.away_team_id : game.home_team_id;
+                                    const teamName =
+                                      side === 'away' ? game.away_team_name : game.home_team_name;
                                     const slots = Array.from(inheritedLineupMap.values()).map(
                                       (e) => ({
                                         position_slot: e.position_slot,
@@ -2455,7 +2473,7 @@ const GameDetailsPage = () => {
                                       }),
                                     );
                                     setLineupInheritBusy((prev) => ({ ...prev, [side]: true }));
-                                    saveTeamLineup(teamId, slots).finally(() =>
+                                    saveTeamLineup(teamId, slots, teamName).finally(() =>
                                       setLineupInheritBusy((prev) => ({
                                         ...prev,
                                         [side]: false,
@@ -2746,6 +2764,20 @@ const GameDetailsPage = () => {
         editMode={starsEditMode}
         roster={roster}
         busy={!!busy}
+        awayTeam={{
+          id: game.away_team_id,
+          code: game.away_team_code,
+          logo: game.away_team_logo,
+          primaryColor: game.away_team_primary_color,
+          textColor: game.away_team_text_color,
+        }}
+        homeTeam={{
+          id: game.home_team_id,
+          code: game.home_team_code,
+          logo: game.home_team_logo,
+          primaryColor: game.home_team_primary_color,
+          textColor: game.home_team_text_color,
+        }}
         initialStars={
           starsEditMode && game
             ? {

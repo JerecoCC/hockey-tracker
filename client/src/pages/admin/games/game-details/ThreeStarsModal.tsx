@@ -10,12 +10,22 @@ interface StarPayload {
   star3: string;
 }
 
+interface TeamMeta {
+  id: string;
+  code: string;
+  logo: string | null;
+  primaryColor: string;
+  textColor: string;
+}
+
 interface Props {
   open: boolean;
   /** true = editing stars on a finished game; false = end-game award flow */
   editMode: boolean;
   roster: GameRosterEntry[];
   busy: boolean;
+  awayTeam: TeamMeta;
+  homeTeam: TeamMeta;
   /** Pre-fill values used when editMode is true */
   initialStars?: { star1: string; star2: string; star3: string };
   onClose: () => void;
@@ -30,6 +40,8 @@ const ThreeStarsModal = ({
   editMode,
   roster,
   busy,
+  awayTeam,
+  homeTeam,
   initialStars,
   onClose,
   onSave,
@@ -48,13 +60,23 @@ const ThreeStarsModal = ({
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const allPlayerOptions = roster.map((e) => ({
-    value: e.player_id,
-    label:
-      e.jersey_number != null
-        ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
-        : `${e.first_name} ${e.last_name}`,
-  }));
+  const teamMap: Record<string, TeamMeta> = {
+    [awayTeam.id]: awayTeam,
+    [homeTeam.id]: homeTeam,
+  };
+
+  const allPlayerOptions = roster.map((e) => {
+    const team = teamMap[e.team_id];
+    return {
+      value: e.player_id,
+      label:
+        e.jersey_number != null
+          ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
+          : `${e.first_name} ${e.last_name}`,
+      logo: team?.logo ?? undefined,
+      code: team?.code,
+    };
+  });
 
   const canConfirm = !!star1Id && !!star2Id && !!star3Id;
 

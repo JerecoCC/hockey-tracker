@@ -1434,6 +1434,7 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   grid-template-columns: 1fr 1fr;
   align-items: stretch;
   gap: 0;
+  height: 50px; // driven by two-line player info text (~34px) + top/bottom padding (16px)
 
   &:last-child {
     border-bottom: none;
@@ -1470,18 +1471,26 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   justify-content: flex-end;
 }
 
+// Applied alongside .soAttemptCell — only overrides justify-content
 .soAttemptCellEmpty {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-sm $space-md;
+  justify-content: space-between;
+}
+
+.soAttemptEmptyDash {
   font-size: $font-sm;
   color: $text-dim;
-  border-right: 1px solid $border;
+}
 
-  &:last-child {
-    border-right: none;
-  }
+.soAttemptEmptySquare {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  aspect-ratio: 1;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+  background: transparent;
+  flex-shrink: 0;
 }
 
 .soAttemptPhoto {

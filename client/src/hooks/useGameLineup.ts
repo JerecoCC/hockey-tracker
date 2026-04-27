@@ -63,6 +63,7 @@ const useGameLineup = (gameId: string | undefined) => {
   const saveTeamLineup = async (
     teamId: string,
     slots: Array<{ position_slot: LineupPositionSlot; player_id: string | null }>,
+    teamName?: string,
   ): Promise<boolean> => {
     try {
       await axios.put(
@@ -70,7 +71,7 @@ const useGameLineup = (gameId: string | undefined) => {
         { team_id: teamId, slots },
         { headers: authHeaders() },
       );
-      toast.success('Lineup saved!');
+      toast.success(teamName ? `${teamName} starting lineup saved` : 'Starting lineup saved');
       await queryClient.invalidateQueries({ queryKey: ['game-lineup', gameId] });
       return true;
     } catch (err) {
