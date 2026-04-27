@@ -103,7 +103,7 @@ const ListItem = ({
         ))}
 
       {/* Jersey number chip */}
-      {jerseyNumber != null && <span className={styles.jerseyChip}>#{jerseyNumber}</span>}
+      {jerseyNumber != null && <span className={styles.jerseyChip}>{jerseyNumber}</span>}
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}
       <div className={styles.info}>

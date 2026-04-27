@@ -422,9 +422,11 @@
 
 // ── Stats tab ──────────────────────────────────────────────────────────────────
 
-// Tighten vertical gap for nested sub-tabs
+// Stats section: SegmentedControl + content stacked vertically
 .statsSubTabs {
-  gap: $space-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
 }
 
 // SegmentedControl inside a card header — shrink to content width
