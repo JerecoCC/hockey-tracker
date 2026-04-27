@@ -22,6 +22,7 @@ interface Props {
   period: string;
   editGoal: GoalRecord | null;
   game: GameRecord;
+  goals: GoalRecord[];
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   busy: boolean;
@@ -35,6 +36,7 @@ const ScoreGoalModal = ({
   period,
   editGoal,
   game,
+  goals,
   awayRoster,
   homeRoster,
   busy,
@@ -42,7 +44,7 @@ const ScoreGoalModal = ({
   onAdd,
   onUpdate,
 }: Props) => {
-  const [goalTeam, setGoalTeam] = useState<'away' | 'home'>('away');
+  const [goalTeam, setGoalTeam] = useState<'away' | 'home' | null>(null);
   const [goalPeriodTime, setGoalPeriodTime] = useState('');
   const [goalType, setGoalType] = useState('even-strength');
   const [goalEmptyNet, setGoalEmptyNet] = useState(false);
@@ -62,7 +64,7 @@ const ScoreGoalModal = ({
         setGoalAssist1Id(editGoal.assist_1_id ?? '');
         setGoalAssist2Id(editGoal.assist_2_id ?? '');
       } else {
-        setGoalTeam('away');
+        setGoalTeam(null);
         setGoalPeriodTime('');
         setGoalType('even-strength');
         setGoalEmptyNet(false);
@@ -80,7 +82,11 @@ const ScoreGoalModal = ({
     setGoalAssist2Id('');
   };
 
-  const teamRoster = goalTeam === 'away' ? awayRoster : homeRoster;
+  /** OT allows at most one goal. Block adding when one already exists (editing that goal is still OK). */
+  const otGoalExists =
+    period === 'OT' && goals.some((g) => g.period === 'OT' && g.id !== editGoal?.id);
+
+  const teamRoster = goalTeam === 'away' ? awayRoster : goalTeam === 'home' ? homeRoster : [];
   const playerOptions = teamRoster.map((e) => ({
     value: e.player_id,
     label:
@@ -119,6 +125,7 @@ const ScoreGoalModal = ({
   });
 
   const handleConfirm = async () => {
+    if (!goalTeam) return;
     const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
     const payload: PostGoalData = {
       team_id: teamId,
@@ -149,17 +156,26 @@ const ScoreGoalModal = ({
       title={editGoal ? 'Edit Goal' : 'Score Goal'}
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : editGoal ? 'Save Changes' : 'Record Goal'}
-      confirmDisabled={busy || submitting || !goalScorerId}
+      confirmDisabled={busy || submitting || !goalTeam || !goalScorerId || otGoalExists}
       busy={submitting}
       onConfirm={handleConfirm}
     >
       <div className={styles.goalForm}>
-        <SegmentedControl
-          value={goalTeam}
-          onChange={(v) => handleTeamChange(v as 'away' | 'home')}
-          options={teamOptions}
-          disabled={submitting}
-        />
+        {otGoalExists && (
+          <p className={styles.otLimitNote}>
+            An overtime goal has already been recorded. Only one goal is allowed per OT period.
+          </p>
+        )}
+        <div className={styles.goalFormField}>
+          <label className={styles.goalFormLabel}>Scoring Team</label>
+          <SegmentedControl
+            value={goalTeam}
+            onChange={(v) => handleTeamChange(v as 'away' | 'home')}
+            options={teamOptions}
+            disabled={submitting || otGoalExists}
+            autoFocus
+          />
+        </div>
         <div className={styles.goalFormTimeRow}>
           <div className={`${styles.goalFormField} ${styles.goalPeriodTimeField}`}>
             <label className={styles.goalFormLabel}>
@@ -170,7 +186,6 @@ const ScoreGoalModal = ({
               value={goalPeriodTime}
               onChange={setGoalPeriodTime}
               disabled={submitting}
-              autoFocus
             />
           </div>
           <div className={`${styles.goalFormField} ${styles.goalTypeField}`}>
