@@ -39,6 +39,8 @@ interface Props {
   textColor?: string | null;
   /** Optional line shown above the name (e.g. jersey number + position). */
   eyebrow?: string;
+  /** Jersey number — rendered as a distinct chip between the photo and name column. */
+  jerseyNumber?: number | null;
   /** Optional secondary line shown below the name (e.g. season label + recorded date). */
   subtitle?: string;
   /** Optional third line shown below the subtitle (e.g. a version note). */
@@ -66,6 +68,7 @@ const ListItem = ({
   primaryColor,
   textColor,
   eyebrow,
+  jerseyNumber,
   subtitle,
   note,
   actions,
@@ -98,6 +101,9 @@ const ListItem = ({
             {placeholder ?? (codeValue ?? name ?? '').slice(0, 3)}
           </span>
         ))}
+
+      {/* Jersey number chip */}
+      {jerseyNumber != null && <span className={styles.jerseyChip}>#{jerseyNumber}</span>}
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}
       <div className={styles.info}>

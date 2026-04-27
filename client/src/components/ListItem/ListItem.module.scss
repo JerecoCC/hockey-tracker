@@ -57,6 +57,24 @@
   border-radius: 50%;
 }
 
+// ── Jersey number chip ────────────────────────────────────────────────────────
+.jerseyChip {
+  flex-shrink: 0;
+  min-width: 34px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  font-variant-numeric: tabular-nums;
+  padding: 0 $space-xs;
+  letter-spacing: 0.02em;
+}
+
 // ── Info column (name + optional subtitle / note) ─────────────────────────────
 .info {
   flex: 1;

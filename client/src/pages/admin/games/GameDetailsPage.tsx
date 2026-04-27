@@ -2565,12 +2565,9 @@ const GameDetailsPage = () => {
                         const isStarter = lineupMap.has(e.player_id);
                         const isInheritedStarter =
                           !isStarter && inheritedLineupMap.has(e.player_id);
-                        const jerseyPart = e.jersey_number != null ? `#${e.jersey_number}` : null;
                         const positionPart = e.position
                           ? (POSITION_LABEL[e.position] ?? e.position)
-                          : null;
-                        const eyebrow =
-                          [jerseyPart, positionPart].filter(Boolean).join(' · ') || undefined;
+                          : undefined;
                         return (
                           <ListItem
                             key={e.id}
@@ -2578,7 +2575,8 @@ const GameDetailsPage = () => {
                             image_shape="circle"
                             primaryColor={primaryColor}
                             textColor={textColor}
-                            eyebrow={eyebrow}
+                            jerseyNumber={e.jersey_number ?? null}
+                            eyebrow={positionPart}
                             name={`${e.last_name}, ${e.first_name}`}
                             placeholder={`${e.first_name[0]}${e.last_name[0]}`}
                             rightContent={

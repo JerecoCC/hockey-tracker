@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './SegmentedControl.module.scss';
 
 export interface SegmentedControlOption {
@@ -6,6 +7,8 @@ export interface SegmentedControlOption {
   label: ReactNode;
   /** When provided, replaces the default `.active` class when this option is selected. */
   activeClassName?: string;
+  /** When provided, wraps the button in a Tooltip with this text. */
+  tooltip?: string;
 }
 
 interface SegmentedControlProps {
@@ -19,6 +22,8 @@ interface SegmentedControlProps {
   disabled?: boolean;
   /** Moves focus to the first option button on mount. */
   autoFocus?: boolean;
+  /** Extra CSS class applied to the root wrapper (e.g. for width overrides). */
+  className?: string;
 }
 
 /**
@@ -32,26 +37,39 @@ const SegmentedControl = ({
   options,
   disabled = false,
   autoFocus = false,
+  className,
 }: SegmentedControlProps) => (
-  <div className={styles.segmentedControl}>
-    {options.map((opt, i) => (
-      <button
-        key={opt.value}
-        type="button"
-        className={[
-          styles.option,
-          value === opt.value ? (opt.activeClassName ?? styles.active) : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        disabled={disabled}
-        onClick={() => onChange(opt.value)}
-        // eslint-disable-next-line jsx-a11y/no-autofocus
-        autoFocus={autoFocus && i === 0}
-      >
-        {opt.label}
-      </button>
-    ))}
+  <div className={[styles.segmentedControl, className].filter(Boolean).join(' ')}>
+    {options.map((opt, i) => {
+      const btn = (
+        <button
+          key={opt.value}
+          type="button"
+          className={[
+            styles.option,
+            value === opt.value ? (opt.activeClassName ?? styles.active) : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+          disabled={disabled}
+          onClick={() => onChange(opt.value)}
+          // eslint-disable-next-line jsx-a11y/no-autofocus
+          autoFocus={autoFocus && i === 0}
+        >
+          {opt.label}
+        </button>
+      );
+      return opt.tooltip ? (
+        <Tooltip
+          key={opt.value}
+          text={opt.tooltip}
+        >
+          {btn}
+        </Tooltip>
+      ) : (
+        btn
+      );
+    })}
   </div>
 );
 

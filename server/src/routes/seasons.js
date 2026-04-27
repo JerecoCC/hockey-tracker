@@ -688,5 +688,145 @@ router.delete('/:seasonId/groups/:groupId/teams', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:id/stats  – aggregate player stats for a season
+// ---------------------------------------------------------------------------
+router.get('/:id/stats', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const skaters = await sql`
+      WITH season_games AS (
+        SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
+      ),
+      player_gp AS (
+        SELECT gr.player_id, COUNT(DISTINCT gr.game_id) AS gp
+        FROM game_rosters gr
+        WHERE gr.game_id IN (SELECT id FROM season_games)
+        GROUP BY gr.player_id
+      ),
+      player_goals_agg AS (
+        SELECT scorer_id AS player_id, COUNT(*) AS goals
+        FROM goals
+        WHERE game_id IN (SELECT id FROM season_games) AND goal_type != 'own'
+        GROUP BY scorer_id
+      ),
+      player_assists_agg AS (
+        SELECT player_id, COUNT(*) AS assists
+        FROM (
+          SELECT assist_1_id AS player_id FROM goals
+            WHERE game_id IN (SELECT id FROM season_games) AND assist_1_id IS NOT NULL
+          UNION ALL
+          SELECT assist_2_id AS player_id FROM goals
+            WHERE game_id IN (SELECT id FROM season_games) AND assist_2_id IS NOT NULL
+        ) a
+        GROUP BY player_id
+      ),
+      player_team AS (
+        SELECT DISTINCT ON (pt.player_id)
+          pt.player_id, pt.team_id, pt.jersey_number, pt.photo
+        FROM player_teams pt
+        WHERE pt.season_id = ${id}
+        ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
+      )
+      SELECT
+        p.id                                          AS player_id,
+        p.first_name,
+        p.last_name,
+        COALESCE(ptr.photo, p.photo)                  AS photo,
+        p.position,
+        ptr.jersey_number,
+        ptr.team_id,
+        ti.code                                       AS team_code,
+        ti.name                                       AS team_name,
+        ti.logo                                       AS team_logo,
+        t.primary_color                               AS team_primary_color,
+        t.text_color                                  AS team_text_color,
+        pgp.gp::int                                   AS gp,
+        COALESCE(pg.goals,   0)::int                  AS goals,
+        COALESCE(pa.assists, 0)::int                  AS assists,
+        (COALESCE(pg.goals, 0) + COALESCE(pa.assists, 0))::int AS points
+      FROM player_gp pgp
+      JOIN players  p   ON p.id   = pgp.player_id
+      LEFT JOIN player_team        ptr ON ptr.player_id = p.id
+      LEFT JOIN teams              t   ON t.id          = ptr.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = ptr.team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      LEFT JOIN player_goals_agg   pg  ON pg.player_id  = p.id
+      LEFT JOIN player_assists_agg pa  ON pa.player_id  = p.id
+      WHERE p.position != 'G'
+      ORDER BY points DESC, goals DESC, assists DESC, pgp.gp DESC
+    `;
+
+    const goalies = await sql`
+      WITH season_games AS (
+        SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
+      ),
+      player_team AS (
+        SELECT DISTINCT ON (pt.player_id)
+          pt.player_id, pt.team_id, pt.jersey_number, pt.photo
+        FROM player_teams pt
+        WHERE pt.season_id = ${id}
+        ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
+      )
+      SELECT
+        p.id                                                   AS player_id,
+        p.first_name,
+        p.last_name,
+        COALESCE(ptr.photo, p.photo)                           AS photo,
+        ptr.jersey_number,
+        ggs.team_id                                            AS team_id,
+        ti.code                                                AS team_code,
+        ti.name                                                AS team_name,
+        ti.logo                                                AS team_logo,
+        t.primary_color                                        AS team_primary_color,
+        t.text_color                                           AS team_text_color,
+        COUNT(DISTINCT ggs.game_id)::int                       AS gp,
+        SUM(ggs.shots_against)::int                            AS shots_against,
+        SUM(ggs.saves)::int                                    AS saves,
+        SUM(ggs.shots_against - ggs.saves)::int                AS goals_against,
+        CASE WHEN SUM(ggs.shots_against) > 0
+          THEN ROUND(SUM(ggs.saves)::numeric / SUM(ggs.shots_against), 3)
+          ELSE NULL END                                        AS save_pct,
+        COUNT(*) FILTER (
+          WHERE ggs.shots_against > 0
+            AND ggs.shots_against = ggs.saves
+        )::int                                                 AS shutouts,
+        CASE WHEN COUNT(DISTINCT ggs.game_id) > 0
+          THEN ROUND(
+            (SUM(ggs.shots_against) - SUM(ggs.saves))::numeric
+              / COUNT(DISTINCT ggs.game_id), 2)
+          ELSE NULL END                                        AS gaa
+      FROM game_goalie_stats ggs
+      JOIN games   g   ON g.id  = ggs.game_id
+                      AND g.season_id = ${id}
+                      AND g.status    = 'final'
+      JOIN players p   ON p.id  = ggs.goalie_id
+      LEFT JOIN player_team ptr ON ptr.player_id = ggs.goalie_id
+      LEFT JOIN teams       t   ON t.id          = ggs.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = ggs.team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      GROUP BY
+        p.id, p.first_name, p.last_name, p.photo,
+        ptr.photo, ptr.jersey_number,
+        ggs.team_id, ti.code, ti.name, ti.logo,
+        t.primary_color, t.text_color
+      ORDER BY save_pct DESC NULLS LAST, saves DESC
+    `;
+
+    return res.json({ skaters, goalies });
+  } catch (err) {
+    console.error('season stats error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 

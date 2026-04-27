@@ -28,6 +28,14 @@ const PERIOD_LABEL: Record<string, string> = {
   SO: 'SO',
 };
 
+const PERIOD_TITLE_LABEL: Record<string, string> = {
+  '1': '1st Period',
+  '2': '2nd Period',
+  '3': '3rd Period',
+  OT: 'Overtime',
+  SO: 'Shootout',
+};
+
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
@@ -147,7 +155,7 @@ const RecordShotsModal = ({
   const modalTitle = showShootsFirst
     ? 'Go To Shootout'
     : isEndGame
-      ? 'End Game'
+      ? `End Game — ${PERIOD_TITLE_LABEL[period] ?? period}`
       : `Record Shots — ${PERIOD_LABEL[period] ?? period} Period`;
   const confirmLabel = submitting
     ? 'Saving…'

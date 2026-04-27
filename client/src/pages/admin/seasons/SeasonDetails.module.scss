@@ -420,6 +420,181 @@
   grid-column: 1 / -1;
 }
 
+// ── Stats tab ──────────────────────────────────────────────────────────────────
+
+// Tighten vertical gap for nested sub-tabs
+.statsSubTabs {
+  gap: $space-lg;
+}
+
+// SegmentedControl inside a card header — shrink to content width
+.statsSegmentedControl {
+  width: fit-content;
+}
+
+// Summary subtab: two cards side by side
+.statsSummaryGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-xl;
+  align-items: start;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+// Leader list inside Summary cards
+.statsLeaderList {
+  display: flex;
+  flex-direction: column;
+}
+
+.statsLeaderRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.03);
+  }
+}
+
+.statsLeaderRank {
+  flex-shrink: 0;
+  width: 20px;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-dim;
+  text-align: right;
+}
+
+.statsLeaderStat {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-bright;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.statsPlayerCell {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+}
+
+.statsPlayerPhoto {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.statsPlayerPhotoPlaceholder {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-dim;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+.statsPlayerName {
+  font-size: $font-sm;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.statsPagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
+  padding: $space-md $space-md $space-sm;
+  border-top: 1px solid $border;
+}
+
+.statsPageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.04);
+  color: $text-body;
+  font-size: $font-lg;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+  }
+}
+
+.statsPageInfo {
+  font-size: $font-sm;
+  color: $text-dim;
+  min-width: 48px;
+  text-align: center;
+}
+
+.statsTeamLogo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.15));
+}
+
+.statsTeamLogoPlaceholder {
+  width: 24px;
+  height: 24px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-dim;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-transform: uppercase;
+}
+
+// ── Summary leader layout ─────────────────────────────────────────────────────
+
+.statsLeadersPage {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-2xl;
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
