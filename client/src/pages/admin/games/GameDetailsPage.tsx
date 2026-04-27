@@ -958,7 +958,7 @@ const GameDetailsPage = () => {
                                               ),
                                           }
                                         : null,
-                                      num === 3
+                                      num === 3 && liveAwayScore === liveHomeScore
                                         ? {
                                             icon: 'more_time',
                                             tooltip: 'Go to Overtime',
@@ -976,7 +976,7 @@ const GameDetailsPage = () => {
                                               ),
                                           }
                                         : null,
-                                      num === 3
+                                      num === 3 && liveAwayScore !== liveHomeScore
                                         ? {
                                             icon: 'flag',
                                             tooltip: 'End Game',
@@ -2036,7 +2036,8 @@ const GameDetailsPage = () => {
                             ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
                             (game.current_period !== 'SO' || soComplete) &&
                             (game.current_period !== 'OT' ||
-                              goals.some((g) => g.period === 'OT')) && (
+                              goals.some((g) => g.period === 'OT')) &&
+                            (game.current_period !== '3' || liveAwayScore !== liveHomeScore) && (
                               <Button
                                 variant="filled"
                                 intent="danger"
