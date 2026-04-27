@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import Icon from '../../../../components/Icon/Icon';
 import Modal from '../../../../components/Modal/Modal';
 import SegmentedControl from '../../../../components/SegmentedControl/SegmentedControl';
 import Select from '../../../../components/Select/Select';
@@ -15,8 +14,8 @@ interface Props {
   initialTeam: 'away' | 'home';
   /** Initial shooter id when editing. */
   initialShooterId: string;
-  /** Initial scored state when editing. */
-  initialScored: boolean;
+  /** Initial scored state when editing. null = no selection yet (add mode). */
+  initialScored: boolean | null;
   game: GameRecord;
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
@@ -42,7 +41,7 @@ const ShootoutAttemptModal = ({
   const isEditMode = mode !== null && mode !== 'add';
   const [team, setTeam] = useState<'away' | 'home'>(initialTeam);
   const [shooterId, setShooterId] = useState(initialShooterId);
-  const [scored, setScored] = useState(initialScored);
+  const [scored, setScored] = useState<boolean | null>(initialScored);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -99,25 +98,21 @@ const ShootoutAttemptModal = ({
       value: 'miss',
       label: (
         <>
-          <Icon
-            name="cancel"
-            size="1rem"
-          />{' '}
+          <span className={styles.soResultOptionIcon}>✕</span>
           Miss
         </>
       ),
+      activeClassName: styles.resultOptionMissActive,
     },
     {
       value: 'goal',
       label: (
         <>
-          <Icon
-            name="check_circle"
-            size="1rem"
-          />{' '}
+          <span className={styles.soResultOptionIcon}>✓</span>
           Goal
         </>
       ),
+      activeClassName: styles.resultOptionGoalActive,
     },
   ];
 
@@ -126,9 +121,13 @@ const ShootoutAttemptModal = ({
     setSubmitting(true);
     try {
       if (isEditMode) {
-        await onUpdate(mode as string, { team_id: teamId, shooter_id: shooterId, scored });
+        await onUpdate(mode as string, {
+          team_id: teamId,
+          shooter_id: shooterId,
+          scored: scored ?? false,
+        });
       } else {
-        await onAdd({ team_id: teamId, shooter_id: shooterId, scored });
+        await onAdd({ team_id: teamId, shooter_id: shooterId, scored: scored ?? false });
       }
       onClose();
     } finally {
@@ -142,7 +141,7 @@ const ShootoutAttemptModal = ({
       title={isEditMode ? 'Edit Attempt' : `Add Attempt — ${attemptTeamName}`}
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : isEditMode ? 'Save Changes' : 'Record Attempt'}
-      confirmDisabled={busy || submitting || !shooterId}
+      confirmDisabled={busy || submitting || !shooterId || scored === null}
       busy={submitting}
       onConfirm={handleConfirm}
     >
@@ -168,13 +167,16 @@ const ShootoutAttemptModal = ({
             onChange={setShooterId}
             placeholder="Select shooter…"
             searchable
+            autoFocus
             disabled={submitting}
           />
         </div>
         <div className={styles.goalFormField}>
-          <label className={styles.goalFormLabel}>Result</label>
+          <label className={styles.goalFormLabel}>
+            Result <span className={styles.required}>*</span>
+          </label>
           <SegmentedControl
-            value={scored ? 'goal' : 'miss'}
+            value={scored === null ? null : scored ? 'goal' : 'miss'}
             onChange={(v) => setScored(v === 'goal')}
             options={resultOptions}
             disabled={submitting}
