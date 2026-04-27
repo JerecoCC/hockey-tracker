@@ -121,6 +121,21 @@
   text-align: left;
 }
 
+// ── Game type — left accent border ───────────────────────────────────────────
+// Overrides the left side of the base 1px $border to a thicker coloured stripe.
+
+.typePreseason {
+  border-left: 3px solid $text-dim; // slate — exhibition/lower stakes
+}
+
+.typeRegular {
+  border-left: 3px solid $accent-light; // blue — standard season play
+}
+
+.typePlayoff {
+  border-left: 3px solid $warning-light; // amber/gold — high stakes
+}
+
 // ── Hover-revealed actions slot ───────────────────────────────────────────────
 // Structural styles (position, opacity, gradient) live in ActionOverlay.module.scss.
 

@@ -59,3 +59,63 @@ svg[aria-hidden] {
     transform: rotate(360deg);
   }
 }
+
+// ── react-toastify overrides — match admin card style ──────────────────
+// Design tokens (raw values to avoid @use path complexity in index.scss)
+// $bg-card: #1e293b  $border: #334155  $radius-lg: 12px
+// $text-body: #e2e8f0  $text-bright: #f8fafc  $text-dim: #64748b
+
+.Toastify__toast {
+  background: #1e293b !important;
+  border: 1px solid #334155 !important;
+  border-radius: 12px !important;
+  color: #e2e8f0 !important;
+  font-family: inherit !important;
+  font-size: 0.875rem !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  padding: 0.875rem 1rem !important;
+
+  // Intent — left accent border
+  &.Toastify__toast--success {
+    border-left: 3px solid #86efac !important;
+  }
+  &.Toastify__toast--error {
+    border-left: 3px solid #fb7185 !important;
+  }
+  &.Toastify__toast--info {
+    border-left: 3px solid #93c5fd !important;
+  }
+  &.Toastify__toast--warning {
+    border-left: 3px solid #fbbf24 !important;
+  }
+}
+
+.Toastify__toast-body {
+  color: #e2e8f0 !important;
+  font-family: inherit !important;
+  padding: 0 !important;
+  gap: 0.625rem !important;
+}
+
+// Intent icon colours
+.Toastify__toast--success .Toastify__toast-icon svg {
+  fill: #86efac !important;
+}
+.Toastify__toast--error .Toastify__toast-icon svg {
+  fill: #fb7185 !important;
+}
+.Toastify__toast--info .Toastify__toast-icon svg {
+  fill: #93c5fd !important;
+}
+.Toastify__toast--warning .Toastify__toast-icon svg {
+  fill: #fbbf24 !important;
+}
+
+.Toastify__close-button {
+  color: #64748b !important;
+  opacity: 1 !important;
+
+  &:hover {
+    color: #e2e8f0 !important;
+  }
+}

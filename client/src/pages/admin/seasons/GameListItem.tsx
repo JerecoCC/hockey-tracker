@@ -3,6 +3,7 @@ import Badge from '../../../components/Badge/Badge';
 import type { BadgeIntent } from '../../../components/Badge/Badge';
 import Button from '../../../components/Button/Button';
 import type { ButtonIntent } from '../../../components/Button/Button';
+import type { GameType } from '../../../hooks/useGames';
 import styles from './GameListItem.module.scss';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -40,6 +41,7 @@ interface Props {
   time?: string;
   /** Venue / arena name */
   venue?: string;
+  gameType?: GameType;
   actions?: (GameListItemAction | false | null | undefined)[];
 }
 
@@ -63,6 +65,12 @@ const TeamLogo = ({ logo, code, primaryColor, textColor }: TeamInfo) =>
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+const GAME_TYPE_CLASS: Record<GameType, string> = {
+  preseason: styles.typePreseason,
+  regular: styles.typeRegular,
+  playoff: styles.typePlayoff,
+};
+
 const GameListItem = ({
   awayTeam,
   homeTeam,
@@ -75,6 +83,7 @@ const GameListItem = ({
   date,
   time,
   venue,
+  gameType,
   actions,
 }: Props) => {
   const visibleActions = actions?.filter((a): a is GameListItemAction => Boolean(a)) ?? [];
@@ -84,8 +93,10 @@ const GameListItem = ({
 
   const dateLine = [date, time].filter(Boolean).join(' • ');
 
+  const itemClass = [styles.item, gameType && GAME_TYPE_CLASS[gameType]].filter(Boolean).join(' ');
+
   return (
-    <li className={styles.item}>
+    <li className={itemClass}>
       {/* Main: date line + stacked teams */}
       <div className={styles.main}>
         {dateLine && <span className={styles.dateLine}>{dateLine}</span>}
