@@ -535,6 +535,9 @@ const GameDetailsPage = () => {
 
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
+  // Only the last recorded goal in the active period can be edited or deleted.
+  const currentPeriodGoals = goals.filter((g) => g.period === game.current_period);
+  const lastCurrentPeriodGoalId = currentPeriodGoals[currentPeriodGoals.length - 1]?.id;
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
   // Scores are always derived from the goals table (period_scores); the DB columns were removed.
   // The SO winner's +1 is never written as a goal row, so period_scores has no SO entry.
@@ -1109,8 +1112,8 @@ const GameDetailsPage = () => {
                                             </Tooltip>
                                           )}
 
-                                          {/* Edit / Delete goal — in-progress only */}
-                                          {isInProgress && (
+                                          {/* Edit / Delete — only the last goal of the current period */}
+                                          {isInProgress && goal.id === lastCurrentPeriodGoalId && (
                                             <ActionOverlay className={styles.goalActions}>
                                               <Button
                                                 variant="ghost"
@@ -1312,27 +1315,28 @@ const GameDetailsPage = () => {
                                               </Tooltip>
                                             )}
 
-                                            {/* Edit / Delete goal — in-progress only */}
-                                            {isInProgress && (
-                                              <ActionOverlay className={styles.goalActions}>
-                                                <Button
-                                                  variant="ghost"
-                                                  intent="neutral"
-                                                  icon="edit"
-                                                  size="sm"
-                                                  tooltip="Edit goal"
-                                                  onClick={() => openEditGoalModal(goal)}
-                                                />
-                                                <Button
-                                                  variant="ghost"
-                                                  intent="danger"
-                                                  icon="delete"
-                                                  size="sm"
-                                                  tooltip="Delete goal"
-                                                  onClick={() => deleteGoal(goal.id)}
-                                                />
-                                              </ActionOverlay>
-                                            )}
+                                            {/* Edit / Delete — only the last goal of the current period */}
+                                            {isInProgress &&
+                                              goal.id === lastCurrentPeriodGoalId && (
+                                                <ActionOverlay className={styles.goalActions}>
+                                                  <Button
+                                                    variant="ghost"
+                                                    intent="neutral"
+                                                    icon="edit"
+                                                    size="sm"
+                                                    tooltip="Edit goal"
+                                                    onClick={() => openEditGoalModal(goal)}
+                                                  />
+                                                  <Button
+                                                    variant="ghost"
+                                                    intent="danger"
+                                                    icon="delete"
+                                                    size="sm"
+                                                    tooltip="Delete goal"
+                                                    onClick={() => deleteGoal(goal.id)}
+                                                  />
+                                                </ActionOverlay>
+                                              )}
                                           </li>
                                         );
                                       })}
