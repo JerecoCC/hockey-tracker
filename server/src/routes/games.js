@@ -162,7 +162,7 @@ router.get('/:id', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
-      -- Last 5 final games for the home team within this season
+      -- Last 10 final games for the home team within this season
       LEFT JOIN LATERAL (
         SELECT COALESCE(
           json_agg(
@@ -202,7 +202,7 @@ router.get('/:id', async (req, res) => {
             AND (g2.home_team_id = g.home_team_id OR g2.away_team_id = g.home_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
-          LIMIT 5
+          LIMIT 10
         ) lg
         LEFT JOIN LATERAL (
           SELECT name, code, logo FROM team_iterations
@@ -211,7 +211,7 @@ router.get('/:id', async (req, res) => {
           LIMIT 1
         ) opp_ti ON true
       ) home_l5 ON true
-      -- Last 5 final games for the away team within this season
+      -- Last 10 final games for the away team within this season
       LEFT JOIN LATERAL (
         SELECT COALESCE(
           json_agg(
@@ -251,7 +251,7 @@ router.get('/:id', async (req, res) => {
             AND (g2.home_team_id = g.away_team_id OR g2.away_team_id = g.away_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
-          LIMIT 5
+          LIMIT 10
         ) lg
         LEFT JOIN LATERAL (
           SELECT name, code, logo FROM team_iterations
