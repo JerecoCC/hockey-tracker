@@ -7,7 +7,7 @@ import TimePicker from '@/components/TimePicker/TimePicker';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalRecord, type PostGoalData } from '@/hooks/useGameGoals';
-import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
+import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
 
 const GOAL_TYPES = [
   { value: 'even-strength', label: 'Even Strength' },

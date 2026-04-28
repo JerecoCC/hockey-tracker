@@ -5,14 +5,19 @@ import Modal from '@/components/Modal/Modal';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
-import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
+import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
 type FormValues = { goalies: Array<{ shots_against: string; saves: string }> };
 
-interface UpsertData { goalie_id: string; team_id: string; shots_against: number; saves: number }
+interface UpsertData {
+  goalie_id: string;
+  team_id: string;
+  shots_against: number;
+  saves: number;
+}
 
 interface Props {
   open: boolean;
@@ -24,7 +29,15 @@ interface Props {
   upsertGoalieStat: (data: UpsertData) => Promise<void>;
 }
 
-const GoalieStatsEditModal = ({ open, game, awayRoster, homeRoster, goalieStats, onClose, upsertGoalieStat }: Props) => {
+const GoalieStatsEditModal = ({
+  open,
+  game,
+  awayRoster,
+  homeRoster,
+  goalieStats,
+  onClose,
+  upsertGoalieStat,
+}: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const allGoalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
 
@@ -36,7 +49,10 @@ const GoalieStatsEditModal = ({ open, game, awayRoster, homeRoster, goalieStats,
       reset({
         goalies: allGoalies.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          return { shots_against: stat ? String(stat.shots_against) : '', saves: stat ? String(stat.saves) : '' };
+          return {
+            shots_against: stat ? String(stat.shots_against) : '',
+            saves: stat ? String(stat.saves) : '',
+          };
         }),
       });
     }
@@ -53,7 +69,12 @@ const GoalieStatsEditModal = ({ open, game, awayRoster, homeRoster, goalieStats,
       const shots = parseInt(row.shots_against, 10);
       const saves = parseInt(row.saves, 10);
       if (!isNaN(shots) && !isNaN(saves)) {
-        await upsertGoalieStat({ goalie_id: goalie.player_id, team_id: goalie.team_id, shots_against: shots, saves });
+        await upsertGoalieStat({
+          goalie_id: goalie.player_id,
+          team_id: goalie.team_id,
+          shots_against: shots,
+          saves,
+        });
       }
     }
     setSubmitting(false);
@@ -61,9 +82,15 @@ const GoalieStatsEditModal = ({ open, game, awayRoster, homeRoster, goalieStats,
   };
 
   return (
-    <Modal open={open} title="Goalie Stats" onClose={onClose}
+    <Modal
+      open={open}
+      title="Goalie Stats"
+      onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : 'Save'}
-      onConfirm={handleConfirm} confirmDisabled={submitting} busy={submitting}>
+      onConfirm={handleConfirm}
+      confirmDisabled={submitting}
+      busy={submitting}
+    >
       <div className={styles.shotsModalBody}>
         <div className={styles.shotsGoalieHeader}>
           <span />
@@ -81,18 +108,67 @@ const GoalieStatsEditModal = ({ open, game, awayRoster, homeRoster, goalieStats,
           const primary = isAway ? game.away_team_primary_color : game.home_team_primary_color;
           const text = isAway ? game.away_team_text_color : game.home_team_text_color;
           return (
-            <div key={field.id} className={styles.shotsGoalieRow}>
+            <div
+              key={field.id}
+              className={styles.shotsGoalieRow}
+            >
               <span className={styles.goalieNameCell}>
-                {logo ? <img src={logo} alt={code} className={styles.goalTeamLogo} /> : <span className={styles.goalTeamLogoPlaceholder} style={{ background: primary, color: text }}>{code?.slice(0, 1)}</span>}
-                {goalie.photo ? <img src={goalie.photo} alt="" className={styles.goalScorerPhoto} /> : <span className={styles.goalScorerPhotoPlaceholder} style={{ background: primary, color: text }}>{goalie.last_name?.charAt(0)}</span>}
+                {logo ? (
+                  <img
+                    src={logo}
+                    alt={code}
+                    className={styles.goalTeamLogo}
+                  />
+                ) : (
+                  <span
+                    className={styles.goalTeamLogoPlaceholder}
+                    style={{ background: primary, color: text }}
+                  >
+                    {code?.slice(0, 1)}
+                  </span>
+                )}
+                {goalie.photo ? (
+                  <img
+                    src={goalie.photo}
+                    alt=""
+                    className={styles.goalScorerPhoto}
+                  />
+                ) : (
+                  <span
+                    className={styles.goalScorerPhotoPlaceholder}
+                    style={{ background: primary, color: text }}
+                  >
+                    {goalie.last_name?.charAt(0)}
+                  </span>
+                )}
                 <div className={styles.goalInfo}>
-                  {goalie.jersey_number != null && <span className={styles.goalAssists}>#{goalie.jersey_number}</span>}
-                  <span className={styles.goalScorer}>{fmt(goalie.first_name, goalie.last_name)}</span>
+                  {goalie.jersey_number != null && (
+                    <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
+                  )}
+                  <span className={styles.goalScorer}>
+                    {fmt(goalie.first_name, goalie.last_name)}
+                  </span>
                 </div>
               </span>
               <div className={styles.shotsGoalieInputs}>
-                <Field type="number" control={control} name={`goalies.${i}.shots_against`} placeholder="0" min={0} disabled={submitting} transform={(v) => v.replace(/[^0-9]/g, '')} />
-                <Field type="number" control={control} name={`goalies.${i}.saves`} placeholder="0" min={0} disabled={submitting} transform={(v) => v.replace(/[^0-9]/g, '')} />
+                <Field
+                  type="number"
+                  control={control}
+                  name={`goalies.${i}.shots_against`}
+                  placeholder="0"
+                  min={0}
+                  disabled={submitting}
+                  transform={(v) => v.replace(/[^0-9]/g, '')}
+                />
+                <Field
+                  type="number"
+                  control={control}
+                  name={`goalies.${i}.saves`}
+                  placeholder="0"
+                  min={0}
+                  disabled={submitting}
+                  transform={(v) => v.replace(/[^0-9]/g, '')}
+                />
               </div>
             </div>
           );
