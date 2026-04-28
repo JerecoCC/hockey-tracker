@@ -1,7 +1,7 @@
-import Card from '../../../components/Card/Card';
-import EntityHeader from '../../../components/EntityHeader/EntityHeader';
-import { type LeagueFullRecord } from '../../../hooks/useLeagueDetails';
-import styles from './LeagueDetails.module.scss';
+import Card from '@/components/Card/Card';
+import EntityHeader from '@/components/EntityHeader/EntityHeader';
+import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
+import styles from '@/pages/admin/leagues/LeagueDetails.module.scss';
 
 const normalizeDescription = (html: string | null | undefined): string | null => {
   if (!html || html === '<p></p>') return null;

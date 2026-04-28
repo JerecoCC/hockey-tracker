@@ -1,5 +1,5 @@
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import { SeasonRecord } from '../../../hooks/useSeasons';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import { SeasonRecord } from '@/hooks/useSeasons';
 
 interface Props {
   open: boolean;

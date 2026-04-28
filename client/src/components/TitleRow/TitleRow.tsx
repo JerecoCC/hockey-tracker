@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { createPortal } from 'react-dom';
-import { useTitleRowContainer } from '../../context/TitleRowContext';
-import styles from './TitleRow.module.scss';
+import { useTitleRowContainer } from '@/context/TitleRowContext';
+import styles from '@/components/TitleRow/TitleRow.module.scss';
 
 interface TitleRowProps {
   /** Content on the left side (e.g. a back button or primary action). */

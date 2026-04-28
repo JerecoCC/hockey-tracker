@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
-import Checkbox from '../Checkbox/Checkbox';
-import styles from './SelectableListItem.module.scss';
+import Checkbox from '@/components/Checkbox/Checkbox';
+import styles from '@/components/SelectableListItem/SelectableListItem.module.scss';
 
 export interface SelectableListItemProps {
   checked: boolean;

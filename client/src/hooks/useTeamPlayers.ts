@@ -2,7 +2,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useState } from 'react';
 import { toast } from 'react-toastify';
-import { type PlayerRecord, type CreatePlayerData, type BulkPlayerInput } from './useLeaguePlayers';
+import { type PlayerRecord, type CreatePlayerData, type BulkPlayerInput } from '@/hooks/useLeaguePlayers';
 
 export interface PlayerRosterInput {
   player_id: string;

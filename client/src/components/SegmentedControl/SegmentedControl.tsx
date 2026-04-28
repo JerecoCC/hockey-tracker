@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import Tooltip from '../Tooltip/Tooltip';
-import styles from './SegmentedControl.module.scss';
+import Tooltip from '@/components/Tooltip/Tooltip';
+import styles from '@/components/SegmentedControl/SegmentedControl.module.scss';
 
 export interface SegmentedControlOption {
   value: string;

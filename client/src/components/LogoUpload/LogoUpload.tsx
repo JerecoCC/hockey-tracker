@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useController, type Control, type RegisterOptions } from 'react-hook-form';
-import Button from '../Button/Button';
-import Icon from '../Icon/Icon';
-import styles from './LogoUpload.module.scss';
+import Button from '@/components/Button/Button';
+import Icon from '@/components/Icon/Icon';
+import styles from '@/components/LogoUpload/LogoUpload.module.scss';
 
 interface Props {
   label?: string;

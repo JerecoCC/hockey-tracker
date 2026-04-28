@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import ConfirmModal from './ConfirmModal';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 
 const defaultProps = {
   open: true,

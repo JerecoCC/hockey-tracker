@@ -1,8 +1,8 @@
 import type { ButtonHTMLAttributes } from 'react';
 import cn from 'classnames';
-import Icon from '../Icon/Icon';
-import Tooltip from '../Tooltip/Tooltip';
-import styles from './Button.module.scss';
+import Icon from '@/components/Icon/Icon';
+import Tooltip from '@/components/Tooltip/Tooltip';
+import styles from '@/components/Button/Button.module.scss';
 
 export type ButtonVariant = 'filled' | 'outlined' | 'ghost';
 export type ButtonIntent = 'accent' | 'success' | 'warning' | 'danger' | 'info' | 'neutral';

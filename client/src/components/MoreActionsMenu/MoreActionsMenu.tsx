@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import Button from '../Button/Button';
-import Icon from '../Icon/Icon';
-import styles from './MoreActionsMenu.module.scss';
+import Button from '@/components/Button/Button';
+import Icon from '@/components/Icon/Icon';
+import styles from '@/components/MoreActionsMenu/MoreActionsMenu.module.scss';
 
 export interface MoreActionsMenuItem {
   label: string;

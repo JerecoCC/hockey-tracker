@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
-import Icon from '../../../components/Icon/Icon';
-import styles from './InfoItem.module.scss';
+import Icon from '@/components/Icon/Icon';
+import styles from '@/pages/admin/teams/InfoItem.module.scss';
 
 type DataProps = {
   label: string;

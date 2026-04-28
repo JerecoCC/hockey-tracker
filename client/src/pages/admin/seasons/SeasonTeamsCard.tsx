@@ -1,19 +1,19 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
-import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
-import Badge from '../../../components/Badge/Badge';
-import Button from '../../../components/Button/Button';
-import Card from '../../../components/Card/Card';
-import Icon from '../../../components/Icon/Icon';
-import Modal from '../../../components/Modal/Modal';
+import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
+import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Badge from '@/components/Badge/Badge';
+import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import Icon from '@/components/Icon/Icon';
+import Modal from '@/components/Modal/Modal';
 import {
   type LeagueTeam,
   type SeasonGroupRecord,
   type SeasonTeam,
-} from '../../../hooks/useSeasonDetails';
-import SeasonTeamOverrideModal from './SeasonTeamOverrideModal';
-import styles from './SeasonDetails.module.scss';
+} from '@/hooks/useSeasonDetails';
+import SeasonTeamOverrideModal from '@/pages/admin/seasons/SeasonTeamOverrideModal';
+import styles from '@/pages/admin/seasons/SeasonDetails.module.scss';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

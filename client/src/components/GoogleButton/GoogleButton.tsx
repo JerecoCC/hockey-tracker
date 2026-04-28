@@ -1,6 +1,6 @@
-import Button from '../Button/Button';
-import { useAuth } from '../../context/AuthContext';
-import styles from './GoogleButton.module.scss';
+import Button from '@/components/Button/Button';
+import { useAuth } from '@/context/AuthContext';
+import styles from '@/components/GoogleButton/GoogleButton.module.scss';
 
 interface GoogleButtonProps {
   label?: string;

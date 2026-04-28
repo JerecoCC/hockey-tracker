@@ -1,45 +1,45 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ActionOverlay from '../../../../components/ActionOverlay/ActionOverlay';
-import Badge from '../../../../components/Badge/Badge';
-import Tooltip from '../../../../components/Tooltip/Tooltip';
-import Breadcrumbs from '../../../../components/Breadcrumbs/Breadcrumbs';
-import Icon from '../../../../components/Icon/Icon';
-import Accordion, { type AccordionAction } from '../../../../components/Accordion/Accordion';
-import Button from '../../../../components/Button/Button';
-import Card from '../../../../components/Card/Card';
-import ListItem from '../../../../components/ListItem/ListItem';
-import MoreActionsMenu from '../../../../components/MoreActionsMenu/MoreActionsMenu';
-import Tabs from '../../../../components/Tabs/Tabs';
-import TitleRow from '../../../../components/TitleRow/TitleRow';
+import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
+import Badge from '@/components/Badge/Badge';
+import Tooltip from '@/components/Tooltip/Tooltip';
+import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
+import Icon from '@/components/Icon/Icon';
+import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
+import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import ListItem from '@/components/ListItem/ListItem';
+import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
+import Tabs from '@/components/Tabs/Tabs';
+import TitleRow from '@/components/TitleRow/TitleRow';
 import {
   useGameDetails,
   type CurrentPeriod,
   type GameType,
   type LastFiveGame,
-} from '../../../../hooks/useGames';
-import useTeamPlayers from '../../../../hooks/useTeamPlayers';
-import useGameLineup from '../../../../hooks/useGameLineup';
-import useGameRoster, { type GameRosterEntry } from '../../../../hooks/useGameRoster';
-import useGameGoals, { type GoalRecord } from '../../../../hooks/useGameGoals';
-import useGameGoalieStats from '../../../../hooks/useGameGoalieStats';
-import useShootoutAttempts, { type ShootoutAttempt } from '../../../../hooks/useShootoutAttempts';
-import useTabState from '../../../../hooks/useTabState';
-import LineupRosterModal from '../LineupRosterModal';
-import LineupCreatePlayersModal from '../LineupCreatePlayersModal';
-import SetLineupModal from '../SetLineupModal';
-import RemoveFromLineupModal from './RemoveFromLineupModal';
-import StartGameModal from './StartGameModal';
-import GameInfoEditModal from './GameInfoEditModal';
-import ThreeStarsModal from './ThreeStarsModal';
-import ScoreGoalModal from './ScoreGoalModal';
-import ShootoutAttemptModal from './ShootoutAttemptModal';
-import GoalieStatsEditModal from './GoalieStatsEditModal';
-import ShotsEditModal from './ShotsEditModal';
-import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
-import ScoreboardCard from './ScoreboardCard';
-import styles from './GameDetailsPage.module.scss';
+} from '@/hooks/useGames';
+import useTeamPlayers from '@/hooks/useTeamPlayers';
+import useGameLineup from '@/hooks/useGameLineup';
+import useGameRoster, { type GameRosterEntry } from '@/hooks/useGameRoster';
+import useGameGoals, { type GoalRecord } from '@/hooks/useGameGoals';
+import useGameGoalieStats from '@/hooks/useGameGoalieStats';
+import useShootoutAttempts, { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';
+import useTabState from '@/hooks/useTabState';
+import LineupRosterModal from '@/pages/admin/games/LineupRosterModal';
+import LineupCreatePlayersModal from '@/pages/admin/games/LineupCreatePlayersModal';
+import SetLineupModal from '@/pages/admin/games/SetLineupModal';
+import RemoveFromLineupModal from '@/pages/admin/games/game-details/RemoveFromLineupModal';
+import StartGameModal from '@/pages/admin/games/game-details/StartGameModal';
+import GameInfoEditModal from '@/pages/admin/games/game-details/GameInfoEditModal';
+import ThreeStarsModal from '@/pages/admin/games/game-details/ThreeStarsModal';
+import ScoreGoalModal from '@/pages/admin/games/game-details/ScoreGoalModal';
+import ShootoutAttemptModal from '@/pages/admin/games/game-details/ShootoutAttemptModal';
+import GoalieStatsEditModal from '@/pages/admin/games/game-details/GoalieStatsEditModal';
+import ShotsEditModal from '@/pages/admin/games/game-details/ShotsEditModal';
+import RecordShotsModal, { type ShotsNextAction } from '@/pages/admin/games/game-details/RecordShotsModal';
+import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
+import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

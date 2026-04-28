@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import ActionOverlay from './ActionOverlay';
+import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 
 describe('ActionOverlay', () => {
   it('renders a <span> element', () => {

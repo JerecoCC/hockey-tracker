@@ -1,5 +1,5 @@
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import { LeagueRecord } from '../../../hooks/useLeagues';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import { LeagueRecord } from '@/hooks/useLeagues';
 
 interface Props {
   open: boolean;

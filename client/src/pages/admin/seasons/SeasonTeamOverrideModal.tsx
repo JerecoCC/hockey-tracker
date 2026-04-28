@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
-import Modal from '../../../components/Modal/Modal';
-import SearchableList from '../../../components/SearchableList/SearchableList';
-import { type SeasonGroupRecord, type LeagueTeam } from '../../../hooks/useSeasonDetails';
-import styles from './SeasonDetails.module.scss';
+import Button from '@/components/Button/Button';
+import Icon from '@/components/Icon/Icon';
+import Modal from '@/components/Modal/Modal';
+import SearchableList from '@/components/SearchableList/SearchableList';
+import { type SeasonGroupRecord, type LeagueTeam } from '@/hooks/useSeasonDetails';
+import styles from '@/pages/admin/seasons/SeasonDetails.module.scss';
 
 interface Props {
   open: boolean;

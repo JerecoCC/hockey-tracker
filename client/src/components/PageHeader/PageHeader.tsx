@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../context/AuthContext';
-import Icon from '../Icon/Icon';
-import Tooltip from '../Tooltip/Tooltip';
-import styles from './PageHeader.module.scss';
+import { useAuth } from '@/context/AuthContext';
+import Icon from '@/components/Icon/Icon';
+import Tooltip from '@/components/Tooltip/Tooltip';
+import styles from '@/components/PageHeader/PageHeader.module.scss';
 
 const EXACT_TITLES: Record<string, string> = {
   '/admin/leagues': 'Leagues',

@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '../../../components/Field/Field';
-import LogoUpload from '../../../components/LogoUpload/LogoUpload';
-import Modal from '../../../components/Modal/Modal';
-import { type LeagueFullRecord } from '../../../hooks/useLeagueDetails';
-import { type CreateLeagueData } from '../../../hooks/useLeagues';
-import styles from './LeagueEditModal.module.scss';
+import Field from '@/components/Field/Field';
+import LogoUpload from '@/components/LogoUpload/LogoUpload';
+import Modal from '@/components/Modal/Modal';
+import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
+import { type CreateLeagueData } from '@/hooks/useLeagues';
+import styles from '@/pages/admin/leagues/LeagueEditModal.module.scss';
 
 const BEST_OF_OPTIONS = [
   { value: '3', label: 'Best of 3' },

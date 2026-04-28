@@ -1,9 +1,9 @@
 import { forwardRef, useState } from 'react';
 import type { ReactNode } from 'react';
-import Button from '../Button/Button';
-import type { ButtonIntent, ButtonVariant } from '../Button/Button';
-import Icon from '../Icon/Icon';
-import styles from './Accordion.module.scss';
+import Button from '@/components/Button/Button';
+import type { ButtonIntent, ButtonVariant } from '@/components/Button/Button';
+import Icon from '@/components/Icon/Icon';
+import styles from '@/components/Accordion/Accordion.module.scss';
 
 export interface AccordionAction {
   /** Button text label. */

@@ -1,8 +1,8 @@
-import Button from '../../../components/Button/Button';
-import Card from '../../../components/Card/Card';
-import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
-import { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
-import styles from './LeagueDetails.module.scss';
+import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
+import styles from '@/pages/admin/leagues/LeagueDetails.module.scss';
 
 interface Props {
   seasons: LeagueSeasonRecord[];

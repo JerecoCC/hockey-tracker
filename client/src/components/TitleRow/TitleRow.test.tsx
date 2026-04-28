@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import TitleRow from './TitleRow';
+import TitleRow from '@/components/TitleRow/TitleRow';
 
 describe('TitleRow', () => {
   it('renders left content', () => {

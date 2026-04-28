@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { type Control, type UseFormSetValue, useFieldArray, useForm } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Field from '../../../components/Field/Field';
-import Icon from '../../../components/Icon/Icon';
-import Modal from '../../../components/Modal/Modal';
-import type { SelectOption } from '../../../components/Select/Select';
-import { type CreateGameData } from '../../../hooks/useGames';
-import { type SeasonTeam } from '../../../hooks/useSeasonDetails';
-import styles from './BulkCreateGamesModal.module.scss';
+import Button from '@/components/Button/Button';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Field from '@/components/Field/Field';
+import Icon from '@/components/Icon/Icon';
+import Modal from '@/components/Modal/Modal';
+import type { SelectOption } from '@/components/Select/Select';
+import { type CreateGameData } from '@/hooks/useGames';
+import { type SeasonTeam } from '@/hooks/useSeasonDetails';
+import styles from '@/pages/admin/seasons/BulkCreateGamesModal.module.scss';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

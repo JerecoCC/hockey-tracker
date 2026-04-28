@@ -1,4 +1,4 @@
-import styles from './StatsLeaderCard.module.scss';
+import styles from '@/pages/admin/seasons/StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
   player_id: string;

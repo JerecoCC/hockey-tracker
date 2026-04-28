@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import Table, { Column } from './Table';
+import Table, { Column } from '@/components/Table/Table';
 
 interface Item {
   id: string;

@@ -1,16 +1,16 @@
 import { useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import Button from '../../../components/Button/Button';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Field from '../../../components/Field/Field';
-import Icon from '../../../components/Icon/Icon';
-import Modal from '../../../components/Modal/Modal';
+import Button from '@/components/Button/Button';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Field from '@/components/Field/Field';
+import Icon from '@/components/Icon/Icon';
+import Modal from '@/components/Modal/Modal';
 import {
   type BulkPlayerInput,
   type PlayerPosition,
   type PlayerShoots,
-} from '../../../hooks/useLeaguePlayers';
-import styles from './BulkAddPlayersModal.module.scss';
+} from '@/hooks/useLeaguePlayers';
+import styles from '@/pages/admin/leagues/BulkAddPlayersModal.module.scss';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },

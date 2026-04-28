@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
-import { type CreateTeamData } from './useTeams';
+import { type CreateTeamData } from '@/hooks/useTeams';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 

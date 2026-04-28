@@ -1,10 +1,10 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '../../../components/Field/Field';
-import LogoUpload from '../../../components/LogoUpload/LogoUpload';
-import Modal from '../../../components/Modal/Modal';
-import { type CreateTeamData, type TeamRecord } from '../../../hooks/useTeams';
-import styles from './TeamFormModal.module.scss';
+import Field from '@/components/Field/Field';
+import LogoUpload from '@/components/LogoUpload/LogoUpload';
+import Modal from '@/components/Modal/Modal';
+import { type CreateTeamData, type TeamRecord } from '@/hooks/useTeams';
+import styles from '@/pages/admin/teams/TeamFormModal.module.scss';
 
 interface FormValues {
   name: string;
