@@ -34,23 +34,18 @@ import ShotsEditModal from './ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
-import {
-  DATE_FMT_SHORT,
-  TIME_FMT,
-  formatScheduledTime,
-  formatPlayerName,
-  buildFormRecord,
-  PERIOD_IDS,
-  PERIODS,
-  GAME_TYPE_LABEL,
-  POSITION_LABEL,
-  GOAL_TYPE_BADGE,
-} from './constants';
+import { DATE_FMT_SHORT, TIME_FMT, formatScheduledTime, formatPlayerName } from './formatUtils';
+import { buildFormRecord } from './gameUtils';
+import { PERIOD_IDS, PERIODS, GAME_TYPE_LABEL, POSITION_LABEL, GOAL_TYPE_BADGE } from './constants';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const GameDetailsPage = () => {
-  const { leagueId, seasonId, id } = useParams<{
+  const {
+    leagueId = '',
+    seasonId,
+    id,
+  } = useParams<{
     leagueId: string;
     seasonId: string;
     id: string;
