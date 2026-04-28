@@ -249,6 +249,8 @@ const GameDetailsPage = () => {
   const [attemptInitialTeam, setAttemptInitialTeam] = useState<'away' | 'home'>('away');
   const [attemptInitialShooterId, setAttemptInitialShooterId] = useState('');
   const [attemptInitialScored, setAttemptInitialScored] = useState<boolean | null>(null);
+  /** ID of the attempt currently being deleted; null when idle. */
+  const [deletingAttemptId, setDeletingAttemptId] = useState<string | null>(null);
 
   const openAttemptModal = () => {
     if (!game) return;
@@ -276,6 +278,12 @@ const GameDetailsPage = () => {
   };
 
   const closeAttemptModal = () => setAttemptModalMode(null);
+
+  const handleDeleteAttempt = async (attemptId: string) => {
+    setDeletingAttemptId(attemptId);
+    await deleteAttempt(attemptId);
+    setDeletingAttemptId(null);
+  };
 
   // ── End Game / 3-stars modal ──────────────────────────────────────────────
   const [starsModalOpen, setStarsModalOpen] = useState(false);
@@ -1344,22 +1352,33 @@ const GameDetailsPage = () => {
                                     attempt.attempt_order ===
                                       Math.max(...attempts.map((a) => a.attempt_order)) && (
                                       <ActionOverlay className={styles.goalActions}>
-                                        <Button
-                                          variant="ghost"
-                                          intent="neutral"
-                                          icon="edit"
-                                          size="sm"
-                                          tooltip="Edit attempt"
-                                          onClick={() => openEditAttemptModal(attempt)}
-                                        />
-                                        <Button
-                                          variant="ghost"
-                                          intent="danger"
-                                          icon="delete"
-                                          size="sm"
-                                          tooltip="Delete attempt"
-                                          onClick={() => deleteAttempt(attempt.id)}
-                                        />
+                                        {(() => {
+                                          const isDeleting = deletingAttemptId === attempt.id;
+                                          return (
+                                            <>
+                                              <Button
+                                                variant="ghost"
+                                                intent="neutral"
+                                                icon="edit"
+                                                size="sm"
+                                                tooltip="Edit attempt"
+                                                disabled={isDeleting}
+                                                onClick={() => openEditAttemptModal(attempt)}
+                                              />
+                                              <Button
+                                                variant="ghost"
+                                                intent="danger"
+                                                icon={isDeleting ? 'hourglass_empty' : 'delete'}
+                                                size="sm"
+                                                tooltip={
+                                                  isDeleting ? 'Deleting…' : 'Delete attempt'
+                                                }
+                                                disabled={isDeleting}
+                                                onClick={() => handleDeleteAttempt(attempt.id)}
+                                              />
+                                            </>
+                                          );
+                                        })()}
                                       </ActionOverlay>
                                     )}
                                 </div>
