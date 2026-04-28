@@ -3,11 +3,14 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { type GameRecord } from '@/hooks/useGames';
-import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
+import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
 
 type ShotsEditFormValues = { periods: Array<{ away_shots: string; home_shots: string }> };
 
-interface LinescorePeriod { id: string; label: string }
+interface LinescorePeriod {
+  id: string;
+  label: string;
+}
 
 interface Props {
   open: boolean;
@@ -19,7 +22,9 @@ interface Props {
 
 const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Props) => {
   const [submitting, setSubmitting] = useState(false);
-  const { control, reset, getValues } = useForm<ShotsEditFormValues>({ defaultValues: { periods: [] } });
+  const { control, reset, getValues } = useForm<ShotsEditFormValues>({
+    defaultValues: { periods: [] },
+  });
   const { fields } = useFieldArray({ control, name: 'periods' });
 
   useEffect(() => {
@@ -27,7 +32,10 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
       reset({
         periods: periods.map((p) => {
           const ps = game.period_shots.find((s) => s.period === p.id);
-          return { away_shots: ps ? String(ps.away_shots) : '', home_shots: ps ? String(ps.home_shots) : '' };
+          return {
+            away_shots: ps ? String(ps.away_shots) : '',
+            home_shots: ps ? String(ps.home_shots) : '',
+          };
         }),
       });
     }
@@ -52,20 +60,45 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
   };
 
   const teamRows = [
-    { key: 'away' as const, logo: game.away_team_logo, code: game.away_team_code, primary: game.away_team_primary_color, text: game.away_team_text_color, fieldKey: 'away_shots' as const },
-    { key: 'home' as const, logo: game.home_team_logo, code: game.home_team_code, primary: game.home_team_primary_color, text: game.home_team_text_color, fieldKey: 'home_shots' as const },
+    {
+      key: 'away' as const,
+      logo: game.away_team_logo,
+      code: game.away_team_code,
+      primary: game.away_team_primary_color,
+      text: game.away_team_text_color,
+      fieldKey: 'away_shots' as const,
+    },
+    {
+      key: 'home' as const,
+      logo: game.home_team_logo,
+      code: game.home_team_code,
+      primary: game.home_team_primary_color,
+      text: game.home_team_text_color,
+      fieldKey: 'home_shots' as const,
+    },
   ];
 
   return (
-    <Modal open={open} title="Edit Shots" onClose={onClose}
+    <Modal
+      open={open}
+      title="Edit Shots"
+      onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : 'Save'}
-      onConfirm={handleConfirm} confirmDisabled={submitting} busy={submitting}>
+      onConfirm={handleConfirm}
+      confirmDisabled={submitting}
+      busy={submitting}
+    >
       <table className={`${styles.periodsTable} ${styles.shotsEditTable}`}>
         <thead>
           <tr>
             <th className={styles.thTeam} />
             {fields.map((field, i) => (
-              <th key={field.id} className={styles.thPeriod}>{periods[i]?.label ?? ''}</th>
+              <th
+                key={field.id}
+                className={styles.thPeriod}
+              >
+                {periods[i]?.label ?? ''}
+              </th>
             ))}
           </tr>
         </thead>
@@ -74,13 +107,37 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
             <tr key={row.key}>
               <td className={styles.tdTeam}>
                 <span className={styles.linescoreTeam}>
-                  {row.logo ? <img src={row.logo} alt={row.code} className={styles.linescoreLogo} /> : <span className={styles.linescoreLogoPlaceholder} style={{ background: row.primary, color: row.text }}>{row.code?.slice(0, 1)}</span>}
+                  {row.logo ? (
+                    <img
+                      src={row.logo}
+                      alt={row.code}
+                      className={styles.linescoreLogo}
+                    />
+                  ) : (
+                    <span
+                      className={styles.linescoreLogoPlaceholder}
+                      style={{ background: row.primary, color: row.text }}
+                    >
+                      {row.code?.slice(0, 1)}
+                    </span>
+                  )}
                   <span className={styles.linescoreCode}>{row.code}</span>
                 </span>
               </td>
               {fields.map((field, i) => (
-                <td key={field.id} className={styles.tdShotsInput}>
-                  <Field type="number" control={control} name={`periods.${i}.${row.fieldKey}`} placeholder="0" min={0} disabled={submitting} transform={(v) => v.replace(/[^0-9]/g, '')} />
+                <td
+                  key={field.id}
+                  className={styles.tdShotsInput}
+                >
+                  <Field
+                    type="number"
+                    control={control}
+                    name={`periods.${i}.${row.fieldKey}`}
+                    placeholder="0"
+                    min={0}
+                    disabled={submitting}
+                    transform={(v) => v.replace(/[^0-9]/g, '')}
+                  />
                 </td>
               ))}
             </tr>

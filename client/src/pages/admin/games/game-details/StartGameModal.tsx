@@ -1,7 +1,7 @@
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
+import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
 
 /** Treats an "HH:mm" string as Eastern Time and returns a UTC ISO string. */
 const etHHMMtoISO = (hhmm: string): string => {

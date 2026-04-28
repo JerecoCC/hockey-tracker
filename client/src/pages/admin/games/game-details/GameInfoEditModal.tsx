@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { type GameRecord, type GameType } from '@/hooks/useGames';
-import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
+import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
 
 const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
   { value: 'preseason', label: 'Preseason' },
@@ -70,7 +70,14 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { venue: '', scheduled_date: '', scheduled_time: '', game_type: 'regular', time_start: '', time_end: '' },
+    defaultValues: {
+      venue: '',
+      scheduled_date: '',
+      scheduled_time: '',
+      game_type: 'regular',
+      time_start: '',
+      time_end: '',
+    },
   });
 
   useEffect(() => {
@@ -108,16 +115,57 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       confirmDisabled={isSubmitting || disabled}
       busy={isSubmitting || isSaving}
     >
-      <form id="game-info-edit-form" className={styles.formGrid} onSubmit={onSubmit}>
+      <form
+        id="game-info-edit-form"
+        className={styles.formGrid}
+        onSubmit={onSubmit}
+      >
         <div className={styles.formFieldFull}>
-          <Field label="Game Type" type="select" control={control} name="game_type" options={GAME_TYPE_OPTIONS} disabled={isSubmitting} />
+          <Field
+            label="Game Type"
+            type="select"
+            control={control}
+            name="game_type"
+            options={GAME_TYPE_OPTIONS}
+            disabled={isSubmitting}
+          />
         </div>
-        <Field label="Date" type="datepicker" control={control} name="scheduled_date" placeholder="Select date…" autoFocus />
-        <Field label="Scheduled Time" type="timepicker" control={control} name="scheduled_time" />
-        <Field label="Start Time" type="timepicker" control={control} name="time_start" disabled={isSubmitting || game.status === 'scheduled'} />
-        <Field label="End Time" type="timepicker" control={control} name="time_end" disabled={isSubmitting || game.status !== 'final'} />
+        <Field
+          label="Date"
+          type="datepicker"
+          control={control}
+          name="scheduled_date"
+          placeholder="Select date…"
+          autoFocus
+        />
+        <Field
+          label="Scheduled Time"
+          type="timepicker"
+          control={control}
+          name="scheduled_time"
+        />
+        <Field
+          label="Start Time"
+          type="timepicker"
+          control={control}
+          name="time_start"
+          disabled={isSubmitting || game.status === 'scheduled'}
+        />
+        <Field
+          label="End Time"
+          type="timepicker"
+          control={control}
+          name="time_end"
+          disabled={isSubmitting || game.status !== 'final'}
+        />
         <div className={styles.formFieldFull}>
-          <Field label="Venue" control={control} name="venue" placeholder="e.g. Scotiabank Arena" disabled={isSubmitting} />
+          <Field
+            label="Venue"
+            control={control}
+            name="venue"
+            placeholder="e.g. Scotiabank Arena"
+            disabled={isSubmitting}
+          />
         </div>
       </form>
     </Modal>
