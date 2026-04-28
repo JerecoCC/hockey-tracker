@@ -1,6 +1,6 @@
-import Button from '../Button/Button';
-import ColorSwatch from '../ColorSwatch/ColorSwatch';
-import styles from './EntityHeader.module.scss';
+import Button from '@/components/Button/Button';
+import ColorSwatch from '@/components/ColorSwatch/ColorSwatch';
+import styles from '@/components/EntityHeader/EntityHeader.module.scss';
 
 interface Swatch {
   label: string;

@@ -1,5 +1,5 @@
-import ConfirmModal from '../../../../components/ConfirmModal/ConfirmModal';
-import { type GameRosterEntry } from '../../../../hooks/useGameRoster';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import { type GameRosterEntry } from '@/hooks/useGameRoster';
 
 interface Props {
   entry: GameRosterEntry | null;

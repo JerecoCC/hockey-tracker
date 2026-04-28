@@ -1,7 +1,7 @@
-import ActionOverlay from '../ActionOverlay/ActionOverlay';
-import Badge, { type BadgeIntent } from '../Badge/Badge';
-import Button, { type ButtonIntent } from '../Button/Button';
-import styles from './ListItem.module.scss';
+import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
+import Badge, { type BadgeIntent } from '@/components/Badge/Badge';
+import Button, { type ButtonIntent } from '@/components/Button/Button';
+import styles from '@/components/ListItem/ListItem.module.scss';
 
 export interface ListItemAction {
   icon: string;

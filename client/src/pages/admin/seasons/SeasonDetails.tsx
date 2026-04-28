@@ -1,28 +1,28 @@
 import { useState, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import Button from '../../../components/Button/Button';
-import Card from '../../../components/Card/Card';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Badge from '../../../components/Badge/Badge';
-import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
-import Table, { type Column } from '../../../components/Table/Table';
-import SegmentedControl from '../../../components/SegmentedControl/SegmentedControl';
-import Tabs from '../../../components/Tabs/Tabs';
-import TitleRow from '../../../components/TitleRow/TitleRow';
-import useSeasonDetails, { type SeasonGroupRecord } from '../../../hooks/useSeasonDetails';
-import { type SeasonRecord } from '../../../hooks/useSeasons';
+import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
+import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Badge from '@/components/Badge/Badge';
+import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
+import Table, { type Column } from '@/components/Table/Table';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Tabs from '@/components/Tabs/Tabs';
+import TitleRow from '@/components/TitleRow/TitleRow';
+import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
+import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
-} from '../../../hooks/useSeasonStats';
-import useTabState from '../../../hooks/useTabState';
-import SeasonEndModal from './SeasonEndModal';
-import SeasonFormModal from './SeasonFormModal';
-import SeasonGamesTab from './SeasonGamesTab';
-import SeasonTeamsCard from './SeasonTeamsCard';
-import StatsLeaderCard from './StatsLeaderCard';
-import styles from './SeasonDetails.module.scss';
+} from '@/hooks/useSeasonStats';
+import useTabState from '@/hooks/useTabState';
+import SeasonEndModal from '@/pages/admin/seasons/SeasonEndModal';
+import SeasonFormModal from '@/pages/admin/seasons/SeasonFormModal';
+import SeasonGamesTab from '@/pages/admin/seasons/SeasonGamesTab';
+import SeasonTeamsCard from '@/pages/admin/seasons/SeasonTeamsCard';
+import StatsLeaderCard from '@/pages/admin/seasons/StatsLeaderCard';
+import styles from '@/pages/admin/seasons/SeasonDetails.module.scss';
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'long',

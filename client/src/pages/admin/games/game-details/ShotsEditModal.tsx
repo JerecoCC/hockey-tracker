@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import Field from '../../../../components/Field/Field';
-import Modal from '../../../../components/Modal/Modal';
-import { type GameRecord } from '../../../../hooks/useGames';
-import styles from '../GameDetailsPage.module.scss';
+import Field from '@/components/Field/Field';
+import Modal from '@/components/Modal/Modal';
+import { type GameRecord } from '@/hooks/useGames';
+import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
 
 type ShotsEditFormValues = { periods: Array<{ away_shots: string; home_shots: string }> };
 

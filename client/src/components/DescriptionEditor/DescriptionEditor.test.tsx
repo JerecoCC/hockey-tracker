@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import DescriptionEditor from './DescriptionEditor';
+import DescriptionEditor from '@/components/DescriptionEditor/DescriptionEditor';
 
 // Mock RTE — exposes two buttons so tests can simulate content changes
 jest.mock('../RichTextEditor/RichTextEditor', () => ({

@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-import Button from '../Button/Button';
-import type { ButtonIntent } from '../Button/Button';
-import styles from './Modal.module.scss';
+import Button from '@/components/Button/Button';
+import type { ButtonIntent } from '@/components/Button/Button';
+import styles from '@/components/Modal/Modal.module.scss';
 
 interface Props {
   open: boolean;

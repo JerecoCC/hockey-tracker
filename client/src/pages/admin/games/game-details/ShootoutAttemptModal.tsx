@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import Modal from '../../../../components/Modal/Modal';
-import SegmentedControl from '../../../../components/SegmentedControl/SegmentedControl';
-import Select from '../../../../components/Select/Select';
-import { type GameRecord } from '../../../../hooks/useGames';
-import { type GameRosterEntry } from '../../../../hooks/useGameRoster';
-import { type PostAttemptData, type PutAttemptData } from '../../../../hooks/useShootoutAttempts';
-import styles from '../GameDetailsPage.module.scss';
+import Modal from '@/components/Modal/Modal';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Select from '@/components/Select/Select';
+import { type GameRecord } from '@/hooks/useGames';
+import { type GameRosterEntry } from '@/hooks/useGameRoster';
+import { type PostAttemptData, type PutAttemptData } from '@/hooks/useShootoutAttempts';
+import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
 
 interface Props {
   /** null = closed; 'add' = add mode; any other string = edit mode (the attempt id) */

@@ -1,11 +1,11 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '../../../components/Field/Field';
-import LogoUpload from '../../../components/LogoUpload/LogoUpload';
-import Modal from '../../../components/Modal/Modal';
-import { type CreatePlayerData, type PlayerPosition } from '../../../hooks/useLeaguePlayers';
-import { type TeamPlayerRecord } from '../../../hooks/useTeamPlayers';
-import styles from '../leagues/PlayerFormModal.module.scss';
+import Field from '@/components/Field/Field';
+import LogoUpload from '@/components/LogoUpload/LogoUpload';
+import Modal from '@/components/Modal/Modal';
+import { type CreatePlayerData, type PlayerPosition } from '@/hooks/useLeaguePlayers';
+import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import styles from '@/pages/admin/leagues/PlayerFormModal.module.scss';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },

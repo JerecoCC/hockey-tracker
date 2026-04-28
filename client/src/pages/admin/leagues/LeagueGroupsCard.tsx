@@ -1,17 +1,17 @@
 import { useState } from 'react';
-import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
-import Button from '../../../components/Button/Button';
-import Card from '../../../components/Card/Card';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import Icon from '../../../components/Icon/Icon';
-import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
+import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
+import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Icon from '@/components/Icon/Icon';
+import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import {
   type CreateGroupData,
   type GroupRecord,
   type GroupTeamRecord,
-} from '../../../hooks/useLeagueGroups';
-import { type TeamRecord } from '../../../hooks/useTeams';
-import styles from './LeagueDetails.module.scss';
+} from '@/hooks/useLeagueGroups';
+import { type TeamRecord } from '@/hooks/useTeams';
+import styles from '@/pages/admin/leagues/LeagueDetails.module.scss';
 
 // ── Inline add / edit row ────────────────────────────────────────────────────
 

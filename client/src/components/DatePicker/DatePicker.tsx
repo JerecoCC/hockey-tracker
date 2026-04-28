@@ -1,6 +1,6 @@
 import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import Icon from '../Icon/Icon';
-import styles from './DatePicker.module.scss';
+import Icon from '@/components/Icon/Icon';
+import styles from '@/components/DatePicker/DatePicker.module.scss';
 
 interface Props {
   value: string; // YYYY-MM-DD or ''

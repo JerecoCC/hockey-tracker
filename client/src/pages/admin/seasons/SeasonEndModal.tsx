@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '../../../components/Field/Field';
-import Modal from '../../../components/Modal/Modal';
-import styles from './SeasonFormModal.module.scss';
+import Field from '@/components/Field/Field';
+import Modal from '@/components/Modal/Modal';
+import styles from '@/pages/admin/seasons/SeasonFormModal.module.scss';
 
 interface FormValues {
   end_date: string;

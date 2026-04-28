@@ -2,12 +2,12 @@ import { useState } from 'react';
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
-import { useAuth } from '../../context/AuthContext';
-import Button from '../../components/Button/Button';
-import GoogleButton from '../../components/GoogleButton/GoogleButton';
-import Icon from '../../components/Icon/Icon';
-import Card from '../../components/Card/Card';
-import styles from './Login.module.scss';
+import { useAuth } from '@/context/AuthContext';
+import Button from '@/components/Button/Button';
+import GoogleButton from '@/components/GoogleButton/GoogleButton';
+import Icon from '@/components/Icon/Icon';
+import Card from '@/components/Card/Card';
+import styles from '@/pages/login/Login.module.scss';
 
 const LoginPage = () => {
   const { login } = useAuth();

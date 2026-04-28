@@ -1,16 +1,16 @@
 import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
-import Field from '../../../components/Field/Field';
-import Modal from '../../../components/Modal/Modal';
-import type { SelectOption } from '../../../components/Select/Select';
+import Field from '@/components/Field/Field';
+import Modal from '@/components/Modal/Modal';
+import type { SelectOption } from '@/components/Select/Select';
 import useGames, {
   type CreateGameData,
   type GameRecord,
   type GameStatus,
   type GameType,
-} from '../../../hooks/useGames';
-import { type SeasonTeam } from '../../../hooks/useSeasonDetails';
-import styles from './GameFormModal.module.scss';
+} from '@/hooks/useGames';
+import { type SeasonTeam } from '@/hooks/useSeasonDetails';
+import styles from '@/pages/admin/seasons/GameFormModal.module.scss';
 
 interface FormValues {
   home_team_id: string | null;

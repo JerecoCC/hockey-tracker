@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
-import Field from '../../../../components/Field/Field';
-import Modal from '../../../../components/Modal/Modal';
-import { type GameRecord } from '../../../../hooks/useGames';
-import { type GameRosterEntry } from '../../../../hooks/useGameRoster';
-import { type GoalieStatRecord } from '../../../../hooks/useGameGoalieStats';
-import styles from '../GameDetailsPage.module.scss';
+import Field from '@/components/Field/Field';
+import Modal from '@/components/Modal/Modal';
+import { type GameRecord } from '@/hooks/useGames';
+import { type GameRosterEntry } from '@/hooks/useGameRoster';
+import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';

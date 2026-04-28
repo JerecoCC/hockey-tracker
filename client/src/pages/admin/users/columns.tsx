@@ -1,8 +1,8 @@
-﻿import { Column } from '../../../components/Table/Table';
-import Button from '../../../components/Button/Button';
-import Icon from '../../../components/Icon/Icon';
-import Badge from '../../../components/Badge/Badge';
-import styles from './Users.module.scss';
+﻿import { Column } from '@/components/Table/Table';
+import Button from '@/components/Button/Button';
+import Icon from '@/components/Icon/Icon';
+import Badge from '@/components/Badge/Badge';
+import styles from '@/pages/admin/users/Users.module.scss';
 
 export interface UserRecord {
   id: string;

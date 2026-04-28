@@ -1,6 +1,6 @@
 import { ReactNode, useState } from 'react';
-import Icon from '../Icon/Icon';
-import styles from './SearchableList.module.scss';
+import Icon from '@/components/Icon/Icon';
+import styles from '@/components/SearchableList/SearchableList.module.scss';
 
 interface Props<T> {
   /** Full unfiltered item list. */

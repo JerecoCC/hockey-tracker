@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import LoginPage from './Login';
+import LoginPage from '@/pages/login/Login';
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => jest.fn(),

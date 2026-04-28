@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import Tabs, { type Tab } from './Tabs';
+import Tabs, { type Tab } from '@/components/Tabs/Tabs';
 
 const tabs: Tab[] = [
   { label: 'Alpha', content: <div>Alpha content</div> },

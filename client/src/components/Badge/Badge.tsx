@@ -1,5 +1,5 @@
-import Icon from '../Icon/Icon';
-import styles from './Badge.module.scss';
+import Icon from '@/components/Icon/Icon';
+import styles from '@/components/Badge/Badge.module.scss';
 
 export type BadgeIntent = 'accent' | 'info' | 'success' | 'neutral' | 'danger' | 'warning';
 

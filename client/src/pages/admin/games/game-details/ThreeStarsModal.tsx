@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import Modal from '../../../../components/Modal/Modal';
-import Select from '../../../../components/Select/Select';
-import { type GameRosterEntry } from '../../../../hooks/useGameRoster';
-import styles from '../GameDetailsPage.module.scss';
+import Modal from '@/components/Modal/Modal';
+import Select from '@/components/Select/Select';
+import { type GameRosterEntry } from '@/hooks/useGameRoster';
+import styles from '@/pages/admin/games/GameDetailsPage.module.scss';
 
 interface StarPayload {
   star1: string;

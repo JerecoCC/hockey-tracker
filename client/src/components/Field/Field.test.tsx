@@ -1,6 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
-import Field from './Field';
+import Field from '@/components/Field/Field';
 
 const ColorField = ({ defaultValue = '#ff0000' }: { defaultValue?: string }) => {
   const { control } = useForm({ defaultValues: { color: defaultValue } });

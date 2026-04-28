@@ -1,6 +1,6 @@
-import { type TeamDetailRecord } from '../../../hooks/useTeamDetails';
-import InfoItem from './InfoItem';
-import styles from './TeamDetails.module.scss';
+import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
+import InfoItem from '@/pages/admin/teams/InfoItem';
+import styles from '@/pages/admin/teams/TeamDetails.module.scss';
 
 export interface SeasonOption {
   value: string;

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
-import Button from '../../../components/Button/Button';
-import Modal from '../../../components/Modal/Modal';
-import Select from '../../../components/Select/Select';
-import { type LineupEntry, type LineupPositionSlot } from '../../../hooks/useGameLineup';
-import { type TeamPlayerRecord } from '../../../hooks/useTeamPlayers';
-import styles from './SetLineupModal.module.scss';
+import Button from '@/components/Button/Button';
+import Modal from '@/components/Modal/Modal';
+import Select from '@/components/Select/Select';
+import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
+import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import styles from '@/pages/admin/games/SetLineupModal.module.scss';
 
 // Positions that count as "forwards" and are interchangeable for C/LW/RW slots
 const FORWARD_POSITIONS = new Set(['C', 'LW', 'RW']);

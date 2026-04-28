@@ -2,7 +2,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
-import { UserRecord } from '../pages/admin/users/columns';
+import { UserRecord } from '@/pages/admin/users/columns';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 

@@ -1,10 +1,10 @@
-import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
-import Badge from '../../../components/Badge/Badge';
-import type { BadgeIntent } from '../../../components/Badge/Badge';
-import Button from '../../../components/Button/Button';
-import type { ButtonIntent } from '../../../components/Button/Button';
-import type { GameType } from '../../../hooks/useGames';
-import styles from './GameListItem.module.scss';
+import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
+import Badge from '@/components/Badge/Badge';
+import type { BadgeIntent } from '@/components/Badge/Badge';
+import Button from '@/components/Button/Button';
+import type { ButtonIntent } from '@/components/Button/Button';
+import type { GameType } from '@/hooks/useGames';
+import styles from '@/pages/admin/seasons/GameListItem.module.scss';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import Button from '../../../components/Button/Button';
-import Card from '../../../components/Card/Card';
-import ConfirmModal from '../../../components/ConfirmModal/ConfirmModal';
-import ListItem, { type ListItemAction } from '../../../components/ListItem/ListItem';
-import SearchableList from '../../../components/SearchableList/SearchableList';
-import Select from '../../../components/Select/Select';
-import { type LeagueSeasonRecord } from '../../../hooks/useLeagueDetails';
-import { type PlayerRecord } from '../../../hooks/useLeaguePlayers';
-import styles from './LeagueDetails.module.scss';
+import Button from '@/components/Button/Button';
+import Card from '@/components/Card/Card';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import SearchableList from '@/components/SearchableList/SearchableList';
+import Select from '@/components/Select/Select';
+import { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
+import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
+import styles from '@/pages/admin/leagues/LeagueDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
