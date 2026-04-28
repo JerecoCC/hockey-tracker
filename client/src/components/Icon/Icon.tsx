@@ -29,6 +29,8 @@ import {
   faEyeSlash,
   faFolderPlus,
   faHockeyPuck,
+  faHourglassHalf,
+  faList,
   faLocationDot,
   faMagnifyingGlass,
   faPen,
@@ -41,6 +43,7 @@ import {
   faSortDown,
   faSortUp,
   faStar,
+  faTableCells,
   faTrash,
   faTrophy,
   faUserGear,
@@ -123,6 +126,13 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // stats
   query_stats: faChartLine,
+
+  // view toggles
+  grid_view: faTableCells,
+  view_list: faList,
+
+  // loading / time
+  hourglass_empty: faHourglassHalf,
 
   // decorative
   sports_hockey: faHockeyPuck,
