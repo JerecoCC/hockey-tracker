@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-import type { ButtonIntent } from '@/components/Button/Button';
-import Modal from '@/components/Modal/Modal';
-import styles from '@/components/ConfirmModal/ConfirmModal.module.scss';
+import type { ButtonIntent } from '../Button/Button';
+import Modal from '../Modal/Modal';
+import styles from './ConfirmModal.module.scss';
 
 export type ConfirmVariant = 'danger' | 'accent' | 'info';
 

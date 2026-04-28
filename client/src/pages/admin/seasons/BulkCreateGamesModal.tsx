@@ -8,7 +8,7 @@ import Modal from '@/components/Modal/Modal';
 import type { SelectOption } from '@/components/Select/Select';
 import { type CreateGameData } from '@/hooks/useGames';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
-import styles from '@/pages/admin/seasons/BulkCreateGamesModal.module.scss';
+import styles from './BulkCreateGamesModal.module.scss';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

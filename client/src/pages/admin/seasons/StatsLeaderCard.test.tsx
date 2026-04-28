@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import StatsLeaderCard, { type StatsLeaderItem } from '@/pages/admin/seasons/StatsLeaderCard';
+import StatsLeaderCard, { type StatsLeaderItem } from './StatsLeaderCard';
 
 const makePlayer = (overrides: Partial<StatsLeaderItem> = {}): StatsLeaderItem => ({
   player_id: 'p1',

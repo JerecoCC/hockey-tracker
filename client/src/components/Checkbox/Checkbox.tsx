@@ -1,5 +1,5 @@
-import Icon from '@/components/Icon/Icon';
-import styles from '@/components/Checkbox/Checkbox.module.scss';
+import Icon from '../Icon/Icon';
+import styles from './Checkbox.module.scss';
 
 interface CheckboxProps {
   checked: boolean;

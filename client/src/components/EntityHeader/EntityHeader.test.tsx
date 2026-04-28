@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import EntityHeader from '@/components/EntityHeader/EntityHeader';
+import EntityHeader from './EntityHeader';
 
 // Code longer than 3 chars so placeholder ('TOR') differs from full code ('TORONTO')
 const defaultProps = {

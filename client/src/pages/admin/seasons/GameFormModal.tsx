@@ -10,7 +10,7 @@ import useGames, {
   type GameType,
 } from '@/hooks/useGames';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
-import styles from '@/pages/admin/seasons/GameFormModal.module.scss';
+import styles from './GameFormModal.module.scss';
 
 interface FormValues {
   home_team_id: string | null;

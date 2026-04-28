@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
-import styles from '@/components/Tabs/Tabs.module.scss';
+import styles from './Tabs.module.scss';
 
 export interface Tab {
   label: string;

@@ -1,5 +1,5 @@
-import Tooltip from '@/components/Tooltip/Tooltip';
-import styles from '@/components/ColorSwatch/ColorSwatch.module.scss';
+import Tooltip from '../Tooltip/Tooltip';
+import styles from './ColorSwatch.module.scss';
 
 interface Props {
   label: string;

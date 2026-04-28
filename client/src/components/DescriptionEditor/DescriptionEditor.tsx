@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import Button from '@/components/Button/Button';
-import Icon from '@/components/Icon/Icon';
-import RichTextEditor from '@/components/RichTextEditor/RichTextEditor';
-import styles from '@/components/DescriptionEditor/DescriptionEditor.module.scss';
+import Button from '../Button/Button';
+import Icon from '../Icon/Icon';
+import RichTextEditor from '../RichTextEditor/RichTextEditor';
+import styles from './DescriptionEditor.module.scss';
 
 interface Props {
   description: string | null;

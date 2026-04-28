@@ -2,11 +2,11 @@ import { useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Table from '@/components/Table/Table';
 import useUsers from '@/hooks/useUsers';
-import { getUserColumns, UserRecord } from '@/pages/admin/users/columns';
-import UserRoleModal, { RoleConfirm } from '@/pages/admin/users/UserRoleModal';
-import UserDeleteModal from '@/pages/admin/users/UserDeleteModal';
+import { getUserColumns, UserRecord } from './columns';
+import UserRoleModal, { RoleConfirm } from './UserRoleModal';
+import UserDeleteModal from './UserDeleteModal';
 import Card from '@/components/Card/Card';
-import styles from '@/pages/admin/users/Users.module.scss';
+import styles from './Users.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   [...data].sort((a, b) => {

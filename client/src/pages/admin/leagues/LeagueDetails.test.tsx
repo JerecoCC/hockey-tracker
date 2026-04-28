@@ -2,7 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
-import LeagueDetailsPage from '@/pages/admin/leagues/LeagueDetails';
+import LeagueDetailsPage from './LeagueDetails';
 
 // ── Router ─────────────────────────────────────────────────────────────
 const mockNavigate = jest.fn();

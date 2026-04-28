@@ -4,7 +4,7 @@ import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { type SelectOption } from '@/components/Select/Select';
 import { type CreateSeasonData, type SeasonRecord } from '@/hooks/useSeasons';
-import styles from '@/pages/admin/seasons/SeasonFormModal.module.scss';
+import styles from './SeasonFormModal.module.scss';
 
 interface FormValues {
   league_id: string | null;

@@ -7,13 +7,13 @@ import {
   type TextareaHTMLAttributes,
 } from 'react';
 import { Controller, type Control, type RegisterOptions } from 'react-hook-form';
-import Icon from '@/components/Icon/Icon';
+import Icon from '../Icon/Icon';
 import cn from 'classnames';
-import DatePicker from '@/components/DatePicker/DatePicker';
-import TimePicker from '@/components/TimePicker/TimePicker';
-import RichTextEditor from '@/components/RichTextEditor/RichTextEditor';
-import Select, { SelectOption } from '@/components/Select/Select';
-import styles from '@/components/Field/Field.module.scss';
+import DatePicker from '../DatePicker/DatePicker';
+import TimePicker from '../TimePicker/TimePicker';
+import RichTextEditor from '../RichTextEditor/RichTextEditor';
+import Select, { SelectOption } from '../Select/Select';
+import styles from './Field.module.scss';
 
 type BaseProps = {
   label?: string;

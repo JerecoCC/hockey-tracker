@@ -1,5 +1,5 @@
 import { ReactNode, useRef, useState } from 'react';
-import styles from '@/components/Tooltip/Tooltip.module.scss';
+import styles from './Tooltip.module.scss';
 
 interface TooltipProps {
   text: string;

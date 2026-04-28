@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import Modal from '@/components/Modal/Modal';
+import Modal from './Modal';
 
 const defaultProps = {
   open: true,

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
 import Card from '@/components/Card/Card';
-import styles from '@/pages/dashboard/Dashboard.module.scss';
+import styles from './Dashboard.module.scss';
 
 const DashboardPage = () => {
   const { user, logout } = useAuth();

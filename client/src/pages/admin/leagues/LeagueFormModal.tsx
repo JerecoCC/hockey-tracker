@@ -4,7 +4,7 @@ import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import { type CreateLeagueData, type LeagueRecord } from '@/hooks/useLeagues';
-import styles from '@/pages/admin/leagues/Leagues.module.scss';
+import styles from './Leagues.module.scss';
 
 const BEST_OF_OPTIONS = [
   { value: '3', label: 'Best of 3' },

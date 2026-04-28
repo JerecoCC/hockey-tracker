@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
-import Icon from '@/components/Icon/Icon';
-import styles from '@/components/Breadcrumbs/Breadcrumbs.module.scss';
+import Icon from '../Icon/Icon';
+import styles from './Breadcrumbs.module.scss';
 
 export interface BreadcrumbItem {
   label: string;

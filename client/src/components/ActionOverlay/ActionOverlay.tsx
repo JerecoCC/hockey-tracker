@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import styles from '@/components/ActionOverlay/ActionOverlay.module.scss';
+import styles from './ActionOverlay.module.scss';
 
 interface Props {
   /** Class from the consumer's module — used by the parent's hover selector to reveal the overlay */

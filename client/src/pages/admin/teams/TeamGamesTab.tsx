@@ -1,5 +1,5 @@
 import Card from '@/components/Card/Card';
-import styles from '@/pages/admin/teams/TeamDetails.module.scss';
+import styles from './TeamDetails.module.scss';
 
 const TeamGamesTab = () => (
   <Card>

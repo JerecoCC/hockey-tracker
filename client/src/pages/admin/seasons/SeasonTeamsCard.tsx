@@ -12,8 +12,8 @@ import {
   type SeasonGroupRecord,
   type SeasonTeam,
 } from '@/hooks/useSeasonDetails';
-import SeasonTeamOverrideModal from '@/pages/admin/seasons/SeasonTeamOverrideModal';
-import styles from '@/pages/admin/seasons/SeasonDetails.module.scss';
+import SeasonTeamOverrideModal from './SeasonTeamOverrideModal';
+import styles from './SeasonDetails.module.scss';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 

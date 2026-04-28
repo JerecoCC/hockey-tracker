@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/Badge/Badge';
 import Card from '@/components/Card/Card';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
-import styles from '@/pages/admin/games/game-details/ScoreboardCard.module.scss';
+import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 

@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
-import PageHeader from '@/components/PageHeader/PageHeader';
+import PageHeader from './PageHeader';
 
 const mockNavigate = jest.fn();
 const mockLogout = jest.fn();

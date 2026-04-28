@@ -1,7 +1,7 @@
 import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import cn from 'classnames';
-import Icon from '@/components/Icon/Icon';
-import styles from '@/components/Select/Select.module.scss';
+import Icon from '../Icon/Icon';
+import styles from './Select.module.scss';
 
 export interface SelectOption {
   value: string;

@@ -9,7 +9,7 @@ import Modal from '@/components/Modal/Modal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
 import useSeasons from '@/hooks/useSeasons';
-import styles from '@/pages/admin/teams/TeamDetails.module.scss';
+import styles from './TeamDetails.module.scss';
 
 interface Props {
   teamId: string;

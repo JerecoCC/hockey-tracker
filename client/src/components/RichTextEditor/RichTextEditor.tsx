@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
-import styles from '@/components/RichTextEditor/RichTextEditor.module.scss';
+import styles from './RichTextEditor.module.scss';
 
 interface ToolbarButtonProps {
   active?: boolean;

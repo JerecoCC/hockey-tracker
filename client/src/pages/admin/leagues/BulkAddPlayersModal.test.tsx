@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, within, waitFor } from '@testing-library/react';
-import BulkAddPlayersModal from '@/pages/admin/leagues/BulkAddPlayersModal';
+import BulkAddPlayersModal from './BulkAddPlayersModal';
 
 // Replace the custom Field/Select with native elements that still register
 // properly with react-hook-form, so tests can use fireEvent.change without

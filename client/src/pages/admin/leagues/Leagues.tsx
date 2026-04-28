@@ -4,11 +4,11 @@ import Button from '@/components/Button/Button';
 import Table, { Column } from '@/components/Table/Table';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
-import LeagueDeleteModal from '@/pages/admin/leagues/LeagueDeleteModal';
-import LeagueFormModal from '@/pages/admin/leagues/LeagueFormModal';
+import LeagueDeleteModal from './LeagueDeleteModal';
+import LeagueFormModal from './LeagueFormModal';
 import Card from '@/components/Card/Card';
 import TitleRow from '@/components/TitleRow/TitleRow';
-import styles from '@/pages/admin/leagues/Leagues.module.scss';
+import styles from './Leagues.module.scss';
 
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   [...data].sort((a, b) => {

@@ -1,5 +1,5 @@
 import type { CSSProperties, ReactNode } from 'react';
-import styles from '@/components/Card/Card.module.scss';
+import styles from './Card.module.scss';
 
 interface CardProps {
   /** Visual theme. 'admin' = dark bg + border. 'light' = white bg + shadow. */

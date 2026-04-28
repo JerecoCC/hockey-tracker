@@ -11,7 +11,7 @@ import {
   type GroupTeamRecord,
 } from '@/hooks/useLeagueGroups';
 import { type TeamRecord } from '@/hooks/useTeams';
-import styles from '@/pages/admin/leagues/LeagueDetails.module.scss';
+import styles from './LeagueDetails.module.scss';
 
 // ── Inline add / edit row ────────────────────────────────────────────────────
 

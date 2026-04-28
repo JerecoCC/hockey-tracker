@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, act } from '@testing-library/react';
-import SetLineupModal from '@/pages/admin/games/SetLineupModal';
+import SetLineupModal from './SetLineupModal';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 
