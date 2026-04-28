@@ -7,9 +7,9 @@ import SearchableList from '@/components/SearchableList/SearchableList';
 import Select from '@/components/Select/Select';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
-import AddPlayersModal from '@/pages/admin/teams/AddPlayersModal';
-import TeamPlayerEditModal from '@/pages/admin/teams/TeamPlayerEditModal';
-import styles from '@/pages/admin/teams/TeamDetails.module.scss';
+import AddPlayersModal from './AddPlayersModal';
+import TeamPlayerEditModal from './TeamPlayerEditModal';
+import styles from './TeamDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',

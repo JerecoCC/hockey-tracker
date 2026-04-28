@@ -6,12 +6,12 @@ import TitleRow from '@/components/TitleRow/TitleRow';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import useTabState from '@/hooks/useTabState';
-import TeamInfoTab from '@/pages/admin/teams/TeamInfoTab';
-import TeamGamesTab from '@/pages/admin/teams/TeamGamesTab';
-import TeamRosterTab from '@/pages/admin/teams/TeamRosterTab';
-import TeamProspectsTab from '@/pages/admin/teams/TeamProspectsTab';
-import TeamHistoryTab from '@/pages/admin/teams/TeamHistoryTab';
-import styles from '@/pages/admin/teams/TeamDetails.module.scss';
+import TeamInfoTab from './TeamInfoTab';
+import TeamGamesTab from './TeamGamesTab';
+import TeamRosterTab from './TeamRosterTab';
+import TeamProspectsTab from './TeamProspectsTab';
+import TeamHistoryTab from './TeamHistoryTab';
+import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
   const navigate = useNavigate();

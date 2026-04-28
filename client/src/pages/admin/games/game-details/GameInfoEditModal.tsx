@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { type GameRecord, type GameType } from '@/hooks/useGames';
-import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
+import styles from './GameDetailsPage.module.scss';
 
 const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
   { value: 'preseason', label: 'Preseason' },

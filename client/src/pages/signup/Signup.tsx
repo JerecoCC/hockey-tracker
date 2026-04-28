@@ -7,7 +7,7 @@ import Button from '@/components/Button/Button';
 import GoogleButton from '@/components/GoogleButton/GoogleButton';
 import Icon from '@/components/Icon/Icon';
 import Card from '@/components/Card/Card';
-import styles from '@/pages/signup/Signup.module.scss';
+import styles from './Signup.module.scss';
 
 const SignupPage = () => {
   const { signup } = useAuth();

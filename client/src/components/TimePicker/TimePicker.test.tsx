@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import TimePicker from '@/components/TimePicker/TimePicker';
+import TimePicker from './TimePicker';
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
 

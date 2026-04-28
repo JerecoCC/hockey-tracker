@@ -4,8 +4,8 @@ import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import { type GroupRecord } from '@/hooks/useLeagueGroups';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';
-import TeamEditModal from '@/pages/admin/teams/TeamEditModal';
-import TeamInfoGrid from '@/pages/admin/teams/TeamInfoGrid';
+import TeamEditModal from './TeamEditModal';
+import TeamInfoGrid from './TeamInfoGrid';
 
 interface Props {
   team: TeamDetailRecord;

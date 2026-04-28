@@ -26,20 +26,20 @@ import useGameGoals, { type GoalRecord } from '@/hooks/useGameGoals';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts, { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
-import LineupRosterModal from '@/pages/admin/games/LineupRosterModal';
-import LineupCreatePlayersModal from '@/pages/admin/games/LineupCreatePlayersModal';
-import SetLineupModal from '@/pages/admin/games/SetLineupModal';
-import RemoveFromLineupModal from '@/pages/admin/games/game-details/RemoveFromLineupModal';
-import StartGameModal from '@/pages/admin/games/game-details/StartGameModal';
-import GameInfoEditModal from '@/pages/admin/games/game-details/GameInfoEditModal';
-import ThreeStarsModal from '@/pages/admin/games/game-details/ThreeStarsModal';
-import ScoreGoalModal from '@/pages/admin/games/game-details/ScoreGoalModal';
-import ShootoutAttemptModal from '@/pages/admin/games/game-details/ShootoutAttemptModal';
-import GoalieStatsEditModal from '@/pages/admin/games/game-details/GoalieStatsEditModal';
-import ShotsEditModal from '@/pages/admin/games/game-details/ShotsEditModal';
-import RecordShotsModal, { type ShotsNextAction } from '@/pages/admin/games/game-details/RecordShotsModal';
-import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
-import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
+import LineupRosterModal from '../LineupRosterModal';
+import LineupCreatePlayersModal from '../LineupCreatePlayersModal';
+import SetLineupModal from '../SetLineupModal';
+import RemoveFromLineupModal from './RemoveFromLineupModal';
+import StartGameModal from './StartGameModal';
+import GameInfoEditModal from './GameInfoEditModal';
+import ThreeStarsModal from './ThreeStarsModal';
+import ScoreGoalModal from './ScoreGoalModal';
+import ShootoutAttemptModal from './ShootoutAttemptModal';
+import GoalieStatsEditModal from './GoalieStatsEditModal';
+import ShotsEditModal from './ShotsEditModal';
+import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
+import ScoreboardCard from './ScoreboardCard';
+import styles from './GameDetailsPage.module.scss';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 

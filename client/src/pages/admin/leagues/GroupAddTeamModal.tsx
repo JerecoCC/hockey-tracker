@@ -4,7 +4,7 @@ import Modal from '@/components/Modal/Modal';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type GroupRecord } from '@/hooks/useLeagueGroups';
 import { type TeamRecord } from '@/hooks/useTeams';
-import styles from '@/pages/admin/leagues/LeagueDetails.module.scss';
+import styles from './LeagueDetails.module.scss';
 
 interface Props {
   open: boolean;

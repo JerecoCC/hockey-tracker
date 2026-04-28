@@ -8,7 +8,7 @@ import {
   type PlayerPosition,
   type PlayerShoots,
 } from '@/hooks/useLeaguePlayers';
-import styles from '@/pages/admin/leagues/PlayerFormModal.module.scss';
+import styles from './PlayerFormModal.module.scss';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },

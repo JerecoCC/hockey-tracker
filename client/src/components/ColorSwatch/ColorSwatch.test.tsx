@@ -1,5 +1,5 @@
 import { render, screen } from '@testing-library/react';
-import ColorSwatch from '@/components/ColorSwatch/ColorSwatch';
+import ColorSwatch from './ColorSwatch';
 
 describe('ColorSwatch', () => {
   it('renders the label text', () => {

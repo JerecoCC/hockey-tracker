@@ -5,7 +5,7 @@ import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
-import styles from '@/pages/admin/games/LineupRosterModal.module.scss';
+import styles from './LineupRosterModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });

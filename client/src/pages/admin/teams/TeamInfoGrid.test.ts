@@ -1,4 +1,4 @@
-import { seasonLabel } from '@/pages/admin/teams/TeamInfoGrid';
+import { seasonLabel } from './TeamInfoGrid';
 
 // seasonLabel(startDate, endDate, name) derives a short display label:
 //   - no startDate           → team name (fallback)

@@ -7,7 +7,7 @@ import SearchableList from '@/components/SearchableList/SearchableList';
 import Select from '@/components/Select/Select';
 import { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
-import styles from '@/pages/admin/leagues/LeagueDetails.module.scss';
+import styles from './LeagueDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',

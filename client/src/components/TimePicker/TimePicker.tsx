@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
-import Icon from '@/components/Icon/Icon';
-import styles from '@/components/TimePicker/TimePicker.module.scss';
+import Icon from '../Icon/Icon';
+import styles from './TimePicker.module.scss';
 
 interface Props {
   value: string; // HH:MM (24-hour) or '' in clock mode; MM:SS or '' in duration mode

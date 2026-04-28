@@ -1,5 +1,5 @@
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import { UserRecord } from '@/pages/admin/users/columns';
+import { UserRecord } from './columns';
 
 interface Props {
   open: boolean;

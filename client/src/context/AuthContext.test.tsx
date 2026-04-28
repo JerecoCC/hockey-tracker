@@ -1,6 +1,6 @@
 import { renderHook, waitFor, act } from '@testing-library/react';
 import axios from 'axios';
-import { AuthProvider, useAuth } from '@/context/AuthContext';
+import { AuthProvider, useAuth } from './AuthContext';
 
 jest.mock('axios');
 const mockedAxios = jest.mocked(axios);

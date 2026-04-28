@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
-import Icon from '@/components/Icon/Icon';
-import Tooltip from '@/components/Tooltip/Tooltip';
-import styles from '@/components/Table/Table.module.scss';
+import Icon from '../Icon/Icon';
+import Tooltip from '../Tooltip/Tooltip';
+import styles from './Table.module.scss';
 
 export type Column<T> =
   | {

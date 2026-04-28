@@ -4,13 +4,13 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
-import GameListItem from '@/pages/admin/seasons/GameListItem';
+import GameListItem from './GameListItem';
 import Select from '@/components/Select/Select';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
 import type { SelectOption } from '@/components/Select/Select';
-import BulkCreateGamesModal from '@/pages/admin/seasons/BulkCreateGamesModal';
-import GameFormModal from '@/pages/admin/seasons/GameFormModal';
-import styles from '@/pages/admin/seasons/SeasonGamesTab.module.scss';
+import BulkCreateGamesModal from './BulkCreateGamesModal';
+import GameFormModal from './GameFormModal';
+import styles from './SeasonGamesTab.module.scss';
 
 // ── Display helpers ───────────────────────────────────────────────────────────
 

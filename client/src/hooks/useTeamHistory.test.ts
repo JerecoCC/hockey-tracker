@@ -3,7 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import useTeamHistory from '@/hooks/useTeamHistory';
+import useTeamHistory from './useTeamHistory';
 
 jest.mock('axios');
 jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));

@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
-import { type SeasonRecord, type CreateSeasonData } from '@/hooks/useSeasons';
-import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
+import { type SeasonRecord, type CreateSeasonData } from './useSeasons';
+import { type GroupTeamRecord } from './useLeagueGroups';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 

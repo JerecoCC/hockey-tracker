@@ -17,12 +17,12 @@ import useSeasonStats, {
   type GoalieStatRecord,
 } from '@/hooks/useSeasonStats';
 import useTabState from '@/hooks/useTabState';
-import SeasonEndModal from '@/pages/admin/seasons/SeasonEndModal';
-import SeasonFormModal from '@/pages/admin/seasons/SeasonFormModal';
-import SeasonGamesTab from '@/pages/admin/seasons/SeasonGamesTab';
-import SeasonTeamsCard from '@/pages/admin/seasons/SeasonTeamsCard';
-import StatsLeaderCard from '@/pages/admin/seasons/StatsLeaderCard';
-import styles from '@/pages/admin/seasons/SeasonDetails.module.scss';
+import SeasonEndModal from './SeasonEndModal';
+import SeasonFormModal from './SeasonFormModal';
+import SeasonGamesTab from './SeasonGamesTab';
+import SeasonTeamsCard from './SeasonTeamsCard';
+import StatsLeaderCard from './StatsLeaderCard';
+import styles from './SeasonDetails.module.scss';
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'long',

@@ -7,7 +7,7 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
-import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
+import styles from './GameDetailsPage.module.scss';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }

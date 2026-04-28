@@ -1,7 +1,7 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import Button from '@/components/Button/Button';
-import Icon from '@/components/Icon/Icon';
-import styles from '@/components/AdminNav/AdminNav.module.scss';
+import Button from '../Button/Button';
+import Icon from '../Icon/Icon';
+import styles from './AdminNav.module.scss';
 
 interface NavItem {
   label: string;

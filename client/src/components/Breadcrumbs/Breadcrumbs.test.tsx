@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
+import Breadcrumbs from './Breadcrumbs';
 
 const mockNavigate = jest.fn();
 

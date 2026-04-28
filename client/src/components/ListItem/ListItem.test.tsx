@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import ListItem from '@/components/ListItem/ListItem';
+import ListItem from './ListItem';
 
 // Wrap in a <ul> so the DOM is valid (ListItem renders a <li>).
 const renderItem = (props: Parameters<typeof ListItem>[0]) =>

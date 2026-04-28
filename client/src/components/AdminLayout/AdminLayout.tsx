@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import TitleRowContext from '@/context/TitleRowContext';
-import AdminNav from '@/components/AdminNav/AdminNav';
-import Icon from '@/components/Icon/Icon';
-import PageHeader from '@/components/PageHeader/PageHeader';
-import styles from '@/components/AdminLayout/AdminLayout.module.scss';
+import AdminNav from '../AdminNav/AdminNav';
+import Icon from '../Icon/Icon';
+import PageHeader from '../PageHeader/PageHeader';
+import styles from './AdminLayout.module.scss';
 
 const AdminLayout = () => {
   const [collapsed, setCollapsed] = useState(false);

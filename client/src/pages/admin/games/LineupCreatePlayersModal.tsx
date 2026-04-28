@@ -6,7 +6,7 @@ import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
-import styles from '@/pages/admin/games/LineupCreatePlayersModal.module.scss';
+import styles from './LineupCreatePlayersModal.module.scss';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },

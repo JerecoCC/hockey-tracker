@@ -3,7 +3,7 @@ import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import useLeagues from '@/hooks/useLeagues';
+import useLeagues from './useLeagues';
 
 const createWrapper = () => {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });

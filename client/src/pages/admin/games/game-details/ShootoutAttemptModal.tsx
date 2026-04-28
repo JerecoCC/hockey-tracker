@@ -5,7 +5,7 @@ import Select from '@/components/Select/Select';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type PostAttemptData, type PutAttemptData } from '@/hooks/useShootoutAttempts';
-import styles from '@/pages/admin/games/game-details/GameDetailsPage.module.scss';
+import styles from './GameDetailsPage.module.scss';
 
 interface Props {
   /** null = closed; 'add' = add mode; any other string = edit mode (the attempt id) */

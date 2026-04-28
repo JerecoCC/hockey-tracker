@@ -9,7 +9,7 @@ import SelectableListItem from '@/components/SelectableListItem/SelectableListIt
 import useSeasons from '@/hooks/useSeasons';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
-import styles from '@/pages/admin/teams/AddPlayersModal.module.scss';
+import styles from './AddPlayersModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });

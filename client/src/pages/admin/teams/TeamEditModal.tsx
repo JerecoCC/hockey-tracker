@@ -5,7 +5,7 @@ import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';
-import styles from '@/pages/admin/teams/TeamEditModal.module.scss';
+import styles from './TeamEditModal.module.scss';
 
 interface FormValues {
   logo: File | string | null;
