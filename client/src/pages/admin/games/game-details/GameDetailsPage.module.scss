@@ -729,6 +729,120 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   min-width: 0;
 }
 
+// View toggle buttons in card header
+.lastFiveViewToggle {
+  display: flex;
+  gap: $space-xs;
+}
+
+// ── List view ─────────────────────────────────────────────────────────────────
+
+// Container for list-mode rows inside the accordion body
+.lastFiveListRows {
+  display: flex;
+  flex-direction: column;
+  padding: $space-xs 0;
+}
+
+// Individual game row
+.lastFiveListRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs $space-md;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background $transition-base;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+// Result label (W / OTW / OTL / L)
+.lastFiveListResult {
+  font-size: $font-xs;
+  font-weight: 700;
+  width: 30px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.lastFiveListResultW {
+  color: $success;
+}
+
+.lastFiveListResultL {
+  color: $danger;
+}
+
+.lastFiveListResultT {
+  color: $text-dim;
+}
+
+// Small logo circle
+.lastFiveListLogo {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, #{$bg-card}, white 10%);
+  overflow: hidden;
+}
+
+.lastFiveListLogoImg {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.lastFiveListLogoPlaceholder {
+  font-size: 7px;
+  font-weight: 700;
+  color: $text-body;
+}
+
+// Opponent name (home/away indicator + name)
+.lastFiveListOpp {
+  flex: 1;
+  font-size: $font-sm;
+  color: $text-body;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Score: "3–2"
+.lastFiveListScore {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-sm;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: $text-bright;
+  white-space: nowrap;
+}
+
+// "(OT)" / "(SO)" appended after the score
+.lastFiveListSuffix {
+  font-size: $font-xs;
+  font-weight: 400;
+  color: $text-dim;
+}
+
+// Date at far right
+.lastFiveListDate {
+  font-size: $font-xs;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
 // Form record shown in accordion headerRight: W - OTW - OTL - L
 .lastFiveForm {
   display: inline-flex;

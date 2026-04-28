@@ -299,6 +299,9 @@ const GameDetailsPage = () => {
   // ── Shots edit modal ──────────────────────────────────────────────────────
   const [shotsEditModalOpen, setShotsEditModalOpen] = useState(false);
 
+  // ── Last 5 Games view mode ────────────────────────────────────────────────
+  const [lastFiveView, setLastFiveView] = useState<'square' | 'list'>('square');
+
   // ── Start Game modal ──────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const openStartGameModal = () => setStartGameModalOpen(true);
@@ -1736,6 +1739,76 @@ const GameDetailsPage = () => {
                           );
                         };
 
+                        const renderListRow = (lg: LastFiveGame) => {
+                          const isOT = lg.overtime_periods != null && lg.overtime_periods > 0;
+                          const isSO = lg.shootout;
+                          const isExtra = isOT || isSO;
+                          const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
+                          const resultLabel =
+                            lg.result === 'W' && isExtra
+                              ? 'OTW'
+                              : lg.result === 'L' && isExtra
+                                ? 'OTL'
+                                : lg.result;
+                          const resultClass =
+                            lg.result === 'W'
+                              ? styles.lastFiveListResultW
+                              : lg.result === 'L'
+                                ? styles.lastFiveListResultL
+                                : styles.lastFiveListResultT;
+
+                          return (
+                            <div
+                              key={lg.game_id}
+                              className={styles.lastFiveListRow}
+                              role="button"
+                              tabIndex={0}
+                              onClick={() =>
+                                navigate(
+                                  `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ')
+                                  navigate(
+                                    `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
+                                  );
+                              }}
+                            >
+                              <span className={`${styles.lastFiveListResult} ${resultClass}`}>
+                                {resultLabel}
+                              </span>
+                              <span className={styles.lastFiveListLogo}>
+                                {lg.opponent_logo ? (
+                                  <img
+                                    src={lg.opponent_logo}
+                                    alt={lg.opponent_code}
+                                    className={styles.lastFiveListLogoImg}
+                                  />
+                                ) : (
+                                  <span className={styles.lastFiveListLogoPlaceholder}>
+                                    {lg.opponent_code?.slice(0, 3)}
+                                  </span>
+                                )}
+                              </span>
+                              <span className={styles.lastFiveListOpp}>
+                                {lg.is_home ? 'vs' : '@'} {lg.opponent_name ?? lg.opponent_code}
+                              </span>
+                              <span className={styles.lastFiveListScore}>
+                                {lg.away_score}–{lg.home_score}
+                                {suffix && (
+                                  <span className={styles.lastFiveListSuffix}>{suffix}</span>
+                                )}
+                              </span>
+                              {lg.scheduled_at && (
+                                <span className={styles.lastFiveListDate}>
+                                  {DATE_FMT_SHORT.format(new Date(lg.scheduled_at))}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        };
+
                         const renderTeamAccordion = (
                           label: string,
                           logo: string | null,
@@ -1788,25 +1861,57 @@ const GameDetailsPage = () => {
                               );
                             })()}
                           >
-                            <div
-                              className={[
-                                styles.lastFiveGames,
-                                games.length === 0 ? styles.lastFiveGamesEmpty : '',
-                              ]
-                                .join(' ')
-                                .trim()}
-                            >
-                              {games.length === 0 ? (
-                                <p className={styles.noGoalsText}>No recent games</p>
-                              ) : (
-                                games.map((lg) => renderSquare(lg, primary, text))
-                              )}
-                            </div>
+                            {lastFiveView === 'list' ? (
+                              <div className={styles.lastFiveListRows}>
+                                {games.length === 0 ? (
+                                  <p className={styles.noGoalsText}>No recent games</p>
+                                ) : (
+                                  games.map((lg) => renderListRow(lg))
+                                )}
+                              </div>
+                            ) : (
+                              <div
+                                className={[
+                                  styles.lastFiveGames,
+                                  games.length === 0 ? styles.lastFiveGamesEmpty : '',
+                                ]
+                                  .join(' ')
+                                  .trim()}
+                              >
+                                {games.length === 0 ? (
+                                  <p className={styles.noGoalsText}>No recent games</p>
+                                ) : (
+                                  games.map((lg) => renderSquare(lg, primary, text))
+                                )}
+                              </div>
+                            )}
                           </Accordion>
                         );
 
                         return (
-                          <Card title="Last 5 Games">
+                          <Card
+                            title="Last 5 Games"
+                            action={
+                              <div className={styles.lastFiveViewToggle}>
+                                <Button
+                                  variant="ghost"
+                                  intent={lastFiveView === 'square' ? 'accent' : 'neutral'}
+                                  icon="grid_view"
+                                  size="sm"
+                                  tooltip="Grid view"
+                                  onClick={() => setLastFiveView('square')}
+                                />
+                                <Button
+                                  variant="ghost"
+                                  intent={lastFiveView === 'list' ? 'accent' : 'neutral'}
+                                  icon="view_list"
+                                  size="sm"
+                                  tooltip="List view"
+                                  onClick={() => setLastFiveView('list')}
+                                />
+                              </div>
+                            }
+                          >
                             <div className={styles.lastFiveList}>
                               <div className={styles.lastFiveTeamCol}>
                                 {renderTeamAccordion(
