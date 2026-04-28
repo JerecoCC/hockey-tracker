@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-expressions */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
@@ -13,12 +12,7 @@ import ListItem from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
-import {
-  useGameDetails,
-  type CurrentPeriod,
-  type GameType,
-  type LastFiveGame,
-} from '@/hooks/useGames';
+import { useGameDetails, type CurrentPeriod, type LastFiveGame } from '@/hooks/useGames';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup from '@/hooks/useGameLineup';
 import useGameRoster, { type GameRosterEntry } from '@/hooks/useGameRoster';
@@ -40,99 +34,18 @@ import ShotsEditModal from './ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
 import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-const DATE_FMT_SHORT = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
-
-/** Formats an ISO timestamp as "7:05 PM" (ET). */
-const TIME_FMT = new Intl.DateTimeFormat('en-US', {
-  hour: 'numeric',
-  minute: '2-digit',
-  timeZone: 'America/New_York',
-});
-
-/** Converts a stored "HH:MM" 24-hour string to "h:mm AM/PM". */
-const formatScheduledTime = (t: string): string => {
-  const [hStr, mStr] = t.split(':');
-  const h = parseInt(hStr, 10);
-  const m = mStr ?? '00';
-  const suffix = h >= 12 ? 'PM' : 'AM';
-  const h12 = h % 12 === 0 ? 12 : h % 12;
-  return `${h12}:${m} ${suffix}`;
-};
-
-const PERIOD_IDS = ['1', '2', '3'] as const;
-const PERIODS: { num: number; label: string; periodId: CurrentPeriod }[] = [
-  { num: 1, label: '1st Period', periodId: '1' },
-  { num: 2, label: '2nd Period', periodId: '2' },
-  { num: 3, label: '3rd Period', periodId: '3' },
-];
-
-const GAME_TYPE_LABEL: Record<GameType, string> = {
-  preseason: 'Preseason',
-  regular: 'Regular Season',
-  playoff: 'Playoffs',
-};
-
-const POSITION_LABEL: Record<string, string> = {
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  D: 'Defense',
-  G: 'Goalie',
-};
-
-/** Goal type → { abbreviation, badge intent }. Even-strength returns null (no badge). */
-const GOAL_TYPE_BADGE: Record<
-  string,
-  {
-    label: string;
-    tooltip: string;
-    intent: 'info' | 'warning' | 'neutral' | 'success' | 'danger';
-  } | null
-> = {
-  'even-strength': null,
-  'power-play': { label: 'PP', tooltip: 'Power Play', intent: 'info' },
-  shorthanded: { label: 'SH', tooltip: 'Shorthanded', intent: 'warning' },
-  'empty-net': { label: 'EN', tooltip: 'Empty Net', intent: 'neutral' },
-  'penalty-shot': { label: 'PS', tooltip: 'Penalty Shot', intent: 'success' },
-  own: { label: 'OG', tooltip: 'Own Goal', intent: 'danger' },
-};
-
-/**
- * Format a player name for goal/assist display.
- * Result: "C. McDavid"  (or "McDavid" when no first name)
- */
-const formatPlayerName = (firstName: string | null, lastName: string | null): string => {
-  if (!lastName) return '';
-  const initial = firstName ? `${firstName.charAt(0)}. ` : '';
-  return `${initial}${lastName}`;
-};
-
-/**
- * Compute W-OTW-OTL-L form record counts from a last-five array.
- * Wins/losses in overtime or shootout count as OTW/OTL; all others are regulation W/L.
- */
-const buildFormRecord = (games: LastFiveGame[]) => {
-  let w = 0,
-    otw = 0,
-    otl = 0,
-    l = 0;
-  for (const g of games) {
-    const isExtra = (g.overtime_periods != null && g.overtime_periods > 0) || g.shootout;
-    if (g.result === 'W') {
-      isExtra ? otw++ : w++;
-    } else if (g.result === 'L') {
-      isExtra ? otl++ : l++;
-    }
-  }
-  return { w, otw, otl, l };
-};
+import {
+  DATE_FMT_SHORT,
+  TIME_FMT,
+  formatScheduledTime,
+  formatPlayerName,
+  buildFormRecord,
+  PERIOD_IDS,
+  PERIODS,
+  GAME_TYPE_LABEL,
+  POSITION_LABEL,
+  GOAL_TYPE_BADGE,
+} from './constants';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -490,20 +403,39 @@ const GameDetailsPage = () => {
     setEditGoal(null);
   };
 
-  // After the Score Goal modal closes, restore focus to the "Score Goal" button
-  // (or the first available action) in the active period's accordion header.
+  // Focuses the Score Goal action (or first enabled action) in the current period's accordion.
+  const focusCurrentPeriodAction = useCallback(() => {
+    if (!game?.current_period) return;
+    const accordionEl = periodAccordionRefs.current.get(game.current_period);
+    const firstBtn = accordionEl?.querySelector<HTMLButtonElement>(
+      '[data-hover-actions] button:not([disabled])',
+    );
+    firstBtn?.focus();
+  }, [game?.current_period]);
+
+  // After the Score Goal modal closes, restore focus to the current period's action.
   const prevGoalPeriodRef = useRef<string | null>(null);
   useEffect(() => {
     const prev = prevGoalPeriodRef.current;
     prevGoalPeriodRef.current = goalPeriod;
     if (prev !== null && goalPeriod === null && game?.current_period) {
-      const accordionEl = periodAccordionRefs.current.get(game.current_period);
-      const firstBtn = accordionEl?.querySelector<HTMLButtonElement>(
-        '[data-hover-actions] button:not([disabled])',
-      );
-      firstBtn?.focus();
+      focusCurrentPeriodAction();
     }
-  }, [goalPeriod, game]);
+  }, [goalPeriod, game?.current_period, focusCurrentPeriodAction]);
+
+  // On page load and whenever the current period advances, auto-focus the Score
+  // Goal action of the new active period — but only while the game is in progress.
+  // Uses `undefined` as the initial sentinel so the first non-null period always fires.
+  const prevCurrentPeriodRef = useRef<string | null | undefined>(undefined);
+  useEffect(() => {
+    const prev = prevCurrentPeriodRef.current;
+    const cur = game?.current_period ?? null;
+    prevCurrentPeriodRef.current = cur;
+    if (game?.status !== 'in_progress' || cur === null) return;
+    if (prev === undefined || prev !== cur) {
+      focusCurrentPeriodAction();
+    }
+  }, [game?.status, game?.current_period, focusCurrentPeriodAction]);
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
 
