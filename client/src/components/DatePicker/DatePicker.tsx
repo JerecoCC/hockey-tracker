@@ -81,15 +81,15 @@ const SEGMENT_INFO: Record<
   Segment,
   { start: number; end: number; placeholder: string; maxLen: number }
 > = {
-  year: { start: 0, end: 4, placeholder: 'YYYY', maxLen: 4 },
-  month: { start: 5, end: 7, placeholder: 'MM', maxLen: 2 },
-  day: { start: 8, end: 10, placeholder: 'DD', maxLen: 2 },
+  month: { start: 0, end: 2, placeholder: 'MM', maxLen: 2 },
+  day: { start: 3, end: 5, placeholder: 'DD', maxLen: 2 },
+  year: { start: 6, end: 10, placeholder: 'YYYY', maxLen: 4 },
 };
 
-const SEGMENT_ORDER: Segment[] = ['year', 'month', 'day'];
+const SEGMENT_ORDER: Segment[] = ['month', 'day', 'year'];
 
 /**
- * Build the 10-char display string (e.g. "2024/01/DD") from committed segment
+ * Build the 10-char display string (e.g. "MM/DD/2024") from committed segment
  * values and the digit buffer being typed into the active segment.
  */
 const buildDisplay = (
@@ -106,7 +106,7 @@ const buildDisplay = (
     }
     return committed !== null ? String(committed).padStart(info.maxLen, '0') : info.placeholder;
   };
-  return `${seg('year', cYear)}/${seg('month', cMonth)}/${seg('day', cDay)}`;
+  return `${seg('month', cMonth)}/${seg('day', cDay)}/${seg('year', cYear)}`;
 };
 
 const DatePicker = (props: Props) => {
@@ -189,7 +189,7 @@ const DatePicker = (props: Props) => {
       // which schedules a state update — but by the time the user types the
       // state update may not be committed yet, leaving activeSeg null and
       // causing typed characters to be swallowed.
-      activateSegment('year');
+      activateSegment('month');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -248,11 +248,11 @@ const DatePicker = (props: Props) => {
 
   const handleInputClick = () => {
     const pos = inputRef.current?.selectionStart ?? 0;
-    activateSegment(pos <= 4 ? 'year' : pos <= 7 ? 'month' : 'day');
+    activateSegment(pos <= 2 ? 'month' : pos <= 5 ? 'day' : 'year');
   };
 
   const handleFocus = () => {
-    if (!activeSeg) activateSegment('year');
+    if (!activeSeg) activateSegment('month');
   };
 
   const handleBlur = () => {
