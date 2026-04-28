@@ -1,0 +1,292 @@
+@use "../../../../styles/colors" as *;
+@use "../../../../styles/mixins" as *;
+
+// ── Scoreboard card ────────────────────────────────────────────────────────────
+.scoreboardCard {
+  margin-bottom: $space-xl;
+  overflow: hidden;
+}
+
+.scoreboard {
+  display: flex;
+  align-items: stretch;
+  min-height: 80px;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    padding: 0;
+    min-height: unset;
+  }
+}
+
+// ── Team sides (away = left, home = right) ─────────────────────────────────────
+.teamSide {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  flex: 1;
+  min-width: 0;
+  padding: $space-lg 0;
+
+  @media (max-width: 900px) {
+    position: relative;
+    order: 0;
+    padding: $space-md calc(#{$space-md} + 52px) $space-md $space-lg;
+    width: 100%;
+    box-sizing: border-box;
+    border-bottom: 1px solid $border;
+    overflow: hidden;
+  }
+}
+
+.teamSideLoser {
+  @media (max-width: 900px) {
+    .teamLogoBtn {
+      opacity: 0.45;
+    }
+  }
+}
+
+.teamSideHome {
+  flex-direction: row-reverse;
+
+  @media (max-width: 900px) {
+    flex-direction: row;
+    order: 2;
+    border-bottom: none;
+  }
+}
+
+// Diagonal stripe decoration
+.teamStripe {
+  position: relative;
+  align-self: stretch;
+  flex-shrink: 0;
+  width: 64px;
+  clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
+  opacity: 0.9;
+  margin: -$space-lg 0;
+
+  @media (max-width: 900px) {
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+    width: 52px;
+    margin-left: -$space-lg;
+
+    .teamStripeSecondary {
+      clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
+    }
+
+    .teamStripeSecondary2 {
+      clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
+    }
+  }
+}
+
+.teamStripeHome {
+  clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+  .teamStripeSecondary {
+    clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
+  }
+
+  .teamStripeSecondary2 {
+    clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
+  }
+
+  @media (max-width: 900px) {
+    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+    margin-left: -$space-lg;
+
+    .teamStripeSecondary {
+      clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
+    }
+
+    .teamStripeSecondary2 {
+      clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
+    }
+  }
+}
+
+.teamStripeRight {
+  display: none;
+
+  @media (max-width: 900px) {
+    display: block;
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: 0;
+    width: 52px;
+    clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+    .teamStripeSecondary {
+      clip-path: polygon(42.5% 0, 55% 0, 25% 100%, 12.5% 100%);
+    }
+
+    .teamStripeSecondary2 {
+      clip-path: polygon(67.5% 0, 80% 0, 50% 100%, 37.5% 100%);
+    }
+  }
+}
+
+// Primary fill
+.teamStripePrimary {
+  position: absolute;
+  inset: 0;
+}
+
+// Secondary strips
+.teamStripeSecondary {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(45% 0%, 57.5% 0%, 87.5% 100%, 75% 100%);
+}
+
+.teamStripeSecondary2 {
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(20% 0%, 32.5% 0%, 62.5% 100%, 50% 100%);
+}
+
+// Logo button
+.teamLogoBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  border-radius: $radius-md;
+  flex-shrink: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  transition: opacity 0.15s ease;
+
+  &:hover {
+    opacity: 0.75;
+  }
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 4px;
+  }
+
+  @media (max-width: 900px) {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+.teamLogoBtnHome {
+  @media (max-width: 900px) {
+    flex-direction: row-reverse;
+  }
+}
+
+// ── Team logo / placeholder ────────────────────────────────────────────────────
+.teamLogo {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  display: block;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
+
+  @media (max-width: 900px) {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.teamLogoPlaceholder {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: $bg-input;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-dim;
+  letter-spacing: 0.04em;
+
+  @media (max-width: 900px) {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.teamInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.teamFullName {
+  font-size: $font-base;
+  font-weight: 700;
+  color: $text-bright;
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.teamSubInfo {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+// ── Center: score numbers flanking the status block ───────────────────────────
+.scoreCenter {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  flex-shrink: 0;
+  padding: $space-md $space-xl;
+
+  @media (max-width: 900px) {
+    order: 1;
+    justify-content: center;
+    padding: $space-md $space-lg;
+    border-bottom: 1px solid $border;
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.scoreBlock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
+.scoreNumber {
+  font-size: 2.75rem;
+  font-weight: 700;
+  color: $text-bright;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  min-width: 2rem;
+  text-align: center;
+  transition: color 0.15s;
+  line-height: 1;
+
+  @media (max-width: 900px) {
+    font-size: 2rem;
+  }
+}
+
+.scoreNumberLoser {
+  color: $text-dim;
+}
+
+.scoreDate {
+  font-size: $font-sm;
+  color: $text-dim;
+}

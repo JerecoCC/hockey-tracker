@@ -11,7 +11,7 @@ import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
 import TeamDetailsPage from './pages/admin/teams/TeamDetails';
 import SeasonDetailsPage from './pages/admin/seasons/SeasonDetails';
-import GameDetailsPage from './pages/admin/games/GameDetailsPage';
+import GameDetailsPage from './pages/admin/games/game-details/GameDetailsPage';
 import AuthCallbackPage from './pages/auth/callback/AuthCallback';
 
 const PrivateRoute = (props: { children: ReactNode }) => {
