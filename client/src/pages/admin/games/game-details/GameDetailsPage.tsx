@@ -1610,7 +1610,7 @@ const GameDetailsPage = () => {
                         );
                       })()}
 
-                    {/* ── Last 10 Games card ── */}
+                    {/* ── Last 5 Games card ── */}
                     {(game.home_last_five || game.away_last_five) &&
                       (() => {
                         const awayGames = game.away_last_five ?? [];
@@ -1761,24 +1761,28 @@ const GameDetailsPage = () => {
                         );
 
                         return (
-                          <Card title="Last 10 Games">
+                          <Card title="Last 5 Games">
                             <div className={styles.lastFiveList}>
-                              {renderTeamAccordion(
-                                game.away_team_name,
-                                game.away_team_logo,
-                                game.away_team_code,
-                                game.away_team_primary_color,
-                                game.away_team_text_color,
-                                awayGames,
-                              )}
-                              {renderTeamAccordion(
-                                game.home_team_name,
-                                game.home_team_logo,
-                                game.home_team_code,
-                                game.home_team_primary_color,
-                                game.home_team_text_color,
-                                homeGames,
-                              )}
+                              <div className={styles.lastFiveTeamCol}>
+                                {renderTeamAccordion(
+                                  game.away_team_name,
+                                  game.away_team_logo,
+                                  game.away_team_code,
+                                  game.away_team_primary_color,
+                                  game.away_team_text_color,
+                                  awayGames,
+                                )}
+                              </div>
+                              <div className={styles.lastFiveTeamCol}>
+                                {renderTeamAccordion(
+                                  game.home_team_name,
+                                  game.home_team_logo,
+                                  game.home_team_code,
+                                  game.home_team_primary_color,
+                                  game.home_team_text_color,
+                                  homeGames,
+                                )}
+                              </div>
                             </div>
                           </Card>
                         );
