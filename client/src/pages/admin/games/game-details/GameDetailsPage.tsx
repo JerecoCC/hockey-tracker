@@ -147,6 +147,8 @@ const GameDetailsPage = () => {
   /**
    * True when the shootout has a winner and "End Game" can be offered.
    * Conditions:
+   *   - Early clinch: within regulation, one team's lead is already unassailable
+   *     (the other team cannot tie even if they score every remaining attempt), OR
    *   - All regulation rounds recorded AND one team leads, OR
    *   - Tied after regulation AND a sudden-death round has produced a decisive result
    *     (one team scored while the other missed in the same SD round).
@@ -166,10 +168,16 @@ const GameDetailsPage = () => {
     const firstAttempts = attempts.filter((a) => a.team_id === firstSideId);
     const secondAttempts = attempts.filter((a) => a.team_id === secondSideId);
 
-    if (firstAttempts.length < bestOf || secondAttempts.length < bestOf) return false;
-
     const firstRegGoals = firstAttempts.slice(0, bestOf).filter((a) => a.scored).length;
     const secondRegGoals = secondAttempts.slice(0, bestOf).filter((a) => a.scored).length;
+    const firstRemaining = Math.max(0, bestOf - firstAttempts.length);
+    const secondRemaining = Math.max(0, bestOf - secondAttempts.length);
+
+    // Early clinch: one team is already guaranteed to win within regulation
+    if (firstRegGoals > secondRegGoals + secondRemaining) return true;
+    if (secondRegGoals > firstRegGoals + firstRemaining) return true;
+
+    if (firstAttempts.length < bestOf || secondAttempts.length < bestOf) return false;
 
     if (firstRegGoals !== secondRegGoals) return true; // regulation winner
 
@@ -205,10 +213,16 @@ const GameDetailsPage = () => {
     const firstAttempts = attempts.filter((a) => a.team_id === firstSideId);
     const secondAttempts = attempts.filter((a) => a.team_id === secondSideId);
 
-    if (firstAttempts.length < bestOf || secondAttempts.length < bestOf) return null;
-
     const firstRegGoals = firstAttempts.slice(0, bestOf).filter((a) => a.scored).length;
     const secondRegGoals = secondAttempts.slice(0, bestOf).filter((a) => a.scored).length;
+    const firstRemaining = Math.max(0, bestOf - firstAttempts.length);
+    const secondRemaining = Math.max(0, bestOf - secondAttempts.length);
+
+    // Early clinch: one team's lead is unassailable within regulation
+    if (firstRegGoals > secondRegGoals + secondRemaining) return firstSide;
+    if (secondRegGoals > firstRegGoals + firstRemaining) return secondSide;
+
+    if (firstAttempts.length < bestOf || secondAttempts.length < bestOf) return null;
 
     if (firstRegGoals !== secondRegGoals)
       return firstRegGoals > secondRegGoals ? firstSide : secondSide;
@@ -1137,6 +1151,14 @@ const GameDetailsPage = () => {
                               .slice(0, bestOf)
                               .filter((a) => a.scored).length;
 
+                            // Early clinch: the winner is decided before all regulation attempts
+                            // are taken because the trailing team cannot mathematically tie.
+                            const firstRemaining = Math.max(0, bestOf - firstTeamAttempts.length);
+                            const secondRemaining = Math.max(0, bestOf - secondTeamAttempts.length);
+                            const isEarlyClinch =
+                              firstRegGoals > secondRegGoals + secondRemaining ||
+                              secondRegGoals > firstRegGoals + firstRemaining;
+
                             // Sudden-death extension: when regulation is complete and tied,
                             // keep adding rows one SD round at a time until one team wins a round.
                             const regulationComplete =
@@ -1171,11 +1193,15 @@ const GameDetailsPage = () => {
                               }
                             }
 
-                            const roundCount = Math.max(
-                              bestOf + sdExtraRounds,
-                              firstTeamAttempts.length,
-                              secondTeamAttempts.length,
-                            );
+                            // When clinched early, only show rows up to the last recorded attempt;
+                            // remaining placeholder rows are removed.
+                            const roundCount = isEarlyClinch
+                              ? Math.max(firstTeamAttempts.length, secondTeamAttempts.length)
+                              : Math.max(
+                                  bestOf + sdExtraRounds,
+                                  firstTeamAttempts.length,
+                                  secondTeamAttempts.length,
+                                );
 
                             const firstTeamInfo = {
                               code:
