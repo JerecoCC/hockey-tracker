@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { forwardRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import Button from '../Button/Button';
 import type { ButtonIntent, ButtonVariant } from '../Button/Button';
@@ -41,73 +41,86 @@ interface Props {
   children?: ReactNode;
 }
 
-const Accordion = ({
-  label,
-  headerRight,
-  hoverActions,
-  defaultOpen = true,
-  toggleDisabled = false,
-  variant = 'collapsible',
-  className,
-  children,
-}: Props) => {
-  const [open, setOpen] = useState(defaultOpen);
-  const isStatic = variant === 'static';
-  const bodyVisible = isStatic || open;
+const Accordion = forwardRef<HTMLDivElement, Props>(
+  (
+    {
+      label,
+      headerRight,
+      hoverActions,
+      defaultOpen = true,
+      toggleDisabled = false,
+      variant = 'collapsible',
+      className,
+      children,
+    },
+    ref,
+  ) => {
+    const [open, setOpen] = useState(defaultOpen);
+    const isStatic = variant === 'static';
+    const bodyVisible = isStatic || open;
 
-  return (
-    <div className={[styles.accordion, className].filter(Boolean).join(' ')}>
+    return (
       <div
-        className={[
-          styles.row,
-          !(bodyVisible && children != null) ? styles.rowCollapsed : '',
-          isStatic ? styles.rowStatic : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
+        ref={ref}
+        className={[styles.accordion, className].filter(Boolean).join(' ')}
       >
-        {!isStatic && (
-          <button
-            className={[styles.toggle, toggleDisabled ? styles.toggleDisabled : '']
-              .filter(Boolean)
-              .join(' ')}
-            onClick={() => !toggleDisabled && setOpen((v) => !v)}
-            aria-label={open ? 'Collapse' : 'Expand'}
-            aria-expanded={open}
-            aria-disabled={toggleDisabled}
-            tabIndex={toggleDisabled ? -1 : undefined}
-          >
-            <Icon
-              name="expand_more"
-              size="0.8em"
-              className={open ? styles.toggleIconOpen : styles.toggleIcon}
-            />
-          </button>
-        )}
-        <div className={styles.label}>{label}</div>
-        {headerRight != null && <div className={styles.headerRight}>{headerRight}</div>}
-        {hoverActions != null && hoverActions.length > 0 && (
-          <div className={styles.hoverActions}>
-            {hoverActions.map((action, i) => (
-              <Button
-                key={i}
-                variant={action.variant ?? 'outlined'}
-                intent={action.intent ?? 'neutral'}
-                size="sm"
-                icon={action.icon}
-                disabled={action.disabled}
-                tooltip={action.tooltip}
-                onClick={action.onClick}
-              >
-                {action.label}
-              </Button>
-            ))}
-          </div>
-        )}
+        <div
+          className={[
+            styles.row,
+            !(bodyVisible && children != null) ? styles.rowCollapsed : '',
+            isStatic ? styles.rowStatic : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {!isStatic && (
+            <button
+              className={[styles.toggle, toggleDisabled ? styles.toggleDisabled : '']
+                .filter(Boolean)
+                .join(' ')}
+              onClick={() => !toggleDisabled && setOpen((v) => !v)}
+              aria-label={open ? 'Collapse' : 'Expand'}
+              aria-expanded={open}
+              aria-disabled={toggleDisabled}
+              tabIndex={toggleDisabled ? -1 : undefined}
+            >
+              <Icon
+                name="expand_more"
+                size="0.8em"
+                className={open ? styles.toggleIconOpen : styles.toggleIcon}
+              />
+            </button>
+          )}
+          <div className={styles.label}>{label}</div>
+          {headerRight != null && <div className={styles.headerRight}>{headerRight}</div>}
+          {hoverActions != null && hoverActions.length > 0 && (
+            <div
+              className={styles.hoverActions}
+              data-hover-actions
+            >
+              {hoverActions.map((action, i) => (
+                <Button
+                  key={i}
+                  variant={action.variant ?? 'outlined'}
+                  intent={action.intent ?? 'neutral'}
+                  size="sm"
+                  icon={action.icon}
+                  disabled={action.disabled}
+                  tooltip={action.tooltip}
+                  onClick={action.onClick}
+                >
+                  {action.label}
+                </Button>
+              ))}
+            </div>
+          )}
+        </div>
+        {bodyVisible && children != null && <div className={styles.body}>{children}</div>}
       </div>
-      {bodyVisible && children != null && <div className={styles.body}>{children}</div>}
-    </div>
-  );
-};
+    );
+  },
+);
+
+Accordion.displayName = 'Accordion';
 
 export default Accordion;

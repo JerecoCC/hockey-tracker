@@ -27,7 +27,8 @@
   border-bottom: 1px solid $border;
   transition: background $transition-fast;
 
-  &:hover {
+  &:hover,
+  &:focus-within {
     background: color-mix(in srgb, var(--accordion-header-bg), white 6%);
 
     .hoverActions {

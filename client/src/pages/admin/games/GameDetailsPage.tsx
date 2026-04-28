@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
 import Badge from '../../../components/Badge/Badge';
@@ -488,6 +488,16 @@ const GameDetailsPage = () => {
     setConfirmRemove(null);
   };
 
+  // Refs for each period accordion so we can restore focus after the goal modal closes.
+  const periodAccordionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const setAccordionRef = useCallback(
+    (periodId: string) => (el: HTMLDivElement | null) => {
+      if (el) periodAccordionRefs.current.set(periodId, el);
+      else periodAccordionRefs.current.delete(periodId);
+    },
+    [],
+  );
+
   const openGoalModal = (period: 1 | 2 | 3 | 'OT' | 'SO') => {
     setEditGoal(null);
     setGoalPeriod(String(period));
@@ -502,6 +512,21 @@ const GameDetailsPage = () => {
     setGoalPeriod(null);
     setEditGoal(null);
   };
+
+  // After the Score Goal modal closes, restore focus to the "Score Goal" button
+  // (or the first available action) in the active period's accordion header.
+  const prevGoalPeriodRef = useRef<string | null>(null);
+  useEffect(() => {
+    const prev = prevGoalPeriodRef.current;
+    prevGoalPeriodRef.current = goalPeriod;
+    if (prev !== null && goalPeriod === null && game?.current_period) {
+      const accordionEl = periodAccordionRefs.current.get(game.current_period);
+      const firstBtn = accordionEl?.querySelector<HTMLButtonElement>(
+        '[data-hover-actions] button:not([disabled])',
+      );
+      firstBtn?.focus();
+    }
+  }, [goalPeriod, game]);
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
 
@@ -563,9 +588,9 @@ const GameDetailsPage = () => {
 
   // Period columns for the Linescore table (always 1–3, plus OT/SO if applicable).
   const linescorePeriods: { id: string; label: string }[] = [
-    { id: '1', label: '1' },
-    { id: '2', label: '2' },
-    { id: '3', label: '3' },
+    { id: '1', label: '1st' },
+    { id: '2', label: '2nd' },
+    { id: '3', label: '3rd' },
     ...(game.period_scores.some((ps) => ps.period === 'OT') ||
     (game.overtime_periods ?? 0) > 0 ||
     game.current_period === 'OT' ||
@@ -930,6 +955,7 @@ const GameDetailsPage = () => {
                           return (
                             <Accordion
                               key={num}
+                              ref={setAccordionRef(periodId)}
                               variant="static"
                               className={isActive ? styles.periodItemActive : undefined}
                               label={<span className={styles.periodLabel}>{label}</span>}
@@ -1156,6 +1182,7 @@ const GameDetailsPage = () => {
                             const otGoals = goals.filter((g) => g.period === 'OT');
                             return (
                               <Accordion
+                                ref={setAccordionRef('OT')}
                                 variant="static"
                                 className={isOTActive ? styles.periodItemActive : undefined}
                                 label={<span className={styles.periodLabel}>Overtime</span>}
