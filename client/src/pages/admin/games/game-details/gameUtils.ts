@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-unused-expressions */
 import type { LastFiveGame } from '@/hooks/useGames';
 
 /**
- * Compute W-OTW-OTL-L form record counts from a last-five array.
+ * Compute W-OTW-OTL-L form record counts from a last-ten array.
  * Wins/losses in overtime or shootout count as OTW/OTL; all others are regulation W/L.
  */
 export const buildFormRecord = (games: LastFiveGame[]) => {

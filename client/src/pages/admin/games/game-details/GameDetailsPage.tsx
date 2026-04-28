@@ -1610,7 +1610,7 @@ const GameDetailsPage = () => {
                         );
                       })()}
 
-                    {/* ── Last 5 Games card ── */}
+                    {/* ── Last 10 Games card ── */}
                     {(game.home_last_five || game.away_last_five) &&
                       (() => {
                         const awayGames = game.away_last_five ?? [];
@@ -1761,7 +1761,7 @@ const GameDetailsPage = () => {
                         );
 
                         return (
-                          <Card title="Last 5 Games">
+                          <Card title="Last 10 Games">
                             <div className={styles.lastFiveList}>
                               {renderTeamAccordion(
                                 game.away_team_name,
