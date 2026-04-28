@@ -169,15 +169,17 @@ router.get('/:id', async (req, res) => {
             json_build_object(
               'game_id',          lg.id,
               'scheduled_at',     lg.scheduled_at,
-              'home_score',       lg.home_score,
-              'away_score',       lg.away_score,
+              'home_score',       lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
+              'away_score',       lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
               'overtime_periods', lg.overtime_periods,
               'shootout',         lg.shootout,
               'result', CASE
-                WHEN (lg.home_team_id = g.home_team_id AND lg.home_score > lg.away_score)
-                  OR (lg.away_team_id = g.home_team_id AND lg.away_score > lg.home_score) THEN 'W'
-                WHEN (lg.home_team_id = g.home_team_id AND lg.home_score < lg.away_score)
-                  OR (lg.away_team_id = g.home_team_id AND lg.away_score < lg.home_score) THEN 'L'
+                WHEN lg.shootout THEN
+                  CASE WHEN lg.so_winner_team_id = g.home_team_id THEN 'W' ELSE 'L' END
+                WHEN (lg.home_team_id = g.home_team_id AND lg.home_goals > lg.away_goals)
+                  OR (lg.away_team_id = g.home_team_id AND lg.away_goals > lg.home_goals) THEN 'W'
+                WHEN (lg.home_team_id = g.home_team_id AND lg.home_goals < lg.away_goals)
+                  OR (lg.away_team_id = g.home_team_id AND lg.away_goals < lg.home_goals) THEN 'L'
                 ELSE 'T'
               END,
               'opponent_team_id', CASE WHEN lg.home_team_id = g.home_team_id THEN lg.away_team_id ELSE lg.home_team_id END,
@@ -193,8 +195,20 @@ router.get('/:id', async (req, res) => {
           SELECT
             g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
             g2.home_team_id, g2.away_team_id,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_score,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_score
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
+            CASE WHEN g2.shootout THEN (
+              SELECT CASE
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
+                THEN g2.home_team_id
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored)
+                THEN g2.away_team_id
+                ELSE NULL
+              END
+              FROM shootout_attempts WHERE game_id = g2.id
+            ) END AS so_winner_team_id
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
@@ -218,15 +232,17 @@ router.get('/:id', async (req, res) => {
             json_build_object(
               'game_id',          lg.id,
               'scheduled_at',     lg.scheduled_at,
-              'home_score',       lg.home_score,
-              'away_score',       lg.away_score,
+              'home_score',       lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
+              'away_score',       lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
               'overtime_periods', lg.overtime_periods,
               'shootout',         lg.shootout,
               'result', CASE
-                WHEN (lg.home_team_id = g.away_team_id AND lg.home_score > lg.away_score)
-                  OR (lg.away_team_id = g.away_team_id AND lg.away_score > lg.home_score) THEN 'W'
-                WHEN (lg.home_team_id = g.away_team_id AND lg.home_score < lg.away_score)
-                  OR (lg.away_team_id = g.away_team_id AND lg.away_score < lg.home_score) THEN 'L'
+                WHEN lg.shootout THEN
+                  CASE WHEN lg.so_winner_team_id = g.away_team_id THEN 'W' ELSE 'L' END
+                WHEN (lg.home_team_id = g.away_team_id AND lg.home_goals > lg.away_goals)
+                  OR (lg.away_team_id = g.away_team_id AND lg.away_goals > lg.home_goals) THEN 'W'
+                WHEN (lg.home_team_id = g.away_team_id AND lg.home_goals < lg.away_goals)
+                  OR (lg.away_team_id = g.away_team_id AND lg.away_goals < lg.home_goals) THEN 'L'
                 ELSE 'T'
               END,
               'opponent_team_id', CASE WHEN lg.home_team_id = g.away_team_id THEN lg.away_team_id ELSE lg.home_team_id END,
@@ -242,8 +258,20 @@ router.get('/:id', async (req, res) => {
           SELECT
             g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
             g2.home_team_id, g2.away_team_id,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_score,
-            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_score
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
+            CASE WHEN g2.shootout THEN (
+              SELECT CASE
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
+                THEN g2.home_team_id
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored)
+                THEN g2.away_team_id
+                ELSE NULL
+              END
+              FROM shootout_attempts WHERE game_id = g2.id
+            ) END AS so_winner_team_id
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
