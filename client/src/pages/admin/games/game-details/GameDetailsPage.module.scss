@@ -716,11 +716,17 @@ $_active-period-color: mix($accent, $bg-card, 50%);
 
 // ── Last 5 Games card ─────────────────────────────────────────────────────────
 
-// Two accordions stacked with a gap between them
+// Two team columns side by side
 .lastFiveList {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: $space-sm;
+  align-items: flex-start;
+}
+
+.lastFiveTeamCol {
+  flex: 1;
+  min-width: 0;
 }
 
 // Form record shown in accordion headerRight: W - OTW - OTL - L

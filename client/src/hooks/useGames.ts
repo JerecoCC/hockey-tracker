@@ -16,7 +16,7 @@ export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed' 
 export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
 export type SeriesStatus = 'upcoming' | 'active' | 'complete';
 
-/** A single entry in a team's last-ten-games form guide. */
+/** A single entry in a team's last-five-games form guide. */
 export interface LastFiveGame {
   game_id:          string;
   scheduled_at:     string | null;
@@ -24,7 +24,7 @@ export interface LastFiveGame {
   away_score:       number;
   overtime_periods: number | null;
   shootout:         boolean;
-  /** Result from the perspective of the team whose last-ten list this belongs to. */
+  /** Result from the perspective of the team whose last-five list this belongs to. */
   result:           'W' | 'L' | 'T';
   /** True if the team was the home team in that historical game (determines square background color). */
   is_home:          boolean;
@@ -80,9 +80,9 @@ export interface GameRecord {
   season_name?:          string;
   league_id?:            string;
   league_name?:          string;
-  /** Last 10 final games for the home team within the same season (detail endpoint only). */
+  /** Last 5 final games for the home team within the same season (detail endpoint only). */
   home_last_five?:       LastFiveGame[];
-  /** Last 10 final games for the away team within the same season (detail endpoint only). */
+  /** Last 5 final games for the away team within the same season (detail endpoint only). */
   away_last_five?:       LastFiveGame[];
   /** Number of regulation shootout rounds before sudden death (from the league settings). */
   best_of_shootout:      number;
