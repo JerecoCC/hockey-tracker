@@ -1,54 +1,47 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ActionOverlay from '../../../components/ActionOverlay/ActionOverlay';
-import Badge from '../../../components/Badge/Badge';
-import Tooltip from '../../../components/Tooltip/Tooltip';
-import Breadcrumbs from '../../../components/Breadcrumbs/Breadcrumbs';
-import Icon from '../../../components/Icon/Icon';
-import Accordion, { type AccordionAction } from '../../../components/Accordion/Accordion';
-import Button from '../../../components/Button/Button';
-import Card from '../../../components/Card/Card';
-import ListItem from '../../../components/ListItem/ListItem';
-import MoreActionsMenu from '../../../components/MoreActionsMenu/MoreActionsMenu';
-import Tabs from '../../../components/Tabs/Tabs';
-import TitleRow from '../../../components/TitleRow/TitleRow';
+import ActionOverlay from '../../../../components/ActionOverlay/ActionOverlay';
+import Badge from '../../../../components/Badge/Badge';
+import Tooltip from '../../../../components/Tooltip/Tooltip';
+import Breadcrumbs from '../../../../components/Breadcrumbs/Breadcrumbs';
+import Icon from '../../../../components/Icon/Icon';
+import Accordion, { type AccordionAction } from '../../../../components/Accordion/Accordion';
+import Button from '../../../../components/Button/Button';
+import Card from '../../../../components/Card/Card';
+import ListItem from '../../../../components/ListItem/ListItem';
+import MoreActionsMenu from '../../../../components/MoreActionsMenu/MoreActionsMenu';
+import Tabs from '../../../../components/Tabs/Tabs';
+import TitleRow from '../../../../components/TitleRow/TitleRow';
 import {
   useGameDetails,
   type CurrentPeriod,
-  type GameStatus,
   type GameType,
   type LastFiveGame,
-} from '../../../hooks/useGames';
-import useTeamPlayers from '../../../hooks/useTeamPlayers';
-import useGameLineup from '../../../hooks/useGameLineup';
-import useGameRoster, { type GameRosterEntry } from '../../../hooks/useGameRoster';
-import useGameGoals, { type GoalRecord } from '../../../hooks/useGameGoals';
-import useGameGoalieStats from '../../../hooks/useGameGoalieStats';
-import useShootoutAttempts, { type ShootoutAttempt } from '../../../hooks/useShootoutAttempts';
-import useTabState from '../../../hooks/useTabState';
-import LineupRosterModal from './LineupRosterModal';
-import LineupCreatePlayersModal from './LineupCreatePlayersModal';
-import SetLineupModal from './SetLineupModal';
-import RemoveFromLineupModal from './game-details/RemoveFromLineupModal';
-import StartGameModal from './game-details/StartGameModal';
-import GameInfoEditModal from './game-details/GameInfoEditModal';
-import ThreeStarsModal from './game-details/ThreeStarsModal';
-import ScoreGoalModal from './game-details/ScoreGoalModal';
-import ShootoutAttemptModal from './game-details/ShootoutAttemptModal';
-import GoalieStatsEditModal from './game-details/GoalieStatsEditModal';
-import ShotsEditModal from './game-details/ShotsEditModal';
-import RecordShotsModal, { type ShotsNextAction } from './game-details/RecordShotsModal';
+} from '../../../../hooks/useGames';
+import useTeamPlayers from '../../../../hooks/useTeamPlayers';
+import useGameLineup from '../../../../hooks/useGameLineup';
+import useGameRoster, { type GameRosterEntry } from '../../../../hooks/useGameRoster';
+import useGameGoals, { type GoalRecord } from '../../../../hooks/useGameGoals';
+import useGameGoalieStats from '../../../../hooks/useGameGoalieStats';
+import useShootoutAttempts, { type ShootoutAttempt } from '../../../../hooks/useShootoutAttempts';
+import useTabState from '../../../../hooks/useTabState';
+import LineupRosterModal from '../LineupRosterModal';
+import LineupCreatePlayersModal from '../LineupCreatePlayersModal';
+import SetLineupModal from '../SetLineupModal';
+import RemoveFromLineupModal from './RemoveFromLineupModal';
+import StartGameModal from './StartGameModal';
+import GameInfoEditModal from './GameInfoEditModal';
+import ThreeStarsModal from './ThreeStarsModal';
+import ScoreGoalModal from './ScoreGoalModal';
+import ShootoutAttemptModal from './ShootoutAttemptModal';
+import GoalieStatsEditModal from './GoalieStatsEditModal';
+import ShotsEditModal from './ShotsEditModal';
+import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
+import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-const DATE_FMT = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric',
-});
 
 const DATE_FMT_SHORT = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -71,22 +64,6 @@ const formatScheduledTime = (t: string): string => {
   const suffix = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${m} ${suffix}`;
-};
-
-const STATUS_LABEL: Record<GameStatus, string> = {
-  scheduled: 'Scheduled',
-  in_progress: 'In Progress',
-  final: 'Final',
-  postponed: 'Postponed',
-  cancelled: 'Cancelled',
-};
-
-const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'info',
-  in_progress: 'warning',
-  final: 'success',
-  postponed: 'warning',
-  cancelled: 'danger',
 };
 
 const PERIOD_IDS = ['1', '2', '3'] as const;
@@ -636,193 +613,15 @@ const GameDetailsPage = () => {
       />
 
       {/* ── Scoreboard card ── */}
-      <Card
-        className={styles.scoreboardCard}
-        style={{ padding: 0 }}
-      >
-        <div className={styles.scoreboard}>
-          {/* ── Away side ── */}
-          <div
-            className={[
-              styles.teamSide,
-              isFinal && liveAwayScore < liveHomeScore ? styles.teamSideLoser : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            style={
-              {
-                '--team-primary': game.away_team_primary_color,
-                '--team-text': game.away_team_text_color,
-              } as React.CSSProperties
-            }
-          >
-            <div className={styles.teamStripe}>
-              <div
-                className={styles.teamStripePrimary}
-                style={{ background: game.away_team_primary_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary}
-                style={{ background: game.away_team_text_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary2}
-                style={{ background: game.away_team_text_color }}
-              />
-            </div>
-            <button
-              type="button"
-              className={styles.teamLogoBtn}
-              onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team_id}`)}
-            >
-              {game.away_team_logo ? (
-                <img
-                  src={game.away_team_logo}
-                  alt={game.away_team_code}
-                  className={styles.teamLogo}
-                />
-              ) : (
-                <span className={styles.teamLogoPlaceholder}>
-                  {game.away_team_code.slice(0, 3)}
-                </span>
-              )}
-              <div className={styles.teamInfo}>
-                <span className={styles.teamFullName}>{game.away_team_name}</span>
-                <span className={styles.teamSubInfo}>{game.away_team_code}</span>
-              </div>
-            </button>
-            {/* Right stripe — stacked mode only, mirrors the left stripe */}
-            <div className={`${styles.teamStripe} ${styles.teamStripeRight}`}>
-              <div
-                className={styles.teamStripePrimary}
-                style={{ background: game.away_team_primary_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary}
-                style={{ background: game.away_team_text_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary2}
-                style={{ background: game.away_team_text_color }}
-              />
-            </div>
-          </div>
-
-          {/* ── Center: score + status ── */}
-          <div className={styles.scoreCenter}>
-            {(isFinal || isInProgress) && (
-              <span
-                className={[
-                  styles.scoreNumber,
-                  isFinal && liveAwayScore < liveHomeScore ? styles.scoreNumberLoser : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                {liveAwayScore}
-              </span>
-            )}
-            <div className={styles.scoreBlock}>
-              {isFinal ? (
-                <Badge
-                  label={`Final${overtimeSuffix}`}
-                  intent="success"
-                />
-              ) : (
-                <Badge
-                  label={STATUS_LABEL[game.status]}
-                  intent={STATUS_INTENT[game.status]}
-                />
-              )}
-              {game.scheduled_at && (
-                <span className={styles.scoreDate}>
-                  {DATE_FMT.format(new Date(game.scheduled_at))}
-                </span>
-              )}
-            </div>
-            {(isFinal || isInProgress) && (
-              <span
-                className={[
-                  styles.scoreNumber,
-                  isFinal && liveHomeScore < liveAwayScore ? styles.scoreNumberLoser : '',
-                ]
-                  .filter(Boolean)
-                  .join(' ')}
-              >
-                {liveHomeScore}
-              </span>
-            )}
-          </div>
-
-          {/* ── Home side ── */}
-          <div
-            className={[
-              styles.teamSide,
-              styles.teamSideHome,
-              isFinal && liveHomeScore < liveAwayScore ? styles.teamSideLoser : '',
-            ]
-              .filter(Boolean)
-              .join(' ')}
-            style={
-              {
-                '--team-primary': game.home_team_primary_color,
-                '--team-text': game.home_team_text_color,
-              } as React.CSSProperties
-            }
-          >
-            <div className={`${styles.teamStripe} ${styles.teamStripeHome}`}>
-              <div
-                className={styles.teamStripePrimary}
-                style={{ background: game.home_team_primary_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary}
-                style={{ background: game.home_team_text_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary2}
-                style={{ background: game.home_team_text_color }}
-              />
-            </div>
-            <button
-              type="button"
-              className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
-              onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team_id}`)}
-            >
-              <div className={`${styles.teamInfo} ${styles.teamInfoHome}`}>
-                <span className={styles.teamFullName}>{game.home_team_name}</span>
-                <span className={styles.teamSubInfo}>{game.home_team_code}</span>
-              </div>
-              {game.home_team_logo ? (
-                <img
-                  src={game.home_team_logo}
-                  alt={game.home_team_code}
-                  className={styles.teamLogo}
-                />
-              ) : (
-                <span className={styles.teamLogoPlaceholder}>
-                  {game.home_team_code.slice(0, 3)}
-                </span>
-              )}
-            </button>
-            {/* Right stripe — stacked mode only, mirrors the left stripe */}
-            <div className={`${styles.teamStripe} ${styles.teamStripeRight}`}>
-              <div
-                className={styles.teamStripePrimary}
-                style={{ background: game.home_team_primary_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary}
-                style={{ background: game.home_team_text_color }}
-              />
-              <div
-                className={styles.teamStripeSecondary2}
-                style={{ background: game.home_team_text_color }}
-              />
-            </div>
-          </div>
-        </div>
-      </Card>
+      <ScoreboardCard
+        game={game}
+        isFinal={isFinal}
+        isInProgress={isInProgress}
+        liveAwayScore={liveAwayScore}
+        liveHomeScore={liveHomeScore}
+        overtimeSuffix={overtimeSuffix}
+        leagueId={leagueId}
+      />
 
       {/* ── Tabs ── */}
       <Tabs
