@@ -252,9 +252,17 @@ const ShootoutAccordion = ({
 
   // ── Accordion actions ─────────────────────────────────────────────────────
 
+  // The current round is "unbalanced" when the first team has already taken
+  // their attempt but the second team hasn't yet (firstTeamAttempts.length >
+  // secondTeamAttempts.length). In that case we must still allow recording the
+  // second team's attempt for this round, even if the winner is already decided.
+  const roundUnbalanced = firstTeamAttempts.length > secondTeamAttempts.length;
+  const canAddAttempt = !soComplete || roundUnbalanced;
+  const canEndGame = soComplete && !roundUnbalanced;
+
   const hoverActions: AccordionAction[] | undefined = isSOActive
     ? ([
-        !soComplete
+        canAddAttempt
           ? {
               icon: 'sports_hockey',
               tooltip: 'Add Attempt',
@@ -263,7 +271,7 @@ const ShootoutAccordion = ({
               onClick: onAddAttempt,
             }
           : null,
-        soComplete
+        canEndGame
           ? {
               icon: 'flag',
               tooltip: 'End Game',

@@ -1,0 +1,146 @@
+@use "../../../../styles/colors" as *;
+@use "../../../../styles/mixins" as *;
+
+// ── Period scoring list ────────────────────────────────────────────────────────
+
+.periodList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+// Passed as className to Accordion to tint the border AND header for the active period.
+$_active-period-color: mix($accent, $bg-card, 50%);
+.periodItemActive {
+  border-color: $_active-period-color;
+  --accordion-header-bg: #{$_active-period-color};
+}
+
+// Passed as label slot content to give the period name a fixed-width column.
+.periodLabel {
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 96px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.noGoalsText {
+  margin: 0;
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Goal list (inside period accordion) ──────────────────────────────────────
+
+.goalList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.goalItem {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-bottom: 1px solid $border;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover .goalActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+// Period time (e.g. "12:34")
+.goalTime {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  min-width: 2.75rem;
+  flex-shrink: 0;
+}
+
+// Small square team logo / placeholder
+.goalTeamLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.goalTeamLogoPlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Circular scorer avatar
+.goalScorerPhoto {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.goalScorerPhotoPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+// Text column: scorer name + assists
+.goalInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.goalScorer {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goalAssists {
+  font-size: $font-xs;
+  color: $text-dim;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
