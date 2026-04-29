@@ -108,6 +108,14 @@
   gap: 2px;
 }
 
+.divider {
+  border-top: 1px solid $text-dim;
+  margin: $space-sm $space-md;
+  pointer-events: none;
+  list-style: none;
+  flex-shrink: 0;
+}
+
 .emptyMessage {
   padding: $space-sm $space-md;
   font-size: $font-sm;

@@ -1,0 +1,222 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Page loader ────────────────────────────────────────────────────────────
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loaderWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8rem $space-lg;
+  gap: $space-lg;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.loaderText {
+  color: $text-dim;
+  font-size: $font-base;
+  margin: 0;
+}
+
+// ── Hero card ──────────────────────────────────────────────────────────────
+.hero {
+  display: flex;
+  align-items: center;
+  gap: $space-xl;
+}
+
+.avatarWrapper {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  overflow: hidden;
+}
+
+.avatar {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  display: block;
+}
+
+.avatarInitials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: $border;
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-bright;
+  text-transform: uppercase;
+}
+
+.heroInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.heroName {
+  font-size: $font-3xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+}
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+
+  > span + span::before {
+    content: "•";
+    margin-right: $space-md;
+    color: $border;
+  }
+}
+
+// ── Status badge ──────────────────────────────────────────────────────────
+.statusBadge {
+  flex-shrink: 0;
+  padding: $space-xs $space-md;
+  border-radius: $radius-pill;
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.statusActive {
+  background: rgba(34, 197, 94, 0.15);
+  color: #4ade80;
+}
+
+.statusInactive {
+  background: rgba(100, 116, 139, 0.15);
+  color: $text-dim;
+}
+
+// ── Info grid ─────────────────────────────────────────────────────────────
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: $space-xl;
+}
+
+.infoCell {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoCellLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.infoCellValue {
+  font-size: $font-body;
+  color: $text-body;
+}
+
+.infoCellMuted {
+  font-size: $font-body;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Placeholder ───────────────────────────────────────────────────────────
+.placeholder {
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
+  padding: $space-lg 0;
+  text-align: center;
+}
+
+// ── Team history stint list ───────────────────────────────────────────────
+.stintList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.stintItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md $space-lg;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+}
+
+.stintLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.15));
+}
+
+.stintLogoPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  background: $border;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.stintInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.stintTeam {
+  font-size: $font-body;
+  font-weight: 600;
+  color: $text-bright;
+}
+
+.stintMeta {
+  font-size: $font-sm;
+  color: $text-dim;
+}

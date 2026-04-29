@@ -12,6 +12,7 @@ import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type SeasonRecord } from '@/hooks/useSeasons';
+import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
@@ -36,6 +37,9 @@ const parseLocal = (iso: string) => {
 const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : '—');
 const formatEndDate = (d: string | null, isCurrent: boolean) =>
   d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : '—';
+
+const FORWARD_POSITIONS = new Set(['C', 'LW', 'RW']);
+const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
 
 const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
@@ -63,6 +67,7 @@ const SeasonDetailsPage = () => {
   } = useSeasonDetails(id);
 
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
+  const { standings, loading: standingsLoading } = useSeasonStandings(id);
 
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -71,8 +76,6 @@ const SeasonDetailsPage = () => {
   // ── Stats state ───────────────────────────────────────────────────────────────
   type SkaterStatType = 'points' | 'goals' | 'assists';
   type GoalieLeaderStat = 'save_pct' | 'gaa' | 'shutouts';
-  const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
-
   // Summary sub-section state
   const [summarySkaterStat, setSummarySkaterStat] = useState<SkaterStatType>('points');
   const [summaryDefStat, setSummaryDefStat] = useState<SkaterStatType>('points');
@@ -99,6 +102,11 @@ const SeasonDetailsPage = () => {
     dir: 'desc',
   });
   const [goaliePage, setGoaliePage] = useState(1);
+  // Standings sort
+  const [standingsSort, setStandingsSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({
+    key: 'points',
+    dir: 'desc',
+  });
 
   const PAGE_SIZE = 10;
 
@@ -114,7 +122,7 @@ const SeasonDetailsPage = () => {
     });
 
   const forwards = useMemo(
-    () => skaters.filter((s) => !DEFENSE_POSITIONS.has(s.position ?? '')),
+    () => skaters.filter((s) => FORWARD_POSITIONS.has(s.position ?? '')),
     [skaters],
   );
   const defensemen = useMemo(
@@ -299,6 +307,47 @@ const SeasonDetailsPage = () => {
     },
   ];
 
+  const standingsColumns: Column<TeamStandingRecord>[] = [
+    {
+      type: 'custom',
+      header: 'Team',
+      render: (row) => (
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          {row.team_logo ? (
+            <img
+              src={row.team_logo}
+              alt={row.team_name ?? ''}
+              style={{ width: 24, height: 24, objectFit: 'contain' }}
+            />
+          ) : (
+            <span
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: '50%',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '0.65rem',
+                fontWeight: 700,
+                background: row.team_primary_color ?? '#888',
+                color: row.team_text_color ?? '#fff',
+              }}
+            >
+              {row.team_code?.slice(0, 2) ?? '??'}
+            </span>
+          )}
+          {row.team_name ?? row.team_code ?? '—'}
+        </span>
+      ),
+    },
+    { header: 'GP', key: 'gp', align: 'center', sortable: true },
+    { header: 'W', key: 'wins', align: 'center', sortable: true },
+    { header: 'L', key: 'losses', align: 'center', sortable: true },
+    { header: 'OTL', key: 'otl', align: 'center', sortable: true },
+    { header: 'PTS', key: 'points', align: 'center', sortable: true },
+  ];
+
   const leagueHref = `/admin/leagues/${leagueId}`;
 
   if (loading && !season) {
@@ -476,7 +525,7 @@ const SeasonDetailsPage = () => {
                   onChange={setStatsSubTab}
                   options={[
                     { value: 'Summary', label: 'Summary' },
-                    { value: 'Skaters', label: 'Skaters' },
+                    { value: 'Forwards', label: 'Forwards' },
                     { value: 'Defense', label: 'Defense' },
                     { value: 'Goalies', label: 'Goalies' },
                     { value: 'Teams', label: 'Teams' },
@@ -485,9 +534,9 @@ const SeasonDetailsPage = () => {
 
                 {statsSubTab === 'Summary' && (
                   <div className={styles.statsLeadersPage}>
-                    {/* ── Skaters (Forwards) card ── */}
+                    {/* ── Forwards card ── */}
                     <Card
-                      title="Skaters"
+                      title="Forwards"
                       action={
                         <SegmentedControl
                           value={summarySkaterStat}
@@ -512,11 +561,11 @@ const SeasonDetailsPage = () => {
                           }
                           getFeaturedStat={(s) => s[summarySkaterStat] ?? 0}
                           getRowStat={(s) => s[summarySkaterStat] ?? 0}
-                          onAllLeaders={() => setStatsSubTab('Skaters')}
+                          onAllLeaders={() => setStatsSubTab('Forwards')}
                         />
                       ) : (
                         !statsLoading && (
-                          <p className={styles.tabPlaceholder}>No skater stats yet.</p>
+                          <p className={styles.tabPlaceholder}>No forward stats yet.</p>
                         )
                       )}
                     </Card>
@@ -595,7 +644,7 @@ const SeasonDetailsPage = () => {
                   </div>
                 )}
 
-                {statsSubTab === 'Skaters' && (
+                {statsSubTab === 'Forwards' && (
                   <Card>
                     <Table
                       columns={skaterColumns}
@@ -705,7 +754,27 @@ const SeasonDetailsPage = () => {
 
                 {statsSubTab === 'Teams' && (
                   <Card>
-                    <p className={styles.tabPlaceholder}>Teams coming soon.</p>
+                    {standingsLoading ? (
+                      <p className={styles.tabPlaceholder}>Loading standings…</p>
+                    ) : standings.length === 0 ? (
+                      <p className={styles.tabPlaceholder}>No standings data yet.</p>
+                    ) : (
+                      <Table
+                        columns={standingsColumns}
+                        data={[...standings].sort((a, b) => {
+                          const av =
+                            (a as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
+                          const bv =
+                            (b as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
+                          const cmp = Number(bv) - Number(av);
+                          return standingsSort.dir === 'desc' ? cmp : -cmp;
+                        })}
+                        rowKey={(row) => row.team_id}
+                        activeSortKey={standingsSort.key}
+                        sortDir={standingsSort.dir}
+                        onSort={(key, dir) => setStandingsSort({ key, dir })}
+                      />
+                    )}
                   </Card>
                 )}
               </div>

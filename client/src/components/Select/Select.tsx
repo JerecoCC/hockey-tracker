@@ -3,12 +3,14 @@ import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import styles from './Select.module.scss';
 
-export interface SelectOption {
-  value: string;
-  label: string;
-  logo?: string | null;
-  code?: string;
-}
+export type SelectOption =
+  | { value: string; label: string; logo?: string | null; code?: string }
+  | { divider: true };
+
+/** Type guard — true for selectable options, false for dividers. */
+const isOption = (
+  o: SelectOption,
+): o is { value: string; label: string; logo?: string | null; code?: string } => !('divider' in o);
 
 interface Props {
   value: string | null;
@@ -81,11 +83,15 @@ const Select = (props: Props) => {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  // Options visible in the dropdown — filtered by query when searchable.
+  // Options visible in the dropdown — when searching, dividers are stripped and
+  // remaining selectable options are filtered by the query text.
   const visibleOptions =
     searchable && query
-      ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+      ? options.filter((o) => isOption(o) && o.label.toLowerCase().includes(query.toLowerCase()))
       : options;
+
+  // Only selectable (non-divider) entries — used for keyboard navigation.
+  const selectableVisible = visibleOptions.filter(isOption);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {
@@ -97,20 +103,20 @@ const Select = (props: Props) => {
         setOpen(true);
         return;
       }
-      const currentIndex = visibleOptions.findIndex((o) => o.value === value);
+      const currentIndex = selectableVisible.findIndex((o) => o.value === value);
       const next =
         e.key === 'ArrowDown'
-          ? Math.min(currentIndex + 1, visibleOptions.length - 1)
+          ? Math.min(currentIndex + 1, selectableVisible.length - 1)
           : Math.max(currentIndex - 1, 0);
-      if (visibleOptions[next]) onChange(visibleOptions[next].value);
+      if (selectableVisible[next]) onChange(selectableVisible[next].value);
     } else if (e.key === 'Enter' || (!searchable && e.key === ' ')) {
       e.preventDefault();
       if (!open) {
         measureMenu();
         setOpen(true);
-      } else if (searchable && visibleOptions.length === 1) {
+      } else if (searchable && selectableVisible.length === 1) {
         // Auto-select the only matching result on Enter.
-        onChange(visibleOptions[0].value);
+        onChange(selectableVisible[0].value);
         closeMenu();
       } else {
         // Confirm the current selection and close.
@@ -119,7 +125,7 @@ const Select = (props: Props) => {
     }
   };
 
-  const selected = options.find((o) => o.value === value) ?? null;
+  const selected = options.find((o) => isOption(o) && o.value === value) ?? null;
 
   return (
     <div
@@ -225,39 +231,48 @@ const Select = (props: Props) => {
           className={styles.menu}
           style={menuStyle}
         >
-          {visibleOptions.length === 0 ? (
+          {selectableVisible.length === 0 ? (
             <li className={styles.emptyMessage}>
               {searchable && query ? `No results for "${query}"` : emptyMessage}
             </li>
           ) : (
-            visibleOptions.map((opt) => (
-              <li
-                key={opt.value}
-                role="option"
-                aria-selected={value === opt.value}
-              >
-                <button
-                  type="button"
-                  tabIndex={-1}
-                  className={cn(styles.option, value === opt.value && styles.optionActive)}
-                  onClick={() => {
-                    onChange(opt.value);
-                    closeMenu();
-                  }}
+            visibleOptions.map((opt, idx) =>
+              !isOption(opt) ? (
+                <li
+                  key={`divider-${idx}`}
+                  role="separator"
+                  aria-hidden="true"
+                  className={styles.divider}
+                />
+              ) : (
+                <li
+                  key={opt.value}
+                  role="option"
+                  aria-selected={value === opt.value}
                 >
-                  {opt.logo ? (
-                    <img
-                      src={opt.logo}
-                      alt=""
-                      className={styles.optionLogo}
-                    />
-                  ) : opt.code ? (
-                    <span className={styles.optionNoLogo}>{opt.code.slice(0, 1)}</span>
-                  ) : null}
-                  {opt.label}
-                </button>
-              </li>
-            ))
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className={cn(styles.option, value === opt.value && styles.optionActive)}
+                    onClick={() => {
+                      onChange(opt.value);
+                      closeMenu();
+                    }}
+                  >
+                    {opt.logo ? (
+                      <img
+                        src={opt.logo}
+                        alt=""
+                        className={styles.optionLogo}
+                      />
+                    ) : opt.code ? (
+                      <span className={styles.optionNoLogo}>{opt.code.slice(0, 1)}</span>
+                    ) : null}
+                    {opt.label}
+                  </button>
+                </li>
+              ),
+            )
           )}
         </ul>
       )}

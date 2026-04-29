@@ -1,0 +1,92 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.layout {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2xl;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 8rem;
+  gap: $space-xl;
+}
+
+// ── Trade History ──────────────────────────────────────────────────────────
+
+.history {
+  border-top: 1px solid $border;
+  padding-top: $space-xl;
+}
+
+.historyTitle {
+  margin: 0 0 $space-md;
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.stintList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.stintItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+}
+
+.stintLogo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.stintInfo {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.stintTeam {
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stintJersey {
+  font-size: $font-sm;
+  color: $text-dim;
+  flex-shrink: 0;
+}
+
+.stintDates {
+  font-size: $font-sm;
+  color: $text-dim;
+  white-space: nowrap;
+  flex-shrink: 0;
+}

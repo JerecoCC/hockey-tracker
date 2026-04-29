@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -9,6 +10,7 @@ import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import AddPlayersModal from './AddPlayersModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
+import TradePlayerModal from './TradePlayerModal';
 import styles from './TeamDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
@@ -26,6 +28,7 @@ interface Props {
 }
 
 const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
+  const navigate = useNavigate();
   // Load all seasons for this league
   const { seasons: leagueSeasons } = useSeasons(leagueId);
   const currentSeason = leagueSeasons.find((s) => s.is_current);
@@ -48,9 +51,11 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     updatePlayerTeam,
     uploadPlayerPhoto,
     deletePlayer,
+    tradePlayer,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
+  const [tradeTarget, setTradeTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -115,11 +120,24 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                     actions={
                       [
                         {
+                          icon: 'open_in_new',
+                          intent: 'neutral',
+                          tooltip: 'View player',
+                          onClick: () => navigate(`/admin/players/${p.id}`),
+                        },
+                        {
                           icon: 'edit',
                           intent: 'neutral',
                           tooltip: 'Edit player',
                           disabled: busy === p.id,
                           onClick: () => setEditTarget(p),
+                        },
+                        {
+                          icon: 'swap_horiz',
+                          intent: 'info',
+                          tooltip: 'Trade player',
+                          disabled: busy === p.id || !selectedSeasonId,
+                          onClick: () => setTradeTarget(p),
                         },
                         {
                           icon: 'delete',
@@ -161,6 +179,16 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
         updatePlayer={updatePlayer}
         updatePlayerTeam={updatePlayerTeam}
         uploadPlayerPhoto={uploadPlayerPhoto}
+      />
+
+      <TradePlayerModal
+        open={!!tradeTarget}
+        player={tradeTarget}
+        currentTeamId={teamId}
+        seasonId={selectedSeasonId ?? ''}
+        leagueId={leagueId}
+        onClose={() => setTradeTarget(null)}
+        tradePlayer={tradePlayer}
       />
 
       <AddPlayersModal

@@ -4,6 +4,42 @@ import { useState } from 'react';
 import { toast } from 'react-toastify';
 import { type PlayerRecord, type CreatePlayerData, type BulkPlayerInput } from './useLeaguePlayers';
 
+/** A single player_teams stint row returned by the history endpoint. */
+export interface PlayerStintRecord {
+  id: string;
+  player_id: string;
+  team_id: string;
+  season_id: string;
+  jersey_number: number | null;
+  photo: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  created_at: string;
+  team_name: string | null;
+  team_code: string | null;
+  team_logo: string | null;
+  primary_color: string | null;
+  text_color: string | null;
+}
+
+/** Fetch all stints for a player, optionally scoped to a season. */
+export const usePlayerTradeHistory = (playerId: string | null, seasonId?: string | null) => {
+  const { data: stints = [], isLoading: loading } = useQuery<PlayerStintRecord[]>({
+    queryKey: ['player-trade-history', playerId, seasonId],
+    queryFn: async () => {
+      const params: Record<string, string> = {};
+      if (seasonId) params.season_id = seasonId;
+      const { data } = await axios.get<PlayerStintRecord[]>(
+        `${API}/admin/player-teams/history/${playerId}`,
+        { headers: authHeaders(), params },
+      );
+      return data;
+    },
+    enabled: !!playerId,
+  });
+  return { stints, loading };
+};
+
 export interface PlayerRosterInput {
   player_id: string;
   jersey_number?: number | null;
@@ -220,7 +256,37 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer };
+  /**
+   * Trade a player to a new team within the same season.
+   * Closes the current active stint and opens a new one on to_team_id.
+   */
+  const tradePlayer = async (
+    playerId: string,
+    seasonId: string,
+    toTeamId: string,
+    tradeDate: string,
+    jerseyNumber?: number | null,
+  ): Promise<boolean> => {
+    setBusy(playerId);
+    try {
+      await axios.post(
+        `${API}/admin/player-teams/trade`,
+        { player_id: playerId, season_id: seasonId, to_team_id: toTeamId, trade_date: tradeDate, jersey_number: jerseyNumber ?? null },
+        { headers: authHeaders() },
+      );
+      toast.success('Player traded successfully!');
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to trade player'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer, tradePlayer };
 };
 
 export default useTeamPlayers;
