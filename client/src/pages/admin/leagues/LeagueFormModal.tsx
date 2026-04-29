@@ -18,6 +18,11 @@ const SHOOTOUT_OPTIONS = [
   { value: '7', label: '7 rounds' },
 ];
 
+const SCORING_SYSTEM_OPTIONS = [
+  { value: '2-1-0', label: '2-1-0 (W / OT Loss / Loss)' },
+  { value: '3-2-1-0', label: '3-2-1-0 (W / OT W / OT Loss / Loss)' },
+];
+
 interface FormValues {
   name: string;
   code: string;
@@ -26,6 +31,7 @@ interface FormValues {
   text_color: string;
   best_of_playoff: string;
   best_of_shootout: string;
+  scoring_system: '3-2-1-0' | '2-1-0';
 }
 
 interface Props {
@@ -54,6 +60,7 @@ const LeagueFormModal = (props: Props) => {
       text_color: '#ffffff',
       best_of_playoff: '7',
       best_of_shootout: '3',
+      scoring_system: '2-1-0',
     },
   });
 
@@ -81,6 +88,7 @@ const LeagueFormModal = (props: Props) => {
       text_color: editTarget?.text_color ?? '#ffffff',
       best_of_playoff: String(editTarget?.best_of_playoff ?? 7),
       best_of_shootout: String(editTarget?.best_of_shootout ?? 3),
+      scoring_system: editTarget?.scoring_system ?? '2-1-0',
     });
   }, [open, editTarget, reset]);
 
@@ -99,6 +107,7 @@ const LeagueFormModal = (props: Props) => {
       text_color: data.text_color,
       best_of_playoff: parseInt(data.best_of_playoff, 10),
       best_of_shootout: parseInt(data.best_of_shootout, 10),
+      scoring_system: data.scoring_system,
     };
     const ok = editTarget ? await updateLeague(editTarget.id, payload) : await addLeague(payload);
     if (ok) onClose();
@@ -169,6 +178,13 @@ const LeagueFormModal = (props: Props) => {
           control={control}
           name="best_of_shootout"
           options={SHOOTOUT_OPTIONS}
+        />
+        <Field
+          label="Scoring System"
+          type="select"
+          control={control}
+          name="scoring_system"
+          options={SCORING_SYSTEM_OPTIONS}
         />
       </form>
     </Modal>

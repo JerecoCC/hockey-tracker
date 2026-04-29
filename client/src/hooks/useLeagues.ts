@@ -16,6 +16,8 @@ export interface LeagueRecord {
   best_of_playoff: number;
   /** Number of shootout rounds before sudden death for this league — 3, 5, or 7. */
   best_of_shootout: number;
+  /** Point system used for standings: '3-2-1-0' (win/OTW/OTL/loss) or '2-1-0' (win/OTL/loss). */
+  scoring_system: '3-2-1-0' | '2-1-0';
 }
 
 export interface CreateLeagueData {
@@ -27,6 +29,7 @@ export interface CreateLeagueData {
   text_color?: string;
   best_of_playoff?: number;
   best_of_shootout?: number;
+  scoring_system?: '3-2-1-0' | '2-1-0';
 }
 
 const authHeaders = () => {

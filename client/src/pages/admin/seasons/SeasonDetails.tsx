@@ -426,6 +426,12 @@ const SeasonDetailsPage = () => {
                       {formatEndDate(season.end_date, season.is_current)}
                     </span>
                   </div>
+                  <div className={styles.infoItem}>
+                    <span className={styles.infoLabel}>Games Per Season</span>
+                    <span className={styles.infoValue}>
+                      {season.games_per_season != null ? season.games_per_season : '—'}
+                    </span>
+                  </div>
                 </div>
               </Card>
             ),

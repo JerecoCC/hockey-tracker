@@ -19,6 +19,11 @@ const SHOOTOUT_OPTIONS = [
   { value: '7', label: '7 rounds' },
 ];
 
+const SCORING_SYSTEM_OPTIONS = [
+  { value: '2-1-0', label: '2-1-0 (W / OT Loss / Loss)' },
+  { value: '3-2-1-0', label: '3-2-1-0 (W / OT W / OT Loss / Loss)' },
+];
+
 interface FormValues {
   logo: File | string | null;
   name: string;
@@ -28,6 +33,7 @@ interface FormValues {
   description: string | null;
   best_of_playoff: string;
   best_of_shootout: string;
+  scoring_system: '3-2-1-0' | '2-1-0';
 }
 
 const normalizeDescription = (html: string | null | undefined): string | null => {
@@ -59,6 +65,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       description: null,
       best_of_playoff: '7',
       best_of_shootout: '3',
+      scoring_system: '2-1-0' as const,
     },
   });
 
@@ -73,6 +80,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       description: league.description ?? null,
       best_of_playoff: String(league.best_of_playoff ?? 7),
       best_of_shootout: String(league.best_of_shootout ?? 3),
+      scoring_system: league.scoring_system ?? '2-1-0',
     });
   }, [open, league, reset]);
 
@@ -92,6 +100,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       description: normalizeDescription(data.description) ?? undefined,
       best_of_playoff: parseInt(data.best_of_playoff, 10),
       best_of_shootout: parseInt(data.best_of_shootout, 10),
+      scoring_system: data.scoring_system,
     };
     const ok = await updateLeague(league.id, payload);
     if (ok) onClose();
@@ -168,6 +177,14 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
           control={control}
           name="best_of_shootout"
           options={SHOOTOUT_OPTIONS}
+          disabled={isSubmitting}
+        />
+        <Field
+          label="Scoring System"
+          type="select"
+          control={control}
+          name="scoring_system"
+          options={SCORING_SYSTEM_OPTIONS}
           disabled={isSubmitting}
         />
         <Field

@@ -350,6 +350,10 @@ async function initSchema() {
   await sql`
     ALTER TABLE seasons ADD COLUMN IF NOT EXISTS is_ended BOOLEAN NOT NULL DEFAULT FALSE
   `;
+  // games_per_season: target number of regular-season games per team for this season.
+  await sql`
+    ALTER TABLE seasons ADD COLUMN IF NOT EXISTS games_per_season SMALLINT
+  `;
   // Drop the old partial-unique-index approach now that the FK on leagues enforces uniqueness.
   await sql`DROP INDEX IF EXISTS seasons_one_current_per_league`;
 
@@ -388,6 +392,13 @@ async function initSchema() {
     ALTER TABLE leagues
       ADD COLUMN IF NOT EXISTS best_of_shootout SMALLINT NOT NULL DEFAULT 3
         CHECK (best_of_shootout IN (3, 5, 7))
+  `;
+
+  // scoring_system: point system used by this league ('3-2-1-0' or '2-1-0').
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS scoring_system TEXT NOT NULL DEFAULT '2-1-0'
+        CHECK (scoring_system IN ('3-2-1-0', '2-1-0'))
   `;
 
   // ── Playoff series ────────────────────────────────────────────────────────

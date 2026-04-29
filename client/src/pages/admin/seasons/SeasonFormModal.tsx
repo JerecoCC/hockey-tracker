@@ -11,6 +11,7 @@ interface FormValues {
   name: string;
   start_date: string;
   end_date: string;
+  games_per_season: string;
 }
 
 interface Props {
@@ -33,7 +34,13 @@ const SeasonFormModal = (props: Props) => {
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { league_id: null, name: '', start_date: '', end_date: '' },
+    defaultValues: {
+      league_id: null,
+      name: '',
+      start_date: '',
+      end_date: '',
+      games_per_season: '',
+    },
   });
 
   useEffect(() => {
@@ -43,6 +50,8 @@ const SeasonFormModal = (props: Props) => {
       name: editTarget?.name ?? '',
       start_date: editTarget?.start_date?.slice(0, 10) ?? '',
       end_date: editTarget?.end_date?.slice(0, 10) ?? '',
+      games_per_season:
+        editTarget?.games_per_season != null ? String(editTarget.games_per_season) : '',
     });
   }, [open, editTarget, reset]);
 
@@ -52,6 +61,7 @@ const SeasonFormModal = (props: Props) => {
       name: data.name.trim(),
       start_date: data.start_date || null,
       end_date: data.end_date || null,
+      games_per_season: data.games_per_season ? parseInt(data.games_per_season, 10) : null,
     };
     const ok = editTarget ? await updateSeason(editTarget.id, payload) : await addSeason(payload);
     if (ok) onClose();
@@ -109,6 +119,17 @@ const SeasonFormModal = (props: Props) => {
             placeholder="Select end date…"
           />
         </div>
+        <Field
+          label="Games Per Season"
+          type="number"
+          control={control}
+          name="games_per_season"
+          placeholder="e.g. 82"
+          rules={{
+            min: { value: 1, message: 'Must be at least 1' },
+            max: { value: 9999, message: 'Too many games' },
+          }}
+        />
       </form>
     </Modal>
   );
