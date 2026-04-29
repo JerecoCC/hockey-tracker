@@ -1,0 +1,243 @@
+@use "../../../../styles/colors" as *;
+@use "../../../../styles/mixins" as *;
+
+// Summary score shown in the accordion label (e.g. "2/3 – 1/3")
+.soLabelSummary {
+  font-size: $font-sm;
+  font-weight: 500;
+  color: $text-dim;
+}
+
+// ── Attempt grid ──────────────────────────────────────────────────────────────
+
+.soAttemptGrid {
+  display: flex;
+  flex-direction: column;
+}
+
+.soAttemptHeaderRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: center;
+  padding: $space-xs $space-md;
+  border-bottom: 1px solid $border;
+  gap: $space-sm;
+}
+
+.soAttemptColHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-dim;
+}
+
+.soAttemptColHeaderAway {
+  justify-content: flex-end;
+}
+
+.soFirstShooterBadge {
+  font-size: $font-xs;
+  font-weight: 500;
+  color: $text-dim;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
+.soAttemptColLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.soAttemptColLogoPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.soAttemptRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  align-items: stretch;
+  gap: 0;
+  height: 50px;
+
+  &:last-child {
+    border-bottom: none;
+  }
+}
+
+.soAttemptRoundCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: $space-xs $space-sm;
+}
+
+.soAttemptRoundLabel {
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-dim;
+}
+
+.soAttemptCell {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  border-right: 1px solid #334155;
+
+  &:hover .goalActions {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.soAttemptCellAway {
+  justify-content: flex-end;
+}
+
+.soAttemptCellScored {
+}
+.soAttemptCellMissed {
+}
+
+// Applied alongside .soAttemptCell — only overrides justify-content
+.soAttemptCellEmpty {
+  justify-content: space-between;
+}
+
+.soAttemptEmptyDash {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.soAttemptEmptySquare {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: stretch;
+  aspect-ratio: 1;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+  background: transparent;
+  flex-shrink: 0;
+}
+
+.soAttemptPhoto {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.soAttemptPhotoPlaceholder {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.soAttemptPlayerInfo {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.soAttemptPlayerInfoAway {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.soAttemptJersey {
+  font-size: $font-xs;
+  color: $text-dim;
+  line-height: 1.2;
+}
+
+.soAttemptName {
+  font-size: $font-sm;
+  font-weight: 500;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.soResultBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  aspect-ratio: 1;
+  border-radius: $radius-sm;
+  font-size: 0.75rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+  border: 1px solid $border-light;
+  cursor: default;
+}
+
+.soResultBadgeScored {
+  background: rgba($success, 0.5);
+  border-color: $success;
+  color: $text-bright;
+}
+
+.soResultBadgeMissed {
+  background: rgba($danger, 0.5);
+  border-color: $danger;
+  color: $text-bright;
+}
+
+.soAttemptTotalsRow {
+  display: grid;
+  grid-template-columns: 2.5rem 1fr 1fr;
+  align-items: center;
+  border-top: 2px solid $border;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.soAttemptTotalsLabel {
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: $text-dim;
+}
+
+.soAttemptTotalCell {
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-body;
+  border-right: 1px solid $border;
+
+  &:last-child {
+    border-right: none;
+  }
+}

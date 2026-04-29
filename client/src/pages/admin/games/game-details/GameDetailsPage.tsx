@@ -33,6 +33,7 @@ import GoalieStatsEditModal from './GoalieStatsEditModal';
 import ShotsEditModal from './ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
 import ScoreboardCard from './ScoreboardCard';
+import ShootoutAccordion from './ShootoutAccordion';
 import styles from './GameDetailsPage.module.scss';
 import { DATE_FMT_SHORT, TIME_FMT, formatScheduledTime, formatPlayerName } from './formatUtils';
 import { buildFormRecord } from './gameUtils';
@@ -443,9 +444,11 @@ const GameDetailsPage = () => {
     }
   }, [goalPeriod, game?.current_period, focusCurrentPeriodAction]);
 
-  // On page load and whenever the current period advances, auto-focus the Score
-  // Goal action of the new active period — but only while the game is in progress.
-  // Uses `undefined` as the initial sentinel so the first non-null period always fires.
+  // On page load and whenever the current period advances, mark a focus as pending.
+  // We defer the actual focus until `busy` clears, because `advancePeriod` sets
+  // `busy = 'advance-period'` which disables all action buttons — querying for
+  // `button:not([disabled])` would return nothing if we focused immediately.
+  const pendingFocusRef = useRef(false);
   const prevCurrentPeriodRef = useRef<string | null | undefined>(undefined);
   useEffect(() => {
     const prev = prevCurrentPeriodRef.current;
@@ -453,9 +456,18 @@ const GameDetailsPage = () => {
     prevCurrentPeriodRef.current = cur;
     if (game?.status !== 'in_progress' || cur === null) return;
     if (prev === undefined || prev !== cur) {
+      pendingFocusRef.current = true;
+    }
+  }, [game?.status, game?.current_period]);
+
+  // Fire the pending focus as soon as busy clears (covers the period-advance case
+  // where the buttons are disabled while the API call is in flight).
+  useEffect(() => {
+    if (!busy && pendingFocusRef.current) {
+      pendingFocusRef.current = false;
       focusCurrentPeriodAction();
     }
-  }, [game?.status, game?.current_period, focusCurrentPeriodAction]);
+  }, [busy, focusCurrentPeriodAction]);
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
 
@@ -1128,402 +1140,27 @@ const GameDetailsPage = () => {
                         {/* ── Shootouts accordion ── */}
                         {(game.current_period === 'SO' ||
                           goals.some((g) => g.period === 'SO') ||
-                          (isFinal && game.shootout)) &&
-                          (() => {
-                            const isSOActive = !isFinal && game.current_period === 'SO';
-                            const isSODone = isFinal;
-
-                            // Determine column order: first team is the one that shot first
-                            const firstTeamId = game.shootout_first_team_id;
-                            const firstSide =
-                              firstTeamId === game.away_team_id
-                                ? 'away'
-                                : firstTeamId === game.home_team_id
-                                  ? 'home'
-                                  : 'away'; // default to away if not set
-                            const secondSide = firstSide === 'away' ? 'home' : 'away';
-                            const firstTeamAttempts = attempts.filter(
-                              (a) =>
-                                a.team_id ===
-                                (firstSide === 'away' ? game.away_team_id : game.home_team_id),
-                            );
-                            const secondTeamAttempts = attempts.filter(
-                              (a) =>
-                                a.team_id ===
-                                (secondSide === 'away' ? game.away_team_id : game.home_team_id),
-                            );
-                            const bestOf = game.best_of_shootout ?? 3;
-
-                            // Goals scored during the regulation rounds only (first bestOf per team)
-                            const firstRegGoals = firstTeamAttempts
-                              .slice(0, bestOf)
-                              .filter((a) => a.scored).length;
-                            const secondRegGoals = secondTeamAttempts
-                              .slice(0, bestOf)
-                              .filter((a) => a.scored).length;
-
-                            // Early clinch: the winner is decided before all regulation attempts
-                            // are taken because the trailing team cannot mathematically tie.
-                            const firstRemaining = Math.max(0, bestOf - firstTeamAttempts.length);
-                            const secondRemaining = Math.max(0, bestOf - secondTeamAttempts.length);
-                            const isEarlyClinch =
-                              firstRegGoals > secondRegGoals + secondRemaining ||
-                              secondRegGoals > firstRegGoals + firstRemaining;
-
-                            // Sudden-death extension: when regulation is complete and tied,
-                            // keep adding rows one SD round at a time until one team wins a round.
-                            const regulationComplete =
-                              firstTeamAttempts.length >= bestOf &&
-                              secondTeamAttempts.length >= bestOf;
-                            const tiedAfterRegulation =
-                              regulationComplete && firstRegGoals === secondRegGoals;
-
-                            let sdExtraRounds = 0;
-                            if (tiedAfterRegulation) {
-                              let sdRound = 0;
-
-                              while (true) {
-                                const sdFirst = firstTeamAttempts[bestOf + sdRound];
-                                const sdSecond = secondTeamAttempts[bestOf + sdRound];
-                                if (!sdFirst && !sdSecond) {
-                                  // Neither team has taken this SD round yet — show one blank row
-                                  sdExtraRounds = sdRound + 1;
-                                  break;
-                                }
-                                if (!sdFirst || !sdSecond) {
-                                  // Round is partially recorded; maxRecorded covers the row
-                                  break;
-                                }
-                                // Both teams have shot this SD round
-                                if (sdFirst.scored !== sdSecond.scored) {
-                                  // One scored, the other missed — SD winner found, no more rows
-                                  break;
-                                }
-                                // Both scored or both missed — advance to the next SD round
-                                sdRound++;
-                              }
+                          (isFinal && game.shootout)) && (
+                          <ShootoutAccordion
+                            game={game}
+                            attempts={attempts}
+                            isFinal={isFinal}
+                            isInProgress={isInProgress}
+                            soComplete={soComplete}
+                            busy={busy}
+                            deletingAttemptId={deletingAttemptId}
+                            className={
+                              !isFinal && game.current_period === 'SO'
+                                ? styles.periodItemActive
+                                : undefined
                             }
-
-                            // When clinched early, only show rows up to the last recorded attempt;
-                            // remaining placeholder rows are removed.
-                            const roundCount = isEarlyClinch
-                              ? Math.max(firstTeamAttempts.length, secondTeamAttempts.length)
-                              : Math.max(
-                                  bestOf + sdExtraRounds,
-                                  firstTeamAttempts.length,
-                                  secondTeamAttempts.length,
-                                );
-
-                            const firstTeamInfo = {
-                              code:
-                                firstSide === 'away' ? game.away_team_code : game.home_team_code,
-                              logo:
-                                firstSide === 'away' ? game.away_team_logo : game.home_team_logo,
-                              primary:
-                                firstSide === 'away'
-                                  ? game.away_team_primary_color
-                                  : game.home_team_primary_color,
-                              text:
-                                firstSide === 'away'
-                                  ? game.away_team_text_color
-                                  : game.home_team_text_color,
-                            };
-                            const secondTeamInfo = {
-                              code:
-                                secondSide === 'away' ? game.away_team_code : game.home_team_code,
-                              logo:
-                                secondSide === 'away' ? game.away_team_logo : game.home_team_logo,
-                              primary:
-                                secondSide === 'away'
-                                  ? game.away_team_primary_color
-                                  : game.home_team_primary_color,
-                              text:
-                                secondSide === 'away'
-                                  ? game.away_team_text_color
-                                  : game.home_team_text_color,
-                            };
-
-                            const renderAttemptCell = (
-                              attempt: ShootoutAttempt | undefined,
-                              teamInfo: typeof firstTeamInfo,
-                              side: 'away' | 'home',
-                            ) => {
-                              const isAway = side === 'away';
-                              if (!attempt) {
-                                return (
-                                  <div
-                                    className={`${styles.soAttemptCell} ${styles.soAttemptCellEmpty}`}
-                                  >
-                                    {isAway ? (
-                                      <>
-                                        <span className={styles.soAttemptEmptyDash}>—</span>
-                                        <span className={styles.soAttemptEmptySquare} />
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span className={styles.soAttemptEmptySquare} />
-                                        <span className={styles.soAttemptEmptyDash}>—</span>
-                                      </>
-                                    )}
-                                  </div>
-                                );
-                              }
-                              const shooterName = formatPlayerName(
-                                attempt.shooter_first_name,
-                                attempt.shooter_last_name,
-                              );
-                              const jerseyLabel =
-                                attempt.shooter_jersey_number != null
-                                  ? `#${attempt.shooter_jersey_number}`
-                                  : null;
-
-                              const resultBadge = (
-                                <span
-                                  className={[
-                                    styles.soResultBadge,
-                                    attempt.scored
-                                      ? styles.soResultBadgeScored
-                                      : styles.soResultBadgeMissed,
-                                  ].join(' ')}
-                                >
-                                  {attempt.scored ? '✓' : '✕'}
-                                </span>
-                              );
-
-                              const photo = attempt.shooter_photo ? (
-                                <img
-                                  src={attempt.shooter_photo}
-                                  alt=""
-                                  className={styles.soAttemptPhoto}
-                                />
-                              ) : (
-                                <span
-                                  className={styles.soAttemptPhotoPlaceholder}
-                                  style={{
-                                    background: teamInfo.primary,
-                                    color: teamInfo.text,
-                                  }}
-                                >
-                                  {attempt.shooter_last_name?.charAt(0)}
-                                </span>
-                              );
-
-                              const playerInfo = (
-                                <div
-                                  className={[
-                                    styles.soAttemptPlayerInfo,
-                                    !isAway ? styles.soAttemptPlayerInfoAway : '',
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                >
-                                  {jerseyLabel && (
-                                    <span className={styles.soAttemptJersey}>{jerseyLabel}</span>
-                                  )}
-                                  <span className={styles.soAttemptName}>{shooterName}</span>
-                                </div>
-                              );
-
-                              return (
-                                <div
-                                  className={[
-                                    styles.soAttemptCell,
-                                    !isAway ? styles.soAttemptCellAway : '',
-                                    attempt.scored
-                                      ? styles.soAttemptCellScored
-                                      : styles.soAttemptCellMissed,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(' ')}
-                                >
-                                  {isAway ? (
-                                    // Away: [photo] [playerInfo] [badge]
-                                    <>
-                                      {photo}
-                                      {playerInfo}
-                                      {resultBadge}
-                                    </>
-                                  ) : (
-                                    // Home: [badge] [playerInfo right-aligned] [photo]
-                                    <>
-                                      {resultBadge}
-                                      {playerInfo}
-                                      {photo}
-                                    </>
-                                  )}
-                                  {isInProgress &&
-                                    attempt.attempt_order ===
-                                      Math.max(...attempts.map((a) => a.attempt_order)) && (
-                                      <ActionOverlay className={styles.goalActions}>
-                                        {(() => {
-                                          const isDeleting = deletingAttemptId === attempt.id;
-                                          return (
-                                            <>
-                                              <Button
-                                                variant="ghost"
-                                                intent="neutral"
-                                                icon="edit"
-                                                size="sm"
-                                                tooltip="Edit attempt"
-                                                disabled={isDeleting}
-                                                onClick={() => openEditAttemptModal(attempt)}
-                                              />
-                                              <Button
-                                                variant="ghost"
-                                                intent="danger"
-                                                icon={isDeleting ? 'hourglass_empty' : 'delete'}
-                                                size="sm"
-                                                tooltip={
-                                                  isDeleting ? 'Deleting…' : 'Delete attempt'
-                                                }
-                                                disabled={isDeleting}
-                                                onClick={() => handleDeleteAttempt(attempt.id)}
-                                              />
-                                            </>
-                                          );
-                                        })()}
-                                      </ActionOverlay>
-                                    )}
-                                </div>
-                              );
-                            };
-
-                            const awayAttempts =
-                              firstSide === 'away' ? firstTeamAttempts : secondTeamAttempts;
-                            const homeAttempts =
-                              firstSide === 'home' ? firstTeamAttempts : secondTeamAttempts;
-                            const soLabelSummary =
-                              attempts.length > 0
-                                ? `${awayAttempts.filter((a) => a.scored).length}/${awayAttempts.length} – ${homeAttempts.filter((a) => a.scored).length}/${homeAttempts.length}`
-                                : null;
-
-                            return (
-                              <Accordion
-                                variant="static"
-                                className={isSOActive ? styles.periodItemActive : undefined}
-                                label={
-                                  <span className={styles.periodLabel}>
-                                    Shootout
-                                    {soLabelSummary && (
-                                      <span className={styles.soLabelSummary}>
-                                        {soLabelSummary}
-                                      </span>
-                                    )}
-                                  </span>
-                                }
-                                hoverActions={
-                                  isSOActive
-                                    ? ([
-                                        !soComplete
-                                          ? {
-                                              icon: 'sports_hockey',
-                                              tooltip: 'Add Attempt',
-                                              intent: 'success' as const,
-                                              disabled: !!busy,
-                                              onClick: openAttemptModal,
-                                            }
-                                          : null,
-                                        soComplete
-                                          ? {
-                                              icon: 'flag',
-                                              tooltip: 'End Game',
-                                              intent: 'danger' as const,
-                                              disabled: !!busy,
-                                              onClick: () =>
-                                                openShotsModal('SO', { type: 'end-game' }, true),
-                                            }
-                                          : null,
-                                      ].filter(Boolean) as AccordionAction[])
-                                    : undefined
-                                }
-                              >
-                                {(isSOActive || isSODone) && (
-                                  <div className={styles.soAttemptGrid}>
-                                    {/* Header row */}
-                                    <div className={styles.soAttemptHeaderRow}>
-                                      <div
-                                        className={[
-                                          styles.soAttemptColHeader,
-                                          firstSide === 'home' ? styles.soAttemptColHeaderAway : '',
-                                        ]
-                                          .filter(Boolean)
-                                          .join(' ')}
-                                      >
-                                        {firstTeamInfo.logo ? (
-                                          <img
-                                            src={firstTeamInfo.logo}
-                                            alt={firstTeamInfo.code}
-                                            className={styles.soAttemptColLogo}
-                                          />
-                                        ) : (
-                                          <span
-                                            className={styles.soAttemptColLogoPlaceholder}
-                                            style={{
-                                              background: firstTeamInfo.primary,
-                                              color: firstTeamInfo.text,
-                                            }}
-                                          >
-                                            {firstTeamInfo.code.slice(0, 1)}
-                                          </span>
-                                        )}
-                                        <span>{firstTeamInfo.code}</span>
-                                        <span className={styles.soFirstShooterBadge}>
-                                          shoots first
-                                        </span>
-                                      </div>
-                                      <div
-                                        className={[
-                                          styles.soAttemptColHeader,
-                                          secondSide === 'home'
-                                            ? styles.soAttemptColHeaderAway
-                                            : '',
-                                        ]
-                                          .filter(Boolean)
-                                          .join(' ')}
-                                      >
-                                        {secondTeamInfo.logo ? (
-                                          <img
-                                            src={secondTeamInfo.logo}
-                                            alt={secondTeamInfo.code}
-                                            className={styles.soAttemptColLogo}
-                                          />
-                                        ) : (
-                                          <span
-                                            className={styles.soAttemptColLogoPlaceholder}
-                                            style={{
-                                              background: secondTeamInfo.primary,
-                                              color: secondTeamInfo.text,
-                                            }}
-                                          >
-                                            {secondTeamInfo.code.slice(0, 1)}
-                                          </span>
-                                        )}
-                                        <span>{secondTeamInfo.code}</span>
-                                      </div>
-                                    </div>
-                                    {/* Round rows — always renders best_of_shootout rows, with empty cells for unplayed rounds */}
-                                    {Array.from({ length: roundCount }, (_, i) => (
-                                      <div
-                                        key={i}
-                                        className={styles.soAttemptRow}
-                                      >
-                                        {renderAttemptCell(
-                                          firstTeamAttempts[i],
-                                          firstTeamInfo,
-                                          firstSide,
-                                        )}
-                                        {renderAttemptCell(
-                                          secondTeamAttempts[i],
-                                          secondTeamInfo,
-                                          secondSide,
-                                        )}
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </Accordion>
-                            );
-                          })()}
+                            labelClassName={styles.periodLabel}
+                            onAddAttempt={openAttemptModal}
+                            onEditAttempt={openEditAttemptModal}
+                            onDeleteAttempt={handleDeleteAttempt}
+                            onEndGame={() => openShotsModal('SO', { type: 'end-game' }, true)}
+                          />
+                        )}
                       </div>
                     </Card>
 
