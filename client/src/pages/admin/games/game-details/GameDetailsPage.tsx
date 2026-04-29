@@ -1,18 +1,16 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
-import Badge from '@/components/Badge/Badge';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Icon from '@/components/Icon/Icon';
-import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
+import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ListItem from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
-import { useGameDetails, type CurrentPeriod, type LastFiveGame } from '@/hooks/useGames';
+import { useGameDetails, type LastFiveGame } from '@/hooks/useGames';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup from '@/hooks/useGameLineup';
 import useGameRoster, { type GameRosterEntry } from '@/hooks/useGameRoster';
@@ -33,11 +31,12 @@ import GoalieStatsEditModal from './GoalieStatsEditModal';
 import ShotsEditModal from './ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
 import ScoreboardCard from './ScoreboardCard';
-import ShootoutAccordion from './ShootoutAccordion';
+import ScoringCard from './ScoringCard';
+
 import styles from './GameDetailsPage.module.scss';
 import { DATE_FMT_SHORT, TIME_FMT, formatScheduledTime, formatPlayerName } from './formatUtils';
 import { buildFormRecord } from './gameUtils';
-import { PERIOD_IDS, PERIODS, GAME_TYPE_LABEL, POSITION_LABEL, GOAL_TYPE_BADGE } from './constants';
+import { PERIOD_IDS, GAME_TYPE_LABEL, POSITION_LABEL } from './constants';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -702,467 +701,28 @@ const GameDetailsPage = () => {
                           </Card>
                         );
                       })()}
-                    <Card title="Scoring">
-                      <div className={styles.periodList}>
-                        {PERIODS.map(({ num, label, periodId }, idx) => {
-                          const currentIdx = PERIOD_IDS.indexOf(
-                            game.current_period as '1' | '2' | '3',
-                          );
-                          // currentIdx is -1 when current_period is 'OT' or 'SO' (not in PERIOD_IDS).
-                          // In that case all regular periods are past, so mark them done.
-                          const isPostRegulation =
-                            game.current_period === 'OT' || game.current_period === 'SO';
-                          const isActive = !isFinal && game.current_period === periodId;
-                          const isDone = isFinal || isPostRegulation || currentIdx > idx;
-
-                          return (
-                            <Accordion
-                              key={num}
-                              ref={setAccordionRef(periodId)}
-                              variant="static"
-                              className={isActive ? styles.periodItemActive : undefined}
-                              label={<span className={styles.periodLabel}>{label}</span>}
-                              hoverActions={
-                                isActive
-                                  ? ([
-                                      {
-                                        icon: 'sports_hockey',
-                                        tooltip: 'Score Goal',
-                                        intent: 'success' as const,
-                                        disabled: !!busy,
-                                        onClick: () => openGoalModal(num as 1 | 2 | 3),
-                                      },
-                                      num < 3
-                                        ? {
-                                            icon: 'flag',
-                                            tooltip: 'End Period',
-                                            intent: 'danger' as const,
-                                            disabled: !!busy,
-                                            onClick: () =>
-                                              openShotsModal(
-                                                periodId,
-                                                {
-                                                  type: 'advance',
-                                                  label: 'End Period',
-                                                  next: String(num + 1) as CurrentPeriod,
-                                                },
-                                                false,
-                                              ),
-                                          }
-                                        : null,
-                                      num === 3 && liveAwayScore === liveHomeScore
-                                        ? {
-                                            icon: 'more_time',
-                                            tooltip: 'Go to Overtime',
-                                            intent: 'accent' as const,
-                                            disabled: !!busy,
-                                            onClick: () =>
-                                              openShotsModal(
-                                                '3',
-                                                {
-                                                  type: 'advance',
-                                                  label: 'Go to Overtime',
-                                                  next: 'OT',
-                                                },
-                                                false,
-                                              ),
-                                          }
-                                        : null,
-                                      num === 3 && liveAwayScore !== liveHomeScore
-                                        ? {
-                                            icon: 'flag',
-                                            tooltip: 'End Game',
-                                            intent: 'danger' as const,
-                                            disabled: !!busy,
-                                            onClick: () =>
-                                              openShotsModal('3', { type: 'end-game' }, true),
-                                          }
-                                        : null,
-                                    ].filter(Boolean) as AccordionAction[])
-                                  : undefined
-                              }
-                            >
-                              {(() => {
-                                const periodGoals = goals.filter((g) => g.period === periodId);
-                                if (periodGoals.length === 0) {
-                                  if (isActive || isDone) {
-                                    return <p className={styles.noGoalsText}>No goals scored</p>;
-                                  }
-                                  return null;
-                                }
-                                return (
-                                  <ul className={styles.goalList}>
-                                    {periodGoals.map((goal) => {
-                                      const tally = tallyByGoalId.get(goal.id);
-                                      const scorerName =
-                                        formatPlayerName(
-                                          goal.scorer_first_name,
-                                          goal.scorer_last_name,
-                                        ) + (tally ? ` (${tally.scorerGoals})` : '');
-                                      const assists = [
-                                        goal.assist_1_id
-                                          ? formatPlayerName(
-                                              goal.assist_1_first_name,
-                                              goal.assist_1_last_name,
-                                            ) +
-                                            (tally?.assist1Assists != null
-                                              ? ` (${tally.assist1Assists})`
-                                              : '')
-                                          : null,
-                                        goal.assist_2_id
-                                          ? formatPlayerName(
-                                              goal.assist_2_first_name,
-                                              goal.assist_2_last_name,
-                                            ) +
-                                            (tally?.assist2Assists != null
-                                              ? ` (${tally.assist2Assists})`
-                                              : '')
-                                          : null,
-                                      ].filter(Boolean) as string[];
-                                      const primaryBadge =
-                                        goal.goal_type === 'empty-net'
-                                          ? null
-                                          : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
-                                      const showEN =
-                                        goal.empty_net || goal.goal_type === 'empty-net';
-                                      return (
-                                        <li
-                                          key={goal.id}
-                                          className={styles.goalItem}
-                                        >
-                                          {/* Time */}
-                                          <span className={styles.goalTime}>
-                                            {goal.period_time ?? '—'}
-                                          </span>
-
-                                          {/* Team logo */}
-                                          {goal.team_logo ? (
-                                            <img
-                                              src={goal.team_logo}
-                                              alt={goal.team_code}
-                                              className={styles.goalTeamLogo}
-                                            />
-                                          ) : (
-                                            <span
-                                              className={styles.goalTeamLogoPlaceholder}
-                                              style={{
-                                                background: goal.team_primary_color,
-                                                color: goal.team_text_color,
-                                              }}
-                                            >
-                                              {goal.team_code?.slice(0, 1)}
-                                            </span>
-                                          )}
-
-                                          {/* Scorer avatar */}
-                                          {goal.scorer_photo ? (
-                                            <img
-                                              src={goal.scorer_photo}
-                                              alt=""
-                                              className={styles.goalScorerPhoto}
-                                            />
-                                          ) : (
-                                            <span
-                                              className={styles.goalScorerPhotoPlaceholder}
-                                              style={{
-                                                background: goal.team_primary_color,
-                                                color: goal.team_text_color,
-                                              }}
-                                            >
-                                              {goal.scorer_last_name?.charAt(0)}
-                                            </span>
-                                          )}
-
-                                          {/* Name + assists */}
-                                          <div className={styles.goalInfo}>
-                                            <span className={styles.goalScorer}>{scorerName}</span>
-                                            <span className={styles.goalAssists}>
-                                              {assists.length > 0
-                                                ? assists.join(', ')
-                                                : 'Unassisted'}
-                                            </span>
-                                          </div>
-
-                                          {/* Goal type badges */}
-                                          {primaryBadge && (
-                                            <Tooltip text={primaryBadge.tooltip}>
-                                              <Badge
-                                                label={primaryBadge.label}
-                                                intent={primaryBadge.intent}
-                                              />
-                                            </Tooltip>
-                                          )}
-                                          {showEN && (
-                                            <Tooltip text="Empty Net">
-                                              <Badge
-                                                label="EN"
-                                                intent="neutral"
-                                              />
-                                            </Tooltip>
-                                          )}
-
-                                          {/* Edit / Delete — only the last goal of the current period */}
-                                          {isInProgress && goal.id === lastCurrentPeriodGoalId && (
-                                            <ActionOverlay className={styles.goalActions}>
-                                              <Button
-                                                variant="ghost"
-                                                intent="neutral"
-                                                icon="edit"
-                                                size="sm"
-                                                tooltip="Edit goal"
-                                                onClick={() => openEditGoalModal(goal)}
-                                              />
-                                              <Button
-                                                variant="ghost"
-                                                intent="danger"
-                                                icon="delete"
-                                                size="sm"
-                                                tooltip="Delete goal"
-                                                onClick={() => deleteGoal(goal.id)}
-                                              />
-                                            </ActionOverlay>
-                                          )}
-                                        </li>
-                                      );
-                                    })}
-                                  </ul>
-                                );
-                              })()}
-                            </Accordion>
-                          );
-                        })}
-
-                        {/* ── Overtime accordion ── */}
-                        {(game.current_period === 'OT' ||
-                          game.current_period === 'SO' ||
-                          goals.some((g) => g.period === 'OT') ||
-                          (isFinal && (game.overtime_periods ?? 0) > 0) ||
-                          (isFinal && game.shootout)) &&
-                          (() => {
-                            const isOTActive = !isFinal && game.current_period === 'OT';
-                            // OT is "done" when the game is final, or when play has advanced past OT into SO
-                            const isOTDone = isFinal || game.current_period === 'SO';
-                            const otGoals = goals.filter((g) => g.period === 'OT');
-                            return (
-                              <Accordion
-                                ref={setAccordionRef('OT')}
-                                variant="static"
-                                className={isOTActive ? styles.periodItemActive : undefined}
-                                label={<span className={styles.periodLabel}>Overtime</span>}
-                                hoverActions={
-                                  isOTActive
-                                    ? ([
-                                        otGoals.length === 0
-                                          ? {
-                                              icon: 'sports_hockey',
-                                              tooltip: 'Score Goal',
-                                              intent: 'success' as const,
-                                              disabled: !!busy,
-                                              onClick: () => openGoalModal('OT'),
-                                            }
-                                          : null,
-                                        otGoals.length === 0
-                                          ? {
-                                              icon: 'play_arrow',
-                                              tooltip: 'Go to Shootouts',
-                                              intent: 'info' as const,
-                                              disabled: !!busy,
-                                              onClick: () =>
-                                                openShotsModal(
-                                                  'OT',
-                                                  {
-                                                    type: 'advance',
-                                                    label: 'Go to Shootouts',
-                                                    next: 'SO',
-                                                  },
-                                                  false,
-                                                  true, // showShootsFirst
-                                                ),
-                                            }
-                                          : null,
-                                        otGoals.length > 0
-                                          ? {
-                                              icon: 'flag',
-                                              tooltip: 'End Game',
-                                              intent: 'danger' as const,
-                                              disabled: !!busy,
-                                              onClick: () =>
-                                                openShotsModal('OT', { type: 'end-game' }, true),
-                                            }
-                                          : null,
-                                      ].filter(Boolean) as AccordionAction[])
-                                    : undefined
-                                }
-                              >
-                                {(() => {
-                                  if (otGoals.length === 0) {
-                                    if (isOTActive || isOTDone) {
-                                      return <p className={styles.noGoalsText}>No goals scored</p>;
-                                    }
-                                    return null;
-                                  }
-                                  return (
-                                    <ul className={styles.goalList}>
-                                      {otGoals.map((goal) => {
-                                        const tally = tallyByGoalId.get(goal.id);
-                                        const scorerName =
-                                          formatPlayerName(
-                                            goal.scorer_first_name,
-                                            goal.scorer_last_name,
-                                          ) + (tally ? ` (${tally.scorerGoals})` : '');
-                                        const assists = [
-                                          goal.assist_1_id
-                                            ? formatPlayerName(
-                                                goal.assist_1_first_name,
-                                                goal.assist_1_last_name,
-                                              ) +
-                                              (tally?.assist1Assists != null
-                                                ? ` (${tally.assist1Assists})`
-                                                : '')
-                                            : null,
-                                          goal.assist_2_id
-                                            ? formatPlayerName(
-                                                goal.assist_2_first_name,
-                                                goal.assist_2_last_name,
-                                              ) +
-                                              (tally?.assist2Assists != null
-                                                ? ` (${tally.assist2Assists})`
-                                                : '')
-                                            : null,
-                                        ].filter(Boolean) as string[];
-                                        const primaryBadge =
-                                          goal.goal_type === 'empty-net'
-                                            ? null
-                                            : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
-                                        const showEN =
-                                          goal.empty_net || goal.goal_type === 'empty-net';
-                                        return (
-                                          <li
-                                            key={goal.id}
-                                            className={styles.goalItem}
-                                          >
-                                            <span className={styles.goalTime}>
-                                              {goal.period_time ?? '—'}
-                                            </span>
-                                            {goal.team_logo ? (
-                                              <img
-                                                src={goal.team_logo}
-                                                alt={goal.team_code}
-                                                className={styles.goalTeamLogo}
-                                              />
-                                            ) : (
-                                              <span
-                                                className={styles.goalTeamLogoPlaceholder}
-                                                style={{
-                                                  background: goal.team_primary_color,
-                                                  color: goal.team_text_color,
-                                                }}
-                                              >
-                                                {goal.team_code?.slice(0, 1)}
-                                              </span>
-                                            )}
-                                            {goal.scorer_photo ? (
-                                              <img
-                                                src={goal.scorer_photo}
-                                                alt=""
-                                                className={styles.goalScorerPhoto}
-                                              />
-                                            ) : (
-                                              <span
-                                                className={styles.goalScorerPhotoPlaceholder}
-                                                style={{
-                                                  background: goal.team_primary_color,
-                                                  color: goal.team_text_color,
-                                                }}
-                                              >
-                                                {goal.scorer_last_name?.charAt(0)}
-                                              </span>
-                                            )}
-                                            <div className={styles.goalInfo}>
-                                              <span className={styles.goalScorer}>
-                                                {scorerName}
-                                              </span>
-                                              <span className={styles.goalAssists}>
-                                                {assists.length > 0
-                                                  ? assists.join(', ')
-                                                  : 'Unassisted'}
-                                              </span>
-                                            </div>
-                                            {primaryBadge && (
-                                              <Tooltip text={primaryBadge.tooltip}>
-                                                <Badge
-                                                  label={primaryBadge.label}
-                                                  intent={primaryBadge.intent}
-                                                />
-                                              </Tooltip>
-                                            )}
-                                            {showEN && (
-                                              <Tooltip text="Empty Net">
-                                                <Badge
-                                                  label="EN"
-                                                  intent="neutral"
-                                                />
-                                              </Tooltip>
-                                            )}
-
-                                            {/* Edit / Delete — only the last goal of the current period */}
-                                            {isInProgress &&
-                                              goal.id === lastCurrentPeriodGoalId && (
-                                                <ActionOverlay className={styles.goalActions}>
-                                                  <Button
-                                                    variant="ghost"
-                                                    intent="neutral"
-                                                    icon="edit"
-                                                    size="sm"
-                                                    tooltip="Edit goal"
-                                                    onClick={() => openEditGoalModal(goal)}
-                                                  />
-                                                  <Button
-                                                    variant="ghost"
-                                                    intent="danger"
-                                                    icon="delete"
-                                                    size="sm"
-                                                    tooltip="Delete goal"
-                                                    onClick={() => deleteGoal(goal.id)}
-                                                  />
-                                                </ActionOverlay>
-                                              )}
-                                          </li>
-                                        );
-                                      })}
-                                    </ul>
-                                  );
-                                })()}
-                              </Accordion>
-                            );
-                          })()}
-
-                        {/* ── Shootouts accordion ── */}
-                        {(game.current_period === 'SO' ||
-                          goals.some((g) => g.period === 'SO') ||
-                          (isFinal && game.shootout)) && (
-                          <ShootoutAccordion
-                            game={game}
-                            attempts={attempts}
-                            isFinal={isFinal}
-                            isInProgress={isInProgress}
-                            soComplete={soComplete}
-                            busy={busy}
-                            deletingAttemptId={deletingAttemptId}
-                            className={
-                              !isFinal && game.current_period === 'SO'
-                                ? styles.periodItemActive
-                                : undefined
-                            }
-                            labelClassName={styles.periodLabel}
-                            onAddAttempt={openAttemptModal}
-                            onEditAttempt={openEditAttemptModal}
-                            onDeleteAttempt={handleDeleteAttempt}
-                            onEndGame={() => openShotsModal('SO', { type: 'end-game' }, true)}
-                          />
-                        )}
-                      </div>
-                    </Card>
+                    <ScoringCard
+                      game={game}
+                      goals={goals}
+                      isFinal={isFinal}
+                      isInProgress={isInProgress}
+                      busy={busy}
+                      liveAwayScore={liveAwayScore}
+                      liveHomeScore={liveHomeScore}
+                      tallyByGoalId={tallyByGoalId}
+                      lastCurrentPeriodGoalId={lastCurrentPeriodGoalId}
+                      attempts={attempts}
+                      soComplete={soComplete}
+                      deletingAttemptId={deletingAttemptId}
+                      setAccordionRef={setAccordionRef}
+                      onScoreGoal={openGoalModal}
+                      onEditGoal={openEditGoalModal}
+                      onDeleteGoal={deleteGoal}
+                      onOpenShotsModal={openShotsModal}
+                      onAddAttempt={openAttemptModal}
+                      onEditAttempt={openEditAttemptModal}
+                      onDeleteAttempt={handleDeleteAttempt}
+                    />
 
                     {/* ── Goalie Stats card ── */}
                     {(isFinal || isInProgress) &&
