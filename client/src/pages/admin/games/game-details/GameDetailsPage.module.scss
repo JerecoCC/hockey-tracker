@@ -372,6 +372,7 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   display: flex;
   flex-direction: column;
   gap: $space-xl;
+  container-type: inline-size;
 }
 
 .emptyText {
@@ -665,6 +666,12 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   gap: $space-sm;
 }
 
+.accordionTeamCount {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+}
+
 .accordionTeamLogo {
   width: 24px;
   height: 24px;
@@ -695,7 +702,7 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   gap: $space-xl;
   align-items: start;
 
-  @media (max-width: 860px) {
+  @container (max-width: #{$bp-tablet}) {
     grid-template-columns: 1fr;
   }
 }
@@ -716,17 +723,24 @@ $_active-period-color: mix($accent, $bg-card, 50%);
 
 // ── Last 5 Games card ─────────────────────────────────────────────────────────
 
-// Two team columns side by side
+// Two team columns side by side — collapses to single column on narrow cards
 .lastFiveList {
   display: flex;
   flex-direction: row;
+  flex-wrap: wrap;
   gap: $space-sm;
   align-items: flex-start;
+  container-type: inline-size;
+
+  @container (max-width: #{$bp-tablet}) {
+    flex-direction: column;
+  }
 }
 
 .lastFiveTeamCol {
   flex: 1;
-  min-width: 0;
+  min-width: 390px;
+  width: 100%;
 }
 
 // View toggle buttons in card header

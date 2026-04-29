@@ -8,6 +8,10 @@
 //   $max-content-width  →  1440px  centered page content cap
 $max-content-width: 1440px;
 
+// ── Breakpoints ───────────────────────────────────────────────────────
+//   $bp-tablet  →  768px  two-column layouts collapse to single column
+$bp-tablet: 768px;
+
 // ── Spacing scale ─────────────────────────────────────────────────────
 //   $space-xs  →  4px   badge padding, list gap
 //   $space-sm  →  8px   button padding, action gaps

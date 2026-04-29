@@ -1742,14 +1742,8 @@ const GameDetailsPage = () => {
                         const renderListRow = (lg: LastFiveGame) => {
                           const isOT = lg.overtime_periods != null && lg.overtime_periods > 0;
                           const isSO = lg.shootout;
-                          const isExtra = isOT || isSO;
                           const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
-                          const resultLabel =
-                            lg.result === 'W' && isExtra
-                              ? 'OTW'
-                              : lg.result === 'L' && isExtra
-                                ? 'OTL'
-                                : lg.result;
+                          const resultLabel = lg.result;
                           const resultClass =
                             lg.result === 'W'
                               ? styles.lastFiveListResultW
@@ -2371,6 +2365,7 @@ const GameDetailsPage = () => {
                         </span>
                       )}
                       {teamName}
+                      <span className={styles.accordionTeamCount}>({rosterEntries.length}/23)</span>
                     </span>
                   }
                   hoverActions={
