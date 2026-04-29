@@ -21,6 +21,7 @@ export interface LeagueSeasonRecord {
   start_date: string | null;
   end_date: string | null;
   is_current: boolean;
+  games_per_season: number | null;
   created_at: string;
 }
 

@@ -38,6 +38,10 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
         <span className={styles.infoLabel}>Shootout Rounds</span>
         <span className={styles.infoValue}>{league.best_of_shootout} rounds</span>
       </div>
+      <div className={styles.infoItem}>
+        <span className={styles.infoLabel}>Scoring System</span>
+        <span className={styles.infoValue}>{league.scoring_system}</span>
+      </div>
       <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
         <span className={styles.infoLabel}>Description</span>
         {normalizeDescription(league.description) ? (

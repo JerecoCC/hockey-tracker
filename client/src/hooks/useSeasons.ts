@@ -17,6 +17,8 @@ export interface SeasonRecord {
   is_current: boolean;
   /** True when the season has been explicitly marked as ended — roster editing is locked. */
   is_ended: boolean;
+  /** Target number of regular-season games per team for this season. Null if not set. */
+  games_per_season: number | null;
   created_at: string;
 }
 
@@ -25,6 +27,7 @@ export interface CreateSeasonData {
   name: string;
   start_date?: string | null;
   end_date?: string | null;
+  games_per_season?: number | null;
 }
 
 const authHeaders = () => {
