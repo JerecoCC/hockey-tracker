@@ -21,9 +21,9 @@ type ShotsFormValues = {
 };
 
 const PERIOD_LABEL: Record<string, string> = {
-  '1': '1',
-  '2': '2',
-  '3': '3',
+  '1': '1st',
+  '2': '2nd',
+  '3': '3rd',
   OT: 'OT',
   SO: 'SO',
 };
