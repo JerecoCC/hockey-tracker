@@ -2,12 +2,10 @@ import { useEffect, useState } from 'react';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
 import Select from '@/components/Select/Select';
+import { type SelectOption } from '@/components/Select/Select';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import styles from './SetLineupModal.module.scss';
-
-// Positions that count as "forwards" and are interchangeable for C/LW/RW slots
-const FORWARD_POSITIONS = new Set(['C', 'LW', 'RW']);
 
 interface Props {
   open: boolean;
@@ -27,25 +25,36 @@ type Draft = Record<LineupPositionSlot, string | null>;
 
 const emptyDraft = (): Draft => ({ C: null, LW: null, RW: null, D1: null, D2: null, G: null });
 
-/** Returns option list for a given slot based on position eligibility. */
-const buildOptions = (
-  slot: LineupPositionSlot,
-  players: TeamPlayerRecord[],
-): { value: string; label: string }[] => {
-  const eligible = players.filter((p) => {
-    const pos = p.position ?? '';
-    if (slot === 'C' || slot === 'LW' || slot === 'RW') return FORWARD_POSITIONS.has(pos);
-    if (slot === 'D1' || slot === 'D2') return pos === 'D';
-    if (slot === 'G') return pos === 'G';
-    return false;
-  });
-  return eligible.map((p) => ({
-    value: p.id,
-    label:
-      p.jersey_number != null
-        ? `#${p.jersey_number} ${p.first_name} ${p.last_name}`
-        : `${p.first_name} ${p.last_name}`,
-  }));
+const toOption = (p: TeamPlayerRecord): SelectOption => ({
+  value: p.id,
+  label:
+    p.jersey_number != null
+      ? `#${p.jersey_number} ${p.first_name} ${p.last_name}`
+      : `${p.first_name} ${p.last_name}`,
+});
+
+/**
+ * Builds the option list for a position slot.
+ *
+ * For G: only goalies.
+ * For C/LW/RW/D1/D2: players whose position matches the slot come first,
+ * then a divider, then all remaining non-goalies — so defenders can play
+ * forward and vice-versa.
+ */
+const buildOptions = (slot: LineupPositionSlot, players: TeamPlayerRecord[]): SelectOption[] => {
+  if (slot === 'G') return players.filter((p) => (p.position ?? '') === 'G').map(toOption);
+
+  // Primary position for this slot: C → 'C', LW → 'LW', RW → 'RW', D1/D2 → 'D'
+  const primaryPos = slot === 'D1' || slot === 'D2' ? 'D' : slot;
+
+  const nonGoalies = players.filter((p) => (p.position ?? '') !== 'G');
+  const primary = nonGoalies.filter((p) => (p.position ?? '') === primaryPos);
+  const rest = nonGoalies.filter((p) => (p.position ?? '') !== primaryPos);
+
+  const result: SelectOption[] = primary.map(toOption);
+  if (primary.length > 0 && rest.length > 0) result.push({ divider: true });
+  result.push(...rest.map(toOption));
+  return result;
 };
 
 const SLOT_LABEL: Record<LineupPositionSlot, string> = {

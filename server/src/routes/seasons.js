@@ -57,7 +57,8 @@ router.get('/:id', async (req, res) => {
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.created_at,
-             l.name AS league_name, l.code AS league_code, l.logo AS league_logo
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.scoring_system AS league_scoring_system
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       WHERE s.id = ${id}
@@ -697,6 +698,110 @@ router.delete('/:seasonId/groups/:groupId/teams', async (req, res) => {
 // ---------------------------------------------------------------------------
 // GET /api/admin/seasons/:id/stats  – aggregate player stats for a season
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:id/standings
+// Returns per-team standings (GP, W, L, OTL, PTS) for regular-season games.
+// Points are awarded according to the league's scoring_system:
+//   '2-1-0'   → Win=2, OTL=1, Loss=0
+//   '3-2-1-0' → Reg Win=3, OT/SO Win=2, OT/SO Loss=1, Reg Loss=0
+// ---------------------------------------------------------------------------
+router.get('/:id/standings', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const standings = await sql`
+      WITH season_info AS (
+        SELECT l.scoring_system
+        FROM seasons s
+        JOIN leagues l ON l.id = s.league_id
+        WHERE s.id = ${id}
+      ),
+      season_games AS (
+        SELECT
+          g.id,
+          g.home_team_id,
+          g.away_team_id,
+          g.overtime_periods,
+          g.shootout,
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id)::int AS home_goals,
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id)::int AS away_goals
+        FROM games g
+        WHERE g.season_id = ${id}
+          AND g.status    = 'final'
+          AND g.game_type = 'regular'
+      ),
+      game_results AS (
+        SELECT
+          home_team_id,
+          away_team_id,
+          (overtime_periods > 0 OR shootout)                        AS is_extra_time,
+          CASE WHEN home_goals > away_goals THEN home_team_id
+               ELSE away_team_id END                                AS winner_id
+        FROM season_games
+      ),
+      -- Expand each game into two rows: one per team
+      team_game AS (
+        SELECT
+          home_team_id                                              AS team_id,
+          CASE WHEN winner_id = home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
+          CASE WHEN winner_id = home_team_id AND is_extra_time     THEN 1 ELSE 0 END AS ot_win,
+          CASE WHEN winner_id != home_team_id AND is_extra_time    THEN 1 ELSE 0 END AS otl,
+          CASE WHEN winner_id != home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss
+        FROM game_results
+        UNION ALL
+        SELECT
+          away_team_id                                              AS team_id,
+          CASE WHEN winner_id = away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
+          CASE WHEN winner_id = away_team_id AND is_extra_time     THEN 1 ELSE 0 END AS ot_win,
+          CASE WHEN winner_id != away_team_id AND is_extra_time    THEN 1 ELSE 0 END AS otl,
+          CASE WHEN winner_id != away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss
+        FROM game_results
+      ),
+      aggregated AS (
+        SELECT
+          team_id,
+          COUNT(*)::int                     AS gp,
+          SUM(reg_win + ot_win)::int        AS wins,
+          SUM(reg_win)::int                 AS reg_wins,
+          SUM(ot_win)::int                  AS ot_wins,
+          SUM(otl)::int                     AS otl,
+          SUM(loss)::int                    AS losses
+        FROM team_game
+        GROUP BY team_id
+      )
+      SELECT
+        t.id                               AS team_id,
+        ti.name                            AS team_name,
+        ti.code                            AS team_code,
+        ti.logo                            AS team_logo,
+        t.primary_color                    AS team_primary_color,
+        t.text_color                       AS team_text_color,
+        a.gp,
+        a.wins,
+        a.losses,
+        a.otl,
+        CASE (SELECT scoring_system FROM season_info)
+          WHEN '3-2-1-0' THEN (a.reg_wins * 3 + a.ot_wins * 2 + a.otl)
+          ELSE                 (a.wins * 2 + a.otl)
+        END::int                           AS points
+      FROM aggregated a
+      JOIN teams t ON t.id = a.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = a.team_id
+        ORDER BY CASE WHEN season_id = ${id} THEN 0 ELSE 1 END,
+                 CASE WHEN season_id IS NULL  THEN 0 ELSE 1 END,
+                 recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      ORDER BY points DESC, wins DESC, otl DESC
+    `;
+    return res.json(standings);
+  } catch (err) {
+    console.error('season standings error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
   try {

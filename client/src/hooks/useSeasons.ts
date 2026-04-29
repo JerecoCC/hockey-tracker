@@ -19,6 +19,8 @@ export interface SeasonRecord {
   is_ended: boolean;
   /** Target number of regular-season games per team for this season. Null if not set. */
   games_per_season: number | null;
+  /** Scoring system inherited from the league: '2-1-0' or '3-2-1-0'. */
+  league_scoring_system: '2-1-0' | '3-2-1-0';
   created_at: string;
 }
 

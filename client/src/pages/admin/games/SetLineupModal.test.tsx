@@ -12,7 +12,7 @@ jest.mock('../../../components/Select/Select', () => {
     placeholder,
   }: {
     value: string;
-    options: { value: string; label: string }[];
+    options: Array<{ value?: string; label?: string; divider?: true }>;
     onChange: (v: string) => void;
     placeholder?: string;
   }) => (
@@ -22,14 +22,16 @@ jest.mock('../../../components/Select/Select', () => {
       aria-label={placeholder}
     >
       <option value="">{placeholder}</option>
-      {options.map((o) => (
-        <option
-          key={o.value}
-          value={o.value}
-        >
-          {o.label}
-        </option>
-      ))}
+      {options
+        .filter((o) => !o.divider)
+        .map((o) => (
+          <option
+            key={o.value}
+            value={o.value}
+          >
+            {o.label}
+          </option>
+        ))}
     </select>
   );
   return { __esModule: true, default: MockSelect };
@@ -284,5 +286,74 @@ describe('SetLineupModal – close', () => {
     render(<SetLineupModal {...defaultProps} />);
     fireEvent.click(screen.getByRole('button', { name: /cancel/i }));
     expect(defaultProps.onClose).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── Option ordering ───────────────────────────────────────────────────────
+// The mock renders options in DOM order (dividers filtered out), so the first
+// <option> after the placeholder is the primary-position player.
+describe('SetLineupModal – option ordering', () => {
+  const getOptionsFor = (selectEl: HTMLSelectElement) =>
+    Array.from(selectEl.options)
+      .slice(1) // skip the placeholder option
+      .map((o) => o.value);
+
+  it('C select lists the center player first, then other non-goalies', () => {
+    render(<SetLineupModal {...defaultProps} />);
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const opts = getOptionsFor(selects[0]); // C slot
+    expect(opts[0]).toBe('c1'); // Alice (C) is first
+    expect(opts).toContain('lw1');
+    expect(opts).toContain('rw1');
+    expect(opts).toContain('d1');
+    expect(opts).not.toContain('g1'); // goalies excluded
+  });
+
+  it('LW select lists the left-wing player first, then other non-goalies', () => {
+    render(<SetLineupModal {...defaultProps} />);
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const opts = getOptionsFor(selects[1]); // LW slot
+    expect(opts[0]).toBe('lw1'); // Bob (LW) is first
+    expect(opts).toContain('c1');
+    expect(opts).not.toContain('g1');
+  });
+
+  it('RW select lists the right-wing player first, then other non-goalies', () => {
+    render(<SetLineupModal {...defaultProps} />);
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const opts = getOptionsFor(selects[2]); // RW slot
+    expect(opts[0]).toBe('rw1'); // Carol (RW) is first
+    expect(opts).toContain('c1');
+    expect(opts).not.toContain('g1');
+  });
+
+  it('D1 select lists defence players first, then other non-goalies', () => {
+    render(<SetLineupModal {...defaultProps} />);
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const opts = getOptionsFor(selects[3]); // D1 slot
+    // Both D players should appear before forwards
+    const d1Idx = opts.indexOf('d1');
+    const d2Idx = opts.indexOf('d2');
+    const c1Idx = opts.indexOf('c1');
+    expect(d1Idx).toBeLessThan(c1Idx);
+    expect(d2Idx).toBeLessThan(c1Idx);
+    expect(opts).not.toContain('g1');
+  });
+
+  it('D2 select lists defence players first, then other non-goalies', () => {
+    render(<SetLineupModal {...defaultProps} />);
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const opts = getOptionsFor(selects[4]); // D2 slot
+    const d1Idx = opts.indexOf('d1');
+    const c1Idx = opts.indexOf('c1');
+    expect(d1Idx).toBeLessThan(c1Idx);
+    expect(opts).not.toContain('g1');
+  });
+
+  it('G select shows only goalies', () => {
+    render(<SetLineupModal {...defaultProps} />);
+    const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
+    const opts = getOptionsFor(selects[5]); // G slot
+    expect(opts).toEqual(['g1']);
   });
 });

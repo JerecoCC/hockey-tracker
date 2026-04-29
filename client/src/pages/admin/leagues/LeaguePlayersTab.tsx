@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -44,6 +45,7 @@ const LeaguePlayersTab = ({
   onDelete,
   className,
 }: Props) => {
+  const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -85,17 +87,22 @@ const LeaguePlayersTab = ({
               {filtered.map((p) => (
                 <ListItem
                   key={p.id}
+                  leadingImage={p.team_logo}
                   image={p.photo}
                   image_shape="circle"
-                  name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
+                  name={`${p.first_name} ${p.last_name}`}
                   placeholder={`${p.first_name[0]}${p.last_name[0]}`}
                   primaryColor={p.primary_color ?? undefined}
                   textColor={p.text_color ?? undefined}
-                  subtitle={
-                    [p.team_name, p.position ? (POSITION_LABELS[p.position] ?? p.position) : null]
+                  eyebrow={
+                    [
+                      p.jersey_number != null ? `#${p.jersey_number}` : null,
+                      p.position ? (POSITION_LABELS[p.position] ?? p.position) : null,
+                    ]
                       .filter(Boolean)
-                      .join(' • ') || undefined
+                      .join(' · ') || undefined
                   }
+                  subtitle={p.team_name ?? undefined}
                   rightContent={{
                     type: 'tag',
                     label: p.is_active ? 'Active' : 'Inactive',
@@ -103,6 +110,12 @@ const LeaguePlayersTab = ({
                   }}
                   actions={
                     [
+                      {
+                        icon: 'open_in_new',
+                        intent: 'neutral',
+                        tooltip: 'View player',
+                        onClick: () => navigate(`/admin/players/${p.id}`),
+                      },
                       {
                         icon: 'edit',
                         intent: 'neutral',

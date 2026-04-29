@@ -54,16 +54,18 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, primary_color, text_color
+            jersey_number, team_name, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name, p.photo,
+              p.id, p.first_name, p.last_name,
+              COALESCE(pt.photo, p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, p.position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
               ti.name       AS team_name,
+              ti.logo       AS team_logo,
               t.primary_color,
               t.text_color
             FROM players p
@@ -72,7 +74,7 @@ router.get('/', async (req, res) => {
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             LEFT JOIN LATERAL (
-              SELECT name FROM team_iterations
+              SELECT name, logo FROM team_iterations
               WHERE team_id = t.id AND season_id = ${season_id}
               LIMIT 1
             ) ti ON TRUE
@@ -88,16 +90,18 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, primary_color, text_color
+            jersey_number, team_name, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name, p.photo,
+              p.id, p.first_name, p.last_name,
+              COALESCE(pt.photo, p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, p.position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
               ti.name       AS team_name,
+              ti.logo       AS team_logo,
               t.primary_color,
               t.text_color
             FROM players p
@@ -105,7 +109,7 @@ router.get('/', async (req, res) => {
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             LEFT JOIN LATERAL (
-              SELECT name FROM team_iterations
+              SELECT name, logo FROM team_iterations
               WHERE team_id = t.id
               ORDER BY season_id DESC NULLS LAST
               LIMIT 1
@@ -196,6 +200,83 @@ router.get('/', async (req, res) => {
     return res.json(players);
   } catch (err) {
     console.error('players list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/stats  – career stats for one player
+// Returns one row per season (aggregated across any mid-season trades).
+// Columns: season_id, season_name, jersey_number, gp, goals, assists, points,
+//          team_id, team_name, team_logo, primary_color, text_color
+// ---------------------------------------------------------------------------
+router.get('/:id/stats', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      WITH player_seasons AS (
+        SELECT DISTINCT season_id FROM player_teams WHERE player_id = ${id}
+      ),
+      gp_counts AS (
+        SELECT ga.season_id, COUNT(DISTINCT gr.game_id) AS gp
+        FROM game_rosters gr
+        JOIN games ga ON ga.id = gr.game_id
+        WHERE gr.player_id = ${id}
+        GROUP BY ga.season_id
+      ),
+      goal_counts AS (
+        SELECT ga.season_id, COUNT(*) AS goals
+        FROM goals gl
+        JOIN games ga ON ga.id = gl.game_id
+        WHERE gl.scorer_id = ${id}
+        GROUP BY ga.season_id
+      ),
+      assist_counts AS (
+        SELECT ga.season_id, COUNT(*) AS assists
+        FROM goals gl
+        JOIN games ga ON ga.id = gl.game_id
+        WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id}
+        GROUP BY ga.season_id
+      ),
+      latest_team AS (
+        SELECT DISTINCT ON (pt.season_id)
+          pt.season_id, pt.team_id, pt.jersey_number
+        FROM player_teams pt
+        WHERE pt.player_id = ${id}
+        ORDER BY pt.season_id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+      )
+      SELECT
+        s.id         AS season_id,
+        s.name       AS season_name,
+        lt.jersey_number,
+        COALESCE(gc.gp, 0)      AS gp,
+        COALESCE(gl.goals, 0)   AS goals,
+        COALESCE(ac.assists, 0) AS assists,
+        COALESCE(gl.goals, 0) + COALESCE(ac.assists, 0) AS points,
+        lt.team_id,
+        ti.name  AS team_name,
+        ti.logo  AS team_logo,
+        t.primary_color,
+        t.text_color
+      FROM player_seasons ps
+      JOIN seasons s ON s.id = ps.season_id
+      LEFT JOIN latest_team lt ON lt.season_id = ps.season_id
+      LEFT JOIN gp_counts gc ON gc.season_id = ps.season_id
+      LEFT JOIN goal_counts gl ON gl.season_id = ps.season_id
+      LEFT JOIN assist_counts ac ON ac.season_id = ps.season_id
+      LEFT JOIN teams t ON t.id = lt.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, logo FROM team_iterations
+        WHERE team_id = lt.team_id
+        ORDER BY CASE WHEN season_id = ps.season_id THEN 0 ELSE 1 END,
+                 recorded_at DESC
+        LIMIT 1
+      ) ti ON lt.team_id IS NOT NULL
+      ORDER BY s.created_at DESC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('players stats error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
