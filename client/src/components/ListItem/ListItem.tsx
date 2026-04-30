@@ -30,6 +30,12 @@ interface Props {
    * displayed alongside a circular player photo).
    */
   leadingImage?: string | null;
+  /** Text shown in the leading placeholder when no leadingImage is provided (e.g. team code). */
+  leadingImagePlaceholder?: string;
+  /** Background color for the leading placeholder. */
+  leadingImagePrimaryColor?: string | null;
+  /** Text color for the leading placeholder. */
+  leadingImageTextColor?: string | null;
   image?: string | null;
   /** Controls the shape of the image and placeholder. Defaults to 'square'. */
   image_shape?: 'square' | 'circle';
@@ -64,6 +70,9 @@ interface Props {
 
 const ListItem = ({
   leadingImage,
+  leadingImagePlaceholder,
+  leadingImagePrimaryColor,
+  leadingImageTextColor,
   image,
   image_shape = 'square',
   hideImage = false,
@@ -88,13 +97,28 @@ const ListItem = ({
   return (
     <li className={[styles.item, className].filter(Boolean).join(' ')}>
       {/* Leading image (e.g. team logo shown to the left of a player photo) */}
-      {leadingImage && (
-        <img
-          src={leadingImage}
-          alt=""
-          className={styles.leadingLogo}
-        />
-      )}
+      {(leadingImage || leadingImagePlaceholder) &&
+        (leadingImage ? (
+          <img
+            src={leadingImage}
+            alt=""
+            className={styles.leadingLogo}
+          />
+        ) : (
+          <span
+            className={styles.leadingLogoPlaceholder}
+            style={
+              leadingImagePrimaryColor
+                ? {
+                    background: leadingImagePrimaryColor,
+                    color: leadingImageTextColor ?? undefined,
+                  }
+                : undefined
+            }
+          >
+            {leadingImagePlaceholder}
+          </span>
+        ))}
 
       {/* Image or color-branded placeholder */}
       {!hideImage &&

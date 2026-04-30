@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
@@ -6,8 +7,13 @@ import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import usePlayerDetails, { type PlayerCareerStatRecord } from '@/hooks/usePlayerDetails';
-import { usePlayerTradeHistory } from '@/hooks/useTeamPlayers';
+import {
+  usePlayerTradeHistory,
+  useStintActions,
+  type PlayerStintRecord,
+} from '@/hooks/useTeamPlayers';
 import useTabState from '@/hooks/useTabState';
+import StintEditModal from './StintEditModal';
 import styles from './PlayerDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
@@ -56,7 +62,9 @@ const PlayerDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { player, stats, loading } = usePlayerDetails(id);
   const { stints } = usePlayerTradeHistory(id ?? null);
+  const { updateStint, uploadStintPhoto } = useStintActions(id ?? null);
   const [activeTab, handleTabChange] = useTabState('tab:player-details');
+  const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
 
   if (loading) {
     return (
@@ -226,6 +234,14 @@ const PlayerDetailsPage = () => {
                             {s.end_date ? s.end_date.slice(0, 10) : 'Present'}
                           </span>
                         </div>
+                        <Button
+                          variant="outlined"
+                          intent="neutral"
+                          icon="edit"
+                          size="sm"
+                          tooltip="Edit stint"
+                          onClick={() => setEditingStint(s)}
+                        />
                       </li>
                     ))}
                   </ul>
@@ -234,6 +250,14 @@ const PlayerDetailsPage = () => {
             ),
           },
         ]}
+      />
+
+      <StintEditModal
+        open={!!editingStint}
+        stint={editingStint}
+        onClose={() => setEditingStint(null)}
+        updateStint={updateStint}
+        uploadStintPhoto={uploadStintPhoto}
       />
     </>
   );
