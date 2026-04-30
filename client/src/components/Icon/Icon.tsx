@@ -7,6 +7,7 @@ import {
   faChartLine,
   faArrowUpRightFromSquare,
   faCheck,
+  faDownload,
   faCircleCheck,
   faCircleMinus,
   faCircleXmark,
@@ -90,6 +91,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   // actions
   add: faPlus,
   calendar: faCalendarDays,
+  download: faDownload,
   play_arrow: faPlay,
   folder_plus: faFolderPlus,
   check: faCheck,

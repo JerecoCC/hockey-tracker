@@ -613,6 +613,104 @@
   gap: $space-lg;
 }
 
+// ── Previous Meetings card ────────────────────────────────────────────────────
+
+.prevMeetingsRows {
+  display: flex;
+  flex-direction: column;
+  padding: $space-xs 0;
+}
+
+.prevMeetingRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-xs $space-md;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.prevMeetingDate {
+  font-size: $font-base;
+  color: $text-dim;
+  white-space: nowrap;
+  min-width: 48px;
+}
+
+.prevMeetingTeam {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex: 1;
+  min-width: 0;
+}
+
+.prevMeetingTeamRight {
+  justify-content: flex-end;
+}
+
+.prevMeetingCode {
+  font-size: $font-body;
+  font-weight: 600;
+  color: $text-bright;
+}
+
+.prevMeetingLogo {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.prevMeetingLogoPlaceholder {
+  width: 40px;
+  height: 40px;
+  font-size: 10px;
+  font-weight: 700;
+  border: 1px solid $border;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.prevMeetingScore {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: $font-body;
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 72px;
+  justify-content: center;
+}
+
+.prevMeetingScoreBright {
+  color: $text-bright;
+}
+
+.prevMeetingScoreDim {
+  color: $text-dim;
+}
+
+.prevMeetingScoreSep {
+  color: $text-dim;
+  font-weight: 400;
+}
+
+.prevMeetingSuffix {
+  font-size: $font-base;
+  font-weight: 400;
+  color: $text-dim;
+  margin-left: $space-xs;
+}
+
 // ── Last 5 Games card ─────────────────────────────────────────────────────────
 
 // Two team columns side by side — collapses to single column on narrow cards
@@ -667,9 +765,9 @@
 
 // Result label (W / OTW / OTL / L)
 .lastFiveListResult {
-  font-size: $font-xs;
+  font-size: $font-body;
   font-weight: 700;
-  width: 30px;
+  width: 36px;
   text-align: center;
   flex-shrink: 0;
 }
@@ -686,10 +784,10 @@
   color: $text-dim;
 }
 
-// Small logo circle
+// Logo circle in list rows
 .lastFiveListLogo {
-  width: 26px;
-  height: 26px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 1px solid $border;
   display: flex;
@@ -701,13 +799,13 @@
 }
 
 .lastFiveListLogoImg {
-  width: 18px;
-  height: 18px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
 .lastFiveListLogoPlaceholder {
-  font-size: 7px;
+  font-size: 10px;
   font-weight: 700;
   color: $text-body;
 }
@@ -715,7 +813,7 @@
 // Opponent name (home/away indicator + name)
 .lastFiveListOpp {
   flex: 1;
-  font-size: $font-sm;
+  font-size: $font-body;
   color: $text-body;
   min-width: 0;
   overflow: hidden;
@@ -728,7 +826,7 @@
   display: flex;
   align-items: center;
   gap: $space-xs;
-  font-size: $font-sm;
+  font-size: $font-body;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: $text-bright;
@@ -737,14 +835,14 @@
 
 // "(OT)" / "(SO)" appended after the score
 .lastFiveListSuffix {
-  font-size: $font-xs;
+  font-size: $font-base;
   font-weight: 400;
   color: $text-dim;
 }
 
 // Date at far right
 .lastFiveListDate {
-  font-size: $font-xs;
+  font-size: $font-base;
   color: $text-dim;
   white-space: nowrap;
 }

@@ -126,7 +126,8 @@ router.get('/:id', async (req, res) => {
         l.name AS league_name,
         l.best_of_shootout,
         home_l5.home_last_five,
-        away_l5.away_last_five
+        away_l5.away_last_five,
+        prev.previous_meetings
       FROM games g
       JOIN seasons s ON s.id = g.season_id
       JOIN leagues l ON l.id = s.league_id
@@ -288,6 +289,53 @@ router.get('/:id', async (req, res) => {
           LIMIT 1
         ) opp_ti ON true
       ) away_l5 ON true
+      -- All previous meetings between home and away teams in the same season
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'game_id',               lg.id,
+              'scheduled_at',          lg.scheduled_at,
+              'current_home_was_home', (lg.home_team_id = g.home_team_id),
+              'home_score',            lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
+              'away_score',            lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
+              'overtime_periods',      lg.overtime_periods,
+              'shootout',              lg.shootout
+            ) ORDER BY lg.scheduled_at ASC NULLS LAST, lg.created_at ASC
+          ),
+          '[]'::json
+        ) AS previous_meetings
+        FROM (
+          SELECT
+            g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
+            g2.home_team_id, g2.away_team_id,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
+            CASE WHEN g2.shootout THEN (
+              SELECT CASE
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
+                THEN g2.home_team_id
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored)
+                THEN g2.away_team_id
+                ELSE NULL
+              END
+              FROM shootout_attempts WHERE game_id = g2.id
+            ) END AS so_winner_team_id
+          FROM games g2
+          WHERE g2.season_id = g.season_id
+            AND g2.id != g.id
+            AND g2.status = 'final'
+            AND (
+              (g2.home_team_id = g.home_team_id AND g2.away_team_id = g.away_team_id)
+              OR
+              (g2.home_team_id = g.away_team_id AND g2.away_team_id = g.home_team_id)
+            )
+            AND g2.scheduled_at < g.scheduled_at
+          ORDER BY g2.scheduled_at ASC NULLS LAST, g2.created_at ASC
+        ) lg
+      ) prev ON true
       WHERE g.id = ${id}
     `;
 

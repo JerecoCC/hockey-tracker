@@ -16,6 +16,20 @@ export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed' 
 export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
 export type SeriesStatus = 'upcoming' | 'active' | 'complete';
 
+/** A previous head-to-head meeting between the two teams in the current game's season. */
+export interface PreviousMeeting {
+  game_id:               string;
+  scheduled_at:          string | null;
+  /** True when the current game's home team was also home in this past meeting. */
+  current_home_was_home: boolean;
+  /** Score of the historical home team (not necessarily the current game's home team). */
+  home_score:            number;
+  /** Score of the historical away team (not necessarily the current game's away team). */
+  away_score:            number;
+  overtime_periods:      number | null;
+  shootout:              boolean;
+}
+
 /** A single entry in a team's last-five-games form guide. */
 export interface LastFiveGame {
   game_id:          string;
@@ -84,6 +98,8 @@ export interface GameRecord {
   home_last_five?:       LastFiveGame[];
   /** Last 5 final games for the away team within the same season (detail endpoint only). */
   away_last_five?:       LastFiveGame[];
+  /** All previous final meetings between home and away teams this season (detail endpoint only). */
+  previous_meetings?:    PreviousMeeting[];
   /** Number of regulation shootout rounds before sudden death (from the league settings). */
   best_of_shootout:      number;
 }

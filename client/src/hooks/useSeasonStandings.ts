@@ -14,9 +14,12 @@ export interface TeamStandingRecord {
   team_text_color: string | null;
   gp: number;
   wins: number;
+  reg_wins: number;
+  ot_wins: number;
   losses: number;
   otl: number;
   points: number;
+  games_remaining: number | null;
 }
 
 const useSeasonStandings = (seasonId: string | undefined) => {

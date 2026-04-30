@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/Badge/Badge';
+import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import styles from './ScoreboardCard.module.scss';
@@ -40,6 +41,7 @@ interface Props {
   liveHomeScore: number;
   overtimeSuffix: string;
   leagueId: string;
+  onGenerateImage?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -52,6 +54,7 @@ const ScoreboardCard = ({
   liveHomeScore,
   overtimeSuffix,
   leagueId,
+  onGenerateImage,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -156,6 +159,16 @@ const ScoreboardCard = ({
               <span className={styles.scoreDate}>
                 {DATE_FMT.format(new Date(game.scheduled_at))}
               </span>
+            )}
+            {isFinal && onGenerateImage && (
+              <Button
+                variant="ghost"
+                intent="neutral"
+                icon="download"
+                size="sm"
+                tooltip="Download score card"
+                onClick={onGenerateImage}
+              />
             )}
           </div>
           {(isFinal || isInProgress) && (

@@ -333,10 +333,19 @@ const SeasonDetailsPage = () => {
       ),
     },
     { header: 'GP', key: 'gp', align: 'center', sortable: true },
-    { header: 'W', key: 'wins', align: 'center', sortable: true },
-    { header: 'L', key: 'losses', align: 'center', sortable: true },
-    { header: 'OTL', key: 'otl', align: 'center', sortable: true },
+    {
+      type: 'custom',
+      header: 'GR',
+      render: (row) => (row.games_remaining != null ? String(row.games_remaining) : '—'),
+      sortable: true,
+      sortKey: 'games_remaining',
+      align: 'center',
+    },
     { header: 'PTS', key: 'points', align: 'center', sortable: true },
+    { header: 'W', key: 'reg_wins', align: 'center', sortable: true },
+    { header: 'OTW', key: 'ot_wins', align: 'center', sortable: true },
+    { header: 'OTL', key: 'otl', align: 'center', sortable: true },
+    { header: 'L', key: 'losses', align: 'center', sortable: true },
   ];
 
   const leagueHref = `/admin/leagues/${leagueId}`;
