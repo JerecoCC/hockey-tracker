@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Badge from '@/components/Badge/Badge';
 import type { BadgeIntent } from '@/components/Badge/Badge';
@@ -42,6 +43,8 @@ interface Props {
   /** Venue / arena name */
   venue?: string;
   gameType?: GameType;
+  /** When provided, renders a stretched anchor so the item can be right-clicked to open in a new tab. */
+  href?: string;
   actions?: (GameListItemAction | false | null | undefined)[];
 }
 
@@ -84,6 +87,7 @@ const GameListItem = ({
   time,
   venue,
   gameType,
+  href,
   actions,
 }: Props) => {
   const visibleActions = actions?.filter((a): a is GameListItemAction => Boolean(a)) ?? [];
@@ -97,6 +101,14 @@ const GameListItem = ({
 
   return (
     <li className={itemClass}>
+      {href && (
+        <Link
+          to={href}
+          className={styles.itemLink}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      )}
       {/* Main: date line + stacked teams */}
       <div className={styles.main}>
         {dateLine && <span className={styles.dateLine}>{dateLine}</span>}

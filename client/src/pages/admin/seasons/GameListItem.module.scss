@@ -136,8 +136,19 @@
   border-left: 3px solid $warning-light; // amber/gold — high stakes
 }
 
+// ── Stretched link — fills the entire item for right-click / middle-click ─────
+// Sits at z-index 0 so action buttons (z-index 1+) intercept their own clicks.
+
+.itemLink {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+}
+
 // ── Hover-revealed actions slot ───────────────────────────────────────────────
 // Structural styles (position, opacity, gradient) live in ActionOverlay.module.scss.
 
 .actions {
+  z-index: 1;
 }
