@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -138,6 +138,56 @@ const LineupCreatePlayersModal = ({
     return !!(row?.first_name || row?.last_name || row?.position);
   };
 
+  // Per-row inline warnings — recomputed live as the user types.
+  const rowWarnings = useMemo(() => {
+    const rosterNameMap = new Map(
+      existingRoster.map((r) => [
+        `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
+        r,
+      ]),
+    );
+    const rosterJerseyMap = new Map(
+      existingRoster.filter((r) => r.jersey_number != null).map((r) => [r.jersey_number!, r]),
+    );
+
+    const seenNames = new Map<string, number>(); // nameKey → first row index
+    const seenJerseys = new Map<number, number>(); // jerseyNum → first row index
+
+    return (watchedPlayers ?? []).map((row) => {
+      const result: { name?: string; jersey?: string } = {};
+      const fn = row?.first_name?.trim() ?? '';
+      const ln = row?.last_name?.trim() ?? '';
+
+      if (fn && ln) {
+        const nameKey = `${fn.toLowerCase()} ${ln.toLowerCase()}`;
+        const fullName = `${fn} ${ln}`;
+        if (rosterNameMap.has(nameKey)) {
+          const match = rosterNameMap.get(nameKey)!;
+          result.name = `${fullName} is already on this team's roster${match.jersey_number != null ? ` (#${match.jersey_number})` : ''}.`;
+        } else if (seenNames.has(nameKey)) {
+          result.name = `${fullName} appears more than once.`;
+        } else {
+          seenNames.set(nameKey, seenNames.size);
+        }
+      }
+
+      const jerseyNum =
+        row?.jersey_number !== '' && row?.jersey_number != null ? Number(row.jersey_number) : null;
+      if (jerseyNum != null && !isNaN(jerseyNum)) {
+        if (rosterJerseyMap.has(jerseyNum)) {
+          const match = rosterJerseyMap.get(jerseyNum)!;
+          result.jersey = `#${jerseyNum} is already worn by ${match.first_name} ${match.last_name}.`;
+        } else if (seenJerseys.has(jerseyNum)) {
+          result.jersey = `#${jerseyNum} appears more than once in this form.`;
+        } else {
+          seenJerseys.set(jerseyNum, seenJerseys.size);
+        }
+      }
+
+      return result;
+    });
+  }, [watchedPlayers, existingRoster]);
+
   const handleDeleteClick = (index: number) => {
     if (isRowDirty(index)) setConfirmRemoveIndex(index);
     else remove(index);
@@ -241,64 +291,93 @@ const LineupCreatePlayersModal = ({
           </div>
 
           <div className={styles.playerList}>
-            {fields.map((field, index) => (
-              <div
-                key={field.id}
-                className={styles.playerRow}
-                ref={(el) => {
-                  rowRefs.current[index] = el;
-                }}
-              >
-                <Field
-                  control={control}
-                  name={`players.${index}.jersey_number`}
-                  placeholder="—"
-                  disabled={isSubmitting}
-                  inputMode="numeric"
-                  maxLength={2}
-                  transform={(val) => val.replace(/[^0-9]/g, '').slice(0, 2)}
-                />
-                <Field
-                  control={control}
-                  name={`players.${index}.last_name`}
-                  required
-                  rules={{ required: true }}
-                  placeholder="Last name"
-                  disabled={isSubmitting}
-                />
-                <Field
-                  control={control}
-                  name={`players.${index}.first_name`}
-                  required
-                  rules={{ required: true }}
-                  placeholder="First name"
-                  disabled={isSubmitting}
-                />
-                <Field
-                  type="select"
-                  control={control}
-                  name={`players.${index}.position`}
-                  options={getPositionOptions(index)}
-                  required
-                  rules={{ required: true }}
-                  placeholder="Position"
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  className={styles.deleteBtn}
-                  onClick={() => handleDeleteClick(index)}
-                  disabled={isSubmitting}
-                  aria-label="Remove player"
-                  style={{ visibility: fields.length === 1 ? 'hidden' : undefined }}
+            {fields.map((field, index) => {
+              const warn = rowWarnings[index];
+              return (
+                <div
+                  key={field.id}
+                  className={styles.playerItem}
                 >
-                  <Icon
-                    name="delete"
-                    size="1em"
-                  />
-                </button>
-              </div>
-            ))}
+                  <div
+                    className={styles.playerRow}
+                    ref={(el) => {
+                      rowRefs.current[index] = el;
+                    }}
+                  >
+                    <Field
+                      control={control}
+                      name={`players.${index}.jersey_number`}
+                      placeholder="—"
+                      disabled={isSubmitting}
+                      inputMode="numeric"
+                      maxLength={2}
+                      transform={(val) => val.replace(/[^0-9]/g, '').slice(0, 2)}
+                    />
+                    <Field
+                      control={control}
+                      name={`players.${index}.last_name`}
+                      required
+                      rules={{ required: true }}
+                      placeholder="Last name"
+                      disabled={isSubmitting}
+                    />
+                    <Field
+                      control={control}
+                      name={`players.${index}.first_name`}
+                      required
+                      rules={{ required: true }}
+                      placeholder="First name"
+                      disabled={isSubmitting}
+                    />
+                    <Field
+                      type="select"
+                      control={control}
+                      name={`players.${index}.position`}
+                      options={getPositionOptions(index)}
+                      required
+                      rules={{ required: true }}
+                      placeholder="Position"
+                      disabled={isSubmitting}
+                    />
+                    <button
+                      type="button"
+                      className={styles.deleteBtn}
+                      onClick={() => handleDeleteClick(index)}
+                      disabled={isSubmitting}
+                      aria-label="Remove player"
+                      style={{ visibility: fields.length === 1 ? 'hidden' : undefined }}
+                    >
+                      <Icon
+                        name="delete"
+                        size="1em"
+                      />
+                    </button>
+                  </div>
+                  {(warn?.name || warn?.jersey) && (
+                    <div className={styles.rowWarnings}>
+                      {warn.name && (
+                        <p className={styles.rowWarning}>
+                          <Icon
+                            name="warning"
+                            size="0.85em"
+                          />
+                          {warn.name}
+                        </p>
+                      )}
+                      {warn.jersey && (
+                        <p className={styles.rowWarning}>
+                          <Icon
+                            name="warning"
+                            size="0.85em"
+                          />
+                          {warn.jersey}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
 
           <div className={styles.addRow}>
