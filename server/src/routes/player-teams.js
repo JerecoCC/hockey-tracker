@@ -42,12 +42,52 @@ router.post('/bulk', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/admin/player-teams
+// Body: { player_id, team_id, season_id, jersey_number?, photo?, start_date?, end_date? }
+// Creates a new stint row directly. Returns 409 if the unique active-stint index fires
+// (i.e. the player already has an open stint in this season and end_date is omitted).
+// ---------------------------------------------------------------------------
+router.post('/', async (req, res) => {
+  const { player_id, team_id, season_id, jersey_number, photo, start_date, end_date } = req.body;
+  if (!player_id) return res.status(400).json({ error: 'player_id is required' });
+  if (!team_id)   return res.status(400).json({ error: 'team_id is required' });
+  if (!season_id) return res.status(400).json({ error: 'season_id is required' });
+
+  try {
+    const rows = await sql`
+      INSERT INTO player_teams
+        (player_id, team_id, season_id, jersey_number, photo, start_date, end_date)
+      VALUES (
+        ${player_id}, ${team_id}, ${season_id},
+        ${jersey_number ?? null},
+        ${photo ?? null},
+        ${start_date ?? null}::date,
+        ${end_date   ?? null}::date
+      )
+      RETURNING id, player_id, team_id, season_id, jersey_number, photo,
+                start_date::text AS start_date, end_date::text AS end_date
+    `;
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({
+        error: 'Player already has an active stint in this season. Set an end date or close the existing stint first.',
+      });
+    }
+    console.error('player-teams create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/admin/player-teams
-// Body: { player_id, team_id, season_id, jersey_number?, photo? }
+// Body: { player_id, team_id, season_id, jersey_number?, photo?, effective_date? }
 // Updates jersey_number and/or photo on the active stint for this player/team/season.
+// When jersey_number changes, the old value is preserved in jersey_number_history
+// so that game queries can resolve the correct number by date.
 // ---------------------------------------------------------------------------
 router.patch('/', async (req, res) => {
-  const { player_id, team_id, season_id, jersey_number, photo } = req.body;
+  const { player_id, team_id, season_id, jersey_number, photo, effective_date } = req.body;
   if (!player_id) return res.status(400).json({ error: 'player_id is required' });
   if (!team_id)   return res.status(400).json({ error: 'team_id is required' });
   if (!season_id) return res.status(400).json({ error: 'season_id is required' });
@@ -56,6 +96,37 @@ router.patch('/', async (req, res) => {
   const photoInBody  = 'photo' in req.body;
 
   try {
+    // If jersey_number is changing, record history before the update.
+    if (jerseyInBody && jersey_number != null) {
+      const [current] = await sql`
+        SELECT id, jersey_number,
+               COALESCE(start_date, created_at::date) AS effective_start
+        FROM player_teams
+        WHERE player_id = ${player_id}
+          AND team_id   = ${team_id}
+          AND season_id = ${season_id}
+          AND end_date IS NULL
+      `;
+      if (current && current.jersey_number !== jersey_number) {
+        const changeDate = effective_date ?? new Date().toISOString().slice(0, 10);
+        // Seed initial history if none exists for this stint yet.
+        const existingHistory = await sql`
+          SELECT 1 FROM jersey_number_history WHERE player_teams_id = ${current.id} LIMIT 1
+        `;
+        if (existingHistory.length === 0 && current.jersey_number != null) {
+          await sql`
+            INSERT INTO jersey_number_history (player_teams_id, jersey_number, effective_from)
+            VALUES (${current.id}, ${current.jersey_number}, ${current.effective_start})
+          `;
+        }
+        // Record the new number going forward.
+        await sql`
+          INSERT INTO jersey_number_history (player_teams_id, jersey_number, effective_from)
+          VALUES (${current.id}, ${jersey_number}, ${changeDate})
+        `;
+      }
+    }
+
     const rows = await sql`
       UPDATE player_teams
       SET
@@ -119,13 +190,15 @@ router.get('/history/:playerId', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/player-teams/:id
-// Body: { jersey_number?, photo?, start_date?, end_date? }
+// Body: { team_id?, season_id?, jersey_number?, photo?, start_date?, end_date? }
 // Updates editable fields on a specific stint row by its UUID.
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { jersey_number, photo, start_date, end_date } = req.body;
+  const { team_id, season_id, jersey_number, photo, start_date, end_date } = req.body;
 
+  const teamInBody      = 'team_id'       in req.body;
+  const seasonInBody    = 'season_id'     in req.body;
   const jerseyInBody    = 'jersey_number' in req.body;
   const photoInBody     = 'photo'         in req.body;
   const startDateInBody = 'start_date'    in req.body;
@@ -135,10 +208,12 @@ router.patch('/:id', async (req, res) => {
     const rows = await sql`
       UPDATE player_teams
       SET
-        jersey_number = CASE WHEN ${jerseyInBody}    THEN ${jersey_number ?? null}           ELSE jersey_number END,
-        photo         = CASE WHEN ${photoInBody}     THEN ${photo ?? null}                   ELSE photo         END,
-        start_date    = CASE WHEN ${startDateInBody} THEN ${start_date ?? null}::date        ELSE start_date    END,
-        end_date      = CASE WHEN ${endDateInBody}   THEN ${end_date ?? null}::date          ELSE end_date      END
+        team_id       = CASE WHEN ${teamInBody}      THEN ${team_id}::uuid                   ELSE team_id       END,
+        season_id     = CASE WHEN ${seasonInBody}    THEN ${season_id}::uuid                 ELSE season_id     END,
+        jersey_number = CASE WHEN ${jerseyInBody}    THEN ${jersey_number ?? null}            ELSE jersey_number END,
+        photo         = CASE WHEN ${photoInBody}     THEN ${photo ?? null}                    ELSE photo         END,
+        start_date    = CASE WHEN ${startDateInBody} THEN ${start_date ?? null}::date         ELSE start_date    END,
+        end_date      = CASE WHEN ${endDateInBody}   THEN ${end_date ?? null}::date           ELSE end_date      END
       WHERE id = ${id}
       RETURNING
         id, player_id, team_id, season_id,

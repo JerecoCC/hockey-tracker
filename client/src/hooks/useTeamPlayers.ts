@@ -23,6 +23,17 @@ export interface PlayerStintRecord {
 }
 
 export interface UpdateStintData {
+  team_id?: string;
+  season_id?: string;
+  jersey_number?: number | null;
+  photo?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
+export interface CreateStintData {
+  team_id: string;
+  season_id: string;
   jersey_number?: number | null;
   photo?: string | null;
   start_date?: string | null;
@@ -68,6 +79,26 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
+  const createStint = async (data: CreateStintData): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.post(
+        `${API}/admin/player-teams`,
+        { player_id: playerId, ...data },
+        { headers: authHeaders() },
+      );
+      toast.success('Stint recorded!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to record stint'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const uploadStintPhoto = async (file: File): Promise<string | null> => {
     const formData = new FormData();
     formData.append('photo', file);
@@ -84,7 +115,7 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
-  return { updateStint, uploadStintPhoto, saving };
+  return { createStint, updateStint, uploadStintPhoto, saving };
 };
 
 export interface PlayerRosterInput {
