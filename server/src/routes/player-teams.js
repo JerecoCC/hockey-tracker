@@ -118,6 +118,95 @@ router.get('/history/:playerId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /api/admin/player-teams/:id
+// Body: { jersey_number?, photo?, start_date?, end_date? }
+// Updates editable fields on a specific stint row by its UUID.
+// ---------------------------------------------------------------------------
+router.patch('/:id', async (req, res) => {
+  const { id } = req.params;
+  const { jersey_number, photo, start_date, end_date } = req.body;
+
+  const jerseyInBody    = 'jersey_number' in req.body;
+  const photoInBody     = 'photo'         in req.body;
+  const startDateInBody = 'start_date'    in req.body;
+  const endDateInBody   = 'end_date'      in req.body;
+
+  try {
+    const rows = await sql`
+      UPDATE player_teams
+      SET
+        jersey_number = CASE WHEN ${jerseyInBody}    THEN ${jersey_number ?? null}           ELSE jersey_number END,
+        photo         = CASE WHEN ${photoInBody}     THEN ${photo ?? null}                   ELSE photo         END,
+        start_date    = CASE WHEN ${startDateInBody} THEN ${start_date ?? null}::date        ELSE start_date    END,
+        end_date      = CASE WHEN ${endDateInBody}   THEN ${end_date ?? null}::date          ELSE end_date      END
+      WHERE id = ${id}
+      RETURNING
+        id, player_id, team_id, season_id,
+        jersey_number, photo,
+        start_date::text AS start_date,
+        end_date::text   AS end_date
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Stint not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('player-teams patch/:id error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/player-teams/bulk-trade
+// Body: { players: [{ player_id, jersey_number? }], season_id, to_team_id, trade_date }
+// Closes each player's current active stint and opens a new one on to_team_id.
+// Returns { traded: [...], failed: [player_ids that had no active stint] }
+// ---------------------------------------------------------------------------
+router.post('/bulk-trade', async (req, res) => {
+  const { players, season_id, to_team_id, trade_date } = req.body;
+
+  if (!Array.isArray(players) || players.length === 0)
+    return res.status(400).json({ error: 'players must be a non-empty array' });
+  if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
+  if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
+  if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
+
+  try {
+    const traded = [];
+    const failed = [];
+
+    for (const { player_id, jersey_number = null } of players) {
+      // Close the current active stint
+      const closed = await sql`
+        UPDATE player_teams
+        SET end_date = ${trade_date}
+        WHERE player_id = ${player_id}
+          AND season_id = ${season_id}
+          AND end_date IS NULL
+        RETURNING id, team_id
+      `;
+
+      if (closed.length === 0) {
+        failed.push(player_id);
+        continue;
+      }
+
+      // Open new stint on the destination team
+      const created = await sql`
+        INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number)
+        VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number ?? null})
+        RETURNING id, player_id, team_id, season_id, jersey_number,
+                  start_date::text AS start_date, end_date::text AS end_date
+      `;
+      traded.push(created[0]);
+    }
+
+    return res.status(201).json({ traded, failed });
+  } catch (err) {
+    console.error('player-teams bulk-trade error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/trade
 // Body: { player_id, season_id, to_team_id, trade_date, jersey_number? }
 // Closes the player's current stint (sets end_date) and opens a new one on

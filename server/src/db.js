@@ -334,6 +334,35 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
 
+  // Migrate primary key from composite (player_id, team_id, season_id) → id UUID.
+  // Old databases were created with the composite PK; new ones already have id as PK.
+  // We detect the old state by checking if id is NOT already the primary key column.
+  await sql`
+    DO $$
+    DECLARE
+      pk_col TEXT;
+    BEGIN
+      -- Find the column(s) in the current PK for player_teams
+      SELECT string_agg(a.attname, ',' ORDER BY a.attnum)
+        INTO pk_col
+        FROM pg_index i
+        JOIN pg_attribute a ON a.attrelid = i.indrelid AND a.attnum = ANY(i.indkey)
+        WHERE i.indrelid = 'player_teams'::regclass
+          AND i.indisprimary;
+
+      -- Only run if the PK is NOT already solely on "id"
+      IF pk_col IS DISTINCT FROM 'id' THEN
+        -- Fill id for any rows that somehow still have NULL
+        UPDATE player_teams SET id = gen_random_uuid() WHERE id IS NULL;
+        -- Drop the old composite PK
+        ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_pkey;
+        -- Promote id to be the sole primary key
+        ALTER TABLE player_teams ADD PRIMARY KEY (id);
+      END IF;
+    END
+    $$
+  `;
+
   // Only one active (end_date IS NULL) stint per player per season at a time.
   await sql`
     CREATE UNIQUE INDEX IF NOT EXISTS player_teams_one_active_per_season
