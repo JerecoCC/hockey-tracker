@@ -560,7 +560,7 @@ router.get('/:id/lineup', async (req, res) => {
         p.first_name  AS player_first_name,
         p.last_name   AS player_last_name,
         COALESCE(pt.photo, p.photo) AS player_photo,
-        pt.jersey_number,
+        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
       FROM game_starting_lineup sl
       JOIN games g ON g.id = sl.game_id
@@ -578,6 +578,12 @@ router.get('/:id/lineup', async (req, res) => {
         AND pt.team_id  = sl.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) pt_jnh ON true
       WHERE sl.game_id = ${id}
         AND slot.player_id IS NOT NULL
     `;
@@ -600,7 +606,7 @@ router.get('/:id/lineup', async (req, res) => {
           p.first_name  AS player_first_name,
           p.last_name   AS player_last_name,
           COALESCE(pt.photo, p.photo) AS player_photo,
-          pt.jersey_number,
+          COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           true AS inherited
         FROM games g
         JOIN game_starting_lineup sl ON sl.game_id = g.id AND sl.team_id = ${teamId}
@@ -618,6 +624,12 @@ router.get('/:id/lineup', async (req, res) => {
           AND pt.team_id  = sl.team_id
           AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
           AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        LEFT JOIN LATERAL (
+          SELECT jersey_number FROM jersey_number_history
+          WHERE player_teams_id = pt.id
+            AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+          ORDER BY effective_from DESC LIMIT 1
+        ) pt_jnh ON true
         WHERE (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
           AND g.status = 'final'
           AND g.id <> ${id}
@@ -686,7 +698,7 @@ router.put('/:id/lineup', async (req, res) => {
         p.first_name  AS player_first_name,
         p.last_name   AS player_last_name,
         COALESCE(pt.photo, p.photo) AS player_photo,
-        pt.jersey_number
+        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_starting_lineup sl
       JOIN games g ON g.id = sl.game_id
       CROSS JOIN LATERAL (VALUES
@@ -703,6 +715,12 @@ router.put('/:id/lineup', async (req, res) => {
         AND pt.team_id  = sl.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) pt_jnh ON true
       WHERE sl.game_id = ${id}
         AND sl.team_id = ${team_id}
         AND slot.player_id IS NOT NULL
@@ -753,7 +771,7 @@ router.get('/:id/roster', async (req, res) => {
         gr.id, gr.game_id, gr.team_id, gr.player_id,
         p.first_name, p.last_name,
         COALESCE(pt.photo, p.photo) AS photo,
-        p.position, pt.jersey_number,
+        p.position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
       FROM game_rosters gr
       JOIN games g ON g.id = gr.game_id
@@ -763,8 +781,14 @@ router.get('/:id/roster', async (req, res) => {
         AND pt.team_id  = gr.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) pt_jnh ON true
       WHERE gr.game_id = ${id}
-      ORDER BY pt.jersey_number ASC NULLS LAST, p.last_name ASC
+      ORDER BY COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
     `;
 
     // 3. Determine which teams still need a roster.
@@ -793,7 +817,7 @@ router.get('/:id/roster', async (req, res) => {
           gr.id, ${id}::uuid AS game_id, gr.team_id, gr.player_id,
           p.first_name, p.last_name,
           COALESCE(pt.photo, p.photo) AS photo,
-          p.position, pt.jersey_number,
+          p.position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           true AS inherited
         FROM game_rosters gr
         JOIN games g ON g.id = gr.game_id
@@ -803,8 +827,14 @@ router.get('/:id/roster', async (req, res) => {
           AND pt.team_id  = gr.team_id
           AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
           AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        LEFT JOIN LATERAL (
+          SELECT jersey_number FROM jersey_number_history
+          WHERE player_teams_id = pt.id
+            AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+          ORDER BY effective_from DESC LIMIT 1
+        ) pt_jnh ON true
         WHERE gr.game_id = ${lastGameRows[0].game_id} AND gr.team_id = ${teamId}
-        ORDER BY pt.jersey_number ASC NULLS LAST, p.last_name ASC
+        ORDER BY COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
       `;
       inheritedRows.push(...rows);
     }
@@ -839,7 +869,7 @@ router.post('/:id/roster', async (req, res) => {
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.player_id,
         p.first_name, p.last_name, COALESCE(pt.photo, p.photo) AS photo, p.position,
-        pt.jersey_number
+        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_rosters gr
       JOIN games g ON g.id = gr.game_id
       JOIN players p ON p.id = gr.player_id
@@ -848,8 +878,14 @@ router.post('/:id/roster', async (req, res) => {
         AND pt.team_id  = gr.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) pt_jnh ON true
       WHERE gr.game_id = ${id} AND gr.team_id = ${team_id}
-      ORDER BY pt.jersey_number ASC NULLS LAST, p.last_name ASC
+      ORDER BY COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
     `;
     return res.status(201).json(rows);
   } catch (err) {
@@ -904,18 +940,18 @@ router.get('/:id/goals', async (req, res) => {
         -- scorer
         sp.first_name                       AS scorer_first_name,
         sp.last_name                        AS scorer_last_name,
-        COALESCE(spt.photo, sp.photo)       AS scorer_photo,
-        spt.jersey_number                   AS scorer_jersey_number,
+        COALESCE(spt.photo, sp.photo)                         AS scorer_photo,
+        COALESCE(spt_jnh.jersey_number, spt.jersey_number)   AS scorer_jersey_number,
         -- assist 1
-        a1p.first_name                      AS assist_1_first_name,
-        a1p.last_name                       AS assist_1_last_name,
-        COALESCE(a1pt.photo, a1p.photo)     AS assist_1_photo,
-        a1pt.jersey_number                  AS assist_1_jersey_number,
+        a1p.first_name                                        AS assist_1_first_name,
+        a1p.last_name                                         AS assist_1_last_name,
+        COALESCE(a1pt.photo, a1p.photo)                       AS assist_1_photo,
+        COALESCE(a1pt_jnh.jersey_number, a1pt.jersey_number)  AS assist_1_jersey_number,
         -- assist 2
-        a2p.first_name                      AS assist_2_first_name,
-        a2p.last_name                       AS assist_2_last_name,
-        COALESCE(a2pt.photo, a2p.photo)     AS assist_2_photo,
-        a2pt.jersey_number                  AS assist_2_jersey_number,
+        a2p.first_name                                        AS assist_2_first_name,
+        a2p.last_name                                         AS assist_2_last_name,
+        COALESCE(a2pt.photo, a2p.photo)                       AS assist_2_photo,
+        COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number)  AS assist_2_jersey_number,
         -- prior-game cumulative stats (finalized games in same season before this game)
         (SELECT COUNT(*)::int
           FROM goals g2
@@ -950,16 +986,34 @@ router.get('/:id/goals', async (req, res) => {
         ON spt.player_id = go.scorer_id AND spt.team_id = go.team_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = spt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) spt_jnh ON true
       LEFT JOIN players a1p ON a1p.id = go.assist_1_id
       LEFT JOIN player_teams a1pt
         ON a1pt.player_id = go.assist_1_id AND a1pt.team_id = go.team_id
         AND (a1pt.start_date IS NULL OR a1pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a1pt.end_date   IS NULL OR a1pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = a1pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) a1pt_jnh ON true
       LEFT JOIN players a2p ON a2p.id = go.assist_2_id
       LEFT JOIN player_teams a2pt
         ON a2pt.player_id = go.assist_2_id AND a2pt.team_id = go.team_id
         AND (a2pt.start_date IS NULL OR a2pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a2pt.end_date   IS NULL OR a2pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = a2pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) a2pt_jnh ON true
       JOIN teams t ON t.id = go.team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
@@ -1021,11 +1075,11 @@ router.post('/:id/goals', async (req, res) => {
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color,
         sp.first_name AS scorer_first_name, sp.last_name AS scorer_last_name, COALESCE(spt.photo, sp.photo) AS scorer_photo,
-        spt.jersey_number AS scorer_jersey_number,
+        COALESCE(spt_jnh.jersey_number, spt.jersey_number) AS scorer_jersey_number,
         a1p.first_name AS assist_1_first_name, a1p.last_name AS assist_1_last_name, COALESCE(a1pt.photo, a1p.photo) AS assist_1_photo,
-        a1pt.jersey_number AS assist_1_jersey_number,
+        COALESCE(a1pt_jnh.jersey_number, a1pt.jersey_number) AS assist_1_jersey_number,
         a2p.first_name AS assist_2_first_name, a2p.last_name AS assist_2_last_name, COALESCE(a2pt.photo, a2p.photo) AS assist_2_photo,
-        a2pt.jersey_number AS assist_2_jersey_number
+        COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number) AS assist_2_jersey_number
       FROM goals go
       JOIN games g ON g.id = go.game_id
       JOIN players sp ON sp.id = go.scorer_id
@@ -1033,16 +1087,34 @@ router.post('/:id/goals', async (req, res) => {
         ON spt.player_id = go.scorer_id AND spt.team_id = go.team_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = spt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) spt_jnh ON true
       LEFT JOIN players a1p ON a1p.id = go.assist_1_id
       LEFT JOIN player_teams a1pt
         ON a1pt.player_id = go.assist_1_id AND a1pt.team_id = go.team_id
         AND (a1pt.start_date IS NULL OR a1pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a1pt.end_date   IS NULL OR a1pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = a1pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) a1pt_jnh ON true
       LEFT JOIN players a2p ON a2p.id = go.assist_2_id
       LEFT JOIN player_teams a2pt
         ON a2pt.player_id = go.assist_2_id AND a2pt.team_id = go.team_id
         AND (a2pt.start_date IS NULL OR a2pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a2pt.end_date   IS NULL OR a2pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = a2pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) a2pt_jnh ON true
       JOIN teams t ON t.id = go.team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
@@ -1187,7 +1259,7 @@ router.get('/:id/goalie-stats', async (req, res) => {
         p.first_name AS goalie_first_name,
         p.last_name  AS goalie_last_name,
         COALESCE(pt.photo, p.photo) AS goalie_photo,
-        pt.jersey_number AS goalie_jersey_number,
+        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
         ti.name  AS team_name,
         ti.code  AS team_code,
         ti.logo  AS team_logo,
@@ -1203,13 +1275,19 @@ router.get('/:id/goalie-stats', async (req, res) => {
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) pt_jnh ON true
+      LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = gs.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
       WHERE gs.game_id = ${id}
-      ORDER BY ti.code ASC, pt.jersey_number ASC NULLS LAST
+      ORDER BY ti.code ASC, COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST
     `;
     return res.json(rows);
   } catch (err) {
@@ -1241,7 +1319,8 @@ router.put('/:id/goalie-stats', async (req, res) => {
       SELECT
         gs.id, gs.game_id, gs.team_id, gs.goalie_id, gs.shots_against, gs.saves, gs.created_at,
         p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
-        COALESCE(pt.photo, p.photo) AS goalie_photo, pt.jersey_number AS goalie_jersey_number,
+        COALESCE(pt.photo, p.photo) AS goalie_photo,
+        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color
       FROM game_goalie_stats gs
@@ -1253,6 +1332,12 @@ router.put('/:id/goalie-stats', async (req, res) => {
         AND pt.team_id  = gs.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) pt_jnh ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = gs.team_id
@@ -1381,7 +1466,7 @@ const fetchAttempts = (gameId) => sql`
     p.first_name   AS shooter_first_name,
     p.last_name    AS shooter_last_name,
     COALESCE(pt.photo, p.photo) AS shooter_photo,
-    pt.jersey_number            AS shooter_jersey_number,
+    COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS shooter_jersey_number,
     ti.name  AS team_name,
     ti.code  AS team_code,
     ti.logo  AS team_logo,
@@ -1396,6 +1481,12 @@ const fetchAttempts = (gameId) => sql`
     AND pt.team_id  = sa.team_id
     AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
     AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+  LEFT JOIN LATERAL (
+    SELECT jersey_number FROM jersey_number_history
+    WHERE player_teams_id = pt.id
+      AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+    ORDER BY effective_from DESC LIMIT 1
+  ) pt_jnh ON true
   LEFT JOIN LATERAL (
     SELECT name, code, logo FROM team_iterations
     WHERE team_id = sa.team_id

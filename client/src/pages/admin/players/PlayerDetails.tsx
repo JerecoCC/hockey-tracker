@@ -7,6 +7,8 @@ import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import usePlayerDetails, { type PlayerCareerStatRecord } from '@/hooks/usePlayerDetails';
+import useSeasons from '@/hooks/useSeasons';
+import useTeams from '@/hooks/useTeams';
 import {
   usePlayerTradeHistory,
   useStintActions,
@@ -62,9 +64,12 @@ const PlayerDetailsPage = () => {
   const { id } = useParams<{ id: string }>();
   const { player, stats, loading } = usePlayerDetails(id);
   const { stints } = usePlayerTradeHistory(id ?? null);
-  const { updateStint, uploadStintPhoto } = useStintActions(id ?? null);
+  const { createStint, updateStint, uploadStintPhoto } = useStintActions(id ?? null);
+  const { teams } = useTeams();
+  const { seasons } = useSeasons();
   const [activeTab, handleTabChange] = useTabState('tab:player-details');
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
+  const [creatingStint, setCreatingStint] = useState(false);
 
   if (loading) {
     return (
@@ -199,7 +204,20 @@ const PlayerDetailsPage = () => {
           {
             label: 'Team History',
             content: (
-              <Card title="Team History">
+              <Card
+                title="Team History"
+                action={
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="add"
+                    size="sm"
+                    onClick={() => setCreatingStint(true)}
+                  >
+                    Record Stint
+                  </Button>
+                }
+              >
                 {stints.length === 0 ? (
                   <p className={styles.placeholder}>No team history yet.</p>
                 ) : (
@@ -253,9 +271,15 @@ const PlayerDetailsPage = () => {
       />
 
       <StintEditModal
-        open={!!editingStint}
+        open={creatingStint || !!editingStint}
         stint={editingStint}
-        onClose={() => setEditingStint(null)}
+        teams={teams}
+        seasons={seasons}
+        onClose={() => {
+          setEditingStint(null);
+          setCreatingStint(false);
+        }}
+        createStint={createStint}
         updateStint={updateStint}
         uploadStintPhoto={uploadStintPhoto}
       />

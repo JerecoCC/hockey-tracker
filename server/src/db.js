@@ -370,6 +370,25 @@ async function initSchema() {
       WHERE end_date IS NULL
   `;
 
+  // ── Jersey number history ──────────────────────────────────────────────────
+  // Tracks every jersey number a player wore within a stint, with the date the
+  // number became effective. The current jersey_number on player_teams is a
+  // denormalised copy of the most-recent entry here.
+  // Changing a jersey number never creates a new stint — it appends a row here.
+  await sql`
+    CREATE TABLE IF NOT EXISTS jersey_number_history (
+      id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      player_teams_id UUID NOT NULL REFERENCES player_teams(id) ON DELETE CASCADE,
+      jersey_number   SMALLINT NOT NULL,
+      effective_from  DATE NOT NULL,
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS jnh_player_teams_effective
+      ON jersey_number_history (player_teams_id, effective_from DESC)
+  `;
+
   // Flag exactly one season per league as the "current" season.
   // is_current is kept for backward-compat but is no longer the source of truth —
   // leagues.current_season_id is the authoritative FK and enforces uniqueness at the DB level.
@@ -713,6 +732,73 @@ async function initSchema() {
       attempt_order INT NOT NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  // ── Megan Carter jersey-number migration ──────────────────────────────────
+  // If her jersey change (23 → 27) was recorded as two separate stints on the
+  // same team/season, consolidate them:
+  //   1. Insert history entries on the surviving (jersey 27) stint.
+  //   2. Back-date that stint's start_date to the original start of the 23 stint.
+  //   3. Delete the now-redundant closed (jersey 23) stint.
+  // Idempotent: skips the whole block if any history already exists for her.
+  await sql`
+    DO $$
+    DECLARE
+      v_player_id    UUID;
+      v_old_id       UUID;
+      v_new_id       UUID;
+      v_old_start    DATE;
+      v_change_date  DATE;
+    BEGIN
+      SELECT id INTO v_player_id
+        FROM players
+        WHERE first_name = 'Megan' AND last_name = 'Carter'
+        LIMIT 1;
+      IF v_player_id IS NULL THEN RETURN; END IF;
+
+      -- Skip if already migrated
+      IF EXISTS (
+        SELECT 1 FROM jersey_number_history jnh
+        JOIN player_teams pt ON pt.id = jnh.player_teams_id
+        WHERE pt.player_id = v_player_id
+      ) THEN RETURN; END IF;
+
+      -- Find the closed jersey-23 stint and the active jersey-27 stint
+      -- on the same team and season.
+      SELECT
+        old_pt.id,
+        new_pt.id,
+        COALESCE(old_pt.start_date, old_pt.created_at::date),
+        COALESCE(new_pt.start_date, old_pt.end_date + INTERVAL '1 day')::date
+      INTO v_old_id, v_new_id, v_old_start, v_change_date
+      FROM player_teams old_pt
+      JOIN player_teams new_pt
+        ON  new_pt.player_id  = old_pt.player_id
+        AND new_pt.team_id    = old_pt.team_id
+        AND new_pt.season_id  = old_pt.season_id
+        AND new_pt.jersey_number = 27
+        AND new_pt.end_date IS NULL
+      WHERE old_pt.player_id    = v_player_id
+        AND old_pt.jersey_number = 23
+        AND old_pt.end_date IS NOT NULL
+      LIMIT 1;
+
+      IF v_new_id IS NULL THEN RETURN; END IF;
+
+      -- Record jersey 23 from original start
+      INSERT INTO jersey_number_history (player_teams_id, jersey_number, effective_from)
+        VALUES (v_new_id, 23, v_old_start);
+
+      -- Record jersey 27 from change date
+      INSERT INTO jersey_number_history (player_teams_id, jersey_number, effective_from)
+        VALUES (v_new_id, 27, v_change_date);
+
+      -- Extend the surviving stint back to the original start
+      UPDATE player_teams SET start_date = v_old_start WHERE id = v_new_id;
+
+      -- Remove the now-redundant closed stint
+      DELETE FROM player_teams WHERE id = v_old_id;
+    END$$
   `;
 
   console.log('Database schema ready');
