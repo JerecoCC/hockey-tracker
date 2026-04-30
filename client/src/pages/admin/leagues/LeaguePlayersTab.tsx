@@ -76,11 +76,17 @@ const LeaguePlayersTab = ({
         }
       >
         <SearchableList
-          items={players}
+          items={[...players].sort((a, b) =>
+            `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`),
+          )}
           filterFn={(p, q) => {
+            const query = q.toLowerCase();
             const name = `${p.first_name} ${p.last_name}`.toLowerCase();
             const pos = (p.position ?? '').toLowerCase();
-            return name.includes(q.toLowerCase()) || pos.includes(q.toLowerCase());
+            const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
+            return (
+              name.includes(query) || pos.includes(query) || jersey.startsWith(q.replace('#', ''))
+            );
           }}
           renderItems={(filtered) => (
             <ul className={styles.teamList}>
@@ -88,6 +94,9 @@ const LeaguePlayersTab = ({
                 <ListItem
                   key={p.id}
                   leadingImage={p.team_logo}
+                  leadingImagePlaceholder={(p.team_name ?? '').slice(0, 3) || undefined}
+                  leadingImagePrimaryColor={p.primary_color ?? undefined}
+                  leadingImageTextColor={p.text_color ?? undefined}
                   image={p.photo}
                   image_shape="circle"
                   name={`${p.first_name} ${p.last_name}`}
