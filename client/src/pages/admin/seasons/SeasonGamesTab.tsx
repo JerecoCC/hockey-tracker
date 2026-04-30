@@ -193,6 +193,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
             {filteredGames.map((game) => (
               <GameListItem
                 key={game.id}
+                href={`/admin/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
                 awayTeam={{
                   logo: game.away_team_logo,
                   code: game.away_team_code,
