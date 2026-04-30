@@ -424,6 +424,22 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots };
+  const deleteGame = async (): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('deleting');
+    try {
+      await axios.delete(`${API}/admin/games/${id}`, { headers: authHeaders() });
+      toast.success('Game deleted!');
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete game'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, deleteGame };
 };
 
