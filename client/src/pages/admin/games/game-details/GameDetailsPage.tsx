@@ -10,7 +10,7 @@ import ListItem from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
-import { useGameDetails, type LastFiveGame } from '@/hooks/useGames';
+import { useGameDetails, type LastFiveGame, type PreviousMeeting } from '@/hooks/useGames';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup from '@/hooks/useGameLineup';
 import useGameRoster, { type GameRosterEntry } from '@/hooks/useGameRoster';
@@ -32,6 +32,7 @@ import GoalieStatsEditModal from './GoalieStatsEditModal';
 import ShotsEditModal from './ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from './RecordShotsModal';
 import ScoreboardCard from './ScoreboardCard';
+import ScoreImageModal from './ScoreImageModal';
 import ScoringCard from './ScoringCard';
 
 import styles from './GameDetailsPage.module.scss';
@@ -302,7 +303,10 @@ const GameDetailsPage = () => {
   const [shotsEditModalOpen, setShotsEditModalOpen] = useState(false);
 
   // ── Last 5 Games view mode ────────────────────────────────────────────────
-  const [lastFiveView, setLastFiveView] = useState<'square' | 'list'>('square');
+  const [lastFiveView, setLastFiveView] = useState<'square' | 'list'>('list');
+
+  // ── Score image modal ─────────────────────────────────────────────────────
+  const [scoreImageOpen, setScoreImageOpen] = useState(false);
 
   // ── Start Game modal ──────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
@@ -589,6 +593,7 @@ const GameDetailsPage = () => {
         liveHomeScore={liveHomeScore}
         overtimeSuffix={overtimeSuffix}
         leagueId={leagueId}
+        onGenerateImage={isFinal ? () => setScoreImageOpen(true) : undefined}
       />
 
       {/* ── Tabs ── */}
@@ -860,6 +865,126 @@ const GameDetailsPage = () => {
                         );
                       })()}
 
+                    {/* ── Previous Meetings card ── */}
+                    {game.previous_meetings && game.previous_meetings.length > 0 && (
+                      <Card title="Previous Meetings">
+                        <div className={styles.prevMeetingsRows}>
+                          {game.previous_meetings.map((pm: PreviousMeeting) => {
+                            const isOT = pm.overtime_periods != null && pm.overtime_periods > 0;
+                            const isSO = pm.shootout;
+                            const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
+                            // Left = historical away team, right = historical home team.
+                            // current_home_was_home tells us which current team played which role.
+                            const leftTeam = pm.current_home_was_home
+                              ? {
+                                  code: game.away_team_code,
+                                  logo: game.away_team_logo,
+                                  primary: game.away_team_primary_color,
+                                  text: game.away_team_text_color,
+                                }
+                              : {
+                                  code: game.home_team_code,
+                                  logo: game.home_team_logo,
+                                  primary: game.home_team_primary_color,
+                                  text: game.home_team_text_color,
+                                };
+                            const rightTeam = pm.current_home_was_home
+                              ? {
+                                  code: game.home_team_code,
+                                  logo: game.home_team_logo,
+                                  primary: game.home_team_primary_color,
+                                  text: game.home_team_text_color,
+                                }
+                              : {
+                                  code: game.away_team_code,
+                                  logo: game.away_team_logo,
+                                  primary: game.away_team_primary_color,
+                                  text: game.away_team_text_color,
+                                };
+                            // pm.away_score / pm.home_score are always from the historical game's perspective
+                            const homeWon = pm.home_score > pm.away_score;
+                            const renderTeamLogo = (team: typeof leftTeam) =>
+                              team.logo ? (
+                                <img
+                                  src={team.logo}
+                                  alt={team.code}
+                                  className={styles.prevMeetingLogo}
+                                />
+                              ) : (
+                                <span
+                                  className={styles.prevMeetingLogoPlaceholder}
+                                  style={{ background: team.primary, color: team.text }}
+                                >
+                                  {team.code?.slice(0, 3)}
+                                </span>
+                              );
+                            return (
+                              <div
+                                key={pm.game_id}
+                                className={styles.prevMeetingRow}
+                                role="button"
+                                tabIndex={0}
+                                onClick={() =>
+                                  navigate(
+                                    `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${pm.game_id}`,
+                                  )
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' || e.key === ' ')
+                                    navigate(
+                                      `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${pm.game_id}`,
+                                    );
+                                }}
+                              >
+                                {pm.scheduled_at && (
+                                  <span className={styles.prevMeetingDate}>
+                                    {DATE_FMT_SHORT.format(new Date(pm.scheduled_at))}
+                                  </span>
+                                )}
+                                {/* Historical away team — always left */}
+                                <span className={styles.prevMeetingTeam}>
+                                  {renderTeamLogo(leftTeam)}
+                                  <span className={styles.prevMeetingCode}>{leftTeam.code}</span>
+                                </span>
+                                {/* Score: historical away – historical home */}
+                                <span className={styles.prevMeetingScore}>
+                                  <span
+                                    className={
+                                      homeWon
+                                        ? styles.prevMeetingScoreDim
+                                        : styles.prevMeetingScoreBright
+                                    }
+                                  >
+                                    {pm.away_score}
+                                  </span>
+                                  <span className={styles.prevMeetingScoreSep}>–</span>
+                                  <span
+                                    className={
+                                      homeWon
+                                        ? styles.prevMeetingScoreBright
+                                        : styles.prevMeetingScoreDim
+                                    }
+                                  >
+                                    {pm.home_score}
+                                  </span>
+                                  {suffix && (
+                                    <span className={styles.prevMeetingSuffix}>{suffix}</span>
+                                  )}
+                                </span>
+                                {/* Historical home team — always right */}
+                                <span
+                                  className={`${styles.prevMeetingTeam} ${styles.prevMeetingTeamRight}`}
+                                >
+                                  <span className={styles.prevMeetingCode}>{rightTeam.code}</span>
+                                  {renderTeamLogo(rightTeam)}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </Card>
+                    )}
+
                     {/* ── Last 5 Games card ── */}
                     {(game.home_last_five || game.away_last_five) &&
                       (() => {
@@ -1091,19 +1216,19 @@ const GameDetailsPage = () => {
                               <div className={styles.lastFiveViewToggle}>
                                 <Button
                                   variant="ghost"
-                                  intent={lastFiveView === 'square' ? 'accent' : 'neutral'}
-                                  icon="grid_view"
-                                  size="sm"
-                                  tooltip="Grid view"
-                                  onClick={() => setLastFiveView('square')}
-                                />
-                                <Button
-                                  variant="ghost"
                                   intent={lastFiveView === 'list' ? 'accent' : 'neutral'}
                                   icon="view_list"
                                   size="sm"
                                   tooltip="List view"
                                   onClick={() => setLastFiveView('list')}
+                                />
+                                <Button
+                                  variant="ghost"
+                                  intent={lastFiveView === 'square' ? 'accent' : 'neutral'}
+                                  icon="grid_view"
+                                  size="sm"
+                                  tooltip="Grid view"
+                                  onClick={() => setLastFiveView('square')}
                                 />
                               </div>
                             }
@@ -2005,6 +2130,18 @@ const GameDetailsPage = () => {
           periods={linescorePeriods}
           onClose={() => setShotsEditModalOpen(false)}
           updatePeriodShots={updatePeriodShots}
+        />
+      )}
+
+      {/* ── Score image modal ── */}
+      {scoreImageOpen && game && (
+        <ScoreImageModal
+          open={scoreImageOpen}
+          game={game}
+          liveAwayScore={liveAwayScore}
+          liveHomeScore={liveHomeScore}
+          overtimeSuffix={overtimeSuffix}
+          onClose={() => setScoreImageOpen(false)}
         />
       )}
 

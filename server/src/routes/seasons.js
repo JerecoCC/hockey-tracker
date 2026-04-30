@@ -710,7 +710,7 @@ router.get('/:id/standings', async (req, res) => {
   try {
     const standings = await sql`
       WITH season_info AS (
-        SELECT l.scoring_system
+        SELECT l.scoring_system, s.games_per_season
         FROM seasons s
         JOIN leagues l ON l.id = s.league_id
         WHERE s.id = ${id}
@@ -733,7 +733,7 @@ router.get('/:id/standings', async (req, res) => {
         SELECT
           home_team_id,
           away_team_id,
-          (overtime_periods > 0 OR shootout)                        AS is_extra_time,
+          (COALESCE(overtime_periods, 0) > 0 OR shootout)           AS is_extra_time,
           CASE WHEN home_goals > away_goals THEN home_team_id
                ELSE away_team_id END                                AS winner_id
         FROM season_games
@@ -777,12 +777,18 @@ router.get('/:id/standings', async (req, res) => {
         t.text_color                       AS team_text_color,
         a.gp,
         a.wins,
+        a.reg_wins,
+        a.ot_wins,
         a.losses,
         a.otl,
         CASE (SELECT scoring_system FROM season_info)
           WHEN '3-2-1-0' THEN (a.reg_wins * 3 + a.ot_wins * 2 + a.otl)
           ELSE                 (a.wins * 2 + a.otl)
-        END::int                           AS points
+        END::int                           AS points,
+        CASE WHEN (SELECT games_per_season FROM season_info) IS NOT NULL
+          THEN GREATEST(0, (SELECT games_per_season FROM season_info) - a.gp)
+          ELSE NULL
+        END::int                           AS games_remaining
       FROM aggregated a
       JOIN teams t ON t.id = a.team_id
       LEFT JOIN LATERAL (
