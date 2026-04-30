@@ -9,8 +9,8 @@ import Select from '@/components/Select/Select';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import AddPlayersModal from './AddPlayersModal';
+import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
-import TradePlayerModal from './TradePlayerModal';
 import styles from './TeamDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
@@ -51,11 +51,11 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     updatePlayerTeam,
     uploadPlayerPhoto,
     deletePlayer,
-    tradePlayer,
+    bulkTradePlayers,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
-  const [tradeTarget, setTradeTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -74,16 +74,28 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
       <Card
         title="Roster"
         action={
-          leagueSeasons.length > 0 ? (
-            <Select
-              value={selectedSeasonId}
-              options={leagueSeasons.map((s) => ({
-                value: s.id,
-                label: s.is_current ? `${s.name} ✦` : s.name,
-              }))}
-              onChange={setSelectedSeasonId}
-            />
-          ) : undefined
+          <div className={styles.rosterActions}>
+            {leagueSeasons.length > 0 && (
+              <Select
+                value={selectedSeasonId}
+                options={leagueSeasons.map((s) => ({
+                  value: s.id,
+                  label: s.is_current ? `${s.name} ✦` : s.name,
+                }))}
+                onChange={setSelectedSeasonId}
+              />
+            )}
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="swap_horiz"
+              size="sm"
+              disabled={!selectedSeasonId || players.length === 0}
+              onClick={() => setTradeModalOpen(true)}
+            >
+              Trade Players
+            </Button>
+          </div>
         }
       >
         <SearchableList
@@ -133,13 +145,6 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                           onClick: () => setEditTarget(p),
                         },
                         {
-                          icon: 'swap_horiz',
-                          intent: 'info',
-                          tooltip: 'Trade player',
-                          disabled: busy === p.id || !selectedSeasonId,
-                          onClick: () => setTradeTarget(p),
-                        },
-                        {
                           icon: 'delete',
                           intent: 'danger',
                           tooltip: 'Delete player',
@@ -181,14 +186,14 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
         uploadPlayerPhoto={uploadPlayerPhoto}
       />
 
-      <TradePlayerModal
-        open={!!tradeTarget}
-        player={tradeTarget}
-        currentTeamId={teamId}
-        seasonId={selectedSeasonId ?? ''}
+      <BulkTradeModal
+        open={tradeModalOpen}
+        onClose={() => setTradeModalOpen(false)}
+        players={players}
+        teamId={teamId}
         leagueId={leagueId}
-        onClose={() => setTradeTarget(null)}
-        tradePlayer={tradePlayer}
+        seasonId={selectedSeasonId}
+        bulkTradePlayers={bulkTradePlayers}
       />
 
       <AddPlayersModal
