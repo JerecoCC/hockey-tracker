@@ -50,3 +50,17 @@
     min-width: 0;
   }
 }
+
+// Horizontal rule divider inside forms
+.divider {
+  border: none;
+  border-top: 1px solid $border;
+  margin: 0;
+}
+
+// Jersey # (narrow) + Start Date + End Date on one row
+.stintDateRow {
+  display: grid;
+  grid-template-columns: 5rem 1fr 1fr;
+  gap: $space-md;
+}
