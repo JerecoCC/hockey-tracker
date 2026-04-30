@@ -22,6 +22,13 @@ export interface PlayerStintRecord {
   text_color: string | null;
 }
 
+export interface UpdateStintData {
+  jersey_number?: number | null;
+  photo?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+}
+
 /** Fetch all stints for a player, optionally scoped to a season. */
 export const usePlayerTradeHistory = (playerId: string | null, seasonId?: string | null) => {
   const { data: stints = [], isLoading: loading } = useQuery<PlayerStintRecord[]>({
@@ -38,6 +45,46 @@ export const usePlayerTradeHistory = (playerId: string | null, seasonId?: string
     enabled: !!playerId,
   });
   return { stints, loading };
+};
+
+/** Actions for editing and uploading photos on individual player_teams stints. */
+export const useStintActions = (playerId: string | null) => {
+  const queryClient = useQueryClient();
+  const [saving, setSaving] = useState(false);
+
+  const updateStint = async (stintId: string, data: UpdateStintData): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.patch(`${API}/admin/player-teams/${stintId}`, data, { headers: authHeaders() });
+      toast.success('Stint updated!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update stint'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const uploadStintPhoto = async (file: File): Promise<string | null> => {
+    const formData = new FormData();
+    formData.append('photo', file);
+    try {
+      const { data } = await axios.post<{ url: string }>(
+        `${API}/admin/players/upload`,
+        formData,
+        { headers: { ...authHeaders(), 'Content-Type': 'multipart/form-data' } },
+      );
+      return data.url;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to upload photo'));
+      return null;
+    }
+  };
+
+  return { updateStint, uploadStintPhoto, saving };
 };
 
 export interface PlayerRosterInput {
@@ -257,36 +304,44 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
   };
 
   /**
-   * Trade a player to a new team within the same season.
-   * Closes the current active stint and opens a new one on to_team_id.
+   * Bulk-trade players to a new team within the same season.
+   * Closes each player's current active stint and opens a new one on toTeamId.
+   * Each entry may carry an optional jerseyNumber for the new stint.
    */
-  const tradePlayer = async (
-    playerId: string,
-    seasonId: string,
+  const bulkTradePlayers = async (
+    playerRows: { playerId: string; jerseyNumber: number | null }[],
+    sId: string,
     toTeamId: string,
     tradeDate: string,
-    jerseyNumber?: number | null,
   ): Promise<boolean> => {
-    setBusy(playerId);
     try {
-      await axios.post(
-        `${API}/admin/player-teams/trade`,
-        { player_id: playerId, season_id: seasonId, to_team_id: toTeamId, trade_date: tradeDate, jersey_number: jerseyNumber ?? null },
+      const { data } = await axios.post(
+        `${API}/admin/player-teams/bulk-trade`,
+        {
+          players: playerRows.map((r) => ({ player_id: r.playerId, jersey_number: r.jerseyNumber })),
+          season_id: sId,
+          to_team_id: toTeamId,
+          trade_date: tradeDate,
+        },
         { headers: authHeaders() },
       );
-      toast.success('Player traded successfully!');
+      const count: number = data.traded?.length ?? 0;
+      const failed: number = data.failed?.length ?? 0;
+      toast.success(
+        failed > 0
+          ? `${count} player${count !== 1 ? 's' : ''} traded (${failed} had no active stint)`
+          : `${count} player${count !== 1 ? 's' : ''} traded successfully!`,
+      );
       await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history'] });
-      return true;
+      return count > 0;
     } catch (err) {
-      toast.error(apiError(err, 'Failed to trade player'));
+      toast.error(apiError(err, 'Failed to trade players'));
       return false;
-    } finally {
-      setBusy(null);
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer, tradePlayer };
+  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer, bulkTradePlayers };
 };
 
 export default useTeamPlayers;
