@@ -41,6 +41,14 @@ const formatEndDate = (d: string | null, isCurrent: boolean) =>
 const FORWARD_POSITIONS = new Set(['C', 'LW', 'RW']);
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
 
+type SkaterStatType = 'points' | 'goals' | 'assists';
+
+const PAGE_SIZE = 10;
+const sortBySkaterStat = (arr: SkaterStatRecord[], stat: SkaterStatType) =>
+  [...arr]
+    .sort((a, b) => ((b[stat] as number) ?? 0) - ((a[stat] as number) ?? 0))
+    .slice(0, PAGE_SIZE);
+
 const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
   const navigate = useNavigate();
@@ -74,7 +82,6 @@ const SeasonDetailsPage = () => {
   const [showEditModal, setShowEditModal] = useState(false);
 
   // ── Stats state ───────────────────────────────────────────────────────────────
-  type SkaterStatType = 'points' | 'goals' | 'assists';
   type GoalieLeaderStat = 'save_pct' | 'gaa' | 'shutouts';
   // Summary sub-section state
   const [summarySkaterStat, setSummarySkaterStat] = useState<SkaterStatType>('points');
@@ -108,13 +115,8 @@ const SeasonDetailsPage = () => {
     dir: 'desc',
   });
 
-  const PAGE_SIZE = 10;
-
-  const sortBySkaterStat = (arr: SkaterStatRecord[], stat: SkaterStatType) =>
-    [...arr].sort((a, b) => (b[stat] ?? 0) - (a[stat] ?? 0)).slice(0, PAGE_SIZE);
-
   const computeTieRanks = (values: (number | null)[]): string[] =>
-    values.map((val, i) => {
+    values.map((val) => {
       const firstIdx = values.findIndex((v) => v === val);
       const rank = firstIdx + 1;
       const count = values.filter((v) => v === val).length;
@@ -215,17 +217,6 @@ const SeasonDetailsPage = () => {
     if (stat === 'gaa') return g.gaa != null ? Number(g.gaa).toFixed(2) : '—';
     return String(g.shutouts ?? 0);
   };
-
-  const SKATER_STAT_TABS: { label: string; value: SkaterStatType }[] = [
-    { label: 'Points', value: 'points' },
-    { label: 'Goals', value: 'goals' },
-    { label: 'Assists', value: 'assists' },
-  ];
-  const GOALIE_STAT_TABS: { label: string; value: GoalieLeaderStat }[] = [
-    { label: 'Save %', value: 'save_pct' },
-    { label: 'GAA', value: 'gaa' },
-    { label: 'Shutouts', value: 'shutouts' },
-  ];
 
   const STAT_OPTIONS: { value: SkaterStatType; label: string; tooltip: string }[] = [
     { value: 'points', label: 'PTS', tooltip: 'Points (Goals + Assists)' },

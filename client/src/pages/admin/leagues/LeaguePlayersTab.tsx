@@ -94,7 +94,9 @@ const LeaguePlayersTab = ({
                 <ListItem
                   key={p.id}
                   leadingImage={p.team_logo}
-                  leadingImagePlaceholder={(p.team_name ?? '').slice(0, 3) || undefined}
+                  leadingImagePlaceholder={
+                    (p.team_code ?? (p.team_name ?? '').slice(0, 3)) || undefined
+                  }
                   leadingImagePrimaryColor={p.primary_color ?? undefined}
                   leadingImageTextColor={p.text_color ?? undefined}
                   image={p.photo}
@@ -111,7 +113,6 @@ const LeaguePlayersTab = ({
                       .filter(Boolean)
                       .join(' · ') || undefined
                   }
-                  subtitle={p.team_name ?? undefined}
                   rightContent={{
                     type: 'tag',
                     label: p.is_active ? 'Active' : 'Inactive',

@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, team_logo, primary_color, text_color
+            jersey_number, team_name, team_code, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -65,6 +65,7 @@ router.get('/', async (req, res) => {
               p.is_active, p.created_at,
               pt.jersey_number,
               ti.name       AS team_name,
+              ti.code       AS team_code,
               ti.logo       AS team_logo,
               t.primary_color,
               t.text_color
@@ -74,8 +75,10 @@ router.get('/', async (req, res) => {
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             LEFT JOIN LATERAL (
-              SELECT name, logo FROM team_iterations
-              WHERE team_id = t.id AND season_id = ${season_id}
+              SELECT name, code, logo FROM team_iterations
+              WHERE team_id = t.id
+                AND (season_id = ${season_id} OR season_id IS NULL)
+              ORDER BY CASE WHEN season_id = ${season_id} THEN 0 ELSE 1 END, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id
@@ -90,7 +93,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, team_logo, primary_color, text_color
+            jersey_number, team_name, team_code, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -101,6 +104,7 @@ router.get('/', async (req, res) => {
               p.is_active, p.created_at,
               pt.jersey_number,
               ti.name       AS team_name,
+              ti.code       AS team_code,
               ti.logo       AS team_logo,
               t.primary_color,
               t.text_color
@@ -109,7 +113,7 @@ router.get('/', async (req, res) => {
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             LEFT JOIN LATERAL (
-              SELECT name, logo FROM team_iterations
+              SELECT name, code, logo FROM team_iterations
               WHERE team_id = t.id
               ORDER BY season_id DESC NULLS LAST
               LIMIT 1
