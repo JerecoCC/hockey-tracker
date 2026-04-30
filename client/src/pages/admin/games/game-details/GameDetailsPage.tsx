@@ -23,6 +23,7 @@ import LineupCreatePlayersModal from '../LineupCreatePlayersModal';
 import SetLineupModal from '../SetLineupModal';
 import RemoveFromLineupModal from './RemoveFromLineupModal';
 import StartGameModal from './StartGameModal';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import GameInfoEditModal from './GameInfoEditModal';
 import ThreeStarsModal from './ThreeStarsModal';
 import ScoreGoalModal from './ScoreGoalModal';
@@ -62,6 +63,7 @@ const GameDetailsPage = () => {
     updateStars,
     updateGameInfo,
     updatePeriodShots,
+    deleteGame,
   } = useGameDetails(id);
   const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(id);
   const { goalieStats, upsertGoalieStat } = useGameGoalieStats(id);
@@ -305,6 +307,9 @@ const GameDetailsPage = () => {
   // ── Start Game modal ──────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const openStartGameModal = () => setStartGameModalOpen(true);
+
+  // ── Delete Game confirm ───────────────────────────────────────────────────
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
 
   // ── Game Info edit modal ──────────────────────────────────────────────────
   const [gameInfoEditOpen, setGameInfoEditOpen] = useState(false);
@@ -1169,6 +1174,12 @@ const GameDetailsPage = () => {
                                     intent: 'danger',
                                     onClick: () => updateStatus('cancelled'),
                                   },
+                                  {
+                                    label: 'Delete Game',
+                                    icon: 'delete',
+                                    intent: 'danger',
+                                    onClick: () => setConfirmDeleteOpen(true),
+                                  },
                                 ]}
                               />
                             </>
@@ -1200,6 +1211,19 @@ const GameDetailsPage = () => {
                                 }}
                               />
                             )}
+                          {game.status !== 'scheduled' && (
+                            <MoreActionsMenu
+                              disabled={!!busy}
+                              items={[
+                                {
+                                  label: 'Delete Game',
+                                  icon: 'delete',
+                                  intent: 'danger',
+                                  onClick: () => setConfirmDeleteOpen(true),
+                                },
+                              ]}
+                            />
+                          )}
                         </div>
                       }
                     >
@@ -1567,7 +1591,7 @@ const GameDetailsPage = () => {
                   }
                   hoverActions={
                     isFinal
-                      ? undefined
+                      ? []
                       : [
                           ...(inheritedEntries.length > 0 && rosterEntries.length === 0
                             ? [
@@ -1981,6 +2005,28 @@ const GameDetailsPage = () => {
           periods={linescorePeriods}
           onClose={() => setShotsEditModalOpen(false)}
           updatePeriodShots={updatePeriodShots}
+        />
+      )}
+
+      {/* ── Delete Game confirm ── */}
+      {game && (
+        <ConfirmModal
+          open={confirmDeleteOpen}
+          title="Delete Game"
+          body={`Delete ${game.away_team_code} @ ${game.home_team_code}? This will remove all goals, lineups, and related data. This cannot be undone.`}
+          confirmLabel="Delete"
+          confirmIcon="delete"
+          variant="danger"
+          busy={busy === 'deleting'}
+          onCancel={() => setConfirmDeleteOpen(false)}
+          onConfirm={async () => {
+            const ok = await deleteGame();
+            if (ok) {
+              navigate(`/admin/leagues/${leagueId}/seasons/${seasonId}`);
+            } else {
+              setConfirmDeleteOpen(false);
+            }
+          }}
         />
       )}
     </>
