@@ -4,8 +4,9 @@ import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/login/Login';
 import SignupPage from './pages/signup/Signup';
-import DashboardPage from './pages/dashboard/Dashboard';
 import AdminLayout from './components/AdminLayout/AdminLayout';
+import UserLayout from './components/UserLayout/UserLayout';
+import UserDashboard from './pages/user/dashboard/UserDashboard';
 import LeaguesPage from './pages/admin/leagues/Leagues';
 import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
@@ -92,12 +93,15 @@ const router = createBrowserRouter([
   },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   {
-    path: '/dashboard',
     element: (
       <PrivateRoute>
-        <DashboardPage />
+        <UserLayout />
       </PrivateRoute>
     ),
+    children: [
+      { path: '/dashboard', element: <UserDashboard /> },
+      { path: '/leagues', element: <div /> },
+    ],
   },
   {
     element: (

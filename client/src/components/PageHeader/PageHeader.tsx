@@ -8,6 +8,8 @@ import styles from './PageHeader.module.scss';
 const EXACT_TITLES: Record<string, string> = {
   '/admin/leagues': 'Leagues',
   '/admin/users': 'Users',
+  '/dashboard': 'Dashboard',
+  '/leagues': 'Leagues',
 };
 
 const getTitle = (pathname: string): string => {
@@ -17,6 +19,7 @@ const getTitle = (pathname: string): string => {
   if (/\/admin\/leagues\/[^/]+\/seasons\//.test(pathname)) return 'Season Details';
   if (/\/admin\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   if (/\/admin\/teams\/[^/]+/.test(pathname)) return 'Team Details';
+  if (/\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   return '';
 };
 
@@ -57,7 +60,8 @@ const PageHeader = () => {
   };
 
   const handleSwitchPanel = () => {
-    navigate(isAdminPanel ? '/dashboard' : '/admin/leagues');
+    if (isAdminPanel) navigate('/leagues');
+    else navigate('/admin/leagues');
   };
 
   return (
@@ -71,13 +75,13 @@ const PageHeader = () => {
             ref={dropdownRef}
           >
             {isAdmin && (
-              <Tooltip text="Dashboard">
+              <Tooltip text={isAdminPanel ? 'User View' : 'Admin Panel'}>
                 <button
                   className={styles.switchBtn}
                   onClick={handleSwitchPanel}
                 >
                   <Icon
-                    name="apps"
+                    name={isAdminPanel ? 'apps' : 'shield'}
                     size="1.1rem"
                   />
                 </button>

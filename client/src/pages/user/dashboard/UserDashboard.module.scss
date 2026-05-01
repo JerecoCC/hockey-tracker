@@ -1,0 +1,191 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+// ── Page ───────────────────────────────────────────────────────────────
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-4xl;
+}
+
+// ── Welcome ────────────────────────────────────────────────────────────
+.welcome {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+}
+
+.avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid $border;
+  flex-shrink: 0;
+}
+
+.welcomeName {
+  margin: 0 0 $space-xs;
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+.welcomeEmail {
+  margin: 0;
+  font-size: $font-base;
+  color: $text-dim;
+}
+
+// ── Section ────────────────────────────────────────────────────────────
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+.empty {
+  margin: 0;
+  font-size: $font-base;
+  color: $text-dim;
+  padding: $space-lg 0;
+}
+
+// ── League list ────────────────────────────────────────────────────────
+.leaguesList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.leagueCard {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.leagueHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.leagueLogo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.leagueLogoPlaceholder {
+  width: 28px;
+  height: 28px;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.leagueName {
+  font-size: $font-lg;
+  font-weight: 600;
+  color: $text-bright;
+}
+
+// ── Teams grid ─────────────────────────────────────────────────────────
+.teamsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: $space-md;
+}
+
+// ── Team card ──────────────────────────────────────────────────────────
+.teamCard {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  padding: $space-md $space-lg;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  transition: border-color $transition-fast;
+
+  &.teamCardFavorited {
+    border-color: $accent;
+  }
+}
+
+.teamCardLeft {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  min-width: 0;
+}
+
+.teamLogo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.teamLogoPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.teamName {
+  margin: 0 0 2px;
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-body;
+  @include truncate;
+}
+
+.teamCode {
+  margin: 0;
+  font-size: $font-xs;
+  color: $text-dim;
+}
+
+// ── Star button ────────────────────────────────────────────────────────
+.starBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  color: $text-dim;
+  cursor: pointer;
+  transition: color $transition-fast;
+
+  &:hover {
+    color: $warning-light;
+  }
+
+  &.starActive {
+    color: $warning-light;
+  }
+}

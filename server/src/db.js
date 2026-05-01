@@ -801,6 +801,17 @@ async function initSchema() {
     END$$
   `;
 
+  // ── User favourite teams ───────────────────────────────────────────────────
+  // Connects a user to any number of teams across any league.
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_favorite_teams (
+      user_id    UUID NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+      team_id    UUID NOT NULL REFERENCES teams(id)  ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, team_id)
+    )
+  `;
+
   console.log('Database schema ready');
 }
 

@@ -1,0 +1,119 @@
+@use "../../styles/colors" as *;
+@use "../../styles/mixins" as *;
+
+// ── Layout tokens ──────────────────────────────────────────────────────
+$nav-width: 220px;
+$nav-collapsed-width: 56px;
+
+// ── Shell ──────────────────────────────────────────────────────────────
+.nav {
+  width: $nav-width;
+  height: 100%;
+  background: $bg-card;
+  border-right: 1px solid $border;
+  display: flex;
+  flex-direction: column;
+  padding: $space-2xl 0;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width $transition-layout ease;
+}
+
+// ── Collapsed state ────────────────────────────────────────────────────
+.collapsed {
+  width: $nav-collapsed-width;
+
+  .brandRow {
+    justify-content: flex-start;
+    padding: 0 $space-xl;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: $space-md 0;
+
+    &.active {
+      border-left: 3px solid $accent;
+      padding-left: 0;
+    }
+  }
+}
+
+// ── Top section ────────────────────────────────────────────────────────
+.top {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2xl;
+}
+
+// ── Brand row ──────────────────────────────────────────────────────────
+.brandRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 $space-xl;
+  min-height: $space-3xl;
+}
+
+.brand {
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+// ── Nav list ───────────────────────────────────────────────────────────
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.navItem {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $space-lg;
+  width: 100%;
+  padding: $space-md $space-xl;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  color: $text-light;
+  font-size: $font-nav;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  white-space: nowrap;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    background: $bg-page;
+    color: #e2e8f0;
+  }
+
+  &.active {
+    background: rgba($accent, 0.13);
+    color: $accent-light;
+    border-left: 3px solid $accent;
+    padding-left: calc(#{$space-xl} - 3px);
+  }
+}
+
+.icon {
+  font-size: $font-2xl;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+// ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
+.navTooltipWrapper {
+  display: block;
+  width: 100%;
+}
