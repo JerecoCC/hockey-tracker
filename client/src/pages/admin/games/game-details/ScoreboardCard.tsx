@@ -40,7 +40,8 @@ interface Props {
   liveAwayScore: number;
   liveHomeScore: number;
   overtimeSuffix: string;
-  leagueId: string;
+  /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
+  leagueId?: string;
   onGenerateImage?: () => void;
 }
 
@@ -96,7 +97,11 @@ const ScoreboardCard = ({
           <button
             type="button"
             className={styles.teamLogoBtn}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team_id}`)}
+            onClick={
+              leagueId
+                ? () => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team_id}`)
+                : undefined
+            }
           >
             {game.away_team_logo ? (
               <img
@@ -218,7 +223,11 @@ const ScoreboardCard = ({
           <button
             type="button"
             className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team_id}`)}
+            onClick={
+              leagueId
+                ? () => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team_id}`)
+                : undefined
+            }
           >
             <div className={`${styles.teamInfo} ${styles.teamInfoHome}`}>
               <span className={styles.teamFullName}>{game.home_team_name}</span>

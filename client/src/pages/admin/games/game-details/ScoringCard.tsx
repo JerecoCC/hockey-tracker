@@ -37,19 +37,20 @@ interface Props {
   attempts: ShootoutAttempt[];
   soComplete: boolean;
   deletingAttemptId: string | null;
-  setAccordionRef: (periodId: string) => (el: HTMLDivElement | null) => void;
-  onScoreGoal: (period: 1 | 2 | 3 | 'OT') => void;
-  onEditGoal: (goal: GoalRecord) => void;
-  onDeleteGoal: (goalId: string) => void;
-  onOpenShotsModal: (
+  /** When omitted, no admin action overlays are rendered (used in read-only user view). */
+  setAccordionRef?: (periodId: string) => (el: HTMLDivElement | null) => void;
+  onScoreGoal?: (period: 1 | 2 | 3 | 'OT') => void;
+  onEditGoal?: (goal: GoalRecord) => void;
+  onDeleteGoal?: (goalId: string) => void;
+  onOpenShotsModal?: (
     period: string,
     action: ShotsNextAction,
     showGoalies: boolean,
     showShootsFirst?: boolean,
   ) => void;
-  onAddAttempt: () => void;
-  onEditAttempt: (attempt: ShootoutAttempt) => void;
-  onDeleteAttempt: (attemptId: string) => void;
+  onAddAttempt?: () => void;
+  onEditAttempt?: (attempt: ShootoutAttempt) => void;
+  onDeleteAttempt?: (attemptId: string) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -153,7 +154,7 @@ const ScoringCard = ({
                 />
               </Tooltip>
             )}
-            {isInProgress && goal.id === lastCurrentPeriodGoalId && (
+            {isInProgress && goal.id === lastCurrentPeriodGoalId && onEditGoal && onDeleteGoal && (
               <ActionOverlay className={styles.goalActions}>
                 <Button
                   variant="ghost"
@@ -192,12 +193,12 @@ const ScoringCard = ({
           return (
             <Accordion
               key={num}
-              ref={setAccordionRef(periodId)}
+              ref={setAccordionRef ? setAccordionRef(periodId) : undefined}
               variant="static"
               className={isActive ? styles.periodItemActive : undefined}
               label={<span className={styles.periodLabel}>{label}</span>}
               hoverActions={
-                isActive
+                isActive && onScoreGoal && onOpenShotsModal
                   ? ([
                       {
                         icon: 'sports_hockey',
@@ -274,12 +275,12 @@ const ScoringCard = ({
             const otGoals = goals.filter((g) => g.period === 'OT');
             return (
               <Accordion
-                ref={setAccordionRef('OT')}
+                ref={setAccordionRef ? setAccordionRef('OT') : undefined}
                 variant="static"
                 className={isOTActive ? styles.periodItemActive : undefined}
                 label={<span className={styles.periodLabel}>Overtime</span>}
                 hoverActions={
-                  isOTActive
+                  isOTActive && onScoreGoal && onOpenShotsModal
                     ? ([
                         otGoals.length === 0
                           ? {
@@ -348,7 +349,11 @@ const ScoringCard = ({
             onAddAttempt={onAddAttempt}
             onEditAttempt={onEditAttempt}
             onDeleteAttempt={onDeleteAttempt}
-            onEndGame={() => onOpenShotsModal('SO', { type: 'end-game' }, true)}
+            onEndGame={
+              onOpenShotsModal
+                ? () => onOpenShotsModal('SO', { type: 'end-game' }, true)
+                : undefined
+            }
           />
         )}
       </div>

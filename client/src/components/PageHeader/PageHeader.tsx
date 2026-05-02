@@ -9,7 +9,7 @@ const EXACT_TITLES: Record<string, string> = {
   '/admin/leagues': 'Leagues',
   '/admin/users': 'Users',
   '/dashboard': 'Dashboard',
-  '/leagues': 'Leagues',
+  '/games': 'Games',
 };
 
 const getTitle = (pathname: string): string => {
@@ -19,6 +19,7 @@ const getTitle = (pathname: string): string => {
   if (/\/admin\/leagues\/[^/]+\/seasons\//.test(pathname)) return 'Season Details';
   if (/\/admin\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   if (/\/admin\/teams\/[^/]+/.test(pathname)) return 'Team Details';
+  if (/\/games\/[^/]+/.test(pathname)) return 'Game Details';
   if (/\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   return '';
 };

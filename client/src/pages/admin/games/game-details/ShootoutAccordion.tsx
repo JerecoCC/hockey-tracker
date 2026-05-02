@@ -20,10 +20,11 @@ interface Props {
   className?: string;
   /** Class for the label <span> — keeps the period label style consistent. */
   labelClassName?: string;
-  onAddAttempt: () => void;
-  onEditAttempt: (attempt: ShootoutAttempt) => void;
-  onDeleteAttempt: (id: string) => Promise<void>;
-  onEndGame: () => void;
+  /** When omitted, no admin action overlays are rendered (used in read-only user view). */
+  onAddAttempt?: () => void;
+  onEditAttempt?: (attempt: ShootoutAttempt) => void;
+  onDeleteAttempt?: (id: string) => Promise<void>;
+  onEndGame?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -224,28 +225,31 @@ const ShootoutAccordion = ({
             {photo}
           </>
         )}
-        {isInProgress && attempt.attempt_order === maxAttemptOrder && (
-          <ActionOverlay className={styles.goalActions}>
-            <Button
-              variant="ghost"
-              intent="neutral"
-              icon="edit"
-              size="sm"
-              tooltip="Edit attempt"
-              disabled={deletingAttemptId === attempt.id}
-              onClick={() => onEditAttempt(attempt)}
-            />
-            <Button
-              variant="ghost"
-              intent="danger"
-              icon={deletingAttemptId === attempt.id ? 'hourglass_empty' : 'delete'}
-              size="sm"
-              tooltip={deletingAttemptId === attempt.id ? 'Deleting…' : 'Delete attempt'}
-              disabled={deletingAttemptId === attempt.id}
-              onClick={() => onDeleteAttempt(attempt.id)}
-            />
-          </ActionOverlay>
-        )}
+        {isInProgress &&
+          attempt.attempt_order === maxAttemptOrder &&
+          onEditAttempt &&
+          onDeleteAttempt && (
+            <ActionOverlay className={styles.goalActions}>
+              <Button
+                variant="ghost"
+                intent="neutral"
+                icon="edit"
+                size="sm"
+                tooltip="Edit attempt"
+                disabled={deletingAttemptId === attempt.id}
+                onClick={() => onEditAttempt(attempt)}
+              />
+              <Button
+                variant="ghost"
+                intent="danger"
+                icon={deletingAttemptId === attempt.id ? 'hourglass_empty' : 'delete'}
+                size="sm"
+                tooltip={deletingAttemptId === attempt.id ? 'Deleting…' : 'Delete attempt'}
+                disabled={deletingAttemptId === attempt.id}
+                onClick={() => onDeleteAttempt(attempt.id)}
+              />
+            </ActionOverlay>
+          )}
       </div>
     );
   };
@@ -260,28 +264,29 @@ const ShootoutAccordion = ({
   const canAddAttempt = !soComplete || roundUnbalanced;
   const canEndGame = soComplete && !roundUnbalanced;
 
-  const hoverActions: AccordionAction[] | undefined = isSOActive
-    ? ([
-        canAddAttempt
-          ? {
-              icon: 'sports_hockey',
-              tooltip: 'Add Attempt',
-              intent: 'success' as const,
-              disabled: !!busy,
-              onClick: onAddAttempt,
-            }
-          : null,
-        canEndGame
-          ? {
-              icon: 'flag',
-              tooltip: 'End Game',
-              intent: 'danger' as const,
-              disabled: !!busy,
-              onClick: onEndGame,
-            }
-          : null,
-      ].filter(Boolean) as AccordionAction[])
-    : undefined;
+  const hoverActions: AccordionAction[] | undefined =
+    isSOActive && onAddAttempt && onEndGame
+      ? ([
+          canAddAttempt
+            ? {
+                icon: 'sports_hockey',
+                tooltip: 'Add Attempt',
+                intent: 'success' as const,
+                disabled: !!busy,
+                onClick: onAddAttempt,
+              }
+            : null,
+          canEndGame
+            ? {
+                icon: 'flag',
+                tooltip: 'End Game',
+                intent: 'danger' as const,
+                disabled: !!busy,
+                onClick: onEndGame,
+              }
+            : null,
+        ].filter(Boolean) as AccordionAction[])
+      : undefined;
 
   // ── Render ────────────────────────────────────────────────────────────────
 

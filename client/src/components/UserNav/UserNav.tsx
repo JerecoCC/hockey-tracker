@@ -11,7 +11,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: 'apps' },
-  { label: 'Leagues', path: '/leagues', icon: 'emoji_events' },
+  { label: 'Games', path: '/games', icon: 'sports_hockey' },
 ];
 
 interface UserNavProps {

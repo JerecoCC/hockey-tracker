@@ -7,6 +7,8 @@ import SignupPage from './pages/signup/Signup';
 import AdminLayout from './components/AdminLayout/AdminLayout';
 import UserLayout from './components/UserLayout/UserLayout';
 import UserDashboard from './pages/user/dashboard/UserDashboard';
+import UserGames from './pages/user/games/UserGames';
+import UserGameDetailsPage from './pages/user/games/game-details/UserGameDetailsPage';
 import LeaguesPage from './pages/admin/leagues/Leagues';
 import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
@@ -100,7 +102,8 @@ const router = createBrowserRouter([
     ),
     children: [
       { path: '/dashboard', element: <UserDashboard /> },
-      { path: '/leagues', element: <div /> },
+      { path: '/games', element: <UserGames /> },
+      { path: '/games/:id', element: <UserGameDetailsPage /> },
     ],
   },
   {
