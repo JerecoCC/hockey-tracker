@@ -429,10 +429,15 @@
 
 .goalieRow {
   position: relative;
+  transition: background 0.15s ease;
 
-  &:hover .goalieActions {
-    opacity: 1;
-    pointer-events: auto;
+  &:hover {
+    background: $bg-page;
+
+    .goalieActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
@@ -1205,7 +1210,13 @@
   display: flex;
   align-items: center;
   gap: $space-sm;
-  padding: $space-xs 0;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-sm;
+}
+
+.shotsGoalieRowStarter {
+  border: 1px solid rgba($info, 0.4);
+  background: rgba($info, 0.07);
 }
 
 .shotsGoalieInputs {

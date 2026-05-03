@@ -5,6 +5,7 @@ import Modal from '@/components/Modal/Modal';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
 
 const fmt = (first: string | null, last: string | null) =>
@@ -25,6 +26,7 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
+  lineup: LineupEntry[];
   onClose: () => void;
   upsertGoalieStat: (data: UpsertData) => Promise<void>;
 }
@@ -35,6 +37,7 @@ const GoalieStatsEditModal = ({
   awayRoster,
   homeRoster,
   goalieStats,
+  lineup,
   onClose,
   upsertGoalieStat,
 }: Props) => {
@@ -84,7 +87,7 @@ const GoalieStatsEditModal = ({
   return (
     <Modal
       open={open}
-      title="Goalie Stats"
+      title="Edit Goalie Stats"
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : 'Save'}
       onConfirm={handleConfirm}
@@ -107,10 +110,15 @@ const GoalieStatsEditModal = ({
           const code = isAway ? game.away_team_code : game.home_team_code;
           const primary = isAway ? game.away_team_primary_color : game.home_team_primary_color;
           const text = isAway ? game.away_team_text_color : game.home_team_text_color;
+          const isStarter = lineup.some(
+            (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
+          );
           return (
             <div
               key={field.id}
-              className={styles.shotsGoalieRow}
+              className={[styles.shotsGoalieRow, isStarter ? styles.shotsGoalieRowStarter : '']
+                .filter(Boolean)
+                .join(' ')}
             >
               <span className={styles.goalieNameCell}>
                 {logo ? (

@@ -146,8 +146,23 @@
   flex-shrink: 0;
 }
 
+// ── Stretched link — fills the entire item for right-click / middle-click ─────
+// Sits at z-index 0 so action buttons (z-index 1+) intercept their own clicks.
+.itemLink {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+// ── Clickable variant — show pointer cursor when href is provided ──────────────
+.itemClickable {
+  cursor: pointer;
+}
+
 // ── Hover-revealed actions slot ───────────────────────────────────────────────
 // Structural styles (position, opacity, gradient) live in ActionOverlay.module.scss.
 // This class exists so .item:hover can target it.
 .actions {
+  z-index: 1;
 }

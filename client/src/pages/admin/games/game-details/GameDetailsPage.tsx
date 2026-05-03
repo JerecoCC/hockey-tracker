@@ -815,10 +815,13 @@ const GameDetailsPage = () => {
                                       : stat
                                         ? '1.000'
                                         : '—';
+                                  const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
                                   return (
                                     <tr
                                       key={goalie.player_id}
                                       className={styles.goalieRow}
+                                      style={{ cursor: 'pointer' }}
+                                      onClick={() => navigate(playerHref)}
                                     >
                                       <td className={styles.goalieTdName}>
                                         <span className={styles.goalieNameCell}>
@@ -859,17 +862,12 @@ const GameDetailsPage = () => {
                                                 #{goalie.jersey_number}
                                               </span>
                                             )}
-                                            <Link
-                                              to={`/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`}
-                                              className={styles.playerLink}
-                                            >
-                                              <span className={styles.goalScorer}>
-                                                {formatPlayerName(
-                                                  goalie.first_name,
-                                                  goalie.last_name,
-                                                )}
-                                              </span>
-                                            </Link>
+                                            <span className={styles.goalScorer}>
+                                              {formatPlayerName(
+                                                goalie.first_name,
+                                                goalie.last_name,
+                                              )}
+                                            </span>
                                           </div>
                                         </span>
                                       </td>
@@ -1853,6 +1851,7 @@ const GameDetailsPage = () => {
                             eyebrow={positionPart}
                             name={`${e.last_name}, ${e.first_name}`}
                             placeholder={`${e.first_name[0]}${e.last_name[0]}`}
+                            href={`/admin/leagues/${leagueId}/teams/${e.team_id}/players/${e.player_id}`}
                             rightContent={
                               isStarter
                                 ? { type: 'tag', label: 'Starter', intent: 'accent' }
@@ -2114,6 +2113,7 @@ const GameDetailsPage = () => {
           awayRoster={awayRoster}
           homeRoster={homeRoster}
           goalieStats={goalieStats}
+          lineup={lineup}
           onClose={() => setShotsPeriod(null)}
           updatePeriodShots={updatePeriodShots}
           upsertGoalieStat={async (data) => {
@@ -2137,6 +2137,7 @@ const GameDetailsPage = () => {
           awayRoster={awayRoster}
           homeRoster={homeRoster}
           goalieStats={goalieStats}
+          lineup={lineup}
           onClose={() => setGoalieStatsModalOpen(false)}
           upsertGoalieStat={async (data) => {
             await upsertGoalieStat(data);

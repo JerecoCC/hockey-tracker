@@ -7,6 +7,7 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
 
 export type ShotsNextAction =
@@ -69,6 +70,7 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
+  lineup: LineupEntry[];
   onClose: () => void;
   updatePeriodShots: (period: string, home: number, away: number) => Promise<boolean | undefined>;
   upsertGoalieStat: (data: UpsertGoalieData) => Promise<void>;
@@ -90,6 +92,7 @@ const RecordShotsModal = ({
   awayRoster,
   homeRoster,
   goalieStats,
+  lineup,
   onClose,
   updatePeriodShots,
   upsertGoalieStat,
@@ -231,6 +234,7 @@ const RecordShotsModal = ({
         control={control}
         goalieFields={goalieFields}
         goalieRosterList={goalieRosterList}
+        lineup={lineup}
         showShootsFirst={showShootsFirst}
         soFirstTeam={soFirstTeam}
         setSoFirstTeam={setSoFirstTeam}
@@ -248,6 +252,7 @@ interface BodyProps {
   control: Control<ShotsFormValues, any>;
   goalieFields: FieldArrayWithId<ShotsFormValues, 'goalies'>[];
   goalieRosterList: GameRosterEntry[];
+  lineup: LineupEntry[];
   showShootsFirst: boolean;
   soFirstTeam: 'away' | 'home' | null;
   setSoFirstTeam: Dispatch<SetStateAction<'away' | 'home' | null>>;
@@ -261,6 +266,7 @@ const RecordShotsBody = ({
   control,
   goalieFields,
   goalieRosterList,
+  lineup,
   showShootsFirst,
   soFirstTeam,
   setSoFirstTeam,
@@ -414,10 +420,15 @@ const RecordShotsBody = ({
             const code = isAway ? game.away_team_code : game.home_team_code;
             const primary = isAway ? game.away_team_primary_color : game.home_team_primary_color;
             const text = isAway ? game.away_team_text_color : game.home_team_text_color;
+            const isStarter = lineup.some(
+              (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
+            );
             return (
               <div
                 key={field.id}
-                className={styles.shotsGoalieRow}
+                className={[styles.shotsGoalieRow, isStarter ? styles.shotsGoalieRowStarter : '']
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 <span className={styles.goalieNameCell}>
                   {renderTeamLogo(
