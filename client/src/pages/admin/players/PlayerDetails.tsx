@@ -133,7 +133,9 @@ const PlayerDetailsPage = () => {
   const initials = `${player.first_name[0]}${player.last_name[0]}`;
   const latestStint = stints[0];
   const jerseyNumber = latestStint?.jersey_number ?? null;
-  const photo = latestStint?.photo ?? player.photo;
+  // Use the first stint (active) photo; if that's missing, fall back to the most-recent
+  // historical stint that does have a photo; then fall back to the global player photo.
+  const photo = stints.find((s) => s.photo)?.photo ?? player.photo;
   const avatarBg = latestStint?.primary_color ?? undefined;
   const avatarColor = latestStint?.text_color ?? undefined;
   const positionLabel = player.position
