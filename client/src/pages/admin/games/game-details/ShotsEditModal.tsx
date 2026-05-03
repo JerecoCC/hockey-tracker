@@ -49,11 +49,9 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
       const row = rows[i];
       const periodId = periods[i]?.id;
       if (!row || !periodId) continue;
-      const away = parseInt(row.away_shots, 10);
-      const home = parseInt(row.home_shots, 10);
-      if (!isNaN(away) && !isNaN(home)) {
-        await updatePeriodShots(periodId, home, away);
-      }
+      const away = parseInt(row.away_shots || '0', 10);
+      const home = parseInt(row.home_shots || '0', 10);
+      await updatePeriodShots(periodId, home, away);
     }
     setSubmitting(false);
     onClose();

@@ -373,10 +373,6 @@ const GameDetailsPage = () => {
     away: false,
     home: false,
   });
-  const [lineupInheritBusy, setLineupInheritBusy] = useState<{ away: boolean; home: boolean }>({
-    away: false,
-    home: false,
-  });
 
   // ── Lineup modal state ────────────────────────────────────────────────────
   const [lineupAddTeam, setLineupAddTeam] = useState<'away' | 'home' | null>(null);
@@ -393,14 +389,19 @@ const GameDetailsPage = () => {
   // Both teams must have at least one persisted (non-inherited) roster entry.
   const rosterReady = awayRoster.length > 0 && homeRoster.length > 0;
 
-  // Both teams must have all 6 position slots covered (inherited entries from the
-  // last game count — they represent a real lineup that can be used as-is).
+  // Both teams must have all 6 position slots covered (saved or inherited) AND every
+  // player in those slots must be on the current game's roster. If a traded/injured
+  // player is in the inherited lineup but not rostered, the guard fires and the admin
+  // must explicitly fix the lineup before starting.
   const lineupsReady = (() => {
     if (!game) return false;
     const SLOTS = ['C', 'LW', 'RW', 'D1', 'D2', 'G'] as const;
+    const rosterIds = new Set(roster.map((e) => e.player_id));
     const hasAll = (teamId: string) => {
       const entries = lineup.filter((e) => e.team_id === teamId);
-      return SLOTS.every((slot) => entries.some((e) => e.position_slot === slot));
+      return SLOTS.every((slot) =>
+        entries.some((e) => e.position_slot === slot && rosterIds.has(e.player_id)),
+      );
     };
     return hasAll(game.away_team_id) && hasAll(game.home_team_id);
   })();
@@ -1758,37 +1759,7 @@ const GameDetailsPage = () => {
                                 },
                               ]
                             : []),
-                          ...(inheritedLineupMap.size > 0 &&
-                          lineupMap.size === 0 &&
-                          rosterEntries.length > 0
-                            ? [
-                                {
-                                  icon: 'history',
-                                  tooltip: "Apply Last Game's Starting Lineup",
-                                  intent: 'warning' as const,
-                                  disabled: lineupInheritBusy[side],
-                                  onClick: () => {
-                                    const teamId =
-                                      side === 'away' ? game.away_team_id : game.home_team_id;
-                                    const teamName =
-                                      side === 'away' ? game.away_team_name : game.home_team_name;
-                                    const slots = Array.from(inheritedLineupMap.values()).map(
-                                      (e) => ({
-                                        position_slot: e.position_slot,
-                                        player_id: e.player_id,
-                                      }),
-                                    );
-                                    setLineupInheritBusy((prev) => ({ ...prev, [side]: true }));
-                                    saveTeamLineup(teamId, slots, teamName).finally(() =>
-                                      setLineupInheritBusy((prev) => ({
-                                        ...prev,
-                                        [side]: false,
-                                      })),
-                                    );
-                                  },
-                                },
-                              ]
-                            : []),
+
                           ...(rosterEntries.length > 0
                             ? [
                                 {

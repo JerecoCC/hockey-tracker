@@ -173,12 +173,8 @@ const RecordShotsModal = ({
     const isSOEndGame = period === 'SO' && isEndGame;
     setSubmitting(true);
     if (!isSOEndGame) {
-      const away = parseInt(away_shots, 10);
-      const home = parseInt(home_shots, 10);
-      if (isNaN(away) || isNaN(home)) {
-        setSubmitting(false);
-        return;
-      }
+      const away = parseInt(away_shots || '0', 10);
+      const home = parseInt(home_shots || '0', 10);
       const ok = await updatePeriodShots(period, home, away);
       if (!ok) {
         setSubmitting(false);
