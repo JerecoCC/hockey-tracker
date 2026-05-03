@@ -636,7 +636,7 @@
 }
 
 .prevMeetingDate {
-  font-size: $font-base;
+  font-size: $font-sm;
   color: $text-dim;
   white-space: nowrap;
   min-width: 48px;
@@ -655,22 +655,22 @@
 }
 
 .prevMeetingCode {
-  font-size: $font-body;
+  font-size: $font-base;
   font-weight: 600;
   color: $text-bright;
 }
 
 .prevMeetingLogo {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .prevMeetingLogoPlaceholder {
-  width: 40px;
-  height: 40px;
-  font-size: 10px;
+  width: 32px;
+  height: 32px;
+  font-size: 9px;
   font-weight: 700;
   border: 1px solid $border;
   border-radius: 50%;
@@ -684,7 +684,7 @@
   display: flex;
   align-items: center;
   gap: 3px;
-  font-size: $font-body;
+  font-size: $font-base;
   font-weight: 600;
   white-space: nowrap;
   min-width: 72px;
@@ -705,7 +705,7 @@
 }
 
 .prevMeetingSuffix {
-  font-size: $font-base;
+  font-size: $font-sm;
   font-weight: 400;
   color: $text-dim;
   margin-left: $space-xs;
@@ -765,7 +765,7 @@
 
 // Result label (W / OTW / OTL / L)
 .lastFiveListResult {
-  font-size: $font-body;
+  font-size: $font-base;
   font-weight: 700;
   width: 36px;
   text-align: center;
@@ -786,8 +786,8 @@
 
 // Logo circle in list rows
 .lastFiveListLogo {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   border: 1px solid $border;
   display: flex;
@@ -799,8 +799,8 @@
 }
 
 .lastFiveListLogoImg {
-  width: 28px;
-  height: 28px;
+  width: 22px;
+  height: 22px;
   object-fit: contain;
 }
 
@@ -813,7 +813,7 @@
 // Opponent name (home/away indicator + name)
 .lastFiveListOpp {
   flex: 1;
-  font-size: $font-body;
+  font-size: $font-base;
   color: $text-body;
   min-width: 0;
   overflow: hidden;
@@ -826,7 +826,7 @@
   display: flex;
   align-items: center;
   gap: $space-xs;
-  font-size: $font-body;
+  font-size: $font-base;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   color: $text-bright;
@@ -835,14 +835,14 @@
 
 // "(OT)" / "(SO)" appended after the score
 .lastFiveListSuffix {
-  font-size: $font-base;
+  font-size: $font-sm;
   font-weight: 400;
   color: $text-dim;
 }
 
 // Date at far right
 .lastFiveListDate {
-  font-size: $font-base;
+  font-size: $font-sm;
   color: $text-dim;
   white-space: nowrap;
 }
@@ -912,8 +912,8 @@
 
 // Circle frame around the opponent logo
 .lastFiveLogoCircle {
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
   border: 1px solid;
   display: flex;
@@ -942,8 +942,8 @@
 
 // Opponent logo inside the circle
 .lastFiveOpponentLogo {
-  width: 34px;
-  height: 34px;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
   filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
 }
@@ -1008,15 +1008,15 @@
 }
 
 .linescoreLogo {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .linescoreLogoPlaceholder {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -1130,15 +1130,15 @@
 }
 
 .shotsTeamLogo {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .shotsTeamLogoPlaceholder {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
