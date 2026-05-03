@@ -149,8 +149,8 @@ router.get('/', async (req, res) => {
             JOIN player_teams pt ON pt.player_id  = p.id
                                 AND pt.team_id    = ${team_id}
                                 AND pt.season_id  = ${season_id}
-                                AND (pt.start_date IS NULL OR pt.start_date <= CURRENT_DATE)
-                                AND (pt.end_date   IS NULL OR pt.end_date   >= CURRENT_DATE)
+                                AND (pt.start_date IS NULL OR pt.start_date <= (NOW() AT TIME ZONE 'America/New_York')::date)
+                                AND (pt.end_date   IS NULL OR pt.end_date   >  (NOW() AT TIME ZONE 'America/New_York')::date)
             JOIN teams        t  ON t.id           = pt.team_id
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations

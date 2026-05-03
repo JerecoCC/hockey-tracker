@@ -23,9 +23,12 @@ interface Props {
 }
 
 const dayBefore = (dateStr: string): string => {
+  // Anchor at noon UTC on the given date (always same EST calendar day), subtract one day,
+  // then format back in EST — consistent with the server's America/New_York default.
   const [y, m, d] = dateStr.split('-').map(Number);
-  const prev = new Date(y, m - 1, d - 1); // pure local-date arithmetic, no UTC shift
-  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
+  const dt = new Date(Date.UTC(y, m - 1, d, 17, 0, 0)); // 17:00 UTC = noon EST / 1pm EDT
+  dt.setUTCDate(dt.getUTCDate() - 1);
+  return dt.toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
 };
 
 const ChangeJerseyModal = ({ open, stint, history, onClose, changeJerseyNumber }: Props) => {
