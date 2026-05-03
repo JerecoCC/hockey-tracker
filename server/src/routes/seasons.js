@@ -583,7 +583,7 @@ router.get('/:seasonId/groups', async (req, res) => {
         )
       SELECT
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at,
-        g.is_auto,
+        g.is_auto, g.role,
         COALESCE(
           json_agg(
             json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo,

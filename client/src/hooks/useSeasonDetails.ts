@@ -23,6 +23,8 @@ export interface SeasonGroupRecord {
   name: string;
   sort_order: number;
   created_at: string;
+  /** Semantic playoff role: 'conference' | 'division' | null (no special role). */
+  role: 'conference' | 'division' | null;
   teams: GroupTeamRecord[];
   /** True when this group has season-specific team overrides (vs. league defaults). */
   has_season_override: boolean;

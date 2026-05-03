@@ -833,6 +833,30 @@ async function initSchema() {
     $$
   `;
 
+  // ── Group role ────────────────────────────────────────────────────────────
+  // Semantic role of a top-level group used by the playoff qualification engine.
+  // 'conference' — a conference-level grouping (e.g. Eastern, Western).
+  // 'division'   — a division-level grouping (e.g. Atlantic, Metropolitan).
+  // NULL          — the group has no special playoff role.
+  await sql`
+    ALTER TABLE groups
+      ADD COLUMN IF NOT EXISTS role TEXT
+        CHECK (role IN ('conference', 'division'))
+  `;
+
+  // ── League playoff qualification format ───────────────────────────────────
+  // JSONB array of qualification rules evaluated in order.
+  // Each rule: { scope: 'league'|'conference'|'division', method: 'top'|'wildcard', count: N }
+  // Examples:
+  //   PWHL (top 4 overall): [{"scope":"league","method":"top","count":4}]
+  //   NHL  (top 3/div + 2 WC/conf):
+  //     [{"scope":"division","method":"top","count":3},
+  //      {"scope":"conference","method":"wildcard","count":2}]
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS playoff_format JSONB
+  `;
+
   console.log('Database schema ready');
 }
 

@@ -1,12 +1,27 @@
 import Card from '@/components/Card/Card';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
+import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import styles from './LeagueDetails.module.scss';
 
 const normalizeDescription = (html: string | null | undefined): string | null => {
   if (!html || html === '<p></p>') return null;
   return html;
 };
+
+const SCOPE_LABEL: Record<PlayoffFormatRule['scope'], string> = {
+  league: 'league-wide',
+  conference: 'per conference',
+  division: 'per division',
+};
+
+const METHOD_LABEL: Record<PlayoffFormatRule['method'], string> = {
+  top: 'top',
+  wildcard: 'wildcard',
+};
+
+const formatRuleText = (r: PlayoffFormatRule): string =>
+  `${METHOD_LABEL[r.method] === 'top' ? `Top ${r.count}` : `${r.count} wildcard`} ${SCOPE_LABEL[r.scope]}`;
 
 interface Props {
   league: LeagueFullRecord;
@@ -41,6 +56,23 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
       <div className={styles.infoItem}>
         <span className={styles.infoLabel}>Scoring System</span>
         <span className={styles.infoValue}>{league.scoring_system}</span>
+      </div>
+      <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
+        <span className={styles.infoLabel}>Playoff Qualification</span>
+        {league.playoff_format && league.playoff_format.length > 0 ? (
+          <ol className={styles.playoffFormatList}>
+            {league.playoff_format.map((r, i) => (
+              <li
+                key={i}
+                className={styles.infoValue}
+              >
+                {formatRuleText(r)}
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <span className={styles.infoValueMuted}>Not configured — managed manually</span>
+        )}
       </div>
       <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
         <span className={styles.infoLabel}>Description</span>

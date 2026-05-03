@@ -1,11 +1,22 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
+import Icon from '@/components/Icon/Icon';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
-import { type CreateLeagueData } from '@/hooks/useLeagues';
+import { type CreateLeagueData, type PlayoffFormatRule } from '@/hooks/useLeagues';
 import styles from './LeagueEditModal.module.scss';
+
+const SCOPE_OPTIONS: { value: PlayoffFormatRule['scope']; label: string }[] = [
+  { value: 'league', label: 'Whole League' },
+  { value: 'conference', label: 'Per Conference' },
+  { value: 'division', label: 'Per Division' },
+];
+const METHOD_OPTIONS: { value: PlayoffFormatRule['method']; label: string }[] = [
+  { value: 'top', label: 'Top N (direct)' },
+  { value: 'wildcard', label: 'Wildcard (best remaining)' },
+];
 
 const BEST_OF_OPTIONS = [
   { value: '3', label: 'Best of 3' },
@@ -69,6 +80,8 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
     },
   });
 
+  const [formatRules, setFormatRules] = useState<PlayoffFormatRule[]>([]);
+
   useEffect(() => {
     if (!open) return;
     reset({
@@ -82,7 +95,16 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_shootout: String(league.best_of_shootout ?? 3),
       scoring_system: league.scoring_system ?? '2-1-0',
     });
+    setFormatRules(league.playoff_format ?? []);
   }, [open, league, reset]);
+
+  const addRule = () =>
+    setFormatRules((prev) => [...prev, { scope: 'league', method: 'top', count: 4 }]);
+
+  const updateRule = (idx: number, patch: Partial<PlayoffFormatRule>) =>
+    setFormatRules((prev) => prev.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+
+  const removeRule = (idx: number) => setFormatRules((prev) => prev.filter((_, i) => i !== idx));
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -101,6 +123,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       best_of_playoff: parseInt(data.best_of_playoff, 10),
       best_of_shootout: parseInt(data.best_of_shootout, 10),
       scoring_system: data.scoring_system,
+      playoff_format: formatRules.length > 0 ? formatRules : null,
     };
     const ok = await updateLeague(league.id, payload);
     if (ok) onClose();
@@ -187,6 +210,94 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
           options={SCORING_SYSTEM_OPTIONS}
           disabled={isSubmitting}
         />
+        {/* ── Playoff Qualification Format ──────────────────────────────── */}
+        <div className={styles.formatSection}>
+          <span className={styles.formatLabel}>Playoff Qualification Format</span>
+          <p className={styles.formatHint}>
+            Rules are evaluated in order. Set group roles (Conference / Division) on the league
+            groups to make scope-based rules work.
+          </p>
+          {formatRules.length === 0 && (
+            <p className={styles.formatEmpty}>No rules set — qualification is managed manually.</p>
+          )}
+          {formatRules.map((rule, idx) => (
+            <div
+              key={idx}
+              className={styles.formatRule}
+            >
+              <select
+                className={styles.formatRuleSelect}
+                value={rule.scope}
+                onChange={(e) =>
+                  updateRule(idx, { scope: e.target.value as PlayoffFormatRule['scope'] })
+                }
+                disabled={isSubmitting}
+              >
+                {SCOPE_OPTIONS.map((o) => (
+                  <option
+                    key={o.value}
+                    value={o.value}
+                  >
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                className={styles.formatRuleSelect}
+                value={rule.method}
+                onChange={(e) =>
+                  updateRule(idx, { method: e.target.value as PlayoffFormatRule['method'] })
+                }
+                disabled={isSubmitting}
+              >
+                {METHOD_OPTIONS.map((o) => (
+                  <option
+                    key={o.value}
+                    value={o.value}
+                  >
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+              <input
+                type="number"
+                className={styles.formatRuleCount}
+                value={rule.count}
+                min={1}
+                max={32}
+                onChange={(e) =>
+                  updateRule(idx, { count: Math.max(1, parseInt(e.target.value, 10) || 1) })
+                }
+                disabled={isSubmitting}
+              />
+              <button
+                type="button"
+                className={styles.formatRuleDelete}
+                onClick={() => removeRule(idx)}
+                disabled={isSubmitting}
+                aria-label="Remove rule"
+              >
+                <Icon
+                  name="close"
+                  size="0.85em"
+                />
+              </button>
+            </div>
+          ))}
+          <button
+            type="button"
+            className={styles.formatRuleDelete}
+            style={{ alignSelf: 'flex-start', width: 'auto', padding: '4px 10px', gap: '4px' }}
+            onClick={addRule}
+            disabled={isSubmitting}
+          >
+            <Icon
+              name="add"
+              size="0.85em"
+            />
+            Add Rule
+          </button>
+        </div>
         <Field
           label="Description"
           type="richtext"

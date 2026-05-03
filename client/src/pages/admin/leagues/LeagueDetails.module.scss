@@ -121,6 +121,14 @@
   font-style: italic;
 }
 
+.playoffFormatList {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
 .teamList {
   list-style: none;
   margin: 0;
@@ -406,6 +414,38 @@
 
 .groupInlineBtnCancel {
   color: $text-dim;
+}
+
+// Group label with optional role badge
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+// Small pill badge indicating a group's playoff role
+.groupRoleBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba($text-dim, 0.15);
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+.groupRoleBadge_conference {
+  background: rgba(#6366f1, 0.18);
+  color: #a5b4fc;
+}
+
+.groupRoleBadge_division {
+  background: rgba(#10b981, 0.18);
+  color: #6ee7b7;
 }
 
 // Always-visible footer row inside each group node

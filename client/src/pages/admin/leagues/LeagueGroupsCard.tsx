@@ -87,7 +87,10 @@ interface Props {
   loading: boolean;
   busy: string | null;
   addGroup: (data: CreateGroupData) => Promise<boolean>;
-  updateGroup: (id: string, payload: { name: string }) => Promise<boolean>;
+  updateGroup: (
+    id: string,
+    payload: Partial<Omit<CreateGroupData, 'league_id'>>,
+  ) => Promise<boolean>;
   onAddTeam: (group: GroupRecord) => void;
   onCreateTeam: () => void;
   onEditTeam: (teamId: string) => void;
@@ -98,6 +101,11 @@ interface Props {
 }
 
 // ── GroupNode ────────────────────────────────────────────────────────────────
+
+type GroupRole = 'conference' | 'division' | null;
+
+const ROLE_CYCLE: GroupRole[] = [null, 'conference', 'division'];
+const ROLE_LABELS: Record<string, string> = { conference: 'Conference', division: 'Division' };
 
 interface GroupNodeProps {
   group: GroupRecord;
@@ -113,6 +121,7 @@ interface GroupNodeProps {
   onDeleteTeam: (teamId: string) => Promise<void>;
   onEditTeam: (teamId: string) => void;
   onViewTeam: (teamId: string) => void;
+  onSetRole: (groupId: string, role: GroupRole) => Promise<void>;
   depth?: number;
 }
 
@@ -131,6 +140,7 @@ const GroupNode = (props: GroupNodeProps) => {
     onDeleteTeam,
     onEditTeam,
     onViewTeam,
+    onSetRole,
     depth = 0,
   } = props;
   const [confirmDeleteTeam, setConfirmDeleteTeam] = useState<GroupTeamRecord | null>(null);
@@ -144,6 +154,14 @@ const GroupNode = (props: GroupNodeProps) => {
   const isAddingChild = inlineMode?.type === 'add' && inlineMode.parentId === group.id;
   const isLeaf = children.length === 0;
 
+  const handleCycleRole = () => {
+    const idx = ROLE_CYCLE.indexOf(group.role as GroupRole);
+    const next = ROLE_CYCLE[(idx + 1) % ROLE_CYCLE.length];
+    onSetRole(group.id, next);
+  };
+
+  const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
+
   return (
     <li className={styles.groupItem}>
       {isEditing ? (
@@ -155,7 +173,18 @@ const GroupNode = (props: GroupNodeProps) => {
       ) : (
         <Accordion
           className={depth > 0 ? styles.groupItemChild : undefined}
-          label={group.name}
+          label={
+            <span className={styles.groupLabel}>
+              {group.name}
+              {roleLabel && (
+                <span
+                  className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}
+                >
+                  {roleLabel}
+                </span>
+              )}
+            </span>
+          }
           hoverActions={
             [
               depth === 0 && !isAddingChild && group.teams.length === 0
@@ -166,6 +195,15 @@ const GroupNode = (props: GroupNodeProps) => {
                     onClick: () => onStartAdd(group.id),
                   }
                 : null,
+              {
+                icon: 'label',
+                intent: 'neutral' as const,
+                disabled: busy === group.id,
+                tooltip: group.role
+                  ? `Role: ${ROLE_LABELS[group.role]} (click to change)`
+                  : 'Set playoff role',
+                onClick: handleCycleRole,
+              },
               {
                 icon: 'edit',
                 intent: 'accent' as const,
@@ -263,6 +301,7 @@ const GroupNode = (props: GroupNodeProps) => {
                     onDeleteTeam={onDeleteTeam}
                     onEditTeam={onEditTeam}
                     onViewTeam={onViewTeam}
+                    onSetRole={onSetRole}
                     depth={depth + 1}
                   />
                 ))}
@@ -338,6 +377,10 @@ const LeagueGroupsCard = (props: Props) => {
   };
   const handleCancel = () => setInlineMode(null);
 
+  const handleSetRole = async (groupId: string, role: GroupRole) => {
+    await updateGroup(groupId, { role });
+  };
+
   const isRootAdding = inlineMode?.type === 'add' && inlineMode.parentId === null;
 
   return (
@@ -387,6 +430,7 @@ const LeagueGroupsCard = (props: Props) => {
                   onDeleteTeam={onDeleteTeam}
                   onEditTeam={onEditTeam}
                   onViewTeam={onViewTeam}
+                  onSetRole={handleSetRole}
                 />
               ))}
             </ul>

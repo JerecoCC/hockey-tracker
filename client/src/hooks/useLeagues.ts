@@ -5,6 +5,20 @@ import { toast } from 'react-toastify';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
+/** One rule in the playoff qualification format. Evaluated in order. */
+export interface PlayoffFormatRule {
+  /** Which grouping level this rule applies to. 'league' = entire league. */
+  scope: 'league' | 'conference' | 'division';
+  /**
+   * How teams qualify:
+   * 'top'      — the top N teams in each scope group qualify directly.
+   * 'wildcard' — the best N remaining teams (not yet qualified) in the parent scope.
+   */
+  method: 'top' | 'wildcard';
+  /** Number of teams that qualify per scope instance. */
+  count: number;
+}
+
 export interface LeagueRecord {
   id: string;
   name: string;
@@ -18,6 +32,8 @@ export interface LeagueRecord {
   best_of_shootout: number;
   /** Point system used for standings: '3-2-1-0' (win/OTW/OTL/loss) or '2-1-0' (win/OTL/loss). */
   scoring_system: '3-2-1-0' | '2-1-0';
+  /** Ordered list of qualification rules. Null means no programmatic format is set. */
+  playoff_format: PlayoffFormatRule[] | null;
 }
 
 export interface CreateLeagueData {
@@ -30,6 +46,7 @@ export interface CreateLeagueData {
   best_of_playoff?: number;
   best_of_shootout?: number;
   scoring_system?: '3-2-1-0' | '2-1-0';
+  playoff_format?: PlayoffFormatRule[] | null;
 }
 
 const authHeaders = () => {
