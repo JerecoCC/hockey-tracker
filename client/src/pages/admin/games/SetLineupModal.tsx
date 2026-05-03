@@ -61,8 +61,8 @@ const SLOT_LABEL: Record<LineupPositionSlot, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
-  D1: 'Defence',
-  D2: 'Defence',
+  D1: 'Left Defense',
+  D2: 'Right Defense',
   G: 'Goalie',
 };
 
@@ -163,9 +163,9 @@ const SetLineupModal = ({
         {slotSelect('LW', SLOT_LABEL.LW)}
         {slotSelect('RW', SLOT_LABEL.RW)}
 
-        {/* Defence 1 + Defence 2 — one column each */}
-        {slotSelect('D1', `${SLOT_LABEL.D1} 1`)}
-        {slotSelect('D2', `${SLOT_LABEL.D2} 2`)}
+        {/* Left Defense + Right Defense — one column each */}
+        {slotSelect('D1', SLOT_LABEL.D1)}
+        {slotSelect('D2', SLOT_LABEL.D2)}
 
         {/* Goalie — spans both columns */}
         <div className={styles.spanFull}>{slotSelect('G', SLOT_LABEL.G)}</div>
