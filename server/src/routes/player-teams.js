@@ -190,7 +190,7 @@ router.get('/history/:playerId', async (req, res) => {
       ) ti ON true
       WHERE pt.player_id = ${playerId}
         ${season_id ? sql`AND pt.season_id = ${season_id}` : sql``}
-      ORDER BY COALESCE(pt.start_date, pt.created_at::date) DESC, pt.created_at DESC
+      ORDER BY pt.end_date DESC NULLS FIRST, COALESCE(pt.start_date, pt.created_at::date) DESC, pt.created_at DESC
     `;
     return res.json(rows);
   } catch (err) {
