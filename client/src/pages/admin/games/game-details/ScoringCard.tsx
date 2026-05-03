@@ -387,6 +387,7 @@ const ScoringCard = ({
             onAddAttempt={onAddAttempt}
             onEditAttempt={onEditAttempt}
             onDeleteAttempt={onDeleteAttempt}
+            getPlayerHref={getPlayerHref}
             onEndGame={
               onOpenShotsModal
                 ? () => onOpenShotsModal('SO', { type: 'end-game' }, true)

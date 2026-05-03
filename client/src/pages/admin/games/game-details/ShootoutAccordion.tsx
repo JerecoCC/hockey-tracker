@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
@@ -25,6 +26,8 @@ interface Props {
   onEditAttempt?: (attempt: ShootoutAttempt) => void;
   onDeleteAttempt?: (id: string) => Promise<void>;
   onEndGame?: () => void;
+  /** When provided, shooter names become navigation links. */
+  getPlayerHref?: (playerId: string) => string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -43,6 +46,7 @@ const ShootoutAccordion = ({
   onEditAttempt,
   onDeleteAttempt,
   onEndGame,
+  getPlayerHref,
 }: Props) => {
   const isSOActive = !isFinal && game.current_period === 'SO';
   const isSODone = isFinal;
@@ -191,6 +195,18 @@ const ShootoutAccordion = ({
       </span>
     );
 
+    const href = getPlayerHref ? getPlayerHref(attempt.shooter_id) : undefined;
+    const nameEl = href ? (
+      <Link
+        to={href}
+        className={styles.soAttemptName}
+      >
+        {shooterName}
+      </Link>
+    ) : (
+      <span className={styles.soAttemptName}>{shooterName}</span>
+    );
+
     const playerInfo = (
       <div
         className={[styles.soAttemptPlayerInfo, !isAway ? styles.soAttemptPlayerInfoAway : '']
@@ -198,7 +214,7 @@ const ShootoutAccordion = ({
           .join(' ')}
       >
         {jerseyLabel && <span className={styles.soAttemptJersey}>{jerseyLabel}</span>}
-        <span className={styles.soAttemptName}>{shooterName}</span>
+        {nameEl}
       </div>
     );
 

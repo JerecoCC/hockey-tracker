@@ -98,7 +98,7 @@ const RecordShotsModal = ({
   onEndGameReady,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
-  const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>(null);
+  const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>('home');
 
   const goalieRosterList = showGoalies
     ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
@@ -124,7 +124,7 @@ const RecordShotsModal = ({
           };
         }),
       });
-      setSoFirstTeam(null);
+      setSoFirstTeam('home');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
