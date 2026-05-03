@@ -108,15 +108,26 @@ router.patch('/', async (req, res) => {
           AND end_date IS NULL
       `;
       if (current && current.jersey_number !== jersey_number) {
-        const changeDate = effective_date ?? new Date().toISOString().slice(0, 10);
+        const changeDate = effective_date ?? new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' });
         // Seed initial history if none exists for this stint yet.
         const existingHistory = await sql`
           SELECT 1 FROM jersey_number_history WHERE player_teams_id = ${current.id} LIMIT 1
         `;
         if (existingHistory.length === 0 && current.jersey_number != null) {
+          // If the effective_date is backdated before the stint's natural start, use the
+          // season start date so the old jersey's entry always sorts before the new one.
+          let seedDate = current.effective_start;
+          if (seedDate >= changeDate) {
+            const [season] = await sql`
+              SELECT start_date::text AS start_date FROM seasons
+              JOIN player_teams ON player_teams.season_id = seasons.id
+              WHERE player_teams.id = ${current.id}
+            `;
+            seedDate = season?.start_date ?? changeDate;
+          }
           await sql`
             INSERT INTO jersey_number_history (player_teams_id, jersey_number, effective_from)
-            VALUES (${current.id}, ${current.jersey_number}, ${current.effective_start})
+            VALUES (${current.id}, ${current.jersey_number}, ${seedDate})
           `;
         }
         // Record the new number going forward.
@@ -184,6 +195,33 @@ router.get('/history/:playerId', async (req, res) => {
     return res.json(rows);
   } catch (err) {
     console.error('player-teams history error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/player-teams/history/:playerId/jerseys
+// Returns all jersey_number_history rows across every stint of a player,
+// ordered by stint then effective_from ASC. Callers can group by
+// player_teams_id to display a per-stint jersey number timeline.
+// ---------------------------------------------------------------------------
+router.get('/history/:playerId/jerseys', async (req, res) => {
+  const { playerId } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        jnh.id,
+        jnh.player_teams_id,
+        jnh.jersey_number,
+        jnh.effective_from::text AS effective_from
+      FROM jersey_number_history jnh
+      JOIN player_teams pt ON pt.id = jnh.player_teams_id
+      WHERE pt.player_id = ${playerId}
+      ORDER BY jnh.player_teams_id, jnh.effective_from ASC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('jersey history error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

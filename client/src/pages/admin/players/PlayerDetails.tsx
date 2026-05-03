@@ -16,6 +16,7 @@ import useTeams from '@/hooks/useTeams';
 import {
   usePlayerTradeHistory,
   useStintActions,
+  useJerseyHistory,
   type PlayerStintRecord,
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
@@ -23,6 +24,7 @@ import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import StintEditModal from './StintEditModal';
+import ChangeJerseyModal from './ChangeJerseyModal';
 import styles from './PlayerDetails.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -75,7 +77,10 @@ const PlayerDetailsPage = () => {
   const { player, stats, loading } = usePlayerDetails(id);
   const { team: teamDetails } = useTeamDetails(teamId);
   const { stints } = usePlayerTradeHistory(id ?? null);
-  const { createStint, updateStint, uploadStintPhoto } = useStintActions(id ?? null);
+  const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
+  const { createStint, updateStint, changeJerseyNumber, uploadStintPhoto } = useStintActions(
+    id ?? null,
+  );
   const { teams } = useTeams();
   const { seasons } = useSeasons();
   const queryClient = useQueryClient();
@@ -83,6 +88,7 @@ const PlayerDetailsPage = () => {
   const [editPlayerOpen, setEditPlayerOpen] = useState(false);
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
+  const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
 
   const updatePlayer = async (
     playerId: string,
@@ -318,11 +324,21 @@ const PlayerDetailsPage = () => {
                           <div className={styles.stintInfo}>
                             <span className={styles.stintTeam}>{s.team_name ?? '—'}</span>
                             <span className={styles.stintMeta}>
-                              {s.jersey_number != null ? `#${s.jersey_number} • ` : ''}
+                              {s.jersey_number != null ? `#${s.jersey_number} · ` : ''}
                               {s.start_date ? s.start_date.slice(0, 10) : '?'} –{' '}
                               {s.end_date ? s.end_date.slice(0, 10) : 'Present'}
                             </span>
                           </div>
+                          {!s.end_date && (
+                            <Button
+                              variant="outlined"
+                              intent="neutral"
+                              icon="jersey"
+                              size="sm"
+                              tooltip="Change jersey number"
+                              onClick={() => setChangingJerseyStint(s)}
+                            />
+                          )}
                           <Button
                             variant="outlined"
                             intent="neutral"
@@ -353,6 +369,14 @@ const PlayerDetailsPage = () => {
         uploadPlayerPhoto={uploadStintPhoto}
       />
 
+      <ChangeJerseyModal
+        open={!!changingJerseyStint}
+        stint={changingJerseyStint}
+        history={jerseyHistoryByStint[changingJerseyStint?.id ?? ''] ?? []}
+        onClose={() => setChangingJerseyStint(null)}
+        changeJerseyNumber={changeJerseyNumber}
+      />
+
       <StintEditModal
         open={creatingStint || !!editingStint}
         stint={editingStint}
@@ -370,6 +394,7 @@ const PlayerDetailsPage = () => {
   );
 };
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 // ── Helper: label/value cell ────────────────────────────────────────────────
 const InfoCell = ({ label, value }: { label: string; value: string | null | undefined }) => (
   <div className={styles.infoCell}>

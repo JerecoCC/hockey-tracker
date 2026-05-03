@@ -29,6 +29,7 @@ import {
   faEye,
   faEyeSlash,
   faFolderPlus,
+  faHashtag,
   faHockeyPuck,
   faHourglassHalf,
   faList,
@@ -135,6 +136,9 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // loading / time
   hourglass_empty: faHourglassHalf,
+
+  // jersey number
+  jersey: faHashtag,
 
   // decorative
   sports_hockey: faHockeyPuck,
