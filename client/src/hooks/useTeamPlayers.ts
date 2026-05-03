@@ -109,6 +109,7 @@ export const useStintActions = (playerId: string | null) => {
       toast.success('Stint updated!');
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update stint'));
@@ -176,6 +177,7 @@ export const useStintActions = (playerId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update jersey number'));

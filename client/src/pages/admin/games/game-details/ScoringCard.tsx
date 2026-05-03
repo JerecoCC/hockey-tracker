@@ -81,6 +81,16 @@ const ScoringCard = ({
   onDeleteAttempt,
   getPlayerHref,
 }: Props) => {
+  // ── Helpers ────────────────────────────────────────────────────────────────
+  const periodTimeToSecs = (t: string | null | undefined): number => {
+    if (!t) return 0;
+    const [m, s] = t.split(':').map(Number);
+    return (m || 0) * 60 + (s || 0);
+  };
+
+  const sortedByTime = (gs: GoalRecord[]) =>
+    [...gs].sort((a, b) => periodTimeToSecs(a.period_time) - periodTimeToSecs(b.period_time));
+
   // ── Shared goal-list renderer ──────────────────────────────────────────────
   const renderGoalList = (periodGoals: GoalRecord[]) => (
     <ul className={styles.goalList}>
@@ -227,7 +237,7 @@ const ScoringCard = ({
           const isPostRegulation = game.current_period === 'OT' || game.current_period === 'SO';
           const isActive = !isFinal && game.current_period === periodId;
           const isDone = isFinal || isPostRegulation || currentIdx > idx;
-          const periodGoals = goals.filter((g) => g.period === periodId);
+          const periodGoals = sortedByTime(goals.filter((g) => g.period === periodId));
           return (
             <Accordion
               key={num}
@@ -310,7 +320,7 @@ const ScoringCard = ({
           (() => {
             const isOTActive = !isFinal && game.current_period === 'OT';
             const isOTDone = isFinal || game.current_period === 'SO';
-            const otGoals = goals.filter((g) => g.period === 'OT');
+            const otGoals = sortedByTime(goals.filter((g) => g.period === 'OT'));
             return (
               <Accordion
                 ref={setAccordionRef ? setAccordionRef('OT') : undefined}

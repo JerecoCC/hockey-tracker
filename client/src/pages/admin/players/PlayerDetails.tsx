@@ -98,6 +98,7 @@ const PlayerDetailsPage = () => {
       await axios.patch(`${API}/admin/players/${playerId}`, payload, { headers: authHeaders() });
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       return true;
     } catch {
       toast.error('Failed to update player');

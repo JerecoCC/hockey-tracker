@@ -207,6 +207,12 @@
   width: 128px;
 }
 
+.goalPeriodTimeError {
+  font-size: $font-xs;
+  color: $danger;
+  margin-top: $space-xs;
+}
+
 // Goal type field inside goalFormTimeRow — expands to fill remaining space
 .goalTypeField {
   flex: 1;

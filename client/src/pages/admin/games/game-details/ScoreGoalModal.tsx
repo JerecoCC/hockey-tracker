@@ -86,6 +86,24 @@ const ScoreGoalModal = ({
   const otGoalExists =
     period === 'OT' && goals.some((g) => g.period === 'OT' && g.id !== editGoal?.id);
 
+  /** Latest period_time already recorded for this period (excluding the goal being edited). */
+  const toSecs = (t: string | null | undefined) => {
+    if (!t) return 0;
+    const [m, s] = t.split(':').map(Number);
+    return (m || 0) * 60 + (s || 0);
+  };
+  const latestPeriodTime = goals
+    .filter((g) => g.period === period && g.id !== editGoal?.id)
+    .reduce<string | null>((max, g) => {
+      if (!g.period_time) return max;
+      return max === null || toSecs(g.period_time) > toSecs(max) ? g.period_time : max;
+    }, null);
+
+  const periodTimeError =
+    goalPeriodTime && latestPeriodTime && toSecs(goalPeriodTime) < toSecs(latestPeriodTime)
+      ? `Must be ${latestPeriodTime} or later`
+      : null;
+
   const teamRoster = goalTeam === 'away' ? awayRoster : goalTeam === 'home' ? homeRoster : [];
   const playerOptions = teamRoster.map((e) => ({
     value: e.player_id,
@@ -156,7 +174,9 @@ const ScoreGoalModal = ({
       title={editGoal ? 'Edit Goal' : 'Score Goal'}
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : editGoal ? 'Save Changes' : 'Record Goal'}
-      confirmDisabled={busy || submitting || !goalTeam || !goalScorerId || otGoalExists}
+      confirmDisabled={
+        busy || submitting || !goalTeam || !goalScorerId || otGoalExists || !!periodTimeError
+      }
       busy={submitting}
       onConfirm={handleConfirm}
     >
@@ -182,6 +202,9 @@ const ScoreGoalModal = ({
               onChange={setGoalPeriodTime}
               disabled={submitting}
             />
+            {periodTimeError && (
+              <span className={styles.goalPeriodTimeError}>{periodTimeError}</span>
+            )}
           </div>
           <div className={`${styles.goalFormField} ${styles.goalTypeField}`}>
             <label className={styles.goalFormLabel}>Goal Type</label>
