@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { type PlayoffFormatRule } from './useLeagues';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -21,6 +22,8 @@ export interface SeasonRecord {
   games_per_season: number | null;
   /** Scoring system inherited from the league: '2-1-0' or '3-2-1-0'. */
   league_scoring_system: '2-1-0' | '3-2-1-0';
+  /** Season-level playoff qualification rules (overrides any league-level format). */
+  playoff_format: PlayoffFormatRule[] | null;
   created_at: string;
 }
 
@@ -30,7 +33,11 @@ export interface CreateSeasonData {
   start_date?: string | null;
   end_date?: string | null;
   games_per_season?: number | null;
+  playoff_format?: PlayoffFormatRule[] | null;
 }
+
+// Re-export so consumers can import from one place.
+export type { PlayoffFormatRule };
 
 const authHeaders = () => {
   const token = localStorage.getItem('token');

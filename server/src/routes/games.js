@@ -1500,6 +1500,21 @@ router.patch('/playoff-series/:seriesId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /api/admin/games/playoff-series/:seriesId  – delete a playoff series
+// ---------------------------------------------------------------------------
+router.delete('/playoff-series/:seriesId', async (req, res) => {
+  const { seriesId } = req.params;
+  try {
+    const rows = await sql`DELETE FROM playoff_series WHERE id = ${seriesId} RETURNING id`;
+    if (rows.length === 0) return res.status(404).json({ error: 'Playoff series not found' });
+    return res.json({ message: 'Playoff series deleted' });
+  } catch (err) {
+    console.error('playoff series delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // Shared query helper — returns full shootout attempt rows with player/team info
 // ---------------------------------------------------------------------------
 const fetchAttempts = (gameId) => sql`

@@ -459,3 +459,90 @@ export const useGameDetails = (id: string | undefined) => {
   return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, deleteGame };
 };
 
+// ── Playoff series hook ────────────────────────────────────────────────────────
+
+export interface CreateSeriesData {
+  season_id: string;
+  round: number;
+  series_letter?: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  games_to_win?: number;
+  status?: SeriesStatus;
+  home_wins?: number;
+  away_wins?: number;
+  winner_team_id?: string | null;
+}
+
+export const usePlayoffSeries = (seasonId: string | undefined) => {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const { data: series = [], isLoading: loading } = useQuery<PlayoffSeriesRecord[]>({
+    queryKey: ['playoff-series', seasonId],
+    enabled: !!seasonId,
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayoffSeriesRecord[]>(
+          `${API}/admin/games/playoff-series`,
+          { headers: authHeaders(), params: { season_id: seasonId } },
+        );
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load playoff series'));
+        return [];
+      }
+    },
+  });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ['playoff-series', seasonId] });
+
+  const createSeries = async (data: CreateSeriesData): Promise<boolean> => {
+    setBusy('creating');
+    try {
+      await axios.post(`${API}/admin/games/playoff-series`, data, { headers: authHeaders() });
+      toast.success('Series created!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to create series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const updateSeries = async (id: string, data: Partial<CreateSeriesData>): Promise<boolean> => {
+    setBusy(id);
+    try {
+      await axios.patch(`${API}/admin/games/playoff-series/${id}`, data, { headers: authHeaders() });
+      toast.success('Series updated!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteSeries = async (id: string): Promise<boolean> => {
+    setBusy(id);
+    try {
+      await axios.delete(`${API}/admin/games/playoff-series/${id}`, { headers: authHeaders() });
+      toast.success('Series deleted!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { series, loading, busy, createSeries, updateSeries, deleteSeries };
+};
+

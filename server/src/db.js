@@ -857,6 +857,13 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS playoff_format JSONB
   `;
 
+  // playoff_format on seasons — per-season override of the qualification rules.
+  // Stored as ordered JSONB array identical in shape to leagues.playoff_format.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS playoff_format JSONB
+  `;
+
   console.log('Database schema ready');
 }
 

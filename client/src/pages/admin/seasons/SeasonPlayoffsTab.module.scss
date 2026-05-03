@@ -1,0 +1,137 @@
+@use "../../../styles/colors" as *;
+@use "../../../styles/mixins" as *;
+
+.playoffsStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+// ── Format card ─────────────────────────────────────────────────────────────
+
+.formatRuleList {
+  list-style: decimal;
+  margin: 0;
+  padding-left: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.formatRuleDisplay { font-size: $font-body; color: $text-body; }
+.formatEmpty { font-size: $font-sm; color: $text-dim; font-style: italic; }
+
+.formatEditorStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.formatRule {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  padding: $space-sm $space-md;
+}
+
+.formatRuleSelect {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-sm;
+  padding: 0 $space-sm;
+  cursor: pointer;
+  &:focus { outline: none; border-color: $accent; }
+}
+
+.formatRuleCount {
+  width: 56px;
+  height: 34px;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-sm;
+  padding: 0 $space-sm;
+  text-align: center;
+  &:focus { outline: none; border-color: $accent; }
+}
+
+.formatRuleRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $text-dim;
+  cursor: pointer;
+  flex-shrink: 0;
+  &:hover { border-color: $danger; color: $danger; }
+}
+
+.formatActions { display: flex; align-items: center; gap: $space-sm; }
+
+// ── Series card ──────────────────────────────────────────────────────────────
+
+.seriesStack { display: flex; flex-direction: column; gap: $space-sm; }
+
+.roundLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: $space-md;
+  &:first-child { margin-top: 0; }
+}
+
+.seriesRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+}
+
+.seriesTeams { flex: 1; font-size: $font-sm; font-weight: 500; color: $text-body; }
+.seriesScore { font-size: $font-sm; font-weight: 600; color: $text-body; min-width: 36px; text-align: center; }
+.seriesRowActions { display: flex; align-items: center; gap: $space-xs; }
+.emptyState { font-size: $font-sm; color: $text-dim; font-style: italic; text-align: center; padding: $space-lg 0; }
+
+// ── Series form modal fields ──────────────────────────────────────────────────
+
+.formGrid { display: flex; flex-direction: column; gap: $space-md; }
+.formRow { display: grid; grid-template-columns: 1fr 1fr; gap: $space-md; }
+.formField { display: flex; flex-direction: column; gap: $space-xs; }
+
+.formLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.formSelect, .formInput {
+  height: 42px;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-sm;
+  padding: 0 $space-sm;
+  width: 100%;
+  &:focus { outline: none; border-color: $accent; }
+}

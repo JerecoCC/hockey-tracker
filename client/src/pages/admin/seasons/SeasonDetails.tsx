@@ -21,6 +21,7 @@ import useTabState from '@/hooks/useTabState';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
+import SeasonPlayoffsTab from './SeasonPlayoffsTab';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import StatsLeaderCard from './StatsLeaderCard';
 import styles from './SeasonDetails.module.scss';
@@ -513,6 +514,18 @@ const SeasonDetailsPage = () => {
                 seasonId={id!}
                 seasonTeams={seasonTeams}
                 isEnded={season.is_ended}
+              />
+            ),
+          },
+          {
+            label: 'Playoffs',
+            content: (
+              <SeasonPlayoffsTab
+                seasonId={id!}
+                seasonTeams={seasonTeams}
+                isEnded={season.is_ended}
+                playoffFormat={season.playoff_format ?? null}
+                updateSeason={updateSeason}
               />
             ),
           },
