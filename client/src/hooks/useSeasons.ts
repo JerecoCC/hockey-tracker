@@ -22,8 +22,18 @@ export interface SeasonRecord {
   games_per_season: number | null;
   /** Scoring system inherited from the league: '2-1-0' or '3-2-1-0'. */
   league_scoring_system: '2-1-0' | '3-2-1-0';
+  /** League-level default series length (used when season override is null). */
+  league_best_of_playoff: number;
+  /** League-level default shootout rounds (used when season override is null). */
+  league_best_of_shootout: number;
   /** Season-level playoff qualification rules (overrides any league-level format). */
   playoff_format: PlayoffFormatRule[] | null;
+  /** Season-level playoff series length override. Null falls back to league default. */
+  best_of_playoff: number | null;
+  /** Season-level shootout rounds override. Null falls back to league default. */
+  best_of_shootout: number | null;
+  /** Season-level scoring system override. Null falls back to league default. */
+  scoring_system: '2-1-0' | '3-2-1-0' | null;
   created_at: string;
 }
 
@@ -34,6 +44,9 @@ export interface CreateSeasonData {
   end_date?: string | null;
   games_per_season?: number | null;
   playoff_format?: PlayoffFormatRule[] | null;
+  best_of_playoff?: number | null;
+  best_of_shootout?: number | null;
+  scoring_system?: '2-1-0' | '3-2-1-0' | null;
 }
 
 // Re-export so consumers can import from one place.

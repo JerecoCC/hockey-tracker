@@ -864,6 +864,26 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS playoff_format JSONB
   `;
 
+  // Game-rule overrides per season — nullable, falls back to league defaults when NULL.
+  // best_of_playoff: number of games needed to win a series (2=Bo3, 3=Bo5, 4=Bo7).
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS best_of_playoff SMALLINT
+        CHECK (best_of_playoff IN (3, 5, 7))
+  `;
+  // best_of_shootout: rounds before sudden death in a shootout (3, 5, or 7).
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS best_of_shootout SMALLINT
+        CHECK (best_of_shootout IN (3, 5, 7))
+  `;
+  // scoring_system: points awarded per game result for this season.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS scoring_system TEXT
+        CHECK (scoring_system IN ('2-1-0', '3-2-1-0'))
+  `;
+
   console.log('Database schema ready');
 }
 

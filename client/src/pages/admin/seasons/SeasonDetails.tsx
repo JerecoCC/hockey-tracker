@@ -525,6 +525,12 @@ const SeasonDetailsPage = () => {
                 seasonTeams={seasonTeams}
                 isEnded={season.is_ended}
                 playoffFormat={season.playoff_format ?? null}
+                bestOfPlayoff={season.best_of_playoff ?? null}
+                bestOfShootout={season.best_of_shootout ?? null}
+                scoringSystem={season.scoring_system ?? null}
+                leagueBestOfPlayoff={season.league_best_of_playoff}
+                leagueBestOfShootout={season.league_best_of_shootout}
+                leagueScoringSystem={season.league_scoring_system}
                 updateSeason={updateSeason}
               />
             ),

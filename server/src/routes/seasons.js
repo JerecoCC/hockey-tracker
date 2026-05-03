@@ -57,9 +57,14 @@ router.get('/:id', async (req, res) => {
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.playoff_format,
+             s.best_of_playoff,
+             s.best_of_shootout,
+             s.scoring_system,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
-             l.scoring_system AS league_scoring_system
+             l.scoring_system    AS league_scoring_system,
+             l.best_of_playoff   AS league_best_of_playoff,
+             l.best_of_shootout  AS league_best_of_shootout
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       WHERE s.id = ${id}
@@ -106,29 +111,36 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { league_id, name, start_date, end_date, games_per_season, playoff_format } = req.body;
+  const {
+    league_id, name, start_date, end_date, games_per_season, playoff_format,
+    best_of_playoff, best_of_shootout, scoring_system,
+  } = req.body;
 
   try {
     // Fetch current row so we can merge partial updates
     const existing = await sql`
       SELECT id, name, league_id,
              start_date::text AS start_date, end_date::text AS end_date, is_ended,
-             games_per_season, playoff_format
+             games_per_season, playoff_format,
+             best_of_playoff, best_of_shootout, scoring_system
       FROM seasons WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
     const cur = existing[0];
 
-    const mergedName           = name             !== undefined ? name.trim()                : cur.name;
-    const mergedLeagueId       = league_id        !== undefined ? league_id                  : cur.league_id;
-    const mergedStartDate      = start_date       !== undefined ? (start_date  || null)      : cur.start_date;
-    const mergedEndDate        = end_date         !== undefined ? (end_date    || null)      : cur.end_date;
-    const mergedGamesPerSeason = games_per_season !== undefined ? (games_per_season || null) : cur.games_per_season;
-    const mergedPlayoffFormat  = playoff_format   !== undefined
+    const mergedName            = name              !== undefined ? name.trim()                : cur.name;
+    const mergedLeagueId        = league_id         !== undefined ? league_id                  : cur.league_id;
+    const mergedStartDate       = start_date        !== undefined ? (start_date  || null)      : cur.start_date;
+    const mergedEndDate         = end_date          !== undefined ? (end_date    || null)      : cur.end_date;
+    const mergedGamesPerSeason  = games_per_season  !== undefined ? (games_per_season || null) : cur.games_per_season;
+    const mergedPlayoffFormat   = playoff_format    !== undefined
       ? (playoff_format ? JSON.stringify(playoff_format) : null)
       : (cur.playoff_format ? JSON.stringify(cur.playoff_format) : null);
+    const mergedBestOfPlayoff   = best_of_playoff   !== undefined ? (best_of_playoff   || null) : cur.best_of_playoff;
+    const mergedBestOfShootout  = best_of_shootout  !== undefined ? (best_of_shootout  || null) : cur.best_of_shootout;
+    const mergedScoringSystem   = scoring_system    !== undefined ? (scoring_system    || null) : cur.scoring_system;
     // Auto-set is_ended when an end_date is provided; never auto-clear it.
-    const mergedIsEnded        = mergedEndDate ? true : cur.is_ended;
+    const mergedIsEnded         = mergedEndDate ? true : cur.is_ended;
 
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
 
@@ -146,7 +158,10 @@ router.patch('/:id', async (req, res) => {
         end_date         = ${mergedEndDate},
         is_ended         = ${mergedIsEnded},
         games_per_season = ${mergedGamesPerSeason},
-        playoff_format   = ${mergedPlayoffFormat}::jsonb
+        playoff_format   = ${mergedPlayoffFormat}::jsonb,
+        best_of_playoff  = ${mergedBestOfPlayoff},
+        best_of_shootout = ${mergedBestOfShootout},
+        scoring_system   = ${mergedScoringSystem}
       WHERE id = ${id}
     `;
 

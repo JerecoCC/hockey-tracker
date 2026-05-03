@@ -284,6 +284,23 @@ const SeriesFormModal = ({
   );
 };
 
+// ── Constants ──────────────────────────────────────────────────────────────────
+
+const BEST_OF_OPTIONS = [
+  { value: '3', label: 'Best of 3' },
+  { value: '5', label: 'Best of 5' },
+  { value: '7', label: 'Best of 7' },
+];
+const SHOOTOUT_OPTIONS = [
+  { value: '3', label: '3 rounds' },
+  { value: '5', label: '5 rounds' },
+  { value: '7', label: '7 rounds' },
+];
+const SCORING_OPTIONS = [
+  { value: '2-1-0', label: '2-1-0  (W / OTL / L)' },
+  { value: '3-2-1-0', label: '3-2-1-0  (W / OT W / OTL / L)' },
+];
+
 // ── Main Tab Component ────────────────────────────────────────────────────────
 
 interface Props {
@@ -291,6 +308,12 @@ interface Props {
   seasonTeams: SeasonTeam[];
   isEnded: boolean;
   playoffFormat: PlayoffFormatRule[] | null;
+  bestOfPlayoff: number | null;
+  bestOfShootout: number | null;
+  scoringSystem: '2-1-0' | '3-2-1-0' | null;
+  leagueBestOfPlayoff: number;
+  leagueBestOfShootout: number;
+  leagueScoringSystem: string;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
 }
 
@@ -299,6 +322,12 @@ const SeasonPlayoffsTab = ({
   seasonTeams,
   isEnded,
   playoffFormat,
+  bestOfPlayoff,
+  bestOfShootout,
+  scoringSystem,
+  leagueBestOfPlayoff,
+  leagueBestOfShootout,
+  leagueScoringSystem,
   updateSeason,
 }: Props) => {
   const {
@@ -333,6 +362,31 @@ const SeasonPlayoffsTab = ({
     setFormatRules((p) => p.map((r, idx) => (idx === i ? { ...r, ...patch } : r)));
   const removeRule = (i: number) => setFormatRules((p) => p.filter((_, idx) => idx !== i));
 
+  // ── Game settings state ───────────────────────────────────────────────────────
+  const [editingSettings, setEditingSettings] = useState(false);
+  const [settingsBestOfPlayoff, setSettingsBestOfPlayoff] = useState<string>('');
+  const [settingsBestOfShootout, setSettingsBestOfShootout] = useState<string>('');
+  const [settingsScoringSystem, setSettingsScoringSystem] = useState<string>('');
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const startEditSettings = () => {
+    setSettingsBestOfPlayoff(bestOfPlayoff != null ? String(bestOfPlayoff) : '');
+    setSettingsBestOfShootout(bestOfShootout != null ? String(bestOfShootout) : '');
+    setSettingsScoringSystem(scoringSystem ?? '');
+    setEditingSettings(true);
+  };
+  const cancelEditSettings = () => setEditingSettings(false);
+  const saveSettings = async () => {
+    setSavingSettings(true);
+    const ok = await updateSeason(seasonId, {
+      best_of_playoff: settingsBestOfPlayoff ? parseInt(settingsBestOfPlayoff, 10) : null,
+      best_of_shootout: settingsBestOfShootout ? parseInt(settingsBestOfShootout, 10) : null,
+      scoring_system: (settingsScoringSystem as '2-1-0' | '3-2-1-0') || null,
+    });
+    if (ok) setEditingSettings(false);
+    setSavingSettings(false);
+  };
+
   // ── Series state ─────────────────────────────────────────────────────────────
   const [seriesModalOpen, setSeriesModalOpen] = useState(false);
   const [editTargetSeries, setEditTargetSeries] = useState<PlayoffSeriesRecord | null>(null);
@@ -354,6 +408,152 @@ const SeasonPlayoffsTab = ({
 
   return (
     <div className={styles.playoffsStack}>
+      {/* ── Game Settings ── */}
+      <Card
+        title="Game Settings"
+        action={
+          !editingSettings ? (
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="edit"
+              size="sm"
+              disabled={isEnded}
+              onClick={startEditSettings}
+            >
+              Edit
+            </Button>
+          ) : (
+            <div className={styles.formatActions}>
+              <Button
+                variant="outlined"
+                intent="neutral"
+                size="sm"
+                onClick={cancelEditSettings}
+                disabled={savingSettings}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="filled"
+                intent="accent"
+                size="sm"
+                icon="save"
+                onClick={saveSettings}
+                disabled={savingSettings}
+              >
+                {savingSettings ? 'Saving…' : 'Save'}
+              </Button>
+            </div>
+          )
+        }
+      >
+        {!editingSettings ? (
+          <div className={styles.settingsGrid}>
+            <div className={styles.settingsItem}>
+              <span className={styles.settingsLabel}>Playoff Series Format</span>
+              <span className={styles.settingsValue}>
+                {bestOfPlayoff != null
+                  ? `Best of ${bestOfPlayoff}`
+                  : `Best of ${leagueBestOfPlayoff} (league default)`}
+              </span>
+            </div>
+            <div className={styles.settingsItem}>
+              <span className={styles.settingsLabel}>Shootout Rounds</span>
+              <span className={styles.settingsValue}>
+                {bestOfShootout != null
+                  ? `${bestOfShootout} rounds`
+                  : `${leagueBestOfShootout} rounds (league default)`}
+              </span>
+            </div>
+            <div className={styles.settingsItem}>
+              <span className={styles.settingsLabel}>Scoring System</span>
+              <span className={styles.settingsValue}>
+                {scoringSystem ?? `${leagueScoringSystem} (league default)`}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.settingsEditGrid}>
+            <div className={styles.settingsEditField}>
+              <label className={styles.settingsLabel}>
+                Playoff Series Format
+                <span className={styles.settingsHint}>
+                  {' '}
+                  (league default: Best of {leagueBestOfPlayoff})
+                </span>
+              </label>
+              <select
+                className={styles.settingsSelect}
+                value={settingsBestOfPlayoff}
+                onChange={(e) => setSettingsBestOfPlayoff(e.target.value)}
+                disabled={savingSettings}
+              >
+                <option value="">Use league default</option>
+                {BEST_OF_OPTIONS.map((o) => (
+                  <option
+                    key={o.value}
+                    value={o.value}
+                  >
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.settingsEditField}>
+              <label className={styles.settingsLabel}>
+                Shootout Rounds
+                <span className={styles.settingsHint}>
+                  {' '}
+                  (league default: {leagueBestOfShootout})
+                </span>
+              </label>
+              <select
+                className={styles.settingsSelect}
+                value={settingsBestOfShootout}
+                onChange={(e) => setSettingsBestOfShootout(e.target.value)}
+                disabled={savingSettings}
+              >
+                <option value="">Use league default</option>
+                {SHOOTOUT_OPTIONS.map((o) => (
+                  <option
+                    key={o.value}
+                    value={o.value}
+                  >
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className={styles.settingsEditField}>
+              <label className={styles.settingsLabel}>
+                Scoring System
+                <span className={styles.settingsHint}>
+                  {' '}
+                  (league default: {leagueScoringSystem})
+                </span>
+              </label>
+              <select
+                className={styles.settingsSelect}
+                value={settingsScoringSystem}
+                onChange={(e) => setSettingsScoringSystem(e.target.value)}
+                disabled={savingSettings}
+              >
+                <option value="">Use league default</option>
+                {SCORING_OPTIONS.map((o) => (
+                  <option
+                    key={o.value}
+                    value={o.value}
+                  >
+                    {o.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        )}
+      </Card>
+
       {/* ── Playoff Qualification Format ── */}
       <Card
         title="Playoff Qualification Format"
