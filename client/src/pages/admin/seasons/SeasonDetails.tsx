@@ -787,6 +787,7 @@ const SeasonDetailsPage = () => {
               <SeasonPlayoffsTab
                 seasonId={id!}
                 seasonTeams={seasonTeams}
+                groups={groups}
                 isEnded={season.is_ended}
                 playoffFormat={season.playoff_format ?? null}
                 bestOfPlayoff={season.best_of_playoff ?? null}
