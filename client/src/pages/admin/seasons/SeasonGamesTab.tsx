@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -67,6 +67,15 @@ const GAME_TYPE_OPTIONS: SelectOption[] = [
   { value: 'playoff', label: 'Playoffs' },
 ];
 
+const STATUS_FILTER_OPTIONS: SelectOption[] = [
+  { value: '', label: 'All Statuses' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'final', label: 'Final' },
+  { value: 'postponed', label: 'Postponed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
 const MONTH_FMT = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' });
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -89,9 +98,21 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     label: t.name,
   }));
 
-  // ── Filter state ───────────────────────────────────────────────────────────
+  // ── Filter state (with sessionStorage persistence) ────────────────────────
+  const monthKey = `season-games-month:${seasonId}`;
+  const statusKey = `season-games-status:${seasonId}`;
+
   const [gameTypeFilter, setGameTypeFilter] = useState('');
-  const [monthFilter, setMonthFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState(() => sessionStorage.getItem(monthKey) ?? '');
+  const [statusFilter, setStatusFilter] = useState(() => sessionStorage.getItem(statusKey) ?? '');
+
+  useEffect(() => {
+    sessionStorage.setItem(monthKey, monthFilter);
+  }, [monthKey, monthFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem(statusKey, statusFilter);
+  }, [statusKey, statusFilter]);
 
   /** Month options derived from the fetched games (only months that have games). */
   const monthOptions = useMemo<SelectOption[]>(() => {
@@ -99,7 +120,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     const months: SelectOption[] = [];
     [...games]
       .filter((g) => g.scheduled_at)
-      .sort((a, b) => (a.scheduled_at! < b.scheduled_at! ? -1 : 1))
+      .sort((a, b) => (a.scheduled_at! > b.scheduled_at! ? -1 : 1))
       .forEach((g) => {
         const ym = g.scheduled_at!.slice(0, 7); // "YYYY-MM"
         if (!seen.has(ym)) {
@@ -112,16 +133,21 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     return [{ value: '', label: 'All Months' }, ...months];
   }, [games]);
 
-  /** Games after both filters are applied. */
-  const filteredGames = useMemo(
-    () =>
-      games.filter((g) => {
-        if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
-        if (monthFilter && (g.scheduled_at?.slice(0, 7) ?? '') !== monthFilter) return false;
-        return true;
-      }),
-    [games, gameTypeFilter, monthFilter],
-  );
+  /** Games after all filters are applied, in ascending date order. */
+  const filteredGames = useMemo(() => {
+    const sorted = [...games].sort((a, b) => {
+      if (!a.scheduled_at && !b.scheduled_at) return 0;
+      if (!a.scheduled_at) return 1;
+      if (!b.scheduled_at) return -1;
+      return a.scheduled_at < b.scheduled_at ? -1 : 1;
+    });
+    return sorted.filter((g) => {
+      if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
+      if (monthFilter && (g.scheduled_at?.slice(0, 7) ?? '') !== monthFilter) return false;
+      if (statusFilter && g.status !== (statusFilter as GameStatus)) return false;
+      return true;
+    });
+  }, [games, gameTypeFilter, monthFilter, statusFilter]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -179,6 +205,11 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
             value={monthFilter}
             options={monthOptions}
             onChange={setMonthFilter}
+          />
+          <Select
+            value={statusFilter}
+            options={STATUS_FILTER_OPTIONS}
+            onChange={setStatusFilter}
           />
         </div>
 

@@ -135,7 +135,8 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                           icon: 'open_in_new',
                           intent: 'neutral',
                           tooltip: 'View player',
-                          onClick: () => navigate(`/admin/players/${p.id}`),
+                          onClick: () =>
+                            navigate(`/admin/leagues/${leagueId}/teams/${teamId}/players/${p.id}`),
                         },
                         {
                           icon: 'edit',

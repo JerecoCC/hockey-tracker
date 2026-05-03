@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Icon from '@/components/Icon/Icon';
@@ -363,6 +363,12 @@ const GameDetailsPage = () => {
     (e) => e.team_id === game?.home_team_id && !!e.inherited,
   );
 
+  // Map player_id → team_id for building player detail links
+  const playerTeamMap = useMemo(
+    () => new Map(roster.map((e) => [e.player_id, e.team_id])),
+    [roster],
+  );
+
   const [autoFillBusy, setAutoFillBusy] = useState<{ away: boolean; home: boolean }>({
     away: false,
     home: false,
@@ -686,7 +692,12 @@ const GameDetailsPage = () => {
                                         />
                                       ))}
                                     </span>
-                                    <span className={styles.starName}>{nameLabel}</span>
+                                    <Link
+                                      to={`/admin/leagues/${leagueId}/teams/${player.team_id}/players/${playerId}`}
+                                      className={`${styles.starName} ${styles.playerLink}`}
+                                    >
+                                      {nameLabel}
+                                    </Link>
                                     <span className={styles.starTeam}>{subLabel}</span>
                                     {player.position === 'G' ? (
                                       (() => {
@@ -732,6 +743,12 @@ const GameDetailsPage = () => {
                       onAddAttempt={openAttemptModal}
                       onEditAttempt={openEditAttemptModal}
                       onDeleteAttempt={handleDeleteAttempt}
+                      getPlayerHref={(playerId) => {
+                        const teamId = playerTeamMap.get(playerId);
+                        return teamId
+                          ? `/admin/leagues/${leagueId}/teams/${teamId}/players/${playerId}`
+                          : '#';
+                      }}
                     />
 
                     {/* ── Goalie Stats card ── */}
@@ -842,12 +859,17 @@ const GameDetailsPage = () => {
                                                 #{goalie.jersey_number}
                                               </span>
                                             )}
-                                            <span className={styles.goalScorer}>
-                                              {formatPlayerName(
-                                                goalie.first_name,
-                                                goalie.last_name,
-                                              )}
-                                            </span>
+                                            <Link
+                                              to={`/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`}
+                                              className={styles.playerLink}
+                                            >
+                                              <span className={styles.goalScorer}>
+                                                {formatPlayerName(
+                                                  goalie.first_name,
+                                                  goalie.last_name,
+                                                )}
+                                              </span>
+                                            </Link>
                                           </div>
                                         </span>
                                       </td>

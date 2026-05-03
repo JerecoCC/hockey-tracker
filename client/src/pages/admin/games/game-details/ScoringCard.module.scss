@@ -144,3 +144,12 @@ $_active-period-color: mix($accent, $bg-card, 50%);
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.playerLink {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}

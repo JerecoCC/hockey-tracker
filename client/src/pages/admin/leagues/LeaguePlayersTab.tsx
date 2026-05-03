@@ -19,6 +19,7 @@ const POSITION_LABELS: Record<string, string> = {
 };
 
 interface Props {
+  leagueId: string;
   players: PlayerRecord[];
   seasons: LeagueSeasonRecord[];
   selectedSeasonId: string | null;
@@ -33,6 +34,7 @@ interface Props {
 }
 
 const LeaguePlayersTab = ({
+  leagueId,
   players,
   seasons,
   selectedSeasonId,
@@ -124,7 +126,12 @@ const LeaguePlayersTab = ({
                         icon: 'open_in_new',
                         intent: 'neutral',
                         tooltip: 'View player',
-                        onClick: () => navigate(`/admin/players/${p.id}`),
+                        onClick: () =>
+                          navigate(
+                            p.team_id
+                              ? `/admin/leagues/${leagueId}/teams/${p.team_id}/players/${p.id}`
+                              : `/admin/leagues/${leagueId}`,
+                          ),
                       },
                       {
                         icon: 'edit',

@@ -32,6 +32,7 @@ export interface PlayerRecord {
   created_at: string;
   // Roster fields — populated when fetching by league_id or team_id
   jersey_number?: number | null;
+  team_id?: string | null;
   team_name?: string | null;
   team_code?: string | null;
   team_logo?: string | null;

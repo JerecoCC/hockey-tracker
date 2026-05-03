@@ -185,6 +185,7 @@ const LeagueDetailsPage = () => {
               <div className={styles.grid}>
                 <LeaguePlayersTab
                   className={styles.col12}
+                  leagueId={id ?? ''}
                   players={players}
                   seasons={seasons}
                   selectedSeasonId={selectedSeasonId}

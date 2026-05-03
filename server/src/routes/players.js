@@ -54,7 +54,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -64,6 +64,7 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, p.position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
               ti.logo       AS team_logo,
@@ -93,7 +94,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -103,6 +104,7 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, p.position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
               ti.logo       AS team_logo,

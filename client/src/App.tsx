@@ -131,7 +131,10 @@ const router = createBrowserRouter([
         path: '/admin/leagues/:leagueId/seasons/:seasonId/games/:id',
         element: <GameDetailsPage />,
       },
-      { path: '/admin/players/:id', element: <PlayerDetailsPage /> },
+      {
+        path: '/admin/leagues/:leagueId/teams/:teamId/players/:id',
+        element: <PlayerDetailsPage />,
+      },
     ],
   },
   {

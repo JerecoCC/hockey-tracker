@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Badge from '@/components/Badge/Badge';
 import Tooltip from '@/components/Tooltip/Tooltip';
@@ -51,6 +52,8 @@ interface Props {
   onAddAttempt?: () => void;
   onEditAttempt?: (attempt: ShootoutAttempt) => void;
   onDeleteAttempt?: (attemptId: string) => void;
+  /** When provided, player names in goal rows become navigation links. */
+  getPlayerHref?: (playerId: string) => string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -76,25 +79,31 @@ const ScoringCard = ({
   onAddAttempt,
   onEditAttempt,
   onDeleteAttempt,
+  getPlayerHref,
 }: Props) => {
   // ── Shared goal-list renderer ──────────────────────────────────────────────
   const renderGoalList = (periodGoals: GoalRecord[]) => (
     <ul className={styles.goalList}>
       {periodGoals.map((goal) => {
         const tally = tallyByGoalId.get(goal.id);
-        const scorerName =
-          formatPlayerName(goal.scorer_first_name, goal.scorer_last_name) +
-          (tally ? ` (${tally.scorerGoals})` : '');
-        const assists = [
+        const scorerBaseName = formatPlayerName(goal.scorer_first_name, goal.scorer_last_name);
+        const scorerTally = tally ? ` (${tally.scorerGoals})` : '';
+        const assistList = [
           goal.assist_1_id
-            ? formatPlayerName(goal.assist_1_first_name, goal.assist_1_last_name) +
-              (tally?.assist1Assists != null ? ` (${tally.assist1Assists})` : '')
+            ? {
+                id: goal.assist_1_id,
+                name: formatPlayerName(goal.assist_1_first_name, goal.assist_1_last_name),
+                tally: tally?.assist1Assists != null ? ` (${tally.assist1Assists})` : '',
+              }
             : null,
           goal.assist_2_id
-            ? formatPlayerName(goal.assist_2_first_name, goal.assist_2_last_name) +
-              (tally?.assist2Assists != null ? ` (${tally.assist2Assists})` : '')
+            ? {
+                id: goal.assist_2_id,
+                name: formatPlayerName(goal.assist_2_first_name, goal.assist_2_last_name),
+                tally: tally?.assist2Assists != null ? ` (${tally.assist2Assists})` : '',
+              }
             : null,
-        ].filter(Boolean) as string[];
+        ].filter(Boolean) as { id: string; name: string; tally: string }[];
         const primaryBadge =
           goal.goal_type === 'empty-net' ? null : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
         const showEN = goal.empty_net || goal.goal_type === 'empty-net';
@@ -133,9 +142,38 @@ const ScoringCard = ({
               </span>
             )}
             <div className={styles.goalInfo}>
-              <span className={styles.goalScorer}>{scorerName}</span>
+              <span className={styles.goalScorer}>
+                {getPlayerHref ? (
+                  <Link
+                    to={getPlayerHref(goal.scorer_id)}
+                    className={styles.playerLink}
+                  >
+                    {scorerBaseName}
+                  </Link>
+                ) : (
+                  scorerBaseName
+                )}
+                {scorerTally}
+              </span>
               <span className={styles.goalAssists}>
-                {assists.length > 0 ? assists.join(', ') : 'Unassisted'}
+                {assistList.length > 0
+                  ? assistList.map((a, i) => (
+                      <React.Fragment key={a.id}>
+                        {i > 0 && ', '}
+                        {getPlayerHref ? (
+                          <Link
+                            to={getPlayerHref(a.id)}
+                            className={styles.playerLink}
+                          >
+                            {a.name}
+                          </Link>
+                        ) : (
+                          a.name
+                        )}
+                        {a.tally}
+                      </React.Fragment>
+                    ))
+                  : 'Unassisted'}
               </span>
             </div>
             {primaryBadge && (
