@@ -518,24 +518,6 @@ const SeasonDetailsPage = () => {
             ),
           },
           {
-            label: 'Playoffs',
-            content: (
-              <SeasonPlayoffsTab
-                seasonId={id!}
-                seasonTeams={seasonTeams}
-                isEnded={season.is_ended}
-                playoffFormat={season.playoff_format ?? null}
-                bestOfPlayoff={season.best_of_playoff ?? null}
-                bestOfShootout={season.best_of_shootout ?? null}
-                scoringSystem={season.scoring_system ?? null}
-                leagueBestOfPlayoff={season.league_best_of_playoff}
-                leagueBestOfShootout={season.league_best_of_shootout}
-                leagueScoringSystem={season.league_scoring_system}
-                updateSeason={updateSeason}
-              />
-            ),
-          },
-          {
             label: 'Stats',
             content: (
               <div className={styles.statsSubTabs}>
@@ -802,9 +784,19 @@ const SeasonDetailsPage = () => {
           {
             label: 'Playoffs',
             content: (
-              <Card>
-                <p className={styles.tabPlaceholder}>Playoffs coming soon.</p>
-              </Card>
+              <SeasonPlayoffsTab
+                seasonId={id!}
+                seasonTeams={seasonTeams}
+                isEnded={season.is_ended}
+                playoffFormat={season.playoff_format ?? null}
+                bestOfPlayoff={season.best_of_playoff ?? null}
+                bestOfShootout={season.best_of_shootout ?? null}
+                scoringSystem={season.scoring_system ?? null}
+                leagueBestOfPlayoff={season.league_best_of_playoff}
+                leagueBestOfShootout={season.league_best_of_shootout}
+                leagueScoringSystem={season.league_scoring_system}
+                updateSeason={updateSeason}
+              />
             ),
           },
         ]}

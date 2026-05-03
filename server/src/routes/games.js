@@ -96,6 +96,118 @@ router.get('/', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/games/playoff-series  – list series (filter by season_id)
+// ---------------------------------------------------------------------------
+router.get('/playoff-series', async (req, res) => {
+  const { season_id } = req.query;
+  try {
+    const series = await sql`
+      SELECT
+        ps.id, ps.season_id, ps.round, ps.series_letter,
+        ps.home_team_id, ps.away_team_id,
+        ps.games_to_win, ps.home_wins, ps.away_wins,
+        ps.status, ps.winner_team_id, ps.created_at,
+        ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
+        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo
+      FROM playoff_series ps
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = ps.home_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ht ON true
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = ps.away_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) at ON true
+      WHERE (${season_id ?? null}::uuid IS NULL OR ps.season_id = ${season_id ?? null}::uuid)
+      ORDER BY ps.round ASC, ps.series_letter ASC NULLS LAST, ps.created_at ASC
+    `;
+    return res.json(series);
+  } catch (err) {
+    console.error('playoff series list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/playoff-series  – create a playoff series
+// ---------------------------------------------------------------------------
+router.post('/playoff-series', async (req, res) => {
+  const {
+    season_id, round, series_letter = null,
+    home_team_id, away_team_id,
+    games_to_win = 4, status = 'upcoming',
+  } = req.body;
+
+  if (!season_id || !home_team_id || !away_team_id || !round) {
+    return res.status(400).json({ error: 'season_id, home_team_id, away_team_id, and round are required' });
+  }
+  if (home_team_id === away_team_id) {
+    return res.status(400).json({ error: 'home_team_id and away_team_id must be different' });
+  }
+
+  try {
+    const rows = await sql`
+      INSERT INTO playoff_series (season_id, round, series_letter, home_team_id, away_team_id, games_to_win, status)
+      VALUES (${season_id}, ${round}, ${series_letter}, ${home_team_id}, ${away_team_id}, ${games_to_win}, ${status})
+      RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
+                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
+    `;
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid season_id or team_id' });
+    console.error('playoff series create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/games/playoff-series/:seriesId  – update a playoff series
+// ---------------------------------------------------------------------------
+router.patch('/playoff-series/:seriesId', async (req, res) => {
+  const { seriesId } = req.params;
+  const { home_wins, away_wins, status, winner_team_id, series_letter, games_to_win } = req.body;
+
+  try {
+    const rows = await sql`
+      UPDATE playoff_series SET
+        home_wins      = COALESCE(${home_wins      ?? null}, home_wins),
+        away_wins      = COALESCE(${away_wins      ?? null}, away_wins),
+        status         = COALESCE(${status         ?? null}, status),
+        winner_team_id = COALESCE(${winner_team_id ?? null}, winner_team_id),
+        series_letter  = COALESCE(${series_letter  ?? null}, series_letter),
+        games_to_win   = COALESCE(${games_to_win   ?? null}, games_to_win)
+      WHERE id = ${seriesId}
+      RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
+                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Playoff series not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('playoff series update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/playoff-series/:seriesId  – delete a playoff series
+// ---------------------------------------------------------------------------
+router.delete('/playoff-series/:seriesId', async (req, res) => {
+  const { seriesId } = req.params;
+  try {
+    const rows = await sql`DELETE FROM playoff_series WHERE id = ${seriesId} RETURNING id`;
+    if (rows.length === 0) return res.status(404).json({ error: 'Playoff series not found' });
+    return res.json({ message: 'Playoff series deleted' });
+  } catch (err) {
+    console.error('playoff series delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/:id  – single game with period breakdown
 // ---------------------------------------------------------------------------
 router.get('/:id', async (req, res) => {
@@ -1398,118 +1510,6 @@ router.put('/:id/goalie-stats', async (req, res) => {
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
     console.error('goalie stats put error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// GET /api/admin/games/playoff-series  – list series (filter by season_id)
-// ---------------------------------------------------------------------------
-router.get('/playoff-series', async (req, res) => {
-  const { season_id } = req.query;
-  try {
-    const series = await sql`
-      SELECT
-        ps.id, ps.season_id, ps.round, ps.series_letter,
-        ps.home_team_id, ps.away_team_id,
-        ps.games_to_win, ps.home_wins, ps.away_wins,
-        ps.status, ps.winner_team_id, ps.created_at,
-        ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo
-      FROM playoff_series ps
-      LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
-        WHERE team_id = ps.home_team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-        LIMIT 1
-      ) ht ON true
-      LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
-        WHERE team_id = ps.away_team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-        LIMIT 1
-      ) at ON true
-      WHERE (${season_id ?? null}::uuid IS NULL OR ps.season_id = ${season_id ?? null}::uuid)
-      ORDER BY ps.round ASC, ps.series_letter ASC NULLS LAST, ps.created_at ASC
-    `;
-    return res.json(series);
-  } catch (err) {
-    console.error('playoff series list error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/admin/games/playoff-series  – create a playoff series
-// ---------------------------------------------------------------------------
-router.post('/playoff-series', async (req, res) => {
-  const {
-    season_id, round, series_letter = null,
-    home_team_id, away_team_id,
-    games_to_win = 4, status = 'upcoming',
-  } = req.body;
-
-  if (!season_id || !home_team_id || !away_team_id || !round) {
-    return res.status(400).json({ error: 'season_id, home_team_id, away_team_id, and round are required' });
-  }
-  if (home_team_id === away_team_id) {
-    return res.status(400).json({ error: 'home_team_id and away_team_id must be different' });
-  }
-
-  try {
-    const rows = await sql`
-      INSERT INTO playoff_series (season_id, round, series_letter, home_team_id, away_team_id, games_to_win, status)
-      VALUES (${season_id}, ${round}, ${series_letter}, ${home_team_id}, ${away_team_id}, ${games_to_win}, ${status})
-      RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
-                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
-    `;
-    return res.status(201).json(rows[0]);
-  } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'Invalid season_id or team_id' });
-    console.error('playoff series create error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// PATCH /api/admin/games/playoff-series/:seriesId  – update a playoff series
-// ---------------------------------------------------------------------------
-router.patch('/playoff-series/:seriesId', async (req, res) => {
-  const { seriesId } = req.params;
-  const { home_wins, away_wins, status, winner_team_id, series_letter, games_to_win } = req.body;
-
-  try {
-    const rows = await sql`
-      UPDATE playoff_series SET
-        home_wins      = COALESCE(${home_wins      ?? null}, home_wins),
-        away_wins      = COALESCE(${away_wins      ?? null}, away_wins),
-        status         = COALESCE(${status         ?? null}, status),
-        winner_team_id = COALESCE(${winner_team_id ?? null}, winner_team_id),
-        series_letter  = COALESCE(${series_letter  ?? null}, series_letter),
-        games_to_win   = COALESCE(${games_to_win   ?? null}, games_to_win)
-      WHERE id = ${seriesId}
-      RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
-                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
-    `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Playoff series not found' });
-    return res.json(rows[0]);
-  } catch (err) {
-    console.error('playoff series update error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// DELETE /api/admin/games/playoff-series/:seriesId  – delete a playoff series
-// ---------------------------------------------------------------------------
-router.delete('/playoff-series/:seriesId', async (req, res) => {
-  const { seriesId } = req.params;
-  try {
-    const rows = await sql`DELETE FROM playoff_series WHERE id = ${seriesId} RETURNING id`;
-    if (rows.length === 0) return res.status(404).json({ error: 'Playoff series not found' });
-    return res.json({ message: 'Playoff series deleted' });
-  } catch (err) {
-    console.error('playoff series delete error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
