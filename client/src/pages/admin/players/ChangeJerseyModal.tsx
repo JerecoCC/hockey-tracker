@@ -23,9 +23,9 @@ interface Props {
 }
 
 const dayBefore = (dateStr: string): string => {
-  const d = new Date(`${dateStr}T00:00:00`);
-  d.setDate(d.getDate() - 1);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const prev = new Date(y, m - 1, d - 1); // pure local-date arithmetic, no UTC shift
+  return `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}-${String(prev.getDate()).padStart(2, '0')}`;
 };
 
 const ChangeJerseyModal = ({ open, stint, history, onClose, changeJerseyNumber }: Props) => {
