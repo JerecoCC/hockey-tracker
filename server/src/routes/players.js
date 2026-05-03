@@ -82,7 +82,7 @@ router.get('/', async (req, res) => {
               ORDER BY CASE WHEN season_id = ${season_id} THEN 0 ELSE 1 END, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id
+            ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
           ) sub
           ORDER BY last_name, first_name
         `
@@ -120,7 +120,7 @@ router.get('/', async (req, res) => {
               ORDER BY season_id DESC NULLS LAST
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id, pt.season_id DESC
+            ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
           ) sub
           ORDER BY last_name, first_name
         `
