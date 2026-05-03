@@ -812,6 +812,27 @@ async function initSchema() {
     )
   `;
 
+  // ── Helper function: best available photo for a player ───────────────────
+  // Returns the photo from the most recent player_teams stint that has a
+  // non-null photo (active stint first, then most-recently-started historical
+  // stint). Used as COALESCE(pt.photo, best_player_photo(p.id), p.photo)
+  // across roster, lineup, goalie, and shootout queries so the logic lives
+  // in one place rather than being repeated as a LEFT JOIN LATERAL everywhere.
+  await sql`
+    CREATE OR REPLACE FUNCTION best_player_photo(pid uuid)
+    RETURNS text
+    LANGUAGE sql
+    STABLE
+    AS $$
+      SELECT photo
+      FROM   player_teams
+      WHERE  player_id = pid
+        AND  photo IS NOT NULL
+      ORDER  BY end_date DESC NULLS FIRST, created_at DESC
+      LIMIT  1
+    $$
+  `;
+
   console.log('Database schema ready');
 }
 

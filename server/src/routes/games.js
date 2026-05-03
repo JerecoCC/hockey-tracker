@@ -607,7 +607,7 @@ router.get('/:id/lineup', async (req, res) => {
         slot.position_slot,
         p.first_name  AS player_first_name,
         p.last_name   AS player_last_name,
-        COALESCE(pt.photo, pt_photo.photo, p.photo) AS player_photo,
+        COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS player_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
       FROM game_starting_lineup sl
@@ -632,11 +632,6 @@ router.get('/:id/lineup', async (req, res) => {
           AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
         ORDER BY effective_from DESC LIMIT 1
       ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT photo FROM player_teams
-        WHERE player_id = p.id AND photo IS NOT NULL
-        ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-      ) pt_photo ON true
       WHERE sl.game_id = ${id}
         AND slot.player_id IS NOT NULL
     `;
@@ -658,7 +653,7 @@ router.get('/:id/lineup', async (req, res) => {
           slot.position_slot,
           p.first_name  AS player_first_name,
           p.last_name   AS player_last_name,
-          COALESCE(pt.photo, pt_photo.photo, p.photo) AS player_photo,
+          COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS player_photo,
           COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           true AS inherited
         FROM games g
@@ -683,11 +678,6 @@ router.get('/:id/lineup', async (req, res) => {
             AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
           ORDER BY effective_from DESC LIMIT 1
         ) pt_jnh ON true
-        LEFT JOIN LATERAL (
-          SELECT photo FROM player_teams
-          WHERE player_id = p.id AND photo IS NOT NULL
-          ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-        ) pt_photo ON true
         WHERE (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
           AND g.status = 'final'
           AND g.id <> ${id}
@@ -755,7 +745,7 @@ router.put('/:id/lineup', async (req, res) => {
         slot.position_slot,
         p.first_name  AS player_first_name,
         p.last_name   AS player_last_name,
-        COALESCE(pt.photo, pt_photo.photo, p.photo) AS player_photo,
+        COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS player_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_starting_lineup sl
       JOIN games g ON g.id = sl.game_id
@@ -779,11 +769,6 @@ router.put('/:id/lineup', async (req, res) => {
           AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
         ORDER BY effective_from DESC LIMIT 1
       ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT photo FROM player_teams
-        WHERE player_id = p.id AND photo IS NOT NULL
-        ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-      ) pt_photo ON true
       WHERE sl.game_id = ${id}
         AND sl.team_id = ${team_id}
         AND slot.player_id IS NOT NULL
@@ -833,7 +818,7 @@ router.get('/:id/roster', async (req, res) => {
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.player_id,
         p.first_name, p.last_name,
-        COALESCE(pt.photo, pt_photo.photo, p.photo) AS photo,
+        COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
         p.position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
       FROM game_rosters gr
@@ -850,11 +835,6 @@ router.get('/:id/roster', async (req, res) => {
           AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
         ORDER BY effective_from DESC LIMIT 1
       ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT photo FROM player_teams
-        WHERE player_id = p.id AND photo IS NOT NULL
-        ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-      ) pt_photo ON true
       WHERE gr.game_id = ${id}
       ORDER BY COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
     `;
@@ -884,7 +864,7 @@ router.get('/:id/roster', async (req, res) => {
         SELECT
           gr.id, ${id}::uuid AS game_id, gr.team_id, gr.player_id,
           p.first_name, p.last_name,
-          COALESCE(pt.photo, pt_photo.photo, p.photo) AS photo,
+          COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
           p.position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           true AS inherited
         FROM game_rosters gr
@@ -901,11 +881,6 @@ router.get('/:id/roster', async (req, res) => {
             AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
           ORDER BY effective_from DESC LIMIT 1
         ) pt_jnh ON true
-        LEFT JOIN LATERAL (
-          SELECT photo FROM player_teams
-          WHERE player_id = p.id AND photo IS NOT NULL
-          ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-        ) pt_photo ON true
         WHERE gr.game_id = ${lastGameRows[0].game_id} AND gr.team_id = ${teamId}
         ORDER BY COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
       `;
@@ -941,7 +916,7 @@ router.post('/:id/roster', async (req, res) => {
     const rows = await sql`
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.player_id,
-        p.first_name, p.last_name, COALESCE(pt.photo, pt_photo.photo, p.photo) AS photo, p.position,
+        p.first_name, p.last_name, COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo, p.position,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_rosters gr
       JOIN games g ON g.id = gr.game_id
@@ -957,11 +932,6 @@ router.post('/:id/roster', async (req, res) => {
           AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
         ORDER BY effective_from DESC LIMIT 1
       ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT photo FROM player_teams
-        WHERE player_id = p.id AND photo IS NOT NULL
-        ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-      ) pt_photo ON true
       WHERE gr.game_id = ${id} AND gr.team_id = ${team_id}
       ORDER BY COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
     `;
@@ -1336,7 +1306,7 @@ router.get('/:id/goalie-stats', async (req, res) => {
         gs.created_at,
         p.first_name AS goalie_first_name,
         p.last_name  AS goalie_last_name,
-        COALESCE(pt.photo, pt_photo.photo, p.photo) AS goalie_photo,
+        COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
         ti.name  AS team_name,
         ti.code  AS team_code,
@@ -1358,11 +1328,6 @@ router.get('/:id/goalie-stats', async (req, res) => {
           AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
         ORDER BY effective_from DESC LIMIT 1
       ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT photo FROM player_teams
-        WHERE player_id = p.id AND photo IS NOT NULL
-        ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-      ) pt_photo ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = gs.team_id
@@ -1402,7 +1367,7 @@ router.put('/:id/goalie-stats', async (req, res) => {
       SELECT
         gs.id, gs.game_id, gs.team_id, gs.goalie_id, gs.shots_against, gs.saves, gs.created_at,
         p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
-        COALESCE(pt.photo, pt_photo.photo, p.photo) AS goalie_photo,
+        COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color
@@ -1421,11 +1386,6 @@ router.put('/:id/goalie-stats', async (req, res) => {
           AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
         ORDER BY effective_from DESC LIMIT 1
       ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT photo FROM player_teams
-        WHERE player_id = p.id AND photo IS NOT NULL
-        ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-      ) pt_photo ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = gs.team_id
@@ -1553,7 +1513,7 @@ const fetchAttempts = (gameId) => sql`
     sa.created_at,
     p.first_name   AS shooter_first_name,
     p.last_name    AS shooter_last_name,
-    COALESCE(pt.photo, pt_photo.photo, p.photo) AS shooter_photo,
+    COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS shooter_photo,
     COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS shooter_jersey_number,
     ti.name  AS team_name,
     ti.code  AS team_code,
@@ -1575,11 +1535,6 @@ const fetchAttempts = (gameId) => sql`
       AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
     ORDER BY effective_from DESC LIMIT 1
   ) pt_jnh ON true
-  LEFT JOIN LATERAL (
-    SELECT photo FROM player_teams
-    WHERE player_id = p.id AND photo IS NOT NULL
-    ORDER BY end_date DESC NULLS FIRST, created_at DESC LIMIT 1
-  ) pt_photo ON true
   LEFT JOIN LATERAL (
     SELECT name, code, logo FROM team_iterations
     WHERE team_id = sa.team_id

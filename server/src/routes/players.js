@@ -58,7 +58,7 @@ router.get('/', async (req, res) => {
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, pt_photo.photo, p.photo) AS photo,
+              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, p.position, p.shoots,
@@ -82,12 +82,6 @@ router.get('/', async (req, res) => {
               ORDER BY CASE WHEN season_id = ${season_id} THEN 0 ELSE 1 END, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            LEFT JOIN LATERAL (
-              SELECT photo FROM player_teams
-              WHERE player_id = p.id AND photo IS NOT NULL
-              ORDER BY end_date DESC NULLS FIRST, created_at DESC
-              LIMIT 1
-            ) pt_photo ON TRUE
             ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
           ) sub
           ORDER BY last_name, first_name
@@ -104,7 +98,7 @@ router.get('/', async (req, res) => {
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, pt_photo.photo, p.photo) AS photo,
+              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, p.position, p.shoots,
@@ -126,12 +120,6 @@ router.get('/', async (req, res) => {
               ORDER BY season_id DESC NULLS LAST
               LIMIT 1
             ) ti ON TRUE
-            LEFT JOIN LATERAL (
-              SELECT photo FROM player_teams
-              WHERE player_id = p.id AND photo IS NOT NULL
-              ORDER BY end_date DESC NULLS FIRST, created_at DESC
-              LIMIT 1
-            ) pt_photo ON TRUE
             ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
           ) sub
           ORDER BY last_name, first_name
@@ -148,7 +136,7 @@ router.get('/', async (req, res) => {
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, pt_photo.photo, p.photo) AS photo,
+              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, p.position, p.shoots,
@@ -170,12 +158,6 @@ router.get('/', async (req, res) => {
               ORDER BY season_id DESC NULLS LAST
               LIMIT 1
             ) ti ON TRUE
-            LEFT JOIN LATERAL (
-              SELECT photo FROM player_teams
-              WHERE player_id = p.id AND photo IS NOT NULL
-              ORDER BY end_date DESC NULLS FIRST, created_at DESC
-              LIMIT 1
-            ) pt_photo ON TRUE
             ORDER BY p.id
           ) sub
           ORDER BY last_name, first_name
