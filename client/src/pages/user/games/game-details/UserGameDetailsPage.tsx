@@ -200,7 +200,6 @@ const UserGameDetailsPage = () => {
         liveAwayScore={liveAwayScore}
         liveHomeScore={liveHomeScore}
         overtimeSuffix={overtimeSuffix}
-        onGenerateImage={isFinal ? () => setScoreImageOpen(true) : undefined}
       />
 
       {/* ── Summary grid ── */}
@@ -668,7 +667,21 @@ const UserGameDetailsPage = () => {
 
         {/* ── Right column: Linescore + Shots + Game Info ── */}
         <div className={styles.summaryRight}>
-          <Card title="Linescore">
+          <Card
+            title="Linescore"
+            action={
+              isFinal ? (
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="download"
+                  size="sm"
+                  tooltip="Download score card"
+                  onClick={() => setScoreImageOpen(true)}
+                />
+              ) : undefined
+            }
+          >
             <table className={styles.periodsTable}>
               <thead>
                 <tr>

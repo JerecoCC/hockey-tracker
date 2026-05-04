@@ -42,7 +42,6 @@ interface Props {
   overtimeSuffix: string;
   /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
   leagueId?: string;
-  onGenerateImage?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -55,7 +54,6 @@ const ScoreboardCard = ({
   liveHomeScore,
   overtimeSuffix,
   leagueId,
-  onGenerateImage,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -164,16 +162,6 @@ const ScoreboardCard = ({
               <span className={styles.scoreDate}>
                 {DATE_FMT.format(new Date(game.scheduled_at))}
               </span>
-            )}
-            {isFinal && onGenerateImage && (
-              <Button
-                variant="ghost"
-                intent="neutral"
-                icon="download"
-                size="sm"
-                tooltip="Download score card"
-                onClick={onGenerateImage}
-              />
             )}
           </div>
           {(isFinal || isInProgress) && (
