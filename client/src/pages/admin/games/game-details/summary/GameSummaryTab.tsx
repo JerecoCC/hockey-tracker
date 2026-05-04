@@ -13,7 +13,7 @@ import GameInfoEditModal from '../GameInfoEditModal';
 import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
-import GoalieStatsEditModal from '../GoalieStatsEditModal';
+import GoalieStatsCard from './GoalieStatsCard';
 import ShotsEditModal from '../ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
 import ScoreImageModal from '../ScoreImageModal';
@@ -27,7 +27,7 @@ import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import type { LastFiveGame, PreviousMeeting } from '@/hooks/useGames';
 import styles from '../GameDetailsPage.module.scss';
-import { DATE_FMT_SHORT, formatPlayerName } from '../formatUtils';
+import { DATE_FMT_SHORT } from '../formatUtils';
 import { buildFormRecord } from '../gameUtils';
 import { PERIOD_IDS, GAME_TYPE_LABEL } from '../constants';
 import { TIME_FMT, formatScheduledTime } from '../formatUtils';
@@ -291,9 +291,6 @@ const GameSummaryTab = ({
     setShotsPeriod(period);
   };
 
-  // ── Goalie stats edit modal ──────────────────────────────────────────────
-  const [goalieStatsModalOpen, setGoalieStatsModalOpen] = useState(false);
-
   // ── Period accordion refs ────────────────────────────────────────────────
   const periodAccordionRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const setAccordionRef = useCallback(
@@ -407,118 +404,18 @@ const GameSummaryTab = ({
             />
 
             {/* ── Goalie Stats card ── */}
-            {(isFinal || isInProgress) &&
-              (() => {
-                const goalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
-                const goaliesWithStats = goalies.filter((g) =>
-                  goalieStats.some((gs) => gs.goalie_id === g.player_id),
-                );
-                if (goaliesWithStats.length === 0) return null;
-                return (
-                  <Card
-                    title="Goalie Stats"
-                    action={
-                      isFinal ? (
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          icon="edit"
-                          size="sm"
-                          tooltip="Edit goalie stats"
-                          onClick={() => setGoalieStatsModalOpen(true)}
-                        />
-                      ) : undefined
-                    }
-                  >
-                    <table className={styles.goalieTable}>
-                      <thead>
-                        <tr>
-                          <th className={styles.goalieThTeam}></th>
-                          <th className={styles.goalieTh}>SA</th>
-                          <th className={styles.goalieTh}>SV</th>
-                          <th className={styles.goalieTh}>SV%</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {goalies.map((goalie) => {
-                          const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
-                          if (!stat) return null;
-                          const isAway = goalie.team_id === game.away_team_id;
-                          const primaryColor = isAway
-                            ? game.away_team_primary_color
-                            : game.home_team_primary_color;
-                          const textColor = isAway
-                            ? game.away_team_text_color
-                            : game.home_team_text_color;
-                          const teamLogo = isAway ? game.away_team_logo : game.home_team_logo;
-                          const teamCode = isAway ? game.away_team_code : game.home_team_code;
-                          const svPct =
-                            stat && stat.shots_against > 0
-                              ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
-                              : stat
-                                ? '1.000'
-                                : '—';
-                          const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
-                          return (
-                            <tr
-                              key={goalie.player_id}
-                              className={styles.goalieRow}
-                              style={{ cursor: 'pointer' }}
-                              onClick={() => navigate(playerHref)}
-                            >
-                              <td className={styles.goalieTdName}>
-                                <span className={styles.goalieNameCell}>
-                                  {teamLogo ? (
-                                    <img
-                                      src={teamLogo}
-                                      alt={teamCode}
-                                      className={styles.goalTeamLogo}
-                                    />
-                                  ) : (
-                                    <span
-                                      className={styles.goalTeamLogoPlaceholder}
-                                      style={{ background: primaryColor, color: textColor }}
-                                    >
-                                      {teamCode?.slice(0, 1)}
-                                    </span>
-                                  )}
-                                  {goalie.photo ? (
-                                    <img
-                                      src={goalie.photo}
-                                      alt=""
-                                      className={styles.goalScorerPhoto}
-                                    />
-                                  ) : (
-                                    <span
-                                      className={styles.goalScorerPhotoPlaceholder}
-                                      style={{ background: primaryColor, color: textColor }}
-                                    >
-                                      {goalie.last_name?.charAt(0)}
-                                    </span>
-                                  )}
-                                  <div className={styles.goalInfo}>
-                                    {goalie.jersey_number != null && (
-                                      <span className={styles.goalAssists}>
-                                        #{goalie.jersey_number}
-                                      </span>
-                                    )}
-                                    <span className={styles.goalScorer}>
-                                      {formatPlayerName(goalie.first_name, goalie.last_name)}
-                                    </span>
-                                  </div>
-                                </span>
-                              </td>
-                              <td className={styles.goalieTd}>{stat?.shots_against ?? '—'}</td>
-                              <td className={styles.goalieTd}>{stat?.saves ?? '—'}</td>
-                              <td className={styles.goalieTd}>{svPct}</td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </Card>
-                );
-              })()}
+            {(isFinal || isInProgress) && (
+              <GoalieStatsCard
+                game={game}
+                awayRoster={awayRoster}
+                homeRoster={homeRoster}
+                goalieStats={goalieStats}
+                lineup={lineup}
+                leagueId={leagueId}
+                isFinal={isFinal}
+                upsertGoalieStat={upsertGoalieStat}
+              />
+            )}
 
             {/* ── Previous Meetings card ── */}
             {game.previous_meetings && game.previous_meetings.length > 0 && (
@@ -1260,11 +1157,8 @@ const GameSummaryTab = ({
               </div>
             </Card>
           </div>
-          {/* end summaryRight */}
         </div>
-        {/* end summaryGrid */}
       </div>
-      {/* end tabContent */}
 
       {/* ── Score Goal Form ── */}
       {goalPeriod !== null && (
@@ -1379,22 +1273,6 @@ const GameSummaryTab = ({
             setEndGameReadyForStars(true);
             setStarsEditMode(false);
             setStarsModalOpen(true);
-          }}
-        />
-      )}
-
-      {/* ── Goalie Stats edit modal ── */}
-      {goalieStatsModalOpen && (
-        <GoalieStatsEditModal
-          open={goalieStatsModalOpen}
-          game={game}
-          awayRoster={awayRoster}
-          homeRoster={homeRoster}
-          goalieStats={goalieStats}
-          lineup={lineup}
-          onClose={() => setGoalieStatsModalOpen(false)}
-          upsertGoalieStat={async (data) => {
-            await upsertGoalieStat(data);
           }}
         />
       )}
