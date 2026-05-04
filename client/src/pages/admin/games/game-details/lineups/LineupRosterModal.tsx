@@ -126,7 +126,7 @@ const LineupRosterModal = ({
       open={open}
       title={`Add to ${teamName} Lineup`}
       onClose={handleClose}
-      size="lg"
+      size="md"
       onConfirm={handleSubmit}
       confirmLabel={submitting ? 'Adding…' : 'Add to Lineup'}
       confirmIcon="group_add"
@@ -140,64 +140,62 @@ const LineupRosterModal = ({
         </span>
       }
     >
-      <div className={styles.controls}>
-        <div className={styles.searchWrap}>
-          <Icon
-            name="search"
-            size="1em"
-            className={styles.searchIcon}
-          />
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="Search players…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-          />
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <p className={styles.empty}>
-          {available.length === 0
-            ? 'All team players are already in this lineup.'
-            : `No players match "${query}".`}
-        </p>
-      ) : (
-        <>
-          <ul className={styles.selectAllRow}>
-            <SelectableListItem
-              checked={allFilteredSelected}
-              onToggle={toggleAll}
-              name="Select All"
-              hideImage
+      <div className={styles.content}>
+        <div className={styles.controls}>
+          <div className={styles.searchWrap}>
+            <Icon
+              name="search"
+              size="1em"
+              className={styles.searchIcon}
             />
-          </ul>
-          <div className={styles.listDivider} />
-          <ul className={styles.list}>
-            {filtered.map((p) => {
-              const jerseyPart = p.jersey_number != null ? `#${p.jersey_number}` : null;
-              const positionPart = p.position ? (POSITION_LABELS[p.position] ?? p.position) : null;
-              const eyebrow = [jerseyPart, positionPart].filter(Boolean).join(' · ') || undefined;
-              return (
+            <input
+              className={styles.searchInput}
+              type="text"
+              placeholder="Search players…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className={styles.empty}>
+            {available.length === 0
+              ? 'All team players are already in this lineup.'
+              : `No players match "${query}".`}
+          </p>
+        ) : (
+          <>
+            <ul className={styles.selectAllRow}>
+              <SelectableListItem
+                checked={allFilteredSelected}
+                onToggle={toggleAll}
+                name="Select All"
+                hideImage
+              />
+            </ul>
+            <div className={styles.listDivider} />
+            <ul className={styles.list}>
+              {filtered.map((p) => (
                 <SelectableListItem
                   key={p.id}
                   checked={selected.has(p.id)}
                   onToggle={() => toggle(p.id)}
+                  jerseyNumber={p.jersey_number ?? null}
                   image={p.photo}
                   imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
                   imageShape="circle"
                   imagePrimaryColor={p.primary_color}
                   imageTextColor={p.text_color}
-                  eyebrow={eyebrow}
+                  eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                   name={`${p.last_name}, ${p.first_name}`}
                 />
-              );
-            })}
-          </ul>
-        </>
-      )}
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </Modal>
   );
 };

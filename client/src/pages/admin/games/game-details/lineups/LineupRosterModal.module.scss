@@ -1,7 +1,15 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+.content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .controls {
+  flex-shrink: 0;
   margin-bottom: $space-lg;
 }
 
@@ -54,12 +62,12 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 360px;
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: $space-xl;
 }
 
 .jerseyWrap {
@@ -109,5 +117,4 @@
   font-style: italic;
   text-align: center;
   padding: $space-2xl 0;
-  margin-bottom: $space-xl;
 }
