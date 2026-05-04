@@ -906,14 +906,18 @@ async function initSchema() {
   `;
 
   // ── Widen bracket_slot_rules.scope to include specific_conference / specific_division ──
+  // Wrapped in a single DO block so it is one round-trip to Neon and fully atomic.
   await sql`
-    ALTER TABLE bracket_slot_rules
-      DROP CONSTRAINT IF EXISTS bracket_slot_rules_scope_check
-  `;
-  await sql`
-    ALTER TABLE bracket_slot_rules
-      ADD CONSTRAINT bracket_slot_rules_scope_check
-        CHECK (scope IN ('league', 'conference', 'division', 'specific_conference', 'specific_division'))
+    DO $$
+    BEGIN
+      ALTER TABLE bracket_slot_rules
+        DROP CONSTRAINT IF EXISTS bracket_slot_rules_scope_check;
+      ALTER TABLE bracket_slot_rules
+        ADD CONSTRAINT bracket_slot_rules_scope_check
+          CHECK (scope IN ('league', 'conference', 'division', 'specific_conference', 'specific_division'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END $$
   `;
 
   // ── Add group_id to bracket_slot_rules (for specific_conference / specific_division) ──
