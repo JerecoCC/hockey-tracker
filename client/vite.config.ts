@@ -14,6 +14,7 @@ export default defineConfig({
     preprocessorOptions: {
       scss: {
         api: 'modern-compiler',
+        loadPaths: [path.resolve(__dirname, './src')],
       },
     },
   },

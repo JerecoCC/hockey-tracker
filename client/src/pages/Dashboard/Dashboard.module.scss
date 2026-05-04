@@ -1,5 +1,5 @@
-@use "../../styles/colors" as *;
-@use "../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // local override — dark text on the white card (distinct from $text-body which is for dark-theme pages)
 $text-body-light: #111827;

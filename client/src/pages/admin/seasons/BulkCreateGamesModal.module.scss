@@ -1,5 +1,5 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // Date | Time | Away | Home | Venue | delete
 $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
