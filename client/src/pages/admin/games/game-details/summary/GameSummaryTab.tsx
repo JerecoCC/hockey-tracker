@@ -25,7 +25,8 @@ import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
-import type { LastFiveGame, PreviousMeeting } from '@/hooks/useGames';
+import type { LastFiveGame } from '@/hooks/useGames';
+import PreviousMeetingsCard from './PreviousMeetingsCard';
 import styles from '../GameDetailsPage.module.scss';
 import { DATE_FMT_SHORT } from '../formatUtils';
 import { buildFormRecord } from '../gameUtils';
@@ -418,112 +419,11 @@ const GameSummaryTab = ({
             )}
 
             {/* ── Previous Meetings card ── */}
-            {game.previous_meetings && game.previous_meetings.length > 0 && (
-              <Card title="Previous Meetings">
-                <div className={styles.prevMeetingsRows}>
-                  {game.previous_meetings.map((pm: PreviousMeeting) => {
-                    const isOT = pm.overtime_periods != null && pm.overtime_periods > 0;
-                    const isSO = pm.shootout;
-                    const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
-                    const leftTeam = pm.current_home_was_home
-                      ? {
-                          code: game.away_team_code,
-                          logo: game.away_team_logo,
-                          primary: game.away_team_primary_color,
-                          text: game.away_team_text_color,
-                        }
-                      : {
-                          code: game.home_team_code,
-                          logo: game.home_team_logo,
-                          primary: game.home_team_primary_color,
-                          text: game.home_team_text_color,
-                        };
-                    const rightTeam = pm.current_home_was_home
-                      ? {
-                          code: game.home_team_code,
-                          logo: game.home_team_logo,
-                          primary: game.home_team_primary_color,
-                          text: game.home_team_text_color,
-                        }
-                      : {
-                          code: game.away_team_code,
-                          logo: game.away_team_logo,
-                          primary: game.away_team_primary_color,
-                          text: game.away_team_text_color,
-                        };
-                    const homeWon = pm.home_score > pm.away_score;
-                    const renderTeamLogo = (team: typeof leftTeam) =>
-                      team.logo ? (
-                        <img
-                          src={team.logo}
-                          alt={team.code}
-                          className={styles.prevMeetingLogo}
-                        />
-                      ) : (
-                        <span
-                          className={styles.prevMeetingLogoPlaceholder}
-                          style={{ background: team.primary, color: team.text }}
-                        >
-                          {team.code?.slice(0, 3)}
-                        </span>
-                      );
-                    return (
-                      <div
-                        key={pm.game_id}
-                        className={styles.prevMeetingRow}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() =>
-                          navigate(
-                            `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${pm.game_id}`,
-                          )
-                        }
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ')
-                            navigate(
-                              `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${pm.game_id}`,
-                            );
-                        }}
-                      >
-                        {pm.scheduled_at && (
-                          <span className={styles.prevMeetingDate}>
-                            {DATE_FMT_SHORT.format(new Date(pm.scheduled_at))}
-                          </span>
-                        )}
-                        <span className={styles.prevMeetingTeam}>
-                          {renderTeamLogo(leftTeam)}
-                          <span className={styles.prevMeetingCode}>{leftTeam.code}</span>
-                        </span>
-                        <span className={styles.prevMeetingScore}>
-                          <span
-                            className={
-                              homeWon ? styles.prevMeetingScoreDim : styles.prevMeetingScoreBright
-                            }
-                          >
-                            {pm.away_score}
-                          </span>
-                          <span className={styles.prevMeetingScoreSep}>–</span>
-                          <span
-                            className={
-                              homeWon ? styles.prevMeetingScoreBright : styles.prevMeetingScoreDim
-                            }
-                          >
-                            {pm.home_score}
-                          </span>
-                          {suffix && <span className={styles.prevMeetingSuffix}>{suffix}</span>}
-                        </span>
-                        <span
-                          className={`${styles.prevMeetingTeam} ${styles.prevMeetingTeamRight}`}
-                        >
-                          <span className={styles.prevMeetingCode}>{rightTeam.code}</span>
-                          {renderTeamLogo(rightTeam)}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </Card>
-            )}
+            <PreviousMeetingsCard
+              game={game}
+              leagueId={leagueId}
+              seasonId={seasonId}
+            />
 
             {/* ── Last 5 Games card ── */}
             {(game.home_last_five || game.away_last_five) &&
