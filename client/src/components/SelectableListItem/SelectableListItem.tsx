@@ -17,8 +17,10 @@ export interface SelectableListItemProps {
   imagePrimaryColor?: string | null;
   /** Team text color — used as placeholder text color when no image is set. */
   imageTextColor?: string | null;
-  /** Optional line shown above the name (e.g. jersey number + position). */
+  /** Optional line shown above the name (e.g. position). */
   eyebrow?: string;
+  /** Jersey number — rendered as a bordered chip between the avatar and name column. */
+  jerseyNumber?: number | null;
   name: string;
   subtitle?: string;
   /** Optional node rendered at the trailing edge of the row (e.g. a code badge or jersey input). */
@@ -35,6 +37,7 @@ const SelectableListItem = ({
   imagePrimaryColor,
   imageTextColor,
   eyebrow,
+  jerseyNumber,
   name,
   subtitle,
   rightContent,
@@ -67,6 +70,8 @@ const SelectableListItem = ({
         )}
       </div>
     )}
+
+    {jerseyNumber != null && <span className={styles.jerseyChip}>{jerseyNumber}</span>}
 
     <div className={styles.info}>
       {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
