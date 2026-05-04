@@ -895,13 +895,31 @@ async function initSchema() {
       rule_type    TEXT NOT NULL
                      CHECK (rule_type IN ('seed', 'choice', 'unchosen', 'winner')),
       rank         SMALLINT CHECK (rank BETWEEN 1 AND 16),
-      scope        TEXT CHECK (scope IN ('league', 'conference', 'division')),
+      scope        TEXT CHECK (scope IN ('league', 'conference', 'division', 'specific_conference', 'specific_division')),
+      group_id     UUID REFERENCES groups(id) ON DELETE SET NULL,
       pool         JSONB NOT NULL DEFAULT '[]',
       choice_ref   TEXT,
       matchup_ref  TEXT,
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (rule_set_id, slot_key)
     )
+  `;
+
+  // ── Widen bracket_slot_rules.scope to include specific_conference / specific_division ──
+  await sql`
+    ALTER TABLE bracket_slot_rules
+      DROP CONSTRAINT IF EXISTS bracket_slot_rules_scope_check
+  `;
+  await sql`
+    ALTER TABLE bracket_slot_rules
+      ADD CONSTRAINT bracket_slot_rules_scope_check
+        CHECK (scope IN ('league', 'conference', 'division', 'specific_conference', 'specific_division'))
+  `;
+
+  // ── Add group_id to bracket_slot_rules (for specific_conference / specific_division) ──
+  await sql`
+    ALTER TABLE bracket_slot_rules
+      ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE SET NULL
   `;
 
   // ── Link seasons to a bracket rule set ───────────────────────────────────

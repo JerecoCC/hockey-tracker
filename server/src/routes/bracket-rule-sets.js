@@ -10,13 +10,14 @@ async function upsertSlots(ruleSetId, slots) {
   for (const slot of slots) {
     await sql`
       INSERT INTO bracket_slot_rules
-        (rule_set_id, slot_key, rule_type, rank, scope, pool, choice_ref, matchup_ref)
+        (rule_set_id, slot_key, rule_type, rank, scope, group_id, pool, choice_ref, matchup_ref)
       VALUES (
         ${ruleSetId},
         ${slot.slot_key},
         ${slot.rule_type},
         ${slot.rank ?? null},
         ${slot.scope ?? null},
+        ${slot.group_id ?? null},
         ${slot.pool ? JSON.stringify(slot.pool) : '[]'}::jsonb,
         ${slot.choice_ref ?? null},
         ${slot.matchup_ref ?? null}
@@ -24,7 +25,7 @@ async function upsertSlots(ruleSetId, slots) {
     `;
   }
   return sql`
-    SELECT slot_key, rule_type, rank, scope, pool, choice_ref, matchup_ref
+    SELECT slot_key, rule_type, rank, scope, group_id, pool, choice_ref, matchup_ref
     FROM bracket_slot_rules
     WHERE rule_set_id = ${ruleSetId}
     ORDER BY slot_key
@@ -63,7 +64,7 @@ router.get('/:id', async (req, res) => {
     `;
     if (sets.length === 0) return res.status(404).json({ error: 'Rule set not found' });
     const slots = await sql`
-      SELECT slot_key, rule_type, rank, scope, pool, choice_ref, matchup_ref
+      SELECT slot_key, rule_type, rank, scope, group_id, pool, choice_ref, matchup_ref
       FROM bracket_slot_rules WHERE rule_set_id = ${id} ORDER BY slot_key
     `;
     return res.json({ ...sets[0], slots });

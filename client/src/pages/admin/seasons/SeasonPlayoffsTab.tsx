@@ -7,21 +7,18 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
-import {
-  type PlayoffSeriesRecord,
-  type CreateSeriesData,
-  type SeriesStatus,
-  usePlayoffSeries,
-} from '@/hooks/useGames';
+import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
 import Select from '@/components/Select/Select';
 import useBracketRuleSets from '@/hooks/useBracketRuleSets';
+import useSeasonStandings from '@/hooks/useSeasonStandings';
 import BracketRulesModal, {
   type BracketStructure,
   deriveBracketStructureFromSize,
   getRoundLabel,
+  makeSlotKey,
 } from './BracketRulesModal';
 import styles from './SeasonPlayoffsTab.module.scss';
 
@@ -77,246 +74,6 @@ const deriveBracketStructure = (
   if (totalTeams < 2) return null;
 
   return deriveBracketStructureFromSize(totalTeams);
-};
-
-// ── Series Form ────────────────────────────────────────────────────────────────
-
-interface SeriesFormState {
-  round: string;
-  series_letter: string;
-  home_team_id: string;
-  away_team_id: string;
-  games_to_win: string;
-  status: SeriesStatus;
-  home_wins: string;
-  away_wins: string;
-  winner_team_id: string;
-}
-
-const blankForm = (): SeriesFormState => ({
-  round: '1',
-  series_letter: '',
-  home_team_id: '',
-  away_team_id: '',
-  games_to_win: '4',
-  status: 'upcoming',
-  home_wins: '0',
-  away_wins: '0',
-  winner_team_id: '',
-});
-
-interface SeriesModalProps {
-  open: boolean;
-  editTarget: PlayoffSeriesRecord | null;
-  seasonId: string;
-  teams: SeasonTeam[];
-  busy: string | null;
-  defaultRound?: number;
-  bracketStructure?: BracketStructure | null;
-  onCreate: (d: CreateSeriesData) => Promise<boolean>;
-  onUpdate: (id: string, d: Partial<CreateSeriesData>) => Promise<boolean>;
-  onClose: () => void;
-}
-
-const SeriesFormModal = ({
-  open,
-  editTarget,
-  seasonId,
-  teams,
-  busy,
-  defaultRound = 1,
-  bracketStructure,
-  onCreate,
-  onUpdate,
-  onClose,
-}: SeriesModalProps) => {
-  const [f, setF] = useState<SeriesFormState>(blankForm());
-  useEffect(() => {
-    if (!open) return;
-    if (editTarget) {
-      setF({
-        round: String(editTarget.round),
-        series_letter: editTarget.series_letter ?? '',
-        home_team_id: editTarget.home_team_id,
-        away_team_id: editTarget.away_team_id,
-        games_to_win: String(editTarget.games_to_win),
-        status: editTarget.status,
-        home_wins: String(editTarget.home_wins),
-        away_wins: String(editTarget.away_wins),
-        winner_team_id: editTarget.winner_team_id ?? '',
-      });
-    } else {
-      setF({ ...blankForm(), round: String(defaultRound) });
-    }
-  }, [open, editTarget, defaultRound]);
-
-  const patch = (key: keyof SeriesFormState, val: string) =>
-    setF((prev) => ({ ...prev, [key]: val }));
-
-  const handleSave = async () => {
-    const payload: CreateSeriesData = {
-      season_id: seasonId,
-      round: parseInt(f.round, 10),
-      series_letter: f.series_letter || null,
-      home_team_id: f.home_team_id,
-      away_team_id: f.away_team_id,
-      games_to_win: parseInt(f.games_to_win, 10),
-      status: f.status,
-      home_wins: parseInt(f.home_wins, 10),
-      away_wins: parseInt(f.away_wins, 10),
-      winner_team_id: f.winner_team_id || null,
-    };
-    const ok = editTarget ? await onUpdate(editTarget.id, payload) : await onCreate(payload);
-    if (ok) onClose();
-  };
-
-  const isBusy = busy === 'creating' || (editTarget != null && busy === editTarget.id);
-  const canSave = !!f.home_team_id && !!f.away_team_id && f.home_team_id !== f.away_team_id;
-
-  const teamOpts = teams.map((t) => (
-    <option
-      key={t.id}
-      value={t.id}
-    >
-      {t.name}
-    </option>
-  ));
-
-  return (
-    <Modal
-      open={open}
-      title={editTarget ? 'Edit Playoff Series' : 'New Playoff Series'}
-      onClose={onClose}
-      confirmLabel={editTarget ? 'Save Changes' : 'Create Series'}
-      confirmDisabled={!canSave}
-      busy={isBusy}
-      onConfirm={handleSave}
-    >
-      <div className={styles.formGrid}>
-        <div className={styles.formRow}>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Round</label>
-            <select
-              className={styles.formSelect}
-              value={f.round}
-              onChange={(e) => patch('round', e.target.value)}
-            >
-              {(
-                bracketStructure?.rounds ??
-                [1, 2, 3, 4].map((r) => ({ round: r, label: getRoundLabel(r, 4) }))
-              ).map(({ round: r, label }) => (
-                <option
-                  key={r}
-                  value={r}
-                >
-                  {label}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Series Letter (optional)</label>
-            <input
-              className={styles.formInput}
-              value={f.series_letter}
-              placeholder="e.g. A"
-              maxLength={4}
-              onChange={(e) => patch('series_letter', e.target.value)}
-            />
-          </div>
-        </div>
-        <div className={styles.formRow}>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Home Team</label>
-            <select
-              className={styles.formSelect}
-              value={f.home_team_id}
-              onChange={(e) => patch('home_team_id', e.target.value)}
-            >
-              <option value="">Select team…</option>
-              {teamOpts}
-            </select>
-          </div>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Away Team</label>
-            <select
-              className={styles.formSelect}
-              value={f.away_team_id}
-              onChange={(e) => patch('away_team_id', e.target.value)}
-            >
-              <option value="">Select team…</option>
-              {teamOpts}
-            </select>
-          </div>
-        </div>
-        <div className={styles.formRow}>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Format</label>
-            <select
-              className={styles.formSelect}
-              value={f.games_to_win}
-              onChange={(e) => patch('games_to_win', e.target.value)}
-            >
-              <option value="2">Best of 3</option>
-              <option value="3">Best of 5</option>
-              <option value="4">Best of 7</option>
-            </select>
-          </div>
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Status</label>
-            <select
-              className={styles.formSelect}
-              value={f.status}
-              onChange={(e) => patch('status', e.target.value as SeriesStatus)}
-            >
-              <option value="upcoming">Upcoming</option>
-              <option value="active">Active</option>
-              <option value="complete">Complete</option>
-            </select>
-          </div>
-        </div>
-        {editTarget && (
-          <div className={styles.formRow}>
-            <div className={styles.formField}>
-              <label className={styles.formLabel}>Home Wins</label>
-              <input
-                className={styles.formInput}
-                type="number"
-                min={0}
-                max={f.games_to_win}
-                value={f.home_wins}
-                onChange={(e) => patch('home_wins', e.target.value)}
-              />
-            </div>
-            <div className={styles.formField}>
-              <label className={styles.formLabel}>Away Wins</label>
-              <input
-                className={styles.formInput}
-                type="number"
-                min={0}
-                max={f.games_to_win}
-                value={f.away_wins}
-                onChange={(e) => patch('away_wins', e.target.value)}
-              />
-            </div>
-          </div>
-        )}
-        {f.status === 'complete' && (
-          <div className={styles.formField}>
-            <label className={styles.formLabel}>Winner</label>
-            <select
-              className={styles.formSelect}
-              value={f.winner_team_id}
-              onChange={(e) => patch('winner_team_id', e.target.value)}
-            >
-              <option value="">Select winner…</option>
-              {teamOpts}
-            </select>
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
 };
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -580,36 +337,40 @@ const PlayoffFormatModal = ({
 
 interface BracketSlotProps {
   series: PlayoffSeriesRecord | null;
-  isEnded: boolean;
   busy: string | null;
-  onAdd: () => void;
-  onEdit: (s: PlayoffSeriesRecord) => void;
+  /** Simulated team name for slot 1 (away). Only shown when series is null. */
+  simulatedAway?: string | null;
+  /** Simulated team name for slot 2 (home). Only shown when series is null. */
+  simulatedHome?: string | null;
   onDelete: (s: PlayoffSeriesRecord) => void;
 }
 
-const BracketSlot = ({ series, isEnded, busy, onAdd, onEdit, onDelete }: BracketSlotProps) => {
+const BracketSlot = ({
+  series,
+  busy,
+  simulatedAway,
+  simulatedHome,
+  onDelete,
+}: BracketSlotProps) => {
   if (!series) {
+    const isSimulated = simulatedAway != null || simulatedHome != null;
     return (
       <div
         className={[
           styles.bracketSlot,
           styles.slotFilled,
-          styles.slotEmptyMatchup,
-          isEnded ? styles.slotEmptyDisabled : '',
+          isSimulated ? styles.slotSimulated : styles.slotEmptyMatchup,
+          styles.slotEmptyDisabled,
         ]
           .filter(Boolean)
           .join(' ')}
-        role={!isEnded ? 'button' : undefined}
-        tabIndex={!isEnded ? 0 : undefined}
-        onClick={!isEnded ? onAdd : undefined}
-        onKeyDown={!isEnded ? (e) => e.key === 'Enter' && onAdd() : undefined}
       >
-        <div className={`${styles.slotTeam} ${styles.slotTeamTbd}`}>
-          <span className={styles.slotTeamName}>TBD</span>
+        <div className={`${styles.slotTeam} ${!simulatedAway ? styles.slotTeamTbd : ''}`}>
+          <span className={styles.slotTeamName}>{simulatedAway ?? 'TBD'}</span>
         </div>
         <div className={styles.slotDivider} />
-        <div className={`${styles.slotTeam} ${styles.slotTeamTbd}`}>
-          <span className={styles.slotTeamName}>TBD</span>
+        <div className={`${styles.slotTeam} ${!simulatedHome ? styles.slotTeamTbd : ''}`}>
+          <span className={styles.slotTeamName}>{simulatedHome ?? 'TBD'}</span>
         </div>
       </div>
     );
@@ -654,20 +415,11 @@ const BracketSlot = ({ series, isEnded, busy, onAdd, onEdit, onDelete }: Bracket
         <div className={styles.slotActions}>
           <Button
             variant="ghost"
-            intent="neutral"
-            icon="edit"
-            size="sm"
-            tooltip="Edit series"
-            disabled={isEnded}
-            onClick={() => onEdit(series)}
-          />
-          <Button
-            variant="ghost"
             intent="danger"
             icon="delete"
             size="sm"
             tooltip="Delete series"
-            disabled={isEnded || busy === series.id}
+            disabled={busy === series.id}
             onClick={() => onDelete(series)}
           />
         </div>
@@ -682,7 +434,6 @@ interface Props {
   seasonId: string;
   leagueId: string;
   bracketRuleSetId: string | null;
-  seasonTeams: SeasonTeam[];
   groups: SeasonGroupRecord[];
   isEnded: boolean;
   playoffFormat: PlayoffFormatRule[] | null;
@@ -699,7 +450,6 @@ const SeasonPlayoffsTab = ({
   seasonId,
   leagueId,
   bracketRuleSetId,
-  seasonTeams,
   groups,
   isEnded,
   playoffFormat,
@@ -720,8 +470,57 @@ const SeasonPlayoffsTab = ({
     deleteSeries,
   } = usePlayoffSeries(seasonId);
 
-  const { ruleSets } = useBracketRuleSets(leagueId);
+  const { ruleSets, fetchRuleSet } = useBracketRuleSets(leagueId);
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
+
+  const { standings } = useSeasonStandings(seasonId);
+
+  // ── Simulation state ──────────────────────────────────────────────────────────
+  const [simulatedSlots, setSimulatedSlots] = useState<Record<string, string | null> | null>(null);
+  const [simulating, setSimulating] = useState(false);
+
+  const handleSimulate = async () => {
+    if (!bracketRuleSetId) return;
+    setSimulating(true);
+    try {
+      const ruleSet = await fetchRuleSet(bracketRuleSetId);
+      if (!ruleSet) return;
+
+      // Recursively collect all team IDs belonging to a group and its children.
+      const getGroupTeamIds = (groupId: string): Set<string> => {
+        const ids = new Set<string>();
+        const collect = (gid: string) => {
+          const g = groups.find((gr) => gr.id === gid);
+          if (!g) return;
+          g.teams.forEach((t) => ids.add(t.id));
+          groups.filter((gr) => gr.parent_id === gid).forEach((child) => collect(child.id));
+        };
+        collect(groupId);
+        return ids;
+      };
+
+      const result: Record<string, string | null> = {};
+      for (const slot of ruleSet.slots) {
+        if (slot.rule_type !== 'seed') {
+          result[slot.slot_key] = null;
+          continue;
+        }
+        let filtered = standings;
+        if (
+          (slot.scope === 'specific_conference' || slot.scope === 'specific_division') &&
+          slot.group_id
+        ) {
+          const ids = getGroupTeamIds(slot.group_id);
+          filtered = standings.filter((s) => ids.has(s.team_id));
+        }
+        const idx = (slot.rank ?? 1) - 1;
+        result[slot.slot_key] = filtered[idx]?.team_name ?? null;
+      }
+      setSimulatedSlots(result);
+    } finally {
+      setSimulating(false);
+    }
+  };
 
   // ── Derived bracket structure ─────────────────────────────────────────────────
   const bracketStructure = useMemo(
@@ -735,19 +534,7 @@ const SeasonPlayoffsTab = ({
   const [bracketRulesModalOpen, setBracketRulesModalOpen] = useState(false);
 
   // ── Series state ─────────────────────────────────────────────────────────────
-  const [seriesModalOpen, setSeriesModalOpen] = useState(false);
-  const [editTargetSeries, setEditTargetSeries] = useState<PlayoffSeriesRecord | null>(null);
   const [confirmDeleteSeries, setConfirmDeleteSeries] = useState<PlayoffSeriesRecord | null>(null);
-  const [createRound, setCreateRound] = useState(1);
-  const openCreateSeries = (round = 1) => {
-    setEditTargetSeries(null);
-    setCreateRound(round);
-    setSeriesModalOpen(true);
-  };
-  const openEditSeries = (s: PlayoffSeriesRecord) => {
-    setEditTargetSeries(s);
-    setSeriesModalOpen(true);
-  };
 
   const seriesByRound = series.reduce<Record<number, PlayoffSeriesRecord[]>>((acc, s) => {
     if (!acc[s.round]) acc[s.round] = [];
@@ -764,17 +551,29 @@ const SeasonPlayoffsTab = ({
           <Card
             title="Playoff Bracket"
             action={
-              !bracketStructure ? (
-                <Button
-                  variant="filled"
-                  intent="accent"
-                  icon="add"
-                  size="sm"
-                  disabled={isEnded}
-                  onClick={() => openCreateSeries()}
-                >
-                  Add Series
-                </Button>
+              bracketStructure && bracketRuleSetId ? (
+                simulatedSlots !== null ? (
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="close"
+                    size="sm"
+                    onClick={() => setSimulatedSlots(null)}
+                  >
+                    Clear
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outlined"
+                    intent="accent"
+                    icon="play_arrow"
+                    size="sm"
+                    disabled={simulating}
+                    onClick={handleSimulate}
+                  >
+                    Simulate
+                  </Button>
+                )
               ) : null
             }
           >
@@ -795,10 +594,13 @@ const SeasonPlayoffsTab = ({
                           <BracketSlot
                             key={slotIndex}
                             series={roundSeries[slotIndex] ?? null}
-                            isEnded={isEnded}
                             busy={seriesBusy}
-                            onAdd={() => openCreateSeries(roundInfo.round)}
-                            onEdit={openEditSeries}
+                            simulatedAway={
+                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'away')]
+                            }
+                            simulatedHome={
+                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'home')]
+                            }
                             onDelete={setConfirmDeleteSeries}
                           />
                         ))}
@@ -840,20 +642,11 @@ const SeasonPlayoffsTab = ({
                             <div className={styles.seriesRowActions}>
                               <Button
                                 variant="ghost"
-                                intent="neutral"
-                                icon="edit"
-                                size="sm"
-                                tooltip="Edit series"
-                                disabled={isEnded}
-                                onClick={() => openEditSeries(s)}
-                              />
-                              <Button
-                                variant="ghost"
                                 intent="danger"
                                 icon="delete"
                                 size="sm"
                                 tooltip="Delete series"
-                                disabled={isEnded || seriesBusy === s.id}
+                                disabled={seriesBusy === s.id}
                                 onClick={() => setConfirmDeleteSeries(s)}
                               />
                             </div>
@@ -1019,19 +812,6 @@ const SeasonPlayoffsTab = ({
           seasonId={seasonId}
           updateSeason={updateSeason}
           onClose={() => setSettingsModalOpen(false)}
-        />
-
-        <SeriesFormModal
-          open={seriesModalOpen}
-          editTarget={editTargetSeries}
-          seasonId={seasonId}
-          teams={seasonTeams}
-          busy={seriesBusy}
-          defaultRound={createRound}
-          bracketStructure={bracketStructure}
-          onCreate={createSeries}
-          onUpdate={updateSeries}
-          onClose={() => setSeriesModalOpen(false)}
         />
 
         <ConfirmModal

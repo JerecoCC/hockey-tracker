@@ -388,6 +388,12 @@
   min-height: 82px;
 }
 
+// Simulated matchup: solid border, accent tint — not clickable
+.slotSimulated {
+  border-color: rgba($accent, 0.4);
+  opacity: 0.85;
+}
+
 // Empty matchup: same card structure as filled, but dashed border and TBD rows
 .slotEmptyMatchup {
   border-style: dashed;
