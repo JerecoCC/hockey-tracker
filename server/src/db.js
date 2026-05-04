@@ -864,6 +864,54 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS playoff_format JSONB
   `;
 
+  // ── Bracket rule sets ─────────────────────────────────────────────────────
+  // A named, reusable collection of bracket slot assignment rules owned by a
+  // league.  Multiple seasons in the same league can reference the same set so
+  // the bracket structure only needs to be configured once.
+  await sql`
+    CREATE TABLE IF NOT EXISTS bracket_rule_sets (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id   UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ── Bracket slot rules ────────────────────────────────────────────────────
+  // One row per configured bracket slot within a rule set.  Slots with no rule
+  // ('none') are omitted — they default to unassigned at query time.
+  //
+  // slot_key   : 'r{round}m{matchupIndex}{away|home}', e.g. 'r1m0away'
+  // rule_type  : 'seed' | 'choice' | 'unchosen' | 'winner'
+  //   seed     — #rank team from scope (league / conference / division)
+  //   choice   — a high seed picks from a pool of eligibles (pool JSONB)
+  //   unchosen — the leftover team after a choice pick (choice_ref → slot_key)
+  //   winner   — winner of a prior-round matchup (matchup_ref e.g. 'r1m0')
+  await sql`
+    CREATE TABLE IF NOT EXISTS bracket_slot_rules (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      rule_set_id  UUID NOT NULL REFERENCES bracket_rule_sets(id) ON DELETE CASCADE,
+      slot_key     TEXT NOT NULL,
+      rule_type    TEXT NOT NULL
+                     CHECK (rule_type IN ('seed', 'choice', 'unchosen', 'winner')),
+      rank         SMALLINT CHECK (rank BETWEEN 1 AND 16),
+      scope        TEXT CHECK (scope IN ('league', 'conference', 'division')),
+      pool         JSONB NOT NULL DEFAULT '[]',
+      choice_ref   TEXT,
+      matchup_ref  TEXT,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (rule_set_id, slot_key)
+    )
+  `;
+
+  // ── Link seasons to a bracket rule set ───────────────────────────────────
+  // ON DELETE SET NULL keeps the season intact when a rule set is deleted.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS bracket_rule_set_id UUID
+        REFERENCES bracket_rule_sets(id) ON DELETE SET NULL
+  `;
+
   // Game-rule overrides per season — nullable, falls back to league defaults when NULL.
   // best_of_playoff: number of games needed to win a series (2=Bo3, 3=Bo5, 4=Bo7).
   await sql`

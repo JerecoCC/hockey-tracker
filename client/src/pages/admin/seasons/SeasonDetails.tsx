@@ -786,6 +786,8 @@ const SeasonDetailsPage = () => {
             content: (
               <SeasonPlayoffsTab
                 seasonId={id!}
+                leagueId={season.league_id}
+                bracketRuleSetId={season.bracket_rule_set_id ?? null}
                 seasonTeams={seasonTeams}
                 groups={groups}
                 isEnded={season.is_ended}

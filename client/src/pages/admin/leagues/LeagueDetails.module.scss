@@ -138,6 +138,46 @@
   gap: $space-xs;
 }
 
+// ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
+
+.ruleSetList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.ruleSetItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+}
+
+.ruleSetName {
+  font-size: $font-sm;
+  color: $text-body;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ruleSetActions {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
 // Applied only when teams.length > 5 — caps height and enables scrolling
 .teamListLimited {
   max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-xs});
@@ -181,6 +221,13 @@
   align-items: flex-start;
   gap: $space-md;
   grid-column: 1 / -1;
+}
+
+.emptyMsg {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
 }
 
 .ungroupedLabel {

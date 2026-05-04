@@ -27,6 +27,20 @@
   gap: $space-xl;
 }
 
+// ── Bracket rule set selector card ───────────────────────────────────────────
+
+.ruleSetSelector {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.ruleSetHint {
+  font-size: $font-xs;
+  color: $text-dim;
+  font-style: italic;
+}
+
 // ── Game settings card ───────────────────────────────────────────────────────
 
 .settingsGrid {
@@ -52,6 +66,165 @@
 .settingsValue {
   font-size: $font-sm;
   color: $text-body;
+}
+
+// ── Bracket rules modal ──────────────────────────────────────────────────────
+
+.bracketSizeLabel {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: 100%;
+}
+
+.bracketRulesStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.bracketRulesRound {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.bracketRulesRoundLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding-bottom: $space-xs;
+  border-bottom: 1px solid $border;
+}
+
+.bracketRulesMatchups {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.bracketRulesMatchup {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+}
+
+.bracketRulesMatchupLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-body;
+  margin-bottom: $space-xs;
+}
+
+.bracketRulesAutoNote {
+  font-size: $font-xs;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.bracketRulesSlotRow {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-sm;
+  padding: $space-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba($border, 0.4);
+  }
+}
+
+.bracketRulesSlotLabel {
+  font-size: $font-xs;
+  color: $text-dim;
+  font-weight: 500;
+  min-width: 3.5rem;
+  padding-top: 11px; // vertically centres against 42px Field height
+}
+
+.bracketRulesSlotFields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: $space-xs;
+  flex: 1;
+}
+
+// Rule type selector — fixed width, wide enough for "Choice Pick"
+.slotTypeField {
+  width: 9.5rem;
+  flex-shrink: 0;
+}
+
+// Rank selector — narrow, just for #1–#16
+.slotRankField {
+  width: 5.5rem;
+  flex-shrink: 0;
+}
+
+// Scope / choiceRef selector — fills remaining space
+.slotScopeField {
+  flex: 1;
+  min-width: 9rem;
+}
+
+// Choice pool editor
+.poolEditor {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  flex: 1;
+  width: 100%;
+}
+
+.poolSeedRow {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+// Rank column in pool rows
+.poolSeedRank {
+  width: 5.5rem;
+  flex-shrink: 0;
+}
+
+// Scope column in pool rows
+.poolSeedScope {
+  flex: 1;
+  min-width: 9rem;
+}
+
+.poolSeedRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: $text-dim;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $danger;
+    background: rgba($danger, 0.1);
+  }
 }
 
 // ── Game settings modal ──────────────────────────────────────────────────────

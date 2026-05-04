@@ -60,6 +60,7 @@ router.get('/:id', async (req, res) => {
              s.best_of_playoff,
              s.best_of_shootout,
              s.scoring_system,
+             s.bracket_rule_set_id,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
              l.scoring_system    AS league_scoring_system,
@@ -113,7 +114,7 @@ router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
     league_id, name, start_date, end_date, games_per_season, playoff_format,
-    best_of_playoff, best_of_shootout, scoring_system,
+    best_of_playoff, best_of_shootout, scoring_system, bracket_rule_set_id,
   } = req.body;
 
   try {
@@ -122,7 +123,8 @@ router.patch('/:id', async (req, res) => {
       SELECT id, name, league_id,
              start_date::text AS start_date, end_date::text AS end_date, is_ended,
              games_per_season, playoff_format,
-             best_of_playoff, best_of_shootout, scoring_system
+             best_of_playoff, best_of_shootout, scoring_system,
+             bracket_rule_set_id
       FROM seasons WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
@@ -138,7 +140,8 @@ router.patch('/:id', async (req, res) => {
       : (cur.playoff_format ? JSON.stringify(cur.playoff_format) : null);
     const mergedBestOfPlayoff   = best_of_playoff   !== undefined ? (best_of_playoff   || null) : cur.best_of_playoff;
     const mergedBestOfShootout  = best_of_shootout  !== undefined ? (best_of_shootout  || null) : cur.best_of_shootout;
-    const mergedScoringSystem   = scoring_system    !== undefined ? (scoring_system    || null) : cur.scoring_system;
+    const mergedScoringSystem      = scoring_system       !== undefined ? (scoring_system       || null) : cur.scoring_system;
+    const mergedBracketRuleSetId   = bracket_rule_set_id  !== undefined ? (bracket_rule_set_id  || null) : cur.bracket_rule_set_id;
     // Auto-set is_ended when an end_date is provided; never auto-clear it.
     const mergedIsEnded         = mergedEndDate ? true : cur.is_ended;
 
@@ -152,16 +155,17 @@ router.patch('/:id', async (req, res) => {
     await sql`
       UPDATE seasons
       SET
-        name             = ${mergedName},
-        league_id        = ${mergedLeagueId},
-        start_date       = ${mergedStartDate},
-        end_date         = ${mergedEndDate},
-        is_ended         = ${mergedIsEnded},
-        games_per_season = ${mergedGamesPerSeason},
-        playoff_format   = ${mergedPlayoffFormat}::jsonb,
-        best_of_playoff  = ${mergedBestOfPlayoff},
-        best_of_shootout = ${mergedBestOfShootout},
-        scoring_system   = ${mergedScoringSystem}
+        name                 = ${mergedName},
+        league_id            = ${mergedLeagueId},
+        start_date           = ${mergedStartDate},
+        end_date             = ${mergedEndDate},
+        is_ended             = ${mergedIsEnded},
+        games_per_season     = ${mergedGamesPerSeason},
+        playoff_format       = ${mergedPlayoffFormat}::jsonb,
+        best_of_playoff      = ${mergedBestOfPlayoff},
+        best_of_shootout     = ${mergedBestOfShootout},
+        scoring_system       = ${mergedScoringSystem},
+        bracket_rule_set_id  = ${mergedBracketRuleSetId}
       WHERE id = ${id}
     `;
 

@@ -209,7 +209,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     ]);
   };
 
-  const addGroup = async (data: { name: string; parent_id?: string | null }): Promise<boolean> => {
+  const addGroup = async (data: { name: string; parent_id?: string | null; role?: 'conference' | 'division' | null }): Promise<boolean> => {
     if (!season?.league_id) return false;
     try {
       await axios.post(
@@ -226,7 +226,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     }
   };
 
-  const updateGroup = async (groupId: string, payload: { name: string }): Promise<boolean> => {
+  const updateGroup = async (groupId: string, payload: { name?: string; role?: 'conference' | 'division' | null }): Promise<boolean> => {
     setGroupBusy(groupId);
     try {
       await axios.patch(`${API}/admin/groups/${groupId}`, payload, { headers: authHeaders() });

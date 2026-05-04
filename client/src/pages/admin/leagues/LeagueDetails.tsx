@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import LeagueEditModal from './LeagueEditModal';
 import LeagueInfoCard from './LeagueInfoCard';
 import LeaguePlayersTab from './LeaguePlayersTab';
+import LeaguePlayoffsTab from './LeaguePlayoffsTab';
 import LeagueTeamsTab from './LeagueTeamsTab';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
 import BulkAddPlayersModal from './BulkAddPlayersModal';
@@ -202,6 +203,17 @@ const LeagueDetailsPage = () => {
                     setPlayerModalOpen(true);
                   }}
                   onDelete={deletePlayer}
+                />
+              </div>
+            ),
+          },
+          {
+            label: 'Playoffs',
+            content: (
+              <div className={styles.grid}>
+                <LeaguePlayoffsTab
+                  className={styles.col12}
+                  leagueId={league.id}
                 />
               </div>
             ),

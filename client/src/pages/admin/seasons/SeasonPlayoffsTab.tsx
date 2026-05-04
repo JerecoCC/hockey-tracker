@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -16,6 +16,13 @@ import {
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
+import Select from '@/components/Select/Select';
+import useBracketRuleSets from '@/hooks/useBracketRuleSets';
+import BracketRulesModal, {
+  type BracketStructure,
+  deriveBracketStructureFromSize,
+  getRoundLabel,
+} from './BracketRulesModal';
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -25,21 +32,12 @@ const SCOPE_OPTIONS = [
   { value: 'conference' as PlayoffFormatRule['scope'], label: 'Per Conference' },
   { value: 'division' as PlayoffFormatRule['scope'], label: 'Per Division' },
 ];
+
 const METHOD_OPTIONS = [
   { value: 'top' as PlayoffFormatRule['method'], label: 'Top N (direct)' },
   { value: 'wildcard' as PlayoffFormatRule['method'], label: 'Wildcard (best remaining)' },
 ];
-/**
- * Returns a round label based on the round's position within the total bracket.
- * Labels are always relative to the end: Final → Conference Finals → Second Round → First Round.
- */
-const getRoundLabel = (round: number, totalRounds: number): string => {
-  if (round === totalRounds) return 'Final';
-  if (round === 1) return 'First Round';
-  if (round === totalRounds - 1) return 'Conference Finals';
-  if (round === totalRounds - 2) return 'Second Round';
-  return `Round ${round}`;
-};
+
 const STATUS_INTENT: Record<SeriesStatus, 'neutral' | 'warning' | 'success'> = {
   upcoming: 'neutral',
   active: 'warning',
@@ -60,18 +58,6 @@ const formatRuleText = (r: PlayoffFormatRule) => {
 
 // ── Bracket structure derivation ──────────────────────────────────────────────
 
-interface BracketRound {
-  round: number;
-  label: string;
-  series: number;
-}
-interface BracketStructure {
-  totalTeams: number;
-  bracketSize: number;
-  byes: number;
-  rounds: BracketRound[];
-}
-
 const deriveBracketStructure = (
   rules: PlayoffFormatRule[] | null,
   groups: SeasonGroupRecord[],
@@ -90,19 +76,7 @@ const deriveBracketStructure = (
 
   if (totalTeams < 2) return null;
 
-  const bracketSize = Math.pow(2, Math.ceil(Math.log2(totalTeams)));
-  const numRounds = Math.log2(bracketSize);
-
-  return {
-    totalTeams,
-    bracketSize,
-    byes: bracketSize - totalTeams,
-    rounds: Array.from({ length: numRounds }, (_, i) => ({
-      round: i + 1,
-      label: getRoundLabel(i + 1, numRounds),
-      series: bracketSize / Math.pow(2, i + 1),
-    })),
-  };
+  return deriveBracketStructureFromSize(totalTeams);
 };
 
 // ── Series Form ────────────────────────────────────────────────────────────────
@@ -706,6 +680,8 @@ const BracketSlot = ({ series, isEnded, busy, onAdd, onEdit, onDelete }: Bracket
 
 interface Props {
   seasonId: string;
+  leagueId: string;
+  bracketRuleSetId: string | null;
   seasonTeams: SeasonTeam[];
   groups: SeasonGroupRecord[];
   isEnded: boolean;
@@ -721,6 +697,8 @@ interface Props {
 
 const SeasonPlayoffsTab = ({
   seasonId,
+  leagueId,
+  bracketRuleSetId,
   seasonTeams,
   groups,
   isEnded,
@@ -742,6 +720,9 @@ const SeasonPlayoffsTab = ({
     deleteSeries,
   } = usePlayoffSeries(seasonId);
 
+  const { ruleSets } = useBracketRuleSets(leagueId);
+  const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
+
   // ── Derived bracket structure ─────────────────────────────────────────────────
   const bracketStructure = useMemo(
     () => deriveBracketStructure(playoffFormat, groups),
@@ -751,6 +732,7 @@ const SeasonPlayoffsTab = ({
   // ── Modal state ───────────────────────────────────────────────────────────────
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [formatModalOpen, setFormatModalOpen] = useState(false);
+  const [bracketRulesModalOpen, setBracketRulesModalOpen] = useState(false);
 
   // ── Series state ─────────────────────────────────────────────────────────────
   const [seriesModalOpen, setSeriesModalOpen] = useState(false);
@@ -793,7 +775,7 @@ const SeasonPlayoffsTab = ({
                 >
                   Add Series
                 </Button>
-              ) : undefined
+              ) : null
             }
           >
             {seriesLoading ? (
@@ -887,6 +869,45 @@ const SeasonPlayoffsTab = ({
 
         {/* ── Right column — Settings + Qualification ── */}
         <div className={styles.layoutRight}>
+          {/* ── Bracket Rule Set ── */}
+          <Card
+            title="Bracket Rule Set"
+            action={
+              bracketRuleSetId ? (
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="edit"
+                  size="sm"
+                  tooltip="Edit bracket rules"
+                  disabled={isEnded}
+                  onClick={() => setBracketRulesModalOpen(true)}
+                />
+              ) : null
+            }
+          >
+            <div className={styles.ruleSetSelector}>
+              <Select
+                value={bracketRuleSetId}
+                options={ruleSetOptions}
+                placeholder={
+                  ruleSetOptions.length === 0
+                    ? 'No rule sets — create one in the league Playoffs tab'
+                    : 'Select a rule set…'
+                }
+                onChange={async (id) => {
+                  await updateSeason(seasonId, { bracket_rule_set_id: id });
+                }}
+                disabled={isEnded || ruleSetOptions.length === 0}
+              />
+              {!bracketRuleSetId && ruleSetOptions.length > 0 && (
+                <p className={styles.ruleSetHint}>
+                  Select a rule set to configure the playoff bracket structure.
+                </p>
+              )}
+            </div>
+          </Card>
+
           {/* ── Game Settings ── */}
           <Card
             title="Game Settings"
@@ -965,6 +986,20 @@ const SeasonPlayoffsTab = ({
 
       {/* ── Modals ── */}
       <>
+        <BracketRulesModal
+          open={bracketRulesModalOpen}
+          leagueId={leagueId}
+          ruleSetId={bracketRuleSetId}
+          bracketStructure={bracketStructure}
+          groups={groups}
+          onSave={async (savedId) => {
+            if (savedId !== bracketRuleSetId) {
+              await updateSeason(seasonId, { bracket_rule_set_id: savedId });
+            }
+          }}
+          onClose={() => setBracketRulesModalOpen(false)}
+        />
+
         <PlayoffFormatModal
           open={formatModalOpen}
           playoffFormat={playoffFormat}

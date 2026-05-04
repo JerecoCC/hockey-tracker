@@ -34,6 +34,8 @@ export interface SeasonRecord {
   best_of_shootout: number | null;
   /** Season-level scoring system override. Null falls back to league default. */
   scoring_system: '2-1-0' | '3-2-1-0' | null;
+  /** ID of the bracket rule set assigned to this season. Null if none is assigned. */
+  bracket_rule_set_id: string | null;
   created_at: string;
 }
 
@@ -47,6 +49,7 @@ export interface CreateSeasonData {
   best_of_playoff?: number | null;
   best_of_shootout?: number | null;
   scoring_system?: '2-1-0' | '3-2-1-0' | null;
+  bracket_rule_set_id?: string | null;
 }
 
 // Re-export so consumers can import from one place.

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
+import Field from '@/components/Field/Field';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Badge from '@/components/Badge/Badge';
@@ -7,19 +9,17 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
-import {
-  type LeagueTeam,
-  type SeasonGroupRecord,
-  type SeasonTeam,
-} from '@/hooks/useSeasonDetails';
+import { type LeagueTeam, type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import SeasonTeamOverrideModal from './SeasonTeamOverrideModal';
 import styles from './SeasonDetails.module.scss';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type InlineMode =
-  | { type: 'add'; parentId: string | null }
-  | { type: 'edit'; groupId: string }
+type GroupRole = 'conference' | 'division' | null;
+
+type GroupModalState =
+  | { mode: 'add'; parentId: string | null }
+  | { mode: 'edit'; group: SeasonGroupRecord }
   | null;
 
 // ── Manage Season Teams modal (flat roster picker) ─────────────────────────────
@@ -170,67 +170,96 @@ const ManageTeamsModal = ({
   );
 };
 
-// ── Inline group name input ────────────────────────────────────────────────────
+// ── Group form modal ───────────────────────────────────────────────────────────
 
-interface InlineInputProps {
-  initialValue?: string;
-  placeholder?: string;
-  onConfirm: (name: string) => Promise<void>;
-  onCancel: () => void;
+interface GroupFormValues {
+  name: string;
+  role: 'conference' | 'division' | 'none';
 }
 
-const InlineInput = ({
-  initialValue = '',
-  placeholder = 'Group name…',
-  onConfirm,
-  onCancel,
-}: InlineInputProps) => {
-  const [value, setValue] = useState(initialValue);
-  const [saving, setSaving] = useState(false);
-  const confirm = async () => {
-    const trimmed = value.trim();
-    if (!trimmed || saving) return;
-    setSaving(true);
-    await onConfirm(trimmed);
-    setSaving(false);
-  };
+const ROLE_OPTIONS = [
+  { value: 'none', label: 'None' },
+  { value: 'conference', label: 'Conference' },
+  { value: 'division', label: 'Division' },
+];
+
+const ROLE_LABELS: Record<string, string> = { conference: 'Conference', division: 'Division' };
+
+interface GroupFormModalProps {
+  open: boolean;
+  /** The group being edited, or null when creating a new one. */
+  editTarget: SeasonGroupRecord | null;
+  /** Pre-set parent when adding a sub-group; null for top-level. */
+  parentId: string | null;
+  busy: boolean;
+  onClose: () => void;
+  onSave: (data: { name: string; role: GroupRole; parent_id: string | null }) => Promise<void>;
+}
+
+const GroupFormModal = ({
+  open,
+  editTarget,
+  parentId,
+  busy,
+  onClose,
+  onSave,
+}: GroupFormModalProps) => {
+  const isEdit = editTarget !== null;
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<GroupFormValues>({ defaultValues: { name: '', role: 'none' } });
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        name: editTarget?.name ?? '',
+        role: (editTarget?.role ?? 'none') as GroupFormValues['role'],
+      });
+    }
+  }, [open, editTarget, reset]);
+
+  const onSubmit = handleSubmit(async ({ name, role }) => {
+    await onSave({
+      name,
+      role: role === 'none' ? null : role,
+      parent_id: editTarget?.parent_id ?? parentId,
+    });
+  });
+
   return (
-    <div className={styles.groupInlineRow}>
-      <input
-        className={styles.groupInlineInput}
-        value={value}
-        onChange={(e) => setValue(e.target.value)}
-        placeholder={placeholder}
-        autoFocus
-        disabled={saving}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter') confirm();
-          if (e.key === 'Escape') onCancel();
-        }}
-      />
-      <button
-        className={styles.groupInlineBtn}
-        onClick={confirm}
-        disabled={saving || !value.trim()}
-        aria-label="Confirm"
-      >
-        <Icon
-          name="check"
-          size="0.85em"
+    <Modal
+      open={open}
+      title={isEdit ? 'Edit Group' : 'Create Group'}
+      onClose={onClose}
+      confirmLabel={isSubmitting || busy ? 'Saving…' : isEdit ? 'Save Changes' : 'Create'}
+      confirmDisabled={isSubmitting || busy}
+      busy={isSubmitting || busy}
+      onConfirm={onSubmit}
+    >
+      <div className={styles.form}>
+        <Field
+          label="Name"
+          required
+          control={control}
+          name="name"
+          placeholder="e.g. Eastern Conference"
+          rules={{ required: true }}
+          disabled={isSubmitting || busy}
+          autoFocus
         />
-      </button>
-      <button
-        className={`${styles.groupInlineBtn} ${styles.groupInlineBtnCancel}`}
-        onClick={onCancel}
-        disabled={saving}
-        aria-label="Cancel"
-      >
-        <Icon
-          name="close"
-          size="0.85em"
+        <Field
+          type="select"
+          label="Playoff Role"
+          control={control}
+          name="role"
+          options={ROLE_OPTIONS}
+          disabled={isSubmitting || busy}
         />
-      </button>
-    </div>
+      </div>
+    </Modal>
   );
 };
 
@@ -241,165 +270,147 @@ interface GroupNodeProps {
   allGroups: SeasonGroupRecord[];
   seasonBusy: string | null;
   groupBusy: string | null;
-  inlineMode: InlineMode;
   isEnded: boolean;
-  onStartEdit: (groupId: string) => void;
-  onStartAdd: (parentId: string) => void;
-  onConfirm: (name: string) => Promise<void>;
-  onCancel: () => void;
+  onEdit: (group: SeasonGroupRecord) => void;
+  onAddChild: (parentId: string) => void;
   onSetTeams: (group: SeasonGroupRecord) => void;
   onResetTeams: (groupId: string) => void;
   onDeleteGroup: (group: SeasonGroupRecord) => void;
   depth?: number;
 }
 
-const GroupNode = (props: GroupNodeProps) => {
-  const {
-    group,
-    allGroups,
-    seasonBusy,
-    groupBusy,
-    inlineMode,
-    isEnded,
-    onStartEdit,
-    onStartAdd,
-    onConfirm,
-    onCancel,
-    onSetTeams,
-    onResetTeams,
-    onDeleteGroup,
-    depth = 0,
-  } = props;
-
+const GroupNode = ({
+  group,
+  allGroups,
+  seasonBusy,
+  groupBusy,
+  isEnded,
+  onEdit,
+  onAddChild,
+  onSetTeams,
+  onResetTeams,
+  onDeleteGroup,
+  depth = 0,
+}: GroupNodeProps) => {
   const children = allGroups
     .filter((g) => g.parent_id === group.id)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
-  const isEditing = inlineMode?.type === 'edit' && inlineMode.groupId === group.id;
-  const isAddingChild = inlineMode?.type === 'add' && inlineMode.parentId === group.id;
   const isLeaf = children.length === 0;
+  const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
 
   return (
     <li className={styles.groupItem}>
-      {isEditing ? (
-        <InlineInput
-          initialValue={group.name}
-          onConfirm={onConfirm}
-          onCancel={onCancel}
-        />
-      ) : (
-        <Accordion
-          className={depth > 0 ? styles.groupItemChild : undefined}
-          label={group.name}
-          headerRight={
-            <Badge
-              label={
-                group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'
-              }
-              intent={
-                group.has_season_override ? 'accent' : group.is_inherited ? 'warning' : 'neutral'
-              }
-            />
-          }
-          hoverActions={
-            [
-              !isEnded && depth === 0 && !isAddingChild && group.teams.length === 0
-                ? {
-                    icon: 'folder_plus',
-                    intent: 'neutral' as const,
-                    tooltip: 'Create Sub-group',
-                    onClick: () => onStartAdd(group.id),
-                  }
-                : null,
-              !isEnded && isLeaf
-                ? {
-                    icon: 'groups',
-                    intent: (group.has_season_override
-                      ? 'accent'
-                      : 'neutral') as AccordionAction['intent'],
-                    disabled: !!seasonBusy,
-                    tooltip: 'Add Teams to Group',
-                    onClick: () => onSetTeams(group),
-                  }
-                : null,
-              !isEnded && isLeaf && group.has_season_override
-                ? {
-                    icon: 'restart_alt',
-                    intent: 'neutral' as const,
-                    disabled: !!seasonBusy,
-                    tooltip: 'Revert to default team list',
-                    onClick: () => onResetTeams(group.id),
-                  }
-                : null,
-              {
-                icon: 'edit',
-                intent: 'accent' as const,
-                disabled: groupBusy === group.id,
-                tooltip: 'Rename group',
-                onClick: () => onStartEdit(group.id),
-              },
-              {
-                icon: 'delete',
-                intent: 'danger' as const,
-                disabled: groupBusy === group.id,
-                tooltip: 'Delete group',
-                onClick: () => onDeleteGroup(group),
-              },
-            ].filter(Boolean) as AccordionAction[]
-          }
-        >
-          {isLeaf && group.teams.length > 0 && (
-            <ul className={styles.teamList}>
-              {group.teams.map((t) => (
-                <ListItem
-                  key={t.id}
-                  image={t.logo}
-                  name={t.name}
-                  rightContent={{ type: 'code', value: t.code }}
-                  primaryColor={t.primary_color}
-                  textColor={t.text_color}
+      <Accordion
+        className={depth > 0 ? styles.groupItemChild : undefined}
+        label={
+          <span className={styles.groupLabel}>
+            {group.name}
+            {roleLabel && (
+              <span
+                className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}
+              >
+                {roleLabel}
+              </span>
+            )}
+          </span>
+        }
+        headerRight={
+          <Badge
+            label={
+              group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'
+            }
+            intent={
+              group.has_season_override ? 'accent' : group.is_inherited ? 'warning' : 'neutral'
+            }
+          />
+        }
+        hoverActions={
+          [
+            !isEnded && depth === 0 && children.length === 0
+              ? {
+                  icon: 'folder_plus',
+                  intent: 'neutral' as const,
+                  tooltip: 'Add sub-group',
+                  onClick: () => onAddChild(group.id),
+                }
+              : null,
+            !isEnded && isLeaf
+              ? {
+                  icon: 'groups',
+                  intent: (group.has_season_override
+                    ? 'accent'
+                    : 'neutral') as AccordionAction['intent'],
+                  disabled: !!seasonBusy,
+                  tooltip: 'Assign teams',
+                  onClick: () => onSetTeams(group),
+                }
+              : null,
+            !isEnded && isLeaf && group.has_season_override
+              ? {
+                  icon: 'restart_alt',
+                  intent: 'neutral' as const,
+                  disabled: !!seasonBusy,
+                  tooltip: 'Revert to default team list',
+                  onClick: () => onResetTeams(group.id),
+                }
+              : null,
+            {
+              icon: 'edit',
+              intent: 'accent' as const,
+              disabled: groupBusy === group.id,
+              tooltip: 'Edit group',
+              onClick: () => onEdit(group),
+            },
+            {
+              icon: 'delete',
+              intent: 'danger' as const,
+              disabled: groupBusy === group.id,
+              tooltip: 'Delete group',
+              onClick: () => onDeleteGroup(group),
+            },
+          ].filter(Boolean) as AccordionAction[]
+        }
+      >
+        {isLeaf && group.teams.length > 0 && (
+          <ul className={styles.teamList}>
+            {group.teams.map((t) => (
+              <ListItem
+                key={t.id}
+                image={t.logo}
+                name={t.name}
+                rightContent={{ type: 'code', value: t.code }}
+                primaryColor={t.primary_color}
+                textColor={t.text_color}
+              />
+            ))}
+          </ul>
+        )}
+        {isLeaf && group.teams.length === 0 && (
+          <p className={styles.emptyMsg}>No teams assigned to this group.</p>
+        )}
+        {children.length > 0 && (
+          <div className={styles.groupNestedList}>
+            <ul className={styles.groupList}>
+              {children.map((child) => (
+                <GroupNode
+                  key={child.id}
+                  group={child}
+                  allGroups={allGroups}
+                  seasonBusy={seasonBusy}
+                  groupBusy={groupBusy}
+                  isEnded={isEnded}
+                  onEdit={onEdit}
+                  onAddChild={onAddChild}
+                  onSetTeams={onSetTeams}
+                  onResetTeams={onResetTeams}
+                  onDeleteGroup={onDeleteGroup}
+                  depth={depth + 1}
                 />
               ))}
             </ul>
-          )}
-          {isAddingChild && (
-            <div className={styles.groupItemNew}>
-              <InlineInput
-                placeholder="Sub-group name…"
-                onConfirm={onConfirm}
-                onCancel={onCancel}
-              />
-            </div>
-          )}
-          {isLeaf && group.teams.length === 0 && (
-            <p className={styles.emptyMsg}>No teams assigned to this group.</p>
-          )}
-          {children.length > 0 && (
-            <div className={styles.groupNestedList}>
-              <ul className={styles.groupList}>
-                {children.map((child) => (
-                  <GroupNode
-                    key={child.id}
-                    group={child}
-                    allGroups={allGroups}
-                    seasonBusy={seasonBusy}
-                    groupBusy={groupBusy}
-                    inlineMode={inlineMode}
-                    isEnded={isEnded}
-                    onStartEdit={onStartEdit}
-                    onStartAdd={onStartAdd}
-                    onConfirm={onConfirm}
-                    onCancel={onCancel}
-                    onSetTeams={onSetTeams}
-                    onResetTeams={onResetTeams}
-                    onDeleteGroup={onDeleteGroup}
-                    depth={depth + 1}
-                  />
-                ))}
-              </ul>
-            </div>
-          )}
-        </Accordion>
-      )}
+          </div>
+        )}
+      </Accordion>
     </li>
   );
 };
@@ -418,33 +429,35 @@ interface Props {
   setSeasonTeams: (teamIds: string[]) => Promise<boolean>;
   setSeasonGroupTeams: (groupId: string, teamIds: string[]) => Promise<boolean>;
   resetSeasonGroupTeams: (groupId: string) => Promise<boolean>;
-  addGroup: (data: { name: string; parent_id?: string | null }) => Promise<boolean>;
-  updateGroup: (groupId: string, payload: { name: string }) => Promise<boolean>;
+  addGroup: (data: {
+    name: string;
+    parent_id?: string | null;
+    role?: GroupRole;
+  }) => Promise<boolean>;
+  updateGroup: (groupId: string, payload: { name?: string; role?: GroupRole }) => Promise<boolean>;
   onDeleteGroup: (group: SeasonGroupRecord) => void;
   className?: string;
 }
 
-const SeasonTeamsCard = (props: Props) => {
-  const {
-    seasonTeams,
-    groups,
-    leagueTeams,
-    loading,
-    busy,
-    groupBusy,
-    isEnded,
-    setSeasonTeams,
-    setSeasonGroupTeams,
-    resetSeasonGroupTeams,
-    addGroup,
-    updateGroup,
-    onDeleteGroup,
-    className,
-  } = props;
-
+const SeasonTeamsCard = ({
+  seasonTeams,
+  groups,
+  leagueTeams,
+  loading,
+  busy,
+  groupBusy,
+  isEnded,
+  setSeasonTeams,
+  setSeasonGroupTeams,
+  resetSeasonGroupTeams,
+  addGroup,
+  updateGroup,
+  onDeleteGroup,
+  className,
+}: Props) => {
   const navigate = useNavigate();
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [inlineMode, setInlineMode] = useState<InlineMode>(null);
+  const [groupModal, setGroupModal] = useState<GroupModalState>(null);
   const [teamTarget, setTeamTarget] = useState<SeasonGroupRecord | null>(null);
 
   // ── Split auto group from user groups ────────────────────────────────────────
@@ -453,7 +466,6 @@ const SeasonTeamsCard = (props: Props) => {
   const userRoots = userGroups
     .filter((g) => g.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
-  const isRootAdding = inlineMode?.type === 'add' && inlineMode.parentId === null;
 
   // Teams shown in the auto-group flat list
   const autoTeams = autoGroup?.teams ?? [];
@@ -467,15 +479,6 @@ const SeasonTeamsCard = (props: Props) => {
   const handleRemoveAutoTeam = async (teamId: string) => {
     const next = autoTeams.filter((t) => t.id !== teamId).map((t) => t.id);
     await setSeasonTeams(next);
-  };
-
-  const handleGroupConfirm = async (name: string) => {
-    if (!inlineMode) return;
-    const ok =
-      inlineMode.type === 'add'
-        ? await addGroup({ name, parent_id: inlineMode.parentId })
-        : await updateGroup(inlineMode.groupId, { name });
-    if (ok) setInlineMode(null);
   };
 
   return (
@@ -502,7 +505,7 @@ const SeasonTeamsCard = (props: Props) => {
                 size="sm"
                 variant="outlined"
                 intent="neutral"
-                onClick={() => setInlineMode({ type: 'add', parentId: null })}
+                onClick={() => setGroupModal({ mode: 'add', parentId: null })}
               >
                 Create Group
               </Button>
@@ -515,7 +518,7 @@ const SeasonTeamsCard = (props: Props) => {
         ) : (
           <>
             {/* ── Empty state ── */}
-            {autoTeams.length === 0 && userGroups.length === 0 && !isRootAdding && (
+            {autoTeams.length === 0 && userGroups.length === 0 && (
               <p className={styles.emptyMsg}>
                 No teams added to this season yet. Use &ldquo;Manage Teams&rdquo; to select teams
                 from the league.
@@ -569,46 +572,45 @@ const SeasonTeamsCard = (props: Props) => {
             )}
 
             {/* ── User groups section ── */}
-            {(userRoots.length > 0 || isRootAdding) && (
+            {userRoots.length > 0 && (
               <div className={styles.groupsSection}>
-                {isRootAdding && (
-                  <div
-                    className={`${styles.groupItem} ${styles.groupItemNew} ${styles.groupItemNewRoot}`}
-                  >
-                    <InlineInput
-                      placeholder="Group name…"
-                      onConfirm={handleGroupConfirm}
-                      onCancel={() => setInlineMode(null)}
+                <ul className={styles.groupList}>
+                  {userRoots.map((g) => (
+                    <GroupNode
+                      key={g.id}
+                      group={g}
+                      allGroups={userGroups}
+                      seasonBusy={busy}
+                      groupBusy={groupBusy}
+                      isEnded={isEnded}
+                      onEdit={(group) => setGroupModal({ mode: 'edit', group })}
+                      onAddChild={(parentId) => setGroupModal({ mode: 'add', parentId })}
+                      onSetTeams={setTeamTarget}
+                      onResetTeams={resetSeasonGroupTeams}
+                      onDeleteGroup={onDeleteGroup}
                     />
-                  </div>
-                )}
-                {userRoots.length > 0 && (
-                  <ul className={styles.groupList}>
-                    {userRoots.map((g) => (
-                      <GroupNode
-                        key={g.id}
-                        group={g}
-                        allGroups={userGroups}
-                        seasonBusy={busy}
-                        groupBusy={groupBusy}
-                        inlineMode={inlineMode}
-                        isEnded={isEnded}
-                        onStartEdit={(id) => setInlineMode({ type: 'edit', groupId: id })}
-                        onStartAdd={(pid) => setInlineMode({ type: 'add', parentId: pid })}
-                        onConfirm={handleGroupConfirm}
-                        onCancel={() => setInlineMode(null)}
-                        onSetTeams={setTeamTarget}
-                        onResetTeams={resetSeasonGroupTeams}
-                        onDeleteGroup={onDeleteGroup}
-                      />
-                    ))}
-                  </ul>
-                )}
+                  ))}
+                </ul>
               </div>
             )}
           </>
         )}
       </Card>
+
+      <GroupFormModal
+        open={groupModal !== null}
+        editTarget={groupModal?.mode === 'edit' ? groupModal.group : null}
+        parentId={groupModal?.mode === 'add' ? groupModal.parentId : null}
+        busy={!!groupBusy}
+        onClose={() => setGroupModal(null)}
+        onSave={async ({ name, role, parent_id }) => {
+          const ok =
+            groupModal?.mode === 'edit'
+              ? await updateGroup(groupModal.group.id, { name, role })
+              : await addGroup({ name, parent_id, role });
+          if (ok) setGroupModal(null);
+        }}
+      />
 
       <ManageTeamsModal
         open={pickerOpen}

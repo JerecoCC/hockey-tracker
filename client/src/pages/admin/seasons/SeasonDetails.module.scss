@@ -382,6 +382,45 @@
   color: $text-dim;
 }
 
+// ── Modal form layout ─────────────────────────────────────────────────────────
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// ── Group label + role badge ───────────────────────────────────────────────────
+
+.groupLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.groupRoleBadge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+.groupRoleBadge_conference {
+  background: rgba($accent, 0.18);
+  color: $accent-light;
+  border: 1px solid rgba($accent, 0.3);
+}
+
+.groupRoleBadge_division {
+  background: rgba($success, 0.18);
+  color: $success-light;
+  border: 1px solid rgba($success, 0.3);
+}
+
 // Spans full grid width so the inline-add row fills the row
 .groupItemSpanFull {
   grid-column: 1 / -1;
