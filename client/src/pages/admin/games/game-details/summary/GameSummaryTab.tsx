@@ -1,12 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import Icon from '@/components/Icon/Icon';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import StartGameModal from '../StartGameModal';
@@ -19,6 +18,7 @@ import ShotsEditModal from '../ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
 import ScoreImageModal from '../ScoreImageModal';
 import ScoringCard from '../ScoringCard';
+import ThreeStarsCard from './ThreeStarsCard';
 import type { GameRecord, CurrentPeriod, GameStatus } from '@/hooks/useGames';
 import type { GoalRecord } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
@@ -362,109 +362,20 @@ const GameSummaryTab = ({
         <div className={styles.summaryGrid}>
           {/* ── Left column: Three Stars + Scoring + Goalie Stats + Previous Meetings + Last 5 ── */}
           <div className={styles.summaryLeft}>
-            {hasStars &&
-              (() => {
-                const starDefs = [
-                  { starCount: 1, playerId: game.star_1_id! },
-                  { starCount: 2, playerId: game.star_2_id! },
-                  { starCount: 3, playerId: game.star_3_id! },
-                ];
-                return (
-                  <Card
-                    title="Three Stars"
-                    action={
-                      isFinal ? (
-                        <Button
-                          variant="outlined"
-                          intent="neutral"
-                          icon="edit"
-                          size="sm"
-                          tooltip="Edit three stars"
-                          onClick={() => {
-                            setStarsEditMode(true);
-                            setStarsModalOpen(true);
-                          }}
-                        />
-                      ) : undefined
-                    }
-                  >
-                    <div className={styles.starsRow}>
-                      {starDefs.map(({ starCount, playerId }) => {
-                        const player = roster.find((e) => e.player_id === playerId);
-                        if (!player) return null;
-                        const isAway = player.team_id === game.away_team_id;
-                        const teamCode = isAway ? game.away_team_code : game.home_team_code;
-                        const primaryColor = isAway
-                          ? game.away_team_primary_color
-                          : game.home_team_primary_color;
-                        const textColor = isAway
-                          ? game.away_team_text_color
-                          : game.home_team_text_color;
-                        const stats = playerGameStats.get(playerId) ?? { goals: 0, assists: 0 };
-                        const nameLabel = `${player.first_name} ${player.last_name}`;
-                        const subLabel = [
-                          player.jersey_number != null ? `#${player.jersey_number}` : null,
-                          teamCode,
-                          player.position ?? null,
-                        ]
-                          .filter(Boolean)
-                          .join(' • ');
-                        return (
-                          <div
-                            key={starCount}
-                            className={styles.starItem}
-                          >
-                            {player.photo ? (
-                              <img
-                                src={player.photo}
-                                alt=""
-                                className={styles.starPhoto}
-                              />
-                            ) : (
-                              <span
-                                className={styles.starPhotoPlaceholder}
-                                style={{ background: primaryColor, color: textColor }}
-                              >
-                                {player.first_name[0]}
-                                {player.last_name[0]}
-                              </span>
-                            )}
-                            <span className={styles.starIcons}>
-                              {Array.from({ length: starCount }).map((_, i) => (
-                                <Icon
-                                  key={i}
-                                  name="stars"
-                                />
-                              ))}
-                            </span>
-                            <Link
-                              to={`/admin/leagues/${leagueId}/teams/${player.team_id}/players/${playerId}`}
-                              className={`${styles.starName} ${styles.playerLink}`}
-                            >
-                              {nameLabel}
-                            </Link>
-                            <span className={styles.starTeam}>{subLabel}</span>
-                            {player.position === 'G' ? (
-                              (() => {
-                                const gs = goalieStats.find((s) => s.goalie_id === playerId);
-                                return gs ? (
-                                  <span className={styles.starStats}>
-                                    SA: {gs.shots_against} | SV: {gs.saves}
-                                  </span>
-                                ) : null;
-                              })()
-                            ) : (
-                              <span className={styles.starStats}>
-                                G: {stats.goals} | A: {stats.assists}
-                              </span>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </Card>
-                );
-              })()}
+            {hasStars && (
+              <ThreeStarsCard
+                game={game}
+                roster={roster}
+                goalieStats={goalieStats}
+                playerGameStats={playerGameStats}
+                leagueId={leagueId}
+                isFinal={isFinal}
+                onEdit={() => {
+                  setStarsEditMode(true);
+                  setStarsModalOpen(true);
+                }}
+              />
+            )}
 
             <ScoringCard
               game={game}
