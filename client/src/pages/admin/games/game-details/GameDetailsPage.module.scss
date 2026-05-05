@@ -88,6 +88,15 @@
   text-transform: uppercase;
 }
 
+// Flex row: team logo + player photo + info column
+.goalieNameCell {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
 // Text column: scorer name + assists
 .goalInfo {
   flex: 1;
