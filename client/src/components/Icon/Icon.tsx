@@ -32,6 +32,7 @@ import {
   faHashtag,
   faHockeyPuck,
   faHourglassHalf,
+  faLayerGroup,
   faList,
   faLocationDot,
   faMagnifyingGlass,
@@ -133,6 +134,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   // view toggles
   grid_view: faTableCells,
   view_list: faList,
+  playlist_add: faLayerGroup,
 
   // loading / time
   hourglass_empty: faHourglassHalf,
