@@ -13,6 +13,7 @@ import TitleRow from '@/components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
+import { computeClinched } from '@/lib/computeClinched';
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
@@ -77,6 +78,23 @@ const SeasonDetailsPage = () => {
 
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
   const { standings, loading: standingsLoading } = useSeasonStandings(id);
+
+  const clinchedIds = useMemo(
+    () =>
+      computeClinched(
+        standings,
+        season?.playoff_format ?? null,
+        groups,
+        season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+      ),
+    [
+      standings,
+      season?.playoff_format,
+      season?.scoring_system,
+      season?.league_scoring_system,
+      groups,
+    ],
+  );
 
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -330,6 +348,12 @@ const SeasonDetailsPage = () => {
             </span>
           )}
           {row.team_name ?? row.team_code ?? '—'}
+          {clinchedIds.has(row.team_id) && (
+            <Badge
+              label="x"
+              intent="success"
+            />
+          )}
         </span>
       ),
     },
