@@ -18,7 +18,11 @@ import ScoringCard from '../ScoringCard';
 import ThreeStarsCard from './ThreeStarsCard';
 import type { GameRecord, CurrentPeriod, GameStatus, UpdateGameInfoData } from '@/hooks/useGames';
 import type { GoalRecord } from '@/hooks/useGameGoals';
-import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
+import type {
+  GoalieStatRecord,
+  GoalieSwitchData,
+  UpsertGoalieStatData,
+} from '@/hooks/useGameGoalieStats';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
@@ -50,6 +54,8 @@ interface Props {
   lineupsReady: boolean;
   // Write callbacks
   upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
+  switchGoalie: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
+  removeGoalieStat: (goalieId: string) => Promise<boolean>;
   startGame: (time_start: string) => Promise<boolean>;
   updateStatus: (status: GameStatus) => Promise<boolean>;
   advancePeriod: (nextPeriod: CurrentPeriod) => Promise<boolean>;
@@ -81,6 +87,8 @@ const GameSummaryTab = ({
   rosterReady,
   lineupsReady,
   upsertGoalieStat,
+  switchGoalie,
+  removeGoalieStat,
   startGame,
   updateStatus,
   advancePeriod,
@@ -390,6 +398,8 @@ const GameSummaryTab = ({
                 leagueId={leagueId}
                 isFinal={isFinal}
                 upsertGoalieStat={upsertGoalieStat}
+                switchGoalie={switchGoalie}
+                removeGoalieStat={removeGoalieStat}
               />
             )}
 

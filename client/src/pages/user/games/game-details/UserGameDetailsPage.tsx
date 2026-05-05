@@ -316,12 +316,13 @@ const UserGameDetailsPage = () => {
                       <tr>
                         <th className={styles.goalieThTeam}></th>
                         <th className={styles.goalieTh}>SA</th>
+                        <th className={styles.goalieTh}>GA</th>
                         <th className={styles.goalieTh}>SV</th>
                         <th className={styles.goalieTh}>SV%</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {goalies.map((goalie) => {
+                      {goaliesWithStats.map((goalie) => {
                         const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
                         if (!stat) return null;
                         const isAway = goalie.team_id === game.away_team.id;
@@ -337,6 +338,7 @@ const UserGameDetailsPage = () => {
                           stat.shots_against > 0
                             ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                             : '1.000';
+                        const isBackup = !!stat.entered_period;
                         return (
                           <tr
                             key={goalie.player_id}
@@ -381,10 +383,16 @@ const UserGameDetailsPage = () => {
                                   <span className={styles.goalScorer}>
                                     {formatPlayerName(goalie.first_name, goalie.last_name)}
                                   </span>
+                                  {isBackup && stat.entered_period && (
+                                    <span className={styles.goalAssists}>
+                                      entered P{stat.entered_period}
+                                    </span>
+                                  )}
                                 </div>
                               </span>
                             </td>
                             <td className={styles.goalieTd}>{stat.shots_against}</td>
+                            <td className={styles.goalieTd}>{stat.goals_against}</td>
                             <td className={styles.goalieTd}>{stat.saves}</td>
                             <td className={styles.goalieTd}>{svPct}</td>
                           </tr>

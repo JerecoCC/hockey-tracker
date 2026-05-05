@@ -18,7 +18,12 @@ export interface UpsertGoalieStatData {
   goalie_id: string;
   team_id: string;
   shots_against: number;
-  saves: number;
+}
+
+export interface GoalieSwitchData {
+  goalie_id: string;
+  team_id: string;
+  entered_period: string;
 }
 
 export interface GoalieStatRecord {
@@ -27,7 +32,9 @@ export interface GoalieStatRecord {
   team_id: string;
   goalie_id: string;
   shots_against: number;
+  goals_against: number;
   saves: number;
+  entered_period: string | null;
   created_at: string;
   goalie_first_name: string;
   goalie_last_name: string;
@@ -85,7 +92,44 @@ const useGameGoalieStats = (gameId: string | undefined) => {
     }
   };
 
-  return { goalieStats, loading, busy, upsertGoalieStat };
+  const switchGoalie = async (data: GoalieSwitchData): Promise<GoalieStatRecord[] | null> => {
+    if (!gameId) return null;
+    setBusy(data.goalie_id);
+    try {
+      const { data: rows } = await axios.post<GoalieStatRecord[]>(
+        `${API}/admin/games/${gameId}/goalie-stats/switch`,
+        data,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey });
+      return rows;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to record goalie switch'));
+      return null;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeGoalieStat = async (goalieId: string): Promise<boolean> => {
+    if (!gameId) return false;
+    setBusy(goalieId);
+    try {
+      await axios.delete(
+        `${API}/admin/games/${gameId}/goalie-stats/${goalieId}`,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to remove goalie stat'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { goalieStats, loading, busy, upsertGoalieStat, switchGoalie, removeGoalieStat };
 };
 
 export default useGameGoalieStats;

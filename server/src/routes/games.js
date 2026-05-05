@@ -1420,36 +1420,74 @@ router.patch('/:id/shots', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// Shared CTE fragment – derive goals_against per goalie from the goals table.
+// entered_period (NULL = '1') defines the start of each goalie's active window;
+// the end is the next goalie's entered_period for the same team (LEAD).
+// ---------------------------------------------------------------------------
+const goalieStatsCTE = (gameId) => sql`
+  WITH period_vals (p, v) AS (
+    VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+  ),
+  goalie_ranges AS (
+    SELECT
+      gs.id, gs.game_id, gs.team_id, gs.goalie_id,
+      gs.shots_against, gs.entered_period,
+      pv.v AS from_ord,
+      LEAD(pv.v) OVER (
+        PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v
+      ) AS until_ord
+    FROM game_goalie_stats gs
+    JOIN period_vals pv ON pv.p = COALESCE(gs.entered_period, '1')
+    WHERE gs.game_id = ${gameId}
+  ),
+  goals_per_goalie AS (
+    SELECT gr.id AS stat_id, COUNT(*) AS ga
+    FROM goalie_ranges gr
+    JOIN goals g ON g.game_id = gr.game_id AND g.team_id != gr.team_id
+    JOIN period_vals pv ON pv.p = g.period
+    WHERE pv.v >= gr.from_ord
+      AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)
+    GROUP BY gr.id
+  )
+`;
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/:id/goalie-stats  – list goalie stats for both teams
+// GA is derived from the goals table; saves = shots_against - goals_against.
 // ---------------------------------------------------------------------------
 router.get('/:id/goalie-stats', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
+      ${goalieStatsCTE(id)}
       SELECT
-        gs.id,
-        gs.game_id,
-        gs.team_id,
-        gs.goalie_id,
-        gs.shots_against,
-        gs.saves,
+        gr.id,
+        gr.game_id,
+        gr.team_id,
+        gr.goalie_id,
+        gr.shots_against,
+        gr.entered_period,
+        COALESCE(gpg.ga, 0)::int                              AS goals_against,
+        (gr.shots_against - COALESCE(gpg.ga, 0))::int        AS saves,
         gs.created_at,
         p.first_name AS goalie_first_name,
         p.last_name  AS goalie_last_name,
         COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
-        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
+        COALESCE(pt_jnh.jersey_number, pt.jersey_number)     AS goalie_jersey_number,
         ti.name  AS team_name,
         ti.code  AS team_code,
         ti.logo  AS team_logo,
         t.primary_color AS team_primary_color,
         t.text_color    AS team_text_color
-      FROM game_goalie_stats gs
-      JOIN games g ON g.id = gs.game_id
-      JOIN players p ON p.id = gs.goalie_id
-      JOIN teams t ON t.id = gs.team_id
+      FROM goalie_ranges gr
+      LEFT JOIN goals_per_goalie gpg ON gpg.stat_id = gr.id
+      JOIN game_goalie_stats gs ON gs.id = gr.id
+      JOIN games g  ON g.id  = gr.game_id
+      JOIN players p ON p.id = gr.goalie_id
+      JOIN teams t   ON t.id = gr.team_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gs.goalie_id
-        AND pt.team_id  = gs.team_id
+        ON pt.player_id = gr.goalie_id
+        AND pt.team_id  = gr.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1460,12 +1498,11 @@ router.get('/:id/goalie-stats', async (req, res) => {
       ) pt_jnh ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
-        WHERE team_id = gs.team_id
+        WHERE team_id = gr.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      WHERE gs.game_id = ${id}
-      ORDER BY ti.code ASC, COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST
+      ORDER BY ti.code ASC, gr.from_ord ASC, COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST
     `;
     return res.json(rows);
   } catch (err) {
@@ -1475,39 +1512,46 @@ router.get('/:id/goalie-stats', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/admin/games/:id/goalie-stats  – upsert one goalie's stats
-// Body: { goalie_id, team_id, shots_against, saves }
+// PUT /api/admin/games/:id/goalie-stats  – upsert the starting goalie's SA
+// Body: { goalie_id, team_id, shots_against }
+// GA and saves are derived from the goals table — not stored.
 // ---------------------------------------------------------------------------
 router.put('/:id/goalie-stats', async (req, res) => {
   const { id } = req.params;
-  const { goalie_id, team_id, shots_against, saves } = req.body;
+  const { goalie_id, team_id, shots_against } = req.body;
 
-  if (!goalie_id || !team_id || shots_against == null || saves == null) {
-    return res.status(400).json({ error: 'goalie_id, team_id, shots_against, and saves are required' });
+  if (!goalie_id || !team_id || shots_against == null) {
+    return res.status(400).json({ error: 'goalie_id, team_id, and shots_against are required' });
   }
 
   try {
     await sql`
-      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, saves)
-      VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against}, ${saves})
+      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against)
+      VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against})
       ON CONFLICT (game_id, goalie_id)
-      DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against, saves = EXCLUDED.saves
+      DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against
     `;
-    const [row] = await sql`
+    const rows = await sql`
+      ${goalieStatsCTE(id)}
       SELECT
-        gs.id, gs.game_id, gs.team_id, gs.goalie_id, gs.shots_against, gs.saves, gs.created_at,
+        gr.id, gr.game_id, gr.team_id, gr.goalie_id,
+        gr.shots_against, gr.entered_period,
+        COALESCE(gpg.ga, 0)::int                       AS goals_against,
+        (gr.shots_against - COALESCE(gpg.ga, 0))::int  AS saves,
+        gs.created_at,
         p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
         COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color
-      FROM game_goalie_stats gs
-      JOIN games g ON g.id = gs.game_id
-      JOIN players p ON p.id = gs.goalie_id
-      JOIN teams t ON t.id = gs.team_id
+      FROM goalie_ranges gr
+      LEFT JOIN goals_per_goalie gpg ON gpg.stat_id = gr.id
+      JOIN game_goalie_stats gs ON gs.id = gr.id
+      JOIN games g  ON g.id  = gr.game_id
+      JOIN players p ON p.id = gr.goalie_id
+      JOIN teams t   ON t.id = gr.team_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gs.goalie_id
-        AND pt.team_id  = gs.team_id
+        ON pt.player_id = gr.goalie_id AND pt.team_id = gr.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1518,16 +1562,107 @@ router.put('/:id/goalie-stats', async (req, res) => {
       ) pt_jnh ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
-        WHERE team_id = gs.team_id
+        WHERE team_id = gr.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      WHERE gs.game_id = ${id} AND gs.goalie_id = ${goalie_id}
+      WHERE gr.goalie_id = ${goalie_id}
     `;
-    return res.json(row);
+    return res.json(rows[0]);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
     console.error('goalie stats put error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/:id/goalie-stats/switch  – record a backup goalie
+// Body: { goalie_id, team_id, entered_period }
+// Creates a new stat row for the backup with shots_against = 0.
+// Returns the full updated goalie stats list for the game.
+// ---------------------------------------------------------------------------
+router.post('/:id/goalie-stats/switch', async (req, res) => {
+  const { id } = req.params;
+  const { goalie_id, team_id, entered_period } = req.body;
+
+  if (!goalie_id || !team_id || !entered_period) {
+    return res.status(400).json({ error: 'goalie_id, team_id, and entered_period are required' });
+  }
+  const validPeriods = ['1', '2', '3', 'OT', 'SO'];
+  if (!validPeriods.includes(entered_period)) {
+    return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
+  }
+
+  try {
+    await sql`
+      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, entered_period)
+      VALUES (${id}, ${team_id}, ${goalie_id}, 0, ${entered_period})
+      ON CONFLICT (game_id, goalie_id)
+      DO UPDATE SET entered_period = EXCLUDED.entered_period
+    `;
+    // Return the full updated list so the client can refresh in one round-trip.
+    const rows = await sql`
+      ${goalieStatsCTE(id)}
+      SELECT
+        gr.id, gr.game_id, gr.team_id, gr.goalie_id,
+        gr.shots_against, gr.entered_period,
+        COALESCE(gpg.ga, 0)::int                       AS goals_against,
+        (gr.shots_against - COALESCE(gpg.ga, 0))::int  AS saves,
+        gs.created_at,
+        p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
+        COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
+        COALESCE(pt_jnh.jersey_number, pt.jersey_number)     AS goalie_jersey_number,
+        ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
+        t.primary_color AS team_primary_color, t.text_color AS team_text_color
+      FROM goalie_ranges gr
+      LEFT JOIN goals_per_goalie gpg ON gpg.stat_id = gr.id
+      JOIN game_goalie_stats gs ON gs.id = gr.id
+      JOIN games g  ON g.id  = gr.game_id
+      JOIN players p ON p.id = gr.goalie_id
+      JOIN teams t   ON t.id = gr.team_id
+      LEFT JOIN player_teams pt
+        ON pt.player_id = gr.goalie_id AND pt.team_id = gr.team_id
+        AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) pt_jnh ON true
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = gr.team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      ORDER BY ti.code ASC, gr.from_ord ASC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
+    console.error('goalie stats switch error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/goalie-stats/:goalieId  – remove a goalie entry
+// Used to undo an incorrectly recorded goalie switch.
+// ---------------------------------------------------------------------------
+router.delete('/:id/goalie-stats/:goalieId', async (req, res) => {
+  const { id, goalieId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM game_goalie_stats
+      WHERE game_id = ${id} AND goalie_id = ${goalieId}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Goalie stat not found' });
+    return res.json({ message: 'Goalie stat removed' });
+  } catch (err) {
+    console.error('goalie stats delete error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

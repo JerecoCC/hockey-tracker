@@ -905,8 +905,8 @@ router.get('/:id/stats', async (req, res) => {
     `;
 
     const goalies = await sql`
-      WITH season_games AS (
-        SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
+      WITH period_vals (p, v) AS (
+        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
       ),
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
@@ -914,6 +914,46 @@ router.get('/:id/stats', async (req, res) => {
         FROM player_teams pt
         WHERE pt.season_id = ${id}
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
+      ),
+      -- Per-stint GA: count goals against each goalie during their active window.
+      goalie_ranges AS (
+        SELECT
+          ggs.id, ggs.game_id, ggs.team_id, ggs.goalie_id, ggs.shots_against,
+          pv.v AS from_ord,
+          LEAD(pv.v) OVER (
+            PARTITION BY ggs.game_id, ggs.team_id ORDER BY pv.v
+          ) AS until_ord
+        FROM game_goalie_stats ggs
+        JOIN games g ON g.id = ggs.game_id AND g.season_id = ${id} AND g.status = 'final'
+        JOIN period_vals pv ON pv.p = COALESCE(ggs.entered_period, '1')
+      ),
+      goals_per_stint AS (
+        SELECT gr.id AS stat_id, COUNT(*) AS ga
+        FROM goalie_ranges gr
+        JOIN goals gl ON gl.game_id = gr.game_id AND gl.team_id != gr.team_id
+        JOIN period_vals pv ON pv.p = gl.period
+        WHERE pv.v >= gr.from_ord
+          AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)
+        GROUP BY gr.id
+      ),
+      goalie_game_agg AS (
+        SELECT
+          gr.goalie_id,
+          gr.team_id,
+          COUNT(DISTINCT gr.game_id)::int                       AS gp,
+          SUM(gr.shots_against)::int                            AS shots_against,
+          SUM(COALESCE(gps.ga, 0))::int                         AS goals_against,
+          (SUM(gr.shots_against) - SUM(COALESCE(gps.ga, 0)))::int AS saves,
+          -- Shutout: goalie played whole game (no entered_period) AND GA = 0
+          COUNT(*) FILTER (
+            WHERE gr.shots_against > 0
+              AND COALESCE(gps.ga, 0) = 0
+              AND gr.from_ord = 1
+              AND gr.until_ord IS NULL
+          )::int                                                 AS shutouts
+        FROM goalie_ranges gr
+        LEFT JOIN goals_per_stint gps ON gps.stat_id = gr.id
+        GROUP BY gr.goalie_id, gr.team_id
       )
       SELECT
         p.id                                                   AS player_id,
@@ -921,47 +961,34 @@ router.get('/:id/stats', async (req, res) => {
         p.last_name,
         COALESCE(ptr.photo, p.photo)                           AS photo,
         ptr.jersey_number,
-        ggs.team_id                                            AS team_id,
+        agg.team_id                                            AS team_id,
         ti.code                                                AS team_code,
         ti.name                                                AS team_name,
         ti.logo                                                AS team_logo,
         t.primary_color                                        AS team_primary_color,
         t.text_color                                           AS team_text_color,
-        COUNT(DISTINCT ggs.game_id)::int                       AS gp,
-        SUM(ggs.shots_against)::int                            AS shots_against,
-        SUM(ggs.saves)::int                                    AS saves,
-        SUM(ggs.shots_against - ggs.saves)::int                AS goals_against,
-        CASE WHEN SUM(ggs.shots_against) > 0
-          THEN ROUND(SUM(ggs.saves)::numeric / SUM(ggs.shots_against), 3)
+        agg.gp,
+        agg.shots_against,
+        agg.saves,
+        agg.goals_against,
+        CASE WHEN agg.shots_against > 0
+          THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
           ELSE NULL END                                        AS save_pct,
-        COUNT(*) FILTER (
-          WHERE ggs.shots_against > 0
-            AND ggs.shots_against = ggs.saves
-        )::int                                                 AS shutouts,
-        CASE WHEN COUNT(DISTINCT ggs.game_id) > 0
-          THEN ROUND(
-            (SUM(ggs.shots_against) - SUM(ggs.saves))::numeric
-              / COUNT(DISTINCT ggs.game_id), 2)
+        agg.shutouts,
+        CASE WHEN agg.gp > 0
+          THEN ROUND(agg.goals_against::numeric / agg.gp, 2)
           ELSE NULL END                                        AS gaa
-      FROM game_goalie_stats ggs
-      JOIN games   g   ON g.id  = ggs.game_id
-                      AND g.season_id = ${id}
-                      AND g.status    = 'final'
-      JOIN players p   ON p.id  = ggs.goalie_id
-      LEFT JOIN player_team ptr ON ptr.player_id = ggs.goalie_id
-      LEFT JOIN teams       t   ON t.id          = ggs.team_id
+      FROM goalie_game_agg agg
+      JOIN players p    ON p.id  = agg.goalie_id
+      LEFT JOIN player_team ptr ON ptr.player_id = agg.goalie_id
+      LEFT JOIN teams       t   ON t.id          = agg.team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
-        WHERE team_id = ggs.team_id
+        WHERE team_id = agg.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      GROUP BY
-        p.id, p.first_name, p.last_name, p.photo,
-        ptr.photo, ptr.jersey_number,
-        ggs.team_id, ti.code, ti.name, ti.logo,
-        t.primary_color, t.text_color
-      ORDER BY save_pct DESC NULLS LAST, saves DESC
+      ORDER BY save_pct DESC NULLS LAST, agg.saves DESC
     `;
 
     return res.json({ skaters, goalies });

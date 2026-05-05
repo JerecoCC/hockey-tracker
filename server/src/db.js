@@ -705,8 +705,10 @@ async function initSchema() {
   await sql`DROP TABLE IF EXISTS game_period_shots`;
 
   // ── Goalie stats ───────────────────────────────────────────────────────────
-  // One row per goalie per game. shots_against and saves are entered manually.
-  // save_pct is derived client-side as saves / shots_against.
+  // One row per goalie per game. shots_against is entered manually.
+  // goals_against is derived from the goals table based on entered_period window.
+  // saves = shots_against - goals_against (computed server-side).
+  // entered_period: the period the goalie entered (NULL = started from period 1).
   await sql`
     CREATE TABLE IF NOT EXISTS game_goalie_stats (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -714,11 +716,14 @@ async function initSchema() {
       team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
       goalie_id     UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       shots_against SMALLINT NOT NULL DEFAULT 0 CHECK (shots_against >= 0),
-      saves         SMALLINT NOT NULL DEFAULT 0 CHECK (saves >= 0),
+      entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO')),
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (game_id, goalie_id)
     )
   `;
+  // Migration: add entered_period if missing, drop saves if still present.
+  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO'))`;
+  await sql`ALTER TABLE game_goalie_stats DROP COLUMN IF EXISTS saves`;
 
   // ── Shootout attempts ──────────────────────────────────────────────────────
   // One row per shot attempt in a shootout (both scored and missed).

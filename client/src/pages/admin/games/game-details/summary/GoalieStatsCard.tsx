@@ -3,12 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
+import GoalieSwitchModal from '../GoalieSwitchModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
-import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
+import type {
+  GoalieStatRecord,
+  GoalieSwitchData,
+  UpsertGoalieStatData,
+} from '@/hooks/useGameGoalieStats';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
+
+const PERIOD_LABEL: Record<string, string> = {
+  '1': 'P1',
+  '2': 'P2',
+  '3': 'P3',
+  OT: 'OT',
+  SO: 'SO',
+};
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -21,6 +34,8 @@ interface Props {
   leagueId: string;
   isFinal: boolean;
   upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
+  switchGoalie: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
+  removeGoalieStat: (goalieId: string) => Promise<boolean>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -34,9 +49,12 @@ const GoalieStatsCard = ({
   leagueId,
   isFinal,
   upsertGoalieStat,
+  switchGoalie,
+  removeGoalieStat,
 }: Props) => {
   const navigate = useNavigate();
-  const [modalOpen, setModalOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [switchOpen, setSwitchOpen] = useState(false);
 
   const goalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
   const goaliesWithStats = goalies.filter((g) =>
@@ -50,16 +68,26 @@ const GoalieStatsCard = ({
       <Card
         title="Goalie Stats"
         action={
-          isFinal ? (
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
             <Button
               variant="outlined"
               intent="neutral"
-              icon="edit"
+              icon="swap_horiz"
               size="sm"
-              tooltip="Edit goalie stats"
-              onClick={() => setModalOpen(true)}
+              tooltip="Switch goalie"
+              onClick={() => setSwitchOpen(true)}
             />
-          ) : undefined
+            {isFinal && (
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="edit"
+                size="sm"
+                tooltip="Edit goalie stats"
+                onClick={() => setEditOpen(true)}
+              />
+            )}
+          </div>
         }
       >
         <table className={styles.goalieTable}>
@@ -67,12 +95,13 @@ const GoalieStatsCard = ({
             <tr>
               <th className={styles.goalieThTeam}></th>
               <th className={styles.goalieTh}>SA</th>
+              <th className={styles.goalieTh}>GA</th>
               <th className={styles.goalieTh}>SV</th>
               <th className={styles.goalieTh}>SV%</th>
             </tr>
           </thead>
           <tbody>
-            {goalies.map((goalie) => {
+            {goaliesWithStats.map((goalie) => {
               const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
               if (!stat) return null;
               const isAway = goalie.team_id === game.away_team.id;
@@ -86,6 +115,7 @@ const GoalieStatsCard = ({
                 stat.shots_against > 0
                   ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                   : '1.000';
+              const isBackup = !!stat.entered_period;
               const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
               return (
                 <tr
@@ -130,10 +160,16 @@ const GoalieStatsCard = ({
                         <span className={styles.goalScorer}>
                           {formatPlayerName(goalie.first_name, goalie.last_name)}
                         </span>
+                        {isBackup && (
+                          <span className={styles.goalAssists}>
+                            entered {PERIOD_LABEL[stat.entered_period!] ?? stat.entered_period}
+                          </span>
+                        )}
                       </div>
                     </span>
                   </td>
                   <td className={styles.goalieTd}>{stat.shots_against}</td>
+                  <td className={styles.goalieTd}>{stat.goals_against}</td>
                   <td className={styles.goalieTd}>{stat.saves}</td>
                   <td className={styles.goalieTd}>{svPct}</td>
                 </tr>
@@ -144,16 +180,27 @@ const GoalieStatsCard = ({
       </Card>
 
       <GoalieStatsEditModal
-        open={modalOpen}
+        open={editOpen}
         game={game}
         awayRoster={awayRoster}
         homeRoster={homeRoster}
         goalieStats={goalieStats}
         lineup={lineup}
-        onClose={() => setModalOpen(false)}
+        onClose={() => setEditOpen(false)}
         upsertGoalieStat={async (data) => {
           await upsertGoalieStat(data);
         }}
+        removeGoalieStat={removeGoalieStat}
+      />
+
+      <GoalieSwitchModal
+        open={switchOpen}
+        game={game}
+        awayRoster={awayRoster}
+        homeRoster={homeRoster}
+        existingStats={goalieStats}
+        onClose={() => setSwitchOpen(false)}
+        switchGoalie={switchGoalie}
       />
     </>
   );

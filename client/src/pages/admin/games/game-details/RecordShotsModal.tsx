@@ -18,7 +18,7 @@ type ShotsFormValues = {
   away_shots: string;
   home_shots: string;
   end_time: string;
-  goalies: Array<{ shots_against: string; saves: string }>;
+  goalies: Array<{ shots_against: string }>;
 };
 
 const PERIOD_LABEL: Record<string, string> = {
@@ -114,10 +114,7 @@ const RecordShotsModal = ({
         end_time: '',
         goalies: goalieRosterList.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          return {
-            shots_against: stat ? String(stat.shots_against) : '',
-            saves: stat ? String(stat.saves) : '',
-          };
+          return { shots_against: stat ? String(stat.shots_against) : '' };
         }),
       });
       setSoFirstTeam('home');
@@ -133,16 +130,10 @@ const RecordShotsModal = ({
     !showGoalies ||
     goalieRosterList.length === 0 ||
     (goalieRosterList.some(
-      (g, i) =>
-        g.team_id === game.away_team.id &&
-        goalieFormValues[i]?.shots_against !== '' &&
-        goalieFormValues[i]?.saves !== '',
+      (g, i) => g.team_id === game.away_team.id && goalieFormValues[i]?.shots_against !== '',
     ) &&
       goalieRosterList.some(
-        (g, i) =>
-          g.team_id === game.home_team.id &&
-          goalieFormValues[i]?.shots_against !== '' &&
-          goalieFormValues[i]?.saves !== '',
+        (g, i) => g.team_id === game.home_team.id && goalieFormValues[i]?.shots_against !== '',
       ));
 
   const endTimeValid = !isEndGame || !!endTimeValue;
@@ -180,13 +171,11 @@ const RecordShotsModal = ({
         const row = goalieVals[i];
         if (!row || !goalie) continue;
         const shots = parseInt(row.shots_against, 10);
-        const saves = parseInt(row.saves, 10);
-        if (!isNaN(shots) && !isNaN(saves)) {
+        if (!isNaN(shots)) {
           await upsertGoalieStat({
             goalie_id: goalie.player_id,
             team_id: goalie.team_id,
             shots_against: shots,
-            saves,
           });
         }
       }
@@ -398,7 +387,6 @@ const RecordShotsBody = ({
             <span className={styles.goalFormLabel}>Goalie Stats</span>
             <div className={styles.shotsGoalieInputs}>
               <span className={styles.shotsGoalieColLabel}>SA</span>
-              <span className={styles.shotsGoalieColLabel}>SV</span>
             </div>
           </div>
           {goalieFields.map((field, i) => {
@@ -456,15 +444,6 @@ const RecordShotsBody = ({
                     type="number"
                     control={control}
                     name={`goalies.${i}.shots_against`}
-                    placeholder="0"
-                    min={0}
-                    disabled={submitting}
-                    transform={(v) => v.replace(/[^0-9]/g, '')}
-                  />
-                  <Field
-                    type="number"
-                    control={control}
-                    name={`goalies.${i}.saves`}
                     placeholder="0"
                     min={0}
                     disabled={submitting}
