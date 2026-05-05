@@ -64,11 +64,27 @@ const fromISODate = (iso: string): Date => {
 
 type TzPref = 'ET' | 'local';
 
+/** Returns 'EST' or 'EDT' for the America/New_York timezone on the given game date. */
+const getEtAbbr = (scheduledAt: string | null): string => {
+  const base = scheduledAt ? new Date(scheduledAt) : new Date();
+  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
+    base,
+  );
+  return (
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      timeZoneName: 'short',
+    })
+      .formatToParts(new Date(`${etDatePart}T12:00:00`))
+      .find((p) => p.type === 'timeZoneName')?.value ?? 'ET'
+  );
+};
+
 /**
  * Format a game's scheduled time.
  *
  * When `tzPref` is 'ET', the raw HH:MM stored in the DB (Eastern Time) is
- * formatted as 12-hour with an "ET" suffix.
+ * formatted as 12-hour with "EST" or "EDT" suffix (DST-aware).
  *
  * When `tzPref` is 'local', we reconstruct the exact Eastern moment (DST-aware)
  * and convert it to the browser's local timezone using the browser's locale.
@@ -80,9 +96,10 @@ const fmtGameTime = (
 ): string => {
   if (!scheduledTime) return '';
   const [h, m] = scheduledTime.split(':').map(Number);
+  const abbr = getEtAbbr(scheduledAt);
 
   if (tzPref === 'ET') {
-    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'} ET`;
+    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'} ${abbr}`;
   }
 
   // Derive the ET calendar date for this game so we can reconstruct the full
@@ -91,17 +108,7 @@ const fmtGameTime = (
   const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
     base,
   );
-
-  // Determine the UTC offset for America/New_York on that date (handles DST).
-  const probe = new Date(`${etDatePart}T12:00:00`);
-  const tzAbbr =
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      timeZoneName: 'short',
-    })
-      .formatToParts(probe)
-      .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
-  const offset = tzAbbr === 'EDT' ? '-04:00' : '-05:00';
+  const offset = abbr === 'EDT' ? '-04:00' : '-05:00';
 
   // Build the exact UTC moment and format in the browser's local timezone.
   const d = new Date(`${etDatePart}T${scheduledTime}:00${offset}`);

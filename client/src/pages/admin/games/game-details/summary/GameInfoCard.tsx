@@ -44,7 +44,11 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
           />
           <InfoItem
             label="Scheduled Time"
-            data={game.scheduled_time ? formatScheduledTime(game.scheduled_time) : null}
+            data={
+              game.scheduled_time
+                ? formatScheduledTime(game.scheduled_time, game.scheduled_at)
+                : null
+            }
           />
           <InfoItem
             label="Start Time"

@@ -20,8 +20,8 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-/** Converts a stored "HH:MM" string to "h:mm AM/PM ET" for display. */
-const formatTime = (hhmm: string): string => {
+/** Converts a stored "HH:MM" string to "h:mm AM/PM EST/EDT" for display (DST-aware). */
+const formatTime = (hhmm: string, scheduledAt?: string | null): string => {
   const [hStr, mStr] = hhmm.split(':');
   const h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
@@ -29,7 +29,15 @@ const formatTime = (hhmm: string): string => {
   const period = h < 12 ? 'AM' : 'PM';
   const hour12 = h % 12 === 0 ? 12 : h % 12;
   const min = String(m).padStart(2, '0');
-  return `${hour12}:${min} ${period} ET`;
+  const base = scheduledAt ? new Date(scheduledAt) : new Date();
+  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
+    base,
+  );
+  const abbr =
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
+      .formatToParts(new Date(`${etDatePart}T12:00:00`))
+      .find((p) => p.type === 'timeZoneName')?.value ?? 'ET';
+  return `${hour12}:${min} ${period} ${abbr}`;
 };
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -245,7 +253,11 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 statusIntent={STATUS_INTENT[game.status]}
                 gameType={game.game_type}
                 date={game.scheduled_at ? DATE_FMT.format(new Date(game.scheduled_at)) : undefined}
-                time={game.scheduled_time ? formatTime(game.scheduled_time) : undefined}
+                time={
+                  game.scheduled_time
+                    ? formatTime(game.scheduled_time, game.scheduled_at)
+                    : undefined
+                }
                 venue={game.venue ?? undefined}
                 actions={[
                   {

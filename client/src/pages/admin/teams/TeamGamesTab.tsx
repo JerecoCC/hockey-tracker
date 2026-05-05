@@ -15,13 +15,21 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-const formatTime = (hhmm: string): string => {
+const formatTime = (hhmm: string, scheduledAt?: string | null): string => {
   const [hStr, mStr] = hhmm.split(':');
   const h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
   if (isNaN(h) || isNaN(m)) return hhmm;
   const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'} ET`;
+  const base = scheduledAt ? new Date(scheduledAt) : new Date();
+  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
+    base,
+  );
+  const abbr =
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
+      .formatToParts(new Date(`${etDatePart}T12:00:00`))
+      .find((p) => p.type === 'timeZoneName')?.value ?? 'ET';
+  return `${hour12}:${String(m).padStart(2, '0')} ${h < 12 ? 'AM' : 'PM'} ${abbr}`;
 };
 
 const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
@@ -126,7 +134,9 @@ const TeamGamesTab = ({ teamId, leagueId }: Props) => {
               statusIntent={STATUS_INTENT[game.status]}
               gameType={game.game_type}
               date={game.scheduled_at ? DATE_FMT.format(new Date(game.scheduled_at)) : undefined}
-              time={game.scheduled_time ? formatTime(game.scheduled_time) : undefined}
+              time={
+                game.scheduled_time ? formatTime(game.scheduled_time, game.scheduled_at) : undefined
+              }
               venue={game.venue ?? undefined}
               actions={[
                 {

@@ -885,7 +885,9 @@ const UserGameDetailsPage = () => {
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>Scheduled Time</span>
                 <span className={game.scheduled_time ? styles.infoValue : styles.infoValueMuted}>
-                  {game.scheduled_time ? formatScheduledTime(game.scheduled_time) : '—'}
+                  {game.scheduled_time
+                    ? formatScheduledTime(game.scheduled_time, game.scheduled_at)
+                    : '—'}
                 </span>
               </div>
               <div className={styles.infoItem}>

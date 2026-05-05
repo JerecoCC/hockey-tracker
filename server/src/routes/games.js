@@ -1118,17 +1118,17 @@ router.get('/:id/goals', async (req, res) => {
         -- scorer
         sp.first_name                       AS scorer_first_name,
         sp.last_name                        AS scorer_last_name,
-        COALESCE(spt.photo, sp.photo)                         AS scorer_photo,
+        COALESCE(spt.photo, best_player_photo(sp.id), sp.photo)                         AS scorer_photo,
         COALESCE(spt_jnh.jersey_number, spt.jersey_number)   AS scorer_jersey_number,
         -- assist 1
         a1p.first_name                                        AS assist_1_first_name,
         a1p.last_name                                         AS assist_1_last_name,
-        COALESCE(a1pt.photo, a1p.photo)                       AS assist_1_photo,
+        COALESCE(a1pt.photo, best_player_photo(a1p.id), a1p.photo)                       AS assist_1_photo,
         COALESCE(a1pt_jnh.jersey_number, a1pt.jersey_number)  AS assist_1_jersey_number,
         -- assist 2
         a2p.first_name                                        AS assist_2_first_name,
         a2p.last_name                                         AS assist_2_last_name,
-        COALESCE(a2pt.photo, a2p.photo)                       AS assist_2_photo,
+        COALESCE(a2pt.photo, best_player_photo(a2p.id), a2p.photo)                       AS assist_2_photo,
         COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number)  AS assist_2_jersey_number,
         -- prior-game cumulative stats (finalized games in same season before this game)
         (SELECT COUNT(*)::int
@@ -1252,11 +1252,11 @@ router.post('/:id/goals', async (req, res) => {
         go.scorer_id, go.assist_1_id, go.assist_2_id, go.created_at,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color,
-        sp.first_name AS scorer_first_name, sp.last_name AS scorer_last_name, COALESCE(spt.photo, sp.photo) AS scorer_photo,
+        sp.first_name AS scorer_first_name, sp.last_name AS scorer_last_name, COALESCE(spt.photo, best_player_photo(sp.id), sp.photo) AS scorer_photo,
         COALESCE(spt_jnh.jersey_number, spt.jersey_number) AS scorer_jersey_number,
-        a1p.first_name AS assist_1_first_name, a1p.last_name AS assist_1_last_name, COALESCE(a1pt.photo, a1p.photo) AS assist_1_photo,
+        a1p.first_name AS assist_1_first_name, a1p.last_name AS assist_1_last_name, COALESCE(a1pt.photo, best_player_photo(a1p.id), a1p.photo) AS assist_1_photo,
         COALESCE(a1pt_jnh.jersey_number, a1pt.jersey_number) AS assist_1_jersey_number,
-        a2p.first_name AS assist_2_first_name, a2p.last_name AS assist_2_last_name, COALESCE(a2pt.photo, a2p.photo) AS assist_2_photo,
+        a2p.first_name AS assist_2_first_name, a2p.last_name AS assist_2_last_name, COALESCE(a2pt.photo, best_player_photo(a2p.id), a2p.photo) AS assist_2_photo,
         COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number) AS assist_2_jersey_number
       FROM goals go
       JOIN games g ON g.id = go.game_id

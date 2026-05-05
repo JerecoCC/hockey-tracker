@@ -27,6 +27,15 @@
   color: #f87171;
 }
 
+// ── Validation error message ─────────────────────────────────────────────
+.errorMsg {
+  font-size: $font-xs;
+  font-weight: 500;
+  color: $danger-light;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
 // ── Field base ──────────────────────────────────────────────────────────
 .field {
   background: $bg-input;

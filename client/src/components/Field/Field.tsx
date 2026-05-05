@@ -273,6 +273,9 @@ const Field = (props: FieldProps) => {
               </span>
             )}
             {getField()}
+            {fieldState.error?.message && (
+              <span className={styles.errorMsg}>{fieldState.error.message}</span>
+            )}
           </label>
         );
       }}
