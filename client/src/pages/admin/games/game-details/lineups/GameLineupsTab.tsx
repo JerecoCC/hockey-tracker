@@ -53,6 +53,10 @@ const GameLineupsTab = ({
   });
   const [lineupAddTeam, setLineupAddTeam] = useState<'away' | 'home' | null>(null);
   const [lineupCreateTeam, setLineupCreateTeam] = useState<'away' | 'home' | null>(null);
+  const [createWithJerseys, setCreateWithJerseys] = useState<{
+    team: 'away' | 'home';
+    jerseys: number[];
+  } | null>(null);
   const [lineupSetTeam, setLineupSetTeam] = useState<'away' | 'home' | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<{ entry: GameRosterEntry } | null>(null);
   const [removingFromRoster, setRemovingFromRoster] = useState(false);
@@ -190,9 +194,15 @@ const GameLineupsTab = ({
           const renderPlayer = (e: GameRosterEntry) => {
             const isStarter = lineupMap.has(e.player_id);
             const isInheritedStarter = !isStarter && inheritedLineupMap.has(e.player_id);
-            const positionPart = e.position
-              ? (POSITION_LABEL[e.position] ?? e.position)
-              : undefined;
+            const lineupEntry = lineupMap.get(e.player_id) ?? inheritedLineupMap.get(e.player_id);
+            const slot = lineupEntry?.position_slot;
+            // D1/D2 slots both map to the 'D' label key
+            const slotKey = slot === 'D1' || slot === 'D2' ? 'D' : slot;
+            const positionPart = slotKey
+              ? (POSITION_LABEL[slotKey] ?? slotKey)
+              : e.position
+                ? (POSITION_LABEL[e.position] ?? e.position)
+                : undefined;
             return (
               <ListItem
                 key={e.id}
@@ -293,6 +303,12 @@ const GameLineupsTab = ({
           addToGameRoster={(playerIds) =>
             addToRoster(lineupAddTeam === 'away' ? game.away_team.id : game.home_team.id, playerIds)
           }
+          onMissingJerseys={(jerseys) => {
+            const team = lineupAddTeam!;
+            setLineupAddTeam(null);
+            setCreateWithJerseys({ team, jerseys });
+            setLineupCreateTeam(team);
+          }}
         />
       )}
 
@@ -300,7 +316,13 @@ const GameLineupsTab = ({
       {lineupCreateTeam !== null && (
         <LineupCreatePlayersModal
           open={lineupCreateTeam !== null}
-          onClose={() => setLineupCreateTeam(null)}
+          onClose={() => {
+            setLineupCreateTeam(null);
+            setCreateWithJerseys(null);
+          }}
+          initialJerseyNumbers={
+            createWithJerseys?.team === lineupCreateTeam ? createWithJerseys.jerseys : undefined
+          }
           teamId={lineupCreateTeam === 'away' ? game.away_team.id : game.home_team.id}
           seasonId={seasonId!}
           teamName={lineupCreateTeam === 'away' ? game.away_team.name : game.home_team.name}

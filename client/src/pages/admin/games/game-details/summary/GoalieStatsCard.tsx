@@ -2,15 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
-import GoalieSwitchModal from '../GoalieSwitchModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
-import type {
-  GoalieStatRecord,
-  GoalieSwitchData,
-  UpsertGoalieStatData,
-} from '@/hooks/useGameGoalieStats';
+import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
@@ -34,7 +30,6 @@ interface Props {
   leagueId: string;
   isFinal: boolean;
   upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
-  switchGoalie: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
   removeGoalieStat: (goalieId: string) => Promise<boolean>;
 }
 
@@ -49,12 +44,10 @@ const GoalieStatsCard = ({
   leagueId,
   isFinal,
   upsertGoalieStat,
-  switchGoalie,
   removeGoalieStat,
 }: Props) => {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
-  const [switchOpen, setSwitchOpen] = useState(false);
 
   const goalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
   const goaliesWithStats = goalies.filter((g) =>
@@ -68,36 +61,34 @@ const GoalieStatsCard = ({
       <Card
         title="Goalie Stats"
         action={
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          isFinal ? (
             <Button
               variant="outlined"
               intent="neutral"
-              icon="swap_horiz"
+              icon="edit"
               size="sm"
-              tooltip="Switch goalie"
-              onClick={() => setSwitchOpen(true)}
+              tooltip="Edit goalie stats"
+              onClick={() => setEditOpen(true)}
             />
-            {isFinal && (
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                size="sm"
-                tooltip="Edit goalie stats"
-                onClick={() => setEditOpen(true)}
-              />
-            )}
-          </div>
+          ) : undefined
         }
       >
         <table className={styles.goalieTable}>
           <thead>
             <tr>
               <th className={styles.goalieThTeam}></th>
-              <th className={styles.goalieTh}>SA</th>
-              <th className={styles.goalieTh}>GA</th>
-              <th className={styles.goalieTh}>SV</th>
-              <th className={styles.goalieTh}>SV%</th>
+              <th className={styles.goalieTh}>
+                <Tooltip text="Shots Against">SA</Tooltip>
+              </th>
+              <th className={styles.goalieTh}>
+                <Tooltip text="Saves">SV</Tooltip>
+              </th>
+              <th className={styles.goalieTh}>
+                <Tooltip text="Goals Against">GA</Tooltip>
+              </th>
+              <th className={styles.goalieTh}>
+                <Tooltip text="Save Percentage">SV%</Tooltip>
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -169,8 +160,8 @@ const GoalieStatsCard = ({
                     </span>
                   </td>
                   <td className={styles.goalieTd}>{stat.shots_against}</td>
-                  <td className={styles.goalieTd}>{stat.goals_against}</td>
                   <td className={styles.goalieTd}>{stat.saves}</td>
+                  <td className={styles.goalieTd}>{stat.goals_against}</td>
                   <td className={styles.goalieTd}>{svPct}</td>
                 </tr>
               );
@@ -191,16 +182,6 @@ const GoalieStatsCard = ({
           await upsertGoalieStat(data);
         }}
         removeGoalieStat={removeGoalieStat}
-      />
-
-      <GoalieSwitchModal
-        open={switchOpen}
-        game={game}
-        awayRoster={awayRoster}
-        homeRoster={homeRoster}
-        existingStats={goalieStats}
-        onClose={() => setSwitchOpen(false)}
-        switchGoalie={switchGoalie}
       />
     </>
   );

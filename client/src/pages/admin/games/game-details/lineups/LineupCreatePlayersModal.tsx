@@ -70,6 +70,8 @@ interface Props {
   createAndRosterPlayers: CreateAndRosterFn;
   /** Called with the IDs of newly created players so caller can add them to the game roster */
   onPlayersCreated?: (playerIds: string[]) => Promise<void>;
+  /** Pre-fill form rows with these jersey numbers when the modal opens */
+  initialJerseyNumbers?: number[];
 }
 
 const LineupCreatePlayersModal = ({
@@ -83,6 +85,7 @@ const LineupCreatePlayersModal = ({
   existingRoster = [],
   createAndRosterPlayers,
   onPlayersCreated,
+  initialJerseyNumbers,
 }: Props) => {
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,6 +104,13 @@ const LineupCreatePlayersModal = ({
   const watchedPlayers = useWatch({ control, name: 'players' });
 
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Pre-populate rows from initialJerseyNumbers when the modal opens
+  useEffect(() => {
+    if (!open || !initialJerseyNumbers || initialJerseyNumbers.length === 0) return;
+    const rows = initialJerseyNumbers.map((n) => ({ ...EMPTY_ROW, jersey_number: String(n) }));
+    reset({ players: rows });
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus first row's jersey input when the modal opens
   useEffect(() => {

@@ -11,6 +11,44 @@
 .controls {
   flex-shrink: 0;
   margin-bottom: $space-lg;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.quickAddWrap {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.quickAddInput {
+  flex: 1;
+  height: 36px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: 0 $space-md;
+  font-size: $font-base;
+  color: $text-body;
+  outline: none;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+
+  &:focus {
+    border-color: $accent;
+  }
+}
+
+.missingNote {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-sm;
+  color: $warning;
+  margin: 0;
 }
 
 .selectAllRow {

@@ -108,7 +108,6 @@ const GoalieStatsEditModal = ({
         <div className={styles.shotsGoalieHeader}>
           <span />
           <div className={styles.shotsGoalieInputs}>
-            <span className={styles.shotsGoalieColLabel}>GA</span>
             <span className={styles.shotsGoalieColLabel}>SA</span>
           </div>
         </div>
@@ -176,19 +175,6 @@ const GoalieStatsEditModal = ({
                 </div>
               </span>
               <div className={styles.shotsGoalieInputs}>
-                {/* GA is derived – show read-only */}
-                <span
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    minWidth: '3rem',
-                    fontSize: '0.875rem',
-                    color: 'var(--color-text-muted)',
-                  }}
-                >
-                  {stat?.goals_against ?? '—'}
-                </span>
                 <Field
                   type="number"
                   control={control}

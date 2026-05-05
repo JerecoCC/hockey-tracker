@@ -11,6 +11,7 @@ import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
 import GoalieStatsCard from './GoalieStatsCard';
+import GoalieSwitchModal from '../GoalieSwitchModal';
 import ShotsEditModal from '../ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
 import ScoreImageModal from '../ScoreImageModal';
@@ -239,6 +240,9 @@ const GameSummaryTab = ({
     setDeletingAttemptId(null);
   };
 
+  // ── Goalie Switch modal state ────────────────────────────────────────────
+  const [switchGoalieOpen, setSwitchGoalieOpen] = useState(false);
+
   // ── End Game / 3-stars modal ─────────────────────────────────────────────
   const [starsModalOpen, setStarsModalOpen] = useState(false);
   const [starsEditMode, setStarsEditMode] = useState(false);
@@ -379,6 +383,7 @@ const GameSummaryTab = ({
               onAddAttempt={openAttemptModal}
               onEditAttempt={openEditAttemptModal}
               onDeleteAttempt={handleDeleteAttempt}
+              onSwitchGoalie={isInProgress ? () => setSwitchGoalieOpen(true) : undefined}
               getPlayerHref={(playerId) => {
                 const teamId = playerTeamMap.get(playerId);
                 return teamId
@@ -398,7 +403,6 @@ const GameSummaryTab = ({
                 leagueId={leagueId}
                 isFinal={isFinal}
                 upsertGoalieStat={upsertGoalieStat}
-                switchGoalie={switchGoalie}
                 removeGoalieStat={removeGoalieStat}
               />
             )}
@@ -858,6 +862,17 @@ const GameSummaryTab = ({
           onClose={() => setScoreImageOpen(false)}
         />
       )}
+
+      {/* ── Goalie Switch modal ── */}
+      <GoalieSwitchModal
+        open={switchGoalieOpen}
+        game={game}
+        awayRoster={awayRoster}
+        homeRoster={homeRoster}
+        existingStats={goalieStats}
+        onClose={() => setSwitchGoalieOpen(false)}
+        switchGoalie={switchGoalie}
+      />
 
       {/* ── Delete Game confirm ── */}
       <ConfirmModal

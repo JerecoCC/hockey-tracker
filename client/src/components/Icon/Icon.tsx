@@ -41,6 +41,7 @@ import {
   faPlay,
   faPlus,
   faRightFromBracket,
+  faRightLeft,
   faShield,
   faSort,
   faSortDown,
@@ -141,6 +142,9 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // jersey number
   jersey: faHashtag,
+
+  // swap / switch
+  swap_horiz: faRightLeft,
 
   // decorative
   sports_hockey: faHockeyPuck,

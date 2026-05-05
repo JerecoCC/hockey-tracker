@@ -96,8 +96,21 @@ const RecordShotsModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>('home');
 
+  const allRosterGoalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
+  const lineupGoalieIds = new Set(
+    lineup.filter((l) => l.position_slot === 'G').map((l) => l.player_id),
+  );
+  const hasSubstitution = goalieStats.some((gs) => gs.entered_period !== null);
+  const hasLineupStarters = allRosterGoalies.some((e) => lineupGoalieIds.has(e.player_id));
+
   const goalieRosterList = showGoalies
-    ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
+    ? hasLineupStarters
+      ? allRosterGoalies.filter(
+          (e) =>
+            lineupGoalieIds.has(e.player_id) ||
+            (hasSubstitution && goalieStats.some((gs) => gs.goalie_id === e.player_id)),
+        )
+      : allRosterGoalies
     : [];
 
   const { control, reset, getValues, watch } = useForm<ShotsFormValues>({

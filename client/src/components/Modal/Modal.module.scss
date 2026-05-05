@@ -52,9 +52,9 @@
   // logo upload clear button at top:-6px / right:-6px) bleed out without
   // being clipped by the overflow context. Negative margin compensates so
   // the content alignment is unchanged.
-  // No bottom padding — the footer handles its own spacing, and removing it
-  // prevents a visible gap between inner scrollbars and the footer divider.
-  padding: 8px 8px 0;
+  // Bottom padding gives breathing room between the last form element and
+  // the footer divider, including when the body is scrollable.
+  padding: 8px 8px $space-xl;
   margin: -8px -8px 0;
   // Re-apply right-side scrollbar padding on top of the 8px base so the
   // scrollbar track sits just inside the modal edge.

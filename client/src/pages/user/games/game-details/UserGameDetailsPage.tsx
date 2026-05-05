@@ -315,10 +315,18 @@ const UserGameDetailsPage = () => {
                     <thead>
                       <tr>
                         <th className={styles.goalieThTeam}></th>
-                        <th className={styles.goalieTh}>SA</th>
-                        <th className={styles.goalieTh}>GA</th>
-                        <th className={styles.goalieTh}>SV</th>
-                        <th className={styles.goalieTh}>SV%</th>
+                        <th className={styles.goalieTh}>
+                          <Tooltip text="Shots Against">SA</Tooltip>
+                        </th>
+                        <th className={styles.goalieTh}>
+                          <Tooltip text="Saves">SV</Tooltip>
+                        </th>
+                        <th className={styles.goalieTh}>
+                          <Tooltip text="Goals Against">GA</Tooltip>
+                        </th>
+                        <th className={styles.goalieTh}>
+                          <Tooltip text="Save Percentage">SV%</Tooltip>
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
@@ -392,8 +400,8 @@ const UserGameDetailsPage = () => {
                               </span>
                             </td>
                             <td className={styles.goalieTd}>{stat.shots_against}</td>
-                            <td className={styles.goalieTd}>{stat.goals_against}</td>
                             <td className={styles.goalieTd}>{stat.saves}</td>
+                            <td className={styles.goalieTd}>{stat.goals_against}</td>
                             <td className={styles.goalieTd}>{svPct}</td>
                           </tr>
                         );

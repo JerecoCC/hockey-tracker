@@ -52,6 +52,7 @@ interface Props {
   onAddAttempt?: () => void;
   onEditAttempt?: (attempt: ShootoutAttempt) => void;
   onDeleteAttempt?: (attemptId: string) => void;
+  onSwitchGoalie?: () => void;
   /** When provided, player names in goal rows become navigation links. */
   getPlayerHref?: (playerId: string) => string;
 }
@@ -79,6 +80,7 @@ const ScoringCard = ({
   onAddAttempt,
   onEditAttempt,
   onDeleteAttempt,
+  onSwitchGoalie,
   getPlayerHref,
 }: Props) => {
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -296,6 +298,15 @@ const ScoringCard = ({
                             onClick: () => onOpenShotsModal('3', { type: 'end-game' }, true),
                           }
                         : null,
+                      onSwitchGoalie
+                        ? {
+                            icon: 'swap_horiz',
+                            tooltip: 'Switch Goalie',
+                            intent: 'neutral' as const,
+                            disabled: !!busy,
+                            onClick: onSwitchGoalie,
+                          }
+                        : null,
                     ].filter(Boolean) as AccordionAction[])
                   : undefined
               }
@@ -361,6 +372,15 @@ const ScoringCard = ({
                               intent: 'danger' as const,
                               disabled: !!busy,
                               onClick: () => onOpenShotsModal('OT', { type: 'end-game' }, true),
+                            }
+                          : null,
+                        onSwitchGoalie
+                          ? {
+                              icon: 'swap_horiz',
+                              tooltip: 'Switch Goalie',
+                              intent: 'neutral' as const,
+                              disabled: !!busy,
+                              onClick: onSwitchGoalie,
                             }
                           : null,
                       ].filter(Boolean) as AccordionAction[])

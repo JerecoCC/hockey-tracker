@@ -930,7 +930,7 @@ router.get('/:id/stats', async (req, res) => {
       goals_per_stint AS (
         SELECT gr.id AS stat_id, COUNT(*) AS ga
         FROM goalie_ranges gr
-        JOIN goals gl ON gl.game_id = gr.game_id AND gl.team_id != gr.team_id
+        JOIN goals gl ON gl.game_id = gr.game_id AND gl.team_id != gr.team_id AND gl.empty_net = false
         JOIN period_vals pv ON pv.p = gl.period
         WHERE pv.v >= gr.from_ord
           AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)

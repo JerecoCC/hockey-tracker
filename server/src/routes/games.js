@@ -1443,7 +1443,7 @@ const goalieStatsCTE = (gameId) => sql`
   goals_per_goalie AS (
     SELECT gr.id AS stat_id, COUNT(*) AS ga
     FROM goalie_ranges gr
-    JOIN goals g ON g.game_id = gr.game_id AND g.team_id != gr.team_id
+    JOIN goals g ON g.game_id = gr.game_id AND g.team_id != gr.team_id AND g.empty_net = false
     JOIN period_vals pv ON pv.p = g.period
     WHERE pv.v >= gr.from_ord
       AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)
