@@ -1,5 +1,5 @@
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
-import InfoItem from './InfoItem';
+import InfoItem from '@/components/InfoItem/InfoItem';
 import styles from './TeamDetails.module.scss';
 
 export interface SeasonOption {

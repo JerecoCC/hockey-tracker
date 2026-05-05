@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import InfoItem from '@/components/InfoItem/InfoItem';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
@@ -486,26 +487,22 @@ const SeasonDetailsPage = () => {
                 }
               >
                 <div className={styles.infoGrid}>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>League</span>
-                    <span className={styles.infoValue}>{season.league_name}</span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Start Date</span>
-                    <span className={styles.infoValue}>{formatDate(season.start_date)}</span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>End Date</span>
-                    <span className={styles.infoValue}>
-                      {formatEndDate(season.end_date, season.is_current)}
-                    </span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Games Per Season</span>
-                    <span className={styles.infoValue}>
-                      {season.games_per_season != null ? season.games_per_season : '—'}
-                    </span>
-                  </div>
+                  <InfoItem
+                    label="League"
+                    data={season.league_name}
+                  />
+                  <InfoItem
+                    label="Start Date"
+                    data={formatDate(season.start_date)}
+                  />
+                  <InfoItem
+                    label="End Date"
+                    data={formatEndDate(season.end_date, season.is_current)}
+                  />
+                  <InfoItem
+                    label="Games Per Season"
+                    data={season.games_per_season != null ? String(season.games_per_season) : null}
+                  />
                 </div>
               </Card>
             ),

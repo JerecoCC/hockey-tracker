@@ -1,12 +1,8 @@
 import Card from '@/components/Card/Card';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
+import InfoItem from '@/components/InfoItem/InfoItem';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
 import styles from './LeagueDetails.module.scss';
-
-const normalizeDescription = (html: string | null | undefined): string | null => {
-  if (!html || html === '<p></p>') return null;
-  return html;
-};
 
 interface Props {
   league: LeagueFullRecord;
@@ -30,17 +26,13 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
     />
 
     <div className={styles.infoGrid}>
-      <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-        <span className={styles.infoLabel}>Description</span>
-        {normalizeDescription(league.description) ? (
-          <div
-            className={styles.infoValue}
-            dangerouslySetInnerHTML={{ __html: league.description! }}
-          />
-        ) : (
-          <span className={styles.infoValueMuted}>No description</span>
-        )}
-      </div>
+      <InfoItem
+        type="html"
+        label="Description"
+        data={league.description}
+        muted="No description"
+        full
+      />
     </div>
   </Card>
 );

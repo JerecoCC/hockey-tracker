@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import InfoItem from '@/components/InfoItem/InfoItem';
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
@@ -1008,51 +1009,46 @@ const GameSummaryTab = ({
               }
             >
               <div className={styles.infoGrid}>
-                <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-                  <span className={styles.infoLabel}>Type</span>
-                  <span className={styles.infoValue}>{GAME_TYPE_LABEL[game.game_type]}</span>
-                </div>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Scheduled Date</span>
-                  <span className={game.scheduled_at ? styles.infoValue : styles.infoValueMuted}>
-                    {game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : '—'}
-                  </span>
-                </div>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Scheduled Time</span>
-                  <span className={game.scheduled_time ? styles.infoValue : styles.infoValueMuted}>
-                    {game.scheduled_time ? formatScheduledTime(game.scheduled_time) : '—'}
-                  </span>
-                </div>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>Start Time</span>
-                  <span className={game.time_start ? styles.infoValue : styles.infoValueMuted}>
-                    {game.time_start ? TIME_FMT.format(new Date(game.time_start)) : '—'}
-                  </span>
-                </div>
-                <div className={styles.infoItem}>
-                  <span className={styles.infoLabel}>End Time</span>
-                  <span className={game.time_end ? styles.infoValue : styles.infoValueMuted}>
-                    {game.time_end ? TIME_FMT.format(new Date(game.time_end)) : '—'}
-                  </span>
-                </div>
-                <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-                  <span className={styles.infoLabel}>Venue</span>
-                  <span className={game.venue ? styles.infoValue : styles.infoValueMuted}>
-                    {game.venue ?? '—'}
-                  </span>
-                </div>
+                <InfoItem
+                  label="Type"
+                  data={GAME_TYPE_LABEL[game.game_type]}
+                  full
+                />
+                <InfoItem
+                  label="Scheduled Date"
+                  data={
+                    game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null
+                  }
+                />
+                <InfoItem
+                  label="Scheduled Time"
+                  data={game.scheduled_time ? formatScheduledTime(game.scheduled_time) : null}
+                />
+                <InfoItem
+                  label="Start Time"
+                  data={game.time_start ? TIME_FMT.format(new Date(game.time_start)) : null}
+                />
+                <InfoItem
+                  label="End Time"
+                  data={game.time_end ? TIME_FMT.format(new Date(game.time_end)) : null}
+                />
+                <InfoItem
+                  label="Venue"
+                  data={game.venue ?? null}
+                  full
+                />
                 {game.game_number != null && (
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Game #</span>
-                    <span className={styles.infoValue}>{game.game_number}</span>
-                  </div>
+                  <InfoItem
+                    label="Game #"
+                    data={String(game.game_number)}
+                  />
                 )}
                 {game.notes && (
-                  <div className={`${styles.infoItem} ${styles.infoItemFull}`}>
-                    <span className={styles.infoLabel}>Notes</span>
-                    <span className={styles.infoValue}>{game.notes}</span>
-                  </div>
+                  <InfoItem
+                    label="Notes"
+                    data={game.notes}
+                    full
+                  />
                 )}
               </div>
             </Card>

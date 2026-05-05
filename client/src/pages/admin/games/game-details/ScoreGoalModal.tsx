@@ -245,7 +245,7 @@ const ScoreGoalModal = ({
             placeholder="— Select scorer —"
             onChange={setGoalScorerId}
             searchable
-            disabled={submitting}
+            disabled={submitting || !goalTeam}
           />
         </div>
         <div className={styles.goalFormRow}>
@@ -257,7 +257,7 @@ const ScoreGoalModal = ({
               placeholder="— Optional —"
               onChange={setGoalAssist1Id}
               searchable
-              disabled={submitting}
+              disabled={submitting || !goalTeam}
             />
           </div>
           <div className={styles.goalFormField}>
@@ -268,7 +268,7 @@ const ScoreGoalModal = ({
               placeholder="— Optional —"
               onChange={setGoalAssist2Id}
               searchable
-              disabled={submitting}
+              disabled={submitting || !goalTeam}
             />
           </div>
         </div>

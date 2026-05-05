@@ -4,7 +4,7 @@ import { type LineupEntry } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 
 // ── Mock the custom Select so we can drive it with a native <select> ─────
-jest.mock('../../../components/Select/Select', () => {
+jest.mock('../../../../components/Select/Select', () => {
   const MockSelect = ({
     value,
     options,

@@ -56,25 +56,6 @@
   gap: $space-xl;
 }
 
-.infoItem {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.infoLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.infoValue {
-  font-size: $font-body;
-  color: $text-body;
-}
-
 // ── Groups tree ────────────────────────────────────────────────────────────────
 .groupList {
   list-style: none;
