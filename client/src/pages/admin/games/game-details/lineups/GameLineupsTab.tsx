@@ -322,6 +322,7 @@ const GameLineupsTab = ({
             createWithJerseys?.team === lineupCreateTeam ? createWithJerseys.jerseys : undefined
           }
           teamId={lineupCreateTeam === 'away' ? game.away_team.id : game.home_team.id}
+          leagueId={leagueId}
           seasonId={seasonId!}
           teamName={lineupCreateTeam === 'away' ? game.away_team.name : game.home_team.name}
           existingCount={(lineupCreateTeam === 'away' ? awayRoster : homeRoster).length}

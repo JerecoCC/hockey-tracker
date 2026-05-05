@@ -110,3 +110,38 @@
     margin-bottom: 0.2rem;
   }
 }
+
+.crossTeamWarnings {
+  margin: $space-sm 0 0;
+  padding: $space-sm $space-md;
+  border: 1px solid $warning-light;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, $warning-light 8%, transparent);
+}
+
+.crossTeamWarningList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    font-size: $font-sm;
+    color: $warning-light;
+    margin-bottom: 0.2rem;
+  }
+}
+
+.crossTeamWarningNote {
+  font-size: $font-sm;
+  color: $text-dim;
+  margin: $space-xs 0 0;
+}
+
+.crossTeamWarningActions {
+  margin: $space-sm 0 0;
+  display: flex;
+  justify-content: flex-end;
+}
