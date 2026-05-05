@@ -290,13 +290,6 @@
   text-align: center;
 }
 
-// ── Info grid (inside Summary tab) ────────────────────────────────────────────
-.infoGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-xl $space-2xl;
-}
-
 // ── Period scores table ────────────────────────────────────────────────────────
 .periodsTable {
   width: 100%;

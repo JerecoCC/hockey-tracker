@@ -14,6 +14,16 @@ const apiError = (err: unknown, fallback: string) =>
 export type GameType      = 'preseason' | 'regular' | 'playoff';
 export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed' | 'cancelled';
 export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
+
+export interface UpdateGameInfoData {
+  venue?: string | null;
+  scheduled_at?: string | null;
+  scheduled_time?: string | null;
+  game_type?: GameType;
+  time_start?: string | null;
+  time_end?: string | null;
+  shootout_first_team_id?: string | null;
+}
 export type SeriesStatus = 'upcoming' | 'active' | 'complete';
 
 /** A previous head-to-head meeting between the two teams in the current game's season. */
@@ -367,15 +377,7 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  const updateGameInfo = async (data: {
-    venue?: string | null;
-    scheduled_at?: string | null;
-    scheduled_time?: string | null;
-    game_type?: GameType;
-    time_start?: string | null;
-    time_end?: string | null;
-    shootout_first_team_id?: string | null;
-  }): Promise<boolean> => {
+  const updateGameInfo = async (data: UpdateGameInfoData): Promise<boolean> => {
     if (!id) return false;
     setBusy('update-info');
     try {

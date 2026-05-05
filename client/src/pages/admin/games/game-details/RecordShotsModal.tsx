@@ -6,7 +6,7 @@ import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
-import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
 
@@ -53,13 +53,6 @@ const etHHMMtoISO = (hhmm: string): string => {
   return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
 };
 
-interface UpsertGoalieData {
-  goalie_id: string;
-  team_id: string;
-  shots_against: number;
-  saves: number;
-}
-
 interface Props {
   open: boolean;
   period: string;
@@ -73,7 +66,7 @@ interface Props {
   lineup: LineupEntry[];
   onClose: () => void;
   updatePeriodShots: (period: string, home: number, away: number) => Promise<boolean | undefined>;
-  upsertGoalieStat: (data: UpsertGoalieData) => Promise<void>;
+  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<void>;
   updateGameInfo: (data: {
     time_end?: string | null;
     shootout_first_team_id?: string | null;

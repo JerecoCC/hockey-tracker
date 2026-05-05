@@ -14,6 +14,13 @@ const apiError = (err: unknown, fallback: string): string =>
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export interface UpsertGoalieStatData {
+  goalie_id: string;
+  team_id: string;
+  shots_against: number;
+  saves: number;
+}
+
 export interface GoalieStatRecord {
   id: string;
   game_id: string;
@@ -59,12 +66,7 @@ const useGameGoalieStats = (gameId: string | undefined) => {
     },
   });
 
-  const upsertGoalieStat = async (data: {
-    goalie_id: string;
-    team_id: string;
-    shots_against: number;
-    saves: number;
-  }): Promise<GoalieStatRecord | null> => {
+  const upsertGoalieStat = async (data: UpsertGoalieStatData): Promise<GoalieStatRecord | null> => {
     if (!gameId) return null;
     setBusy(data.goalie_id);
     try {

@@ -4,7 +4,7 @@ import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
-import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
 
@@ -12,13 +12,6 @@ const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
 type FormValues = { goalies: Array<{ shots_against: string; saves: string }> };
-
-interface UpsertData {
-  goalie_id: string;
-  team_id: string;
-  shots_against: number;
-  saves: number;
-}
 
 interface Props {
   open: boolean;
@@ -28,7 +21,7 @@ interface Props {
   goalieStats: GoalieStatRecord[];
   lineup: LineupEntry[];
   onClose: () => void;
-  upsertGoalieStat: (data: UpsertData) => Promise<void>;
+  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<void>;
 }
 
 const GoalieStatsEditModal = ({

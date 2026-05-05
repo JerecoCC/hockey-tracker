@@ -1,5 +1,4 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import InfoItem from '@/components/InfoItem/InfoItem';
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
@@ -10,7 +9,6 @@ import Card from '@/components/Card/Card';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import StartGameModal from '../StartGameModal';
-import GameInfoEditModal from '../GameInfoEditModal';
 import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
@@ -20,19 +18,19 @@ import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
 import ScoreImageModal from '../ScoreImageModal';
 import ScoringCard from '../ScoringCard';
 import ThreeStarsCard from './ThreeStarsCard';
-import type { GameRecord, CurrentPeriod, GameStatus } from '@/hooks/useGames';
+import type { GameRecord, CurrentPeriod, GameStatus, UpdateGameInfoData } from '@/hooks/useGames';
 import type { GoalRecord } from '@/hooks/useGameGoals';
-import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import type { LastFiveGame } from '@/hooks/useGames';
 import PreviousMeetingsCard from './PreviousMeetingsCard';
+import GameInfoCard from './GameInfoCard';
 import styles from '../GameDetailsPage.module.scss';
 import { DATE_FMT_SHORT } from '../formatUtils';
 import { buildFormRecord } from '../gameUtils';
-import { PERIOD_IDS, GAME_TYPE_LABEL } from '../constants';
-import { TIME_FMT, formatScheduledTime } from '../formatUtils';
+import { PERIOD_IDS } from '../constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -55,26 +53,13 @@ interface Props {
   rosterReady: boolean;
   lineupsReady: boolean;
   // Write callbacks
-  upsertGoalieStat: (data: {
-    goalie_id: string;
-    team_id: string;
-    shots_against: number;
-    saves: number;
-  }) => Promise<GoalieStatRecord | null>;
+  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
   startGame: (time_start: string) => Promise<boolean>;
   updateStatus: (status: GameStatus) => Promise<boolean>;
   advancePeriod: (nextPeriod: CurrentPeriod) => Promise<boolean>;
   endGame: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateStars: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
-  updateGameInfo: (data: {
-    venue?: string | null;
-    scheduled_at?: string | null;
-    scheduled_time?: string | null;
-    game_type?: import('@/hooks/useGames').GameType;
-    time_start?: string | null;
-    time_end?: string | null;
-    shootout_first_team_id?: string | null;
-  }) => Promise<boolean>;
+  updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
 }
@@ -270,10 +255,6 @@ const GameSummaryTab = ({
 
   // ── Delete Game confirm ──────────────────────────────────────────────────
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-
-  // ── Game Info edit modal ─────────────────────────────────────────────────
-  const [gameInfoEditOpen, setGameInfoEditOpen] = useState(false);
-  const openGameInfoEdit = () => setGameInfoEditOpen(true);
 
   // ── Record Shots modal state ─────────────────────────────────────────────
   const [shotsPeriod, setShotsPeriod] = useState<string | null>(null);
@@ -995,63 +976,11 @@ const GameSummaryTab = ({
             )}
 
             {/* ── Game Info card ── */}
-            <Card
-              title="Game Info"
-              action={
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit game info"
-                  onClick={openGameInfoEdit}
-                />
-              }
-            >
-              <div className={styles.infoGrid}>
-                <InfoItem
-                  label="Type"
-                  data={GAME_TYPE_LABEL[game.game_type]}
-                  full
-                />
-                <InfoItem
-                  label="Scheduled Date"
-                  data={
-                    game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null
-                  }
-                />
-                <InfoItem
-                  label="Scheduled Time"
-                  data={game.scheduled_time ? formatScheduledTime(game.scheduled_time) : null}
-                />
-                <InfoItem
-                  label="Start Time"
-                  data={game.time_start ? TIME_FMT.format(new Date(game.time_start)) : null}
-                />
-                <InfoItem
-                  label="End Time"
-                  data={game.time_end ? TIME_FMT.format(new Date(game.time_end)) : null}
-                />
-                <InfoItem
-                  label="Venue"
-                  data={game.venue ?? null}
-                  full
-                />
-                {game.game_number != null && (
-                  <InfoItem
-                    label="Game #"
-                    data={String(game.game_number)}
-                  />
-                )}
-                {game.notes && (
-                  <InfoItem
-                    label="Notes"
-                    data={game.notes}
-                    full
-                  />
-                )}
-              </div>
-            </Card>
+            <GameInfoCard
+              game={game}
+              busy={busy}
+              updateGameInfo={updateGameInfo}
+            />
           </div>
         </div>
       </div>
@@ -1095,16 +1024,6 @@ const GameSummaryTab = ({
         disabled={!!busy}
         onClose={() => setStartGameModalOpen(false)}
         onStart={startGame}
-      />
-
-      {/* ── Game Info edit modal ── */}
-      <GameInfoEditModal
-        open={gameInfoEditOpen}
-        game={game}
-        isSaving={busy === 'update-info'}
-        disabled={!!busy}
-        onClose={() => setGameInfoEditOpen(false)}
-        onSave={updateGameInfo}
       />
 
       {/* ── 3 Stars modal ── */}

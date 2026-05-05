@@ -5,7 +5,7 @@ import Card from '@/components/Card/Card';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
-import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
@@ -20,12 +20,7 @@ interface Props {
   lineup: LineupEntry[];
   leagueId: string;
   isFinal: boolean;
-  upsertGoalieStat: (data: {
-    goalie_id: string;
-    team_id: string;
-    shots_against: number;
-    saves: number;
-  }) => Promise<GoalieStatRecord | null>;
+  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -81,7 +76,9 @@ const GoalieStatsCard = ({
               const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
               if (!stat) return null;
               const isAway = goalie.team_id === game.away_team_id;
-              const primaryColor = isAway ? game.away_team_primary_color : game.home_team_primary_color;
+              const primaryColor = isAway
+                ? game.away_team_primary_color
+                : game.home_team_primary_color;
               const textColor = isAway ? game.away_team_text_color : game.home_team_text_color;
               const teamLogo = isAway ? game.away_team_logo : game.home_team_logo;
               const teamCode = isAway ? game.away_team_code : game.home_team_code;
@@ -91,20 +88,38 @@ const GoalieStatsCard = ({
                   : '1.000';
               const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
               return (
-                <tr key={goalie.player_id} className={styles.goalieRow} onClick={() => navigate(playerHref)}>
+                <tr
+                  key={goalie.player_id}
+                  className={styles.goalieRow}
+                  onClick={() => navigate(playerHref)}
+                >
                   <td className={styles.goalieTdName}>
                     <span className={styles.goalieNameCell}>
                       {teamLogo ? (
-                        <img src={teamLogo} alt={teamCode} className={styles.goalTeamLogo} />
+                        <img
+                          src={teamLogo}
+                          alt={teamCode}
+                          className={styles.goalTeamLogo}
+                        />
                       ) : (
-                        <span className={styles.goalTeamLogoPlaceholder} style={{ background: primaryColor, color: textColor }}>
+                        <span
+                          className={styles.goalTeamLogoPlaceholder}
+                          style={{ background: primaryColor, color: textColor }}
+                        >
                           {teamCode?.slice(0, 1)}
                         </span>
                       )}
                       {goalie.photo ? (
-                        <img src={goalie.photo} alt="" className={styles.goalScorerPhoto} />
+                        <img
+                          src={goalie.photo}
+                          alt=""
+                          className={styles.goalScorerPhoto}
+                        />
                       ) : (
-                        <span className={styles.goalScorerPhotoPlaceholder} style={{ background: primaryColor, color: textColor }}>
+                        <span
+                          className={styles.goalScorerPhotoPlaceholder}
+                          style={{ background: primaryColor, color: textColor }}
+                        >
                           {goalie.last_name?.charAt(0)}
                         </span>
                       )}
@@ -136,7 +151,9 @@ const GoalieStatsCard = ({
         goalieStats={goalieStats}
         lineup={lineup}
         onClose={() => setModalOpen(false)}
-        upsertGoalieStat={async (data) => { await upsertGoalieStat(data); }}
+        upsertGoalieStat={async (data) => {
+          await upsertGoalieStat(data);
+        }}
       />
     </>
   );

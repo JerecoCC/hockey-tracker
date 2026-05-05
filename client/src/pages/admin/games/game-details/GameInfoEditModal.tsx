@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import { type GameRecord, type GameType } from '@/hooks/useGames';
+import { type GameRecord, type GameType, type UpdateGameInfoData } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
 
 const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
@@ -45,22 +45,13 @@ type FormValues = {
   time_end: string;
 };
 
-interface SavePayload {
-  venue?: string | null;
-  scheduled_at?: string | null;
-  scheduled_time?: string | null;
-  game_type?: GameType;
-  time_start?: string | null;
-  time_end?: string | null;
-}
-
 interface Props {
   open: boolean;
   game: GameRecord;
   isSaving: boolean;
   disabled: boolean;
   onClose: () => void;
-  onSave: (payload: SavePayload) => Promise<boolean>;
+  onSave: (payload: UpdateGameInfoData) => Promise<boolean>;
 }
 
 const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: Props) => {
