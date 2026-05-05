@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
@@ -380,22 +381,12 @@ const LineupCreatePlayersModal = ({
             })}
           </div>
 
-          <div className={styles.addRow}>
-            <Button
-              type="button"
-              variant="ghost"
-              intent="neutral"
-              icon="add"
-              size="sm"
-              disabled={isSubmitting || !canAddMore}
-              onClick={() => append({ ...EMPTY_ROW })}
-            >
-              Add Player
-            </Button>
-            <span className={styles.slotCounter}>
-              {existingCount + fields.length} / {MAX_ROSTER} players
-            </span>
-          </div>
+          <AddRowBar
+            label="Add Player"
+            onClick={() => append({ ...EMPTY_ROW })}
+            disabled={isSubmitting || !canAddMore}
+            hint={`${existingCount + fields.length} / ${MAX_ROSTER} players`}
+          />
 
           {isSubmitted && errors.players && (
             <p className={styles.formError}>Please fill in all required fields before saving.</p>

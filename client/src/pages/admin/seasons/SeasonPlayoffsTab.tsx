@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
+import InfoItem from '@/components/InfoItem/InfoItem';
 import Modal from '@/components/Modal/Modal';
 import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
-import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
+import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
 import Select from '@/components/Select/Select';
-import useBracketRuleSets from '@/hooks/useBracketRuleSets';
+import useBracketRuleSets, { type BracketSlotRule } from '@/hooks/useBracketRuleSets';
 import useSeasonStandings from '@/hooks/useSeasonStandings';
 import BracketRulesModal, {
   type BracketStructure,
@@ -44,13 +45,6 @@ const STATUS_LABEL: Record<SeriesStatus, string> = {
   upcoming: 'Upcoming',
   active: 'Active',
   complete: 'Complete',
-};
-const formatRuleText = (r: PlayoffFormatRule) => {
-  const count = r.method === 'top' ? `Top ${r.count}` : `${r.count} wildcard`;
-  const scope = { league: 'league-wide', conference: 'per conference', division: 'per division' }[
-    r.scope
-  ];
-  return `${count} ${scope}`;
 };
 
 // ── Bracket structure derivation ──────────────────────────────────────────────
@@ -333,6 +327,87 @@ const PlayoffFormatModal = ({
   );
 };
 
+// ── Choice Pick Modal ─────────────────────────────────────────────────────────
+
+interface ChoicePick {
+  /** The slot key of the 'choice' slot (e.g. "r1m0home"). */
+  choiceSlotKey: string;
+  /** The seeded team that gets to pick, resolved from the companion slot. */
+  chooserName: string | null;
+  /** All candidate team names the chooser may pick from. */
+  candidates: string[];
+  /** The user's selection — null until chosen. */
+  picked: string | null;
+}
+
+interface ChoicePickModalProps {
+  open: boolean;
+  choices: ChoicePick[];
+  onConfirm: (picks: ChoicePick[]) => void;
+  onClose: () => void;
+}
+
+const ChoicePickModal = ({ open, choices, onConfirm, onClose }: ChoicePickModalProps) => {
+  const [picks, setPicks] = useState<ChoicePick[]>([]);
+
+  useEffect(() => {
+    if (open) setPicks(choices.map((c) => ({ ...c, picked: null })));
+  }, [open, choices]);
+
+  // Build the set of all currently selected opponents to prevent the same team
+  // being chosen by two different seeded teams.
+  const pickedSet = new Set(picks.map((p) => p.picked).filter((p): p is string => p !== null));
+
+  const handlePick = (index: number, value: string) => {
+    setPicks((prev) => prev.map((p, i) => (i === index ? { ...p, picked: value } : p)));
+  };
+
+  const allResolved = picks.length > 0 && picks.every((p) => p.picked !== null);
+
+  return (
+    <Modal
+      open={open}
+      title="Opponent Picks"
+      onClose={onClose}
+      confirmLabel="Apply Simulation"
+      onConfirm={() => onConfirm(picks)}
+      confirmDisabled={!allResolved}
+    >
+      <div className={styles.choicePickStack}>
+        <p className={styles.choicePickHint}>
+          The following seeded teams choose their first-round opponent. Each team may only be
+          selected once.
+        </p>
+        {picks.map((pick, i) => {
+          // Filter out any team already chosen by another picker, unless it is
+          // the current picker's own selection (so they can change their mind).
+          const options = pick.candidates
+            .filter((c) => c === pick.picked || !pickedSet.has(c))
+            .map((c) => ({ value: c, label: c }));
+
+          return (
+            <div
+              key={pick.choiceSlotKey}
+              className={styles.choicePickRow}
+            >
+              <span className={styles.choicePickChooser}>{pick.chooserName ?? 'TBD'}</span>
+              <span className={styles.choicePickVerb}>picks</span>
+              <div className={styles.choicePickSelect}>
+                <Select
+                  value={pick.picked}
+                  options={options}
+                  placeholder="Select opponent…"
+                  onChange={(v) => handlePick(i, v)}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </Modal>
+  );
+};
+
 // ── Bracket Slot ──────────────────────────────────────────────────────────────
 
 interface BracketSlotProps {
@@ -465,8 +540,6 @@ const SeasonPlayoffsTab = ({
     series,
     loading: seriesLoading,
     busy: seriesBusy,
-    createSeries,
-    updateSeries,
     deleteSeries,
   } = usePlayoffSeries(seasonId);
 
@@ -478,6 +551,12 @@ const SeasonPlayoffsTab = ({
   // ── Simulation state ──────────────────────────────────────────────────────────
   const [simulatedSlots, setSimulatedSlots] = useState<Record<string, string | null> | null>(null);
   const [simulating, setSimulating] = useState(false);
+
+  // State for the opponent-pick step (used when 'choice' slots are present).
+  const [pickModalOpen, setPickModalOpen] = useState(false);
+  const [pendingChoices, setPendingChoices] = useState<ChoicePick[]>([]);
+  const [partialSimResult, setPartialSimResult] = useState<Record<string, string | null>>({});
+  const [pendingRuleSlots, setPendingRuleSlots] = useState<BracketSlotRule[]>([]);
 
   const handleSimulate = async () => {
     if (!bracketRuleSetId) return;
@@ -499,6 +578,7 @@ const SeasonPlayoffsTab = ({
         return ids;
       };
 
+      // First pass — resolve all 'seed' slots; leave everything else null for now.
       const result: Record<string, string | null> = {};
       for (const slot of ruleSet.slots) {
         if (slot.rule_type !== 'seed') {
@@ -516,10 +596,91 @@ const SeasonPlayoffsTab = ({
         const idx = (slot.rank ?? 1) - 1;
         result[slot.slot_key] = filtered[idx]?.team_name ?? null;
       }
-      setSimulatedSlots(result);
+
+      // Check whether any slots require a human pick.
+      const choiceSlots = ruleSet.slots.filter((s) => s.rule_type === 'choice');
+      if (choiceSlots.length === 0) {
+        // No picks needed — show the bracket immediately.
+        setSimulatedSlots(result);
+        return;
+      }
+
+      // Build a pick entry for each 'choice' slot.
+      // The "chooser" is the seeded team sitting in the companion position of the
+      // same matchup (e.g. if the choice slot is r1m0home, the chooser is r1m0away).
+      const choices: ChoicePick[] = choiceSlots.map((slot) => {
+        const isAway = slot.slot_key.endsWith('away');
+        const companionKey = isAway
+          ? slot.slot_key.replace(/away$/, 'home')
+          : slot.slot_key.replace(/home$/, 'away');
+        const chooserName = result[companionKey] ?? null;
+
+        // Resolve the candidate pool from standings, deduplicating when multiple
+        // pool entries resolve to the same team.
+        const candidates = slot.pool
+          .map((p) => {
+            let filtered = standings;
+            if (
+              (p.scope === 'specific_conference' || p.scope === 'specific_division') &&
+              p.group_id
+            ) {
+              const ids = getGroupTeamIds(p.group_id);
+              filtered = standings.filter((s) => ids.has(s.team_id));
+            }
+            const idx = (p.rank ?? 1) - 1;
+            return filtered[idx]?.team_name ?? null;
+          })
+          .filter((n): n is string => n !== null)
+          .filter((n, i, arr) => arr.indexOf(n) === i);
+
+        return { choiceSlotKey: slot.slot_key, chooserName, candidates, picked: null };
+      });
+
+      // Store the partial result and open the pick modal.
+      setPartialSimResult(result);
+      setPendingChoices(choices);
+      setPendingRuleSlots(ruleSet.slots);
+      setPickModalOpen(true);
     } finally {
       setSimulating(false);
     }
+  };
+
+  /**
+   * Called when the user confirms all opponent picks in the ChoicePickModal.
+   * Applies the chosen teams to 'choice' slots, then resolves 'unchosen' slots
+   * by taking the first unassigned candidate from the referenced choice's pool.
+   */
+  const finalizeSimulation = (picks: ChoicePick[]) => {
+    const result = { ...partialSimResult };
+
+    // Apply each picker's choice.
+    for (const pick of picks) {
+      result[pick.choiceSlotKey] = pick.picked;
+    }
+
+    // Track every team already placed to prevent duplicates in unchosen slots.
+    const assigned = new Set(Object.values(result).filter((v): v is string => v !== null));
+
+    // Fill 'unchosen' slots: take the first candidate from the referenced choice's
+    // pool that hasn't been placed anywhere yet.
+    for (const slot of pendingRuleSlots) {
+      if (slot.rule_type !== 'unchosen' || !slot.choice_ref) continue;
+      const matchingPick = picks.find((p) => p.choiceSlotKey === slot.choice_ref);
+      if (!matchingPick) {
+        result[slot.slot_key] = null;
+        continue;
+      }
+      const unchosen = matchingPick.candidates.find((c) => !assigned.has(c)) ?? null;
+      result[slot.slot_key] = unchosen;
+      if (unchosen) assigned.add(unchosen);
+    }
+
+    setSimulatedSlots(result);
+    setPickModalOpen(false);
+    setPendingChoices([]);
+    setPartialSimResult({});
+    setPendingRuleSlots([]);
   };
 
   // ── Derived bracket structure ─────────────────────────────────────────────────
@@ -568,7 +729,7 @@ const SeasonPlayoffsTab = ({
                     intent="accent"
                     icon="play_arrow"
                     size="sm"
-                    disabled={simulating}
+                    disabled={simulating || pickModalOpen}
                     onClick={handleSimulate}
                   >
                     Simulate
@@ -717,28 +878,26 @@ const SeasonPlayoffsTab = ({
             }
           >
             <div className={styles.settingsGrid}>
-              <div className={styles.settingsItem}>
-                <span className={styles.settingsLabel}>Playoff Series Format</span>
-                <span className={styles.settingsValue}>
-                  {bestOfPlayoff != null
+              <InfoItem
+                label="Playoff Series Format"
+                data={
+                  bestOfPlayoff != null
                     ? `Best of ${bestOfPlayoff}`
-                    : `Best of ${leagueBestOfPlayoff} (league default)`}
-                </span>
-              </div>
-              <div className={styles.settingsItem}>
-                <span className={styles.settingsLabel}>Shootout Rounds</span>
-                <span className={styles.settingsValue}>
-                  {bestOfShootout != null
+                    : `Best of ${leagueBestOfPlayoff} (league default)`
+                }
+              />
+              <InfoItem
+                label="Shootout Rounds"
+                data={
+                  bestOfShootout != null
                     ? `${bestOfShootout} rounds`
-                    : `${leagueBestOfShootout} rounds (league default)`}
-                </span>
-              </div>
-              <div className={styles.settingsItem}>
-                <span className={styles.settingsLabel}>Scoring System</span>
-                <span className={styles.settingsValue}>
-                  {scoringSystem ?? `${leagueScoringSystem} (league default)`}
-                </span>
-              </div>
+                    : `${leagueBestOfShootout} rounds (league default)`
+                }
+              />
+              <InfoItem
+                label="Scoring System"
+                data={scoringSystem ?? `${leagueScoringSystem} (league default)`}
+              />
             </div>
           </Card>
 
@@ -758,16 +917,32 @@ const SeasonPlayoffsTab = ({
             }
           >
             {playoffFormat && playoffFormat.length > 0 ? (
-              <ol className={styles.formatRuleList}>
+              <div className={styles.formatRuleList}>
                 {playoffFormat.map((r, i) => (
-                  <li
+                  <div
                     key={i}
-                    className={styles.formatRuleDisplay}
+                    className={styles.qualRuleRow}
                   >
-                    {formatRuleText(r)}
-                  </li>
+                    <span className={styles.formatRuleStep}>{i + 1}</span>
+                    <span className={styles.formatRuleText}>
+                      {r.method === 'top'
+                        ? `Top ${r.count}`
+                        : `${r.count} wildcard${r.count !== 1 ? 's' : ''}`}
+                    </span>
+                    <Badge
+                      label={
+                        {
+                          league: 'League',
+                          conference: 'Per Conference',
+                          division: 'Per Division',
+                        }[r.scope]
+                      }
+                      intent="neutral"
+                      className={styles.qualRuleBadge}
+                    />
+                  </div>
                 ))}
-              </ol>
+              </div>
             ) : (
               <p className={styles.formatEmpty}>
                 No rules configured — qualification is managed manually.
@@ -812,6 +987,18 @@ const SeasonPlayoffsTab = ({
           seasonId={seasonId}
           updateSeason={updateSeason}
           onClose={() => setSettingsModalOpen(false)}
+        />
+
+        <ChoicePickModal
+          open={pickModalOpen}
+          choices={pendingChoices}
+          onConfirm={finalizeSimulation}
+          onClose={() => {
+            setPickModalOpen(false);
+            setPendingChoices([]);
+            setPartialSimResult({});
+            setPendingRuleSlots([]);
+          }}
         />
 
         <ConfirmModal

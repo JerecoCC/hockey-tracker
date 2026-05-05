@@ -49,25 +49,6 @@
   gap: $space-md;
 }
 
-.settingsItem {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.settingsLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.settingsValue {
-  font-size: $font-sm;
-  color: $text-body;
-}
-
 // ── Bracket rules modal ──────────────────────────────────────────────────────
 
 .bracketSizeLabel {
@@ -227,6 +208,55 @@
   }
 }
 
+// ── Choice picks modal ───────────────────────────────────────────────────────
+
+.choicePickStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.choicePickHint {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.choicePickRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+}
+
+.choicePickChooser {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 7rem;
+  max-width: 10rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.choicePickVerb {
+  font-size: $font-xs;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.choicePickSelect {
+  flex: 1;
+  min-width: 0;
+}
+
 // ── Game settings modal ──────────────────────────────────────────────────────
 
 .modalForm {
@@ -238,16 +268,47 @@
 // ── Format card (read-only) ──────────────────────────────────────────────────
 
 .formatRuleList {
-  list-style: decimal;
-  margin: 0;
-  padding-left: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: $space-xs;
 }
 
-.formatRuleDisplay {
-  font-size: $font-body;
+.qualRuleRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: 6px $space-sm;
+}
+
+.qualRuleBadge {
+  min-width: 7.5rem;
+  text-align: center;
+  justify-content: center;
+}
+
+.formatRuleStep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  background: rgba($accent, 0.12);
+  border: 1px solid rgba($accent, 0.3);
+  color: $accent-light;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.formatRuleText {
+  flex: 1;
+  font-size: $font-sm;
+  font-weight: 500;
   color: $text-body;
 }
 
