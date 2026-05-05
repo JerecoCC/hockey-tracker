@@ -14,7 +14,10 @@ const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
   { value: 'LW', label: 'Left Wing' },
   { value: 'RW', label: 'Right Wing' },
+  { value: 'F', label: 'Forward' },
   { value: 'D', label: 'Defense' },
+  { value: 'LD', label: 'Left Defense' },
+  { value: 'RD', label: 'Right Defense' },
   { value: 'G', label: 'Goalie' },
 ];
 
@@ -67,7 +70,7 @@ const TradePlayerModal = ({
   // Teams in same league excluding the current team
   const teamOptions = teams
     .filter((t) => t.league_id === leagueId && t.id !== currentTeamId)
-    .map((t) => ({ value: t.id, label: t.name }));
+    .map((t) => ({ value: t.id, label: t.name, logo: t.logo ?? undefined, code: t.code }));
 
   const { stints } = usePlayerTradeHistory(player?.id ?? null, seasonId);
 
@@ -77,11 +80,11 @@ const TradePlayerModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { to_team_id: null, trade_date: today(), jersey_number: '', position: '' },
+    defaultValues: { to_team_id: null, trade_date: '', jersey_number: '', position: '' },
   });
 
   useEffect(() => {
-    if (open) reset({ to_team_id: null, trade_date: today(), jersey_number: '', position: '' });
+    if (open) reset({ to_team_id: null, trade_date: '', jersey_number: '', position: '' });
   }, [open, reset]);
 
   const onSubmit = handleSubmit(async (data) => {

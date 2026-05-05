@@ -22,7 +22,10 @@ export const POSITION_LABEL: Record<string, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
+  F: 'Forward',
   D: 'Defense',
+  LD: 'Left Defense',
+  RD: 'Right Defense',
   G: 'Goalie',
 };
 

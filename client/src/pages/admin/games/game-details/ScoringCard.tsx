@@ -257,6 +257,15 @@ const ScoringCard = ({
                         disabled: !!busy,
                         onClick: () => onScoreGoal(num as 1 | 2 | 3),
                       },
+                      onSwitchGoalie
+                        ? {
+                            icon: 'swap_horiz',
+                            tooltip: 'Switch Goalie',
+                            intent: 'neutral' as const,
+                            disabled: !!busy,
+                            onClick: onSwitchGoalie,
+                          }
+                        : null,
                       num < 3
                         ? {
                             icon: 'flag',
@@ -296,15 +305,6 @@ const ScoringCard = ({
                             intent: 'danger' as const,
                             disabled: !!busy,
                             onClick: () => onOpenShotsModal('3', { type: 'end-game' }, true),
-                          }
-                        : null,
-                      onSwitchGoalie
-                        ? {
-                            icon: 'swap_horiz',
-                            tooltip: 'Switch Goalie',
-                            intent: 'neutral' as const,
-                            disabled: !!busy,
-                            onClick: onSwitchGoalie,
                           }
                         : null,
                     ].filter(Boolean) as AccordionAction[])
@@ -365,15 +365,6 @@ const ScoringCard = ({
                                 ),
                             }
                           : null,
-                        otGoals.length > 0
-                          ? {
-                              icon: 'flag',
-                              tooltip: 'End Game',
-                              intent: 'danger' as const,
-                              disabled: !!busy,
-                              onClick: () => onOpenShotsModal('OT', { type: 'end-game' }, true),
-                            }
-                          : null,
                         onSwitchGoalie
                           ? {
                               icon: 'swap_horiz',
@@ -381,6 +372,15 @@ const ScoringCard = ({
                               intent: 'neutral' as const,
                               disabled: !!busy,
                               onClick: onSwitchGoalie,
+                            }
+                          : null,
+                        otGoals.length > 0
+                          ? {
+                              icon: 'flag',
+                              tooltip: 'End Game',
+                              intent: 'danger' as const,
+                              disabled: !!busy,
+                              onClick: () => onOpenShotsModal('OT', { type: 'end-game' }, true),
                             }
                           : null,
                       ].filter(Boolean) as AccordionAction[])

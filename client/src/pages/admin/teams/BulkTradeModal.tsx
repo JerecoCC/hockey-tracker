@@ -130,7 +130,7 @@ const BulkTradeModal = ({
 
   const teamOptions = teams
     .filter((t) => t.league_id === leagueId && t.id !== teamId)
-    .map((t) => ({ value: t.id, label: t.name }));
+    .map((t) => ({ value: t.id, label: t.name, logo: t.logo ?? undefined, code: t.code }));
 
   const playerOptions = players.map((p) => ({
     value: p.id,
@@ -144,20 +144,20 @@ const BulkTradeModal = ({
     setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { to_team_id: null, trade_date: today(), players: [{ ...EMPTY_ROW }] },
+    defaultValues: { to_team_id: null, trade_date: '', players: [{ ...EMPTY_ROW }] },
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'players' });
   const watchedRows = useWatch({ control, name: 'players' });
 
   const handleClose = () => {
-    reset({ to_team_id: null, trade_date: today(), players: [{ ...EMPTY_ROW }] });
+    reset({ to_team_id: null, trade_date: '', players: [{ ...EMPTY_ROW }] });
     onClose();
   };
 
   useEffect(() => {
     if (!open) return;
-    reset({ to_team_id: null, trade_date: today(), players: [{ ...EMPTY_ROW }] });
+    reset({ to_team_id: null, trade_date: '', players: [{ ...EMPTY_ROW }] });
   }, [open, reset]);
 
   const isRowDirty = (index: number) =>

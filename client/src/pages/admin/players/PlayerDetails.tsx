@@ -34,7 +34,10 @@ const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
+  F: 'Forward',
   D: 'Defense',
+  LD: 'Left Defense',
+  RD: 'Right Defense',
   G: 'Goalie',
 };
 

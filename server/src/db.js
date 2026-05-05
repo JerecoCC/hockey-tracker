@@ -298,7 +298,7 @@ async function initSchema() {
       nationality    TEXT,
       height_cm      SMALLINT,
       weight_lbs     SMALLINT,
-      position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'D', 'G')),
+      position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
       shoots         TEXT CHECK (shoots IN ('L', 'R')),
       is_active      BOOLEAN NOT NULL DEFAULT TRUE,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -307,6 +307,10 @@ async function initSchema() {
 
   // Migrations for columns added after the table was first created
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+
+  // Expand position check constraint to include 'F' (generic Forward)
+  await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_position_check`;
+  await sql`ALTER TABLE players ADD CONSTRAINT players_position_check CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
 
   // Player roster stints: one row per player-team-season stint.
   // A mid-season trade is recorded by setting end_date on the current row
@@ -333,7 +337,11 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS photo TEXT`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
-  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS position TEXT CHECK (position IN ('C', 'LW', 'RW', 'D', 'G'))`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS position TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
+
+  // Expand player_teams position check constraint to include 'F', 'LD', 'RD'
+  await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_position_check`;
+  await sql`ALTER TABLE player_teams ADD CONSTRAINT player_teams_position_check CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
 
   // Migrate primary key from composite (player_id, team_id, season_id) → id UUID.
   // Old databases were created with the composite PK; new ones already have id as PK.

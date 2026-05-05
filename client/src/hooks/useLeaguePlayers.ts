@@ -12,7 +12,7 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-export type PlayerPosition = 'C' | 'LW' | 'RW' | 'D' | 'G';
+export type PlayerPosition = 'C' | 'LW' | 'RW' | 'F' | 'D' | 'LD' | 'RD' | 'G';
 export type PlayerShoots = 'L' | 'R';
 
 export interface PlayerRecord {
