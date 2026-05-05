@@ -333,6 +333,7 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS photo TEXT`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS position TEXT CHECK (position IN ('C', 'LW', 'RW', 'D', 'G'))`;
 
   // Migrate primary key from composite (player_id, team_id, season_id) → id UUID.
   // Old databases were created with the composite PK; new ones already have id as PK.

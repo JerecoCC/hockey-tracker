@@ -12,11 +12,20 @@ import { type TeamRecord } from '@/hooks/useTeams';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import styles from '../leagues/PlayerFormModal.module.scss';
 
+const POSITION_OPTIONS = [
+  { value: 'C', label: 'Center' },
+  { value: 'LW', label: 'Left Wing' },
+  { value: 'RW', label: 'Right Wing' },
+  { value: 'D', label: 'Defense' },
+  { value: 'G', label: 'Goalie' },
+];
+
 interface FormValues {
   team_id: string;
   season_id: string;
   photo: File | string | null;
   jersey_number: string;
+  position: string;
   start_date: string;
   end_date: string;
 }
@@ -57,6 +66,7 @@ const StintEditModal = ({
       season_id: '',
       photo: null,
       jersey_number: '',
+      position: '',
       start_date: '',
       end_date: '',
     },
@@ -77,6 +87,7 @@ const StintEditModal = ({
         season_id: stint.season_id,
         photo: stint.photo ?? null,
         jersey_number: stint.jersey_number != null ? String(stint.jersey_number) : '',
+        position: stint.position ?? '',
         start_date: stint.start_date?.slice(0, 10) ?? '',
         end_date: stint.end_date?.slice(0, 10) ?? '',
       });
@@ -86,6 +97,7 @@ const StintEditModal = ({
         season_id: '',
         photo: null,
         jersey_number: '',
+        position: '',
         start_date: '',
         end_date: '',
       });
@@ -106,6 +118,7 @@ const StintEditModal = ({
         season_id: data.season_id,
         photo: photoUrl,
         jersey_number: data.jersey_number ? Number(data.jersey_number) : null,
+        position: data.position || null,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       });
@@ -117,6 +130,7 @@ const StintEditModal = ({
         season_id: data.season_id,
         photo: photoUrl,
         jersey_number: data.jersey_number ? Number(data.jersey_number) : null,
+        position: data.position || null,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       });
@@ -177,7 +191,7 @@ const StintEditModal = ({
           label="Player Photo (this stint)"
           disabled={isSubmitting}
         />
-        <div className={styles.stintDateRow}>
+        <div className={styles.jerseyDateRow}>
           <Field
             type="number"
             label="Jersey #"
@@ -194,6 +208,17 @@ const StintEditModal = ({
                 !!v && Number(v) >= 0 && Number(v) <= 99 && Number.isInteger(Number(v)),
             }}
           />
+          <Field
+            type="select"
+            label="Position (this stint)"
+            control={control}
+            name="position"
+            options={POSITION_OPTIONS}
+            placeholder="Inherit from player…"
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className={styles.row}>
           <Field
             type="datepicker"
             label="Start Date"

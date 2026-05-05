@@ -949,7 +949,7 @@ router.get('/:id/roster', async (req, res) => {
         gr.id, gr.game_id, gr.team_id, gr.player_id,
         p.first_name, p.last_name,
         COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
-        p.position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
+        COALESCE(pt.position, p.position) AS position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
       FROM game_rosters gr
       JOIN games g ON g.id = gr.game_id
@@ -995,7 +995,7 @@ router.get('/:id/roster', async (req, res) => {
           gr.id, ${id}::uuid AS game_id, gr.team_id, gr.player_id,
           p.first_name, p.last_name,
           COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
-          p.position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
+          COALESCE(pt.position, p.position) AS position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           true AS inherited
         FROM game_rosters gr
         JOIN games g ON g.id = gr.game_id
@@ -1046,7 +1046,7 @@ router.post('/:id/roster', async (req, res) => {
     const rows = await sql`
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.player_id,
-        p.first_name, p.last_name, COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo, p.position,
+        p.first_name, p.last_name, COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo, COALESCE(pt.position, p.position) AS position,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_rosters gr
       JOIN games g ON g.id = gr.game_id

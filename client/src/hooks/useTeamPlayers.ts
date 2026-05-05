@@ -13,6 +13,7 @@ export interface PlayerStintRecord {
   season_id: string;
   jersey_number: number | null;
   photo: string | null;
+  position: string | null;
   start_date: string | null;
   end_date: string | null;
   created_at: string;
@@ -28,6 +29,7 @@ export interface UpdateStintData {
   season_id?: string;
   jersey_number?: number | null;
   photo?: string | null;
+  position?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -37,6 +39,7 @@ export interface CreateStintData {
   season_id: string;
   jersey_number?: number | null;
   photo?: string | null;
+  position?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }

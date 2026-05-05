@@ -138,8 +138,9 @@ const PlayerDetailsPage = () => {
   const photo = stints.find((s) => s.photo)?.photo ?? player.photo;
   const avatarBg = latestStint?.primary_color ?? undefined;
   const avatarColor = latestStint?.text_color ?? undefined;
-  const positionLabel = player.position
-    ? (POSITION_LABELS[player.position] ?? player.position)
+  const effectivePosition = latestStint?.position ?? player.position;
+  const positionLabel = effectivePosition
+    ? (POSITION_LABELS[effectivePosition] ?? effectivePosition)
     : null;
 
   const playerEditTarget: TeamPlayerRecord = {

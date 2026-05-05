@@ -10,10 +10,19 @@ import {
 } from '@/hooks/useTeamPlayers';
 import styles from './TradePlayerModal.module.scss';
 
+const POSITION_OPTIONS = [
+  { value: 'C', label: 'Center' },
+  { value: 'LW', label: 'Left Wing' },
+  { value: 'RW', label: 'Right Wing' },
+  { value: 'D', label: 'Defense' },
+  { value: 'G', label: 'Goalie' },
+];
+
 interface FormValues {
   to_team_id: string | null;
   trade_date: string;
   jersey_number: string;
+  position: string;
 }
 
 interface Props {
@@ -29,6 +38,7 @@ interface Props {
     toTeamId: string,
     tradeDate: string,
     jerseyNumber?: number | null,
+    position?: string | null,
   ) => Promise<boolean>;
 }
 
@@ -67,17 +77,25 @@ const TradePlayerModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { to_team_id: null, trade_date: today(), jersey_number: '' },
+    defaultValues: { to_team_id: null, trade_date: today(), jersey_number: '', position: '' },
   });
 
   useEffect(() => {
-    if (open) reset({ to_team_id: null, trade_date: today(), jersey_number: '' });
+    if (open) reset({ to_team_id: null, trade_date: today(), jersey_number: '', position: '' });
   }, [open, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!player || !data.to_team_id) return;
     const jerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
-    const ok = await tradePlayer(player.id, seasonId, data.to_team_id, data.trade_date, jerseyNumber);
+    const position = data.position || null;
+    const ok = await tradePlayer(
+      player.id,
+      seasonId,
+      data.to_team_id,
+      data.trade_date,
+      jerseyNumber,
+      position,
+    );
     if (ok) onClose();
   });
 
@@ -93,7 +111,11 @@ const TradePlayerModal = ({
       busy={isSubmitting}
     >
       <div className={styles.layout}>
-        <form id="trade-player-form" className={styles.form} onSubmit={onSubmit}>
+        <form
+          id="trade-player-form"
+          className={styles.form}
+          onSubmit={onSubmit}
+        >
           <Field
             type="select"
             label="Trade To"
@@ -125,6 +147,15 @@ const TradePlayerModal = ({
               disabled={isSubmitting}
             />
           </div>
+          <Field
+            type="select"
+            label="Position (new team)"
+            control={control}
+            name="position"
+            options={POSITION_OPTIONS}
+            placeholder="Inherit from player…"
+            disabled={isSubmitting}
+          />
         </form>
 
         {stints.length > 0 && (
@@ -132,15 +163,23 @@ const TradePlayerModal = ({
             <h4 className={styles.historyTitle}>Trade History This Season</h4>
             <ul className={styles.stintList}>
               {stints.map((s: PlayerStintRecord) => (
-                <li key={s.id} className={styles.stintItem}>
+                <li
+                  key={s.id}
+                  className={styles.stintItem}
+                >
                   {s.team_logo && (
-                    <img src={s.team_logo} alt={s.team_name ?? ''} className={styles.stintLogo} />
+                    <img
+                      src={s.team_logo}
+                      alt={s.team_name ?? ''}
+                      className={styles.stintLogo}
+                    />
                   )}
                   <div className={styles.stintInfo}>
                     <span className={styles.stintTeam}>{s.team_name ?? 'Unknown Team'}</span>
                     {s.jersey_number != null && (
                       <span className={styles.stintJersey}>#{s.jersey_number}</span>
                     )}
+                    {s.position && <span className={styles.stintJersey}>{s.position}</span>}
                   </div>
                   <span className={styles.stintDates}>
                     {formatDate(s.start_date)} → {s.end_date ? formatDate(s.end_date) : 'Present'}
