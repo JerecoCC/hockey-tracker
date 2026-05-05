@@ -58,6 +58,16 @@ export interface LastFiveGame {
   opponent_logo:    string | null;
 }
 
+export interface TeamInfo {
+  id:              string;
+  name:            string;
+  code:            string;
+  logo:            string | null;
+  primary_color:   string;
+  secondary_color: string;
+  text_color:      string;
+}
+
 export interface GameRecord {
   id:                    string;
   season_id:             string;
@@ -70,20 +80,8 @@ export interface GameRecord {
   time_start:            string | null;
   /** Actual end timestamp (set when the game is finalised). */
   time_end:              string | null;
-  home_team_id:            string;
-  home_team_name:          string;
-  home_team_code:          string;
-  home_team_logo:          string | null;
-  home_team_primary_color:   string;
-  home_team_secondary_color: string;
-  home_team_text_color:      string;
-  away_team_id:              string;
-  away_team_name:            string;
-  away_team_code:            string;
-  away_team_logo:            string | null;
-  away_team_primary_color:   string;
-  away_team_secondary_color: string;
-  away_team_text_color:      string;
+  home_team:             TeamInfo;
+  away_team:             TeamInfo;
   overtime_periods:         number | null;
   shootout:                 boolean;
   /** UUID of the team that shoots first in a shootout, or null if not applicable. */

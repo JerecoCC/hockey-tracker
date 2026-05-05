@@ -55,18 +55,18 @@ const ShootoutAccordion = ({
 
   const firstTeamId = game.shootout_first_team_id;
   const firstSide: 'away' | 'home' =
-    firstTeamId === game.away_team_id
+    firstTeamId === game.away_team.id
       ? 'away'
-      : firstTeamId === game.home_team_id
+      : firstTeamId === game.home_team.id
         ? 'home'
         : 'away';
   const secondSide: 'away' | 'home' = firstSide === 'away' ? 'home' : 'away';
 
   const firstTeamAttempts = attempts.filter(
-    (a) => a.team_id === (firstSide === 'away' ? game.away_team_id : game.home_team_id),
+    (a) => a.team_id === (firstSide === 'away' ? game.away_team.id : game.home_team.id),
   );
   const secondTeamAttempts = attempts.filter(
-    (a) => a.team_id === (secondSide === 'away' ? game.away_team_id : game.home_team_id),
+    (a) => a.team_id === (secondSide === 'away' ? game.away_team.id : game.home_team.id),
   );
 
   const bestOf = game.best_of_shootout ?? 3;
@@ -109,16 +109,16 @@ const ShootoutAccordion = ({
   // ── Team display info (away always left, home always right) ───────────────
 
   const firstTeamInfo = {
-    code: firstSide === 'away' ? game.away_team_code : game.home_team_code,
-    logo: firstSide === 'away' ? game.away_team_logo : game.home_team_logo,
-    primary: firstSide === 'away' ? game.away_team_primary_color : game.home_team_primary_color,
-    text: firstSide === 'away' ? game.away_team_text_color : game.home_team_text_color,
+    code: firstSide === 'away' ? game.away_team.code : game.home_team.code,
+    logo: firstSide === 'away' ? game.away_team.logo : game.home_team.logo,
+    primary: firstSide === 'away' ? game.away_team.primary_color : game.home_team.primary_color,
+    text: firstSide === 'away' ? game.away_team.text_color : game.home_team.text_color,
   };
   const secondTeamInfo = {
-    code: secondSide === 'away' ? game.away_team_code : game.home_team_code,
-    logo: secondSide === 'away' ? game.away_team_logo : game.home_team_logo,
-    primary: secondSide === 'away' ? game.away_team_primary_color : game.home_team_primary_color,
-    text: secondSide === 'away' ? game.away_team_text_color : game.home_team_text_color,
+    code: secondSide === 'away' ? game.away_team.code : game.home_team.code,
+    logo: secondSide === 'away' ? game.away_team.logo : game.home_team.logo,
+    primary: secondSide === 'away' ? game.away_team.primary_color : game.home_team.primary_color,
+    text: secondSide === 'away' ? game.away_team.text_color : game.home_team.text_color,
   };
 
   const awayShootsFirst = firstSide === 'away';

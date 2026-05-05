@@ -177,11 +177,11 @@ const GameCard = ({ game, tzPref }: { game: GameRecord; tzPref: TzPref }) => {
 
       <div className={styles.matchup}>
         <TeamBlock
-          name={game.home_team_name}
-          code={game.home_team_code}
-          logo={game.home_team_logo}
-          primaryColor={game.home_team_primary_color}
-          textColor={game.home_team_text_color}
+          name={game.home_team.name}
+          code={game.home_team.code}
+          logo={game.home_team.logo}
+          primaryColor={game.home_team.primary_color}
+          textColor={game.home_team.text_color}
           align="left"
         />
         <div className={styles.scoreBlock}>
@@ -196,11 +196,11 @@ const GameCard = ({ game, tzPref }: { game: GameRecord; tzPref: TzPref }) => {
           )}
         </div>
         <TeamBlock
-          name={game.away_team_name}
-          code={game.away_team_code}
-          logo={game.away_team_logo}
-          primaryColor={game.away_team_primary_color}
-          textColor={game.away_team_text_color}
+          name={game.away_team.name}
+          code={game.away_team.code}
+          logo={game.away_team.logo}
+          primaryColor={game.away_team.primary_color}
+          textColor={game.away_team.text_color}
           align="right"
         />
       </div>

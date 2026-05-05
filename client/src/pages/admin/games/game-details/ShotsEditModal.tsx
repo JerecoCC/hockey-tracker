@@ -60,18 +60,18 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
   const teamRows = [
     {
       key: 'away' as const,
-      logo: game.away_team_logo,
-      code: game.away_team_code,
-      primary: game.away_team_primary_color,
-      text: game.away_team_text_color,
+      logo: game.away_team.logo,
+      code: game.away_team.code,
+      primary: game.away_team.primary_color,
+      text: game.away_team.text_color,
       fieldKey: 'away_shots' as const,
     },
     {
       key: 'home' as const,
-      logo: game.home_team_logo,
-      code: game.home_team_code,
-      primary: game.home_team_primary_color,
-      text: game.home_team_text_color,
+      logo: game.home_team.logo,
+      code: game.home_team.code,
+      primary: game.home_team.primary_color,
+      text: game.home_team.text_color,
       fieldKey: 'home_shots' as const,
     },
   ];

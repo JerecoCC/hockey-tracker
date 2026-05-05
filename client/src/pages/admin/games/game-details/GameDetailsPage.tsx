@@ -58,14 +58,14 @@ const GameDetailsPage = () => {
     const bestOf = game.best_of_shootout ?? 3;
     const firstTeamId = game.shootout_first_team_id;
     const firstSideId =
-      firstTeamId === game.away_team_id
-        ? game.away_team_id
-        : firstTeamId === game.home_team_id
-          ? game.home_team_id
-          : game.away_team_id;
-    const firstSide: 'away' | 'home' = firstSideId === game.away_team_id ? 'away' : 'home';
+      firstTeamId === game.away_team.id
+        ? game.away_team.id
+        : firstTeamId === game.home_team.id
+          ? game.home_team.id
+          : game.away_team.id;
+    const firstSide: 'away' | 'home' = firstSideId === game.away_team.id ? 'away' : 'home';
     const secondSide: 'away' | 'home' = firstSide === 'away' ? 'home' : 'away';
-    const secondSideId = firstSideId === game.away_team_id ? game.home_team_id : game.away_team_id;
+    const secondSideId = firstSideId === game.away_team.id ? game.home_team.id : game.away_team.id;
 
     const firstAttempts = attempts.filter((a) => a.team_id === firstSideId);
     const secondAttempts = attempts.filter((a) => a.team_id === secondSideId);
@@ -100,13 +100,13 @@ const GameDetailsPage = () => {
   const { roster, addToRoster, removeFromRoster } = useGameRoster(id);
   // Real entries are persisted to this game; inherited entries are pre-populated
   // from the last finished game and not yet saved.
-  const awayRoster = roster.filter((e) => e.team_id === game?.away_team_id && !e.inherited);
-  const homeRoster = roster.filter((e) => e.team_id === game?.home_team_id && !e.inherited);
+  const awayRoster = roster.filter((e) => e.team_id === game?.away_team.id && !e.inherited);
+  const homeRoster = roster.filter((e) => e.team_id === game?.home_team.id && !e.inherited);
   const awayRosterInherited = roster.filter(
-    (e) => e.team_id === game?.away_team_id && !!e.inherited,
+    (e) => e.team_id === game?.away_team.id && !!e.inherited,
   );
   const homeRosterInherited = roster.filter(
-    (e) => e.team_id === game?.home_team_id && !!e.inherited,
+    (e) => e.team_id === game?.home_team.id && !!e.inherited,
   );
 
   // ── Starting lineup data ───────────────────────────────────────────────────
@@ -127,7 +127,7 @@ const GameDetailsPage = () => {
         entries.some((e) => e.position_slot === slot && rosterIds.has(e.player_id)),
       );
     };
-    return hasAll(game.away_team_id) && hasAll(game.home_team_id);
+    return hasAll(game.away_team.id) && hasAll(game.home_team.id);
   })();
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
@@ -222,7 +222,7 @@ const GameDetailsPage = () => {
               { label: seasonName, path: seasonHref },
               {
                 label: [
-                  `${game.away_team_code} @ ${game.home_team_code}`,
+                  `${game.away_team.code} @ ${game.home_team.code}`,
                   game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
                 ]
                   .filter(Boolean)

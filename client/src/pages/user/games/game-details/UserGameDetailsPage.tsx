@@ -40,8 +40,8 @@ const UserGameDetailsPage = () => {
   const [lastFiveView, setLastFiveView] = useState<'square' | 'list'>('list');
 
   // ── Roster splits ──────────────────────────────────────────────────────────
-  const awayRoster = roster.filter((e) => e.team_id === game?.away_team_id);
-  const homeRoster = roster.filter((e) => e.team_id === game?.home_team_id);
+  const awayRoster = roster.filter((e) => e.team_id === game?.away_team.id);
+  const homeRoster = roster.filter((e) => e.team_id === game?.home_team.id);
 
   // ── Shootout completion + winner (merged for efficiency) ──────────────────
   const { soComplete, soWinnerSide } = useMemo(() => {
@@ -49,14 +49,14 @@ const UserGameDetailsPage = () => {
     const bestOf = game.best_of_shootout ?? 3;
     const firstTeamId = game.shootout_first_team_id;
     const firstSideId =
-      firstTeamId === game.away_team_id
-        ? game.away_team_id
-        : firstTeamId === game.home_team_id
-          ? game.home_team_id
-          : game.away_team_id;
-    const firstSide: 'away' | 'home' = firstSideId === game.away_team_id ? 'away' : 'home';
+      firstTeamId === game.away_team.id
+        ? game.away_team.id
+        : firstTeamId === game.home_team.id
+          ? game.home_team.id
+          : game.away_team.id;
+    const firstSide: 'away' | 'home' = firstSideId === game.away_team.id ? 'away' : 'home';
     const secondSide: 'away' | 'home' = firstSide === 'away' ? 'home' : 'away';
-    const secondSideId = firstSideId === game.away_team_id ? game.home_team_id : game.away_team_id;
+    const secondSideId = firstSideId === game.away_team.id ? game.home_team.id : game.away_team.id;
     const fAttempts = attempts.filter((a) => a.team_id === firstSideId);
     const sAttempts = attempts.filter((a) => a.team_id === secondSideId);
     const fReg = fAttempts.slice(0, bestOf).filter((a) => a.scored).length;
@@ -220,14 +220,14 @@ const UserGameDetailsPage = () => {
                     {starDefs.map(({ starCount, playerId }) => {
                       const player = roster.find((e) => e.player_id === playerId);
                       if (!player) return null;
-                      const isAway = player.team_id === game.away_team_id;
-                      const teamCode = isAway ? game.away_team_code : game.home_team_code;
+                      const isAway = player.team_id === game.away_team.id;
+                      const teamCode = isAway ? game.away_team.code : game.home_team.code;
                       const primaryColor = isAway
-                        ? game.away_team_primary_color
-                        : game.home_team_primary_color;
+                        ? game.away_team.primary_color
+                        : game.home_team.primary_color;
                       const textColor = isAway
-                        ? game.away_team_text_color
-                        : game.home_team_text_color;
+                        ? game.away_team.text_color
+                        : game.home_team.text_color;
                       const gameStats = playerGameStats.get(playerId) ?? { goals: 0, assists: 0 };
                       const nameLabel = `${player.first_name} ${player.last_name}`;
                       const subLabel = [
@@ -324,15 +324,15 @@ const UserGameDetailsPage = () => {
                       {goalies.map((goalie) => {
                         const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
                         if (!stat) return null;
-                        const isAway = goalie.team_id === game.away_team_id;
+                        const isAway = goalie.team_id === game.away_team.id;
                         const primaryColor = isAway
-                          ? game.away_team_primary_color
-                          : game.home_team_primary_color;
+                          ? game.away_team.primary_color
+                          : game.home_team.primary_color;
                         const textColor = isAway
-                          ? game.away_team_text_color
-                          : game.home_team_text_color;
-                        const teamLogo = isAway ? game.away_team_logo : game.home_team_logo;
-                        const teamCode = isAway ? game.away_team_code : game.home_team_code;
+                          ? game.away_team.text_color
+                          : game.home_team.text_color;
+                        const teamLogo = isAway ? game.away_team.logo : game.home_team.logo;
+                        const teamCode = isAway ? game.away_team.code : game.home_team.code;
                         const svPct =
                           stat.shots_against > 0
                             ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
@@ -406,29 +406,29 @@ const UserGameDetailsPage = () => {
                   const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
                   const leftTeam = pm.current_home_was_home
                     ? {
-                        code: game.away_team_code,
-                        logo: game.away_team_logo,
-                        primary: game.away_team_primary_color,
-                        text: game.away_team_text_color,
+                        code: game.away_team.code,
+                        logo: game.away_team.logo,
+                        primary: game.away_team.primary_color,
+                        text: game.away_team.text_color,
                       }
                     : {
-                        code: game.home_team_code,
-                        logo: game.home_team_logo,
-                        primary: game.home_team_primary_color,
-                        text: game.home_team_text_color,
+                        code: game.home_team.code,
+                        logo: game.home_team.logo,
+                        primary: game.home_team.primary_color,
+                        text: game.home_team.text_color,
                       };
                   const rightTeam = pm.current_home_was_home
                     ? {
-                        code: game.home_team_code,
-                        logo: game.home_team_logo,
-                        primary: game.home_team_primary_color,
-                        text: game.home_team_text_color,
+                        code: game.home_team.code,
+                        logo: game.home_team.logo,
+                        primary: game.home_team.primary_color,
+                        text: game.home_team.text_color,
                       }
                     : {
-                        code: game.away_team_code,
-                        logo: game.away_team_logo,
-                        primary: game.away_team_primary_color,
-                        text: game.away_team_text_color,
+                        code: game.away_team.code,
+                        logo: game.away_team.logo,
+                        primary: game.away_team.primary_color,
+                        text: game.away_team.text_color,
                       };
                   const homeWon = pm.home_score > pm.away_score;
                   const renderLogo = (t: typeof leftTeam) =>
@@ -640,21 +640,21 @@ const UserGameDetailsPage = () => {
                   <div className={styles.lastFiveList}>
                     <div className={styles.lastFiveTeamCol}>
                       {renderTeamAccordion(
-                        game.away_team_name,
-                        game.away_team_logo,
-                        game.away_team_code,
-                        game.away_team_primary_color,
-                        game.away_team_text_color,
+                        game.away_team.name,
+                        game.away_team.logo,
+                        game.away_team.code,
+                        game.away_team.primary_color,
+                        game.away_team.text_color,
                         awayGames,
                       )}
                     </div>
                     <div className={styles.lastFiveTeamCol}>
                       {renderTeamAccordion(
-                        game.home_team_name,
-                        game.home_team_logo,
-                        game.home_team_code,
-                        game.home_team_primary_color,
-                        game.home_team_text_color,
+                        game.home_team.name,
+                        game.home_team.logo,
+                        game.home_team.code,
+                        game.home_team.primary_color,
+                        game.home_team.text_color,
                         homeGames,
                       )}
                     </div>
@@ -704,20 +704,20 @@ const UserGameDetailsPage = () => {
                   );
                   return [
                     {
-                      teamId: game.away_team_id,
-                      teamCode: game.away_team_code,
-                      teamLogo: game.away_team_logo,
-                      primaryColor: game.away_team_primary_color,
-                      textColor: game.away_team_text_color,
+                      teamId: game.away_team.id,
+                      teamCode: game.away_team.code,
+                      teamLogo: game.away_team.logo,
+                      primaryColor: game.away_team.primary_color,
+                      textColor: game.away_team.text_color,
                       total: liveAwayScore,
                       isLoser: isFinal && liveAwayScore < liveHomeScore,
                     },
                     {
-                      teamId: game.home_team_id,
-                      teamCode: game.home_team_code,
-                      teamLogo: game.home_team_logo,
-                      primaryColor: game.home_team_primary_color,
-                      textColor: game.home_team_text_color,
+                      teamId: game.home_team.id,
+                      teamCode: game.home_team.code,
+                      teamLogo: game.home_team.logo,
+                      primaryColor: game.home_team.primary_color,
+                      textColor: game.home_team.text_color,
                       total: liveHomeScore,
                       isLoser: isFinal && liveHomeScore < liveAwayScore,
                     },
@@ -761,7 +761,7 @@ const UserGameDetailsPage = () => {
                           );
                         }
                         const rawGoals =
-                          row.teamId === game.away_team_id ? ps?.away_goals : ps?.home_goals;
+                          row.teamId === game.away_team.id ? ps?.away_goals : ps?.home_goals;
                         return (
                           <td
                             key={p.id}
@@ -808,18 +808,18 @@ const UserGameDetailsPage = () => {
                     {
                       key: 'away',
                       isAway: true,
-                      logo: game.away_team_logo,
-                      code: game.away_team_code,
-                      primary: game.away_team_primary_color,
-                      text: game.away_team_text_color,
+                      logo: game.away_team.logo,
+                      code: game.away_team.code,
+                      primary: game.away_team.primary_color,
+                      text: game.away_team.text_color,
                     },
                     {
                       key: 'home',
                       isAway: false,
-                      logo: game.home_team_logo,
-                      code: game.home_team_code,
-                      primary: game.home_team_primary_color,
-                      text: game.home_team_text_color,
+                      logo: game.home_team.logo,
+                      code: game.home_team.code,
+                      primary: game.home_team.primary_color,
+                      text: game.home_team.text_color,
                     },
                   ].map((row) => (
                     <tr key={row.key}>

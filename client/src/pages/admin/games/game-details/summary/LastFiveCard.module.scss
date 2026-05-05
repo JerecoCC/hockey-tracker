@@ -1,0 +1,322 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Local copies of shared helpers ────────────────────────────────────────────
+
+.noGoalsText {
+  margin: 0;
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.goalTeamLogoPlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.linescoreTeam {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.linescoreLogo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+// ── Last 5 Games card ─────────────────────────────────────────────────────────
+
+// Two team columns side by side — collapses to single column on narrow cards
+.lastFiveList {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: $space-sm;
+  align-items: flex-start;
+  container-type: inline-size;
+
+  @container (max-width: #{$bp-tablet}) {
+    flex-direction: column;
+  }
+}
+
+.lastFiveTeamCol {
+  flex: 1;
+  min-width: 390px;
+  width: 100%;
+}
+
+// View toggle buttons in card header
+.lastFiveViewToggle {
+  display: flex;
+  gap: $space-xs;
+}
+
+// ── List view ─────────────────────────────────────────────────────────────────
+
+// Container for list-mode rows inside the accordion body
+.lastFiveListRows {
+  display: flex;
+  flex-direction: column;
+  padding: $space-xs 0;
+}
+
+// Individual game row
+.lastFiveListRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs $space-md;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition: background $transition-base;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+// Result label (W / OTW / OTL / L)
+.lastFiveListResult {
+  font-size: $font-base;
+  font-weight: 700;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.lastFiveListResultW {
+  color: $success;
+}
+
+.lastFiveListResultL {
+  color: $danger;
+}
+
+.lastFiveListResultT {
+  color: $text-dim;
+}
+
+// Logo circle in list rows
+.lastFiveListLogo {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: color-mix(in srgb, #{$bg-card}, white 10%);
+  overflow: hidden;
+}
+
+.lastFiveListLogoImg {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.lastFiveListLogoPlaceholder {
+  font-size: 10px;
+  font-weight: 700;
+  color: $text-body;
+}
+
+// Opponent name (home/away indicator + name)
+.lastFiveListOpp {
+  flex: 1;
+  font-size: $font-base;
+  color: $text-body;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Score: "3–2"
+.lastFiveListScore {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-base;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: $text-bright;
+  white-space: nowrap;
+}
+
+// "(OT)" / "(SO)" appended after the score
+.lastFiveListSuffix {
+  font-size: $font-sm;
+  font-weight: 400;
+  color: $text-dim;
+}
+
+// Date at far right
+.lastFiveListDate {
+  font-size: $font-sm;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+// Form record shown in accordion headerRight: W - OTW - OTL - L
+.lastFiveForm {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-sm;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: $text-body;
+  white-space: nowrap;
+}
+
+.lastFiveFormSep {
+  color: $text-dim;
+  font-weight: 400;
+  user-select: none;
+}
+
+// Flex row of game squares inside accordion body
+.lastFiveGames {
+  display: flex;
+  gap: $space-sm;
+  padding: $space-sm $space-md;
+  flex-wrap: wrap;
+}
+
+.lastFiveGamesEmpty {
+  padding: 0;
+}
+
+// ── Square view ───────────────────────────────────────────────────────────────
+
+// Individual game square
+.lastFiveSquare {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  width: 80px;
+  height: 108px;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+  background: color-mix(in srgb, #{$bg-card}, white 6%);
+  padding: $space-sm $space-xs;
+  overflow: hidden;
+  flex-shrink: 0;
+  color: $text-body;
+  cursor: pointer;
+  transition: opacity $transition-fast;
+
+  &:hover {
+    opacity: 0.8;
+  }
+}
+
+// Home game square — bg is a mix of accordion header + team primary; border uses primary
+.lastFiveSquareHome {
+  background: color-mix(in srgb, #{$border}, var(--square-primary) 35%);
+  border-color: var(--square-primary);
+
+  .lastFiveDate {
+    color: color-mix(in srgb, #{$text-body}, var(--square-primary) 25%);
+  }
+}
+
+// Circle frame around the opponent logo
+.lastFiveLogoCircle {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.lastFiveLogoCircleAway {
+  background: color-mix(in srgb, #{$bg-card}, white 12%);
+  border-color: $border;
+
+  .lastFiveOpponentPlaceholder {
+    color: $text-body;
+  }
+}
+
+.lastFiveLogoCircleHome {
+  background: color-mix(in srgb, #{$border}, var(--circle-text) 35%);
+  border-color: color-mix(in srgb, #{$border}, var(--circle-text) 55%);
+
+  .lastFiveOpponentPlaceholder {
+    color: $text-body;
+  }
+}
+
+// Opponent logo inside the circle
+.lastFiveOpponentLogo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
+}
+
+// Placeholder text inside the circle (no logo available)
+.lastFiveOpponentPlaceholder {
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+// Bottom row: W/L  score  (OT)/(SO)
+.lastFiveScore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  width: 100%;
+}
+
+// Date shown above the circle
+.lastFiveDate {
+  font-size: 9px;
+  font-weight: 600;
+  color: $text-body;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.lastFiveResult {
+  font-size: $font-xs;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.lastFiveScoreText {
+  font-size: $font-xs;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.lastFiveOT {
+  font-size: $font-xs;
+  font-weight: 600;
+  line-height: 1;
+}

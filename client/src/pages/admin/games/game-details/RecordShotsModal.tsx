@@ -134,13 +134,13 @@ const RecordShotsModal = ({
     goalieRosterList.length === 0 ||
     (goalieRosterList.some(
       (g, i) =>
-        g.team_id === game.away_team_id &&
+        g.team_id === game.away_team.id &&
         goalieFormValues[i]?.shots_against !== '' &&
         goalieFormValues[i]?.saves !== '',
     ) &&
       goalieRosterList.some(
         (g, i) =>
-          g.team_id === game.home_team_id &&
+          g.team_id === game.home_team.id &&
           goalieFormValues[i]?.shots_against !== '' &&
           goalieFormValues[i]?.saves !== '',
       ));
@@ -193,7 +193,7 @@ const RecordShotsModal = ({
     }
     if (isEndGame && end_time) await updateGameInfo({ time_end: etHHMMtoISO(end_time) });
     if (showShootsFirst && soFirstTeam) {
-      const firstTeamId = soFirstTeam === 'away' ? game.away_team_id : game.home_team_id;
+      const firstTeamId = soFirstTeam === 'away' ? game.away_team.id : game.home_team.id;
       await updateGameInfo({ shootout_first_team_id: firstTeamId });
     }
     setSubmitting(false);
@@ -264,20 +264,20 @@ const RecordShotsBody = ({
   const teamRows = [
     {
       key: 'away',
-      logo: game.away_team_logo,
-      code: game.away_team_code,
-      name: game.away_team_name,
-      primaryColor: game.away_team_primary_color,
-      textColor: game.away_team_text_color,
+      logo: game.away_team.logo,
+      code: game.away_team.code,
+      name: game.away_team.name,
+      primaryColor: game.away_team.primary_color,
+      textColor: game.away_team.text_color,
       fieldName: 'away_shots' as const,
     },
     {
       key: 'home',
-      logo: game.home_team_logo,
-      code: game.home_team_code,
-      name: game.home_team_name,
-      primaryColor: game.home_team_primary_color,
-      textColor: game.home_team_text_color,
+      logo: game.home_team.logo,
+      code: game.home_team.code,
+      name: game.home_team.name,
+      primaryColor: game.home_team.primary_color,
+      textColor: game.home_team.text_color,
       fieldName: 'home_shots' as const,
     },
   ];
@@ -365,11 +365,11 @@ const RecordShotsBody = ({
             value={soFirstTeam ?? ''}
             onChange={(v) => setSoFirstTeam(v as 'away' | 'home')}
             options={(['away', 'home'] as const).map((side) => {
-              const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
-              const code = side === 'away' ? game.away_team_code : game.home_team_code;
+              const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
+              const code = side === 'away' ? game.away_team.code : game.home_team.code;
               const primary =
-                side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
-              const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
+                side === 'away' ? game.away_team.primary_color : game.home_team.primary_color;
+              const text = side === 'away' ? game.away_team.text_color : game.home_team.text_color;
               return {
                 value: side,
                 label: (
@@ -404,11 +404,11 @@ const RecordShotsBody = ({
           {goalieFields.map((field, i) => {
             const goalie = goalieRosterList[i];
             if (!goalie) return null;
-            const isAway = goalie.team_id === game.away_team_id;
-            const logo = isAway ? game.away_team_logo : game.home_team_logo;
-            const code = isAway ? game.away_team_code : game.home_team_code;
-            const primary = isAway ? game.away_team_primary_color : game.home_team_primary_color;
-            const text = isAway ? game.away_team_text_color : game.home_team_text_color;
+            const isAway = goalie.team_id === game.away_team.id;
+            const logo = isAway ? game.away_team.logo : game.home_team.logo;
+            const code = isAway ? game.away_team.code : game.home_team.code;
+            const primary = isAway ? game.away_team.primary_color : game.home_team.primary_color;
+            const text = isAway ? game.away_team.text_color : game.home_team.text_color;
             const isStarter = lineup.some(
               (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
             );

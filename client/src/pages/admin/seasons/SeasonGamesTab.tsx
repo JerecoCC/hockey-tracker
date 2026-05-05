@@ -226,16 +226,16 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 key={game.id}
                 href={`/admin/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
                 awayTeam={{
-                  logo: game.away_team_logo,
-                  code: game.away_team_code,
-                  primaryColor: game.away_team_primary_color,
-                  textColor: game.away_team_text_color,
+                  logo: game.away_team.logo,
+                  code: game.away_team.code,
+                  primaryColor: game.away_team.primary_color,
+                  textColor: game.away_team.text_color,
                 }}
                 homeTeam={{
-                  logo: game.home_team_logo,
-                  code: game.home_team_code,
-                  primaryColor: game.home_team_primary_color,
-                  textColor: game.home_team_text_color,
+                  logo: game.home_team.logo,
+                  code: game.home_team.code,
+                  primaryColor: game.home_team.primary_color,
+                  textColor: game.home_team.text_color,
                 }}
                 awayScore={game.period_scores.reduce((s, ps) => s + ps.away_goals, 0)}
                 homeScore={game.period_scores.reduce((s, ps) => s + ps.home_goals, 0)}
@@ -302,7 +302,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
         title="Delete Game"
         body={
           confirmDelete
-            ? `Delete ${confirmDelete.away_team_code} @ ${confirmDelete.home_team_code}? This cannot be undone.`
+            ? `Delete ${confirmDelete.away_team.code} @ ${confirmDelete.home_team.code}? This cannot be undone.`
             : ''
         }
         confirmLabel="Delete"

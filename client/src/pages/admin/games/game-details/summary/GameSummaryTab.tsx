@@ -1,9 +1,7 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
-import Tooltip from '@/components/Tooltip/Tooltip';
-import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
@@ -24,12 +22,10 @@ import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoal
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
-import type { LastFiveGame } from '@/hooks/useGames';
 import PreviousMeetingsCard from './PreviousMeetingsCard';
 import GameInfoCard from './GameInfoCard';
+import LastFiveCard from './LastFiveCard';
 import styles from '../GameDetailsPage.module.scss';
-import { DATE_FMT_SHORT } from '../formatUtils';
-import { buildFormRecord } from '../gameUtils';
 import { PERIOD_IDS } from '../constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -111,12 +107,12 @@ const GameSummaryTab = ({
     const bestOf = game.best_of_shootout ?? 3;
     const firstTeamId = game.shootout_first_team_id;
     const firstSideId =
-      firstTeamId === game.away_team_id
-        ? game.away_team_id
-        : firstTeamId === game.home_team_id
-          ? game.home_team_id
-          : game.away_team_id;
-    const secondSideId = firstSideId === game.away_team_id ? game.home_team_id : game.away_team_id;
+      firstTeamId === game.away_team.id
+        ? game.away_team.id
+        : firstTeamId === game.home_team.id
+          ? game.home_team.id
+          : game.away_team.id;
+    const secondSideId = firstSideId === game.away_team.id ? game.home_team.id : game.away_team.id;
     const firstAttempts = attempts.filter((a) => a.team_id === firstSideId);
     const secondAttempts = attempts.filter((a) => a.team_id === secondSideId);
     const firstRegGoals = firstAttempts.slice(0, bestOf).filter((a) => a.scored).length;
@@ -207,9 +203,9 @@ const GameSummaryTab = ({
   const openAttemptModal = () => {
     const firstTeamId = game.shootout_first_team_id;
     const fSide: 'away' | 'home' =
-      firstTeamId === game.away_team_id
+      firstTeamId === game.away_team.id
         ? 'away'
-        : firstTeamId === game.home_team_id
+        : firstTeamId === game.home_team.id
           ? 'home'
           : 'away';
     const nextSide: 'away' | 'home' =
@@ -221,7 +217,7 @@ const GameSummaryTab = ({
   };
 
   const openEditAttemptModal = (attempt: ShootoutAttempt) => {
-    setAttemptInitialTeam(attempt.team_id === game.away_team_id ? 'away' : 'home');
+    setAttemptInitialTeam(attempt.team_id === game.away_team.id ? 'away' : 'home');
     setAttemptInitialShooterId(attempt.shooter_id);
     setAttemptInitialScored(attempt.scored);
     setAttemptModalMode(attempt.id);
@@ -242,9 +238,6 @@ const GameSummaryTab = ({
 
   // ── Shots edit modal ─────────────────────────────────────────────────────
   const [shotsEditModalOpen, setShotsEditModalOpen] = useState(false);
-
-  // ── Last 5 Games view mode ───────────────────────────────────────────────
-  const [lastFiveView, setLastFiveView] = useState<'square' | 'list'>('list');
 
   // ── Score image modal ────────────────────────────────────────────────────
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
@@ -408,270 +401,11 @@ const GameSummaryTab = ({
             />
 
             {/* ── Last 5 Games card ── */}
-            {(game.home_last_five || game.away_last_five) &&
-              (() => {
-                const awayGames = game.away_last_five ?? [];
-                const homeGames = game.home_last_five ?? [];
-
-                const renderSquare = (lg: LastFiveGame, teamPrimary: string, teamText: string) => {
-                  const isOT = lg.overtime_periods != null && lg.overtime_periods > 0;
-                  const isSO = lg.shootout;
-                  const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
-                  return (
-                    <div
-                      key={lg.game_id}
-                      className={[
-                        styles.lastFiveSquare,
-                        lg.is_home ? styles.lastFiveSquareHome : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                      style={
-                        lg.is_home
-                          ? ({ '--square-primary': teamPrimary } as React.CSSProperties)
-                          : undefined
-                      }
-                      role="button"
-                      tabIndex={0}
-                      onClick={() =>
-                        navigate(
-                          `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
-                        )
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ')
-                          navigate(
-                            `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
-                          );
-                      }}
-                    >
-                      {lg.scheduled_at && (
-                        <span className={styles.lastFiveDate}>
-                          {DATE_FMT_SHORT.format(new Date(lg.scheduled_at))}
-                        </span>
-                      )}
-                      <Tooltip text={lg.opponent_name ?? lg.opponent_code}>
-                        <span
-                          className={`${styles.lastFiveLogoCircle} ${lg.is_home ? styles.lastFiveLogoCircleHome : styles.lastFiveLogoCircleAway}`}
-                          style={
-                            lg.is_home
-                              ? ({ '--circle-text': teamText } as React.CSSProperties)
-                              : undefined
-                          }
-                        >
-                          {lg.opponent_logo ? (
-                            <img
-                              src={lg.opponent_logo}
-                              alt={lg.opponent_code}
-                              className={styles.lastFiveOpponentLogo}
-                            />
-                          ) : (
-                            <span className={styles.lastFiveOpponentPlaceholder}>
-                              {lg.opponent_code?.slice(0, 3)}
-                            </span>
-                          )}
-                        </span>
-                      </Tooltip>
-                      <div className={styles.lastFiveScore}>
-                        <span className={styles.lastFiveResult}>{lg.result}</span>
-                        <span className={styles.lastFiveScoreText}>
-                          {lg.away_score}-{lg.home_score}
-                        </span>
-                        {suffix && <span className={styles.lastFiveOT}>{suffix}</span>}
-                      </div>
-                    </div>
-                  );
-                };
-
-                const renderListRow = (lg: LastFiveGame) => {
-                  const isOT = lg.overtime_periods != null && lg.overtime_periods > 0;
-                  const isSO = lg.shootout;
-                  const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
-                  const resultLabel = lg.result;
-                  const resultClass =
-                    lg.result === 'W'
-                      ? styles.lastFiveListResultW
-                      : lg.result === 'L'
-                        ? styles.lastFiveListResultL
-                        : styles.lastFiveListResultT;
-                  return (
-                    <div
-                      key={lg.game_id}
-                      className={styles.lastFiveListRow}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() =>
-                        navigate(
-                          `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
-                        )
-                      }
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ')
-                          navigate(
-                            `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${lg.game_id}`,
-                          );
-                      }}
-                    >
-                      <span className={`${styles.lastFiveListResult} ${resultClass}`}>
-                        {resultLabel}
-                      </span>
-                      <span className={styles.lastFiveListLogo}>
-                        {lg.opponent_logo ? (
-                          <img
-                            src={lg.opponent_logo}
-                            alt={lg.opponent_code}
-                            className={styles.lastFiveListLogoImg}
-                          />
-                        ) : (
-                          <span className={styles.lastFiveListLogoPlaceholder}>
-                            {lg.opponent_code?.slice(0, 3)}
-                          </span>
-                        )}
-                      </span>
-                      <span className={styles.lastFiveListOpp}>
-                        {lg.is_home ? 'vs' : '@'} {lg.opponent_name ?? lg.opponent_code}
-                      </span>
-                      <span className={styles.lastFiveListScore}>
-                        {lg.away_score}–{lg.home_score}
-                        {suffix && <span className={styles.lastFiveListSuffix}>{suffix}</span>}
-                      </span>
-                      {lg.scheduled_at && (
-                        <span className={styles.lastFiveListDate}>
-                          {DATE_FMT_SHORT.format(new Date(lg.scheduled_at))}
-                        </span>
-                      )}
-                    </div>
-                  );
-                };
-
-                const renderTeamAccordion = (
-                  label: string,
-                  logo: string | null,
-                  code: string,
-                  primary: string,
-                  text: string,
-                  games: LastFiveGame[],
-                ) => (
-                  <Accordion
-                    variant="static"
-                    label={
-                      <span className={styles.linescoreTeam}>
-                        {logo ? (
-                          <img
-                            src={logo}
-                            alt={code}
-                            className={styles.linescoreLogo}
-                          />
-                        ) : (
-                          <span
-                            className={styles.goalTeamLogoPlaceholder}
-                            style={{ background: primary, color: text }}
-                          >
-                            {code?.slice(0, 1)}
-                          </span>
-                        )}
-                        <span>{label}</span>
-                      </span>
-                    }
-                    headerRight={(() => {
-                      const { w, otw, otl, l } = buildFormRecord(games);
-                      return (
-                        <span className={styles.lastFiveForm}>
-                          <Tooltip text="Wins">
-                            <span>{w}</span>
-                          </Tooltip>
-                          <span className={styles.lastFiveFormSep}>-</span>
-                          <Tooltip text="OT/SO Wins">
-                            <span>{otw}</span>
-                          </Tooltip>
-                          <span className={styles.lastFiveFormSep}>-</span>
-                          <Tooltip text="OT/SO Losses">
-                            <span>{otl}</span>
-                          </Tooltip>
-                          <span className={styles.lastFiveFormSep}>-</span>
-                          <Tooltip text="Losses">
-                            <span>{l}</span>
-                          </Tooltip>
-                        </span>
-                      );
-                    })()}
-                  >
-                    {lastFiveView === 'list' ? (
-                      <div className={styles.lastFiveListRows}>
-                        {games.length === 0 ? (
-                          <p className={styles.noGoalsText}>No recent games</p>
-                        ) : (
-                          games.map((lg) => renderListRow(lg))
-                        )}
-                      </div>
-                    ) : (
-                      <div
-                        className={[
-                          styles.lastFiveGames,
-                          games.length === 0 ? styles.lastFiveGamesEmpty : '',
-                        ]
-                          .join(' ')
-                          .trim()}
-                      >
-                        {games.length === 0 ? (
-                          <p className={styles.noGoalsText}>No recent games</p>
-                        ) : (
-                          games.map((lg) => renderSquare(lg, primary, text))
-                        )}
-                      </div>
-                    )}
-                  </Accordion>
-                );
-
-                return (
-                  <Card
-                    title="Last 5 Games"
-                    action={
-                      <div className={styles.lastFiveViewToggle}>
-                        <Button
-                          variant="ghost"
-                          intent={lastFiveView === 'list' ? 'accent' : 'neutral'}
-                          icon="view_list"
-                          size="sm"
-                          tooltip="List view"
-                          onClick={() => setLastFiveView('list')}
-                        />
-                        <Button
-                          variant="ghost"
-                          intent={lastFiveView === 'square' ? 'accent' : 'neutral'}
-                          icon="grid_view"
-                          size="sm"
-                          tooltip="Grid view"
-                          onClick={() => setLastFiveView('square')}
-                        />
-                      </div>
-                    }
-                  >
-                    <div className={styles.lastFiveList}>
-                      <div className={styles.lastFiveTeamCol}>
-                        {renderTeamAccordion(
-                          game.away_team_name,
-                          game.away_team_logo,
-                          game.away_team_code,
-                          game.away_team_primary_color,
-                          game.away_team_text_color,
-                          awayGames,
-                        )}
-                      </div>
-                      <div className={styles.lastFiveTeamCol}>
-                        {renderTeamAccordion(
-                          game.home_team_name,
-                          game.home_team_logo,
-                          game.home_team_code,
-                          game.home_team_primary_color,
-                          game.home_team_text_color,
-                          homeGames,
-                        )}
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })()}
+            <LastFiveCard
+              game={game}
+              leagueId={leagueId}
+              seasonId={seasonId}
+            />
           </div>
           {/* end summaryLeft */}
 
@@ -793,20 +527,20 @@ const GameSummaryTab = ({
                     );
                     return [
                       {
-                        teamId: game.away_team_id,
-                        teamCode: game.away_team_code,
-                        teamLogo: game.away_team_logo,
-                        primaryColor: game.away_team_primary_color,
-                        textColor: game.away_team_text_color,
+                        teamId: game.away_team.id,
+                        teamCode: game.away_team.code,
+                        teamLogo: game.away_team.logo,
+                        primaryColor: game.away_team.primary_color,
+                        textColor: game.away_team.text_color,
                         total: liveAwayScore,
                         isLoser: isFinal && liveAwayScore < liveHomeScore,
                       },
                       {
-                        teamId: game.home_team_id,
-                        teamCode: game.home_team_code,
-                        teamLogo: game.home_team_logo,
-                        primaryColor: game.home_team_primary_color,
-                        textColor: game.home_team_text_color,
+                        teamId: game.home_team.id,
+                        teamCode: game.home_team.code,
+                        teamLogo: game.home_team.logo,
+                        primaryColor: game.home_team.primary_color,
+                        textColor: game.home_team.text_color,
                         total: liveHomeScore,
                         isLoser: isFinal && liveHomeScore < liveAwayScore,
                       },
@@ -852,7 +586,7 @@ const GameSummaryTab = ({
                             );
                           }
                           const rawGoals =
-                            row.teamId === game.away_team_id ? ps?.away_goals : ps?.home_goals;
+                            row.teamId === game.away_team.id ? ps?.away_goals : ps?.home_goals;
                           const goals2: number | string = rawGoals ?? (isPeriodDone ? 0 : '—');
                           return (
                             <td
@@ -914,18 +648,18 @@ const GameSummaryTab = ({
                       {
                         key: 'away',
                         isAway: true,
-                        logo: game.away_team_logo,
-                        code: game.away_team_code,
-                        primary: game.away_team_primary_color,
-                        text: game.away_team_text_color,
+                        logo: game.away_team.logo,
+                        code: game.away_team.code,
+                        primary: game.away_team.primary_color,
+                        text: game.away_team.text_color,
                       },
                       {
                         key: 'home',
                         isAway: false,
-                        logo: game.home_team_logo,
-                        code: game.home_team_code,
-                        primary: game.home_team_primary_color,
-                        text: game.home_team_text_color,
+                        logo: game.home_team.logo,
+                        code: game.home_team.code,
+                        primary: game.home_team.primary_color,
+                        text: game.home_team.text_color,
                       },
                     ].map((row) => (
                       <tr key={row.key}>
@@ -1033,18 +767,18 @@ const GameSummaryTab = ({
         roster={roster}
         busy={!!busy}
         awayTeam={{
-          id: game.away_team_id,
-          code: game.away_team_code,
-          logo: game.away_team_logo,
-          primaryColor: game.away_team_primary_color,
-          textColor: game.away_team_text_color,
+          id: game.away_team.id,
+          code: game.away_team.code,
+          logo: game.away_team.logo,
+          primaryColor: game.away_team.primary_color,
+          textColor: game.away_team.text_color,
         }}
         homeTeam={{
-          id: game.home_team_id,
-          code: game.home_team_code,
-          logo: game.home_team_logo,
-          primaryColor: game.home_team_primary_color,
-          textColor: game.home_team_text_color,
+          id: game.home_team.id,
+          code: game.home_team.code,
+          logo: game.home_team.logo,
+          primaryColor: game.home_team.primary_color,
+          textColor: game.home_team.text_color,
         }}
         initialStars={
           starsEditMode && game
@@ -1119,7 +853,7 @@ const GameSummaryTab = ({
       <ConfirmModal
         open={confirmDeleteOpen}
         title="Delete Game"
-        body={`Delete ${game.away_team_code} @ ${game.home_team_code}? This will remove all goals, lineups, and related data. This cannot be undone.`}
+        body={`Delete ${game.away_team.code} @ ${game.home_team.code}? This will remove all goals, lineups, and related data. This cannot be undone.`}
         confirmLabel="Delete"
         confirmIcon="delete"
         variant="danger"

@@ -62,13 +62,13 @@ const ShootoutAttemptModal = ({
         ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
         : `${e.first_name} ${e.last_name}`,
   }));
-  const attemptTeamName = team === 'away' ? game.away_team_name : game.home_team_name;
+  const attemptTeamName = team === 'away' ? game.away_team.name : game.home_team.name;
 
   const teamOptions = (['away', 'home'] as const).map((side) => {
-    const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
-    const code = side === 'away' ? game.away_team_code : game.home_team_code;
-    const primary = side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
-    const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
+    const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
+    const code = side === 'away' ? game.away_team.code : game.home_team.code;
+    const primary = side === 'away' ? game.away_team.primary_color : game.home_team.primary_color;
+    const text = side === 'away' ? game.away_team.text_color : game.home_team.text_color;
     return {
       value: side,
       label: (
@@ -117,7 +117,7 @@ const ShootoutAttemptModal = ({
   ];
 
   const handleConfirm = async () => {
-    const teamId = team === 'away' ? game.away_team_id : game.home_team_id;
+    const teamId = team === 'away' ? game.away_team.id : game.home_team.id;
     setSubmitting(true);
     try {
       if (isEditMode) {

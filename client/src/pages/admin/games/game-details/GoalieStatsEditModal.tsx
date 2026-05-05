@@ -98,11 +98,11 @@ const GoalieStatsEditModal = ({
         {fields.map((field, i) => {
           const goalie = allGoalies[i];
           if (!goalie) return null;
-          const isAway = goalie.team_id === game.away_team_id;
-          const logo = isAway ? game.away_team_logo : game.home_team_logo;
-          const code = isAway ? game.away_team_code : game.home_team_code;
-          const primary = isAway ? game.away_team_primary_color : game.home_team_primary_color;
-          const text = isAway ? game.away_team_text_color : game.home_team_text_color;
+          const isAway = goalie.team_id === game.away_team.id;
+          const logo = isAway ? game.away_team.logo : game.home_team.logo;
+          const code = isAway ? game.away_team.code : game.home_team.code;
+          const primary = isAway ? game.away_team.primary_color : game.home_team.primary_color;
+          const text = isAway ? game.away_team.text_color : game.home_team.text_color;
           const isStarter = lineup.some(
             (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
           );

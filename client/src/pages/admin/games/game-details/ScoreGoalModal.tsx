@@ -56,7 +56,7 @@ const ScoreGoalModal = ({
   useEffect(() => {
     if (open) {
       if (editGoal) {
-        setGoalTeam(editGoal.team_id === game.away_team_id ? 'away' : 'home');
+        setGoalTeam(editGoal.team_id === game.away_team.id ? 'away' : 'home');
         setGoalPeriodTime(editGoal.period_time ?? '');
         setGoalType(editGoal.goal_type === 'empty-net' ? 'even-strength' : editGoal.goal_type);
         setGoalEmptyNet(editGoal.empty_net || editGoal.goal_type === 'empty-net');
@@ -73,7 +73,7 @@ const ScoreGoalModal = ({
         setGoalAssist2Id('');
       }
     }
-  }, [open, editGoal, game.away_team_id]);
+  }, [open, editGoal, game.away_team.id]);
 
   const handleTeamChange = (team: 'away' | 'home') => {
     setGoalTeam(team);
@@ -114,10 +114,10 @@ const ScoreGoalModal = ({
   }));
 
   const teamOptions = (['away', 'home'] as const).map((side) => {
-    const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
-    const code = side === 'away' ? game.away_team_code : game.home_team_code;
-    const primary = side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
-    const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
+    const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
+    const code = side === 'away' ? game.away_team.code : game.home_team.code;
+    const primary = side === 'away' ? game.away_team.primary_color : game.home_team.primary_color;
+    const text = side === 'away' ? game.away_team.text_color : game.home_team.text_color;
     return {
       value: side,
       label: (
@@ -144,7 +144,7 @@ const ScoreGoalModal = ({
 
   const handleConfirm = async () => {
     if (!goalTeam) return;
-    const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
+    const teamId = goalTeam === 'away' ? game.away_team.id : game.home_team.id;
     const payload: PostGoalData = {
       team_id: teamId,
       period,

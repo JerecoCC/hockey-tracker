@@ -34,19 +34,21 @@ router.get('/', async (req, res) => {
         gs.period_scores,
         g.period_shots,
         -- Home team
-        g.home_team_id,
-        ht.name  AS home_team_name,
-        ht.code  AS home_team_code,
-        ht.logo  AS home_team_logo,
-        t_home.primary_color AS home_team_primary_color,
-        t_home.text_color    AS home_team_text_color,
+        json_build_object(
+          'id', g.home_team_id,
+          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'primary_color', t_home.primary_color,
+          'secondary_color', t_home.secondary_color,
+          'text_color', t_home.text_color
+        ) AS home_team,
         -- Away team
-        g.away_team_id,
-        at.name  AS away_team_name,
-        at.code  AS away_team_code,
-        at.logo  AS away_team_logo,
-        t_away.primary_color AS away_team_primary_color,
-        t_away.text_color    AS away_team_text_color
+        json_build_object(
+          'id', g.away_team_id,
+          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'primary_color', t_away.primary_color,
+          'secondary_color', t_away.secondary_color,
+          'text_color', t_away.text_color
+        ) AS away_team
       FROM games g
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
@@ -223,16 +225,20 @@ router.get('/:id', async (req, res) => {
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
         g.period_shots,
-        g.home_team_id,
-        ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-        t_home.primary_color   AS home_team_primary_color,
-        t_home.secondary_color AS home_team_secondary_color,
-        t_home.text_color      AS home_team_text_color,
-        g.away_team_id,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
-        t_away.primary_color   AS away_team_primary_color,
-        t_away.secondary_color AS away_team_secondary_color,
-        t_away.text_color      AS away_team_text_color,
+        json_build_object(
+          'id', g.home_team_id,
+          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'primary_color', t_home.primary_color,
+          'secondary_color', t_home.secondary_color,
+          'text_color', t_home.text_color
+        ) AS home_team,
+        json_build_object(
+          'id', g.away_team_id,
+          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'primary_color', t_away.primary_color,
+          'secondary_color', t_away.secondary_color,
+          'text_color', t_away.text_color
+        ) AS away_team,
         s.name AS season_name,
         l.id   AS league_id,
         l.name AS league_name,
@@ -502,14 +508,20 @@ router.post('/', async (req, res) => {
         g.playoff_series_id, g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
-        g.home_team_id,
-        ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-        t_home.primary_color AS home_team_primary_color,
-        t_home.text_color    AS home_team_text_color,
-        g.away_team_id,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
-        t_away.primary_color AS away_team_primary_color,
-        t_away.text_color    AS away_team_text_color
+        json_build_object(
+          'id', g.home_team_id,
+          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'primary_color', t_home.primary_color,
+          'secondary_color', t_home.secondary_color,
+          'text_color', t_home.text_color
+        ) AS home_team,
+        json_build_object(
+          'id', g.away_team_id,
+          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'primary_color', t_away.primary_color,
+          'secondary_color', t_away.secondary_color,
+          'text_color', t_away.text_color
+        ) AS away_team
       FROM games g
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
@@ -616,14 +628,20 @@ router.patch('/:id', async (req, res) => {
         g.star_1_id, g.star_2_id, g.star_3_id,
         gs.period_scores,
         g.period_shots,
-        g.home_team_id,
-        ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-        t_home.primary_color AS home_team_primary_color,
-        t_home.text_color    AS home_team_text_color,
-        g.away_team_id,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
-        t_away.primary_color AS away_team_primary_color,
-        t_away.text_color    AS away_team_text_color
+        json_build_object(
+          'id', g.home_team_id,
+          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'primary_color', t_home.primary_color,
+          'secondary_color', t_home.secondary_color,
+          'text_color', t_home.text_color
+        ) AS home_team,
+        json_build_object(
+          'id', g.away_team_id,
+          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'primary_color', t_away.primary_color,
+          'secondary_color', t_away.secondary_color,
+          'text_color', t_away.text_color
+        ) AS away_team
       FROM games g
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id

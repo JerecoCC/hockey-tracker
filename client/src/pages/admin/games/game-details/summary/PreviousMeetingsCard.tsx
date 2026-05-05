@@ -18,7 +18,11 @@ type TeamMeta = { code: string; logo: string | null; primary: string; text: stri
 
 const TeamLogo = ({ team }: { team: TeamMeta }) =>
   team.logo ? (
-    <img src={team.logo} alt={team.code} className={styles.prevMeetingLogo} />
+    <img
+      src={team.logo}
+      alt={team.code}
+      className={styles.prevMeetingLogo}
+    />
   ) : (
     <span
       className={styles.prevMeetingLogoPlaceholder}
@@ -37,16 +41,16 @@ const PreviousMeetingsCard = ({ game, leagueId, seasonId }: Props) => {
   if (!meetings || meetings.length === 0) return null;
 
   const awayTeam: TeamMeta = {
-    code: game.away_team_code,
-    logo: game.away_team_logo,
-    primary: game.away_team_primary_color,
-    text: game.away_team_text_color,
+    code: game.away_team.code,
+    logo: game.away_team.logo,
+    primary: game.away_team.primary_color,
+    text: game.away_team.text_color,
   };
   const homeTeam: TeamMeta = {
-    code: game.home_team_code,
-    logo: game.home_team_logo,
-    primary: game.home_team_primary_color,
-    text: game.home_team_text_color,
+    code: game.home_team.code,
+    logo: game.home_team.logo,
+    primary: game.home_team.primary_color,
+    text: game.home_team.text_color,
   };
 
   return (
@@ -86,11 +90,15 @@ const PreviousMeetingsCard = ({ game, leagueId, seasonId }: Props) => {
                 <span className={styles.prevMeetingCode}>{leftTeam.code}</span>
               </span>
               <span className={styles.prevMeetingScore}>
-                <span className={homeWon ? styles.prevMeetingScoreDim : styles.prevMeetingScoreBright}>
+                <span
+                  className={homeWon ? styles.prevMeetingScoreDim : styles.prevMeetingScoreBright}
+                >
                   {pm.away_score}
                 </span>
                 <span className={styles.prevMeetingScoreSep}>–</span>
-                <span className={homeWon ? styles.prevMeetingScoreBright : styles.prevMeetingScoreDim}>
+                <span
+                  className={homeWon ? styles.prevMeetingScoreBright : styles.prevMeetingScoreDim}
+                >
                   {pm.home_score}
                 </span>
                 {suffix && <span className={styles.prevMeetingSuffix}>{suffix}</span>}

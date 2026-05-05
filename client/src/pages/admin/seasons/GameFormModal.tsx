@@ -77,8 +77,8 @@ const GameFormModal = ({
     if (!open) return;
     if (editTarget) {
       reset({
-        home_team_id: editTarget.home_team_id,
-        away_team_id: editTarget.away_team_id,
+        home_team_id: editTarget.home_team.id,
+        away_team_id: editTarget.away_team.id,
         game_type: editTarget.game_type,
         status: editTarget.status,
         scheduled_date: editTarget.scheduled_at ? editTarget.scheduled_at.slice(0, 10) : '',

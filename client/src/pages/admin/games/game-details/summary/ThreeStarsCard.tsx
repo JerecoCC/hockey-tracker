@@ -56,12 +56,10 @@ const ThreeStarsCard = ({
           const player = roster.find((e) => e.player_id === playerId);
           if (!player) return null;
 
-          const isAway = player.team_id === game.away_team_id;
-          const teamCode = isAway ? game.away_team_code : game.home_team_code;
-          const primaryColor = isAway
-            ? game.away_team_primary_color
-            : game.home_team_primary_color;
-          const textColor = isAway ? game.away_team_text_color : game.home_team_text_color;
+          const isAway = player.team_id === game.away_team.id;
+          const teamCode = isAway ? game.away_team.code : game.home_team.code;
+          const primaryColor = isAway ? game.away_team.primary_color : game.home_team.primary_color;
+          const textColor = isAway ? game.away_team.text_color : game.home_team.text_color;
           const stats = playerGameStats.get(playerId) ?? { goals: 0, assists: 0 };
           const goalieStatRecord = goalieStats.find((s) => s.goalie_id === playerId) ?? null;
 

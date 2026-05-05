@@ -58,32 +58,32 @@ const GameLineupsTab = ({
   const [removingFromRoster, setRemovingFromRoster] = useState(false);
 
   const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
-    game.away_team_id,
+    game.away_team.id,
     seasonId,
   );
   const { createAndRosterPlayers: createAndRosterHome } = useTeamPlayers(
-    game.home_team_id,
+    game.home_team.id,
     seasonId,
   );
 
   const awayLineupMap = new Map(
     lineup
-      .filter((e) => e.team_id === game.away_team_id && !e.inherited)
+      .filter((e) => e.team_id === game.away_team.id && !e.inherited)
       .map((e) => [e.player_id, e]),
   );
   const homeLineupMap = new Map(
     lineup
-      .filter((e) => e.team_id === game.home_team_id && !e.inherited)
+      .filter((e) => e.team_id === game.home_team.id && !e.inherited)
       .map((e) => [e.player_id, e]),
   );
   const awayInheritedLineupMap = new Map(
     lineup
-      .filter((e) => e.team_id === game.away_team_id && !!e.inherited)
+      .filter((e) => e.team_id === game.away_team.id && !!e.inherited)
       .map((e) => [e.player_id, e]),
   );
   const homeInheritedLineupMap = new Map(
     lineup
-      .filter((e) => e.team_id === game.home_team_id && !!e.inherited)
+      .filter((e) => e.team_id === game.home_team.id && !!e.inherited)
       .map((e) => [e.player_id, e]),
   );
 
@@ -136,7 +136,7 @@ const GameLineupsTab = ({
                       intent: 'accent' as const,
                       disabled: autoFillBusy[side],
                       onClick: async () => {
-                        const teamId = side === 'away' ? game.away_team_id : game.home_team_id;
+                        const teamId = side === 'away' ? game.away_team.id : game.home_team.id;
                         setAutoFillBusy((prev) => ({ ...prev, [side]: true }));
                         await addToRoster(
                           teamId,
@@ -253,11 +253,11 @@ const GameLineupsTab = ({
           <div className={styles.lineupGrid}>
             {renderTeamAccordion(
               'away',
-              game.away_team_name,
-              game.away_team_code,
-              game.away_team_logo,
-              game.away_team_primary_color,
-              game.away_team_text_color,
+              game.away_team.name,
+              game.away_team.code,
+              game.away_team.logo,
+              game.away_team.primary_color,
+              game.away_team.text_color,
               awayRoster,
               awayLineupMap,
               awayInheritedLineupMap,
@@ -265,11 +265,11 @@ const GameLineupsTab = ({
             )}
             {renderTeamAccordion(
               'home',
-              game.home_team_name,
-              game.home_team_code,
-              game.home_team_logo,
-              game.home_team_primary_color,
-              game.home_team_text_color,
+              game.home_team.name,
+              game.home_team.code,
+              game.home_team.logo,
+              game.home_team.primary_color,
+              game.home_team.text_color,
               homeRoster,
               homeLineupMap,
               homeInheritedLineupMap,
@@ -284,14 +284,14 @@ const GameLineupsTab = ({
         <LineupRosterModal
           open={lineupAddTeam !== null}
           onClose={() => setLineupAddTeam(null)}
-          teamId={lineupAddTeam === 'away' ? game.away_team_id : game.home_team_id}
+          teamId={lineupAddTeam === 'away' ? game.away_team.id : game.home_team.id}
           seasonId={seasonId!}
-          teamName={lineupAddTeam === 'away' ? game.away_team_name : game.home_team_name}
+          teamName={lineupAddTeam === 'away' ? game.away_team.name : game.home_team.name}
           existingPlayerIds={
             new Set((lineupAddTeam === 'away' ? awayRoster : homeRoster).map((e) => e.player_id))
           }
           addToGameRoster={(playerIds) =>
-            addToRoster(lineupAddTeam === 'away' ? game.away_team_id : game.home_team_id, playerIds)
+            addToRoster(lineupAddTeam === 'away' ? game.away_team.id : game.home_team.id, playerIds)
           }
         />
       )}
@@ -301,9 +301,9 @@ const GameLineupsTab = ({
         <LineupCreatePlayersModal
           open={lineupCreateTeam !== null}
           onClose={() => setLineupCreateTeam(null)}
-          teamId={lineupCreateTeam === 'away' ? game.away_team_id : game.home_team_id}
+          teamId={lineupCreateTeam === 'away' ? game.away_team.id : game.home_team.id}
           seasonId={seasonId!}
-          teamName={lineupCreateTeam === 'away' ? game.away_team_name : game.home_team_name}
+          teamName={lineupCreateTeam === 'away' ? game.away_team.name : game.home_team.name}
           existingCount={(lineupCreateTeam === 'away' ? awayRoster : homeRoster).length}
           existingGoalieCount={
             (lineupCreateTeam === 'away' ? awayRoster : homeRoster).filter(
@@ -320,7 +320,7 @@ const GameLineupsTab = ({
           }
           onPlayersCreated={(playerIds) =>
             addToRoster(
-              lineupCreateTeam === 'away' ? game.away_team_id : game.home_team_id,
+              lineupCreateTeam === 'away' ? game.away_team.id : game.home_team.id,
               playerIds,
             ).then(() => {})
           }
@@ -338,8 +338,8 @@ const GameLineupsTab = ({
             <SetLineupModal
               open={lineupSetTeam !== null}
               onClose={() => setLineupSetTeam(null)}
-              teamId={lineupSetTeam === 'away' ? game.away_team_id : game.home_team_id}
-              teamName={lineupSetTeam === 'away' ? game.away_team_name : game.home_team_name}
+              teamId={lineupSetTeam === 'away' ? game.away_team.id : game.home_team.id}
+              teamName={lineupSetTeam === 'away' ? game.away_team.name : game.home_team.name}
               players={rosterForSide as unknown as Parameters<typeof SetLineupModal>[0]['players']}
               lineup={lineup}
               saveTeamLineup={saveTeamLineup}

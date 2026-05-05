@@ -75,13 +75,13 @@ const GoalieStatsCard = ({
             {goalies.map((goalie) => {
               const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
               if (!stat) return null;
-              const isAway = goalie.team_id === game.away_team_id;
+              const isAway = goalie.team_id === game.away_team.id;
               const primaryColor = isAway
-                ? game.away_team_primary_color
-                : game.home_team_primary_color;
-              const textColor = isAway ? game.away_team_text_color : game.home_team_text_color;
-              const teamLogo = isAway ? game.away_team_logo : game.home_team_logo;
-              const teamCode = isAway ? game.away_team_code : game.home_team_code;
+                ? game.away_team.primary_color
+                : game.home_team.primary_color;
+              const textColor = isAway ? game.away_team.text_color : game.home_team.text_color;
+              const teamLogo = isAway ? game.away_team.logo : game.home_team.logo;
+              const teamCode = isAway ? game.away_team.code : game.home_team.code;
               const svPct =
                 stat.shots_against > 0
                   ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
