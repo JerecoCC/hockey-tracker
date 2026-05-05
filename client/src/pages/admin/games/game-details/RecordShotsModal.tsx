@@ -165,7 +165,8 @@ const RecordShotsModal = ({
         ? nextAction.label
         : 'Confirm';
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const { away_shots, home_shots, end_time, goalies: goalieVals } = getValues();
     const isSOEndGame = period === 'SO' && isEndGame;
     setSubmitting(true);
@@ -214,23 +215,28 @@ const RecordShotsModal = ({
       onClose={onClose}
       confirmLabel={confirmLabel}
       confirmIcon={isEndGame ? 'star' : 'flag'}
-      onConfirm={handleConfirm}
+      confirmForm="record-shots-form"
       confirmDisabled={submitting || !goalieStatsValid || !endTimeValid || !shootsFirstValid}
       busy={submitting}
     >
-      <RecordShotsBody
-        isEndGame={isEndGame}
-        period={period}
-        game={game}
-        control={control}
-        goalieFields={goalieFields}
-        goalieRosterList={goalieRosterList}
-        lineup={lineup}
-        showShootsFirst={showShootsFirst}
-        soFirstTeam={soFirstTeam}
-        setSoFirstTeam={setSoFirstTeam}
-        submitting={submitting}
-      />
+      <form
+        id="record-shots-form"
+        onSubmit={handleConfirm}
+      >
+        <RecordShotsBody
+          isEndGame={isEndGame}
+          period={period}
+          game={game}
+          control={control}
+          goalieFields={goalieFields}
+          goalieRosterList={goalieRosterList}
+          lineup={lineup}
+          showShootsFirst={showShootsFirst}
+          soFirstTeam={soFirstTeam}
+          setSoFirstTeam={setSoFirstTeam}
+          submitting={submitting}
+        />
+      </form>
     </Modal>
   );
 };

@@ -26,6 +26,8 @@ export const POSITION_LABEL: Record<string, string> = {
   D: 'Defense',
   LD: 'Left Defense',
   RD: 'Right Defense',
+  D1: 'Left Defense',
+  D2: 'Right Defense',
   G: 'Goalie',
 };
 

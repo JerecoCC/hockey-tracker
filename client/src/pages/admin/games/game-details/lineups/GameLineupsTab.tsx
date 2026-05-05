@@ -196,10 +196,8 @@ const GameLineupsTab = ({
             const isInheritedStarter = !isStarter && inheritedLineupMap.has(e.player_id);
             const lineupEntry = lineupMap.get(e.player_id) ?? inheritedLineupMap.get(e.player_id);
             const slot = lineupEntry?.position_slot;
-            // D1/D2 slots both map to the 'D' label key
-            const slotKey = slot === 'D1' || slot === 'D2' ? 'D' : slot;
-            const positionPart = slotKey
-              ? (POSITION_LABEL[slotKey] ?? slotKey)
+            const positionPart = slot
+              ? (POSITION_LABEL[slot] ?? slot)
               : e.position
                 ? (POSITION_LABEL[e.position] ?? e.position)
                 : undefined;
