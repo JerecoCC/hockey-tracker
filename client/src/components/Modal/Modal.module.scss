@@ -113,9 +113,31 @@
   }
 }
 
+@keyframes slideDownSheet {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fadeOutOverlay {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .overlay {
     align-items: flex-end;
+  }
+
+  .closingOverlay {
+    animation: fadeOutOverlay $transition-layout ease forwards;
   }
 
   .modal,
@@ -127,6 +149,10 @@
     border-bottom: none;
     max-height: 90dvh;
     animation: slideUpSheet $transition-layout ease;
+  }
+
+  .closing {
+    animation: slideDownSheet $transition-layout ease forwards;
   }
 
   // Keep footer actions stacked full-width for easier tapping

@@ -1,7 +1,10 @@
-import { ReactNode } from 'react';
+import { ReactNode, useState } from 'react';
 import Button from '../Button/Button';
 import type { ButtonIntent } from '../Button/Button';
 import styles from './Modal.module.scss';
+
+// Must match the CSS animation duration for slideDownSheet
+const SHEET_DURATION_MS = 220;
 
 interface Props {
   open: boolean;
@@ -57,7 +60,25 @@ const Modal = (props: Props) => {
     hideFooter,
   } = props;
 
-  if (!open) return null;
+  // isClosing stays true for the duration of the slide-down animation before
+  // the parent's onClose is called and the component fully unmounts.
+  const [isClosing, setIsClosing] = useState(false);
+
+  if (!open && !isClosing) return null;
+
+  const handleClose = () => {
+    if (isClosing) return;
+    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    if (isMobile) {
+      setIsClosing(true);
+      setTimeout(() => {
+        setIsClosing(false);
+        onClose();
+      }, SHEET_DURATION_MS);
+    } else {
+      onClose();
+    }
+  };
 
   const showConfirm = !!(onConfirm || confirmForm);
 
@@ -68,7 +89,7 @@ const Modal = (props: Props) => {
         <Button
           variant="outlined"
           intent="neutral"
-          onClick={onClose}
+          onClick={handleClose}
           type="button"
           disabled={busy}
         >
@@ -90,13 +111,16 @@ const Modal = (props: Props) => {
     </div>
   );
 
+  const modalSizeClass =
+    size === 'lg' ? ` ${styles.modalLg}` : size === 'xl' ? ` ${styles.modalXl}` : '';
+
   return (
     <div
-      className={styles.overlay}
-      onClick={onClose}
+      className={`${styles.overlay} ${isClosing ? styles.closingOverlay : ''}`}
+      onClick={handleClose}
     >
       <div
-        className={`${styles.modal}${size === 'lg' ? ` ${styles.modalLg}` : size === 'xl' ? ` ${styles.modalXl}` : ''}`}
+        className={`${styles.modal}${modalSizeClass} ${isClosing ? styles.closing : ''}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>
@@ -106,7 +130,7 @@ const Modal = (props: Props) => {
             intent="neutral"
             icon="close"
             iconSize="0.8rem"
-            onClick={onClose}
+            onClick={handleClose}
             type="button"
             className={styles.closeBtn}
           />
