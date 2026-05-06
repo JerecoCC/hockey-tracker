@@ -20,6 +20,13 @@
   pointer-events: none;
 }
 
+// Hidden on mobile — PageHeader renders the strip instead
+.tabListHiddenMobile {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
 // ── Individual tab button ──────────────────────────────────────────────
 .tab {
   position: relative;

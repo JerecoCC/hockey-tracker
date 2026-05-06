@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useLayoutEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
+import { useMobileTabs } from '@/context/MobileTabsContext';
 import styles from './Tabs.module.scss';
 
 export interface Tab {
@@ -23,16 +24,45 @@ const Tabs = (props: TabsProps) => {
   const { tabs, activeIndex, defaultIndex = 0, onTabChange, className, disabled = false } = props;
   const [internal, setInternal] = useState(defaultIndex);
   const active = activeIndex ?? internal;
+  const { setMobileTabs } = useMobileTabs();
+
+  // Keep a ref to the latest onTabChange so the context callback never goes stale.
+  const onTabChangeRef = useRef(onTabChange);
+  onTabChangeRef.current = onTabChange;
 
   const handleSelect = (i: number) => {
     setInternal(i);
     onTabChange?.(i);
   };
 
+  // Register with MobileTabsContext so PageHeader can render the tab strip.
+  // useLayoutEffect fires synchronously before paint → no flash on first render.
+  useLayoutEffect(() => {
+    const labels = tabs.map((t) => t.label);
+    setMobileTabs({
+      tabs: labels,
+      activeIndex: active,
+      onChange: (i) => {
+        setInternal(i);
+        onTabChangeRef.current?.(i);
+      },
+    });
+    return () => {
+      // Clear when this Tabs instance unmounts (navigating away).
+      setMobileTabs(null);
+    };
+    // Re-register whenever the active tab or the tab count changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, tabs.length]);
+
   return (
     <div className={[styles.tabs, className].filter(Boolean).join(' ')}>
       <div
-        className={[styles.tabList, disabled ? styles.tabListDisabled : '']
+        className={[
+          styles.tabList,
+          disabled ? styles.tabListDisabled : '',
+          styles.tabListHiddenMobile,
+        ]
           .filter(Boolean)
           .join(' ')}
         role="tablist"

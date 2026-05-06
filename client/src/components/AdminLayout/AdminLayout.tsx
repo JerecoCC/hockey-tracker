@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Outlet } from 'react-router-dom';
 import TitleRowContext from '@/context/TitleRowContext';
+import MobileTabsContext, { type MobileTabsState } from '@/context/MobileTabsContext';
 import AdminNav from '../AdminNav/AdminNav';
 import Icon from '../Icon/Icon';
 import PageHeader from '../PageHeader/PageHeader';
@@ -12,47 +13,51 @@ const AdminLayout = () => {
   // State ref-callback: triggers a re-render once the div mounts so the portal
   // target is available to all child TitleRow instances.
   const [titleRowContainer, setTitleRowContainer] = useState<HTMLDivElement | null>(null);
+  const [mobileTabs, setMobileTabs] = useState<MobileTabsState | null>(null);
+  const mobileTabsCtx = useMemo(() => ({ mobileTabs, setMobileTabs }), [mobileTabs]);
 
   return (
-    <TitleRowContext.Provider value={titleRowContainer}>
-      <div className={styles.page}>
-        {/* Mobile backdrop */}
-        {mobileOpen && (
-          <div
-            className={styles.overlay}
-            onClick={() => setMobileOpen(false)}
-            aria-hidden="true"
-          />
-        )}
-
-        <div className={styles.sidebarWrapper}>
-          <AdminNav
-            collapsed={collapsed}
-            onToggle={() => setCollapsed((c) => !c)}
-            mobileOpen={mobileOpen}
-            onMobileClose={() => setMobileOpen(false)}
-          />
-          <button
-            className={styles.sidebarToggle}
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-          >
-            <Icon
-              name={collapsed ? 'chevron_right' : 'chevron_left'}
-              size="0.75rem"
+    <MobileTabsContext.Provider value={mobileTabsCtx}>
+      <TitleRowContext.Provider value={titleRowContainer}>
+        <div className={styles.page}>
+          {/* Mobile backdrop */}
+          {mobileOpen && (
+            <div
+              className={styles.overlay}
+              onClick={() => setMobileOpen(false)}
+              aria-hidden="true"
             />
-          </button>
+          )}
+
+          <div className={styles.sidebarWrapper}>
+            <AdminNav
+              collapsed={collapsed}
+              onToggle={() => setCollapsed((c) => !c)}
+              mobileOpen={mobileOpen}
+              onMobileClose={() => setMobileOpen(false)}
+            />
+            <button
+              className={styles.sidebarToggle}
+              onClick={() => setCollapsed((c) => !c)}
+              aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+            >
+              <Icon
+                name={collapsed ? 'chevron_right' : 'chevron_left'}
+                size="0.75rem"
+              />
+            </button>
+          </div>
+          <div className={styles.scrollArea}>
+            <PageHeader onMenuToggle={() => setMobileOpen((o) => !o)} />
+            <main className={styles.main}>
+              {/* Portal target — TitleRow from any child page renders here */}
+              <div ref={setTitleRowContainer} />
+              <Outlet />
+            </main>
+          </div>
         </div>
-        <div className={styles.scrollArea}>
-          <PageHeader onMenuToggle={() => setMobileOpen((o) => !o)} />
-          <main className={styles.main}>
-            {/* Portal target — TitleRow from any child page renders here */}
-            <div ref={setTitleRowContainer} />
-            <Outlet />
-          </main>
-        </div>
-      </div>
-    </TitleRowContext.Provider>
+      </TitleRowContext.Provider>
+    </MobileTabsContext.Provider>
   );
 };
 
