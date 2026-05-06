@@ -76,4 +76,8 @@ $bg-page: #0f172a;
   margin: 0 auto;
   padding: $space-4xl;
   flex: 1;
+
+  @media (max-width: 768px) {
+    padding: $space-2xl $space-lg;
+  }
 }
