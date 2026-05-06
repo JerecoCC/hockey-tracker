@@ -141,4 +141,16 @@ $nav-collapsed-width: 56px;
   .collapsed {
     width: $nav-width;
   }
+
+  // Restore left-aligned item layout when the slideout is open
+  .collapsed.mobileOpen {
+    .navItem {
+      justify-content: flex-start;
+      padding: $space-md $space-xl;
+
+      &.active {
+        padding-left: calc(#{$space-xl} - 3px);
+      }
+    }
+  }
 }
