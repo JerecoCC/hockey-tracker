@@ -155,6 +155,11 @@
     animation: slideDownSheet $transition-layout ease forwards;
   }
 
+  // Extra bottom padding for home-bar / thumb comfort
+  .footer {
+    padding-bottom: $space-4xl;
+  }
+
   // Keep footer actions stacked full-width for easier tapping
   .footerRow {
     flex-direction: column-reverse;
