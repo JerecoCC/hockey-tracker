@@ -4,8 +4,11 @@ import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/login/Login';
 import SignupPage from './pages/signup/Signup';
-import DashboardPage from './pages/dashboard/Dashboard';
 import AdminLayout from './components/AdminLayout/AdminLayout';
+import UserLayout from './components/UserLayout/UserLayout';
+import UserDashboard from './pages/user/dashboard/UserDashboard';
+import UserGames from './pages/user/games/UserGames';
+import UserGameDetailsPage from './pages/user/games/game-details/UserGameDetailsPage';
 import LeaguesPage from './pages/admin/leagues/Leagues';
 import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
@@ -92,12 +95,16 @@ const router = createBrowserRouter([
   },
   { path: '/auth/callback', element: <AuthCallbackPage /> },
   {
-    path: '/dashboard',
     element: (
       <PrivateRoute>
-        <DashboardPage />
+        <UserLayout />
       </PrivateRoute>
     ),
+    children: [
+      { path: '/dashboard', element: <UserDashboard /> },
+      { path: '/games', element: <UserGames /> },
+      { path: '/games/:id', element: <UserGameDetailsPage /> },
+    ],
   },
   {
     element: (
@@ -124,7 +131,10 @@ const router = createBrowserRouter([
         path: '/admin/leagues/:leagueId/seasons/:seasonId/games/:id',
         element: <GameDetailsPage />,
       },
-      { path: '/admin/players/:id', element: <PlayerDetailsPage /> },
+      {
+        path: '/admin/leagues/:leagueId/teams/:teamId/players/:id',
+        element: <PlayerDetailsPage />,
+      },
     ],
   },
   {

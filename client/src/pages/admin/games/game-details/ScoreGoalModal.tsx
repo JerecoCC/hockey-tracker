@@ -56,7 +56,7 @@ const ScoreGoalModal = ({
   useEffect(() => {
     if (open) {
       if (editGoal) {
-        setGoalTeam(editGoal.team_id === game.away_team_id ? 'away' : 'home');
+        setGoalTeam(editGoal.team_id === game.away_team.id ? 'away' : 'home');
         setGoalPeriodTime(editGoal.period_time ?? '');
         setGoalType(editGoal.goal_type === 'empty-net' ? 'even-strength' : editGoal.goal_type);
         setGoalEmptyNet(editGoal.empty_net || editGoal.goal_type === 'empty-net');
@@ -73,7 +73,7 @@ const ScoreGoalModal = ({
         setGoalAssist2Id('');
       }
     }
-  }, [open, editGoal, game.away_team_id]);
+  }, [open, editGoal, game.away_team.id]);
 
   const handleTeamChange = (team: 'away' | 'home') => {
     setGoalTeam(team);
@@ -86,6 +86,24 @@ const ScoreGoalModal = ({
   const otGoalExists =
     period === 'OT' && goals.some((g) => g.period === 'OT' && g.id !== editGoal?.id);
 
+  /** Latest period_time already recorded for this period (excluding the goal being edited). */
+  const toSecs = (t: string | null | undefined) => {
+    if (!t) return 0;
+    const [m, s] = t.split(':').map(Number);
+    return (m || 0) * 60 + (s || 0);
+  };
+  const latestPeriodTime = goals
+    .filter((g) => g.period === period && g.id !== editGoal?.id)
+    .reduce<string | null>((max, g) => {
+      if (!g.period_time) return max;
+      return max === null || toSecs(g.period_time) > toSecs(max) ? g.period_time : max;
+    }, null);
+
+  const periodTimeError =
+    goalPeriodTime && latestPeriodTime && toSecs(goalPeriodTime) < toSecs(latestPeriodTime)
+      ? `Must be ${latestPeriodTime} or later`
+      : null;
+
   const teamRoster = goalTeam === 'away' ? awayRoster : goalTeam === 'home' ? homeRoster : [];
   const playerOptions = teamRoster.map((e) => ({
     value: e.player_id,
@@ -96,10 +114,10 @@ const ScoreGoalModal = ({
   }));
 
   const teamOptions = (['away', 'home'] as const).map((side) => {
-    const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
-    const code = side === 'away' ? game.away_team_code : game.home_team_code;
-    const primary = side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
-    const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
+    const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
+    const code = side === 'away' ? game.away_team.code : game.home_team.code;
+    const primary = side === 'away' ? game.away_team.primary_color : game.home_team.primary_color;
+    const text = side === 'away' ? game.away_team.text_color : game.home_team.text_color;
     return {
       value: side,
       label: (
@@ -126,7 +144,7 @@ const ScoreGoalModal = ({
 
   const handleConfirm = async () => {
     if (!goalTeam) return;
-    const teamId = goalTeam === 'away' ? game.away_team_id : game.home_team_id;
+    const teamId = goalTeam === 'away' ? game.away_team.id : game.home_team.id;
     const payload: PostGoalData = {
       team_id: teamId,
       period,
@@ -156,7 +174,9 @@ const ScoreGoalModal = ({
       title={editGoal ? 'Edit Goal' : 'Score Goal'}
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : editGoal ? 'Save Changes' : 'Record Goal'}
-      confirmDisabled={busy || submitting || !goalTeam || !goalScorerId || otGoalExists}
+      confirmDisabled={
+        busy || submitting || !goalTeam || !goalScorerId || otGoalExists || !!periodTimeError
+      }
       busy={submitting}
       onConfirm={handleConfirm}
     >
@@ -182,6 +202,9 @@ const ScoreGoalModal = ({
               onChange={setGoalPeriodTime}
               disabled={submitting}
             />
+            {periodTimeError && (
+              <span className={styles.goalPeriodTimeError}>{periodTimeError}</span>
+            )}
           </div>
           <div className={`${styles.goalFormField} ${styles.goalTypeField}`}>
             <label className={styles.goalFormLabel}>Goal Type</label>
@@ -222,7 +245,7 @@ const ScoreGoalModal = ({
             placeholder="— Select scorer —"
             onChange={setGoalScorerId}
             searchable
-            disabled={submitting}
+            disabled={submitting || !goalTeam}
           />
         </div>
         <div className={styles.goalFormRow}>
@@ -234,7 +257,7 @@ const ScoreGoalModal = ({
               placeholder="— Optional —"
               onChange={setGoalAssist1Id}
               searchable
-              disabled={submitting}
+              disabled={submitting || !goalTeam}
             />
           </div>
           <div className={styles.goalFormField}>
@@ -245,7 +268,7 @@ const ScoreGoalModal = ({
               placeholder="— Optional —"
               onChange={setGoalAssist2Id}
               searchable
-              disabled={submitting}
+              disabled={submitting || !goalTeam}
             />
           </div>
         </div>

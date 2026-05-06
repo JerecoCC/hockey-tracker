@@ -220,15 +220,15 @@ const ScoreImageModal = ({
     setGenerating(true);
     try {
       const [awayImg, homeImg, heroImg] = await Promise.all([
-        game.away_team_logo ? loadImage(game.away_team_logo) : Promise.resolve(null),
-        game.home_team_logo ? loadImage(game.home_team_logo) : Promise.resolve(null),
+        game.away_team.logo ? loadImage(game.away_team.logo) : Promise.resolve(null),
+        game.home_team.logo ? loadImage(game.home_team.logo) : Promise.resolve(null),
         heroFile ? loadLocalImage(heroFile) : Promise.resolve(null),
       ]);
 
       const awayWon = liveAwayScore > liveHomeScore;
       const homeWon = liveHomeScore > liveAwayScore;
-      const awayPrimary = game.away_team_primary_color;
-      const homePrimary = game.home_team_primary_color;
+      const awayPrimary = game.away_team.primary_color;
+      const homePrimary = game.home_team.primary_color;
 
       // ════════════════════════════════════════════════════════════════════════
       // SECTION 1 — HERO  (y 0 → HERO_H)
@@ -297,8 +297,8 @@ const ScoreImageModal = ({
           HERO_H * 0.5,
           400,
           awayPrimary,
-          game.away_team_text_color,
-          game.away_team_code,
+          game.away_team.text_color,
+          game.away_team.code,
           0.13,
         );
         drawLogo(
@@ -308,8 +308,8 @@ const ScoreImageModal = ({
           HERO_H * 0.5,
           400,
           homePrimary,
-          game.home_team_text_color,
-          game.home_team_code,
+          game.home_team.text_color,
+          game.home_team.code,
           0.13,
         );
       }
@@ -348,9 +348,9 @@ const ScoreImageModal = ({
       ctx.textBaseline = 'bottom';
       ctx.fillStyle = 'rgba(248,250,252,0.95)';
       ctx.textAlign = 'left';
-      ctx.fillText(game.away_team_name, 52, HERO_H - 44);
+      ctx.fillText(game.away_team.name, 52, HERO_H - 44);
       ctx.textAlign = 'right';
-      ctx.fillText(game.home_team_name, W - 52, HERO_H - 44);
+      ctx.fillText(game.home_team.name, W - 52, HERO_H - 44);
 
       // Bottom split color bar
       ctx.fillStyle = awayPrimary;
@@ -414,8 +414,8 @@ const ScoreImageModal = ({
         scoreMidY - 18,
         logoSize,
         awayPrimary,
-        game.away_team_text_color,
-        game.away_team_code,
+        game.away_team.text_color,
+        game.away_team.code,
       );
       drawLogo(
         ctx,
@@ -424,8 +424,8 @@ const ScoreImageModal = ({
         scoreMidY - 18,
         logoSize,
         homePrimary,
-        game.home_team_text_color,
-        game.home_team_code,
+        game.home_team.text_color,
+        game.home_team.code,
       );
 
       // Team codes beneath logos
@@ -433,8 +433,8 @@ const ScoreImageModal = ({
       ctx.textBaseline = 'top';
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(148,163,184,0.9)';
-      ctx.fillText(game.away_team_code, awayLogoX, scoreMidY + logoSize / 2 - 6);
-      ctx.fillText(game.home_team_code, homeLogoX, scoreMidY + logoSize / 2 - 6);
+      ctx.fillText(game.away_team.code, awayLogoX, scoreMidY + logoSize / 2 - 6);
+      ctx.fillText(game.home_team.code, homeLogoX, scoreMidY + logoSize / 2 - 6);
 
       // Score numbers
       ctx.textBaseline = 'middle';
@@ -482,7 +482,7 @@ const ScoreImageModal = ({
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${game.away_team_code}-vs-${game.home_team_code}-final.png`;
+      a.download = `${game.away_team.code}-vs-${game.home_team.code}-final.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

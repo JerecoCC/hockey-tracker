@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
   try {
     const groups = await sql`
       SELECT
-        g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at, g.is_auto,
+        g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at, g.is_auto, g.role,
         COALESCE(
           json_agg(
             json_build_object('id', t.id, 'name', ti.name, 'code', ti.code, 'logo', ti.logo,
@@ -53,11 +53,14 @@ router.get('/', async (req, res) => {
 // POST /api/admin/groups  – create a group
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { league_id, name, parent_id, sort_order } = req.body;
+  const { league_id, name, parent_id, sort_order, role } = req.body;
 
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
+  }
+  if (role !== undefined && role !== null && !['conference', 'division'].includes(role)) {
+    return res.status(400).json({ error: 'role must be conference, division, or null' });
   }
 
   // Validate parent belongs to the same league
@@ -77,9 +80,9 @@ router.post('/', async (req, res) => {
 
   try {
     const rows = await sql`
-      INSERT INTO groups (league_id, parent_id, name, sort_order)
-      VALUES (${league_id}, ${parent_id ?? null}, ${name.trim()}, ${sort_order ?? 0})
-      RETURNING id, league_id, parent_id, name, sort_order, created_at
+      INSERT INTO groups (league_id, parent_id, name, sort_order, role)
+      VALUES (${league_id}, ${parent_id ?? null}, ${name.trim()}, ${sort_order ?? 0}, ${role ?? null})
+      RETURNING id, league_id, parent_id, name, sort_order, created_at, role
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -94,10 +97,13 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, parent_id, sort_order } = req.body;
+  const { name, parent_id, sort_order, role } = req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
+  }
+  if (role !== undefined && role !== null && !['conference', 'division'].includes(role)) {
+    return res.status(400).json({ error: 'role must be conference, division, or null' });
   }
 
   try {
@@ -118,14 +124,16 @@ router.patch('/:id', async (req, res) => {
 
     const parentInBody = 'parent_id' in req.body;
     const sortInBody   = 'sort_order' in req.body;
+    const roleInBody   = 'role' in req.body;
 
     const rows = await sql`
       UPDATE groups SET
         name       = COALESCE(${name?.trim() ?? null}, name),
         parent_id  = CASE WHEN ${parentInBody} THEN ${parent_id ?? null} ELSE parent_id END,
-        sort_order = CASE WHEN ${sortInBody}   THEN ${sort_order ?? 0}  ELSE sort_order END
+        sort_order = CASE WHEN ${sortInBody}   THEN ${sort_order ?? 0}  ELSE sort_order END,
+        role       = CASE WHEN ${roleInBody}   THEN ${role ?? null}     ELSE role       END
       WHERE id = ${id}
-      RETURNING id, league_id, parent_id, name, sort_order, created_at
+      RETURNING id, league_id, parent_id, name, sort_order, created_at, role
     `;
     return res.json(rows[0]);
   } catch (err) {

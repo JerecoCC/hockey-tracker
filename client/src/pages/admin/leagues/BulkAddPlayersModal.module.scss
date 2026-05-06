@@ -1,5 +1,5 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Scrollable player list ────────────────────────────────────────────────
 .playerList {
@@ -76,11 +76,4 @@
     opacity: 0.25;
     cursor: not-allowed;
   }
-}
-
-// ── Add player row ────────────────────────────────────────────────────────
-.addRow {
-  padding-top: $space-md;
-  border-top: 1px solid $border;
-  margin-top: $space-xs;
 }

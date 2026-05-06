@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Badge, { type BadgeIntent } from '../Badge/Badge';
 import Button, { type ButtonIntent } from '../Button/Button';
@@ -65,6 +66,8 @@ interface Props {
    * entries (false | null | undefined) are ignored, enabling conditional buttons.
    */
   actions?: (ListItemAction | false | null | undefined)[];
+  /** When provided, the entire row becomes a stretched link (z-index 0) so action buttons (z-index 1) still intercept their own clicks. */
+  href?: string;
   className?: string;
 }
 
@@ -87,6 +90,7 @@ const ListItem = ({
   subtitle,
   note,
   actions,
+  href,
   className,
 }: Props) => {
   const hasExtra = !!subtitle || !!note;
@@ -95,7 +99,11 @@ const ListItem = ({
   const codeValue = rightContent?.type === 'code' ? rightContent.value : null;
 
   return (
-    <li className={[styles.item, className].filter(Boolean).join(' ')}>
+    <li
+      className={[styles.item, href ? styles.itemClickable : '', className]
+        .filter(Boolean)
+        .join(' ')}
+    >
       {/* Leading image (e.g. team logo shown to the left of a player photo) */}
       {(leadingImage || leadingImagePlaceholder) &&
         (leadingImage ? (
@@ -169,6 +177,16 @@ const ListItem = ({
           <span className={styles.code}>{rightContent.value}</span>
         )
       ) : null}
+
+      {/* Stretched link — sits at z-index 0 so action buttons (z-index 1) intercept their own clicks */}
+      {href && (
+        <Link
+          to={href}
+          className={styles.itemLink}
+          tabIndex={-1}
+          aria-hidden="true"
+        />
+      )}
 
       {/* Actions (fade in on hover via ActionOverlay) */}
       {visibleActions.length > 0 && (

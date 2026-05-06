@@ -1,10 +1,11 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 .form {
   display: flex;
   flex-direction: column;
   gap: $space-lg;
+  padding-bottom: $space-xl;
 }
 
 // Side-by-side pair (e.g. Position / Shoots, Height / Weight)
@@ -63,4 +64,54 @@
   display: grid;
   grid-template-columns: 5rem 1fr 1fr;
   gap: $space-md;
+}
+
+// Jersey # (narrow) + single date field on one row
+.jerseyDateRow {
+  display: grid;
+  grid-template-columns: 5rem 1fr;
+  gap: $space-md;
+}
+
+// Jersey number history list shown inside ChangeJerseyModal
+.historySection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.historyLabel {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.historyEntry {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  font-size: $font-sm;
+  color: $text-dim;
+  padding: $space-xs $space-sm;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+}
+
+.historyEntryNumber {
+  font-weight: 700;
+  color: $text-body;
+  min-width: 2.5rem;
+}
+
+.historyEntryDates {
+  flex: 1;
 }

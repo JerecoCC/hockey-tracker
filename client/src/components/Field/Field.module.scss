@@ -1,5 +1,5 @@
-@use "../../styles/colors" as *;
-@use "../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Wrapper ─────────────────────────────────────────────────────────────
 .label {
@@ -25,6 +25,15 @@
 
 .required {
   color: #f87171;
+}
+
+// ── Validation error message ─────────────────────────────────────────────
+.errorMsg {
+  font-size: $font-xs;
+  font-weight: 500;
+  color: $danger-light;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 // ── Field base ──────────────────────────────────────────────────────────

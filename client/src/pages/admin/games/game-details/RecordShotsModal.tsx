@@ -1,4 +1,4 @@
-import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { Control, FieldArrayWithId } from 'react-hook-form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
@@ -6,7 +6,9 @@ import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
-import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
+import { type GoalRecord } from '@/hooks/useGameGoals';
+import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
 
 export type ShotsNextAction =
@@ -17,7 +19,7 @@ type ShotsFormValues = {
   away_shots: string;
   home_shots: string;
   end_time: string;
-  goalies: Array<{ shots_against: string; saves: string }>;
+  goalies: Array<{ shots_against: string }>;
 };
 
 const PERIOD_LABEL: Record<string, string> = {
@@ -39,6 +41,18 @@ const PERIOD_TITLE_LABEL: Record<string, string> = {
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
+const isoToETHHMM = (iso: string): string => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const h = parts.find((p) => p.type === 'hour')?.value ?? '';
+  const m = parts.find((p) => p.type === 'minute')?.value ?? '';
+  return h && m ? `${h}:${m}` : '';
+};
+
 const etHHMMtoISO = (hhmm: string): string => {
   const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
     new Date(),
@@ -52,12 +66,58 @@ const etHHMMtoISO = (hhmm: string): string => {
   return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
 };
 
-interface UpsertGoalieData {
-  goalie_id: string;
-  team_id: string;
-  shots_against: number;
-  saves: number;
-}
+const PERIOD_ORDER = ['1', '2', '3', 'OT', 'SO'];
+const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
+
+/**
+ * Computes the expected shots-against for a goalie in a game:
+ * opposing team's total shots (for the periods the goalie played) minus empty-net goals.
+ * Respects goalie substitutions via `entered_period`.
+ */
+const computeAutoSA = (
+  goalie: GameRosterEntry,
+  goalieStats: GoalieStatRecord[],
+  game: GameRecord,
+  periodShots: { period: string; home_shots: number; away_shots: number }[],
+  goals: GoalRecord[],
+): string => {
+  const isAway = goalie.team_id === game.away_team.id;
+  const opposingTeamId = isAway ? game.home_team.id : game.away_team.id;
+
+  const thisStat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
+  const enteredPeriod = thisStat?.entered_period ?? null;
+
+  // Find a substitute on the same team (has an entered_period)
+  const subStat = goalieStats.find(
+    (gs) =>
+      gs.team_id === goalie.team_id &&
+      gs.goalie_id !== goalie.player_id &&
+      gs.entered_period !== null,
+  );
+
+  const playedPeriod = (p: string): boolean => {
+    if (enteredPeriod !== null) {
+      // This goalie is a sub — played from enteredPeriod onwards
+      return periodIdx(p) >= periodIdx(enteredPeriod);
+    }
+    if (subStat) {
+      // Starter with a sub — played until the sub entered
+      return periodIdx(p) < periodIdx(subStat.entered_period!);
+    }
+    // Sole goalie — played all periods
+    return true;
+  };
+
+  const totalOpposingShots = periodShots
+    .filter((ps) => playedPeriod(ps.period))
+    .reduce((sum, ps) => sum + (isAway ? ps.home_shots : ps.away_shots), 0);
+
+  const emptyNetGoals = goals.filter(
+    (g) => g.team_id === opposingTeamId && g.empty_net && playedPeriod(g.period),
+  ).length;
+
+  return String(Math.max(0, totalOpposingShots - emptyNetGoals));
+};
 
 interface Props {
   open: boolean;
@@ -69,9 +129,11 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
+  goals: GoalRecord[];
+  lineup: LineupEntry[];
   onClose: () => void;
   updatePeriodShots: (period: string, home: number, away: number) => Promise<boolean | undefined>;
-  upsertGoalieStat: (data: UpsertGoalieData) => Promise<void>;
+  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<void>;
   updateGameInfo: (data: {
     time_end?: string | null;
     shootout_first_team_id?: string | null;
@@ -90,6 +152,8 @@ const RecordShotsModal = ({
   awayRoster,
   homeRoster,
   goalieStats,
+  goals,
+  lineup,
   onClose,
   updatePeriodShots,
   upsertGoalieStat,
@@ -98,55 +162,114 @@ const RecordShotsModal = ({
   onEndGameReady,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
-  const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>(null);
+  const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>('home');
+
+  const allRosterGoalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
+  const lineupGoalieIds = new Set(
+    lineup.filter((l) => l.position_slot === 'G').map((l) => l.player_id),
+  );
+  // Also treat old games as having a substitution when a team has 2+ goalie stat
+  // rows but no entered_period recorded (substitution tracking added later).
+  const hasSubstitution =
+    goalieStats.some((gs) => gs.entered_period !== null) ||
+    [game.away_team.id, game.home_team.id].some(
+      (teamId) => goalieStats.filter((gs) => gs.team_id === teamId).length > 1,
+    );
+  const hasLineupStarters = allRosterGoalies.some((e) => lineupGoalieIds.has(e.player_id));
 
   const goalieRosterList = showGoalies
-    ? [...awayRoster, ...homeRoster].filter((e) => e.position === 'G')
+    ? hasLineupStarters
+      ? allRosterGoalies.filter(
+          (e) =>
+            lineupGoalieIds.has(e.player_id) ||
+            (hasSubstitution && goalieStats.some((gs) => gs.goalie_id === e.player_id)),
+        )
+      : allRosterGoalies
     : [];
 
-  const { control, reset, getValues, watch } = useForm<ShotsFormValues>({
+  const { control, reset, getValues, watch, setValue } = useForm<ShotsFormValues>({
     defaultValues: { away_shots: '', home_shots: '', end_time: '', goalies: [] },
   });
   const { fields: goalieFields } = useFieldArray({ control, name: 'goalies' });
 
+  // Guard to prevent the shots-reactive effect from firing immediately after reset.
+  const justResetRef = useRef(false);
+
   useEffect(() => {
     if (open) {
       const existing = game.period_shots.find((ps) => ps.period === period);
+      const initAway = existing?.away_shots ?? 0;
+      const initHome = existing?.home_shots ?? 0;
+      // Merge saved shots with the current-period's initial form values so
+      // computeAutoSA sees the same numbers the shots fields will show.
+      const effectivePeriodShots = [
+        ...game.period_shots.filter((ps) => ps.period !== period),
+        { period, away_shots: initAway, home_shots: initHome },
+      ];
+      justResetRef.current = true;
       reset({
         away_shots: existing ? String(existing.away_shots) : '',
         home_shots: existing ? String(existing.home_shots) : '',
-        end_time: '',
+        end_time: isEndGame && game.time_end ? isoToETHHMM(game.time_end) : '',
         goalies: goalieRosterList.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          return {
-            shots_against: stat ? String(stat.shots_against) : '',
-            saves: stat ? String(stat.saves) : '',
-          };
+          if (stat) return { shots_against: String(stat.shots_against) };
+          if (isEndGame)
+            return {
+              shots_against: computeAutoSA(g, goalieStats, game, effectivePeriodShots, goals),
+            };
+          return { shots_against: '' };
         }),
       });
-      setSoFirstTeam(null);
+      setSoFirstTeam('home');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+
+  const awayShots = watch('away_shots');
+  const homeShots = watch('home_shots');
+
+  // Reactively recompute goalie SA whenever the shots fields change.
+  useEffect(() => {
+    if (justResetRef.current) {
+      justResetRef.current = false;
+      return;
+    }
+    if (!isEndGame || !open) return;
+    const formAway = parseInt(awayShots || '0', 10);
+    const formHome = parseInt(homeShots || '0', 10);
+    const effectivePeriodShots = [
+      ...game.period_shots.filter((ps) => ps.period !== period),
+      {
+        period,
+        away_shots: isNaN(formAway) ? 0 : formAway,
+        home_shots: isNaN(formHome) ? 0 : formHome,
+      },
+    ];
+    goalieRosterList.forEach((g, i) => {
+      setValue(
+        `goalies.${i}.shots_against`,
+        computeAutoSA(g, goalieStats, game, effectivePeriodShots, goals),
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awayShots, homeShots]);
 
   const goalieFormValues = watch('goalies');
   const endTimeValue = watch('end_time');
   const isEndGame = nextAction.type === 'end-game';
 
+  // When there's a substitution, shots from the entry period may be split between
+  // two goalies — require the admin to confirm/adjust the pre-filled values.
   const goalieStatsValid =
     !showGoalies ||
     goalieRosterList.length === 0 ||
+    !hasSubstitution ||
     (goalieRosterList.some(
-      (g, i) =>
-        g.team_id === game.away_team_id &&
-        goalieFormValues[i]?.shots_against !== '' &&
-        goalieFormValues[i]?.saves !== '',
+      (g, i) => g.team_id === game.away_team.id && goalieFormValues[i]?.shots_against !== '',
     ) &&
       goalieRosterList.some(
-        (g, i) =>
-          g.team_id === game.home_team_id &&
-          goalieFormValues[i]?.shots_against !== '' &&
-          goalieFormValues[i]?.saves !== '',
+        (g, i) => g.team_id === game.home_team.id && goalieFormValues[i]?.shots_against !== '',
       ));
 
   const endTimeValid = !isEndGame || !!endTimeValue;
@@ -165,17 +288,14 @@ const RecordShotsModal = ({
         ? nextAction.label
         : 'Confirm';
 
-  const handleConfirm = async () => {
+  const handleConfirm = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     const { away_shots, home_shots, end_time, goalies: goalieVals } = getValues();
     const isSOEndGame = period === 'SO' && isEndGame;
     setSubmitting(true);
     if (!isSOEndGame) {
-      const away = parseInt(away_shots, 10);
-      const home = parseInt(home_shots, 10);
-      if (isNaN(away) || isNaN(home)) {
-        setSubmitting(false);
-        return;
-      }
+      const away = parseInt(away_shots || '0', 10);
+      const home = parseInt(home_shots || '0', 10);
       const ok = await updatePeriodShots(period, home, away);
       if (!ok) {
         setSubmitting(false);
@@ -188,20 +308,18 @@ const RecordShotsModal = ({
         const row = goalieVals[i];
         if (!row || !goalie) continue;
         const shots = parseInt(row.shots_against, 10);
-        const saves = parseInt(row.saves, 10);
-        if (!isNaN(shots) && !isNaN(saves)) {
+        if (!isNaN(shots)) {
           await upsertGoalieStat({
             goalie_id: goalie.player_id,
             team_id: goalie.team_id,
             shots_against: shots,
-            saves,
           });
         }
       }
     }
     if (isEndGame && end_time) await updateGameInfo({ time_end: etHHMMtoISO(end_time) });
     if (showShootsFirst && soFirstTeam) {
-      const firstTeamId = soFirstTeam === 'away' ? game.away_team_id : game.home_team_id;
+      const firstTeamId = soFirstTeam === 'away' ? game.away_team.id : game.home_team.id;
       await updateGameInfo({ shootout_first_team_id: firstTeamId });
     }
     setSubmitting(false);
@@ -220,22 +338,29 @@ const RecordShotsModal = ({
       onClose={onClose}
       confirmLabel={confirmLabel}
       confirmIcon={isEndGame ? 'star' : 'flag'}
-      onConfirm={handleConfirm}
+      confirmForm="record-shots-form"
       confirmDisabled={submitting || !goalieStatsValid || !endTimeValid || !shootsFirstValid}
       busy={submitting}
     >
-      <RecordShotsBody
-        isEndGame={isEndGame}
-        period={period}
-        game={game}
-        control={control}
-        goalieFields={goalieFields}
-        goalieRosterList={goalieRosterList}
-        showShootsFirst={showShootsFirst}
-        soFirstTeam={soFirstTeam}
-        setSoFirstTeam={setSoFirstTeam}
-        submitting={submitting}
-      />
+      <form
+        id="record-shots-form"
+        onSubmit={handleConfirm}
+      >
+        <RecordShotsBody
+          isEndGame={isEndGame}
+          period={period}
+          game={game}
+          control={control}
+          goalieFields={goalieFields}
+          goalieRosterList={goalieRosterList}
+          hasSubstitution={hasSubstitution}
+          lineup={lineup}
+          showShootsFirst={showShootsFirst}
+          soFirstTeam={soFirstTeam}
+          setSoFirstTeam={setSoFirstTeam}
+          submitting={submitting}
+        />
+      </form>
     </Modal>
   );
 };
@@ -248,6 +373,8 @@ interface BodyProps {
   control: Control<ShotsFormValues, any>;
   goalieFields: FieldArrayWithId<ShotsFormValues, 'goalies'>[];
   goalieRosterList: GameRosterEntry[];
+  hasSubstitution: boolean;
+  lineup: LineupEntry[];
   showShootsFirst: boolean;
   soFirstTeam: 'away' | 'home' | null;
   setSoFirstTeam: Dispatch<SetStateAction<'away' | 'home' | null>>;
@@ -261,6 +388,8 @@ const RecordShotsBody = ({
   control,
   goalieFields,
   goalieRosterList,
+  hasSubstitution,
+  lineup,
   showShootsFirst,
   soFirstTeam,
   setSoFirstTeam,
@@ -269,20 +398,20 @@ const RecordShotsBody = ({
   const teamRows = [
     {
       key: 'away',
-      logo: game.away_team_logo,
-      code: game.away_team_code,
-      name: game.away_team_name,
-      primaryColor: game.away_team_primary_color,
-      textColor: game.away_team_text_color,
+      logo: game.away_team.logo,
+      code: game.away_team.code,
+      name: game.away_team.name,
+      primaryColor: game.away_team.primary_color,
+      textColor: game.away_team.text_color,
       fieldName: 'away_shots' as const,
     },
     {
       key: 'home',
-      logo: game.home_team_logo,
-      code: game.home_team_code,
-      name: game.home_team_name,
-      primaryColor: game.home_team_primary_color,
-      textColor: game.home_team_text_color,
+      logo: game.home_team.logo,
+      code: game.home_team.code,
+      name: game.home_team.name,
+      primaryColor: game.home_team.primary_color,
+      textColor: game.home_team.text_color,
       fieldName: 'home_shots' as const,
     },
   ];
@@ -312,17 +441,6 @@ const RecordShotsBody = ({
 
   return (
     <div className={styles.shotsModalBody}>
-      {isEndGame && (
-        <Field
-          label="End Time"
-          required
-          type="timepicker"
-          control={control}
-          name="end_time"
-          disabled={submitting}
-          autoFocus
-        />
-      )}
       {!(isEndGame && period === 'SO') && (
         <>
           <hr className={styles.lineupDivider} />
@@ -355,12 +473,22 @@ const RecordShotsBody = ({
                   min={0}
                   disabled={submitting}
                   transform={(v) => v.replace(/[^0-9]/g, '')}
-                  autoFocus={!isEndGame && rowIdx === 0}
+                  autoFocus={rowIdx === 0}
                 />
               </div>
             </div>
           ))}
         </>
+      )}
+      {isEndGame && (
+        <Field
+          label="End Time"
+          required
+          type="timepicker"
+          control={control}
+          name="end_time"
+          disabled={submitting}
+        />
       )}
       {showShootsFirst && (
         <>
@@ -370,11 +498,11 @@ const RecordShotsBody = ({
             value={soFirstTeam ?? ''}
             onChange={(v) => setSoFirstTeam(v as 'away' | 'home')}
             options={(['away', 'home'] as const).map((side) => {
-              const logo = side === 'away' ? game.away_team_logo : game.home_team_logo;
-              const code = side === 'away' ? game.away_team_code : game.home_team_code;
+              const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
+              const code = side === 'away' ? game.away_team.code : game.home_team.code;
               const primary =
-                side === 'away' ? game.away_team_primary_color : game.home_team_primary_color;
-              const text = side === 'away' ? game.away_team_text_color : game.home_team_text_color;
+                side === 'away' ? game.away_team.primary_color : game.home_team.primary_color;
+              const text = side === 'away' ? game.away_team.text_color : game.home_team.text_color;
               return {
                 value: side,
                 label: (
@@ -396,28 +524,34 @@ const RecordShotsBody = ({
           />
         </>
       )}
-      {goalieFields.length > 0 && (
+      {/* Goalie SA: auto-computed and saved silently when no sub; shown for manual
+          confirmation when a substitution occurred (shots may split mid-period). */}
+      {goalieFields.length > 0 && hasSubstitution && (
         <>
           <hr className={styles.lineupDivider} />
           <div className={styles.shotsGoalieHeader}>
             <span className={styles.goalFormLabel}>Goalie Stats</span>
             <div className={styles.shotsGoalieInputs}>
               <span className={styles.shotsGoalieColLabel}>SA</span>
-              <span className={styles.shotsGoalieColLabel}>SV</span>
             </div>
           </div>
           {goalieFields.map((field, i) => {
             const goalie = goalieRosterList[i];
             if (!goalie) return null;
-            const isAway = goalie.team_id === game.away_team_id;
-            const logo = isAway ? game.away_team_logo : game.home_team_logo;
-            const code = isAway ? game.away_team_code : game.home_team_code;
-            const primary = isAway ? game.away_team_primary_color : game.home_team_primary_color;
-            const text = isAway ? game.away_team_text_color : game.home_team_text_color;
+            const isAway = goalie.team_id === game.away_team.id;
+            const logo = isAway ? game.away_team.logo : game.home_team.logo;
+            const code = isAway ? game.away_team.code : game.home_team.code;
+            const primary = isAway ? game.away_team.primary_color : game.home_team.primary_color;
+            const text = isAway ? game.away_team.text_color : game.home_team.text_color;
+            const isStarter = lineup.some(
+              (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
+            );
             return (
               <div
                 key={field.id}
-                className={styles.shotsGoalieRow}
+                className={[styles.shotsGoalieRow, isStarter ? styles.shotsGoalieRowStarter : '']
+                  .filter(Boolean)
+                  .join(' ')}
               >
                 <span className={styles.goalieNameCell}>
                   {renderTeamLogo(
@@ -456,15 +590,6 @@ const RecordShotsBody = ({
                     type="number"
                     control={control}
                     name={`goalies.${i}.shots_against`}
-                    placeholder="0"
-                    min={0}
-                    disabled={submitting}
-                    transform={(v) => v.replace(/[^0-9]/g, '')}
-                  />
-                  <Field
-                    type="number"
-                    control={control}
-                    name={`goalies.${i}.saves`}
                     placeholder="0"
                     min={0}
                     disabled={submitting}

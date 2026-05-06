@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import Button from '@/components/Button/Button';
+import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
@@ -16,7 +16,10 @@ const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
   { value: 'LW', label: 'Left Wing' },
   { value: 'RW', label: 'Right Wing' },
+  { value: 'F', label: 'Forward' },
   { value: 'D', label: 'Defense' },
+  { value: 'LD', label: 'Left Defense' },
+  { value: 'RD', label: 'Right Defense' },
   { value: 'G', label: 'Goalie' },
 ];
 
@@ -185,19 +188,11 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
             ))}
           </div>
 
-          <div className={styles.addRow}>
-            <Button
-              type="button"
-              variant="ghost"
-              intent="neutral"
-              icon="add"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => append({ ...EMPTY_ROW })}
-            >
-              Create Player
-            </Button>
-          </div>
+          <AddRowBar
+            label="Create Player"
+            onClick={() => append({ ...EMPTY_ROW })}
+            disabled={isSubmitting}
+          />
         </form>
       </Modal>
 

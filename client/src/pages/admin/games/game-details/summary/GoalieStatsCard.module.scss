@@ -1,0 +1,129 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+
+.goalieTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: $font-sm;
+}
+
+.goalieThTeam {
+  text-align: left;
+  padding: $space-xs $space-md $space-xs 0;
+  color: $text-dim;
+  font-weight: 600;
+  font-size: $font-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.goalieTh {
+  text-align: center;
+  padding: $space-xs $space-md;
+  color: $text-dim;
+  font-weight: 600;
+  font-size: $font-xs;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.goalieRow {
+  position: relative;
+  transition: background 0.15s ease;
+  cursor: pointer;
+
+  &:hover {
+    background: $bg-page;
+  }
+}
+
+.goalieTdName {
+  position: relative;
+  text-align: left;
+  padding: $space-sm $space-md $space-sm 0;
+}
+
+.goalieNameCell {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.goalieTd {
+  text-align: center;
+  padding: $space-sm $space-md;
+  color: $text-body;
+}
+
+// ── Shared avatar / logo styles ───────────────────────────────────────────────
+
+.goalTeamLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.goalTeamLogoPlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.goalScorerPhoto {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.goalScorerPhotoPlaceholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.goalInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.goalScorer {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.goalAssists {
+  font-size: $font-sm;
+  color: $text-dim;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

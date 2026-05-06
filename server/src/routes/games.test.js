@@ -25,11 +25,14 @@ const LAST_FIVE_GAME = {
 
 const GAME = {
   id: 'game-1', season_id: 'season-1',
-  home_team_id: 'team-1', away_team_id: 'team-2',
-  home_team_name: 'Sharks', home_team_code: 'SJS', home_team_logo: null,
-  home_team_primary_color: '#006272', home_team_secondary_color: '#EA7200', home_team_text_color: '#ffffff',
-  away_team_name: 'Kings',  away_team_code: 'LAK', away_team_logo: null,
-  away_team_primary_color: '#111111', away_team_secondary_color: '#A2AAAD', away_team_text_color: '#ffffff',
+  home_team: {
+    id: 'team-1', name: 'Sharks', code: 'SJS', logo: null,
+    primary_color: '#006272', secondary_color: '#EA7200', text_color: '#ffffff',
+  },
+  away_team: {
+    id: 'team-2', name: 'Kings', code: 'LAK', logo: null,
+    primary_color: '#111111', secondary_color: '#A2AAAD', text_color: '#ffffff',
+  },
   game_type: 'regular', status: 'scheduled',
   scheduled_at: '2024-10-15T19:00:00Z', venue: 'SAP Center',
   overtime_periods: null, shootout: false, shootout_first_team_id: null,

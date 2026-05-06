@@ -14,13 +14,36 @@ const apiError = (err: unknown, fallback: string): string =>
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
+export interface UpsertGoalieStatData {
+  goalie_id: string;
+  team_id: string;
+  shots_against: number;
+  /** Override GA; null clears the override (reverts to auto-calc from goals table); omit to leave unchanged. */
+  goals_against?: number | null;
+  /** Set to a period string to mark as a sub; null to clear; omit to leave unchanged. */
+  entered_period?: string | null;
+  /** MM:SS timestamp within the period when the sub occurred; null to clear; omit to leave unchanged. */
+  sub_time?: string | null;
+}
+
+export interface GoalieSwitchData {
+  goalie_id: string;
+  team_id: string;
+  entered_period: string;
+  /** MM:SS timestamp within the period when the sub occurred. */
+  sub_time?: string | null;
+}
+
 export interface GoalieStatRecord {
   id: string;
   game_id: string;
   team_id: string;
   goalie_id: string;
   shots_against: number;
+  goals_against: number;
   saves: number;
+  entered_period: string | null;
+  sub_time: string | null;
   created_at: string;
   goalie_first_name: string;
   goalie_last_name: string;
@@ -59,12 +82,7 @@ const useGameGoalieStats = (gameId: string | undefined) => {
     },
   });
 
-  const upsertGoalieStat = async (data: {
-    goalie_id: string;
-    team_id: string;
-    shots_against: number;
-    saves: number;
-  }): Promise<GoalieStatRecord | null> => {
+  const upsertGoalieStat = async (data: UpsertGoalieStatData): Promise<GoalieStatRecord | null> => {
     if (!gameId) return null;
     setBusy(data.goalie_id);
     try {
@@ -83,7 +101,44 @@ const useGameGoalieStats = (gameId: string | undefined) => {
     }
   };
 
-  return { goalieStats, loading, busy, upsertGoalieStat };
+  const switchGoalie = async (data: GoalieSwitchData): Promise<GoalieStatRecord[] | null> => {
+    if (!gameId) return null;
+    setBusy(data.goalie_id);
+    try {
+      const { data: rows } = await axios.post<GoalieStatRecord[]>(
+        `${API}/admin/games/${gameId}/goalie-stats/switch`,
+        data,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey });
+      return rows;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to record goalie switch'));
+      return null;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeGoalieStat = async (goalieId: string): Promise<boolean> => {
+    if (!gameId) return false;
+    setBusy(goalieId);
+    try {
+      await axios.delete(
+        `${API}/admin/games/${gameId}/goalie-stats/${goalieId}`,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to remove goalie stat'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { goalieStats, loading, busy, upsertGoalieStat, switchGoalie, removeGoalieStat };
 };
 
 export default useGameGoalieStats;

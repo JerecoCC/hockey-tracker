@@ -4,7 +4,7 @@ import { type LineupEntry } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 
 // ── Mock the custom Select so we can drive it with a native <select> ─────
-jest.mock('../../../components/Select/Select', () => {
+jest.mock('../../../../components/Select/Select', () => {
   const MockSelect = ({
     value,
     options,
@@ -119,9 +119,9 @@ describe('SetLineupModal – visibility', () => {
     expect(screen.getByText('Center')).toBeInTheDocument();
     expect(screen.getByText('Left Wing')).toBeInTheDocument();
     expect(screen.getByText('Right Wing')).toBeInTheDocument();
-    // Defence slots are labelled "Defence 1" and "Defence 2"
-    expect(screen.getByText('Defence 1')).toBeInTheDocument();
-    expect(screen.getByText('Defence 2')).toBeInTheDocument();
+    // Defence slots are labelled "Left Defense" and "Right Defense"
+    expect(screen.getByText('Left Defense')).toBeInTheDocument();
+    expect(screen.getByText('Right Defense')).toBeInTheDocument();
     expect(screen.getByText('Goalie')).toBeInTheDocument();
   });
 });

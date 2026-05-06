@@ -54,16 +54,17 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, p.photo) AS photo,
+              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
-              p.height_cm, p.weight_lbs, p.position, p.shoots,
+              p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
               ti.logo       AS team_logo,
@@ -81,7 +82,7 @@ router.get('/', async (req, res) => {
               ORDER BY CASE WHEN season_id = ${season_id} THEN 0 ELSE 1 END, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id
+            ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
           ) sub
           ORDER BY last_name, first_name
         `
@@ -93,16 +94,17 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, p.photo) AS photo,
+              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
-              p.height_cm, p.weight_lbs, p.position, p.shoots,
+              p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
               ti.logo       AS team_logo,
@@ -118,7 +120,7 @@ router.get('/', async (req, res) => {
               ORDER BY season_id DESC NULLS LAST
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id, pt.season_id DESC
+            ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
           ) sub
           ORDER BY last_name, first_name
         `
@@ -134,10 +136,10 @@ router.get('/', async (req, res) => {
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, p.photo) AS photo,
+              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
-              p.height_cm, p.weight_lbs, p.position, p.shoots,
+              p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
               ti.name       AS team_name,
@@ -147,8 +149,8 @@ router.get('/', async (req, res) => {
             JOIN player_teams pt ON pt.player_id  = p.id
                                 AND pt.team_id    = ${team_id}
                                 AND pt.season_id  = ${season_id}
-                                AND (pt.start_date IS NULL OR pt.start_date <= CURRENT_DATE)
-                                AND (pt.end_date   IS NULL OR pt.end_date   >= CURRENT_DATE)
+                                AND (pt.start_date IS NULL OR pt.start_date <= (NOW() AT TIME ZONE 'America/New_York')::date)
+                                AND (pt.end_date   IS NULL OR pt.end_date   >  (NOW() AT TIME ZONE 'America/New_York')::date)
             JOIN teams        t  ON t.id           = pt.team_id
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations
@@ -174,7 +176,7 @@ router.get('/', async (req, res) => {
               p.id, p.first_name, p.last_name, p.photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
-              p.height_cm, p.weight_lbs, p.position, p.shoots,
+              p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
               ti.name       AS team_name,

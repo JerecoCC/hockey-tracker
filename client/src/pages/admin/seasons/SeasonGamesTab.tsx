@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -20,8 +20,8 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-/** Converts a stored "HH:MM" string to "h:mm AM/PM ET" for display. */
-const formatTime = (hhmm: string): string => {
+/** Converts a stored "HH:MM" string to "h:mm AM/PM EST/EDT" for display (DST-aware). */
+const formatTime = (hhmm: string, scheduledAt?: string | null): string => {
   const [hStr, mStr] = hhmm.split(':');
   const h = parseInt(hStr, 10);
   const m = parseInt(mStr, 10);
@@ -29,7 +29,15 @@ const formatTime = (hhmm: string): string => {
   const period = h < 12 ? 'AM' : 'PM';
   const hour12 = h % 12 === 0 ? 12 : h % 12;
   const min = String(m).padStart(2, '0');
-  return `${hour12}:${min} ${period} ET`;
+  const base = scheduledAt ? new Date(scheduledAt) : new Date();
+  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
+    base,
+  );
+  const abbr =
+    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
+      .formatToParts(new Date(`${etDatePart}T12:00:00`))
+      .find((p) => p.type === 'timeZoneName')?.value ?? 'ET';
+  return `${hour12}:${min} ${period} ${abbr}`;
 };
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -67,6 +75,15 @@ const GAME_TYPE_OPTIONS: SelectOption[] = [
   { value: 'playoff', label: 'Playoffs' },
 ];
 
+const STATUS_FILTER_OPTIONS: SelectOption[] = [
+  { value: '', label: 'All Statuses' },
+  { value: 'scheduled', label: 'Scheduled' },
+  { value: 'in_progress', label: 'In Progress' },
+  { value: 'final', label: 'Final' },
+  { value: 'postponed', label: 'Postponed' },
+  { value: 'cancelled', label: 'Cancelled' },
+];
+
 const MONTH_FMT = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' });
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -89,9 +106,21 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     label: t.name,
   }));
 
-  // ── Filter state ───────────────────────────────────────────────────────────
+  // ── Filter state (with sessionStorage persistence) ────────────────────────
+  const monthKey = `season-games-month:${seasonId}`;
+  const statusKey = `season-games-status:${seasonId}`;
+
   const [gameTypeFilter, setGameTypeFilter] = useState('');
-  const [monthFilter, setMonthFilter] = useState('');
+  const [monthFilter, setMonthFilter] = useState(() => sessionStorage.getItem(monthKey) ?? '');
+  const [statusFilter, setStatusFilter] = useState(() => sessionStorage.getItem(statusKey) ?? '');
+
+  useEffect(() => {
+    sessionStorage.setItem(monthKey, monthFilter);
+  }, [monthKey, monthFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem(statusKey, statusFilter);
+  }, [statusKey, statusFilter]);
 
   /** Month options derived from the fetched games (only months that have games). */
   const monthOptions = useMemo<SelectOption[]>(() => {
@@ -99,7 +128,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     const months: SelectOption[] = [];
     [...games]
       .filter((g) => g.scheduled_at)
-      .sort((a, b) => (a.scheduled_at! < b.scheduled_at! ? -1 : 1))
+      .sort((a, b) => (a.scheduled_at! > b.scheduled_at! ? -1 : 1))
       .forEach((g) => {
         const ym = g.scheduled_at!.slice(0, 7); // "YYYY-MM"
         if (!seen.has(ym)) {
@@ -112,16 +141,26 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     return [{ value: '', label: 'All Months' }, ...months];
   }, [games]);
 
-  /** Games after both filters are applied. */
-  const filteredGames = useMemo(
-    () =>
-      games.filter((g) => {
-        if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
-        if (monthFilter && (g.scheduled_at?.slice(0, 7) ?? '') !== monthFilter) return false;
-        return true;
-      }),
-    [games, gameTypeFilter, monthFilter],
-  );
+  /** Games after all filters are applied, earliest date/time first. */
+  const filteredGames = useMemo(() => {
+    const sorted = [...games].sort((a, b) => {
+      if (!a.scheduled_at && !b.scheduled_at) return 0;
+      if (!a.scheduled_at) return 1;
+      if (!b.scheduled_at) return -1;
+      if (a.scheduled_at !== b.scheduled_at) return a.scheduled_at < b.scheduled_at ? -1 : 1;
+      // Same date — sort by time ascending (null times go last)
+      if (!a.scheduled_time && !b.scheduled_time) return 0;
+      if (!a.scheduled_time) return 1;
+      if (!b.scheduled_time) return -1;
+      return a.scheduled_time < b.scheduled_time ? -1 : 1;
+    });
+    return sorted.filter((g) => {
+      if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
+      if (monthFilter && (g.scheduled_at?.slice(0, 7) ?? '') !== monthFilter) return false;
+      if (statusFilter && g.status !== (statusFilter as GameStatus)) return false;
+      return true;
+    });
+  }, [games, gameTypeFilter, monthFilter, statusFilter]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -180,6 +219,11 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
             options={monthOptions}
             onChange={setMonthFilter}
           />
+          <Select
+            value={statusFilter}
+            options={STATUS_FILTER_OPTIONS}
+            onChange={setStatusFilter}
+          />
         </div>
 
         {loading ? (
@@ -195,16 +239,16 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 key={game.id}
                 href={`/admin/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
                 awayTeam={{
-                  logo: game.away_team_logo,
-                  code: game.away_team_code,
-                  primaryColor: game.away_team_primary_color,
-                  textColor: game.away_team_text_color,
+                  logo: game.away_team.logo,
+                  code: game.away_team.code,
+                  primaryColor: game.away_team.primary_color,
+                  textColor: game.away_team.text_color,
                 }}
                 homeTeam={{
-                  logo: game.home_team_logo,
-                  code: game.home_team_code,
-                  primaryColor: game.home_team_primary_color,
-                  textColor: game.home_team_text_color,
+                  logo: game.home_team.logo,
+                  code: game.home_team.code,
+                  primaryColor: game.home_team.primary_color,
+                  textColor: game.home_team.text_color,
                 }}
                 awayScore={game.period_scores.reduce((s, ps) => s + ps.away_goals, 0)}
                 homeScore={game.period_scores.reduce((s, ps) => s + ps.home_goals, 0)}
@@ -214,7 +258,11 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 statusIntent={STATUS_INTENT[game.status]}
                 gameType={game.game_type}
                 date={game.scheduled_at ? DATE_FMT.format(new Date(game.scheduled_at)) : undefined}
-                time={game.scheduled_time ? formatTime(game.scheduled_time) : undefined}
+                time={
+                  game.scheduled_time
+                    ? formatTime(game.scheduled_time, game.scheduled_at)
+                    : undefined
+                }
                 venue={game.venue ?? undefined}
                 actions={[
                   {
@@ -271,7 +319,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
         title="Delete Game"
         body={
           confirmDelete
-            ? `Delete ${confirmDelete.away_team_code} @ ${confirmDelete.home_team_code}? This cannot be undone.`
+            ? `Delete ${confirmDelete.away_team.code} @ ${confirmDelete.home_team.code}? This cannot be undone.`
             : ''
         }
         confirmLabel="Delete"

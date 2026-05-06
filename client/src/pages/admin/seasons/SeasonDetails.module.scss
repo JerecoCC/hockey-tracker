@@ -1,5 +1,5 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Page loader ────────────────────────────────────────────────────────────────
 .loaderWrapper {
@@ -54,25 +54,6 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: $space-xl;
-}
-
-.infoItem {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.infoLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.infoValue {
-  font-size: $font-body;
-  color: $text-body;
 }
 
 // ── Groups tree ────────────────────────────────────────────────────────────────
@@ -380,6 +361,45 @@
 
 .groupInlineBtnCancel {
   color: $text-dim;
+}
+
+// ── Modal form layout ─────────────────────────────────────────────────────────
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+// ── Group label + role badge ───────────────────────────────────────────────────
+
+.groupLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.groupRoleBadge {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  line-height: 1.6;
+}
+
+.groupRoleBadge_conference {
+  background: rgba($accent, 0.18);
+  color: $accent-light;
+  border: 1px solid rgba($accent, 0.3);
+}
+
+.groupRoleBadge_division {
+  background: rgba($success, 0.18);
+  color: $success-light;
+  border: 1px solid rgba($success, 0.3);
 }
 
 // Spans full grid width so the inline-add row fills the row

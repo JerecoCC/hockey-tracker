@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useState } from 'react';
@@ -12,6 +13,7 @@ export interface PlayerStintRecord {
   season_id: string;
   jersey_number: number | null;
   photo: string | null;
+  position: string | null;
   start_date: string | null;
   end_date: string | null;
   created_at: string;
@@ -27,6 +29,7 @@ export interface UpdateStintData {
   season_id?: string;
   jersey_number?: number | null;
   photo?: string | null;
+  position?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -36,9 +39,48 @@ export interface CreateStintData {
   season_id: string;
   jersey_number?: number | null;
   photo?: string | null;
+  position?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
+
+/** One row from jersey_number_history for a player's stint. */
+export interface JerseyHistoryEntry {
+  id: string;
+  player_teams_id: string;
+  jersey_number: number;
+  /** YYYY-MM-DD */
+  effective_from: string;
+}
+
+/**
+ * Fetches all jersey number history entries across every stint for a player.
+ * Returns `byStint`: a map of player_teams_id → sorted entries (oldest first).
+ */
+export const useJerseyHistory = (playerId: string | null) => {
+  const { data = [] } = useQuery<JerseyHistoryEntry[]>({
+    queryKey: ['jersey-history', playerId],
+    queryFn: async () => {
+      const { data } = await axios.get<JerseyHistoryEntry[]>(
+        `${API}/admin/player-teams/history/${playerId}/jerseys`,
+        { headers: authHeaders() },
+      );
+      return data;
+    },
+    enabled: !!playerId,
+  });
+
+  const byStint = useMemo(() => {
+    const map: Record<string, JerseyHistoryEntry[]> = {};
+    for (const entry of data) {
+      if (!map[entry.player_teams_id]) map[entry.player_teams_id] = [];
+      map[entry.player_teams_id].push(entry);
+    }
+    return map;
+  }, [data]);
+
+  return { byStint };
+};
 
 /** Fetch all stints for a player, optionally scoped to a season. */
 export const usePlayerTradeHistory = (playerId: string | null, seasonId?: string | null) => {
@@ -70,6 +112,10 @@ export const useStintActions = (playerId: string | null) => {
       toast.success('Stint updated!');
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update stint'));
@@ -90,6 +136,10 @@ export const useStintActions = (playerId: string | null) => {
       toast.success('Stint recorded!');
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record stint'));
@@ -115,7 +165,39 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
-  return { createStint, updateStint, uploadStintPhoto, saving };
+  const changeJerseyNumber = async (
+    stint: PlayerStintRecord,
+    jerseyNumber: number,
+    effectiveDate?: string | null,
+  ): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.patch(
+        `${API}/admin/player-teams`,
+        {
+          player_id: stint.player_id,
+          team_id: stint.team_id,
+          season_id: stint.season_id,
+          jersey_number: jerseyNumber,
+          ...(effectiveDate ? { effective_date: effectiveDate } : {}),
+        },
+        { headers: authHeaders() },
+      );
+      toast.success('Jersey number updated!');
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update jersey number'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return { createStint, updateStint, changeJerseyNumber, uploadStintPhoto, saving };
 };
 
 export interface PlayerRosterInput {
@@ -241,6 +323,11 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
         { headers: authHeaders() },
       );
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update player'));

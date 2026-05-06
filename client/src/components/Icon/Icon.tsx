@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faArrowRotateLeft,
   faArrowRotateRight,
   faChartLine,
   faArrowUpRightFromSquare,
@@ -29,8 +30,10 @@ import {
   faEye,
   faEyeSlash,
   faFolderPlus,
+  faHashtag,
   faHockeyPuck,
   faHourglassHalf,
+  faLayerGroup,
   faList,
   faLocationDot,
   faMagnifyingGlass,
@@ -39,6 +42,7 @@ import {
   faPlay,
   faPlus,
   faRightFromBracket,
+  faRightLeft,
   faShield,
   faSort,
   faSortDown,
@@ -112,6 +116,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   person_remove: faUserMinus,
   remove_circle_outline: faCircleMinus,
   restart_alt: faArrowRotateRight,
+  undo: faArrowRotateLeft,
   search: faMagnifyingGlass,
 
   // auth
@@ -132,9 +137,16 @@ const ICON_MAP: Record<string, IconDefinition> = {
   // view toggles
   grid_view: faTableCells,
   view_list: faList,
+  playlist_add: faLayerGroup,
 
   // loading / time
   hourglass_empty: faHourglassHalf,
+
+  // jersey number
+  jersey: faHashtag,
+
+  // swap / switch
+  swap_horiz: faRightLeft,
 
   // decorative
   sports_hockey: faHockeyPuck,

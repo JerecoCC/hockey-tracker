@@ -1,5 +1,5 @@
-@use "../../../../styles/colors" as *;
-@use "../../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Page loader ────────────────────────────────────────────────────────────────
 .loaderWrapper {
@@ -88,6 +88,15 @@
   text-transform: uppercase;
 }
 
+// Flex row: team logo + player photo + info column
+.goalieNameCell {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
 // Text column: scorer name + assists
 .goalInfo {
   flex: 1;
@@ -107,7 +116,7 @@
 }
 
 .goalAssists {
-  font-size: $font-xs;
+  font-size: $font-sm;
   color: $text-dim;
   white-space: nowrap;
   overflow: hidden;
@@ -207,6 +216,12 @@
   width: 128px;
 }
 
+.goalPeriodTimeError {
+  font-size: $font-xs;
+  color: $danger;
+  margin-top: $space-xs;
+}
+
 // Goal type field inside goalFormTimeRow — expands to fill remaining space
 .goalTypeField {
   flex: 1;
@@ -273,42 +288,6 @@
   color: $text-dim;
   font-size: $font-sm;
   text-align: center;
-}
-
-// ── Info grid (inside Summary tab) ────────────────────────────────────────────
-.infoGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-xl $space-2xl;
-}
-
-.infoItem {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.infoItemFull {
-  grid-column: 1 / -1;
-}
-
-.infoLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.infoValue {
-  font-size: $font-body;
-  color: $text-body;
-}
-
-.infoValueMuted {
-  font-size: $font-body;
-  color: $text-dim;
-  font-style: italic;
 }
 
 // ── Period scores table ────────────────────────────────────────────────────────
@@ -398,93 +377,6 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: $text-dim;
-}
-
-// ── Goalie Stats table ────────────────────────────────────────────────────────
-.goalieTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: $font-sm;
-}
-
-.goalieThTeam {
-  text-align: left;
-  padding: $space-xs $space-md $space-xs 0;
-  color: $text-dim;
-  font-weight: 600;
-  font-size: $font-xs;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.goalieTh {
-  text-align: center;
-  padding: $space-xs $space-md;
-  color: $text-dim;
-  font-weight: 600;
-  font-size: $font-xs;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.goalieRow {
-  position: relative;
-
-  &:hover .goalieActions {
-    opacity: 1;
-    pointer-events: auto;
-  }
-}
-
-.goalieTdName {
-  position: relative;
-  text-align: left;
-  padding: $space-sm $space-md $space-sm 0;
-}
-
-.goalieNameCell {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  flex: 1;
-  min-width: 0;
-}
-
-.goalieLogo {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.goalieLogoPlaceholder {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xs;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.goalieNameLabel {
-  font-weight: 500;
-  color: $text-body;
-}
-
-.goalieTd {
-  text-align: center;
-  padding: $space-sm $space-md;
-  color: $text-body;
-}
-
-.goalieActions {
-  position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
 }
 
 // ── Lineup tab ────────────────────────────────────────────────────────────────
@@ -613,386 +505,6 @@
   gap: $space-lg;
 }
 
-// ── Previous Meetings card ────────────────────────────────────────────────────
-
-.prevMeetingsRows {
-  display: flex;
-  flex-direction: column;
-  padding: $space-xs 0;
-}
-
-.prevMeetingRow {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-xs $space-md;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
-}
-
-.prevMeetingDate {
-  font-size: $font-base;
-  color: $text-dim;
-  white-space: nowrap;
-  min-width: 48px;
-}
-
-.prevMeetingTeam {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex: 1;
-  min-width: 0;
-}
-
-.prevMeetingTeamRight {
-  justify-content: flex-end;
-}
-
-.prevMeetingCode {
-  font-size: $font-body;
-  font-weight: 600;
-  color: $text-bright;
-}
-
-.prevMeetingLogo {
-  width: 40px;
-  height: 40px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.prevMeetingLogoPlaceholder {
-  width: 40px;
-  height: 40px;
-  font-size: 10px;
-  font-weight: 700;
-  border: 1px solid $border;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.prevMeetingScore {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  font-size: $font-body;
-  font-weight: 600;
-  white-space: nowrap;
-  min-width: 72px;
-  justify-content: center;
-}
-
-.prevMeetingScoreBright {
-  color: $text-bright;
-}
-
-.prevMeetingScoreDim {
-  color: $text-dim;
-}
-
-.prevMeetingScoreSep {
-  color: $text-dim;
-  font-weight: 400;
-}
-
-.prevMeetingSuffix {
-  font-size: $font-base;
-  font-weight: 400;
-  color: $text-dim;
-  margin-left: $space-xs;
-}
-
-// ── Last 5 Games card ─────────────────────────────────────────────────────────
-
-// Two team columns side by side — collapses to single column on narrow cards
-.lastFiveList {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: $space-sm;
-  align-items: flex-start;
-  container-type: inline-size;
-
-  @container (max-width: #{$bp-tablet}) {
-    flex-direction: column;
-  }
-}
-
-.lastFiveTeamCol {
-  flex: 1;
-  min-width: 390px;
-  width: 100%;
-}
-
-// View toggle buttons in card header
-.lastFiveViewToggle {
-  display: flex;
-  gap: $space-xs;
-}
-
-// ── List view ─────────────────────────────────────────────────────────────────
-
-// Container for list-mode rows inside the accordion body
-.lastFiveListRows {
-  display: flex;
-  flex-direction: column;
-  padding: $space-xs 0;
-}
-
-// Individual game row
-.lastFiveListRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-xs $space-md;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition: background $transition-base;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
-}
-
-// Result label (W / OTW / OTL / L)
-.lastFiveListResult {
-  font-size: $font-body;
-  font-weight: 700;
-  width: 36px;
-  text-align: center;
-  flex-shrink: 0;
-}
-
-.lastFiveListResultW {
-  color: $success;
-}
-
-.lastFiveListResultL {
-  color: $danger;
-}
-
-.lastFiveListResultT {
-  color: $text-dim;
-}
-
-// Logo circle in list rows
-.lastFiveListLogo {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  border: 1px solid $border;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  background: color-mix(in srgb, #{$bg-card}, white 10%);
-  overflow: hidden;
-}
-
-.lastFiveListLogoImg {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-}
-
-.lastFiveListLogoPlaceholder {
-  font-size: 10px;
-  font-weight: 700;
-  color: $text-body;
-}
-
-// Opponent name (home/away indicator + name)
-.lastFiveListOpp {
-  flex: 1;
-  font-size: $font-body;
-  color: $text-body;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-// Score: "3–2"
-.lastFiveListScore {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  font-size: $font-body;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: $text-bright;
-  white-space: nowrap;
-}
-
-// "(OT)" / "(SO)" appended after the score
-.lastFiveListSuffix {
-  font-size: $font-base;
-  font-weight: 400;
-  color: $text-dim;
-}
-
-// Date at far right
-.lastFiveListDate {
-  font-size: $font-base;
-  color: $text-dim;
-  white-space: nowrap;
-}
-
-// Form record shown in accordion headerRight: W - OTW - OTL - L
-.lastFiveForm {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-xs;
-  font-size: $font-sm;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  color: $text-body;
-  white-space: nowrap;
-}
-
-.lastFiveFormSep {
-  color: $text-dim;
-  font-weight: 400;
-  user-select: none;
-}
-
-// Flex row of game squares inside accordion body
-.lastFiveGames {
-  display: flex;
-  gap: $space-sm;
-  padding: $space-sm $space-md;
-  flex-wrap: wrap;
-}
-
-.lastFiveGamesEmpty {
-  padding: 0;
-}
-
-// Individual game square
-.lastFiveSquare {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-between;
-  width: 80px;
-  height: 108px;
-  border-radius: $radius-sm;
-  border: 1px solid $border;
-  background: color-mix(in srgb, #{$bg-card}, white 6%);
-  padding: $space-sm $space-xs;
-  overflow: hidden;
-  flex-shrink: 0;
-  color: $text-body;
-  cursor: pointer;
-  transition: opacity $transition-fast;
-
-  &:hover {
-    opacity: 0.8;
-  }
-}
-
-// Home game square — bg is a mix of accordion header + team primary; border uses primary
-.lastFiveSquareHome {
-  background: color-mix(in srgb, #{$border}, var(--square-primary) 35%);
-  border-color: var(--square-primary);
-
-  .lastFiveDate {
-    color: color-mix(in srgb, #{$text-body}, var(--square-primary) 25%);
-  }
-}
-
-// Circle frame around the opponent logo
-.lastFiveLogoCircle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: 1px solid;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.lastFiveLogoCircleAway {
-  background: color-mix(in srgb, #{$bg-card}, white 12%);
-  border-color: $border;
-
-  .lastFiveOpponentPlaceholder {
-    color: $text-body;
-  }
-}
-
-.lastFiveLogoCircleHome {
-  background: color-mix(in srgb, #{$border}, var(--circle-text) 35%);
-  border-color: color-mix(in srgb, #{$border}, var(--circle-text) 55%);
-
-  .lastFiveOpponentPlaceholder {
-    color: $text-body;
-  }
-}
-
-// Opponent logo inside the circle
-.lastFiveOpponentLogo {
-  width: 34px;
-  height: 34px;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
-}
-
-// Placeholder text inside the circle (no logo available)
-.lastFiveOpponentPlaceholder {
-  font-size: 9px;
-  font-weight: 700;
-  line-height: 1;
-}
-
-// Bottom row: W/L  score  (OT)/(SO)
-.lastFiveScore {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-xs;
-  width: 100%;
-}
-
-// Date shown above the circle
-.lastFiveDate {
-  font-size: 9px;
-  font-weight: 600;
-  color: $text-body;
-  line-height: 1;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.lastFiveResult {
-  font-size: $font-xs;
-  font-weight: 600;
-  line-height: 1;
-}
-
-.lastFiveScoreText {
-  font-size: $font-xs;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
-
-.lastFiveOT {
-  font-size: $font-xs;
-  font-weight: 600;
-  line-height: 1;
-}
-
 // ── Linescore card action row ──────────────────────────────────────────────────
 .linescoreActions {
   display: flex;
@@ -1008,15 +520,15 @@
 }
 
 .linescoreLogo {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .linescoreLogoPlaceholder {
-  width: 22px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   border-radius: 4px;
   display: flex;
   align-items: center;
@@ -1030,73 +542,6 @@
   font-weight: 600;
   color: $text-body;
   font-size: $font-sm;
-}
-
-// ── 3 Stars card ───────────────────────────────────────────────────────────────
-.starsRow {
-  display: flex;
-  gap: $space-lg;
-  justify-content: space-around;
-  flex-wrap: wrap;
-}
-
-.starItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-xs;
-  flex: 1;
-  min-width: 120px;
-  text-align: center;
-}
-
-.starPhoto {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  object-fit: cover;
-  object-position: top;
-  border: 2px solid $border;
-  flex-shrink: 0;
-}
-
-.starPhotoPlaceholder {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xl;
-  font-weight: 700;
-  flex-shrink: 0;
-  border: 2px solid $border;
-}
-
-// Star icons row (replaces "1st / 2nd / 3rd" text).
-.starIcons {
-  display: flex;
-  gap: 3px;
-  color: #f59e0b; // amber-400 — classic gold star colour
-  font-size: $font-lg;
-  margin-top: $space-xs;
-}
-
-.starName {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-body;
-  line-height: 1.3;
-}
-
-.starTeam {
-  font-size: $font-xs;
-  color: $text-dim;
-}
-
-.starStats {
-  font-size: $font-xs;
-  color: $text-dim;
 }
 
 // ── Record Shots modal ───────────────────────────────────────────────────────
@@ -1122,15 +567,15 @@
 }
 
 .shotsTeamLogo {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
   flex-shrink: 0;
 }
 
 .shotsTeamLogoPlaceholder {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -1172,7 +617,7 @@
 }
 
 .shotsGoalieColLabel {
-  width: 72px;
+  width: 56px;
   text-align: center;
   font-size: $font-xs;
   font-weight: 600;
@@ -1197,7 +642,26 @@
   display: flex;
   align-items: center;
   gap: $space-sm;
-  padding: $space-xs 0;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-sm;
+}
+
+.shotsGoalieRowStarter {
+  border: 1px solid rgba($info, 0.4);
+  background: rgba($info, 0.07);
+}
+
+.goalieSubRow {
+  display: flex;
+  gap: $space-sm;
+  align-items: center;
+  padding: $space-xs $space-sm $space-sm;
+  margin-top: -$space-xs;
+
+  // Push the delete button to the right end
+  > button:last-child {
+    margin-left: auto;
+  }
 }
 
 .shotsGoalieInputs {
@@ -1206,8 +670,20 @@
   flex-shrink: 0;
 
   label {
+    display: block;
     margin-bottom: 0;
-    width: 72px;
+    width: 56px;
+    flex-shrink: 0;
+  }
+
+  // Inputs fill their label container and use compact horizontal padding
+  input[type="number"] {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding-left: $space-sm;
+    padding-right: $space-sm;
+    text-align: center;
   }
 }
 

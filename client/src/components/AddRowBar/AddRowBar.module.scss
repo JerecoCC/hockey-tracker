@@ -1,0 +1,17 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.root {
+  padding-top: $space-md;
+  padding-bottom: $space-md;
+  border-top: 1px solid $border;
+  margin-top: $space-xs;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.hint {
+  font-size: $font-xs;
+  color: $text-dim;
+}

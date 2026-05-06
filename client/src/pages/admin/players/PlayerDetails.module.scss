@@ -1,5 +1,5 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Page loader ────────────────────────────────────────────────────────────
 @keyframes spin {
@@ -30,6 +30,11 @@
   color: $text-dim;
   font-size: $font-base;
   margin: 0;
+}
+
+// ── Tabs spacing ───────────────────────────────────────────────────────────
+.tabsWrapper {
+  margin-top: $space-xl;
 }
 
 // ── Hero card ──────────────────────────────────────────────────────────────

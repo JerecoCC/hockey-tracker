@@ -31,6 +31,8 @@ export interface GroupRecord {
   sort_order: number;
   created_at: string;
   is_auto: boolean;
+  /** Semantic playoff role: 'conference' | 'division' | null (no special role). */
+  role: 'conference' | 'division' | null;
   teams: GroupTeamRecord[];
 }
 
@@ -39,6 +41,7 @@ export interface CreateGroupData {
   name: string;
   parent_id?: string | null;
   sort_order?: number;
+  role?: 'conference' | 'division' | null;
 }
 
 // ── Hook ─────────────────────────────────────────────────────────────────────

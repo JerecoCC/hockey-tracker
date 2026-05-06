@@ -18,6 +18,7 @@ interface Props {
   saveTeamLineup: (
     teamId: string,
     slots: Array<{ position_slot: LineupPositionSlot; player_id: string | null }>,
+    teamName?: string,
   ) => Promise<boolean>;
 }
 
@@ -37,19 +38,25 @@ const toOption = (p: TeamPlayerRecord): SelectOption => ({
  * Builds the option list for a position slot.
  *
  * For G: only goalies.
- * For C/LW/RW/D1/D2: players whose position matches the slot come first,
- * then a divider, then all remaining non-goalies — so defenders can play
- * forward and vice-versa.
+ * For C/LW/RW: exact-position matches come first, then generic 'F' (forward) players,
+ * then a divider, then all remaining non-goalies.
+ * For D1/D2: 'D' players come first, then a divider, then the rest (includes F players).
  */
 const buildOptions = (slot: LineupPositionSlot, players: TeamPlayerRecord[]): SelectOption[] => {
   if (slot === 'G') return players.filter((p) => (p.position ?? '') === 'G').map(toOption);
 
-  // Primary position for this slot: C → 'C', LW → 'LW', RW → 'RW', D1/D2 → 'D'
-  const primaryPos = slot === 'D1' || slot === 'D2' ? 'D' : slot;
-
+  const isForwardSlot = slot === 'C' || slot === 'LW' || slot === 'RW';
   const nonGoalies = players.filter((p) => (p.position ?? '') !== 'G');
-  const primary = nonGoalies.filter((p) => (p.position ?? '') === primaryPos);
-  const rest = nonGoalies.filter((p) => (p.position ?? '') !== primaryPos);
+
+  const primary = nonGoalies.filter((p) => {
+    const pos = p.position ?? '';
+    if (isForwardSlot) return pos === slot || pos === 'F';
+    // D1 → LD + D, D2 → RD + D; either specific side also fits the other D slot
+    if (slot === 'D1') return pos === 'LD' || pos === 'D' || pos === 'RD';
+    if (slot === 'D2') return pos === 'RD' || pos === 'D' || pos === 'LD';
+    return false;
+  });
+  const rest = nonGoalies.filter((p) => !primary.includes(p));
 
   const result: SelectOption[] = primary.map(toOption);
   if (primary.length > 0 && rest.length > 0) result.push({ divider: true });
@@ -61,8 +68,8 @@ const SLOT_LABEL: Record<LineupPositionSlot, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
-  D1: 'Defence',
-  D2: 'Defence',
+  D1: 'Left Defense',
+  D2: 'Right Defense',
   G: 'Goalie',
 };
 
@@ -163,9 +170,9 @@ const SetLineupModal = ({
         {slotSelect('LW', SLOT_LABEL.LW)}
         {slotSelect('RW', SLOT_LABEL.RW)}
 
-        {/* Defence 1 + Defence 2 — one column each */}
-        {slotSelect('D1', `${SLOT_LABEL.D1} 1`)}
-        {slotSelect('D2', `${SLOT_LABEL.D2} 2`)}
+        {/* Left Defense + Right Defense — one column each */}
+        {slotSelect('D1', SLOT_LABEL.D1)}
+        {slotSelect('D2', SLOT_LABEL.D2)}
 
         {/* Goalie — spans both columns */}
         <div className={styles.spanFull}>{slotSelect('G', SLOT_LABEL.G)}</div>

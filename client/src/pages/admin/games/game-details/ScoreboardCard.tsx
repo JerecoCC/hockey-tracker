@@ -40,8 +40,8 @@ interface Props {
   liveAwayScore: number;
   liveHomeScore: number;
   overtimeSuffix: string;
-  leagueId: string;
-  onGenerateImage?: () => void;
+  /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
+  leagueId?: string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -54,7 +54,6 @@ const ScoreboardCard = ({
   liveHomeScore,
   overtimeSuffix,
   leagueId,
-  onGenerateImage,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -74,57 +73,61 @@ const ScoreboardCard = ({
             .join(' ')}
           style={
             {
-              '--team-primary': game.away_team_primary_color,
-              '--team-text': game.away_team_text_color,
+              '--team-primary': game.away_team.primary_color,
+              '--team-text': game.away_team.text_color,
             } as React.CSSProperties
           }
         >
           <div className={styles.teamStripe}>
             <div
               className={styles.teamStripePrimary}
-              style={{ background: game.away_team_primary_color }}
+              style={{ background: game.away_team.primary_color }}
             />
             <div
               className={styles.teamStripeSecondary}
-              style={{ background: game.away_team_text_color }}
+              style={{ background: game.away_team.text_color }}
             />
             <div
               className={styles.teamStripeSecondary2}
-              style={{ background: game.away_team_text_color }}
+              style={{ background: game.away_team.text_color }}
             />
           </div>
           <button
             type="button"
             className={styles.teamLogoBtn}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team_id}`)}
+            onClick={
+              leagueId
+                ? () => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team.id}`)
+                : undefined
+            }
           >
-            {game.away_team_logo ? (
+            {game.away_team.logo ? (
               <img
-                src={game.away_team_logo}
-                alt={game.away_team_code}
+                src={game.away_team.logo}
+                alt={game.away_team.code}
                 className={styles.teamLogo}
               />
             ) : (
-              <span className={styles.teamLogoPlaceholder}>{game.away_team_code.slice(0, 3)}</span>
+              <span className={styles.teamLogoPlaceholder}>{game.away_team.code.slice(0, 3)}</span>
             )}
             <div className={styles.teamInfo}>
-              <span className={styles.teamFullName}>{game.away_team_name}</span>
-              <span className={styles.teamSubInfo}>{game.away_team_code}</span>
+              <span className={styles.teamFullName}>{game.away_team.name}</span>
+              <span className={styles.teamSubInfo}>{game.away_team.code}</span>
             </div>
           </button>
           {/* Right stripe — stacked mode only */}
           <div className={`${styles.teamStripe} ${styles.teamStripeRight}`}>
             <div
               className={styles.teamStripePrimary}
-              style={{ background: game.away_team_primary_color }}
+              style={{ background: game.away_team.primary_color }}
             />
             <div
               className={styles.teamStripeSecondary}
-              style={{ background: game.away_team_text_color }}
+              style={{ background: game.away_team.text_color }}
             />
             <div
               className={styles.teamStripeSecondary2}
-              style={{ background: game.away_team_text_color }}
+              style={{ background: game.away_team.text_color }}
             />
           </div>
         </div>
@@ -160,16 +163,6 @@ const ScoreboardCard = ({
                 {DATE_FMT.format(new Date(game.scheduled_at))}
               </span>
             )}
-            {isFinal && onGenerateImage && (
-              <Button
-                variant="ghost"
-                intent="neutral"
-                icon="download"
-                size="sm"
-                tooltip="Download score card"
-                onClick={onGenerateImage}
-              />
-            )}
           </div>
           {(isFinal || isInProgress) && (
             <span
@@ -196,57 +189,61 @@ const ScoreboardCard = ({
             .join(' ')}
           style={
             {
-              '--team-primary': game.home_team_primary_color,
-              '--team-text': game.home_team_text_color,
+              '--team-primary': game.home_team.primary_color,
+              '--team-text': game.home_team.text_color,
             } as React.CSSProperties
           }
         >
           <div className={`${styles.teamStripe} ${styles.teamStripeHome}`}>
             <div
               className={styles.teamStripePrimary}
-              style={{ background: game.home_team_primary_color }}
+              style={{ background: game.home_team.primary_color }}
             />
             <div
               className={styles.teamStripeSecondary}
-              style={{ background: game.home_team_text_color }}
+              style={{ background: game.home_team.text_color }}
             />
             <div
               className={styles.teamStripeSecondary2}
-              style={{ background: game.home_team_text_color }}
+              style={{ background: game.home_team.text_color }}
             />
           </div>
           <button
             type="button"
             className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team_id}`)}
+            onClick={
+              leagueId
+                ? () => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team.id}`)
+                : undefined
+            }
           >
             <div className={`${styles.teamInfo} ${styles.teamInfoHome}`}>
-              <span className={styles.teamFullName}>{game.home_team_name}</span>
-              <span className={styles.teamSubInfo}>{game.home_team_code}</span>
+              <span className={styles.teamFullName}>{game.home_team.name}</span>
+              <span className={styles.teamSubInfo}>{game.home_team.code}</span>
             </div>
-            {game.home_team_logo ? (
+            {game.home_team.logo ? (
               <img
-                src={game.home_team_logo}
-                alt={game.home_team_code}
+                src={game.home_team.logo}
+                alt={game.home_team.code}
                 className={styles.teamLogo}
               />
             ) : (
-              <span className={styles.teamLogoPlaceholder}>{game.home_team_code.slice(0, 3)}</span>
+              <span className={styles.teamLogoPlaceholder}>{game.home_team.code.slice(0, 3)}</span>
             )}
           </button>
           {/* Right stripe — stacked mode only */}
           <div className={`${styles.teamStripe} ${styles.teamStripeRight}`}>
             <div
               className={styles.teamStripePrimary}
-              style={{ background: game.home_team_primary_color }}
+              style={{ background: game.home_team.primary_color }}
             />
             <div
               className={styles.teamStripeSecondary}
-              style={{ background: game.home_team_text_color }}
+              style={{ background: game.home_team.text_color }}
             />
             <div
               className={styles.teamStripeSecondary2}
-              style={{ background: game.home_team_text_color }}
+              style={{ background: game.home_team.text_color }}
             />
           </div>
         </div>

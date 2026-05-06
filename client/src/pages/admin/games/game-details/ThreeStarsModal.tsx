@@ -1,10 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import Select from '@/components/Select/Select';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
-import styles from './GameDetailsPage.module.scss';
 
 interface StarPayload {
+  star1: string;
+  star2: string;
+  star3: string;
+}
+
+interface FormValues {
   star1: string;
   star2: string;
   star3: string;
@@ -47,18 +53,22 @@ const ThreeStarsModal = ({
   onSave,
   onEndGame,
 }: Props) => {
-  const [star1Id, setStar1Id] = useState('');
-  const [star2Id, setStar2Id] = useState('');
-  const [star3Id, setStar3Id] = useState('');
+  const { control, handleSubmit, reset, watch } = useForm<FormValues>({
+    defaultValues: { star1: '', star2: '', star3: '' },
+  });
 
-  // Populate selections whenever the modal opens
   useEffect(() => {
     if (open) {
-      setStar1Id(editMode && initialStars ? initialStars.star1 : '');
-      setStar2Id(editMode && initialStars ? initialStars.star2 : '');
-      setStar3Id(editMode && initialStars ? initialStars.star3 : '');
+      reset({
+        star1: editMode && initialStars ? initialStars.star1 : '',
+        star2: editMode && initialStars ? initialStars.star2 : '',
+        star3: editMode && initialStars ? initialStars.star3 : '',
+      });
     }
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, editMode, initialStars, reset]);
+
+  const [star1, star2, star3] = watch(['star1', 'star2', 'star3']);
+  const canConfirm = !!star1 && !!star2 && !!star3;
 
   const teamMap: Record<string, TeamMeta> = {
     [awayTeam.id]: awayTeam,
@@ -78,10 +88,8 @@ const ThreeStarsModal = ({
     };
   });
 
-  const canConfirm = !!star1Id && !!star2Id && !!star3Id;
-
-  const handleConfirm = async () => {
-    const payload: StarPayload = { star1: star1Id, star2: star2Id, star3: star3Id };
+  const onSubmit = handleSubmit(async (data) => {
+    const payload: StarPayload = { star1: data.star1, star2: data.star2, star3: data.star3 };
     if (editMode) {
       const ok = await onSave(payload);
       if (ok) onClose();
@@ -89,7 +97,7 @@ const ThreeStarsModal = ({
       const ok = await onEndGame(payload);
       if (ok) onClose();
     }
-  };
+  });
 
   return (
     <Modal
@@ -99,43 +107,44 @@ const ThreeStarsModal = ({
       confirmLabel={editMode ? (busy ? 'Saving…' : 'Save') : 'End Game'}
       confirmIcon={editMode ? 'save' : undefined}
       confirmDisabled={!canConfirm || busy}
-      onConfirm={handleConfirm}
+      confirmForm="three-stars-form"
     >
-      <div className={styles.goalForm}>
-        <div className={styles.goalFormField}>
-          <label className={styles.goalFormLabel}>1st Star</label>
-          <Select
-            value={star1Id || null}
-            options={allPlayerOptions}
-            placeholder="— Select player —"
-            onChange={setStar1Id}
-            searchable
-            disabled={busy}
-          />
-        </div>
-        <div className={styles.goalFormField}>
-          <label className={styles.goalFormLabel}>2nd Star</label>
-          <Select
-            value={star2Id || null}
-            options={allPlayerOptions}
-            placeholder="— Select player —"
-            onChange={setStar2Id}
-            searchable
-            disabled={busy}
-          />
-        </div>
-        <div className={styles.goalFormField}>
-          <label className={styles.goalFormLabel}>3rd Star</label>
-          <Select
-            value={star3Id || null}
-            options={allPlayerOptions}
-            placeholder="— Select player —"
-            onChange={setStar3Id}
-            searchable
-            disabled={busy}
-          />
-        </div>
-      </div>
+      <form
+        id="three-stars-form"
+        onSubmit={onSubmit}
+        style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}
+      >
+        <Field
+          label="1st Star"
+          type="select"
+          control={control}
+          name="star1"
+          options={allPlayerOptions}
+          placeholder="— Select player —"
+          searchable
+          disabled={busy}
+        />
+        <Field
+          label="2nd Star"
+          type="select"
+          control={control}
+          name="star2"
+          options={allPlayerOptions}
+          placeholder="— Select player —"
+          searchable
+          disabled={busy}
+        />
+        <Field
+          label="3rd Star"
+          type="select"
+          control={control}
+          name="star3"
+          options={allPlayerOptions}
+          placeholder="— Select player —"
+          searchable
+          disabled={busy}
+        />
+      </form>
     </Modal>
   );
 };

@@ -8,15 +8,21 @@ import styles from './PageHeader.module.scss';
 const EXACT_TITLES: Record<string, string> = {
   '/admin/leagues': 'Leagues',
   '/admin/users': 'Users',
+  '/dashboard': 'Dashboard',
+  '/games': 'Games',
 };
 
 const getTitle = (pathname: string): string => {
   if (EXACT_TITLES[pathname]) return EXACT_TITLES[pathname];
+  if (/\/admin\/leagues\/[^/]+\/teams\/[^/]+\/players\/[^/]+/.test(pathname))
+    return 'Player Details';
   if (/\/admin\/leagues\/[^/]+\/teams\//.test(pathname)) return 'Team Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/games\//.test(pathname)) return 'Game Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\//.test(pathname)) return 'Season Details';
   if (/\/admin\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   if (/\/admin\/teams\/[^/]+/.test(pathname)) return 'Team Details';
+  if (/\/games\/[^/]+/.test(pathname)) return 'Game Details';
+  if (/\/leagues\/[^/]+/.test(pathname)) return 'League Details';
   return '';
 };
 
@@ -57,7 +63,8 @@ const PageHeader = () => {
   };
 
   const handleSwitchPanel = () => {
-    navigate(isAdminPanel ? '/dashboard' : '/admin/leagues');
+    if (isAdminPanel) navigate('/leagues');
+    else navigate('/admin/leagues');
   };
 
   return (
@@ -71,13 +78,13 @@ const PageHeader = () => {
             ref={dropdownRef}
           >
             {isAdmin && (
-              <Tooltip text="Dashboard">
+              <Tooltip text={isAdminPanel ? 'User View' : 'Admin Panel'}>
                 <button
                   className={styles.switchBtn}
                   onClick={handleSwitchPanel}
                 >
                   <Icon
-                    name="apps"
+                    name={isAdminPanel ? 'apps' : 'shield'}
                     size="1.1rem"
                   />
                 </button>

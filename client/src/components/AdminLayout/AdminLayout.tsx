@@ -7,7 +7,7 @@ import PageHeader from '../PageHeader/PageHeader';
 import styles from './AdminLayout.module.scss';
 
 const AdminLayout = () => {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(true);
   // State ref-callback: triggers a re-render once the div mounts so the portal
   // target is available to all child TitleRow instances.
   const [titleRowContainer, setTitleRowContainer] = useState<HTMLDivElement | null>(null);

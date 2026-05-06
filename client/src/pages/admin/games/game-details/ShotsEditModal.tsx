@@ -49,11 +49,9 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
       const row = rows[i];
       const periodId = periods[i]?.id;
       if (!row || !periodId) continue;
-      const away = parseInt(row.away_shots, 10);
-      const home = parseInt(row.home_shots, 10);
-      if (!isNaN(away) && !isNaN(home)) {
-        await updatePeriodShots(periodId, home, away);
-      }
+      const away = parseInt(row.away_shots || '0', 10);
+      const home = parseInt(row.home_shots || '0', 10);
+      await updatePeriodShots(periodId, home, away);
     }
     setSubmitting(false);
     onClose();
@@ -62,18 +60,18 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
   const teamRows = [
     {
       key: 'away' as const,
-      logo: game.away_team_logo,
-      code: game.away_team_code,
-      primary: game.away_team_primary_color,
-      text: game.away_team_text_color,
+      logo: game.away_team.logo,
+      code: game.away_team.code,
+      primary: game.away_team.primary_color,
+      text: game.away_team.text_color,
       fieldKey: 'away_shots' as const,
     },
     {
       key: 'home' as const,
-      logo: game.home_team_logo,
-      code: game.home_team_code,
-      primary: game.home_team_primary_color,
-      text: game.home_team_text_color,
+      logo: game.home_team.logo,
+      code: game.home_team.code,
+      primary: game.home_team.primary_color,
+      text: game.home_team.text_color,
       fieldKey: 'home_shots' as const,
     },
   ];

@@ -56,9 +56,16 @@ router.get('/:id', async (req, res) => {
              s.is_ended,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
+             s.playoff_format,
+             s.best_of_playoff,
+             s.best_of_shootout,
+             s.scoring_system,
+             s.bracket_rule_set_id,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
-             l.scoring_system AS league_scoring_system
+             l.scoring_system    AS league_scoring_system,
+             l.best_of_playoff   AS league_best_of_playoff,
+             l.best_of_shootout  AS league_best_of_shootout
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
       WHERE s.id = ${id}
@@ -105,25 +112,38 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { league_id, name, start_date, end_date, games_per_season } = req.body;
+  const {
+    league_id, name, start_date, end_date, games_per_season, playoff_format,
+    best_of_playoff, best_of_shootout, scoring_system, bracket_rule_set_id,
+  } = req.body;
 
   try {
     // Fetch current row so we can merge partial updates
     const existing = await sql`
       SELECT id, name, league_id,
-             start_date::text AS start_date, end_date::text AS end_date, is_ended, games_per_season
+             start_date::text AS start_date, end_date::text AS end_date, is_ended,
+             games_per_season, playoff_format,
+             best_of_playoff, best_of_shootout, scoring_system,
+             bracket_rule_set_id
       FROM seasons WHERE id = ${id}
     `;
     if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
     const cur = existing[0];
 
-    const mergedName           = name             !== undefined ? name.trim()                   : cur.name;
-    const mergedLeagueId       = league_id        !== undefined ? league_id                     : cur.league_id;
-    const mergedStartDate      = start_date       !== undefined ? (start_date       || null)    : cur.start_date;
-    const mergedEndDate        = end_date         !== undefined ? (end_date         || null)    : cur.end_date;
-    const mergedGamesPerSeason = games_per_season !== undefined ? (games_per_season || null)    : cur.games_per_season;
+    const mergedName            = name              !== undefined ? name.trim()                : cur.name;
+    const mergedLeagueId        = league_id         !== undefined ? league_id                  : cur.league_id;
+    const mergedStartDate       = start_date        !== undefined ? (start_date  || null)      : cur.start_date;
+    const mergedEndDate         = end_date          !== undefined ? (end_date    || null)      : cur.end_date;
+    const mergedGamesPerSeason  = games_per_season  !== undefined ? (games_per_season || null) : cur.games_per_season;
+    const mergedPlayoffFormat   = playoff_format    !== undefined
+      ? (playoff_format ? JSON.stringify(playoff_format) : null)
+      : (cur.playoff_format ? JSON.stringify(cur.playoff_format) : null);
+    const mergedBestOfPlayoff   = best_of_playoff   !== undefined ? (best_of_playoff   || null) : cur.best_of_playoff;
+    const mergedBestOfShootout  = best_of_shootout  !== undefined ? (best_of_shootout  || null) : cur.best_of_shootout;
+    const mergedScoringSystem      = scoring_system       !== undefined ? (scoring_system       || null) : cur.scoring_system;
+    const mergedBracketRuleSetId   = bracket_rule_set_id  !== undefined ? (bracket_rule_set_id  || null) : cur.bracket_rule_set_id;
     // Auto-set is_ended when an end_date is provided; never auto-clear it.
-    const mergedIsEnded        = mergedEndDate ? true : cur.is_ended;
+    const mergedIsEnded         = mergedEndDate ? true : cur.is_ended;
 
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
 
@@ -135,12 +155,17 @@ router.patch('/:id', async (req, res) => {
     await sql`
       UPDATE seasons
       SET
-        name             = ${mergedName},
-        league_id        = ${mergedLeagueId},
-        start_date       = ${mergedStartDate},
-        end_date         = ${mergedEndDate},
-        is_ended         = ${mergedIsEnded},
-        games_per_season = ${mergedGamesPerSeason}
+        name                 = ${mergedName},
+        league_id            = ${mergedLeagueId},
+        start_date           = ${mergedStartDate},
+        end_date             = ${mergedEndDate},
+        is_ended             = ${mergedIsEnded},
+        games_per_season     = ${mergedGamesPerSeason},
+        playoff_format       = ${mergedPlayoffFormat}::jsonb,
+        best_of_playoff      = ${mergedBestOfPlayoff},
+        best_of_shootout     = ${mergedBestOfShootout},
+        scoring_system       = ${mergedScoringSystem},
+        bracket_rule_set_id  = ${mergedBracketRuleSetId}
       WHERE id = ${id}
     `;
 
@@ -159,6 +184,7 @@ router.patch('/:id', async (req, res) => {
              s.is_ended,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
+             s.playoff_format,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
       FROM seasons s
@@ -583,7 +609,7 @@ router.get('/:seasonId/groups', async (req, res) => {
         )
       SELECT
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at,
-        g.is_auto,
+        g.is_auto, g.role,
         COALESCE(
           json_agg(
             json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo,
@@ -879,8 +905,8 @@ router.get('/:id/stats', async (req, res) => {
     `;
 
     const goalies = await sql`
-      WITH season_games AS (
-        SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
+      WITH period_vals (p, v) AS (
+        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
       ),
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
@@ -888,6 +914,46 @@ router.get('/:id/stats', async (req, res) => {
         FROM player_teams pt
         WHERE pt.season_id = ${id}
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
+      ),
+      -- Per-stint GA: count goals against each goalie during their active window.
+      goalie_ranges AS (
+        SELECT
+          ggs.id, ggs.game_id, ggs.team_id, ggs.goalie_id, ggs.shots_against,
+          pv.v AS from_ord,
+          LEAD(pv.v) OVER (
+            PARTITION BY ggs.game_id, ggs.team_id ORDER BY pv.v
+          ) AS until_ord
+        FROM game_goalie_stats ggs
+        JOIN games g ON g.id = ggs.game_id AND g.season_id = ${id} AND g.status = 'final'
+        JOIN period_vals pv ON pv.p = COALESCE(ggs.entered_period, '1')
+      ),
+      goals_per_stint AS (
+        SELECT gr.id AS stat_id, COUNT(*) AS ga
+        FROM goalie_ranges gr
+        JOIN goals gl ON gl.game_id = gr.game_id AND gl.team_id != gr.team_id AND gl.empty_net = false
+        JOIN period_vals pv ON pv.p = gl.period
+        WHERE pv.v >= gr.from_ord
+          AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)
+        GROUP BY gr.id
+      ),
+      goalie_game_agg AS (
+        SELECT
+          gr.goalie_id,
+          gr.team_id,
+          COUNT(DISTINCT gr.game_id)::int                       AS gp,
+          SUM(gr.shots_against)::int                            AS shots_against,
+          SUM(COALESCE(gps.ga, 0))::int                         AS goals_against,
+          (SUM(gr.shots_against) - SUM(COALESCE(gps.ga, 0)))::int AS saves,
+          -- Shutout: goalie played whole game (no entered_period) AND GA = 0
+          COUNT(*) FILTER (
+            WHERE gr.shots_against > 0
+              AND COALESCE(gps.ga, 0) = 0
+              AND gr.from_ord = 1
+              AND gr.until_ord IS NULL
+          )::int                                                 AS shutouts
+        FROM goalie_ranges gr
+        LEFT JOIN goals_per_stint gps ON gps.stat_id = gr.id
+        GROUP BY gr.goalie_id, gr.team_id
       )
       SELECT
         p.id                                                   AS player_id,
@@ -895,47 +961,34 @@ router.get('/:id/stats', async (req, res) => {
         p.last_name,
         COALESCE(ptr.photo, p.photo)                           AS photo,
         ptr.jersey_number,
-        ggs.team_id                                            AS team_id,
+        agg.team_id                                            AS team_id,
         ti.code                                                AS team_code,
         ti.name                                                AS team_name,
         ti.logo                                                AS team_logo,
         t.primary_color                                        AS team_primary_color,
         t.text_color                                           AS team_text_color,
-        COUNT(DISTINCT ggs.game_id)::int                       AS gp,
-        SUM(ggs.shots_against)::int                            AS shots_against,
-        SUM(ggs.saves)::int                                    AS saves,
-        SUM(ggs.shots_against - ggs.saves)::int                AS goals_against,
-        CASE WHEN SUM(ggs.shots_against) > 0
-          THEN ROUND(SUM(ggs.saves)::numeric / SUM(ggs.shots_against), 3)
+        agg.gp,
+        agg.shots_against,
+        agg.saves,
+        agg.goals_against,
+        CASE WHEN agg.shots_against > 0
+          THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
           ELSE NULL END                                        AS save_pct,
-        COUNT(*) FILTER (
-          WHERE ggs.shots_against > 0
-            AND ggs.shots_against = ggs.saves
-        )::int                                                 AS shutouts,
-        CASE WHEN COUNT(DISTINCT ggs.game_id) > 0
-          THEN ROUND(
-            (SUM(ggs.shots_against) - SUM(ggs.saves))::numeric
-              / COUNT(DISTINCT ggs.game_id), 2)
+        agg.shutouts,
+        CASE WHEN agg.gp > 0
+          THEN ROUND(agg.goals_against::numeric / agg.gp, 2)
           ELSE NULL END                                        AS gaa
-      FROM game_goalie_stats ggs
-      JOIN games   g   ON g.id  = ggs.game_id
-                      AND g.season_id = ${id}
-                      AND g.status    = 'final'
-      JOIN players p   ON p.id  = ggs.goalie_id
-      LEFT JOIN player_team ptr ON ptr.player_id = ggs.goalie_id
-      LEFT JOIN teams       t   ON t.id          = ggs.team_id
+      FROM goalie_game_agg agg
+      JOIN players p    ON p.id  = agg.goalie_id
+      LEFT JOIN player_team ptr ON ptr.player_id = agg.goalie_id
+      LEFT JOIN teams       t   ON t.id          = agg.team_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
-        WHERE team_id = ggs.team_id
+        WHERE team_id = agg.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      GROUP BY
-        p.id, p.first_name, p.last_name, p.photo,
-        ptr.photo, ptr.jersey_number,
-        ggs.team_id, ti.code, ti.name, ti.logo,
-        t.primary_color, t.text_color
-      ORDER BY save_pct DESC NULLS LAST, saves DESC
+      ORDER BY save_pct DESC NULLS LAST, agg.saves DESC
     `;
 
     return res.json({ skaters, goalies });

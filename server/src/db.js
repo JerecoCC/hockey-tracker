@@ -298,7 +298,7 @@ async function initSchema() {
       nationality    TEXT,
       height_cm      SMALLINT,
       weight_lbs     SMALLINT,
-      position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'D', 'G')),
+      position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
       shoots         TEXT CHECK (shoots IN ('L', 'R')),
       is_active      BOOLEAN NOT NULL DEFAULT TRUE,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -307,6 +307,10 @@ async function initSchema() {
 
   // Migrations for columns added after the table was first created
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+
+  // Expand position check constraint to include 'F' (generic Forward)
+  await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_position_check`;
+  await sql`ALTER TABLE players ADD CONSTRAINT players_position_check CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
 
   // Player roster stints: one row per player-team-season stint.
   // A mid-season trade is recorded by setting end_date on the current row
@@ -333,6 +337,11 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS photo TEXT`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS position TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
+
+  // Expand player_teams position check constraint to include 'F', 'LD', 'RD'
+  await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_position_check`;
+  await sql`ALTER TABLE player_teams ADD CONSTRAINT player_teams_position_check CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
 
   // Migrate primary key from composite (player_id, team_id, season_id) → id UUID.
   // Old databases were created with the composite PK; new ones already have id as PK.
@@ -704,8 +713,10 @@ async function initSchema() {
   await sql`DROP TABLE IF EXISTS game_period_shots`;
 
   // ── Goalie stats ───────────────────────────────────────────────────────────
-  // One row per goalie per game. shots_against and saves are entered manually.
-  // save_pct is derived client-side as saves / shots_against.
+  // One row per goalie per game. shots_against is entered manually.
+  // goals_against is derived from the goals table based on entered_period window.
+  // saves = shots_against - goals_against (computed server-side).
+  // entered_period: the period the goalie entered (NULL = started from period 1).
   await sql`
     CREATE TABLE IF NOT EXISTS game_goalie_stats (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -713,11 +724,16 @@ async function initSchema() {
       team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
       goalie_id     UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       shots_against SMALLINT NOT NULL DEFAULT 0 CHECK (shots_against >= 0),
-      saves         SMALLINT NOT NULL DEFAULT 0 CHECK (saves >= 0),
+      entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO')),
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (game_id, goalie_id)
     )
   `;
+  // Migration: add entered_period if missing, drop saves if still present.
+  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO'))`;
+  await sql`ALTER TABLE game_goalie_stats DROP COLUMN IF EXISTS saves`;
+  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS sub_time TEXT CHECK (sub_time ~ '^[0-9]{1,2}:[0-5][0-9]$')`;
+  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS goals_against INTEGER CHECK (goals_against >= 0)`;
 
   // ── Shootout attempts ──────────────────────────────────────────────────────
   // One row per shot attempt in a shootout (both scored and missed).
@@ -799,6 +815,159 @@ async function initSchema() {
       -- Remove the now-redundant closed stint
       DELETE FROM player_teams WHERE id = v_old_id;
     END$$
+  `;
+
+  // ── User favourite teams ───────────────────────────────────────────────────
+  // Connects a user to any number of teams across any league.
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_favorite_teams (
+      user_id    UUID NOT NULL REFERENCES users(id)  ON DELETE CASCADE,
+      team_id    UUID NOT NULL REFERENCES teams(id)  ON DELETE CASCADE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, team_id)
+    )
+  `;
+
+  // ── Helper function: best available photo for a player ───────────────────
+  // Returns the photo from the most recent player_teams stint that has a
+  // non-null photo (active stint first, then most-recently-started historical
+  // stint). Used as COALESCE(pt.photo, best_player_photo(p.id), p.photo)
+  // across roster, lineup, goalie, and shootout queries so the logic lives
+  // in one place rather than being repeated as a LEFT JOIN LATERAL everywhere.
+  await sql`
+    CREATE OR REPLACE FUNCTION best_player_photo(pid uuid)
+    RETURNS text
+    LANGUAGE sql
+    STABLE
+    AS $$
+      SELECT photo
+      FROM   player_teams
+      WHERE  player_id = pid
+        AND  photo IS NOT NULL
+      ORDER  BY end_date DESC NULLS FIRST, created_at DESC
+      LIMIT  1
+    $$
+  `;
+
+  // ── Group role ────────────────────────────────────────────────────────────
+  // Semantic role of a top-level group used by the playoff qualification engine.
+  // 'conference' — a conference-level grouping (e.g. Eastern, Western).
+  // 'division'   — a division-level grouping (e.g. Atlantic, Metropolitan).
+  // NULL          — the group has no special playoff role.
+  await sql`
+    ALTER TABLE groups
+      ADD COLUMN IF NOT EXISTS role TEXT
+        CHECK (role IN ('conference', 'division'))
+  `;
+
+  // ── League playoff qualification format ───────────────────────────────────
+  // JSONB array of qualification rules evaluated in order.
+  // Each rule: { scope: 'league'|'conference'|'division', method: 'top'|'wildcard', count: N }
+  // Examples:
+  //   PWHL (top 4 overall): [{"scope":"league","method":"top","count":4}]
+  //   NHL  (top 3/div + 2 WC/conf):
+  //     [{"scope":"division","method":"top","count":3},
+  //      {"scope":"conference","method":"wildcard","count":2}]
+  await sql`
+    ALTER TABLE leagues
+      ADD COLUMN IF NOT EXISTS playoff_format JSONB
+  `;
+
+  // playoff_format on seasons — per-season override of the qualification rules.
+  // Stored as ordered JSONB array identical in shape to leagues.playoff_format.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS playoff_format JSONB
+  `;
+
+  // ── Bracket rule sets ─────────────────────────────────────────────────────
+  // A named, reusable collection of bracket slot assignment rules owned by a
+  // league.  Multiple seasons in the same league can reference the same set so
+  // the bracket structure only needs to be configured once.
+  await sql`
+    CREATE TABLE IF NOT EXISTS bracket_rule_sets (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id   UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ── Bracket slot rules ────────────────────────────────────────────────────
+  // One row per configured bracket slot within a rule set.  Slots with no rule
+  // ('none') are omitted — they default to unassigned at query time.
+  //
+  // slot_key   : 'r{round}m{matchupIndex}{away|home}', e.g. 'r1m0away'
+  // rule_type  : 'seed' | 'choice' | 'unchosen' | 'winner'
+  //   seed     — #rank team from scope (league / conference / division)
+  //   choice   — a high seed picks from a pool of eligibles (pool JSONB)
+  //   unchosen — the leftover team after a choice pick (choice_ref → slot_key)
+  //   winner   — winner of a prior-round matchup (matchup_ref e.g. 'r1m0')
+  await sql`
+    CREATE TABLE IF NOT EXISTS bracket_slot_rules (
+      id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      rule_set_id  UUID NOT NULL REFERENCES bracket_rule_sets(id) ON DELETE CASCADE,
+      slot_key     TEXT NOT NULL,
+      rule_type    TEXT NOT NULL
+                     CHECK (rule_type IN ('seed', 'choice', 'unchosen', 'winner')),
+      rank         SMALLINT CHECK (rank BETWEEN 1 AND 16),
+      scope        TEXT CHECK (scope IN ('league', 'conference', 'division', 'specific_conference', 'specific_division')),
+      group_id     UUID REFERENCES groups(id) ON DELETE SET NULL,
+      pool         JSONB NOT NULL DEFAULT '[]',
+      choice_ref   TEXT,
+      matchup_ref  TEXT,
+      created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (rule_set_id, slot_key)
+    )
+  `;
+
+  // ── Widen bracket_slot_rules.scope to include specific_conference / specific_division ──
+  // Wrapped in a single DO block so it is one round-trip to Neon and fully atomic.
+  await sql`
+    DO $$
+    BEGIN
+      ALTER TABLE bracket_slot_rules
+        DROP CONSTRAINT IF EXISTS bracket_slot_rules_scope_check;
+      ALTER TABLE bracket_slot_rules
+        ADD CONSTRAINT bracket_slot_rules_scope_check
+          CHECK (scope IN ('league', 'conference', 'division', 'specific_conference', 'specific_division'));
+    EXCEPTION WHEN duplicate_object THEN
+      NULL;
+    END $$
+  `;
+
+  // ── Add group_id to bracket_slot_rules (for specific_conference / specific_division) ──
+  await sql`
+    ALTER TABLE bracket_slot_rules
+      ADD COLUMN IF NOT EXISTS group_id UUID REFERENCES groups(id) ON DELETE SET NULL
+  `;
+
+  // ── Link seasons to a bracket rule set ───────────────────────────────────
+  // ON DELETE SET NULL keeps the season intact when a rule set is deleted.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS bracket_rule_set_id UUID
+        REFERENCES bracket_rule_sets(id) ON DELETE SET NULL
+  `;
+
+  // Game-rule overrides per season — nullable, falls back to league defaults when NULL.
+  // best_of_playoff: number of games needed to win a series (2=Bo3, 3=Bo5, 4=Bo7).
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS best_of_playoff SMALLINT
+        CHECK (best_of_playoff IN (3, 5, 7))
+  `;
+  // best_of_shootout: rounds before sudden death in a shootout (3, 5, or 7).
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS best_of_shootout SMALLINT
+        CHECK (best_of_shootout IN (3, 5, 7))
+  `;
+  // scoring_system: points awarded per game result for this season.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS scoring_system TEXT
+        CHECK (scoring_system IN ('2-1-0', '3-2-1-0'))
   `;
 
   console.log('Database schema ready');

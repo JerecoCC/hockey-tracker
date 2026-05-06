@@ -17,7 +17,10 @@ const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
+  F: 'Forward',
   D: 'Defense',
+  LD: 'Left Defense',
+  RD: 'Right Defense',
   G: 'Goalie',
 };
 
@@ -135,7 +138,8 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                           icon: 'open_in_new',
                           intent: 'neutral',
                           tooltip: 'View player',
-                          onClick: () => navigate(`/admin/players/${p.id}`),
+                          onClick: () =>
+                            navigate(`/admin/leagues/${leagueId}/teams/${teamId}/players/${p.id}`),
                         },
                         {
                           icon: 'edit',

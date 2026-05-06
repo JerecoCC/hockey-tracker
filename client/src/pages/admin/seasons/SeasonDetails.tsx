@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import InfoItem from '@/components/InfoItem/InfoItem';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
@@ -13,6 +14,7 @@ import TitleRow from '@/components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
+import { computeClinched, computeEliminated } from '@/lib/computeClinched';
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
@@ -21,6 +23,7 @@ import useTabState from '@/hooks/useTabState';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
+import SeasonPlayoffsTab from './SeasonPlayoffsTab';
 import SeasonTeamsCard from './SeasonTeamsCard';
 import StatsLeaderCard from './StatsLeaderCard';
 import styles from './SeasonDetails.module.scss';
@@ -76,6 +79,40 @@ const SeasonDetailsPage = () => {
 
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
   const { standings, loading: standingsLoading } = useSeasonStandings(id);
+
+  const clinchedIds = useMemo(
+    () =>
+      computeClinched(
+        standings,
+        season?.playoff_format ?? null,
+        groups,
+        season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+      ),
+    [
+      standings,
+      season?.playoff_format,
+      season?.scoring_system,
+      season?.league_scoring_system,
+      groups,
+    ],
+  );
+
+  const eliminatedIds = useMemo(
+    () =>
+      computeEliminated(
+        standings,
+        season?.playoff_format ?? null,
+        groups,
+        season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+      ),
+    [
+      standings,
+      season?.playoff_format,
+      season?.scoring_system,
+      season?.league_scoring_system,
+      groups,
+    ],
+  );
 
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
@@ -329,6 +366,18 @@ const SeasonDetailsPage = () => {
             </span>
           )}
           {row.team_name ?? row.team_code ?? '—'}
+          {clinchedIds.has(row.team_id) && (
+            <Badge
+              label="x"
+              intent="success"
+            />
+          )}
+          {!clinchedIds.has(row.team_id) && eliminatedIds.has(row.team_id) && (
+            <Badge
+              label="e"
+              intent="danger"
+            />
+          )}
         </span>
       ),
     },
@@ -461,26 +510,22 @@ const SeasonDetailsPage = () => {
                 }
               >
                 <div className={styles.infoGrid}>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>League</span>
-                    <span className={styles.infoValue}>{season.league_name}</span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Start Date</span>
-                    <span className={styles.infoValue}>{formatDate(season.start_date)}</span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>End Date</span>
-                    <span className={styles.infoValue}>
-                      {formatEndDate(season.end_date, season.is_current)}
-                    </span>
-                  </div>
-                  <div className={styles.infoItem}>
-                    <span className={styles.infoLabel}>Games Per Season</span>
-                    <span className={styles.infoValue}>
-                      {season.games_per_season != null ? season.games_per_season : '—'}
-                    </span>
-                  </div>
+                  <InfoItem
+                    label="League"
+                    data={season.league_name}
+                  />
+                  <InfoItem
+                    label="Start Date"
+                    data={formatDate(season.start_date)}
+                  />
+                  <InfoItem
+                    label="End Date"
+                    data={formatEndDate(season.end_date, season.is_current)}
+                  />
+                  <InfoItem
+                    label="Games Per Season"
+                    data={season.games_per_season != null ? String(season.games_per_season) : null}
+                  />
                 </div>
               </Card>
             ),
@@ -783,9 +828,21 @@ const SeasonDetailsPage = () => {
           {
             label: 'Playoffs',
             content: (
-              <Card>
-                <p className={styles.tabPlaceholder}>Playoffs coming soon.</p>
-              </Card>
+              <SeasonPlayoffsTab
+                seasonId={id!}
+                leagueId={season.league_id}
+                bracketRuleSetId={season.bracket_rule_set_id ?? null}
+                groups={groups}
+                isEnded={season.is_ended}
+                playoffFormat={season.playoff_format ?? null}
+                bestOfPlayoff={season.best_of_playoff ?? null}
+                bestOfShootout={season.best_of_shootout ?? null}
+                scoringSystem={season.scoring_system ?? null}
+                leagueBestOfPlayoff={season.league_best_of_playoff}
+                leagueBestOfShootout={season.league_best_of_shootout}
+                leagueScoringSystem={season.league_scoring_system}
+                updateSeason={updateSeason}
+              />
             ),
           },
         ]}

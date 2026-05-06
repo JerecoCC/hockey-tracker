@@ -1,5 +1,5 @@
-@use "../../styles/colors" as *;
-@use "../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Wrapper ─────────────────────────────────────────────────────────────────
 .wrapper {
@@ -18,6 +18,8 @@
   color: $text-bright;
   font-size: $font-xs;
   font-weight: 500;
+  text-transform: none;
+  letter-spacing: normal;
   white-space: nowrap;
   padding: $space-xs $space-sm;
   border-radius: $radius-md;

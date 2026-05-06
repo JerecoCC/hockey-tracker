@@ -1,5 +1,5 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // Date | Time | Away | Home | Venue | delete
 $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
@@ -75,10 +75,4 @@ $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
     opacity: 0.25;
     cursor: not-allowed;
   }
-}
-
-.addRow {
-  padding-top: $space-md;
-  border-top: 1px solid $border;
-  margin-top: $space-xs;
 }

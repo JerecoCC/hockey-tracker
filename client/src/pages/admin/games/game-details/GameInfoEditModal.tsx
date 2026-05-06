@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import { type GameRecord, type GameType } from '@/hooks/useGames';
+import { type GameRecord, type GameType, type UpdateGameInfoData } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
 
 const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
@@ -45,22 +45,13 @@ type FormValues = {
   time_end: string;
 };
 
-interface SavePayload {
-  venue?: string | null;
-  scheduled_at?: string | null;
-  scheduled_time?: string | null;
-  game_type?: GameType;
-  time_start?: string | null;
-  time_end?: string | null;
-}
-
 interface Props {
   open: boolean;
   game: GameRecord;
   isSaving: boolean;
   disabled: boolean;
   onClose: () => void;
-  onSave: (payload: SavePayload) => Promise<boolean>;
+  onSave: (payload: UpdateGameInfoData) => Promise<boolean>;
 }
 
 const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: Props) => {
@@ -68,7 +59,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty },
   } = useForm<FormValues>({
     defaultValues: {
       venue: '',
@@ -112,7 +103,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       onClose={onClose}
       confirmLabel={isSubmitting || isSaving ? 'Saving…' : 'Save'}
       confirmForm="game-info-edit-form"
-      confirmDisabled={isSubmitting || disabled}
+      confirmDisabled={isSubmitting || disabled || !isDirty}
       busy={isSubmitting || isSaving}
     >
       <form
@@ -127,7 +118,9 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
             control={control}
             name="game_type"
             options={GAME_TYPE_OPTIONS}
-            disabled={isSubmitting}
+            disabled={isSubmitting || disabled}
+            rules={{ required: 'Game type is required' }}
+            required
           />
         </div>
         <Field
@@ -136,6 +129,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           control={control}
           name="scheduled_date"
           placeholder="Select date…"
+          disabled={isSubmitting || disabled}
           autoFocus
         />
         <Field
@@ -143,20 +137,32 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           type="timepicker"
           control={control}
           name="scheduled_time"
+          disabled={isSubmitting || disabled}
+          rules={{
+            validate: (value, formValues) =>
+              !value || !!formValues.scheduled_date || 'A date is required when time is set',
+          }}
         />
         <Field
           label="Start Time"
           type="timepicker"
           control={control}
           name="time_start"
-          disabled={isSubmitting || game.status === 'scheduled'}
+          disabled={isSubmitting || disabled || game.status === 'scheduled'}
         />
         <Field
           label="End Time"
           type="timepicker"
           control={control}
           name="time_end"
-          disabled={isSubmitting || game.status !== 'final'}
+          disabled={isSubmitting || disabled || game.status !== 'final'}
+          rules={{
+            validate: (value, formValues) =>
+              !value ||
+              !formValues.time_start ||
+              value > formValues.time_start ||
+              'End time must be after start time',
+          }}
         />
         <div className={styles.formFieldFull}>
           <Field
@@ -164,7 +170,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
             control={control}
             name="venue"
             placeholder="e.g. Scotiabank Arena"
-            disabled={isSubmitting}
+            disabled={isSubmitting || disabled}
           />
         </div>
       </form>

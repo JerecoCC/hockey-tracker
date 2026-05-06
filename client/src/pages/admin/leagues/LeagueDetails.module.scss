@@ -1,5 +1,6 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+@use "sass:color";
 
 // ── Section title ──────────────────────────────────────────────────────
 // ── Page loader ────────────────────────────────────────────────────────
@@ -59,7 +60,7 @@
   opacity: 0.55;
 
   .skeletonBone {
-    background: linear-gradient(90deg, $border 25%, lighten($border, 6%) 50%, $border 75%);
+    background: linear-gradient(90deg, $border 25%, color.adjust($border, $lightness: 6%) 50%, $border 75%);
     background-size: 800px 100%;
     animation: shimmer 1.4s ease-in-out infinite;
     border-radius: $radius-sm;
@@ -91,33 +92,12 @@
   gap: $space-2xl;
 }
 
-.infoItem {
+.playoffFormatList {
+  margin: 0;
+  padding-left: 1.25rem;
   display: flex;
   flex-direction: column;
   gap: $space-xs;
-}
-
-.infoItemFull {
-  grid-column: 1 / -1;
-}
-
-.infoLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.infoValue {
-  font-size: $font-body;
-  color: $text-body;
-}
-
-.infoValueMuted {
-  font-size: $font-body;
-  color: $text-dim;
-  font-style: italic;
 }
 
 .teamList {
@@ -127,6 +107,46 @@
   display: flex;
   flex-direction: column;
   gap: $space-xs;
+}
+
+// ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
+
+.ruleSetList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.ruleSetItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+}
+
+.ruleSetName {
+  font-size: $font-sm;
+  color: $text-body;
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ruleSetActions {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
 }
 
 // Applied only when teams.length > 5 — caps height and enables scrolling
@@ -172,6 +192,13 @@
   align-items: flex-start;
   gap: $space-md;
   grid-column: 1 / -1;
+}
+
+.emptyMsg {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
 }
 
 .ungroupedLabel {
@@ -405,6 +432,38 @@
 
 .groupInlineBtnCancel {
   color: $text-dim;
+}
+
+// Group label with optional role badge
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+// Small pill badge indicating a group's playoff role
+.groupRoleBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: rgba($text-dim, 0.15);
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+.groupRoleBadge_conference {
+  background: rgba(#6366f1, 0.18);
+  color: #a5b4fc;
+}
+
+.groupRoleBadge_division {
+  background: rgba(#10b981, 0.18);
+  color: #6ee7b7;
 }
 
 // Always-visible footer row inside each group node

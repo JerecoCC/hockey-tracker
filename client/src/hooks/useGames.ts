@@ -14,6 +14,16 @@ const apiError = (err: unknown, fallback: string) =>
 export type GameType      = 'preseason' | 'regular' | 'playoff';
 export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed' | 'cancelled';
 export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
+
+export interface UpdateGameInfoData {
+  venue?: string | null;
+  scheduled_at?: string | null;
+  scheduled_time?: string | null;
+  game_type?: GameType;
+  time_start?: string | null;
+  time_end?: string | null;
+  shootout_first_team_id?: string | null;
+}
 export type SeriesStatus = 'upcoming' | 'active' | 'complete';
 
 /** A previous head-to-head meeting between the two teams in the current game's season. */
@@ -48,6 +58,16 @@ export interface LastFiveGame {
   opponent_logo:    string | null;
 }
 
+export interface TeamInfo {
+  id:              string;
+  name:            string;
+  code:            string;
+  logo:            string | null;
+  primary_color:   string;
+  secondary_color: string;
+  text_color:      string;
+}
+
 export interface GameRecord {
   id:                    string;
   season_id:             string;
@@ -60,20 +80,8 @@ export interface GameRecord {
   time_start:            string | null;
   /** Actual end timestamp (set when the game is finalised). */
   time_end:              string | null;
-  home_team_id:            string;
-  home_team_name:          string;
-  home_team_code:          string;
-  home_team_logo:          string | null;
-  home_team_primary_color:   string;
-  home_team_secondary_color: string;
-  home_team_text_color:      string;
-  away_team_id:              string;
-  away_team_name:            string;
-  away_team_code:            string;
-  away_team_logo:            string | null;
-  away_team_primary_color:   string;
-  away_team_secondary_color: string;
-  away_team_text_color:      string;
+  home_team:             TeamInfo;
+  away_team:             TeamInfo;
   overtime_periods:         number | null;
   shootout:                 boolean;
   /** UUID of the team that shoots first in a shootout, or null if not applicable. */
@@ -367,15 +375,7 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  const updateGameInfo = async (data: {
-    venue?: string | null;
-    scheduled_at?: string | null;
-    scheduled_time?: string | null;
-    game_type?: GameType;
-    time_start?: string | null;
-    time_end?: string | null;
-    shootout_first_team_id?: string | null;
-  }): Promise<boolean> => {
+  const updateGameInfo = async (data: UpdateGameInfoData): Promise<boolean> => {
     if (!id) return false;
     setBusy('update-info');
     try {
@@ -440,6 +440,27 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
+  // Only needed for edge-case old games where current_period was never persisted.
+  // Status is NOT changed — the game stays final; only current_period is set.
+  const revertToEditMode = async (lastPeriod: CurrentPeriod): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('revert-edit');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { current_period: lastPeriod },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to set current period'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deleteGame = async (): Promise<boolean> => {
     if (!id) return false;
     setBusy('deleting');
@@ -456,6 +477,93 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, deleteGame };
+  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
+};
+
+// ── Playoff series hook ────────────────────────────────────────────────────────
+
+export interface CreateSeriesData {
+  season_id: string;
+  round: number;
+  series_letter?: string | null;
+  home_team_id: string;
+  away_team_id: string;
+  games_to_win?: number;
+  status?: SeriesStatus;
+  home_wins?: number;
+  away_wins?: number;
+  winner_team_id?: string | null;
+}
+
+export const usePlayoffSeries = (seasonId: string | undefined) => {
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState<string | null>(null);
+
+  const { data: series = [], isLoading: loading } = useQuery<PlayoffSeriesRecord[]>({
+    queryKey: ['playoff-series', seasonId],
+    enabled: !!seasonId,
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayoffSeriesRecord[]>(
+          `${API}/admin/games/playoff-series`,
+          { headers: authHeaders(), params: { season_id: seasonId } },
+        );
+        return data;
+      } catch (err) {
+        toast.error(apiError(err, 'Failed to load playoff series'));
+        return [];
+      }
+    },
+  });
+
+  const invalidate = () =>
+    queryClient.invalidateQueries({ queryKey: ['playoff-series', seasonId] });
+
+  const createSeries = async (data: CreateSeriesData): Promise<boolean> => {
+    setBusy('creating');
+    try {
+      await axios.post(`${API}/admin/games/playoff-series`, data, { headers: authHeaders() });
+      toast.success('Series created!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to create series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const updateSeries = async (id: string, data: Partial<CreateSeriesData>): Promise<boolean> => {
+    setBusy(id);
+    try {
+      await axios.patch(`${API}/admin/games/playoff-series/${id}`, data, { headers: authHeaders() });
+      toast.success('Series updated!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const deleteSeries = async (id: string): Promise<boolean> => {
+    setBusy(id);
+    try {
+      await axios.delete(`${API}/admin/games/playoff-series/${id}`, { headers: authHeaders() });
+      toast.success('Series deleted!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to delete series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { series, loading, busy, createSeries, updateSeries, deleteSeries };
 };
 

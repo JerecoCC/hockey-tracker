@@ -1,0 +1,658 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Two-column layout ────────────────────────────────────────────────────────
+
+.layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: $space-xl;
+  align-items: start;
+  container-type: inline-size;
+
+  @container (max-width: #{$bp-tablet}) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.layoutLeft {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+.layoutRight {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+// ── Bracket rule set selector card ───────────────────────────────────────────
+
+.ruleSetSelector {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.ruleSetHint {
+  font-size: $font-xs;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Game settings card ───────────────────────────────────────────────────────
+
+.settingsGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+// ── Bracket rules modal ──────────────────────────────────────────────────────
+
+.bracketSizeLabel {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  width: 100%;
+}
+
+.bracketRulesStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.bracketRulesRound {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.bracketRulesRoundLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  padding-bottom: $space-xs;
+  border-bottom: 1px solid $border;
+}
+
+.bracketRulesMatchups {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.bracketRulesMatchup {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+}
+
+.bracketRulesMatchupLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-body;
+  margin-bottom: $space-xs;
+}
+
+.bracketRulesAutoNote {
+  font-size: $font-xs;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.bracketRulesSlotRow {
+  display: flex;
+  align-items: flex-start;
+  gap: $space-sm;
+  padding: $space-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba($border, 0.4);
+  }
+}
+
+.bracketRulesSlotLabel {
+  font-size: $font-xs;
+  color: $text-dim;
+  font-weight: 500;
+  min-width: 3.5rem;
+  padding-top: 11px; // vertically centres against 42px Field height
+}
+
+.bracketRulesSlotFields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: $space-xs;
+  flex: 1;
+}
+
+// Rule type selector — fixed width, wide enough for "Choice Pick"
+.slotTypeField {
+  width: 9.5rem;
+  flex-shrink: 0;
+}
+
+// Rank selector — narrow, just for #1–#16
+.slotRankField {
+  width: 5.5rem;
+  flex-shrink: 0;
+}
+
+// Scope / choiceRef selector — fills remaining space
+.slotScopeField {
+  flex: 1;
+  min-width: 9rem;
+}
+
+// Choice pool editor
+.poolEditor {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  flex: 1;
+  width: 100%;
+}
+
+.poolSeedRow {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+// Rank column in pool rows
+.poolSeedRank {
+  width: 5.5rem;
+  flex-shrink: 0;
+}
+
+// Scope column in pool rows
+.poolSeedScope {
+  flex: 1;
+  min-width: 9rem;
+}
+
+.poolSeedRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: $text-dim;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+
+  &:hover {
+    color: $danger;
+    background: rgba($danger, 0.1);
+  }
+}
+
+// ── Choice picks modal ───────────────────────────────────────────────────────
+
+.choicePickStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.choicePickHint {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.choicePickRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+}
+
+.choicePickChooser {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 7rem;
+  max-width: 10rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex-shrink: 0;
+}
+
+.choicePickVerb {
+  font-size: $font-xs;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex-shrink: 0;
+}
+
+.choicePickSelect {
+  flex: 1;
+  min-width: 0;
+}
+
+// ── Game settings modal ──────────────────────────────────────────────────────
+
+.modalForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+// ── Format card (read-only) ──────────────────────────────────────────────────
+
+.formatRuleList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.qualRuleRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: 6px $space-sm;
+}
+
+.qualRuleBadge {
+  min-width: 7.5rem;
+  text-align: center;
+  justify-content: center;
+}
+
+.formatRuleStep {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 50%;
+  background: rgba($accent, 0.12);
+  border: 1px solid rgba($accent, 0.3);
+  color: $accent-light;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.formatRuleText {
+  flex: 1;
+  font-size: $font-sm;
+  font-weight: 500;
+  color: $text-body;
+}
+
+.formatEmpty {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+// ── Format modal (bulk-style editor) ────────────────────────────────────────
+
+.formatHeaderRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 5rem 2rem;
+  gap: $space-md;
+  padding: 0 0 $space-xs;
+  border-bottom: 1px solid $border;
+  margin-bottom: $space-xs;
+}
+
+.formatHeaderCell {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.formatRuleRows {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  max-height: 360px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+  padding-right: $space-xs;
+  margin-right: -#{$space-xs};
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+}
+
+.formatRuleRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 5rem 2rem;
+  gap: $space-md;
+  align-items: end;
+  padding: $space-xs 0;
+
+  &:not(:last-child) {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  }
+}
+
+.formatDeleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: $text-dim;
+  border-radius: $radius-sm;
+  cursor: pointer;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
+  margin-bottom: 1px;
+
+  &:hover:not(:disabled) {
+    color: $danger;
+    background: rgba($danger, 0.1);
+  }
+
+  &:disabled {
+    opacity: 0.25;
+    cursor: not-allowed;
+  }
+}
+
+.formatAddRow {
+  padding-top: $space-md;
+  border-top: 1px solid $border;
+  margin-top: $space-xs;
+}
+
+// ── Bracket grid ─────────────────────────────────────────────────────────────
+
+.bracketGrid {
+  display: flex;
+  gap: $space-lg;
+  overflow-x: auto;
+  align-items: stretch;
+  padding-bottom: $space-xs;
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
+
+  &:hover {
+    scrollbar-color: $border transparent;
+  }
+}
+
+.bracketRound {
+  display: flex;
+  flex-direction: column;
+  min-width: 168px;
+  flex: 1;
+}
+
+.bracketRoundLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  text-align: center;
+  padding-bottom: $space-sm;
+  border-bottom: 1px solid $border;
+  margin-bottom: $space-sm;
+  flex-shrink: 0;
+}
+
+.bracketSlots {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: $space-sm;
+  justify-content: space-around;
+}
+
+.bracketSlot {
+  border-radius: $radius-md;
+  overflow: hidden;
+  min-height: 82px;
+}
+
+// Simulated matchup: solid border, accent tint — not clickable
+.slotSimulated {
+  border-color: rgba($accent, 0.4);
+  opacity: 0.85;
+}
+
+// Empty matchup: same card structure as filled, but dashed border and TBD rows
+.slotEmptyMatchup {
+  border-style: dashed;
+  cursor: pointer;
+  transition: border-color $transition-fast;
+
+  &:hover {
+    border-color: $accent;
+
+    .slotTeamTbd .slotTeamName {
+      color: $text-body;
+    }
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
+.slotEmptyDisabled {
+  cursor: default;
+  opacity: 0.35;
+
+  &:hover {
+    border-color: $border;
+  }
+}
+
+.slotTeamTbd {
+  .slotTeamName {
+    color: $text-dim;
+    font-style: italic;
+  }
+}
+
+.slotFilled {
+  background: $bg-page;
+  border: 1px solid $border;
+  display: flex;
+  flex-direction: column;
+}
+
+.slotTeam {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-xs $space-sm;
+  flex: 1;
+}
+
+.slotTeamName {
+  flex: 1;
+  font-size: $font-xs;
+  font-weight: 500;
+  color: $text-body;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.slotTeamWins {
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-body;
+  min-width: 1rem;
+  text-align: center;
+}
+
+.slotTeamWinner {
+  .slotTeamName,
+  .slotTeamWins {
+    color: $success;
+  }
+}
+
+.slotTeamLoser {
+  .slotTeamName,
+  .slotTeamWins {
+    color: $text-dim;
+    opacity: 0.55;
+  }
+}
+
+.slotDivider {
+  height: 1px;
+  background: $border;
+  margin: 0 $space-sm;
+}
+
+.slotFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px $space-xs;
+  border-top: 1px solid $border;
+}
+
+.slotActions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+// ── Series card ──────────────────────────────────────────────────────────────
+
+.seriesStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.roundLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-top: $space-md;
+  &:first-child {
+    margin-top: 0;
+  }
+}
+
+.seriesRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+}
+
+.seriesTeams {
+  flex: 1;
+  font-size: $font-sm;
+  font-weight: 500;
+  color: $text-body;
+}
+.seriesScore {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-body;
+  min-width: 36px;
+  text-align: center;
+}
+.seriesRowActions {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}
+.emptyState {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+  text-align: center;
+  padding: $space-lg 0;
+}
+
+// ── Series form modal fields ──────────────────────────────────────────────────
+
+.formGrid {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-md;
+}
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.formLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.formSelect,
+.formInput {
+  height: 42px;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-sm;
+  padding: 0 $space-sm;
+  width: 100%;
+  &:focus {
+    outline: none;
+    border-color: $accent;
+  }
+}

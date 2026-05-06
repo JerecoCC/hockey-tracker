@@ -1,5 +1,6 @@
-@use "../../styles/colors" as *;
-@use "../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+@use "sass:color";
 
 // ── Wrapper ─────────────────────────────────────────────────────────────
 .wrapper {
@@ -25,7 +26,7 @@
   }
 
   &:hover {
-    border-color: lighten($border, 10%);
+    border-color: color.adjust($border, $lightness: 10%);
   }
 }
 

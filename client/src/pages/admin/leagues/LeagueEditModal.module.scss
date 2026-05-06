@@ -1,5 +1,5 @@
-@use "../../../styles/colors" as *;
-@use "../../../styles/mixins" as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 .form {
   display: flex;
@@ -15,4 +15,96 @@
     flex: 1;
     min-width: 0;
   }
+}
+
+// ── Playoff format rule builder ─────────────────────────────────────────────
+
+.formatSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.formatLabel {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.formatHint {
+  font-size: $font-xs;
+  color: $text-dim;
+  margin: 0;
+}
+
+.formatRule {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  padding: $space-sm $space-md;
+}
+
+.formatRuleSelect {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-sm;
+  padding: 0 $space-sm;
+  cursor: pointer;
+
+  &:focus {
+    outline: none;
+    border-color: $accent;
+  }
+}
+
+.formatRuleCount {
+  width: 56px;
+  height: 34px;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-sm;
+  padding: 0 $space-sm;
+  text-align: center;
+
+  &:focus {
+    outline: none;
+    border-color: $accent;
+  }
+}
+
+.formatRuleDelete {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $text-dim;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    border-color: $danger;
+    color: $danger;
+  }
+}
+
+.formatEmpty {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
 }

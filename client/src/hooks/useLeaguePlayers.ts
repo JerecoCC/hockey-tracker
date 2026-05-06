@@ -12,7 +12,7 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-export type PlayerPosition = 'C' | 'LW' | 'RW' | 'D' | 'G';
+export type PlayerPosition = 'C' | 'LW' | 'RW' | 'F' | 'D' | 'LD' | 'RD' | 'G';
 export type PlayerShoots = 'L' | 'R';
 
 export interface PlayerRecord {
@@ -32,6 +32,7 @@ export interface PlayerRecord {
   created_at: string;
   // Roster fields — populated when fetching by league_id or team_id
   jersey_number?: number | null;
+  team_id?: string | null;
   team_name?: string | null;
   team_code?: string | null;
   team_logo?: string | null;

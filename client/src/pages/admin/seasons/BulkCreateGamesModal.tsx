@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { type Control, type UseFormSetValue, useFieldArray, useForm } from 'react-hook-form';
-import Button from '@/components/Button/Button';
+import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
@@ -223,22 +223,14 @@ const BulkCreateGamesModal = ({
             ))}
           </div>
 
-          <div className={styles.addRow}>
-            <Button
-              type="button"
-              variant="ghost"
-              intent="neutral"
-              icon="add"
-              size="sm"
-              disabled={isSubmitting}
-              onClick={() => {
-                setAutoFocusIndex(fields.length);
-                append({ ...EMPTY_ROW });
-              }}
-            >
-              Add Game
-            </Button>
-          </div>
+          <AddRowBar
+            label="Add Game"
+            disabled={isSubmitting}
+            onClick={() => {
+              setAutoFocusIndex(fields.length);
+              append({ ...EMPTY_ROW });
+            }}
+          />
         </form>
       </Modal>
 

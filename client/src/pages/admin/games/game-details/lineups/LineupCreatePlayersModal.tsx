@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import axios from 'axios';
+import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
@@ -8,11 +10,17 @@ import Modal from '@/components/Modal/Modal';
 import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
 import styles from './LineupCreatePlayersModal.module.scss';
 
+const API = import.meta.env.VITE_API_URL || '/api';
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
   { value: 'LW', label: 'Left Wing' },
   { value: 'RW', label: 'Right Wing' },
+  { value: 'F', label: 'Forward' },
   { value: 'D', label: 'Defense' },
+  { value: 'LD', label: 'Left Defense' },
+  { value: 'RD', label: 'Right Defense' },
   { value: 'G', label: 'Goalie' },
 ];
 
@@ -58,6 +66,7 @@ interface Props {
   open: boolean;
   onClose: () => void;
   teamId: string;
+  leagueId: string;
   seasonId: string;
   teamName: string;
   /** Current number of players already in this team's game roster. */
@@ -69,12 +78,15 @@ interface Props {
   createAndRosterPlayers: CreateAndRosterFn;
   /** Called with the IDs of newly created players so caller can add them to the game roster */
   onPlayersCreated?: (playerIds: string[]) => Promise<void>;
+  /** Pre-fill form rows with these jersey numbers when the modal opens */
+  initialJerseyNumbers?: number[];
 }
 
 const LineupCreatePlayersModal = ({
   open,
   onClose,
   teamId,
+  leagueId,
   seasonId,
   teamName,
   existingCount,
@@ -82,10 +94,13 @@ const LineupCreatePlayersModal = ({
   existingRoster = [],
   createAndRosterPlayers,
   onPlayersCreated,
+  initialJerseyNumbers,
 }: Props) => {
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateErrors, setDuplicateErrors] = useState<string[]>([]);
+  const [crossTeamWarnings, setCrossTeamWarnings] = useState<string[]>([]);
+  const crossTeamConfirmedRef = useRef(false);
 
   const {
     control,
@@ -100,6 +115,15 @@ const LineupCreatePlayersModal = ({
   const watchedPlayers = useWatch({ control, name: 'players' });
 
   const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  // Pre-populate rows from initialJerseyNumbers when the modal opens
+  useEffect(() => {
+    if (!open || !initialJerseyNumbers || initialJerseyNumbers.length === 0) return;
+    const rows = initialJerseyNumbers.map((n) => ({ ...EMPTY_ROW, jersey_number: String(n) }));
+    reset({ players: rows });
+    setCrossTeamWarnings([]);
+    crossTeamConfirmedRef.current = false;
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Focus first row's jersey input when the modal opens
   useEffect(() => {
@@ -196,6 +220,8 @@ const LineupCreatePlayersModal = ({
   const handleClose = () => {
     reset({ players: [{ ...EMPTY_ROW }] });
     setDuplicateErrors([]);
+    setCrossTeamWarnings([]);
+    crossTeamConfirmedRef.current = false;
     onClose();
   };
 
@@ -246,6 +272,55 @@ const LineupCreatePlayersModal = ({
     }
     setDuplicateErrors([]);
 
+    // ── Cross-team duplicate check (soft warning, bypass-able) ───────────────
+    if (!crossTeamConfirmedRef.current) {
+      try {
+        const { data: allPlayers } = await axios.get<
+          Array<{
+            first_name: string;
+            last_name: string;
+            team_id?: string | null;
+            team_name?: string | null;
+          }>
+        >(`${API}/admin/players`, {
+          headers: authHeaders(),
+          params: { league_id: leagueId, season_id: seasonId },
+        });
+
+        // Only check names against other teams — jersey numbers can change on trade,
+        // and players on this team are already covered by the inline roster warnings.
+        const otherTeamPlayers = allPlayers.filter((p) => p.team_id !== teamId);
+
+        const formNameKeys = new Set(
+          data.players.map(
+            (r) => `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
+          ),
+        );
+        const warnings: string[] = [];
+        for (const p of otherTeamPlayers) {
+          const key = `${p.first_name.trim().toLowerCase()} ${p.last_name.trim().toLowerCase()}`;
+          if (formNameKeys.has(key)) {
+            const formRow = data.players.find(
+              (r) =>
+                `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}` === key,
+            )!;
+            const teamLabel = p.team_name ?? 'another team';
+            warnings.push(
+              `"${formRow.first_name.trim()} ${formRow.last_name.trim()}" already exists on ${teamLabel}.`,
+            );
+            formNameKeys.delete(key); // avoid double-warning for same name
+          }
+        }
+        if (warnings.length > 0) {
+          setCrossTeamWarnings(warnings);
+          return;
+        }
+      } catch {
+        // Non-fatal — proceed without the cross-team check if the fetch fails
+      }
+    }
+    setCrossTeamWarnings([]);
+
     // ── Submit ────────────────────────────────────────────────────────────────
     setIsSubmitting(true);
     const payload = data.players.map((row) => ({
@@ -263,6 +338,12 @@ const LineupCreatePlayersModal = ({
     }
     setIsSubmitting(false);
   });
+
+  const handleCreateAnyway = () => {
+    crossTeamConfirmedRef.current = true;
+    setCrossTeamWarnings([]);
+    document.getElementById('lineup-create-players-form')?.requestSubmit();
+  };
 
   return (
     <>
@@ -380,22 +461,12 @@ const LineupCreatePlayersModal = ({
             })}
           </div>
 
-          <div className={styles.addRow}>
-            <Button
-              type="button"
-              variant="ghost"
-              intent="neutral"
-              icon="add"
-              size="sm"
-              disabled={isSubmitting || !canAddMore}
-              onClick={() => append({ ...EMPTY_ROW })}
-            >
-              Add Player
-            </Button>
-            <span className={styles.slotCounter}>
-              {existingCount + fields.length} / {MAX_ROSTER} players
-            </span>
-          </div>
+          <AddRowBar
+            label="Add Player"
+            onClick={() => append({ ...EMPTY_ROW })}
+            disabled={isSubmitting || !canAddMore}
+            hint={`${existingCount + fields.length} / ${MAX_ROSTER} players`}
+          />
 
           {isSubmitted && errors.players && (
             <p className={styles.formError}>Please fill in all required fields before saving.</p>
@@ -406,6 +477,36 @@ const LineupCreatePlayersModal = ({
                 <li key={i}>{msg}</li>
               ))}
             </ul>
+          )}
+          {crossTeamWarnings.length > 0 && (
+            <div className={styles.crossTeamWarnings}>
+              <ul className={styles.crossTeamWarningList}>
+                {crossTeamWarnings.map((msg, i) => (
+                  <li key={i}>
+                    <Icon
+                      name="warning"
+                      size="0.85em"
+                    />
+                    {msg}
+                  </li>
+                ))}
+              </ul>
+              <p className={styles.crossTeamWarningNote}>
+                This may be the same person. You can create a new player record or go back and add
+                the existing player from the season roster instead.
+              </p>
+              <div className={styles.crossTeamWarningActions}>
+                <Button
+                  type="button"
+                  variant="outlined"
+                  intent="warning"
+                  size="sm"
+                  onClick={handleCreateAnyway}
+                >
+                  Create Anyway
+                </Button>
+              </div>
+            </div>
           )}
         </form>
       </Modal>

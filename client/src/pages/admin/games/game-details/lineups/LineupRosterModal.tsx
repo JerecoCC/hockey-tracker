@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
@@ -14,7 +15,10 @@ const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
+  F: 'Forward',
   D: 'Defense',
+  LD: 'Left Defense',
+  RD: 'Right Defense',
   G: 'Goalie',
 };
 
@@ -27,6 +31,8 @@ interface Props {
   existingPlayerIds: Set<string>;
   /** Called with selected player IDs to add them to the game roster */
   addToGameRoster: (playerIds: string[]) => Promise<boolean>;
+  /** Called with jersey numbers that had no matching player, so the caller can open the create modal */
+  onMissingJerseys?: (jerseyNumbers: number[]) => void;
 }
 
 const LineupRosterModal = ({
@@ -37,10 +43,13 @@ const LineupRosterModal = ({
   teamName,
   existingPlayerIds,
   addToGameRoster,
+  onMissingJerseys,
 }: Props) => {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
+  const [jerseyInput, setJerseyInput] = useState('');
+  const [pendingMissing, setPendingMissing] = useState<number[]>([]);
 
   const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
     queryKey: ['players', { team_id: teamId, season_id: seasonId }],
@@ -107,18 +116,52 @@ const LineupRosterModal = ({
     });
   };
 
+  const handleApplyJerseys = () => {
+    const nums = jerseyInput
+      .split(/[\s,]+/)
+      .map((s) => parseInt(s, 10))
+      .filter((n) => !isNaN(n));
+    if (nums.length === 0) return;
+
+    const matched: string[] = [];
+    const missing: number[] = [];
+    for (const num of nums) {
+      const player = available.find((p) => p.jersey_number === num);
+      if (player) matched.push(player.id);
+      else missing.push(num);
+    }
+
+    if (matched.length > 0) {
+      setSelected((prev) => {
+        const next = new Set(prev);
+        matched.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+    setPendingMissing(missing);
+    setJerseyInput('');
+  };
+
   const handleClose = () => {
     setQuery('');
     setSelected(new Set());
+    setJerseyInput('');
+    setPendingMissing([]);
     onClose();
   };
 
   const handleSubmit = async () => {
-    if (selectedCount === 0) return;
-    setSubmitting(true);
-    const ok = await addToGameRoster([...selected]);
-    setSubmitting(false);
-    if (ok) handleClose();
+    if (selectedCount === 0 && pendingMissing.length === 0) return;
+    if (selectedCount > 0) {
+      setSubmitting(true);
+      const ok = await addToGameRoster([...selected]);
+      setSubmitting(false);
+      if (!ok) return;
+    }
+    if (pendingMissing.length > 0) {
+      onMissingJerseys?.(pendingMissing);
+    }
+    handleClose();
   };
 
   return (
@@ -126,78 +169,107 @@ const LineupRosterModal = ({
       open={open}
       title={`Add to ${teamName} Lineup`}
       onClose={handleClose}
-      size="lg"
+      size="md"
       onConfirm={handleSubmit}
       confirmLabel={submitting ? 'Adding…' : 'Add to Lineup'}
       confirmIcon="group_add"
-      confirmDisabled={submitting || selectedCount === 0}
+      confirmDisabled={submitting || (selectedCount === 0 && pendingMissing.length === 0)}
       busy={submitting}
       footerStart={
         <span>
           {selectedCount > 0
             ? `${selectedCount} player${selectedCount !== 1 ? 's' : ''} selected`
-            : 'No players selected'}
+            : pendingMissing.length > 0
+              ? 'Will create missing players'
+              : 'No players selected'}
         </span>
       }
     >
-      <div className={styles.controls}>
-        <div className={styles.searchWrap}>
-          <Icon
-            name="search"
-            size="1em"
-            className={styles.searchIcon}
-          />
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="Search players…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-          />
-        </div>
-      </div>
-
-      {filtered.length === 0 ? (
-        <p className={styles.empty}>
-          {available.length === 0
-            ? 'All team players are already in this lineup.'
-            : `No players match "${query}".`}
-        </p>
-      ) : (
-        <>
-          <ul className={styles.selectAllRow}>
-            <SelectableListItem
-              checked={allFilteredSelected}
-              onToggle={toggleAll}
-              name="Select All"
-              hideImage
+      <div className={styles.content}>
+        <div className={styles.controls}>
+          <div className={styles.quickAddWrap}>
+            <input
+              className={styles.quickAddInput}
+              type="text"
+              placeholder="Jersey numbers (e.g. 7 11 25)…"
+              value={jerseyInput}
+              onChange={(e) => setJerseyInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleApplyJerseys()}
             />
-          </ul>
-          <div className={styles.listDivider} />
-          <ul className={styles.list}>
-            {filtered.map((p) => {
-              const jerseyPart = p.jersey_number != null ? `#${p.jersey_number}` : null;
-              const positionPart = p.position ? (POSITION_LABELS[p.position] ?? p.position) : null;
-              const eyebrow = [jerseyPart, positionPart].filter(Boolean).join(' · ') || undefined;
-              return (
+            <Button
+              size="sm"
+              variant="outlined"
+              intent="neutral"
+              onClick={handleApplyJerseys}
+              disabled={!jerseyInput.trim()}
+            >
+              Apply
+            </Button>
+          </div>
+          {pendingMissing.length > 0 && (
+            <p className={styles.missingNote}>
+              <Icon
+                name="warning"
+                size="0.85em"
+              />
+              No match for jersey{pendingMissing.length !== 1 ? 's' : ''}{' '}
+              {pendingMissing.map((n) => `#${n}`).join(', ')} — will open Create Players on confirm.
+            </p>
+          )}
+          <div className={styles.searchWrap}>
+            <Icon
+              name="search"
+              size="1em"
+              className={styles.searchIcon}
+            />
+            <input
+              className={styles.searchInput}
+              type="text"
+              placeholder="Search players…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+            />
+          </div>
+        </div>
+
+        {filtered.length === 0 ? (
+          <p className={styles.empty}>
+            {available.length === 0
+              ? 'All team players are already in this lineup.'
+              : `No players match "${query}".`}
+          </p>
+        ) : (
+          <>
+            <ul className={styles.selectAllRow}>
+              <SelectableListItem
+                checked={allFilteredSelected}
+                onToggle={toggleAll}
+                name="Select All"
+                hideImage
+              />
+            </ul>
+            <div className={styles.listDivider} />
+            <ul className={styles.list}>
+              {filtered.map((p) => (
                 <SelectableListItem
                   key={p.id}
                   checked={selected.has(p.id)}
                   onToggle={() => toggle(p.id)}
+                  jerseyNumber={p.jersey_number ?? null}
                   image={p.photo}
                   imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
                   imageShape="circle"
                   imagePrimaryColor={p.primary_color}
                   imageTextColor={p.text_color}
-                  eyebrow={eyebrow}
+                  eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                   name={`${p.last_name}, ${p.first_name}`}
                 />
-              );
-            })}
-          </ul>
-        </>
-      )}
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
     </Modal>
   );
 };

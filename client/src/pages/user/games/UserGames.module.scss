@@ -1,0 +1,227 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+// ── Page ───────────────────────────────────────────────────────────────
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-2xl;
+}
+
+// ── Toolbar (week nav + filter selects) ───────────────────────────────
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-lg;
+  flex-wrap: wrap;
+}
+
+// ── Week navigation (prev btn + date picker + next btn) ───────────────
+.weekNav {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.navBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  flex-shrink: 0;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $text-body;
+  cursor: pointer;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    background: $bg-card;
+    border-color: #475569;
+  }
+}
+
+// ── Filter selects row (league · season · status) ─────────────────────
+.filters {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  flex-wrap: wrap;
+}
+
+.filterSelect {
+  min-width: 150px;
+}
+
+// ── Empty / loading ────────────────────────────────────────────────────
+.empty {
+  margin: 0;
+  color: $text-dim;
+  font-size: $font-base;
+  padding: $space-lg 0;
+}
+
+// ── Games list ─────────────────────────────────────────────────────────
+.gamesList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+// ── Game card ──────────────────────────────────────────────────────────
+.gameCardClickable {
+  cursor: pointer;
+
+  &:hover {
+    border-color: $text-dim;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
+.gameCard {
+  background: $bg-page;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  padding: $space-lg $space-2xl;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  transition: border-color $transition-fast;
+
+  &:hover {
+    border-color: #475569;
+  }
+
+  &.live {
+    border-color: $success;
+  }
+}
+
+.dayEmpty {
+  margin: 0;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.dayGames {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+// ── Card meta row (time · season · badge) ─────────────────────────────
+.cardMeta {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  flex-wrap: wrap;
+}
+
+.metaTime {
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.metaSeason {
+  font-size: $font-sm;
+  color: $text-dim;
+
+  &::before {
+    content: "·";
+    margin-right: $space-sm;
+  }
+}
+
+// ── Matchup row ────────────────────────────────────────────────────────
+.matchup {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+}
+
+// ── Team block ─────────────────────────────────────────────────────────
+.team {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  min-width: 0;
+
+  &.teamRight {
+    flex-direction: row-reverse;
+    text-align: right;
+  }
+}
+
+.teamLogo {
+  width: 36px;
+  height: 36px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.teamLogoPlaceholder {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: $font-xs;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.teamName {
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-body;
+  @include truncate;
+}
+
+// ── Score block ────────────────────────────────────────────────────────
+.scoreBlock {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.scoreVal {
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-body;
+  min-width: 20px;
+  text-align: center;
+}
+
+.scoreWin {
+  font-size: $font-2xl;
+  font-weight: 700;
+  color: $text-bright;
+  min-width: 20px;
+  text-align: center;
+}
+
+.scoreSep {
+  font-size: $font-xl;
+  color: $text-dim;
+}
+
+.scoreVs {
+  font-size: $font-base;
+  color: $text-dim;
+  font-weight: 500;
+}

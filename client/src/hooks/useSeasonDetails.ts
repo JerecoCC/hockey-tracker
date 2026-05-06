@@ -23,6 +23,8 @@ export interface SeasonGroupRecord {
   name: string;
   sort_order: number;
   created_at: string;
+  /** Semantic playoff role: 'conference' | 'division' | null (no special role). */
+  role: 'conference' | 'division' | null;
   teams: GroupTeamRecord[];
   /** True when this group has season-specific team overrides (vs. league defaults). */
   has_season_override: boolean;
@@ -207,7 +209,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     ]);
   };
 
-  const addGroup = async (data: { name: string; parent_id?: string | null }): Promise<boolean> => {
+  const addGroup = async (data: { name: string; parent_id?: string | null; role?: 'conference' | 'division' | null }): Promise<boolean> => {
     if (!season?.league_id) return false;
     try {
       await axios.post(
@@ -224,7 +226,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     }
   };
 
-  const updateGroup = async (groupId: string, payload: { name: string }): Promise<boolean> => {
+  const updateGroup = async (groupId: string, payload: { name?: string; role?: 'conference' | 'division' | null }): Promise<boolean> => {
     setGroupBusy(groupId);
     try {
       await axios.patch(`${API}/admin/groups/${groupId}`, payload, { headers: authHeaders() });
