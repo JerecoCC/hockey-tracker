@@ -48,10 +48,9 @@ export const formatScheduledTime = (t: string, scheduledAt?: string | null): str
 
 /**
  * Format a player name for goal/assist display.
- * Result: "C. McDavid"  (or "McDavid" when no first name)
+ * Result: "Connor McDavid"  (or "McDavid" when no first name)
  */
 export const formatPlayerName = (firstName: string | null, lastName: string | null): string => {
   if (!lastName) return '';
-  const initial = firstName ? `${firstName.charAt(0)}. ` : '';
-  return `${initial}${lastName}`;
+  return firstName ? `${firstName} ${lastName}` : lastName;
 };
