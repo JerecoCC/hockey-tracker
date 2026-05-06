@@ -66,6 +66,7 @@ const TeamDetailsPage = () => {
         tabs={[
           {
             label: 'Info',
+            icon: 'info',
             content: (
               <TeamInfoTab
                 team={team}
@@ -77,6 +78,7 @@ const TeamDetailsPage = () => {
           },
           {
             label: 'Games',
+            icon: 'sports_hockey',
             content: (
               <TeamGamesTab
                 teamId={team.id}
@@ -86,6 +88,7 @@ const TeamDetailsPage = () => {
           },
           {
             label: 'Roster',
+            icon: 'set_lineup',
             content: (
               <TeamRosterTab
                 teamId={team.id}
@@ -94,9 +97,10 @@ const TeamDetailsPage = () => {
               />
             ),
           },
-          { label: 'Prospects', content: <TeamProspectsTab /> },
+          { label: 'Prospects', icon: 'search', content: <TeamProspectsTab /> },
           {
             label: 'History',
+            icon: 'history',
             content: (
               <TeamHistoryTab
                 teamId={team.id}

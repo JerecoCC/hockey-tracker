@@ -71,7 +71,6 @@
   @media (max-width: 768px) {
     display: flex;
     overflow-x: auto;
-    border-top: 1px solid $border;
     padding: 0 $space-lg;
     scrollbar-width: none;
 
@@ -86,7 +85,7 @@
   position: relative;
   background: none;
   border: none;
-  padding: $space-sm $space-xl;
+  padding: $space-sm $space-2xl;
   font-size: $font-nav;
   font-weight: 500;
   color: $text-light;

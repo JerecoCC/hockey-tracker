@@ -145,20 +145,31 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
       {/* ── Mobile tab strip (below title row) ── */}
       {mobileTabs && (
         <div className={styles.mobileTabBar}>
-          {mobileTabs.tabs.map((label, i) => (
-            <button
-              key={label}
-              className={[
-                styles.mobileTab,
-                mobileTabs.activeIndex === i ? styles.mobileTabActive : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-              onClick={() => mobileTabs.onChange(i)}
-            >
-              {label}
-            </button>
-          ))}
+          {mobileTabs.tabs.map((label, i) => {
+            const iconName = mobileTabs.icons[i];
+            return (
+              <button
+                key={label}
+                aria-label={label}
+                className={[
+                  styles.mobileTab,
+                  mobileTabs.activeIndex === i ? styles.mobileTabActive : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => mobileTabs.onChange(i)}
+              >
+                {iconName ? (
+                  <Icon
+                    name={iconName}
+                    size="1.1rem"
+                  />
+                ) : (
+                  label
+                )}
+              </button>
+            );
+          })}
         </div>
       )}
     </header>

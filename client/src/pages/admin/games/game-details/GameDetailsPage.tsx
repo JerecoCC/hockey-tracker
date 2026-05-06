@@ -252,6 +252,7 @@ const GameDetailsPage = () => {
         tabs={[
           {
             label: 'Summary',
+            icon: 'apps',
             content: (
               <GameSummaryTab
                 game={game}
@@ -288,6 +289,7 @@ const GameDetailsPage = () => {
           },
           {
             label: 'Lineups',
+            icon: 'set_lineup',
             content: (
               <GameLineupsTab
                 game={game}

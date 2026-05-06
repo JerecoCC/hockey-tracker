@@ -11,6 +11,7 @@ import {
   faCheck,
   faDownload,
   faCircleCheck,
+  faCircleInfo,
   faCircleMinus,
   faCircleXmark,
   faClone,
@@ -81,6 +82,9 @@ const ICON_MAP: Record<string, IconDefinition> = {
   expand_more: faChevronDown,
   menu: faBars,
   shield: faShield,
+
+  // info
+  info: faCircleInfo,
 
   // nav items
   calendar_month: faCalendarDays,

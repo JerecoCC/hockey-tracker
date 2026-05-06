@@ -3,6 +3,8 @@ import { createContext, useContext } from 'react';
 export interface MobileTabsState {
   /** Label for each tab button. */
   tabs: string[];
+  /** Optional icon name (from Icon component) for each tab button. */
+  icons: (string | undefined)[];
   /** Currently active tab index. */
   activeIndex: number;
   /** Called when the user taps a tab in the header strip. */

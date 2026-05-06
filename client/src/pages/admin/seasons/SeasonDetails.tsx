@@ -452,6 +452,7 @@ const SeasonDetailsPage = () => {
         tabs={[
           {
             label: 'Info',
+            icon: 'info',
             content: (
               <Card
                 title={
@@ -532,6 +533,7 @@ const SeasonDetailsPage = () => {
           },
           {
             label: 'Teams',
+            icon: 'group',
             content: (
               <SeasonTeamsCard
                 seasonTeams={seasonTeams}
@@ -552,6 +554,7 @@ const SeasonDetailsPage = () => {
           },
           {
             label: 'Games',
+            icon: 'sports_hockey',
             content: (
               <SeasonGamesTab
                 leagueId={leagueId!}
@@ -563,6 +566,7 @@ const SeasonDetailsPage = () => {
           },
           {
             label: 'Stats',
+            icon: 'query_stats',
             content: (
               <div className={styles.statsSubTabs}>
                 <SegmentedControl
@@ -827,6 +831,7 @@ const SeasonDetailsPage = () => {
           },
           {
             label: 'Playoffs',
+            icon: 'emoji_events',
             content: (
               <SeasonPlayoffsTab
                 seasonId={id!}

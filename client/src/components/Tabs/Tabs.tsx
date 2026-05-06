@@ -5,6 +5,8 @@ import styles from './Tabs.module.scss';
 
 export interface Tab {
   label: string;
+  /** Optional icon name (from Icon component) shown in the mobile header tab strip. */
+  icon?: string;
   content: ReactNode;
 }
 
@@ -38,9 +40,9 @@ const Tabs = (props: TabsProps) => {
   // Register with MobileTabsContext so PageHeader can render the tab strip.
   // useLayoutEffect fires synchronously before paint → no flash on first render.
   useLayoutEffect(() => {
-    const labels = tabs.map((t) => t.label);
     setMobileTabs({
-      tabs: labels,
+      tabs: tabs.map((t) => t.label),
+      icons: tabs.map((t) => t.icon),
       activeIndex: active,
       onChange: (i) => {
         setInternal(i);
