@@ -49,8 +49,10 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const routeTitle = getTitle(pathname);
-  // On mobile, swap the route title for the active tab name when tabs are present.
+  // On mobile, swap the route title for "{RoutePrefix} {ActiveTab}", e.g. "Season Info".
   const activeTabLabel = mobileTabs?.tabs[mobileTabs.activeIndex];
+  const routePrefix = routeTitle.split(' ')[0]; // "League Details" → "League"
+  const mobileTabTitle = activeTabLabel ? `${routePrefix} ${activeTabLabel}` : null;
   const title = routeTitle;
 
   useEffect(() => {
@@ -95,8 +97,8 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
               {title}
             </h1>
           )}
-          {/* Active tab label – only shown on mobile when tabs are present */}
-          {activeTabLabel && <h1 className={styles.titleMobileTab}>{activeTabLabel}</h1>}
+          {/* Prefixed tab title – only shown on mobile when tabs are present */}
+          {mobileTabTitle && <h1 className={styles.titleMobileTab}>{mobileTabTitle}</h1>}
         </div>
 
         <div className={styles.right}>
