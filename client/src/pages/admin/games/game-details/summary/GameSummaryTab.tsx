@@ -273,6 +273,11 @@ const GameSummaryTab = ({
     showGoalies: boolean,
     showShootsFirst = false,
   ) => {
+    if (nextAction.type === 'end-game' && endGameReadyForStars) {
+      setStarsEditMode(false);
+      setStarsModalOpen(true);
+      return;
+    }
     setShotsNextAction(nextAction);
     setShotsShowGoalies(showGoalies);
     setShotsShowShootsFirst(showShootsFirst);
@@ -384,6 +389,7 @@ const GameSummaryTab = ({
               onEditAttempt={openEditAttemptModal}
               onDeleteAttempt={handleDeleteAttempt}
               onSwitchGoalie={isInProgress ? () => setSwitchGoalieOpen(true) : undefined}
+              onGoBackPeriod={isInProgress ? (prev) => advancePeriod(prev) : undefined}
               getPlayerHref={(playerId) => {
                 const teamId = playerTeamMap.get(playerId);
                 return teamId

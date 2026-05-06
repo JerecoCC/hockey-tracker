@@ -14,7 +14,7 @@ import TitleRow from '@/components/TitleRow/TitleRow';
 import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
-import { computeClinched } from '@/lib/computeClinched';
+import { computeClinched, computeEliminated } from '@/lib/computeClinched';
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
@@ -83,6 +83,23 @@ const SeasonDetailsPage = () => {
   const clinchedIds = useMemo(
     () =>
       computeClinched(
+        standings,
+        season?.playoff_format ?? null,
+        groups,
+        season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+      ),
+    [
+      standings,
+      season?.playoff_format,
+      season?.scoring_system,
+      season?.league_scoring_system,
+      groups,
+    ],
+  );
+
+  const eliminatedIds = useMemo(
+    () =>
+      computeEliminated(
         standings,
         season?.playoff_format ?? null,
         groups,
@@ -353,6 +370,12 @@ const SeasonDetailsPage = () => {
             <Badge
               label="x"
               intent="success"
+            />
+          )}
+          {!clinchedIds.has(row.team_id) && eliminatedIds.has(row.team_id) && (
+            <Badge
+              label="e"
+              intent="danger"
             />
           )}
         </span>

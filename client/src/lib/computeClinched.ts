@@ -107,3 +107,90 @@ export function computeClinched(
 
   return clinched;
 }
+
+// ── Elimination ────────────────────────────────────────────────────────────────
+
+/**
+ * Returns the set of team IDs that have been mathematically eliminated from
+ * playoff contention.
+ *
+ * A team is eliminated when their maximum possible points (current points +
+ * remaining games × max pts per win) falls below the current points of the
+ * last team currently holding a playoff spot — meaning they can no longer
+ * reach that spot even if they win every remaining game.
+ *
+ * Rules are processed in order (same claiming logic as computeClinched) so
+ * wildcard pools correctly exclude teams already placed via division/conference
+ * rules.
+ */
+export function computeEliminated(
+  standings: TeamStandingRecord[],
+  playoffFormat: PlayoffFormatRule[] | null,
+  groups: SeasonGroupRecord[],
+  scoringSystem: '2-1-0' | '3-2-1-0',
+): Set<string> {
+  if (!playoffFormat || playoffFormat.length === 0) return new Set();
+  if (standings.length === 0) return new Set();
+
+  const maxPts = scoringSystem === '3-2-1-0' ? 3 : 2;
+  const claimed = new Set<string>();
+  // Teams that still have a mathematical path to the playoffs via any rule.
+  const canQualify = new Set<string>();
+
+  for (const rule of playoffFormat) {
+    if (rule.scope === 'league') {
+      const eligible = standings.filter((t) => !claimed.has(t.team_id));
+      // Last team currently holding a spot in this pool.
+      const lastQualifier = eligible[rule.count - 1] ?? null;
+
+      for (const team of eligible) {
+        // Alive if max possible >= last qualifier's current points, or if
+        // there are fewer teams than spots (everyone qualifies).
+        if (lastQualifier === null || maxPossible(team, maxPts) >= lastQualifier.points) {
+          canQualify.add(team.team_id);
+        }
+      }
+      eligible.slice(0, rule.count).forEach((t) => claimed.add(t.team_id));
+    } else if (rule.scope === 'division') {
+      const divisionGroups = groups.filter((g) => g.role === 'division');
+      for (const div of divisionGroups) {
+        const divIds = getGroupTeamIds(div.id, groups);
+        const eligible = standings.filter(
+          (t) => divIds.has(t.team_id) && !claimed.has(t.team_id),
+        );
+        const lastQualifier = eligible[rule.count - 1] ?? null;
+
+        for (const team of eligible) {
+          if (lastQualifier === null || maxPossible(team, maxPts) >= lastQualifier.points) {
+            canQualify.add(team.team_id);
+          }
+        }
+        eligible.slice(0, rule.count).forEach((t) => claimed.add(t.team_id));
+      }
+    } else if (rule.scope === 'conference') {
+      const conferenceGroups = groups.filter((g) => g.role === 'conference');
+      for (const conf of conferenceGroups) {
+        const confIds = getGroupTeamIds(conf.id, groups);
+        const eligible = standings.filter(
+          (t) => confIds.has(t.team_id) && !claimed.has(t.team_id),
+        );
+        const lastQualifier = eligible[rule.count - 1] ?? null;
+
+        for (const team of eligible) {
+          if (lastQualifier === null || maxPossible(team, maxPts) >= lastQualifier.points) {
+            canQualify.add(team.team_id);
+          }
+        }
+        eligible.slice(0, rule.count).forEach((t) => claimed.add(t.team_id));
+      }
+    }
+  }
+
+  const eliminated = new Set<string>();
+  for (const team of standings) {
+    if (!canQualify.has(team.team_id)) {
+      eliminated.add(team.team_id);
+    }
+  }
+  return eliminated;
+}

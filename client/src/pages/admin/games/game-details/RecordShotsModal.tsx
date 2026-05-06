@@ -40,6 +40,18 @@ const PERIOD_TITLE_LABEL: Record<string, string> = {
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
+const isoToETHHMM = (iso: string): string => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(iso));
+  const h = parts.find((p) => p.type === 'hour')?.value ?? '';
+  const m = parts.find((p) => p.type === 'minute')?.value ?? '';
+  return h && m ? `${h}:${m}` : '';
+};
+
 const etHHMMtoISO = (hhmm: string): string => {
   const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
     new Date(),
@@ -124,7 +136,7 @@ const RecordShotsModal = ({
       reset({
         away_shots: existing ? String(existing.away_shots) : '',
         home_shots: existing ? String(existing.home_shots) : '',
-        end_time: '',
+        end_time: isEndGame && game.time_end ? isoToETHHMM(game.time_end) : '',
         goalies: goalieRosterList.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
           return { shots_against: stat ? String(stat.shots_against) : '' };

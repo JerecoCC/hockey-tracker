@@ -3,6 +3,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faArrowRotateLeft,
   faArrowRotateRight,
   faChartLine,
   faArrowUpRightFromSquare,
@@ -115,6 +116,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   person_remove: faUserMinus,
   remove_circle_outline: faCircleMinus,
   restart_alt: faArrowRotateRight,
+  undo: faArrowRotateLeft,
   search: faMagnifyingGlass,
 
   // auth

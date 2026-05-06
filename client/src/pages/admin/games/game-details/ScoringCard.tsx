@@ -53,6 +53,7 @@ interface Props {
   onEditAttempt?: (attempt: ShootoutAttempt) => void;
   onDeleteAttempt?: (attemptId: string) => void;
   onSwitchGoalie?: () => void;
+  onGoBackPeriod?: (prev: CurrentPeriod) => void;
   /** When provided, player names in goal rows become navigation links. */
   getPlayerHref?: (playerId: string) => string;
 }
@@ -81,6 +82,7 @@ const ScoringCard = ({
   onEditAttempt,
   onDeleteAttempt,
   onSwitchGoalie,
+  onGoBackPeriod,
   getPlayerHref,
 }: Props) => {
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -250,6 +252,15 @@ const ScoringCard = ({
               hoverActions={
                 isActive && onScoreGoal && onOpenShotsModal
                   ? ([
+                      onGoBackPeriod && num > 1 && periodGoals.length === 0
+                        ? {
+                            icon: 'undo',
+                            tooltip: 'Go Back to Previous Period',
+                            intent: 'neutral' as const,
+                            disabled: !!busy,
+                            onClick: () => onGoBackPeriod(String(num - 1) as CurrentPeriod),
+                          }
+                        : null,
                       {
                         icon: 'sports_hockey',
                         tooltip: 'Score Goal',
@@ -341,6 +352,15 @@ const ScoringCard = ({
                 hoverActions={
                   isOTActive && onScoreGoal && onOpenShotsModal
                     ? ([
+                        onGoBackPeriod && otGoals.length === 0
+                          ? {
+                              icon: 'undo',
+                              tooltip: 'Go Back to Previous Period',
+                              intent: 'neutral' as const,
+                              disabled: !!busy,
+                              onClick: () => onGoBackPeriod('3'),
+                            }
+                          : null,
                         otGoals.length === 0
                           ? {
                               icon: 'sports_hockey',

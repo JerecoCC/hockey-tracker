@@ -141,18 +141,18 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     return [{ value: '', label: 'All Months' }, ...months];
   }, [games]);
 
-  /** Games after all filters are applied, most recent date/time first. */
+  /** Games after all filters are applied, earliest date/time first. */
   const filteredGames = useMemo(() => {
     const sorted = [...games].sort((a, b) => {
       if (!a.scheduled_at && !b.scheduled_at) return 0;
       if (!a.scheduled_at) return 1;
       if (!b.scheduled_at) return -1;
-      if (a.scheduled_at !== b.scheduled_at) return a.scheduled_at > b.scheduled_at ? -1 : 1;
-      // Same date — sort by time descending (null times go last)
+      if (a.scheduled_at !== b.scheduled_at) return a.scheduled_at < b.scheduled_at ? -1 : 1;
+      // Same date — sort by time ascending (null times go last)
       if (!a.scheduled_time && !b.scheduled_time) return 0;
       if (!a.scheduled_time) return 1;
       if (!b.scheduled_time) return -1;
-      return a.scheduled_time > b.scheduled_time ? -1 : 1;
+      return a.scheduled_time < b.scheduled_time ? -1 : 1;
     });
     return sorted.filter((g) => {
       if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
