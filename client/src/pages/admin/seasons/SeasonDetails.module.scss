@@ -430,6 +430,12 @@
   gap: $space-sm;
 }
 
+// Match the border-radius of the Edit button (md = $radius-md) for the
+// adjacent MoreActionsMenu trigger, which otherwise uses the icon-only default ($radius-sm).
+.moreActionsBtn {
+  border-radius: $radius-md;
+}
+
 // ── Groups section within the Teams card ──────────────────────────────────────
 .groupsSection {
   // intentionally no border-top/margin — groups render alone when present

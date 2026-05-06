@@ -483,6 +483,8 @@ const SeasonDetailsPage = () => {
                       Edit
                     </Button>
                     <MoreActionsMenu
+                      size="md"
+                      buttonClassName={styles.moreActionsBtn}
                       items={[
                         ...(!season.is_current
                           ? [

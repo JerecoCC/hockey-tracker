@@ -17,9 +17,11 @@ interface Props {
   disabled?: boolean;
   /** Size of the trigger button. Defaults to 'sm'. */
   size?: 'sm' | 'md';
+  /** Extra className forwarded to the trigger Button (e.g. to override border-radius). */
+  buttonClassName?: string;
 }
 
-const MoreActionsMenu = ({ items, disabled = false, size = 'sm' }: Props) => {
+const MoreActionsMenu = ({ items, disabled = false, size = 'sm', buttonClassName }: Props) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -35,7 +37,10 @@ const MoreActionsMenu = ({ items, disabled = false, size = 'sm' }: Props) => {
   }, [open]);
 
   return (
-    <div className={styles.wrapper} ref={wrapperRef}>
+    <div
+      className={styles.wrapper}
+      ref={wrapperRef}
+    >
       <Button
         variant="outlined"
         intent="neutral"
@@ -43,6 +48,7 @@ const MoreActionsMenu = ({ items, disabled = false, size = 'sm' }: Props) => {
         size={size}
         tooltip="More actions"
         disabled={disabled}
+        className={buttonClassName}
         onClick={() => setOpen((o) => !o)}
       />
 
@@ -51,10 +57,7 @@ const MoreActionsMenu = ({ items, disabled = false, size = 'sm' }: Props) => {
           {items.map((item, i) => (
             <button
               key={i}
-              className={[
-                styles.menuItem,
-                item.intent === 'danger' ? styles.menuItemDanger : '',
-              ]
+              className={[styles.menuItem, item.intent === 'danger' ? styles.menuItemDanger : '']
                 .filter(Boolean)
                 .join(' ')}
               disabled={item.disabled ?? disabled}
