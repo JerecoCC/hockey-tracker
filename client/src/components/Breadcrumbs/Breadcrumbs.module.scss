@@ -45,3 +45,18 @@
   font-weight: 600;
   color: $text-bright;
 }
+
+// ── Short label (mobile only) ──────────────────────────────────────────
+.fullLabel {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.shortLabel {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: inline;
+  }
+}

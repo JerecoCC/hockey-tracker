@@ -21,7 +21,11 @@ const TeamDetailsPage = () => {
   const [activeTab, handleTabChange] = useTabState('tab:team-details');
   const breadcrumbItems = [
     { label: 'Leagues', path: '/admin/leagues' },
-    { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
+    {
+      label: team?.league_name ?? '…',
+      shortLabel: team?.league_code ?? undefined,
+      path: `/admin/leagues/${leagueId}`,
+    },
     { label: team?.name ?? '…' },
   ];
 

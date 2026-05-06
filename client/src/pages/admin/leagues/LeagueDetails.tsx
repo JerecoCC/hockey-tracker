@@ -110,7 +110,10 @@ const LeagueDetailsPage = () => {
         }
         right={
           <Breadcrumbs
-            items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: league.name }]}
+            items={[
+              { label: 'Leagues', path: '/admin/leagues' },
+              { label: league.name, shortLabel: league.code },
+            ]}
           />
         }
       />

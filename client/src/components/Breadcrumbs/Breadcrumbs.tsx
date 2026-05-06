@@ -4,12 +4,24 @@ import styles from './Breadcrumbs.module.scss';
 
 export interface BreadcrumbItem {
   label: string;
+  /** Shown instead of `label` on mobile (≤ 768 px). Useful for long names like league names. */
+  shortLabel?: string;
   path?: string;
 }
 
 interface BreadcrumbsProps {
   items: BreadcrumbItem[];
 }
+
+const renderLabel = (item: BreadcrumbItem) =>
+  item.shortLabel ? (
+    <>
+      <span className={styles.fullLabel}>{item.label}</span>
+      <span className={styles.shortLabel}>{item.shortLabel}</span>
+    </>
+  ) : (
+    item.label
+  );
 
 const Breadcrumbs = (props: BreadcrumbsProps) => {
   const { items } = props;
@@ -38,10 +50,10 @@ const Breadcrumbs = (props: BreadcrumbsProps) => {
                 className={styles.link}
                 onClick={() => navigate(item.path!)}
               >
-                {item.label}
+                {renderLabel(item)}
               </button>
             ) : (
-              <span className={isLast ? styles.current : styles.label}>{item.label}</span>
+              <span className={isLast ? styles.current : styles.label}>{renderLabel(item)}</span>
             )}
           </span>
         );

@@ -439,7 +439,7 @@ const SeasonDetailsPage = () => {
           <Breadcrumbs
             items={[
               { label: 'Leagues', path: '/admin/leagues' },
-              { label: season.league_name, path: leagueHref },
+              { label: season.league_name, shortLabel: season.league_code, path: leagueHref },
               { label: season.name },
             ]}
           />
