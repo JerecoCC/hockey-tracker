@@ -732,6 +732,7 @@ async function initSchema() {
   // Migration: add entered_period if missing, drop saves if still present.
   await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO'))`;
   await sql`ALTER TABLE game_goalie_stats DROP COLUMN IF EXISTS saves`;
+  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS sub_time TEXT CHECK (sub_time ~ '^[0-9]{1,2}:[0-5][0-9]$')`;
 
   // ── Shootout attempts ──────────────────────────────────────────────────────
   // One row per shot attempt in a shootout (both scored and missed).

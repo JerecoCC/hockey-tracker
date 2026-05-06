@@ -41,6 +41,7 @@ const GameDetailsPage = () => {
     updateStars,
     updateGameInfo,
     updatePeriodShots,
+    revertToEditMode,
     deleteGame,
   } = useGameDetails(id);
   const { goalieStats, upsertGoalieStat, switchGoalie, removeGoalieStat } = useGameGoalieStats(id);
@@ -280,6 +281,7 @@ const GameDetailsPage = () => {
                 updateStars={updateStars}
                 updateGameInfo={updateGameInfo}
                 updatePeriodShots={updatePeriodShots}
+                revertToEditMode={revertToEditMode}
                 deleteGame={deleteGame}
               />
             ),

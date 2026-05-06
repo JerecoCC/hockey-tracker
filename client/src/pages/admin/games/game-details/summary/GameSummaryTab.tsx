@@ -64,6 +64,7 @@ interface Props {
   updateStars: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
+  revertToEditMode: (lastPeriod: CurrentPeriod) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
 }
 
@@ -97,6 +98,7 @@ const GameSummaryTab = ({
   updateStars,
   updateGameInfo,
   updatePeriodShots,
+  revertToEditMode,
   deleteGame,
 }: Props) => {
   const navigate = useNavigate();
@@ -243,6 +245,11 @@ const GameSummaryTab = ({
   // ── Goalie Switch modal state ────────────────────────────────────────────
   const [switchGoalieOpen, setSwitchGoalieOpen] = useState(false);
 
+  // ── Full Edit Mode (client-side toggle; DB status stays final) ───────────
+  const [isEditMode, setIsEditMode] = useState(false);
+  // Treat the game as in-progress for all edit controls when edit mode is on.
+  const isEditInProgress = isInProgress || isEditMode;
+
   // ── End Game / 3-stars modal ─────────────────────────────────────────────
   const [starsModalOpen, setStarsModalOpen] = useState(false);
   const [starsEditMode, setStarsEditMode] = useState(false);
@@ -346,6 +353,14 @@ const GameSummaryTab = ({
 
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
 
+  // For edit-mode revert: use current_period if set (retained after endGame), else
+  // fall back to the highest period that has a score recorded.
+  const PERIOD_PRIORITY: CurrentPeriod[] = ['SO', 'OT', '3', '2', '1'];
+  const lastPlayedPeriod: CurrentPeriod =
+    (game.current_period as CurrentPeriod | null) ??
+    PERIOD_PRIORITY.find((p) => game.period_scores.some((ps) => ps.period === p)) ??
+    '3';
+
   return (
     <>
       <div className={styles.tabContent}>
@@ -360,18 +375,22 @@ const GameSummaryTab = ({
                 playerGameStats={playerGameStats}
                 leagueId={leagueId}
                 isFinal={isFinal}
-                onEdit={() => {
-                  setStarsEditMode(true);
-                  setStarsModalOpen(true);
-                }}
+                onEdit={
+                  isEditMode
+                    ? () => {
+                        setStarsEditMode(true);
+                        setStarsModalOpen(true);
+                      }
+                    : undefined
+                }
               />
             )}
 
             <ScoringCard
               game={game}
               goals={goals}
-              isFinal={isFinal}
-              isInProgress={isInProgress}
+              isFinal={isFinal && !isEditMode}
+              isInProgress={isEditInProgress}
               busy={busy}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}
@@ -388,8 +407,8 @@ const GameSummaryTab = ({
               onAddAttempt={openAttemptModal}
               onEditAttempt={openEditAttemptModal}
               onDeleteAttempt={handleDeleteAttempt}
-              onSwitchGoalie={isInProgress ? () => setSwitchGoalieOpen(true) : undefined}
-              onGoBackPeriod={isInProgress ? (prev) => advancePeriod(prev) : undefined}
+              onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
+              onGoBackPeriod={isEditInProgress ? (prev) => advancePeriod(prev) : undefined}
               getPlayerHref={(playerId) => {
                 const teamId = playerTeamMap.get(playerId);
                 return teamId
@@ -407,7 +426,7 @@ const GameSummaryTab = ({
                 goalieStats={goalieStats}
                 lineup={lineup}
                 leagueId={leagueId}
-                isFinal={isFinal}
+                isFinal={isFinal && isEditMode}
                 upsertGoalieStat={upsertGoalieStat}
                 removeGoalieStat={removeGoalieStat}
               />
@@ -494,7 +513,11 @@ const GameSummaryTab = ({
                             setStarsEditMode(false);
                             setStarsModalOpen(true);
                           } else {
-                            openShotsModal(game.current_period ?? '3', { type: 'end-game' }, true);
+                            openShotsModal(
+                              game.current_period ?? lastPlayedPeriod,
+                              { type: 'end-game' },
+                              true,
+                            );
                           }
                         }}
                       />
@@ -513,10 +536,33 @@ const GameSummaryTab = ({
                     <MoreActionsMenu
                       disabled={!!busy}
                       items={[
+                        ...(isFinal && !isEditMode
+                          ? [
+                              {
+                                label: 'Full Edit Mode',
+                                icon: 'edit',
+                                onClick: () => {
+                                  setIsEditMode(true);
+                                  setEndGameReadyForStars(false);
+                                  // For old games where current_period was never persisted
+                                  if (!game.current_period) revertToEditMode(lastPlayedPeriod);
+                                },
+                              },
+                            ]
+                          : []),
+                        ...(isEditMode
+                          ? [
+                              {
+                                label: 'Exit Edit Mode',
+                                icon: 'close',
+                                onClick: () => setIsEditMode(false),
+                              },
+                            ]
+                          : []),
                         {
                           label: 'Delete Game',
                           icon: 'delete',
-                          intent: 'danger',
+                          intent: 'danger' as const,
                           onClick: () => setConfirmDeleteOpen(true),
                         },
                       ]}
@@ -589,7 +635,8 @@ const GameSummaryTab = ({
                           const ps = game.period_scores.find((s) => s.period === p.id);
                           const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
                           const isPeriodDone =
-                            isFinal || (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
+                            (isFinal && !isEditMode) ||
+                            (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
                           if (p.id === 'SO') {
                             const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);
                             const soDisplay =
@@ -634,7 +681,7 @@ const GameSummaryTab = ({
               <Card
                 title="Shots"
                 action={
-                  isFinal ? (
+                  isFinal && isEditMode ? (
                     <Button
                       variant="outlined"
                       intent="neutral"
@@ -813,7 +860,10 @@ const GameSummaryTab = ({
         onSave={updateStars}
         onEndGame={async (payload) => {
           const ok = await endGame(payload);
-          if (ok) setEndGameReadyForStars(false);
+          if (ok) {
+            setEndGameReadyForStars(false);
+            setIsEditMode(false);
+          }
           return ok;
         }}
       />
@@ -830,6 +880,7 @@ const GameSummaryTab = ({
           awayRoster={awayRoster}
           homeRoster={homeRoster}
           goalieStats={goalieStats}
+          goals={goals}
           lineup={lineup}
           onClose={() => setShotsPeriod(null)}
           updatePeriodShots={updatePeriodShots}

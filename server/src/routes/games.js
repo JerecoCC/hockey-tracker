@@ -1467,6 +1467,7 @@ router.get('/:id/goalie-stats', async (req, res) => {
         gr.goalie_id,
         gr.shots_against,
         gr.entered_period,
+        gs.sub_time,
         COALESCE(gpg.ga, 0)::int                              AS goals_against,
         (gr.shots_against - COALESCE(gpg.ga, 0))::int        AS saves,
         gs.created_at,
@@ -1512,30 +1513,69 @@ router.get('/:id/goalie-stats', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/admin/games/:id/goalie-stats  – upsert the starting goalie's SA
-// Body: { goalie_id, team_id, shots_against }
+// PUT /api/admin/games/:id/goalie-stats  – upsert a goalie's SA (and optionally entered_period / sub_time)
+// Body: { goalie_id, team_id, shots_against, entered_period?, sub_time? }
 // GA and saves are derived from the goals table — not stored.
 // ---------------------------------------------------------------------------
 router.put('/:id/goalie-stats', async (req, res) => {
   const { id } = req.params;
-  const { goalie_id, team_id, shots_against } = req.body;
+  const { goalie_id, team_id, shots_against, entered_period, sub_time } = req.body;
 
   if (!goalie_id || !team_id || shots_against == null) {
     return res.status(400).json({ error: 'goalie_id, team_id, and shots_against are required' });
   }
+  if (entered_period !== undefined && entered_period !== null) {
+    const validPeriods = ['1', '2', '3', 'OT', 'SO'];
+    if (!validPeriods.includes(entered_period)) {
+      return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
+    }
+  }
+  if (sub_time !== undefined && sub_time !== null && sub_time !== '') {
+    if (!/^[0-9]{1,2}:[0-5][0-9]$/.test(sub_time)) {
+      return res.status(400).json({ error: 'sub_time must be in MM:SS format' });
+    }
+  }
+
+  // entered_period / sub_time: explicit null/empty clears; undefined leaves unchanged
+  const epValue = entered_period === undefined ? undefined : (entered_period || null);
+  const stValue = sub_time === undefined ? undefined : (sub_time || null);
 
   try {
-    await sql`
-      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against)
-      VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against})
-      ON CONFLICT (game_id, goalie_id)
-      DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against
-    `;
+    // Build the upsert dynamically based on which optional fields are provided
+    if (epValue === undefined && stValue === undefined) {
+      await sql`
+        INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against)
+        VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against})
+        ON CONFLICT (game_id, goalie_id)
+        DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against
+      `;
+    } else if (epValue !== undefined && stValue === undefined) {
+      await sql`
+        INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, entered_period)
+        VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against}, ${epValue})
+        ON CONFLICT (game_id, goalie_id)
+        DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against, entered_period = EXCLUDED.entered_period
+      `;
+    } else if (epValue === undefined && stValue !== undefined) {
+      await sql`
+        INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, sub_time)
+        VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against}, ${stValue})
+        ON CONFLICT (game_id, goalie_id)
+        DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against, sub_time = EXCLUDED.sub_time
+      `;
+    } else {
+      await sql`
+        INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, entered_period, sub_time)
+        VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against}, ${epValue}, ${stValue})
+        ON CONFLICT (game_id, goalie_id)
+        DO UPDATE SET team_id = EXCLUDED.team_id, shots_against = EXCLUDED.shots_against, entered_period = EXCLUDED.entered_period, sub_time = EXCLUDED.sub_time
+      `;
+    }
     const rows = await sql`
       ${goalieStatsCTE(id)}
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.goalie_id,
-        gr.shots_against, gr.entered_period,
+        gr.shots_against, gr.entered_period, gs.sub_time,
         COALESCE(gpg.ga, 0)::int                       AS goals_against,
         (gr.shots_against - COALESCE(gpg.ga, 0))::int  AS saves,
         gs.created_at,
@@ -1578,13 +1618,13 @@ router.put('/:id/goalie-stats', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/games/:id/goalie-stats/switch  – record a backup goalie
-// Body: { goalie_id, team_id, entered_period }
+// Body: { goalie_id, team_id, entered_period, sub_time? }
 // Creates a new stat row for the backup with shots_against = 0.
 // Returns the full updated goalie stats list for the game.
 // ---------------------------------------------------------------------------
 router.post('/:id/goalie-stats/switch', async (req, res) => {
   const { id } = req.params;
-  const { goalie_id, team_id, entered_period } = req.body;
+  const { goalie_id, team_id, entered_period, sub_time } = req.body;
 
   if (!goalie_id || !team_id || !entered_period) {
     return res.status(400).json({ error: 'goalie_id, team_id, and entered_period are required' });
@@ -1593,20 +1633,25 @@ router.post('/:id/goalie-stats/switch', async (req, res) => {
   if (!validPeriods.includes(entered_period)) {
     return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
   }
+  if (sub_time && !/^[0-9]{1,2}:[0-5][0-9]$/.test(sub_time)) {
+    return res.status(400).json({ error: 'sub_time must be in MM:SS format' });
+  }
+
+  const stValue = sub_time || null;
 
   try {
     await sql`
-      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, entered_period)
-      VALUES (${id}, ${team_id}, ${goalie_id}, 0, ${entered_period})
+      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, entered_period, sub_time)
+      VALUES (${id}, ${team_id}, ${goalie_id}, 0, ${entered_period}, ${stValue})
       ON CONFLICT (game_id, goalie_id)
-      DO UPDATE SET entered_period = EXCLUDED.entered_period
+      DO UPDATE SET entered_period = EXCLUDED.entered_period, sub_time = EXCLUDED.sub_time
     `;
     // Return the full updated list so the client can refresh in one round-trip.
     const rows = await sql`
       ${goalieStatsCTE(id)}
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.goalie_id,
-        gr.shots_against, gr.entered_period,
+        gr.shots_against, gr.entered_period, gs.sub_time,
         COALESCE(gpg.ga, 0)::int                       AS goals_against,
         (gr.shots_against - COALESCE(gpg.ga, 0))::int  AS saves,
         gs.created_at,

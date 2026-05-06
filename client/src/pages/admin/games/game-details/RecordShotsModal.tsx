@@ -1,4 +1,4 @@
-import { useState, useEffect, type Dispatch, type SetStateAction } from 'react';
+import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
 import type { Control, FieldArrayWithId } from 'react-hook-form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
@@ -7,6 +7,7 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
+import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
 
@@ -65,6 +66,59 @@ const etHHMMtoISO = (hhmm: string): string => {
   return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
 };
 
+const PERIOD_ORDER = ['1', '2', '3', 'OT', 'SO'];
+const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
+
+/**
+ * Computes the expected shots-against for a goalie in a game:
+ * opposing team's total shots (for the periods the goalie played) minus empty-net goals.
+ * Respects goalie substitutions via `entered_period`.
+ */
+const computeAutoSA = (
+  goalie: GameRosterEntry,
+  goalieStats: GoalieStatRecord[],
+  game: GameRecord,
+  periodShots: { period: string; home_shots: number; away_shots: number }[],
+  goals: GoalRecord[],
+): string => {
+  const isAway = goalie.team_id === game.away_team.id;
+  const opposingTeamId = isAway ? game.home_team.id : game.away_team.id;
+
+  const thisStat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
+  const enteredPeriod = thisStat?.entered_period ?? null;
+
+  // Find a substitute on the same team (has an entered_period)
+  const subStat = goalieStats.find(
+    (gs) =>
+      gs.team_id === goalie.team_id &&
+      gs.goalie_id !== goalie.player_id &&
+      gs.entered_period !== null,
+  );
+
+  const playedPeriod = (p: string): boolean => {
+    if (enteredPeriod !== null) {
+      // This goalie is a sub — played from enteredPeriod onwards
+      return periodIdx(p) >= periodIdx(enteredPeriod);
+    }
+    if (subStat) {
+      // Starter with a sub — played until the sub entered
+      return periodIdx(p) < periodIdx(subStat.entered_period!);
+    }
+    // Sole goalie — played all periods
+    return true;
+  };
+
+  const totalOpposingShots = periodShots
+    .filter((ps) => playedPeriod(ps.period))
+    .reduce((sum, ps) => sum + (isAway ? ps.home_shots : ps.away_shots), 0);
+
+  const emptyNetGoals = goals.filter(
+    (g) => g.team_id === opposingTeamId && g.empty_net && playedPeriod(g.period),
+  ).length;
+
+  return String(Math.max(0, totalOpposingShots - emptyNetGoals));
+};
+
 interface Props {
   open: boolean;
   period: string;
@@ -75,6 +129,7 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
+  goals: GoalRecord[];
   lineup: LineupEntry[];
   onClose: () => void;
   updatePeriodShots: (period: string, home: number, away: number) => Promise<boolean | undefined>;
@@ -97,6 +152,7 @@ const RecordShotsModal = ({
   awayRoster,
   homeRoster,
   goalieStats,
+  goals,
   lineup,
   onClose,
   updatePeriodShots,
@@ -112,7 +168,13 @@ const RecordShotsModal = ({
   const lineupGoalieIds = new Set(
     lineup.filter((l) => l.position_slot === 'G').map((l) => l.player_id),
   );
-  const hasSubstitution = goalieStats.some((gs) => gs.entered_period !== null);
+  // Also treat old games as having a substitution when a team has 2+ goalie stat
+  // rows but no entered_period recorded (substitution tracking added later).
+  const hasSubstitution =
+    goalieStats.some((gs) => gs.entered_period !== null) ||
+    [game.away_team.id, game.home_team.id].some(
+      (teamId) => goalieStats.filter((gs) => gs.team_id === teamId).length > 1,
+    );
   const hasLineupStarters = allRosterGoalies.some((e) => lineupGoalieIds.has(e.player_id));
 
   const goalieRosterList = showGoalies
@@ -125,21 +187,38 @@ const RecordShotsModal = ({
       : allRosterGoalies
     : [];
 
-  const { control, reset, getValues, watch } = useForm<ShotsFormValues>({
+  const { control, reset, getValues, watch, setValue } = useForm<ShotsFormValues>({
     defaultValues: { away_shots: '', home_shots: '', end_time: '', goalies: [] },
   });
   const { fields: goalieFields } = useFieldArray({ control, name: 'goalies' });
 
+  // Guard to prevent the shots-reactive effect from firing immediately after reset.
+  const justResetRef = useRef(false);
+
   useEffect(() => {
     if (open) {
       const existing = game.period_shots.find((ps) => ps.period === period);
+      const initAway = existing?.away_shots ?? 0;
+      const initHome = existing?.home_shots ?? 0;
+      // Merge saved shots with the current-period's initial form values so
+      // computeAutoSA sees the same numbers the shots fields will show.
+      const effectivePeriodShots = [
+        ...game.period_shots.filter((ps) => ps.period !== period),
+        { period, away_shots: initAway, home_shots: initHome },
+      ];
+      justResetRef.current = true;
       reset({
         away_shots: existing ? String(existing.away_shots) : '',
         home_shots: existing ? String(existing.home_shots) : '',
         end_time: isEndGame && game.time_end ? isoToETHHMM(game.time_end) : '',
         goalies: goalieRosterList.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          return { shots_against: stat ? String(stat.shots_against) : '' };
+          if (stat) return { shots_against: String(stat.shots_against) };
+          if (isEndGame)
+            return {
+              shots_against: computeAutoSA(g, goalieStats, game, effectivePeriodShots, goals),
+            };
+          return { shots_against: '' };
         }),
       });
       setSoFirstTeam('home');
@@ -147,13 +226,45 @@ const RecordShotsModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
+  const awayShots = watch('away_shots');
+  const homeShots = watch('home_shots');
+
+  // Reactively recompute goalie SA whenever the shots fields change.
+  useEffect(() => {
+    if (justResetRef.current) {
+      justResetRef.current = false;
+      return;
+    }
+    if (!isEndGame || !open) return;
+    const formAway = parseInt(awayShots || '0', 10);
+    const formHome = parseInt(homeShots || '0', 10);
+    const effectivePeriodShots = [
+      ...game.period_shots.filter((ps) => ps.period !== period),
+      {
+        period,
+        away_shots: isNaN(formAway) ? 0 : formAway,
+        home_shots: isNaN(formHome) ? 0 : formHome,
+      },
+    ];
+    goalieRosterList.forEach((g, i) => {
+      setValue(
+        `goalies.${i}.shots_against`,
+        computeAutoSA(g, goalieStats, game, effectivePeriodShots, goals),
+      );
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [awayShots, homeShots]);
+
   const goalieFormValues = watch('goalies');
   const endTimeValue = watch('end_time');
   const isEndGame = nextAction.type === 'end-game';
 
+  // When there's a substitution, shots from the entry period may be split between
+  // two goalies — require the admin to confirm/adjust the pre-filled values.
   const goalieStatsValid =
     !showGoalies ||
     goalieRosterList.length === 0 ||
+    !hasSubstitution ||
     (goalieRosterList.some(
       (g, i) => g.team_id === game.away_team.id && goalieFormValues[i]?.shots_against !== '',
     ) &&
@@ -242,6 +353,7 @@ const RecordShotsModal = ({
           control={control}
           goalieFields={goalieFields}
           goalieRosterList={goalieRosterList}
+          hasSubstitution={hasSubstitution}
           lineup={lineup}
           showShootsFirst={showShootsFirst}
           soFirstTeam={soFirstTeam}
@@ -261,6 +373,7 @@ interface BodyProps {
   control: Control<ShotsFormValues, any>;
   goalieFields: FieldArrayWithId<ShotsFormValues, 'goalies'>[];
   goalieRosterList: GameRosterEntry[];
+  hasSubstitution: boolean;
   lineup: LineupEntry[];
   showShootsFirst: boolean;
   soFirstTeam: 'away' | 'home' | null;
@@ -275,6 +388,7 @@ const RecordShotsBody = ({
   control,
   goalieFields,
   goalieRosterList,
+  hasSubstitution,
   lineup,
   showShootsFirst,
   soFirstTeam,
@@ -327,17 +441,6 @@ const RecordShotsBody = ({
 
   return (
     <div className={styles.shotsModalBody}>
-      {isEndGame && (
-        <Field
-          label="End Time"
-          required
-          type="timepicker"
-          control={control}
-          name="end_time"
-          disabled={submitting}
-          autoFocus
-        />
-      )}
       {!(isEndGame && period === 'SO') && (
         <>
           <hr className={styles.lineupDivider} />
@@ -370,12 +473,22 @@ const RecordShotsBody = ({
                   min={0}
                   disabled={submitting}
                   transform={(v) => v.replace(/[^0-9]/g, '')}
-                  autoFocus={!isEndGame && rowIdx === 0}
+                  autoFocus={rowIdx === 0}
                 />
               </div>
             </div>
           ))}
         </>
+      )}
+      {isEndGame && (
+        <Field
+          label="End Time"
+          required
+          type="timepicker"
+          control={control}
+          name="end_time"
+          disabled={submitting}
+        />
       )}
       {showShootsFirst && (
         <>
@@ -411,7 +524,9 @@ const RecordShotsBody = ({
           />
         </>
       )}
-      {goalieFields.length > 0 && (
+      {/* Goalie SA: auto-computed and saved silently when no sub; shown for manual
+          confirmation when a substitution occurred (shots may split mid-period). */}
+      {goalieFields.length > 0 && hasSubstitution && (
         <>
           <hr className={styles.lineupDivider} />
           <div className={styles.shotsGoalieHeader}>

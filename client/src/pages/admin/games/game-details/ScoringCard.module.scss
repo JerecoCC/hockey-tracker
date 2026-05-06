@@ -1,3 +1,4 @@
+@use "sass:color";
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
@@ -10,7 +11,7 @@
 }
 
 // Passed as className to Accordion to tint the border AND header for the active period.
-$_active-period-color: mix($accent, $bg-card, 50%);
+$_active-period-color: color.mix($accent, $bg-card, 50%);
 .periodItemActive {
   border-color: $_active-period-color;
   --accordion-header-bg: #{$_active-period-color};

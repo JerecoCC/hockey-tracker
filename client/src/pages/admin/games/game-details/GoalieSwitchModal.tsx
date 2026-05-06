@@ -28,6 +28,7 @@ type FormValues = {
   team_side: 'away' | 'home';
   goalie_id: string;
   entered_period: string;
+  sub_time: string;
 };
 
 const GoalieSwitchModal = ({
@@ -42,7 +43,7 @@ const GoalieSwitchModal = ({
   const [submitting, setSubmitting] = useState(false);
 
   const { control, reset, watch, handleSubmit } = useForm<FormValues>({
-    defaultValues: { team_side: 'away', goalie_id: '', entered_period: '2' },
+    defaultValues: { team_side: 'away', goalie_id: '', entered_period: '2', sub_time: '' },
   });
 
   const teamSide = watch('team_side');
@@ -59,7 +60,7 @@ const GoalieSwitchModal = ({
     }));
 
   useEffect(() => {
-    if (open) reset({ team_side: 'away', goalie_id: '', entered_period: '2' });
+    if (open) reset({ team_side: 'away', goalie_id: '', entered_period: '2', sub_time: '' });
   }, [open, reset]);
 
   const onSubmit = async (values: FormValues) => {
@@ -69,6 +70,7 @@ const GoalieSwitchModal = ({
       goalie_id: values.goalie_id,
       team_id: teamId,
       entered_period: values.entered_period,
+      sub_time: values.sub_time || null,
     });
     setSubmitting(false);
     onClose();
@@ -126,6 +128,15 @@ const GoalieSwitchModal = ({
               name="entered_period"
               options={PERIOD_OPTIONS}
               required
+              disabled={submitting}
+            />
+            <Field
+              label="Time of Sub"
+              type="timepicker"
+              mode="duration"
+              control={control}
+              name="sub_time"
+              placeholder="MM:SS"
               disabled={submitting}
             />
           </>

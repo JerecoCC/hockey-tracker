@@ -18,12 +18,18 @@ export interface UpsertGoalieStatData {
   goalie_id: string;
   team_id: string;
   shots_against: number;
+  /** Set to a period string to mark as a sub; null to clear; omit to leave unchanged. */
+  entered_period?: string | null;
+  /** MM:SS timestamp within the period when the sub occurred; null to clear; omit to leave unchanged. */
+  sub_time?: string | null;
 }
 
 export interface GoalieSwitchData {
   goalie_id: string;
   team_id: string;
   entered_period: string;
+  /** MM:SS timestamp within the period when the sub occurred. */
+  sub_time?: string | null;
 }
 
 export interface GoalieStatRecord {
@@ -35,6 +41,7 @@ export interface GoalieStatRecord {
   goals_against: number;
   saves: number;
   entered_period: string | null;
+  sub_time: string | null;
   created_at: string;
   goalie_first_name: string;
   goalie_last_name: string;

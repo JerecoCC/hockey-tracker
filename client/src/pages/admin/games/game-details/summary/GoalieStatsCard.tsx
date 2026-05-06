@@ -154,6 +154,7 @@ const GoalieStatsCard = ({
                         {isBackup && (
                           <span className={styles.goalAssists}>
                             entered {PERIOD_LABEL[stat.entered_period!] ?? stat.entered_period}
+                            {stat.sub_time && ` @ ${stat.sub_time}`}
                           </span>
                         )}
                       </div>

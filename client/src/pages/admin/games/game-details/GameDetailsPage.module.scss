@@ -651,6 +651,14 @@
   background: rgba($info, 0.07);
 }
 
+.goalieSubRow {
+  display: flex;
+  gap: $space-sm;
+  align-items: center;
+  padding: $space-xs $space-sm $space-sm;
+  margin-top: -$space-xs;
+}
+
 .shotsGoalieInputs {
   display: flex;
   gap: $space-sm;

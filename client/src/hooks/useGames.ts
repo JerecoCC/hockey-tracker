@@ -440,6 +440,27 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
+  // Only needed for edge-case old games where current_period was never persisted.
+  // Status is NOT changed — the game stays final; only current_period is set.
+  const revertToEditMode = async (lastPeriod: CurrentPeriod): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('revert-edit');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { current_period: lastPeriod },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to set current period'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deleteGame = async (): Promise<boolean> => {
     if (!id) return false;
     setBusy('deleting');
@@ -456,7 +477,7 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, deleteGame };
+  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
 };
 
 // ── Playoff series hook ────────────────────────────────────────────────────────

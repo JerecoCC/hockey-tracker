@@ -273,12 +273,17 @@ const ShootoutAccordion = ({
   // ── Accordion actions ─────────────────────────────────────────────────────
 
   // The current round is "unbalanced" when the first team has already taken
-  // their attempt but the second team hasn't yet (firstTeamAttempts.length >
-  // secondTeamAttempts.length). In that case we must still allow recording the
-  // second team's attempt for this round, even if the winner is already decided.
+  // their attempt but the second team hasn't yet.
   const roundUnbalanced = firstTeamAttempts.length > secondTeamAttempts.length;
-  const canAddAttempt = !soComplete || roundUnbalanced;
-  const canEndGame = soComplete && !roundUnbalanced;
+
+  // Second team has already won without needing their current attempt:
+  // they lead even accounting for first team's remaining regular-round attempts.
+  const secondWonEarly = roundUnbalanced && secondRegGoals > firstRegGoals + firstRemaining;
+
+  // Allow adding only when the game isn't decided, or when the round is
+  // unbalanced and the second team still has a meaningful shot to take.
+  const canAddAttempt = !soComplete || (roundUnbalanced && !secondWonEarly);
+  const canEndGame = soComplete && (!roundUnbalanced || secondWonEarly);
 
   const hoverActions: AccordionAction[] | undefined =
     isSOActive && onAddAttempt && onEndGame

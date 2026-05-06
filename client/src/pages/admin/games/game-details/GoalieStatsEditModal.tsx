@@ -12,15 +12,17 @@ import styles from './GameDetailsPage.module.scss';
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
-const PERIOD_LABEL: Record<string, string> = {
-  '1': 'P1',
-  '2': 'P2',
-  '3': 'P3',
-  OT: 'OT',
-  SO: 'SO',
-};
+const PERIOD_OPTIONS = [
+  { value: '', label: '— None —' },
+  { value: '1', label: '1st Period' },
+  { value: '2', label: '2nd Period' },
+  { value: '3', label: '3rd Period' },
+  { value: 'OT', label: 'Overtime' },
+];
 
-type FormValues = { goalies: Array<{ shots_against: string }> };
+type FormValues = {
+  goalies: Array<{ shots_against: string; entered_period: string; sub_time: string }>;
+};
 
 interface Props {
   open: boolean;
@@ -61,7 +63,11 @@ const GoalieStatsEditModal = ({
       reset({
         goalies: allGoalies.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          return { shots_against: stat ? String(stat.shots_against) : '' };
+          return {
+            shots_against: stat ? String(stat.shots_against) : '',
+            entered_period: stat?.entered_period ?? '',
+            sub_time: stat?.sub_time ?? '',
+          };
         }),
       });
     }
@@ -77,10 +83,18 @@ const GoalieStatsEditModal = ({
       if (!row || !goalie) continue;
       const shots = parseInt(row.shots_against, 10);
       if (!isNaN(shots)) {
+        const isStarter = lineup.some(
+          (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
+        );
         await upsertGoalieStat({
           goalie_id: goalie.player_id,
           team_id: goalie.team_id,
           shots_against: shots,
+          // Only send entered_period for non-starters (subs); starters leave it unchanged
+          ...(!isStarter && {
+            entered_period: row.entered_period || null,
+            sub_time: row.sub_time || null,
+          }),
         });
       }
     }
@@ -110,6 +124,7 @@ const GoalieStatsEditModal = ({
           <div className={styles.shotsGoalieInputs}>
             <span className={styles.shotsGoalieColLabel}>SA</span>
           </div>
+          <span />
         </div>
         {fields.map((field, i) => {
           const goalie = allGoalies[i];
@@ -123,78 +138,94 @@ const GoalieStatsEditModal = ({
           const isStarter = lineup.some(
             (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
           );
-          const isBackup = !!stat?.entered_period;
+          const isBackup = !isStarter;
           return (
-            <div
-              key={field.id}
-              className={[styles.shotsGoalieRow, isStarter ? styles.shotsGoalieRowStarter : '']
-                .filter(Boolean)
-                .join(' ')}
-            >
-              <span className={styles.goalieNameCell}>
-                {logo ? (
-                  <img
-                    src={logo}
-                    alt={code}
-                    className={styles.goalTeamLogo}
-                  />
-                ) : (
-                  <span
-                    className={styles.goalTeamLogoPlaceholder}
-                    style={{ background: primary, color: text }}
-                  >
-                    {code?.slice(0, 1)}
-                  </span>
-                )}
-                {goalie.photo ? (
-                  <img
-                    src={goalie.photo}
-                    alt=""
-                    className={styles.goalScorerPhoto}
-                  />
-                ) : (
-                  <span
-                    className={styles.goalScorerPhotoPlaceholder}
-                    style={{ background: primary, color: text }}
-                  >
-                    {goalie.last_name?.charAt(0)}
-                  </span>
-                )}
-                <div className={styles.goalInfo}>
-                  {goalie.jersey_number != null && (
-                    <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                  )}
-                  <span className={styles.goalScorer}>
-                    {fmt(goalie.first_name, goalie.last_name)}
-                  </span>
-                  {isBackup && stat?.entered_period && (
-                    <span className={styles.goalAssists}>
-                      entered {PERIOD_LABEL[stat.entered_period] ?? stat.entered_period}
+            <div key={field.id}>
+              <div
+                className={[styles.shotsGoalieRow, isStarter ? styles.shotsGoalieRowStarter : '']
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                <span className={styles.goalieNameCell}>
+                  {logo ? (
+                    <img
+                      src={logo}
+                      alt={code}
+                      className={styles.goalTeamLogo}
+                    />
+                  ) : (
+                    <span
+                      className={styles.goalTeamLogoPlaceholder}
+                      style={{ background: primary, color: text }}
+                    >
+                      {code?.slice(0, 1)}
                     </span>
                   )}
+                  {goalie.photo ? (
+                    <img
+                      src={goalie.photo}
+                      alt=""
+                      className={styles.goalScorerPhoto}
+                    />
+                  ) : (
+                    <span
+                      className={styles.goalScorerPhotoPlaceholder}
+                      style={{ background: primary, color: text }}
+                    >
+                      {goalie.last_name?.charAt(0)}
+                    </span>
+                  )}
+                  <div className={styles.goalInfo}>
+                    {goalie.jersey_number != null && (
+                      <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
+                    )}
+                    <span className={styles.goalScorer}>
+                      {fmt(goalie.first_name, goalie.last_name)}
+                    </span>
+                  </div>
+                </span>
+                <div className={styles.shotsGoalieInputs}>
+                  <Field
+                    type="number"
+                    control={control}
+                    name={`goalies.${i}.shots_against`}
+                    placeholder="0"
+                    min={0}
+                    disabled={submitting || !!removing}
+                    transform={(v) => v.replace(/[^0-9]/g, '')}
+                  />
                 </div>
-              </span>
-              <div className={styles.shotsGoalieInputs}>
-                <Field
-                  type="number"
-                  control={control}
-                  name={`goalies.${i}.shots_against`}
-                  placeholder="0"
-                  min={0}
-                  disabled={submitting || !!removing}
-                  transform={(v) => v.replace(/[^0-9]/g, '')}
-                />
+                {isBackup && (
+                  <Button
+                    variant="outlined"
+                    intent="danger"
+                    icon="delete"
+                    size="sm"
+                    tooltip="Remove goalie switch"
+                    disabled={!!removing || submitting}
+                    onClick={() => handleRemove(goalie.player_id)}
+                  />
+                )}
               </div>
               {isBackup && (
-                <Button
-                  variant="outlined"
-                  intent="danger"
-                  icon="delete"
-                  size="sm"
-                  tooltip="Remove goalie switch"
-                  disabled={!!removing || submitting}
-                  onClick={() => handleRemove(goalie.player_id)}
-                />
+                <div className={styles.goalieSubRow}>
+                  <Field
+                    type="select"
+                    control={control}
+                    name={`goalies.${i}.entered_period`}
+                    options={PERIOD_OPTIONS}
+                    placeholder="— Period —"
+                    disabled={submitting || !!removing}
+                  />
+                  <Field
+                    type="timepicker"
+                    mode="duration"
+                    control={control}
+                    name={`goalies.${i}.sub_time`}
+                    placeholder="MM:SS"
+                    disabled={submitting || !!removing}
+                  />
+                </div>
               )}
             </div>
           );

@@ -15,7 +15,7 @@ interface Props {
   playerGameStats: Map<string, { goals: number; assists: number }>;
   leagueId: string;
   isFinal: boolean;
-  onEdit: () => void;
+  onEdit?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
