@@ -102,3 +102,47 @@
 .closeBtn {
   padding: $space-sm;
 }
+
+// ── Mobile bottom sheet ────────────────────────────────────────────────
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 768px) {
+  .overlay {
+    align-items: flex-end;
+  }
+
+  .modal,
+  .modalLg,
+  .modalXl {
+    max-width: 100%;
+    width: 100%;
+    border-radius: $radius-xl $radius-xl 0 0;
+    border-bottom: none;
+    max-height: 90dvh;
+    animation: slideUpSheet $transition-layout ease;
+  }
+
+  // Keep footer actions stacked full-width for easier tapping
+  .footerRow {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: $space-sm;
+  }
+
+  .footerActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: $space-sm;
+  }
+
+  .footerStart {
+    text-align: center;
+  }
+}
