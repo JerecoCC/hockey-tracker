@@ -112,6 +112,13 @@ $nav-collapsed-width: 56px;
   flex-shrink: 0;
 }
 
+// ── Bottom section (switch panel) ──────────────────────────────────────
+.bottom {
+  margin-top: auto;
+  border-top: 1px solid $border;
+  padding-top: $space-sm;
+}
+
 // ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
 .navTooltipWrapper {
   display: block;

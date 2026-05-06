@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import Icon from '../Icon/Icon';
-import Tooltip from '../Tooltip/Tooltip';
 import styles from './PageHeader.module.scss';
 
 const EXACT_TITLES: Record<string, string> = {
@@ -48,8 +47,6 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const title = getTitle(pathname);
-  const isAdmin = user?.role === 'admin';
-  const isAdminPanel = pathname.startsWith('/admin');
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -64,11 +61,6 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
   const handleSignOut = async () => {
     await logout();
     navigate('/login');
-  };
-
-  const handleSwitchPanel = () => {
-    if (isAdminPanel) navigate('/leagues');
-    else navigate('/admin/leagues');
   };
 
   return (
@@ -95,22 +87,10 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
             className={styles.profileChip}
             ref={dropdownRef}
           >
-            {isAdmin && (
-              <Tooltip text={isAdminPanel ? 'User View' : 'Admin Panel'}>
-                <button
-                  className={styles.switchBtn}
-                  onClick={handleSwitchPanel}
-                >
-                  <Icon
-                    name={isAdminPanel ? 'apps' : 'shield'}
-                    size="1.1rem"
-                  />
-                </button>
-              </Tooltip>
-            )}
             <button
               className={styles.profileBtn}
               onClick={() => setDropdownOpen((o) => !o)}
+              aria-label="Account menu"
             >
               {user.photo ? (
                 <img
@@ -123,12 +103,6 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
                   {getInitials(user.display_name ?? user.displayName)}
                 </span>
               )}
-              <span className={styles.displayName}>{user.display_name ?? user.displayName}</span>
-              <Icon
-                name="expand_more"
-                size="1rem"
-                className={dropdownOpen ? styles.chevronOpen : styles.chevron}
-              />
             </button>
 
             {dropdownOpen && (
