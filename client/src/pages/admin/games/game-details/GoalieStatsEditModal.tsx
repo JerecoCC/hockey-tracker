@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
@@ -8,6 +8,7 @@ import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
+import fieldStyles from '@/components/Field/Field.module.scss';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
@@ -21,7 +22,12 @@ const PERIOD_OPTIONS = [
 ];
 
 type FormValues = {
-  goalies: Array<{ shots_against: string; entered_period: string; sub_time: string }>;
+  goalies: Array<{
+    shots_against: string;
+    saves: string;
+    entered_period: string;
+    sub_time: string;
+  }>;
 };
 
 interface Props {
@@ -55,7 +61,9 @@ const GoalieStatsEditModal = ({
     goalieStats.some((gs) => gs.goalie_id === e.player_id),
   );
 
-  const { control, reset, getValues } = useForm<FormValues>({ defaultValues: { goalies: [] } });
+  const { control, reset, handleSubmit } = useForm<FormValues>({
+    defaultValues: { goalies: [] },
+  });
   const { fields } = useFieldArray({ control, name: 'goalies' });
 
   useEffect(() => {
@@ -65,6 +73,7 @@ const GoalieStatsEditModal = ({
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
           return {
             shots_against: stat ? String(stat.shots_against) : '',
+            saves: stat ? String(stat.saves) : '',
             entered_period: stat?.entered_period ?? '',
             sub_time: stat?.sub_time ?? '',
           };
@@ -74,8 +83,7 @@ const GoalieStatsEditModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const handleConfirm = async () => {
-    const { goalies } = getValues();
+  const handleConfirm = handleSubmit(async ({ goalies }) => {
     setSubmitting(true);
     for (let i = 0; i < allGoalies.length; i++) {
       const goalie = allGoalies[i];
@@ -86,11 +94,14 @@ const GoalieStatsEditModal = ({
         const isStarter = lineup.some(
           (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
         );
+        const sv = parseInt(row.saves, 10);
         await upsertGoalieStat({
           goalie_id: goalie.player_id,
           team_id: goalie.team_id,
           shots_against: shots,
-          // Only send entered_period for non-starters (subs); starters leave it unchanged
+          // Derive GA from SV; null clears any stored override (reverts to goals-table calc)
+          goals_against: isNaN(sv) ? null : Math.max(0, shots - sv),
+          // Only send sub fields for non-starters (subs)
           ...(!isStarter && {
             entered_period: row.entered_period || null,
             sub_time: row.sub_time || null,
@@ -100,7 +111,7 @@ const GoalieStatsEditModal = ({
     }
     setSubmitting(false);
     onClose();
-  };
+  });
 
   const handleRemove = async (goalieId: string) => {
     setRemoving(goalieId);
@@ -123,8 +134,8 @@ const GoalieStatsEditModal = ({
           <span />
           <div className={styles.shotsGoalieInputs}>
             <span className={styles.shotsGoalieColLabel}>SA</span>
+            <span className={styles.shotsGoalieColLabel}>SV</span>
           </div>
-          <span />
         </div>
         {fields.map((field, i) => {
           const goalie = allGoalies[i];
@@ -194,18 +205,26 @@ const GoalieStatsEditModal = ({
                     disabled={submitting || !!removing}
                     transform={(v) => v.replace(/[^0-9]/g, '')}
                   />
-                </div>
-                {isBackup && (
-                  <Button
-                    variant="outlined"
-                    intent="danger"
-                    icon="delete"
-                    size="sm"
-                    tooltip="Remove goalie switch"
-                    disabled={!!removing || submitting}
-                    onClick={() => handleRemove(goalie.player_id)}
+                  {/* SV — GA is derived on save as SA − SV */}
+                  <Controller
+                    control={control}
+                    name={`goalies.${i}.saves`}
+                    render={({ field }) => (
+                      <label>
+                        <input
+                          className={fieldStyles.field}
+                          type="number"
+                          min={0}
+                          placeholder="0"
+                          value={field.value ?? ''}
+                          disabled={submitting || !!removing}
+                          onChange={(e) => field.onChange(e.target.value.replace(/[^0-9]/g, ''))}
+                          onBlur={field.onBlur}
+                        />
+                      </label>
+                    )}
                   />
-                )}
+                </div>
               </div>
               {isBackup && (
                 <div className={styles.goalieSubRow}>
@@ -224,6 +243,15 @@ const GoalieStatsEditModal = ({
                     name={`goalies.${i}.sub_time`}
                     placeholder="MM:SS"
                     disabled={submitting || !!removing}
+                  />
+                  <Button
+                    variant="outlined"
+                    intent="danger"
+                    icon="delete"
+                    size="sm"
+                    tooltip="Remove goalie switch"
+                    disabled={!!removing || submitting}
+                    onClick={() => handleRemove(goalie.player_id)}
                   />
                 </div>
               )}

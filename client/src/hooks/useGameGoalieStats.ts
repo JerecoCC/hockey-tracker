@@ -18,6 +18,8 @@ export interface UpsertGoalieStatData {
   goalie_id: string;
   team_id: string;
   shots_against: number;
+  /** Override GA; null clears the override (reverts to auto-calc from goals table); omit to leave unchanged. */
+  goals_against?: number | null;
   /** Set to a period string to mark as a sub; null to clear; omit to leave unchanged. */
   entered_period?: string | null;
   /** MM:SS timestamp within the period when the sub occurred; null to clear; omit to leave unchanged. */

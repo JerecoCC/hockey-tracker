@@ -617,7 +617,7 @@
 }
 
 .shotsGoalieColLabel {
-  width: 72px;
+  width: 56px;
   text-align: center;
   font-size: $font-xs;
   font-weight: 600;
@@ -657,6 +657,11 @@
   align-items: center;
   padding: $space-xs $space-sm $space-sm;
   margin-top: -$space-xs;
+
+  // Push the delete button to the right end
+  > button:last-child {
+    margin-left: auto;
+  }
 }
 
 .shotsGoalieInputs {
@@ -665,8 +670,20 @@
   flex-shrink: 0;
 
   label {
+    display: block;
     margin-bottom: 0;
-    width: 72px;
+    width: 56px;
+    flex-shrink: 0;
+  }
+
+  // Inputs fill their label container and use compact horizontal padding
+  input[type="number"] {
+    display: block;
+    width: 100%;
+    box-sizing: border-box;
+    padding-left: $space-sm;
+    padding-right: $space-sm;
+    text-align: center;
   }
 }
 
