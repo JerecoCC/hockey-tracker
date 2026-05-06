@@ -17,20 +17,31 @@ const NAV_ITEMS: NavItem[] = [
 interface UserNavProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 const UserNav = (props: UserNavProps) => {
-  const { collapsed } = props;
+  const { collapsed, mobileOpen, onMobileClose } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
+  const showExpanded = !collapsed || !!mobileOpen;
+
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    onMobileClose?.();
+  };
+
   return (
-    <nav className={`${styles.nav} ${collapsed ? styles.collapsed : ''}`}>
+    <nav
+      className={`${styles.nav} ${collapsed ? styles.collapsed : ''} ${mobileOpen ? styles.mobileOpen : ''}`}
+    >
       <div className={styles.top}>
         <div className={styles.brandRow}>
-          {!collapsed && (
+          {showExpanded && (
             <span className={styles.brand}>
               <Icon
                 name="sports_hockey"
@@ -48,15 +59,15 @@ const UserNav = (props: UserNavProps) => {
                 variant="ghost"
                 intent="neutral"
                 className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
-                onClick={() => navigate(path)}
-                tooltip={collapsed ? label : undefined}
-                tooltipClassName={collapsed ? styles.navTooltipWrapper : undefined}
+                onClick={() => handleNavClick(path)}
+                tooltip={!showExpanded ? label : undefined}
+                tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
               >
                 <Icon
                   name={icon}
                   className={styles.icon}
                 />
-                {!collapsed && <span className={styles.label}>{label}</span>}
+                {showExpanded && <span className={styles.label}>{label}</span>}
               </Button>
             </li>
           ))}

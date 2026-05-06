@@ -49,6 +49,27 @@ $bg-page: #0f172a;
   flex-direction: column;
 }
 
+// ── Mobile overlay backdrop ────────────────────────────────────────────
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+// ── Mobile responsive ─────────────────────────────────────────────────
+// Don't use display:none — that hides position:fixed children too.
+// Instead collapse the wrapper to zero width and hide the desktop toggle.
+@media (max-width: 768px) {
+  .sidebarWrapper {
+    width: 0;
+  }
+
+  .sidebarToggle {
+    display: none;
+  }
+}
+
 .main {
   width: 100%;
   max-width: $max-content-width;

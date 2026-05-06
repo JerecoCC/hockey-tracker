@@ -35,7 +35,11 @@ const getInitials = (name: string | undefined) =>
     .join('')
     .toUpperCase();
 
-const PageHeader = () => {
+interface PageHeaderProps {
+  onMenuToggle?: () => void;
+}
+
+const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -69,7 +73,21 @@ const PageHeader = () => {
 
   return (
     <header className={styles.header}>
-      <div className={styles.left}>{title && <h1 className={styles.title}>{title}</h1>}</div>
+      <div className={styles.left}>
+        {onMenuToggle && (
+          <button
+            className={styles.hamburger}
+            onClick={onMenuToggle}
+            aria-label="Open navigation"
+          >
+            <Icon
+              name="menu"
+              size="1.4rem"
+            />
+          </button>
+        )}
+        {title && <h1 className={styles.title}>{title}</h1>}
+      </div>
 
       <div className={styles.right}>
         {user && (

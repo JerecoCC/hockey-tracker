@@ -117,3 +117,28 @@ $nav-collapsed-width: 56px;
   display: block;
   width: 100%;
 }
+
+// ── Mobile slide-out ───────────────────────────────────────────────────
+@media (max-width: 768px) {
+  .nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100dvh;
+    width: $nav-width;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform $transition-layout ease;
+    // Reset the width transition used on desktop
+    transition-property: transform;
+  }
+
+  .nav.mobileOpen {
+    transform: translateX(0);
+  }
+
+  // Keep full width even when desktop-collapsed state is true
+  .collapsed {
+    width: $nav-width;
+  }
+}

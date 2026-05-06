@@ -7,6 +7,7 @@ import {
   faArrowRotateRight,
   faChartLine,
   faArrowUpRightFromSquare,
+  faBars,
   faCheck,
   faDownload,
   faCircleCheck,
@@ -78,6 +79,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   chevron_left: faChevronLeft,
   chevron_right: faChevronRight,
   expand_more: faChevronDown,
+  menu: faBars,
   shield: faShield,
 
   // nav items

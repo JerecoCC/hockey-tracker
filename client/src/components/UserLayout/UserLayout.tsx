@@ -8,6 +8,7 @@ import styles from './UserLayout.module.scss';
 
 const UserLayout = () => {
   const [collapsed, setCollapsed] = useState(true);
+  const [mobileOpen, setMobileOpen] = useState(false);
   // State ref-callback: triggers a re-render once the div mounts so the portal
   // target is available to all child TitleRow instances.
   const [titleRowContainer, setTitleRowContainer] = useState<HTMLDivElement | null>(null);
@@ -15,10 +16,21 @@ const UserLayout = () => {
   return (
     <TitleRowContext.Provider value={titleRowContainer}>
       <div className={styles.page}>
+        {/* Mobile backdrop */}
+        {mobileOpen && (
+          <div
+            className={styles.overlay}
+            onClick={() => setMobileOpen(false)}
+            aria-hidden="true"
+          />
+        )}
+
         <div className={styles.sidebarWrapper}>
           <UserNav
             collapsed={collapsed}
             onToggle={() => setCollapsed((c) => !c)}
+            mobileOpen={mobileOpen}
+            onMobileClose={() => setMobileOpen(false)}
           />
           <button
             className={styles.sidebarToggle}
@@ -32,7 +44,7 @@ const UserLayout = () => {
           </button>
         </div>
         <div className={styles.scrollArea}>
-          <PageHeader />
+          <PageHeader onMenuToggle={() => setMobileOpen((o) => !o)} />
           <main className={styles.main}>
             {/* Portal target — TitleRow from any child page renders here */}
             <div ref={setTitleRowContainer} />
