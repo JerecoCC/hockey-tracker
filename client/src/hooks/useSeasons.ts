@@ -18,6 +18,8 @@ export interface SeasonRecord {
   is_current: boolean;
   /** True when the season has been explicitly marked as ended — roster editing is locked. */
   is_ended: boolean;
+  /** True once the admin has formally ended the regular season and playoff setup has begun. */
+  playoffs_started: boolean;
   /** Target number of regular-season games per team for this season. Null if not set. */
   games_per_season: number | null;
   /** Scoring system inherited from the league: '2-1-0' or '3-2-1-0'. */

@@ -15,7 +15,7 @@ router.get('/', async (req, res) => {
       ? await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
-                 s.is_ended,
+                 s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
                  s.created_at,
@@ -28,7 +28,7 @@ router.get('/', async (req, res) => {
       : await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
-                 s.is_ended,
+                 s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
                  s.created_at,
@@ -53,7 +53,7 @@ router.get('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended,
+             s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.playoff_format,
@@ -122,6 +122,7 @@ router.patch('/:id', async (req, res) => {
     const existing = await sql`
       SELECT id, name, league_id,
              start_date::text AS start_date, end_date::text AS end_date, is_ended,
+             playoffs_started,
              games_per_season, playoff_format,
              best_of_playoff, best_of_shootout, scoring_system,
              bracket_rule_set_id
@@ -181,7 +182,7 @@ router.patch('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended,
+             s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.playoff_format,
@@ -253,6 +254,47 @@ router.patch('/:id/current', async (req, res) => {
     return res.json(rows[0]);
   } catch (err) {
     console.error('seasons set-current error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/seasons/:id/playoffs  – mark regular season as ended,
+// setting playoffs_started = true.  Does NOT set is_ended (the whole season
+// is not over — only the regular-season portion is complete).
+// ---------------------------------------------------------------------------
+router.patch('/:id/playoffs', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await sql`SELECT id FROM seasons WHERE id = ${id}`;
+    if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+
+    await sql`
+      UPDATE seasons SET playoffs_started = TRUE WHERE id = ${id}
+    `;
+
+    const rows = await sql`
+      SELECT s.id, s.name, s.league_id,
+             (l.current_season_id = s.id) AS is_current,
+             s.is_ended, s.playoffs_started,
+             s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.games_per_season,
+             s.playoff_format,
+             s.bracket_rule_set_id,
+             s.best_of_playoff, s.best_of_shootout, s.scoring_system,
+             s.created_at,
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.scoring_system   AS league_scoring_system,
+             l.best_of_playoff  AS league_best_of_playoff,
+             l.best_of_shootout AS league_best_of_shootout
+      FROM seasons s
+      JOIN leagues l ON l.id = s.league_id
+      WHERE s.id = ${id}
+    `;
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('seasons start-playoffs error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

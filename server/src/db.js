@@ -970,6 +970,14 @@ async function initSchema() {
         CHECK (scoring_system IN ('2-1-0', '3-2-1-0'))
   `;
 
+  // playoffs_started: true once the admin has formally ended the regular season
+  // and the bracket / playoff matchup configuration phase has begun.
+  // Distinct from is_ended (which marks the whole season complete, including playoffs).
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS playoffs_started BOOLEAN NOT NULL DEFAULT FALSE
+  `;
+
   console.log('Database schema ready');
 }
 
