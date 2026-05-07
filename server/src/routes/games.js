@@ -136,12 +136,13 @@ router.get('/playoff-series', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/games/playoff-series  – create a playoff series
+// Auto-generates all possible games using the 2-2-1-1-1 home/away pattern.
 // ---------------------------------------------------------------------------
 router.post('/playoff-series', async (req, res) => {
   const {
     season_id, round, series_letter = null,
     home_team_id, away_team_id,
-    games_to_win = 4, status = 'upcoming',
+    status = 'upcoming',
   } = req.body;
 
   if (!season_id || !home_team_id || !away_team_id || !round) {
@@ -152,13 +153,49 @@ router.post('/playoff-series', async (req, res) => {
   }
 
   try {
+    // Derive games_to_win from the explicit body value, or look up the season's
+    // best_of_playoff setting (falling back to the league default).
+    let games_to_win = req.body.games_to_win ? Number(req.body.games_to_win) : null;
+    if (!games_to_win) {
+      const seasonRows = await sql`
+        SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+        FROM seasons s
+        JOIN leagues l ON l.id = s.league_id
+        WHERE s.id = ${season_id}
+      `;
+      const bestOf = seasonRows[0]?.best_of ?? 7;
+      games_to_win = Math.ceil(bestOf / 2);
+    }
+
     const rows = await sql`
       INSERT INTO playoff_series (season_id, round, series_letter, home_team_id, away_team_id, games_to_win, status)
       VALUES (${season_id}, ${round}, ${series_letter}, ${home_team_id}, ${away_team_id}, ${games_to_win}, ${status})
       RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
                 games_to_win, home_wins, away_wins, status, winner_team_id, created_at
     `;
-    return res.status(201).json(rows[0]);
+    const series = rows[0];
+
+    // Auto-generate every possible game for this series.
+    // 2-2-1-1-1 home/away rotation: games 1-2 at home_team, 3-4 at away_team,
+    // then alternating one game at a time (home, away, home…).
+    const maxGames = series.games_to_win * 2 - 1;
+    for (let i = 0; i < maxGames; i++) {
+      const team1IsHome = i < 2 ? true : i < 4 ? false : i % 2 === 0;
+      await sql`
+        INSERT INTO games (season_id, home_team_id, away_team_id, game_type, status, playoff_series_id, game_number_in_series)
+        VALUES (
+          ${series.season_id},
+          ${team1IsHome ? series.home_team_id : series.away_team_id},
+          ${team1IsHome ? series.away_team_id : series.home_team_id},
+          'playoff',
+          'scheduled',
+          ${series.id},
+          ${i + 1}
+        )
+      `;
+    }
+
+    return res.status(201).json(series);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid season_id or team_id' });
     console.error('playoff series create error:', err);

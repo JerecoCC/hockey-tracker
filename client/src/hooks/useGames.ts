@@ -517,7 +517,10 @@ export const usePlayoffSeries = (seasonId: string | undefined) => {
   });
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['playoff-series', seasonId] });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['playoff-series', seasonId] }),
+      queryClient.invalidateQueries({ queryKey: ['games', { season_id: seasonId }] }),
+    ]);
 
   const createSeries = async (data: CreateSeriesData): Promise<boolean> => {
     setBusy('creating');
