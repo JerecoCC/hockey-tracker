@@ -115,6 +115,7 @@ export const useStintActions = (playerId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
@@ -139,6 +140,7 @@ export const useStintActions = (playerId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
@@ -188,6 +190,7 @@ export const useStintActions = (playerId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update jersey number'));
@@ -255,6 +258,8 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
       await axios.patch(`${API}/admin/players/${playerId}`, payload, { headers: authHeaders() });
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update player'));
@@ -279,6 +284,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
       );
       toast.success('Jersey number updated!');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update jersey number'));
@@ -327,6 +333,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {

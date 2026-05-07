@@ -103,6 +103,7 @@ const PlayerDetailsPage = () => {
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch {
       toast.error('Failed to update player');
