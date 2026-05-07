@@ -265,8 +265,10 @@ router.get('/:id', async (req, res) => {
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
         g.overtime_periods, g.shootout, g.shootout_first_team_id,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
+        ps2.round AS playoff_round,
         gs.period_scores,
         g.period_shots,
         json_build_object(
@@ -295,6 +297,7 @@ router.get('/:id', async (req, res) => {
       JOIN leagues l ON l.id = s.league_id
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
+      LEFT JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -376,6 +379,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
             AND (g2.home_team_id = g.home_team_id OR g2.away_team_id = g.home_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -439,6 +443,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
             AND (g2.home_team_id = g.away_team_id OR g2.away_team_id = g.away_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -489,6 +494,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
             AND (
               (g2.home_team_id = g.home_team_id AND g2.away_team_id = g.away_team_id)
               OR
@@ -1174,13 +1180,15 @@ router.get('/:id/goals', async (req, res) => {
         a2p.last_name                                         AS assist_2_last_name,
         COALESCE(a2pt.photo, best_player_photo(a2p.id), a2p.photo)                       AS assist_2_photo,
         COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number)  AS assist_2_jersey_number,
-        -- prior-game cumulative stats (finalized games in same season before this game)
+        -- prior-game cumulative stats (finalized games in same season before this game;
+        -- for playoff games, only count other playoff games)
         (SELECT COUNT(*)::int
           FROM goals g2
           JOIN games gm2 ON gm2.id = g2.game_id
           WHERE g2.scorer_id = go.scorer_id
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
             AND gm2.scheduled_at < g.scheduled_at
         ) AS scorer_prior_goals,
         (SELECT COUNT(*)::int
@@ -1190,6 +1198,7 @@ router.get('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_1_prior_assists,
         (SELECT COUNT(*)::int
@@ -1199,6 +1208,7 @@ router.get('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_2_prior_assists
       FROM goals go
