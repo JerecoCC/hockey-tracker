@@ -11,6 +11,7 @@ import Table, { type Column } from '@/components/Table/Table';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
+import useGames from '@/hooks/useGames';
 import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
@@ -73,12 +74,19 @@ const SeasonDetailsPage = () => {
     updateGroup,
     deleteGroup,
     setCurrentSeason,
+    startPlayoffs,
     endSeason,
     updateSeason,
   } = useSeasonDetails(id);
 
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
   const { standings, loading: standingsLoading } = useSeasonStandings(id);
+
+  // Shared cache with SeasonGamesTab — no extra network request when that tab is loaded.
+  const { games } = useGames({ seasonId: id });
+  const hasUnfinishedRegularGames = games.some(
+    (g) => g.game_type === 'regular' && (g.status === 'scheduled' || g.status === 'in_progress'),
+  );
 
   const clinchedIds = useMemo(
     () =>
@@ -117,6 +125,7 @@ const SeasonDetailsPage = () => {
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showStartPlayoffsConfirm, setShowStartPlayoffsConfirm] = useState(false);
 
   // ── Stats state ───────────────────────────────────────────────────────────────
   type GoalieLeaderStat = 'save_pct' | 'gaa' | 'shutouts';
@@ -458,10 +467,16 @@ const SeasonDetailsPage = () => {
                 title={
                   <>
                     {season.name}
-                    {season.is_current && (
+                    {season.is_current && !season.playoffs_started && (
                       <Badge
                         label="Current"
                         intent="success"
+                      />
+                    )}
+                    {season.is_current && season.playoffs_started && (
+                      <Badge
+                        label="Playoffs"
+                        intent="accent"
                       />
                     )}
                     {season.is_ended && (
@@ -482,10 +497,8 @@ const SeasonDetailsPage = () => {
                     >
                       Edit
                     </Button>
-                    <MoreActionsMenu
-                      size="md"
-                      buttonClassName={styles.moreActionsBtn}
-                      items={[
+                    {(() => {
+                      const moreItems = [
                         ...(!season.is_current
                           ? [
                               {
@@ -493,6 +506,18 @@ const SeasonDetailsPage = () => {
                                 icon: 'stars',
                                 disabled: busy === 'set-current',
                                 onClick: () => setCurrentSeason(true),
+                              },
+                            ]
+                          : []),
+                        ...(season.is_current &&
+                        !season.playoffs_started &&
+                        !hasUnfinishedRegularGames
+                          ? [
+                              {
+                                label: 'End Regular Season',
+                                icon: 'emoji_events',
+                                disabled: busy === 'start-playoffs',
+                                onClick: () => setShowStartPlayoffsConfirm(true),
                               },
                             ]
                           : []),
@@ -507,8 +532,15 @@ const SeasonDetailsPage = () => {
                               },
                             ]
                           : []),
-                      ]}
-                    />
+                      ];
+                      return moreItems.length > 0 ? (
+                        <MoreActionsMenu
+                          size="md"
+                          buttonClassName={styles.moreActionsBtn}
+                          items={moreItems}
+                        />
+                      ) : null;
+                    })()}
                   </div>
                 }
               >
@@ -841,6 +873,7 @@ const SeasonDetailsPage = () => {
                 bracketRuleSetId={season.bracket_rule_set_id ?? null}
                 groups={groups}
                 isEnded={season.is_ended}
+                playoffsStarted={season.playoffs_started}
                 playoffFormat={season.playoff_format ?? null}
                 bestOfPlayoff={season.best_of_playoff ?? null}
                 bestOfShootout={season.best_of_shootout ?? null}
@@ -873,6 +906,30 @@ const SeasonDetailsPage = () => {
           if (!confirmDeleteGroup) return;
           await deleteGroup(confirmDeleteGroup.id);
           setConfirmDeleteGroup(null);
+        }}
+      />
+
+      <ConfirmModal
+        open={showStartPlayoffsConfirm}
+        title="End Regular Season"
+        body={
+          <>
+            This will mark the regular season as complete and open the playoff matchup
+            configuration. Regular-season games can still be edited, but standings will be
+            considered final. Continue?
+          </>
+        }
+        confirmLabel={busy === 'start-playoffs' ? 'Starting…' : 'Start Playoffs'}
+        confirmIcon="emoji_events"
+        variant="accent"
+        busy={busy === 'start-playoffs'}
+        onCancel={() => setShowStartPlayoffsConfirm(false)}
+        onConfirm={async () => {
+          const ok = await startPlayoffs();
+          if (ok) {
+            setShowStartPlayoffsConfirm(false);
+            handleTabChange(3); // index of 'Playoffs' tab
+          }
         }}
       />
 
