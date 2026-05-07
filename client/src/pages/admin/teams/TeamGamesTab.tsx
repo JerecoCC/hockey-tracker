@@ -138,6 +138,9 @@ const TeamGamesTab = ({ teamId, leagueId }: Props) => {
                 game.scheduled_time ? formatTime(game.scheduled_time, game.scheduled_at) : undefined
               }
               venue={game.venue ?? undefined}
+              round={game.playoff_round}
+              gameNumberInSeries={game.game_number_in_series}
+              gameNumber={game.game_number}
               actions={[
                 {
                   icon: 'open_in_new',

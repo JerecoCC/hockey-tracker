@@ -29,8 +29,10 @@ router.get('/', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.overtime_periods, g.shootout,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
+        ps.round AS playoff_round,
         gs.period_scores,
         g.period_shots,
         -- Home team
@@ -52,6 +54,7 @@ router.get('/', async (req, res) => {
       FROM games g
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
+      LEFT JOIN playoff_series ps ON ps.id = g.playoff_series_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -88,7 +91,11 @@ router.get('/', async (req, res) => {
                                                 OR g.away_team_id = ${team_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type   = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status      = ${status    ?? null})
-      ORDER BY g.scheduled_at DESC NULLS LAST, g.scheduled_time DESC NULLS LAST, g.created_at DESC
+      ORDER BY
+        ps.round ASC NULLS LAST,
+        g.game_number_in_series ASC NULLS LAST,
+        g.game_number ASC NULLS LAST,
+        g.scheduled_at ASC NULLS LAST, g.scheduled_time ASC NULLS LAST, g.created_at ASC
     `;
     return res.json(games);
   } catch (err) {

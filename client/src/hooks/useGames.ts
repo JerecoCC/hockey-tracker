@@ -89,6 +89,7 @@ export interface GameRecord {
   playoff_series_id:        string | null;
   game_number_in_series: number | null;
   game_number:           number | null;
+  playoff_round:         number | null;
   notes:                 string | null;
   created_at:            string;
   current_period?:       CurrentPeriod | null;

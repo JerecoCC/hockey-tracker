@@ -42,6 +42,12 @@ interface Props {
   time?: string;
   /** Venue / arena name */
   venue?: string;
+  /** Playoff round number (1–4) */
+  round?: number | null;
+  /** Game number within a playoff series (1–7) */
+  gameNumberInSeries?: number | null;
+  /** Sequential game number within the regular season */
+  gameNumber?: number | null;
   gameType?: GameType;
   /** When provided, renders a stretched anchor so the item can be right-clicked to open in a new tab. */
   href?: string;
@@ -86,6 +92,9 @@ const GameListItem = ({
   date,
   time,
   venue,
+  round,
+  gameNumberInSeries,
+  gameNumber,
   gameType,
   href,
   actions,
@@ -95,7 +104,16 @@ const GameListItem = ({
   const awayLost = isFinal && awayScore < homeScore;
   const homeLost = isFinal && homeScore < awayScore;
 
-  const dateLine = [date, time].filter(Boolean).join(' • ');
+  const dateLine = [date, time].filter(Boolean).join(' • ') || 'TBD';
+
+  // Secondary meta line shown in the middle column.
+  // Playoff games: "Round 1 · Game 3"  Regular games: "Game 12"
+  const metaLine =
+    round != null && gameNumberInSeries != null
+      ? `Round ${round} · Game ${gameNumberInSeries}`
+      : gameNumber != null
+        ? `Game ${gameNumber}`
+        : null;
 
   const itemClass = [styles.item, gameType && GAME_TYPE_CLASS[gameType]].filter(Boolean).join(' ');
 
@@ -111,7 +129,7 @@ const GameListItem = ({
       )}
       {/* Main: date line + stacked teams */}
       <div className={styles.main}>
-        {dateLine && <span className={styles.dateLine}>{dateLine}</span>}
+        <span className={styles.dateLine}>{dateLine}</span>
 
         {/* Away row */}
         <div className={[styles.teamRow, awayLost && styles.teamLoser].filter(Boolean).join(' ')}>
@@ -140,8 +158,11 @@ const GameListItem = ({
         </div>
       </div>
 
-      {/* Venue — between teams and status */}
-      {venue && <span className={styles.venue}>{venue}</span>}
+      {/* Middle — always present so the badge is always pushed to the right */}
+      <div className={styles.middle}>
+        {venue && <span className={styles.venue}>{venue}</span>}
+        {metaLine && <span className={styles.metaLine}>{metaLine}</span>}
+      </div>
 
       {/* Status badge — rightmost */}
       <Badge
