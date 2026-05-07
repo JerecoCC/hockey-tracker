@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
@@ -184,22 +185,13 @@ const PlayerDetailsPage = () => {
       {/* Hero card */}
       <Card>
         <div className={styles.hero}>
-          <div className={styles.avatarWrapper}>
-            {photo ? (
-              <img
-                src={photo}
-                alt={fullName}
-                className={styles.avatar}
-              />
-            ) : (
-              <span
-                className={styles.avatarInitials}
-                style={{ background: avatarBg, color: avatarColor }}
-              >
-                {initials}
-              </span>
-            )}
-          </div>
+          <PlayerAvatar
+            photo={photo}
+            initials={initials}
+            primaryColor={avatarBg}
+            textColor={avatarColor}
+            size={80}
+          />
           <div className={styles.heroInfo}>
             <h2 className={styles.heroName}>{fullName}</h2>
             <div className={styles.heroMeta}>

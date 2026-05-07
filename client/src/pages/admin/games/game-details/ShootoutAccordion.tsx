@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import { type GameRecord } from '@/hooks/useGames';
@@ -180,19 +181,14 @@ const ShootoutAccordion = ({
       </span>
     );
 
-    const photo = attempt.shooter_photo ? (
-      <img
-        src={attempt.shooter_photo}
-        alt=""
-        className={styles.soAttemptPhoto}
+    const photo = (
+      <PlayerAvatar
+        photo={attempt.shooter_photo}
+        initials={attempt.shooter_last_name?.charAt(0) ?? '?'}
+        primaryColor={teamInfo.primary}
+        textColor={teamInfo.text}
+        size={30}
       />
-    ) : (
-      <span
-        className={styles.soAttemptPhotoPlaceholder}
-        style={{ background: teamInfo.primary, color: teamInfo.text }}
-      >
-        {attempt.shooter_last_name?.charAt(0)}
-      </span>
     );
 
     const href = getPlayerHref ? getPlayerHref(attempt.shooter_id) : undefined;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Card from '@/components/Card/Card';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
@@ -130,20 +131,13 @@ const GoalieStatsCard = ({
                           {teamCode?.slice(0, 1)}
                         </span>
                       )}
-                      {goalie.photo ? (
-                        <img
-                          src={goalie.photo}
-                          alt=""
-                          className={styles.goalScorerPhoto}
-                        />
-                      ) : (
-                        <span
-                          className={styles.goalScorerPhotoPlaceholder}
-                          style={{ background: primaryColor, color: textColor }}
-                        >
-                          {goalie.last_name?.charAt(0)}
-                        </span>
-                      )}
+                      <PlayerAvatar
+                        photo={goalie.photo}
+                        initials={goalie.last_name?.charAt(0) ?? '?'}
+                        primaryColor={primaryColor}
+                        textColor={textColor}
+                        size={32}
+                      />
                       <div className={styles.goalInfo}>
                         {goalie.jersey_number != null && (
                           <span className={styles.goalAssists}>#{goalie.jersey_number}</span>

@@ -98,28 +98,6 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   text-transform: uppercase;
 }
 
-// Circular scorer avatar
-.goalScorerPhoto {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.goalScorerPhotoPlaceholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 // Text column: scorer name + assists
 .goalInfo {
   flex: 1;

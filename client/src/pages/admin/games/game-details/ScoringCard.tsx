@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Badge from '@/components/Badge/Badge';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
@@ -143,20 +144,13 @@ const ScoringCard = ({
                 {goal.team_code?.slice(0, 1)}
               </span>
             )}
-            {goal.scorer_photo ? (
-              <img
-                src={goal.scorer_photo}
-                alt=""
-                className={styles.goalScorerPhoto}
-              />
-            ) : (
-              <span
-                className={styles.goalScorerPhotoPlaceholder}
-                style={{ background: goal.team_primary_color, color: goal.team_text_color }}
-              >
-                {goal.scorer_last_name?.charAt(0)}
-              </span>
-            )}
+            <PlayerAvatar
+              photo={goal.scorer_photo}
+              initials={goal.scorer_last_name?.charAt(0) ?? '?'}
+              primaryColor={goal.team_primary_color}
+              textColor={goal.team_text_color}
+              size={32}
+            />
             <div className={styles.goalInfo}>
               <span className={styles.goalScorer}>
                 {getPlayerHref ? (

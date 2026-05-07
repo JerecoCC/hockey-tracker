@@ -1,3 +1,4 @@
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import styles from './StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
@@ -42,20 +43,14 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
     <div className={styles.layout}>
       {/* ── Featured player ── */}
       <div className={styles.featured}>
-        {featured.photo ? (
-          <img src={featured.photo} alt="" className={styles.photo} />
-        ) : (
-          <span
-            className={styles.photoPH}
-            style={{
-              background: featured.team_primary_color ?? undefined,
-              color: featured.team_text_color ?? undefined,
-            }}
-          >
-            {featured.first_name.charAt(0)}
-            {featured.last_name.charAt(0)}
-          </span>
-        )}
+        <PlayerAvatar
+          photo={featured.photo}
+          initials={`${featured.first_name.charAt(0)}${featured.last_name.charAt(0)}`}
+          primaryColor={featured.team_primary_color}
+          textColor={featured.team_text_color}
+          size={110}
+          className={styles.featuredAvatar}
+        />
 
         <span className={styles.name}>
           {featured.first_name}
@@ -65,7 +60,11 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
 
         <div className={styles.meta}>
           {featured.team_logo && (
-            <img src={featured.team_logo} alt="" className={styles.metaLogo} />
+            <img
+              src={featured.team_logo}
+              alt=""
+              className={styles.metaLogo}
+            />
           )}
           {featured.team_code && <span>{featured.team_code}</span>}
           {featured.jersey_number != null && <span>• #{featured.jersey_number}</span>}
@@ -96,7 +95,10 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
 
         {onAllLeaders && (
           <div className={styles.allLeadersRow}>
-            <button className={styles.allLeadersLink} onClick={onAllLeaders}>
+            <button
+              className={styles.allLeadersLink}
+              onClick={onAllLeaders}
+            >
               All Leaders
             </button>
           </div>

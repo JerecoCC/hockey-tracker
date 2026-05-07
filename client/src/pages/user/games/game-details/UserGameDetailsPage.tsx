@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/Button/Button';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
 import Tooltip from '@/components/Tooltip/Tooltip';
@@ -277,21 +278,13 @@ const UserGameDetailsPage = () => {
                           key={starCount}
                           className={styles.starItem}
                         >
-                          {player.photo ? (
-                            <img
-                              src={player.photo}
-                              alt=""
-                              className={styles.starPhoto}
-                            />
-                          ) : (
-                            <span
-                              className={styles.starPhotoPlaceholder}
-                              style={{ background: primaryColor, color: textColor }}
-                            >
-                              {player.first_name[0]}
-                              {player.last_name[0]}
-                            </span>
-                          )}
+                          <PlayerAvatar
+                            photo={player.photo}
+                            initials={`${player.first_name[0]}${player.last_name[0]}`}
+                            primaryColor={primaryColor}
+                            textColor={textColor}
+                            size={56}
+                          />
                           <span className={styles.starIcons}>
                             {Array.from({ length: starCount }).map((_, i) => (
                               <Icon

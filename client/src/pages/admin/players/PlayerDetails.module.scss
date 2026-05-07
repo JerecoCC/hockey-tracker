@@ -44,35 +44,6 @@
   gap: $space-xl;
 }
 
-.avatarWrapper {
-  flex-shrink: 0;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  overflow: hidden;
-}
-
-.avatar {
-  width: 80px;
-  height: 80px;
-  object-fit: cover;
-  display: block;
-}
-
-.avatarInitials {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: $border;
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: $text-bright;
-  text-transform: uppercase;
-}
-
 .heroInfo {
   flex: 1;
   min-width: 0;

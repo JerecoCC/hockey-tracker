@@ -517,29 +517,6 @@
   min-width: 0;
 }
 
-.statsPlayerPhoto {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.statsPlayerPhotoPlaceholder {
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-dim;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  text-transform: uppercase;
-}
-
 .statsPlayerName {
   font-size: $font-sm;
   color: $text-body;

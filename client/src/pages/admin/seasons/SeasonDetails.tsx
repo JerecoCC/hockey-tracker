@@ -24,6 +24,7 @@ import useSeasonStats, {
   type GoalieStatRecord,
 } from '@/hooks/useSeasonStats';
 import useTabState from '@/hooks/useTabState';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
@@ -314,24 +315,13 @@ const SeasonDetailsPage = () => {
           {(row.team_code ?? '?').slice(0, 3)}
         </span>
       )}
-      {row.photo ? (
-        <img
-          src={row.photo}
-          alt={`${row.first_name} ${row.last_name}`}
-          className={styles.statsPlayerPhoto}
-        />
-      ) : (
-        <span
-          className={styles.statsPlayerPhotoPlaceholder}
-          style={{
-            background: row.team_primary_color ?? undefined,
-            color: row.team_text_color ?? undefined,
-          }}
-        >
-          {row.first_name.charAt(0)}
-          {row.last_name.charAt(0)}
-        </span>
-      )}
+      <PlayerAvatar
+        photo={row.photo}
+        initials={`${row.first_name.charAt(0)}${row.last_name.charAt(0)}`}
+        primaryColor={row.team_primary_color}
+        textColor={row.team_text_color}
+        size={28}
+      />
       <span className={styles.statsPlayerName}>
         {row.last_name}, {row.first_name}
       </span>
