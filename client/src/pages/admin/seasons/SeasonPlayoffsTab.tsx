@@ -420,22 +420,22 @@ const ChoicePickModal = ({
 interface BracketSlotProps {
   series: PlayoffSeriesRecord | null;
   busy: string | null;
-  /** Simulated team name for slot 1 (away). Only shown when series is null. */
-  simulatedAway?: string | null;
-  /** Simulated team name for slot 2 (home). Only shown when series is null. */
-  simulatedHome?: string | null;
+  /** Simulated team name for Team 1 (home ice). Only shown when series is null. */
+  simulatedTeam1?: string | null;
+  /** Simulated team name for Team 2. Only shown when series is null. */
+  simulatedTeam2?: string | null;
   onDelete: (s: PlayoffSeriesRecord) => void;
 }
 
 const BracketSlot = ({
   series,
   busy,
-  simulatedAway,
-  simulatedHome,
+  simulatedTeam1,
+  simulatedTeam2,
   onDelete,
 }: BracketSlotProps) => {
   if (!series) {
-    const isSimulated = simulatedAway != null || simulatedHome != null;
+    const isSimulated = simulatedTeam1 != null || simulatedTeam2 != null;
     return (
       <div
         className={[
@@ -447,12 +447,12 @@ const BracketSlot = ({
           .filter(Boolean)
           .join(' ')}
       >
-        <div className={`${styles.slotTeam} ${!simulatedAway ? styles.slotTeamTbd : ''}`}>
-          <span className={styles.slotTeamName}>{simulatedAway ?? 'TBD'}</span>
+        <div className={`${styles.slotTeam} ${!simulatedTeam1 ? styles.slotTeamTbd : ''}`}>
+          <span className={styles.slotTeamName}>{simulatedTeam1 ?? 'TBD'}</span>
         </div>
         <div className={styles.slotDivider} />
-        <div className={`${styles.slotTeam} ${!simulatedHome ? styles.slotTeamTbd : ''}`}>
-          <span className={styles.slotTeamName}>{simulatedHome ?? 'TBD'}</span>
+        <div className={`${styles.slotTeam} ${!simulatedTeam2 ? styles.slotTeamTbd : ''}`}>
+          <span className={styles.slotTeamName}>{simulatedTeam2 ?? 'TBD'}</span>
         </div>
       </div>
     );
@@ -593,16 +593,17 @@ const SeasonPlayoffsTab = ({
     await Promise.all(
       matchupIndices
         .map((mi) => {
-          const awayName = slots[`r1m${mi}away`];
-          const homeName = slots[`r1m${mi}home`];
-          const awayId = awayName != null ? teamIdByName.get(awayName) : undefined;
-          const homeId = homeName != null ? teamIdByName.get(homeName) : undefined;
-          if (!awayId || !homeId) return null;
+          // Team 1 always holds home-ice advantage; Team 2 is the visitor.
+          const team1Name = slots[`r1m${mi}team1`];
+          const team2Name = slots[`r1m${mi}team2`];
+          const team1Id = team1Name != null ? teamIdByName.get(team1Name) : undefined;
+          const team2Id = team2Name != null ? teamIdByName.get(team2Name) : undefined;
+          if (!team1Id || !team2Id) return null;
           return createSeries({
             season_id: seasonId,
             round: 1,
-            away_team_id: awayId,
-            home_team_id: homeId,
+            home_team_id: team1Id,
+            away_team_id: team2Id,
           });
         })
         .filter((p): p is Promise<boolean> => p !== null),
@@ -661,12 +662,12 @@ const SeasonPlayoffsTab = ({
 
       // Build a pick entry for each 'choice' slot.
       // The "chooser" is the seeded team sitting in the companion position of the
-      // same matchup (e.g. if the choice slot is r1m0home, the chooser is r1m0away).
+      // same matchup (e.g. if the choice slot is r1m0team1, the chooser is r1m0team2).
       const choices: ChoicePick[] = choiceSlots.map((slot) => {
-        const isAway = slot.slot_key.endsWith('away');
-        const companionKey = isAway
-          ? slot.slot_key.replace(/away$/, 'home')
-          : slot.slot_key.replace(/home$/, 'away');
+        const isTeam1 = slot.slot_key.endsWith('team1');
+        const companionKey = isTeam1
+          ? slot.slot_key.replace(/team1$/, 'team2')
+          : slot.slot_key.replace(/team2$/, 'team1');
         const chooserName = result[companionKey] ?? null;
 
         // Resolve the candidate pool from standings, deduplicating when multiple
@@ -829,11 +830,11 @@ const SeasonPlayoffsTab = ({
                             key={slotIndex}
                             series={roundSeries[slotIndex] ?? null}
                             busy={seriesBusy}
-                            simulatedAway={
-                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'away')]
+                            simulatedTeam1={
+                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
                             }
-                            simulatedHome={
-                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'home')]
+                            simulatedTeam2={
+                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team2')]
                             }
                             onDelete={setConfirmDeleteSeries}
                           />

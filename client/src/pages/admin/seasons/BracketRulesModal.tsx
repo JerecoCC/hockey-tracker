@@ -119,14 +119,14 @@ interface BracketRulesFormValues {
   slots: SlotFormItem[];
 }
 
-export const makeSlotKey = (round: number, matchup: number, pos: 'away' | 'home') =>
+export const makeSlotKey = (round: number, matchup: number, pos: 'team1' | 'team2') =>
   `r${round}m${matchup}${pos}`;
 
 export const slotKeyToLabel = (key: string, rounds: BracketRound[]): string => {
-  const m = key.match(/^r(\d+)m(\d+)(away|home)$/);
+  const m = key.match(/^r(\d+)m(\d+)(team1|team2)$/);
   if (!m) return key;
   const roundInfo = rounds.find((r) => r.round === Number(m[1]));
-  return `${roundInfo?.label ?? `Round ${m[1]}`} · Matchup ${Number(m[2]) + 1} · Slot ${m[3] === 'away' ? '1' : '2'}`;
+  return `${roundInfo?.label ?? `Round ${m[1]}`} · Matchup ${Number(m[2]) + 1} · Team ${m[3] === 'team1' ? '1' : '2'}`;
 };
 
 const blankSlotItem = (key: string): SlotFormItem => ({
@@ -525,8 +525,8 @@ const BracketRulesModal = ({
     let idx = 0;
     for (const roundInfo of effectiveStructure.rounds) {
       for (let mi = 0; mi < roundInfo.series; mi++) {
-        map[makeSlotKey(roundInfo.round, mi, 'away')] = idx++;
-        map[makeSlotKey(roundInfo.round, mi, 'home')] = idx++;
+        map[makeSlotKey(roundInfo.round, mi, 'team1')] = idx++;
+        map[makeSlotKey(roundInfo.round, mi, 'team2')] = idx++;
       }
     }
     return map;
@@ -602,8 +602,8 @@ const BracketRulesModal = ({
                   >
                     <span className={styles.bracketRulesMatchupLabel}>Matchup {mi + 1}</span>
                     <SingleSlotEditor
-                      label="1"
-                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'away')] ?? 0}
+                      label="Team 1 (home ice)"
+                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team1')] ?? 0}
                       round={1}
                       control={control}
                       setValue={setValue}
@@ -612,8 +612,8 @@ const BracketRulesModal = ({
                       prevRoundMatchupOptions={[]}
                     />
                     <SingleSlotEditor
-                      label="2"
-                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'home')] ?? 0}
+                      label="Team 2"
+                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team2')] ?? 0}
                       round={1}
                       control={control}
                       setValue={setValue}

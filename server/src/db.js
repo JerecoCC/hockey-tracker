@@ -897,7 +897,8 @@ async function initSchema() {
   // One row per configured bracket slot within a rule set.  Slots with no rule
   // ('none') are omitted — they default to unassigned at query time.
   //
-  // slot_key   : 'r{round}m{matchupIndex}{away|home}', e.g. 'r1m0away'
+  // slot_key   : 'r{round}m{matchupIndex}{team1|team2}', e.g. 'r1m0team1'
+  //              team1 always holds home-ice advantage for the series.
   // rule_type  : 'seed' | 'choice' | 'unchosen' | 'winner'
   //   seed     — #rank team from scope (league / conference / division)
   //   choice   — a high seed picks from a pool of eligibles (pool JSONB)
@@ -919,6 +920,17 @@ async function initSchema() {
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (rule_set_id, slot_key)
     )
+  `;
+
+  // ── Migrate slot_key suffix: home→team2, away→team1 ─────────────────────────
+  // The old convention used 'home'/'away'; the new convention uses 'team1'/'team2'
+  // where team1 always holds home-ice advantage.
+  await sql`
+    UPDATE bracket_slot_rules
+    SET slot_key = regexp_replace(
+                    regexp_replace(slot_key, 'home$', 'team2'),
+                    'away$', 'team1')
+    WHERE slot_key ~ '(home|away)$'
   `;
 
   // ── Widen bracket_slot_rules.scope to include specific_conference / specific_division ──
@@ -976,6 +988,38 @@ async function initSchema() {
   await sql`
     ALTER TABLE seasons
       ADD COLUMN IF NOT EXISTS playoffs_started BOOLEAN NOT NULL DEFAULT FALSE
+  `;
+
+  // ── One-time data migration tracking ─────────────────────────────────────────
+  // Lightweight table so non-idempotent data fixes run exactly once.
+  await sql`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      name       TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ── Swap home/away on existing scheduled playoff games ────────────────────
+  // The old bracket slot convention used 'home'/'away' suffixes where 'away'
+  // mapped to Team 1 (home ice). The new convention uses 'team1'/'team2', and
+  // home_team_id in both the series and generated games must be Team 1.
+  // This one-time fix swaps home_team_id ↔ away_team_id for all scheduled
+  // playoff games so they match the corrected seeding logic.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'swap_playoff_game_home_away_v1'
+      ) THEN
+        UPDATE games
+        SET home_team_id = away_team_id,
+            away_team_id = home_team_id
+        WHERE game_type = 'playoff'
+          AND status    = 'scheduled';
+
+        INSERT INTO _migrations (name) VALUES ('swap_playoff_game_home_away_v1');
+      END IF;
+    END $$
   `;
 
   console.log('Database schema ready');
