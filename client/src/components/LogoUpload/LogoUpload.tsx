@@ -35,14 +35,17 @@ const LogoUpload = (props: Props) => {
 
   const displayUrl = preview || (typeof field.value === 'string' ? field.value : '');
 
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
+  const applyFile = (file: File) => {
     setPreview((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
     });
     field.onChange(file);
+  };
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (file) applyFile(file);
   };
 
   const handleClear = () => {
@@ -53,6 +56,28 @@ const LogoUpload = (props: Props) => {
     field.onChange(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Clipboard paste support — active while the component is mounted and not disabled
+  useEffect(() => {
+    if (disabled) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            applyFile(file);
+            e.preventDefault();
+          }
+          break;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [disabled]);
 
   return (
     <div className={styles.logoSection}>
@@ -82,6 +107,7 @@ const LogoUpload = (props: Props) => {
             size="1.5em"
           />
           {label}
+          <span className={styles.fileLabelHint}>Click to browse · or paste from clipboard</span>
           <input
             ref={fileInputRef}
             className={styles.fileInput}
