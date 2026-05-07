@@ -147,6 +147,13 @@ const ScoreboardCard = ({
             </span>
           )}
           <div className={styles.scoreBlock}>
+            {game.playoff_round != null && (
+              <span className={styles.scoreMeta}>
+                {game.game_number_in_series != null
+                  ? `Round ${game.playoff_round} · Game ${game.game_number_in_series}`
+                  : `Round ${game.playoff_round}`}
+              </span>
+            )}
             {isFinal ? (
               <Badge
                 label={`Final${overtimeSuffix}`}
