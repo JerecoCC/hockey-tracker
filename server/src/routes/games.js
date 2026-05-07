@@ -33,6 +33,7 @@ router.get('/', async (req, res) => {
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps.round AS playoff_round,
+        brs.round_names AS playoff_round_names,
         gs.period_scores,
         g.period_shots,
         -- Home team
@@ -52,9 +53,11 @@ router.get('/', async (req, res) => {
           'text_color', t_away.text_color
         ) AS away_team
       FROM games g
+      JOIN seasons s ON s.id = g.season_id
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
       LEFT JOIN playoff_series ps ON ps.id = g.playoff_series_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id

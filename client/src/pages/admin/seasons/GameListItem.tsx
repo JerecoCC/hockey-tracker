@@ -44,6 +44,8 @@ interface Props {
   venue?: string;
   /** Playoff round number (1–4) */
   round?: number | null;
+  /** Custom display label for the playoff round (overrides "Round N" when provided). */
+  roundLabel?: string | null;
   /** Game number within a playoff series (1–7) */
   gameNumberInSeries?: number | null;
   /** Sequential game number within the regular season */
@@ -93,6 +95,7 @@ const GameListItem = ({
   time,
   venue,
   round,
+  roundLabel,
   gameNumberInSeries,
   gameNumber,
   gameType,
@@ -107,13 +110,16 @@ const GameListItem = ({
   const dateLine = [date, time].filter(Boolean).join(' • ') || 'TBD';
 
   // Secondary meta line shown in the middle column.
-  // Playoff games: "Round 1 · Game 3"  Regular games: "Game 12"
+  // Playoff games: "Quarterfinals · Game 3" (or "Round 1 · Game 3")  Regular games: "Game 12"
+  const resolvedRoundLabel = round != null ? (roundLabel ?? `Round ${round}`) : null;
   const metaLine =
-    round != null && gameNumberInSeries != null
-      ? `Round ${round} · Game ${gameNumberInSeries}`
-      : gameNumber != null
-        ? `Game ${gameNumber}`
-        : null;
+    resolvedRoundLabel != null && gameNumberInSeries != null
+      ? `${resolvedRoundLabel} · Game ${gameNumberInSeries}`
+      : resolvedRoundLabel != null && round != null
+        ? resolvedRoundLabel
+        : gameNumber != null
+          ? `Game ${gameNumber}`
+          : null;
 
   const itemClass = [styles.item, gameType && GAME_TYPE_CLASS[gameType]].filter(Boolean).join(' ');
 

@@ -272,6 +272,11 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 }
                 venue={game.venue ?? undefined}
                 round={game.playoff_round}
+                roundLabel={
+                  game.playoff_round != null
+                    ? (game.playoff_round_names?.[game.playoff_round] ?? null)
+                    : null
+                }
                 gameNumberInSeries={game.game_number_in_series}
                 gameNumber={game.game_number}
                 actions={[
