@@ -50,6 +50,7 @@ const LineupRosterModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [jerseyInput, setJerseyInput] = useState('');
   const [pendingMissing, setPendingMissing] = useState<number[]>([]);
+  const [alreadyAdded, setAlreadyAdded] = useState<number[]>([]);
 
   const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
     queryKey: ['players', { team_id: teamId, season_id: seasonId }],
@@ -125,10 +126,18 @@ const LineupRosterModal = ({
 
     const matched: string[] = [];
     const missing: number[] = [];
+    const inLineup: number[] = [];
+
     for (const num of nums) {
-      const player = available.find((p) => p.jersey_number === num);
-      if (player) matched.push(player.id);
-      else missing.push(num);
+      const inAvailable = available.find((p) => p.jersey_number === num);
+      if (inAvailable) {
+        matched.push(inAvailable.id);
+      } else if (allPlayers.some((p) => p.jersey_number === num)) {
+        // Player exists on the team but is already in this lineup
+        inLineup.push(num);
+      } else {
+        missing.push(num);
+      }
     }
 
     if (matched.length > 0) {
@@ -139,6 +148,7 @@ const LineupRosterModal = ({
       });
     }
     setPendingMissing(missing);
+    setAlreadyAdded(inLineup);
     setJerseyInput('');
   };
 
@@ -147,6 +157,7 @@ const LineupRosterModal = ({
     setSelected(new Set());
     setJerseyInput('');
     setPendingMissing([]);
+    setAlreadyAdded([]);
     onClose();
   };
 
@@ -195,6 +206,7 @@ const LineupRosterModal = ({
               value={jerseyInput}
               onChange={(e) => setJerseyInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyJerseys()}
+              autoFocus
             />
             <Button
               size="sm"
@@ -206,6 +218,15 @@ const LineupRosterModal = ({
               Apply
             </Button>
           </div>
+          {alreadyAdded.length > 0 && (
+            <p className={styles.alreadyAddedNote}>
+              <Icon
+                name="info"
+                size="0.85em"
+              />
+              Already in lineup: {alreadyAdded.map((n) => `#${n}`).join(', ')}
+            </p>
+          )}
           {pendingMissing.length > 0 && (
             <p className={styles.missingNote}>
               <Icon
@@ -228,7 +249,6 @@ const LineupRosterModal = ({
               placeholder="Search players…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
             />
           </div>
         </div>
