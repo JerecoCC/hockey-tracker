@@ -160,20 +160,54 @@ const UserGameDetailsPage = () => {
   const currentPeriodGoals = goals.filter((g) => g.period === game.current_period);
   const lastCurrentPeriodGoalId = currentPeriodGoals[currentPeriodGoals.length - 1]?.id;
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
-  const linescorePeriods: { id: string; label: string }[] = [
-    { id: '1', label: '1st' },
-    { id: '2', label: '2nd' },
-    { id: '3', label: '3rd' },
-    ...(game.period_scores.some((ps) => ps.period === 'OT') ||
+  const isPlayoff = game.game_type === 'playoff';
+  const otCount = game.overtime_periods ?? 1;
+
+  // Shot periods — separate OT entries for playoff games.
+  const hasOTShots =
+    game.current_period === 'OT' ||
+    game.current_period === 'SO' ||
+    game.period_shots.some((ps) => /^OT/.test(ps.period)) ||
+    (game.overtime_periods ?? 0) > 0;
+  const shotsPeriods: { id: string; label: string; shortLabel: string }[] = [
+    { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
+    { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
+    { id: '3', label: '3rd', shortLabel: useShortNums ? '3' : '3rd' },
+    ...(hasOTShots
+      ? isPlayoff
+        ? Array.from({ length: otCount }, (_, i) => ({
+            id: `OT${i + 1}`,
+            label: `Overtime ${i + 1}`,
+            shortLabel: `OT${i + 1}`,
+          }))
+        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
+      : []),
+  ];
+
+  const hasOT =
+    game.period_scores.some((ps) => ps.period === 'OT') ||
     (game.overtime_periods ?? 0) > 0 ||
     game.current_period === 'OT' ||
-    game.current_period === 'SO'
-      ? [{ id: 'OT', label: 'OT' }]
+    game.current_period === 'SO';
+  const useShortNums = isPlayoff && otCount > 1;
+  const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
+    { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
+    { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
+    { id: '3', label: '3rd', shortLabel: useShortNums ? '3' : '3rd' },
+    ...(hasOT
+      ? isPlayoff
+        ? Array.from({ length: otCount }, (_, i) => ({
+            id: `OT${i + 1}`,
+            label: `Overtime ${i + 1}`,
+            shortLabel: `OT${i + 1}`,
+          }))
+        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
       : []),
-    ...(game.period_scores.some((ps) => ps.period === 'SO') ||
-    game.shootout ||
-    game.current_period === 'SO'
-      ? [{ id: 'SO', label: 'SO' }]
+    ...(!isPlayoff &&
+    (game.period_scores.some((ps) => ps.period === 'SO') ||
+      game.shootout ||
+      game.current_period === 'SO')
+      ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }]
       : []),
   ];
 
@@ -707,7 +741,7 @@ const UserGameDetailsPage = () => {
                       key={p.id}
                       className={styles.thPeriod}
                     >
-                      {p.label}
+                      {p.shortLabel}
                     </th>
                   ))}
                   <th className={styles.thTotal}>T</th>
@@ -718,6 +752,8 @@ const UserGameDetailsPage = () => {
                   const currentPeriodIdx = PERIOD_IDS.indexOf(
                     game.current_period as '1' | '2' | '3',
                   );
+                  const isPostRegulation =
+                    game.current_period === 'OT' || game.current_period === 'SO';
                   return [
                     {
                       teamId: game.away_team.id,
@@ -759,10 +795,17 @@ const UserGameDetailsPage = () => {
                         </span>
                       </td>
                       {linescorePeriods.map((p) => {
-                        const ps = game.period_scores.find((s) => s.period === p.id);
+                        const isNumberedOT = /^OT[0-9]+$/.test(p.id);
+                        const isLastOT = isNumberedOT && p.id === `OT${game.overtime_periods ?? 1}`;
+                        const ps = isNumberedOT
+                          ? isLastOT
+                            ? game.period_scores.find((s) => s.period === 'OT')
+                            : undefined
+                          : game.period_scores.find((s) => s.period === p.id);
                         const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
                         const isPeriodDone =
-                          isFinal || (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
+                          isFinal ||
+                          (pIdx >= 0 ? isPostRegulation || currentPeriodIdx > pIdx : true);
                         if (p.id === 'SO') {
                           const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);
                           return (
@@ -806,16 +849,14 @@ const UserGameDetailsPage = () => {
                 <thead>
                   <tr>
                     <th className={styles.thTeam}></th>
-                    {linescorePeriods
-                      .filter((p) => p.id !== 'SO')
-                      .map((p) => (
-                        <th
-                          key={p.id}
-                          className={styles.thPeriod}
-                        >
-                          {p.label}
-                        </th>
-                      ))}
+                    {shotsPeriods.map((p) => (
+                      <th
+                        key={p.id}
+                        className={styles.thPeriod}
+                      >
+                        {p.shortLabel}
+                      </th>
+                    ))}
                     <th className={styles.thTotal}>T</th>
                   </tr>
                 </thead>
@@ -858,20 +899,18 @@ const UserGameDetailsPage = () => {
                           <span className={styles.linescoreCode}>{row.code}</span>
                         </span>
                       </td>
-                      {linescorePeriods
-                        .filter((p) => p.id !== 'SO')
-                        .map((p) => {
-                          const ps = game.period_shots.find((s) => s.period === p.id);
-                          const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
-                          return (
-                            <td
-                              key={p.id}
-                              className={styles.tdGoals}
-                            >
-                              {shots ?? '—'}
-                            </td>
-                          );
-                        })}
+                      {shotsPeriods.map((p) => {
+                        const ps = game.period_shots.find((s) => s.period === p.id);
+                        const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
+                        return (
+                          <td
+                            key={p.id}
+                            className={styles.tdGoals}
+                          >
+                            {shots ?? '—'}
+                          </td>
+                        );
+                      })}
                       <td className={styles.tdTotal}>
                         {game.period_shots.reduce(
                           (sum, ps) => sum + (row.isAway ? ps.away_shots : ps.home_shots),

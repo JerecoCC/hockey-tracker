@@ -90,6 +90,11 @@ export interface GameRecord {
   game_number_in_series: number | null;
   game_number:           number | null;
   playoff_round:         number | null;
+  series_home_team_id:   string | null;
+  series_away_team_id:   string | null;
+  series_home_wins:      number | null;
+  series_away_wins:      number | null;
+  series_games_to_win:   number | null;
   notes:                 string | null;
   created_at:            string;
   current_period?:       CurrentPeriod | null;
@@ -111,6 +116,8 @@ export interface GameRecord {
   previous_meetings?:    PreviousMeeting[];
   /** Number of regulation shootout rounds before sudden death (from the league settings). */
   best_of_shootout:      number;
+  /** Custom display names for each playoff round from the season's bracket rule set (detail endpoint only). */
+  playoff_round_names?:  Record<string, string> | null;
 }
 
 export interface SeriesGame {
@@ -490,7 +497,47 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
+  /** Go back to a specific OT period number (keeps current_period = 'OT', sets overtime_periods = targetNum). */
+  const revertOTPeriod = async (targetOTPeriods: number): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('advance-period');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { current_period: 'OT', overtime_periods: targetOTPeriods },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to revert overtime period'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Advance to the next overtime period for playoff games (keeps current_period = 'OT', increments overtime_periods). */
+  const advanceOTPeriod = async (currentOvertimePeriods: number): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('advance-period');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { current_period: 'OT', overtime_periods: currentOvertimePeriods + 1 },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to advance overtime period'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { game, loading, busy, startGame, updateStatus, advancePeriod, advanceOTPeriod, revertOTPeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
 };
 
 // ── Playoff series hook ────────────────────────────────────────────────────────

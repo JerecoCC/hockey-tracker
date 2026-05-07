@@ -962,6 +962,14 @@ async function initSchema() {
         REFERENCES bracket_rule_sets(id) ON DELETE SET NULL
   `;
 
+  // Custom display names for each playoff round, keyed by round number string.
+  // e.g. { "1": "Wild Card", "2": "Division Series", "3": "Conference Finals", "4": "Stanley Cup Final" }
+  // Null means all rounds fall back to the default label (getRoundLabel).
+  await sql`
+    ALTER TABLE bracket_rule_sets
+      ADD COLUMN IF NOT EXISTS round_names JSONB
+  `;
+
   // Game-rule overrides per season — nullable, falls back to league defaults when NULL.
   // best_of_playoff: number of games needed to win a series (2=Bo3, 3=Bo5, 4=Bo7).
   await sql`

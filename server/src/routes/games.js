@@ -289,7 +289,13 @@ router.get('/:id', async (req, res) => {
         g.playoff_series_id, g.game_number_in_series, g.game_number,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
-        ps2.round AS playoff_round,
+        ps2.round         AS playoff_round,
+        ps2.home_team_id  AS series_home_team_id,
+        ps2.away_team_id  AS series_away_team_id,
+        ps2.home_wins     AS series_home_wins,
+        ps2.away_wins     AS series_away_wins,
+        ps2.games_to_win  AS series_games_to_win,
+        brs.round_names   AS playoff_round_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(
@@ -319,6 +325,7 @@ router.get('/:id', async (req, res) => {
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
       LEFT JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -1532,9 +1539,16 @@ router.patch('/:id/shots', async (req, res) => {
         SELECT COALESCE(
           jsonb_agg(
             entry
-            ORDER BY CASE entry->>'period'
-              WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3
-              WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+            ORDER BY CASE
+              WHEN entry->>'period' = '1'  THEN 10
+              WHEN entry->>'period' = '2'  THEN 20
+              WHEN entry->>'period' = '3'  THEN 30
+              WHEN entry->>'period' = 'OT' THEN 40
+              WHEN entry->>'period' LIKE 'OT%' THEN
+                40 + COALESCE(NULLIF(regexp_replace(entry->>'period','[^0-9]','','g'),'')::int, 0)
+              WHEN entry->>'period' = 'SO' THEN 100
+              ELSE 200
+            END
           ),
           '[]'::jsonb
         )

@@ -850,6 +850,15 @@ const SeasonPlayoffsTab = ({
     [playoffFormat, groups],
   );
 
+  // Custom round names from the assigned rule set (null if none configured).
+  const roundNames = useMemo(
+    () =>
+      bracketRuleSetId
+        ? (ruleSets.find((rs) => rs.id === bracketRuleSetId)?.round_names ?? null)
+        : null,
+    [bracketRuleSetId, ruleSets],
+  );
+
   // ── Modal state ───────────────────────────────────────────────────────────────
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [formatModalOpen, setFormatModalOpen] = useState(false);
@@ -924,7 +933,9 @@ const SeasonPlayoffsTab = ({
                       key={roundInfo.round}
                       className={styles.bracketRound}
                     >
-                      <p className={styles.bracketRoundLabel}>{roundInfo.label}</p>
+                      <p className={styles.bracketRoundLabel}>
+                        {getRoundLabel(roundInfo.round, bracketStructure.rounds.length, roundNames)}
+                      </p>
                       <div className={styles.bracketSlots}>
                         {Array.from({ length: roundInfo.series }, (_, slotIndex) => (
                           <BracketSlot
@@ -960,7 +971,9 @@ const SeasonPlayoffsTab = ({
                     const maxRound = Math.max(...Object.keys(seriesByRound).map(Number));
                     return (
                       <div key={round}>
-                        <p className={styles.roundLabel}>{getRoundLabel(round, maxRound)}</p>
+                        <p className={styles.roundLabel}>
+                          {getRoundLabel(round, maxRound, roundNames)}
+                        </p>
                         {seriesByRound[round].map((s) => (
                           <div
                             key={s.id}

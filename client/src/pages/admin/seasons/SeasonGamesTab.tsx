@@ -107,12 +107,19 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
   }));
 
   // ── Filter state (with sessionStorage persistence) ────────────────────────
+  const gameTypeKey = `season-games-type:${seasonId}`;
   const monthKey = `season-games-month:${seasonId}`;
   const statusKey = `season-games-status:${seasonId}`;
 
-  const [gameTypeFilter, setGameTypeFilter] = useState('');
+  const [gameTypeFilter, setGameTypeFilter] = useState(
+    () => sessionStorage.getItem(gameTypeKey) ?? '',
+  );
   const [monthFilter, setMonthFilter] = useState(() => sessionStorage.getItem(monthKey) ?? '');
   const [statusFilter, setStatusFilter] = useState(() => sessionStorage.getItem(statusKey) ?? '');
+
+  useEffect(() => {
+    sessionStorage.setItem(gameTypeKey, gameTypeFilter);
+  }, [gameTypeKey, gameTypeFilter]);
 
   useEffect(() => {
     sessionStorage.setItem(monthKey, monthFilter);

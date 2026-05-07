@@ -162,6 +162,12 @@ const ScoreImageModal = ({
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+    applyImageFile(file);
+  };
+
+  // ── Clipboard paste support ───────────────────────────────────────────────────
+
+  const applyImageFile = (file: File) => {
     setHeroPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
@@ -169,6 +175,26 @@ const ScoreImageModal = ({
     setHeroFile(file);
     resetCrop();
   };
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            applyImageFile(file);
+            e.preventDefault();
+          }
+          break;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [open]);
 
   const handleClear = () => {
     setHeroPreviewUrl((prev) => {
@@ -436,6 +462,46 @@ const ScoreImageModal = ({
       ctx.fillText(game.away_team.code, awayLogoX, scoreMidY + logoSize / 2 - 6);
       ctx.fillText(game.home_team.code, homeLogoX, scoreMidY + logoSize / 2 - 6);
 
+      // Series win dots (playoff only)
+      if (
+        game.game_type === 'playoff' &&
+        game.series_games_to_win != null &&
+        game.series_home_wins != null &&
+        game.series_away_wins != null
+      ) {
+        const total = game.series_games_to_win;
+        const dotR = 12;
+        const dotGap = 10;
+        const dotsW = total * dotR * 2 + (total - 1) * dotGap;
+        // y position: below the team code text (code baseline ≈ scoreMidY + logoSize/2 + 26)
+        const dotCY = scoreMidY + logoSize / 2 + 48;
+
+        // Which team maps to which position on canvas
+        const awayIsSeriesHome = game.away_team.id === game.series_home_team_id;
+        const awayWins = awayIsSeriesHome ? game.series_home_wins : game.series_away_wins;
+        const homeWins = awayIsSeriesHome ? game.series_away_wins : game.series_home_wins;
+
+        const drawDots = (centerX: number, wins: number, isWinner: boolean) => {
+          for (let i = 0; i < total; i++) {
+            const cx = centerX - dotsW / 2 + i * (dotR * 2 + dotGap) + dotR;
+            const filled = i < wins;
+            ctx.beginPath();
+            ctx.arc(cx, dotCY, dotR, 0, Math.PI * 2);
+            if (filled) {
+              ctx.fillStyle = '#22c55e'; // green
+              ctx.fill();
+            } else {
+              ctx.strokeStyle = isWinner ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.18)';
+              ctx.lineWidth = 2;
+              ctx.stroke();
+            }
+          }
+        };
+
+        drawDots(awayLogoX, awayWins, awayWon);
+        drawDots(homeLogoX, homeWins, homeWon);
+      }
+
       // Score numbers
       ctx.textBaseline = 'middle';
       ctx.font = 'bold 200px "Inter",system-ui,sans-serif';
@@ -467,6 +533,47 @@ const ScoreImageModal = ({
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
         ctx.fillText(DATE_FMT.format(new Date(game.scheduled_at)), W / 2, BOT_Y + 52);
+      }
+
+      // Playoff indicator — only rendered for playoff games
+      if (game.game_type === 'playoff') {
+        const roundLabel =
+          game.playoff_round != null
+            ? (game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`)
+            : null;
+        const gameLabel =
+          game.game_number_in_series != null ? `Game ${game.game_number_in_series}` : null;
+        const seriesLine = [roundLabel, gameLabel].filter(Boolean).join(' · ');
+
+        // "PLAYOFFS" pill
+        const pillText = 'PLAYOFFS';
+        const pillPadX = 28;
+        const pillH = 40;
+        const pillY = BOT_Y + 104;
+        ctx.font = 'bold 21px "Inter",system-ui,sans-serif';
+        const pillW = ctx.measureText(pillText).width + pillPadX * 2;
+        const pillX = W / 2 - pillW / 2;
+
+        ctx.fillStyle = 'rgba(56,189,248,0.12)';
+        ctx.beginPath();
+        ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(56,189,248,0.45)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgb(56,189,248)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(pillText, W / 2, pillY + pillH / 2);
+
+        // Round · Game line below the pill
+        if (seriesLine) {
+          ctx.font = '500 30px "Inter",system-ui,sans-serif';
+          ctx.fillStyle = 'rgba(226,232,240,0.9)';
+          ctx.textBaseline = 'top';
+          ctx.fillText(seriesLine, W / 2, pillY + pillH + 14);
+        }
       }
 
       // League · Season at bottom
@@ -577,7 +684,7 @@ const ScoreImageModal = ({
               />
               <span className={styles.uploadLabelPrimary}>Upload Hero Image</span>
               <span className={styles.uploadLabelSub}>
-                Optional · used as the background of the hero section
+                Click to browse · or paste an image from clipboard
               </span>
               <input
                 ref={fileInputRef}

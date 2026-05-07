@@ -45,7 +45,7 @@ interface Props {
   liveAwayScore: number;
   liveHomeScore: number;
   overtimeSuffix: string;
-  linescorePeriods: { id: string; label: string }[];
+  linescorePeriods: { id: string; label: string; shortLabel: string }[];
   goalieStats: GoalieStatRecord[];
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
@@ -60,6 +60,8 @@ interface Props {
   startGame: (time_start: string) => Promise<boolean>;
   updateStatus: (status: GameStatus) => Promise<boolean>;
   advancePeriod: (nextPeriod: CurrentPeriod) => Promise<boolean>;
+  advanceOTPeriod: (currentOTPeriods: number) => Promise<boolean>;
+  revertOTPeriod: (targetOTPeriods: number) => Promise<boolean>;
   endGame: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateStars: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
@@ -94,6 +96,8 @@ const GameSummaryTab = ({
   startGame,
   updateStatus,
   advancePeriod,
+  advanceOTPeriod,
+  revertOTPeriod,
   endGame,
   updateStars,
   updateGameInfo,
@@ -110,6 +114,30 @@ const GameSummaryTab = ({
   // Only the last recorded goal in the active period can be edited or deleted.
   const currentPeriodGoals = goals.filter((g) => g.period === game.current_period);
   const lastCurrentPeriodGoalId = currentPeriodGoals[currentPeriodGoals.length - 1]?.id;
+
+  // Shot periods — OT periods are separate entries for playoff games so each
+  // OT period's shots can be tracked independently.
+  const isPlayoff = game.game_type === 'playoff';
+  const hasOTShots =
+    game.current_period === 'OT' ||
+    game.current_period === 'SO' ||
+    game.period_shots.some((ps) => /^OT/.test(ps.period)) ||
+    (game.overtime_periods ?? 0) > 0;
+  const useShortNums = isPlayoff && (game.overtime_periods ?? 0) > 1;
+  const shotsPeriods: { id: string; label: string; shortLabel: string }[] = [
+    { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
+    { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
+    { id: '3', label: '3rd', shortLabel: useShortNums ? '3' : '3rd' },
+    ...(hasOTShots
+      ? isPlayoff
+        ? Array.from({ length: game.overtime_periods ?? 1 }, (_, i) => ({
+            id: `OT${i + 1}`,
+            label: `Overtime ${i + 1}`,
+            shortLabel: `OT${i + 1}`,
+          }))
+        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
+      : []),
+  ];
 
   /**
    * True when the shootout has a winner and "End Game" can be offered.
@@ -409,6 +437,9 @@ const GameSummaryTab = ({
               onDeleteAttempt={handleDeleteAttempt}
               onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
               onGoBackPeriod={isEditInProgress ? (prev) => advancePeriod(prev) : undefined}
+              onGoBackOTPeriod={
+                isEditInProgress ? (targetNum) => revertOTPeriod(targetNum) : undefined
+              }
               getPlayerHref={(playerId) => {
                 const teamId = playerTeamMap.get(playerId);
                 return teamId
@@ -580,7 +611,7 @@ const GameSummaryTab = ({
                         key={p.id}
                         className={styles.thPeriod}
                       >
-                        {p.label}
+                        {p.shortLabel}
                       </th>
                     ))}
                     <th className={styles.thTotal}>T</th>
@@ -591,6 +622,9 @@ const GameSummaryTab = ({
                     const currentPeriodIdx = PERIOD_IDS.indexOf(
                       game.current_period as '1' | '2' | '3',
                     );
+                    // When the game is in OT or SO, all regular periods are complete.
+                    const isPostRegulation =
+                      game.current_period === 'OT' || game.current_period === 'SO';
                     return [
                       {
                         teamId: game.away_team.id,
@@ -632,11 +666,20 @@ const GameSummaryTab = ({
                           </span>
                         </td>
                         {linescorePeriods.map((p) => {
-                          const ps = game.period_scores.find((s) => s.period === p.id);
+                          // For numbered OT periods (OT1, OT2, …) only the last one maps to
+                          // the actual 'OT' goals; earlier ones always show 0.
+                          const isNumberedOT = /^OT[0-9]+$/.test(p.id);
+                          const isLastOT =
+                            isNumberedOT && p.id === `OT${game.overtime_periods ?? 1}`;
+                          const ps = isNumberedOT
+                            ? isLastOT
+                              ? game.period_scores.find((s) => s.period === 'OT')
+                              : undefined
+                            : game.period_scores.find((s) => s.period === p.id);
                           const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
                           const isPeriodDone =
                             (isFinal && !isEditMode) ||
-                            (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
+                            (pIdx >= 0 ? isPostRegulation || currentPeriodIdx > pIdx : true);
                           if (p.id === 'SO') {
                             const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);
                             const soDisplay =
@@ -697,16 +740,14 @@ const GameSummaryTab = ({
                   <thead>
                     <tr>
                       <th className={styles.thTeam}></th>
-                      {linescorePeriods
-                        .filter((p) => p.id !== 'SO')
-                        .map((p) => (
-                          <th
-                            key={p.id}
-                            className={styles.thPeriod}
-                          >
-                            {p.label}
-                          </th>
-                        ))}
+                      {shotsPeriods.map((p) => (
+                        <th
+                          key={p.id}
+                          className={styles.thPeriod}
+                        >
+                          {p.shortLabel}
+                        </th>
+                      ))}
                       <th className={styles.thTotal}>T</th>
                     </tr>
                   </thead>
@@ -749,20 +790,18 @@ const GameSummaryTab = ({
                             <span className={styles.linescoreCode}>{row.code}</span>
                           </span>
                         </td>
-                        {linescorePeriods
-                          .filter((p) => p.id !== 'SO')
-                          .map((p) => {
-                            const ps = game.period_shots.find((s) => s.period === p.id);
-                            const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
-                            return (
-                              <td
-                                key={p.id}
-                                className={styles.tdGoals}
-                              >
-                                {shots ?? '—'}
-                              </td>
-                            );
-                          })}
+                        {shotsPeriods.map((p) => {
+                          const ps = game.period_shots.find((s) => s.period === p.id);
+                          const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
+                          return (
+                            <td
+                              key={p.id}
+                              className={styles.tdGoals}
+                            >
+                              {shots ?? '—'}
+                            </td>
+                          );
+                        })}
                         <td className={styles.tdTotal}>
                           {game.period_shots.reduce(
                             (sum, ps) => sum + (row.isAway ? ps.away_shots : ps.home_shots),
@@ -889,6 +928,7 @@ const GameSummaryTab = ({
           }}
           updateGameInfo={updateGameInfo}
           onAdvancePeriod={advancePeriod}
+          onNextOTPeriod={() => advanceOTPeriod(game.overtime_periods ?? 1)}
           onEndGameReady={() => {
             setEndGameReadyForStars(true);
             setStarsEditMode(false);
@@ -902,7 +942,7 @@ const GameSummaryTab = ({
         <ShotsEditModal
           open={shotsEditModalOpen}
           game={game}
-          periods={linescorePeriods}
+          periods={shotsPeriods}
           onClose={() => setShotsEditModalOpen(false)}
           updatePeriodShots={updatePeriodShots}
         />

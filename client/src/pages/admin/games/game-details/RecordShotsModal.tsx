@@ -13,6 +13,7 @@ import styles from './GameDetailsPage.module.scss';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }
+  | { type: 'next-ot' }
   | { type: 'end-game' };
 
 type ShotsFormValues = {
@@ -139,6 +140,7 @@ interface Props {
     shootout_first_team_id?: string | null;
   }) => Promise<boolean>;
   onAdvancePeriod: (next: CurrentPeriod) => void;
+  onNextOTPeriod: () => void;
   onEndGameReady: () => void;
 }
 
@@ -159,6 +161,7 @@ const RecordShotsModal = ({
   upsertGoalieStat,
   updateGameInfo,
   onAdvancePeriod,
+  onNextOTPeriod,
   onEndGameReady,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
@@ -275,18 +278,28 @@ const RecordShotsModal = ({
   const endTimeValid = !isEndGame || !!endTimeValue;
   const shootsFirstValid = !showShootsFirst || !!soFirstTeam;
 
+  const isNextOT = nextAction.type === 'next-ot';
+  // "OT1", "OT2", etc. → "Overtime 1", "Overtime 2", etc.
+  const otNumMatch = /^OT([0-9]+)$/.exec(period);
+  const periodTitleLabel = otNumMatch
+    ? `Overtime ${otNumMatch[1]}`
+    : (PERIOD_TITLE_LABEL[period] ?? period);
   const modalTitle = showShootsFirst
     ? 'Go To Shootout'
     : isEndGame
-      ? `End Game — ${PERIOD_TITLE_LABEL[period] ?? period}`
-      : `Record Shots — ${PERIOD_LABEL[period] ?? period} Period`;
+      ? `End Game — ${periodTitleLabel}`
+      : isNextOT
+        ? `Record Shots — ${periodTitleLabel}`
+        : `Record Shots — ${PERIOD_LABEL[period] ?? period} Period`;
   const confirmLabel = submitting
     ? 'Saving…'
     : isEndGame
       ? 'Award Three Stars'
       : nextAction.type === 'advance'
         ? nextAction.label
-        : 'Confirm';
+        : isNextOT
+          ? 'Next Overtime'
+          : 'Confirm';
 
   const handleConfirm = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -326,6 +339,8 @@ const RecordShotsModal = ({
     onClose();
     if (nextAction.type === 'advance') {
       onAdvancePeriod(nextAction.next);
+    } else if (nextAction.type === 'next-ot') {
+      onNextOTPeriod();
     } else {
       onEndGameReady();
     }

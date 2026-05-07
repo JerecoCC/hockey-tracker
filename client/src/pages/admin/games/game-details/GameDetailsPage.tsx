@@ -37,6 +37,8 @@ const GameDetailsPage = () => {
     startGame,
     updateStatus,
     advancePeriod,
+    advanceOTPeriod,
+    revertOTPeriod,
     endGame,
     updateStars,
     updateGameInfo,
@@ -186,20 +188,35 @@ const GameDetailsPage = () => {
         : '';
 
   // Period columns for the Linescore table (always 1–3, plus OT/SO if applicable).
-  const linescorePeriods: { id: string; label: string }[] = [
-    { id: '1', label: '1st' },
-    { id: '2', label: '2nd' },
-    { id: '3', label: '3rd' },
-    ...(game.period_scores.some((ps) => ps.period === 'OT') ||
+  // Playoff games expand OT into separate columns: OT1, OT2, …
+  const isPlayoff = game.game_type === 'playoff';
+  const otCount = game.overtime_periods ?? 1;
+  const hasOT =
+    game.period_scores.some((ps) => ps.period === 'OT') ||
     (game.overtime_periods ?? 0) > 0 ||
     game.current_period === 'OT' ||
-    game.current_period === 'SO'
-      ? [{ id: 'OT', label: 'OT' }]
+    game.current_period === 'SO';
+  // Compact numeric labels when multiple OT columns are present in a playoff game.
+  const useShortNums = isPlayoff && otCount > 1;
+  const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
+    { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
+    { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
+    { id: '3', label: '3rd', shortLabel: useShortNums ? '3' : '3rd' },
+    ...(hasOT
+      ? isPlayoff
+        ? Array.from({ length: otCount }, (_, i) => ({
+            id: `OT${i + 1}`,
+            label: `Overtime ${i + 1}`,
+            shortLabel: `OT${i + 1}`,
+          }))
+        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
       : []),
-    ...(game.period_scores.some((ps) => ps.period === 'SO') ||
-    game.shootout ||
-    game.current_period === 'SO'
-      ? [{ id: 'SO', label: 'SO' }]
+    // Shootouts don't exist in playoffs — suppress SO column for playoff games.
+    ...(!isPlayoff &&
+    (game.period_scores.some((ps) => ps.period === 'SO') ||
+      game.shootout ||
+      game.current_period === 'SO')
+      ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }]
       : []),
   ];
 
@@ -278,6 +295,8 @@ const GameDetailsPage = () => {
                 startGame={startGame}
                 updateStatus={updateStatus}
                 advancePeriod={advancePeriod}
+                advanceOTPeriod={advanceOTPeriod}
+                revertOTPeriod={revertOTPeriod}
                 endGame={endGame}
                 updateStars={updateStars}
                 updateGameInfo={updateGameInfo}

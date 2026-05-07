@@ -149,9 +149,13 @@ const ScoreboardCard = ({
           <div className={styles.scoreBlock}>
             {game.playoff_round != null && (
               <span className={styles.scoreMeta}>
-                {game.game_number_in_series != null
-                  ? `Round ${game.playoff_round} · Game ${game.game_number_in_series}`
-                  : `Round ${game.playoff_round}`}
+                {(() => {
+                  const roundLabel =
+                    game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`;
+                  return game.game_number_in_series != null
+                    ? `${roundLabel} · Game ${game.game_number_in_series}`
+                    : roundLabel;
+                })()}
               </span>
             )}
             {isFinal ? (

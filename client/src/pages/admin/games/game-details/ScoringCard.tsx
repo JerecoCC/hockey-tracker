@@ -54,6 +54,7 @@ interface Props {
   onDeleteAttempt?: (attemptId: string) => void;
   onSwitchGoalie?: () => void;
   onGoBackPeriod?: (prev: CurrentPeriod) => void;
+  onGoBackOTPeriod?: (targetNum: number) => void;
   /** When provided, player names in goal rows become navigation links. */
   getPlayerHref?: (playerId: string) => string;
 }
@@ -83,6 +84,7 @@ const ScoringCard = ({
   onDeleteAttempt,
   onSwitchGoalie,
   onGoBackPeriod,
+  onGoBackOTPeriod,
   getPlayerHref,
 }: Props) => {
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -333,16 +335,106 @@ const ScoringCard = ({
           );
         })}
 
-        {/* ── Overtime accordion ── */}
+        {/* ── Overtime accordion(s) ── */}
         {(game.current_period === 'OT' ||
           game.current_period === 'SO' ||
           goals.some((g) => g.period === 'OT') ||
           (isFinal && (game.overtime_periods ?? 0) > 0) ||
           (isFinal && game.shootout)) &&
           (() => {
+            const isPlayoff = game.game_type === 'playoff';
             const isOTActive = !isFinal && game.current_period === 'OT';
             const isOTDone = isFinal || game.current_period === 'SO';
             const otGoals = sortedByTime(goals.filter((g) => g.period === 'OT'));
+            const otCount = game.overtime_periods ?? 1;
+
+            if (isPlayoff) {
+              // Render a separate accordion for each OT period played.
+              // Since OT is sudden-death, goals only ever appear in the last period.
+              return Array.from({ length: otCount }, (_, i) => {
+                const otNum = i + 1;
+                const isLast = otNum === otCount;
+                const isThisActive = isOTActive && isLast;
+                const isThisDone = isOTDone || !isLast;
+                const periodGoals = isLast ? otGoals : [];
+                return (
+                  <Accordion
+                    key={`OT${otNum}`}
+                    ref={isLast && setAccordionRef ? setAccordionRef('OT') : undefined}
+                    variant="static"
+                    className={isThisActive ? styles.periodItemActive : undefined}
+                    label={<span className={styles.periodLabel}>Overtime {otNum}</span>}
+                    hoverActions={
+                      isThisActive && onScoreGoal && onOpenShotsModal
+                        ? ([
+                            // Go back: OT1 → period 3; OT2+ → previous OT period.
+                            (onGoBackPeriod || onGoBackOTPeriod) && periodGoals.length === 0
+                              ? {
+                                  icon: 'undo',
+                                  tooltip: 'Go Back to Previous Period',
+                                  intent: 'neutral' as const,
+                                  disabled: !!busy,
+                                  onClick: () =>
+                                    otNum === 1
+                                      ? onGoBackPeriod?.('3')
+                                      : onGoBackOTPeriod?.(otNum - 1),
+                                }
+                              : null,
+                            periodGoals.length === 0
+                              ? {
+                                  icon: 'sports_hockey',
+                                  tooltip: 'Score Goal',
+                                  intent: 'success' as const,
+                                  disabled: !!busy,
+                                  onClick: () => onScoreGoal('OT'),
+                                }
+                              : null,
+                            periodGoals.length === 0
+                              ? {
+                                  icon: 'play_arrow',
+                                  tooltip: 'Next Overtime Period',
+                                  intent: 'info' as const,
+                                  disabled: !!busy,
+                                  onClick: () =>
+                                    onOpenShotsModal(`OT${otNum}`, { type: 'next-ot' }, false),
+                                }
+                              : null,
+                            onSwitchGoalie
+                              ? {
+                                  icon: 'swap_horiz',
+                                  tooltip: 'Switch Goalie',
+                                  intent: 'neutral' as const,
+                                  disabled: !!busy,
+                                  onClick: onSwitchGoalie,
+                                }
+                              : null,
+                            periodGoals.length > 0
+                              ? {
+                                  icon: 'flag',
+                                  tooltip: 'End Game',
+                                  intent: 'danger' as const,
+                                  disabled: !!busy,
+                                  onClick: () =>
+                                    onOpenShotsModal(`OT${otNum}`, { type: 'end-game' }, true),
+                                }
+                              : null,
+                          ].filter(Boolean) as AccordionAction[])
+                        : undefined
+                    }
+                  >
+                    {periodGoals.length === 0 ? (
+                      isThisActive || isThisDone ? (
+                        <p className={styles.noGoalsText}>No goals scored</p>
+                      ) : null
+                    ) : (
+                      renderGoalList(periodGoals)
+                    )}
+                  </Accordion>
+                );
+              });
+            }
+
+            // Regular season: single OT accordion.
             return (
               <Accordion
                 ref={setAccordionRef ? setAccordionRef('OT') : undefined}
