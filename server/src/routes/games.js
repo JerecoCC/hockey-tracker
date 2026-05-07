@@ -117,7 +117,8 @@ router.get('/playoff-series', async (req, res) => {
         ps.games_to_win, ps.home_wins, ps.away_wins,
         ps.status, ps.winner_team_id, ps.created_at,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo
+        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
+        sg.games
       FROM playoff_series ps
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
@@ -131,6 +132,26 @@ router.get('/playoff-series', async (req, res) => {
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) at ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'id',                   g.id,
+              'game_number_in_series', g.game_number_in_series,
+              'status',               g.status,
+              'scheduled_at',         g.scheduled_at,
+              'home_team_id',         g.home_team_id,
+              'away_team_id',         g.away_team_id,
+              'home_goals', (SELECT COUNT(*) FROM goals go WHERE go.game_id = g.id AND go.team_id = g.home_team_id),
+              'away_goals', (SELECT COUNT(*) FROM goals go WHERE go.game_id = g.id AND go.team_id = g.away_team_id)
+            )
+            ORDER BY g.game_number_in_series ASC NULLS LAST
+          ),
+          '[]'::json
+        ) AS games
+        FROM games g
+        WHERE g.playoff_series_id = ps.id
+      ) sg ON true
       WHERE (${season_id ?? null}::uuid IS NULL OR ps.season_id = ${season_id ?? null}::uuid)
       ORDER BY ps.round ASC, ps.series_letter ASC NULLS LAST, ps.created_at ASC
     `;
@@ -668,6 +689,73 @@ router.patch('/:id', async (req, res) => {
         shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)
       WHERE id = ${id}
     `;
+
+    // ── Auto-update playoff series win counts ─────────────────────────────────
+    // When a playoff game is finalized, recount wins from actual game results
+    // and sync home_wins / away_wins on the playoff_series row. Also mark the
+    // series complete when either team reaches games_to_win.
+    if (status === 'final') {
+      const gameRows = await sql`
+        SELECT playoff_series_id, home_team_id, away_team_id
+        FROM games WHERE id = ${id}
+      `;
+      const game = gameRows[0];
+      if (game?.playoff_series_id) {
+        const seriesRows = await sql`
+          SELECT id, home_team_id, away_team_id, games_to_win
+          FROM playoff_series WHERE id = ${game.playoff_series_id}
+        `;
+        const series = seriesRows[0];
+        if (series) {
+          // Count goals per team for every final game in this series
+          const winRows = await sql`
+            SELECT
+              g.home_team_id,
+              g.away_team_id,
+              COUNT(*) FILTER (WHERE go.team_id = g.home_team_id) AS home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = g.away_team_id) AS away_goals
+            FROM games g
+            LEFT JOIN goals go ON go.game_id = g.id
+            WHERE g.playoff_series_id = ${series.id}
+              AND g.status = 'final'
+            GROUP BY g.id, g.home_team_id, g.away_team_id
+          `;
+
+          let homeWins = 0;
+          let awayWins = 0;
+          for (const row of winRows) {
+            const hg = Number(row.home_goals);
+            const ag = Number(row.away_goals);
+            if (hg > ag) {
+              // The home team of THIS game won — attribute to the series home/away
+              if (row.home_team_id === series.home_team_id) homeWins++;
+              else awayWins++;
+            } else if (ag > hg) {
+              if (row.away_team_id === series.home_team_id) homeWins++;
+              else awayWins++;
+            }
+          }
+
+          const seriesComplete =
+            homeWins >= series.games_to_win || awayWins >= series.games_to_win;
+          const winnerId = seriesComplete
+            ? homeWins >= series.games_to_win
+              ? series.home_team_id
+              : series.away_team_id
+            : null;
+
+          await sql`
+            UPDATE playoff_series SET
+              home_wins      = ${homeWins},
+              away_wins      = ${awayWins},
+              status         = ${seriesComplete ? 'complete' : awayWins > 0 || homeWins > 0 ? 'active' : 'upcoming'},
+              winner_team_id = COALESCE(${winnerId}, winner_team_id)
+            WHERE id = ${series.id}
+          `;
+        }
+      }
+    }
+
     const updated = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,

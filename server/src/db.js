@@ -1022,6 +1022,63 @@ async function initSchema() {
     END $$
   `;
 
+  // ── Backfill playoff series win counts from finalized games ──────────────
+  // Before automatic win tracking was added, home_wins / away_wins were never
+  // incremented when a game was finalized. This one-time migration recalculates
+  // win counts for every playoff series by counting goals in final games.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_playoff_series_wins_v1'
+      ) THEN
+        UPDATE playoff_series ps
+        SET
+          home_wins = wins.home_wins,
+          away_wins = wins.away_wins,
+          status = CASE
+            WHEN wins.home_wins >= ps.games_to_win OR wins.away_wins >= ps.games_to_win THEN 'complete'
+            WHEN wins.home_wins > 0 OR wins.away_wins > 0 THEN 'active'
+            ELSE ps.status
+          END,
+          winner_team_id = CASE
+            WHEN wins.home_wins >= ps.games_to_win THEN ps.home_team_id
+            WHEN wins.away_wins >= ps.games_to_win THEN ps.away_team_id
+            ELSE ps.winner_team_id
+          END
+        FROM (
+          SELECT
+            g.playoff_series_id,
+            SUM(CASE
+              WHEN goal_counts.home_goals > goal_counts.away_goals AND g.home_team_id = ps2.home_team_id THEN 1
+              WHEN goal_counts.away_goals > goal_counts.home_goals AND g.away_team_id = ps2.home_team_id THEN 1
+              ELSE 0
+            END)::int AS home_wins,
+            SUM(CASE
+              WHEN goal_counts.home_goals > goal_counts.away_goals AND g.home_team_id = ps2.away_team_id THEN 1
+              WHEN goal_counts.away_goals > goal_counts.home_goals AND g.away_team_id = ps2.away_team_id THEN 1
+              ELSE 0
+            END)::int AS away_wins
+          FROM games g
+          JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
+          JOIN LATERAL (
+            SELECT
+              COUNT(*) FILTER (WHERE go.team_id = g.home_team_id) AS home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = g.away_team_id) AS away_goals
+            FROM goals go
+            WHERE go.game_id = g.id
+          ) goal_counts ON true
+          WHERE g.status = 'final'
+            AND g.playoff_series_id IS NOT NULL
+          GROUP BY g.playoff_series_id
+        ) wins
+        WHERE ps.id = wins.playoff_series_id;
+
+        INSERT INTO _migrations (name) VALUES ('backfill_playoff_series_wins_v1');
+      END IF;
+    END $$
+  `;
+
   console.log('Database schema ready');
 }
 

@@ -113,6 +113,17 @@ export interface GameRecord {
   best_of_shootout:      number;
 }
 
+export interface SeriesGame {
+  id:                    string;
+  game_number_in_series: number;
+  status:                string;
+  scheduled_at:          string | null;
+  home_team_id:          string;
+  away_team_id:          string;
+  home_goals:            number;
+  away_goals:            number;
+}
+
 export interface PlayoffSeriesRecord {
   id:             string;
   season_id:      string;
@@ -132,6 +143,7 @@ export interface PlayoffSeriesRecord {
   status:         SeriesStatus;
   winner_team_id: string | null;
   created_at:     string;
+  games:          SeriesGame[];
 }
 
 export interface CreateGameData {

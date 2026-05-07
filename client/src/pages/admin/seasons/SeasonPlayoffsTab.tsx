@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
@@ -8,7 +9,13 @@ import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import Modal from '@/components/Modal/Modal';
-import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
+import {
+  type PlayoffSeriesRecord,
+  type SeriesGame,
+  type SeriesStatus,
+  usePlayoffSeries,
+} from '@/hooks/useGames';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
@@ -24,6 +31,12 @@ import BracketRulesModal, {
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
+
+const DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
 
 const SCOPE_OPTIONS = [
   { value: 'league' as PlayoffFormatRule['scope'], label: 'Whole League' },
@@ -420,6 +433,8 @@ const ChoicePickModal = ({
 interface BracketSlotProps {
   series: PlayoffSeriesRecord | null;
   busy: string | null;
+  leagueId: string;
+  seasonId: string;
   /** Simulated team name for Team 1 (home ice). Only shown when series is null. */
   simulatedTeam1?: string | null;
   /** Simulated team name for Team 2. Only shown when series is null. */
@@ -430,6 +445,8 @@ interface BracketSlotProps {
 const BracketSlot = ({
   series,
   busy,
+  leagueId,
+  seasonId,
   simulatedTeam1,
   simulatedTeam2,
   onDelete,
@@ -462,6 +479,79 @@ const BracketSlot = ({
   const awayWon = series.winner_team_id === series.away_team_id;
   const isComplete = series.status === 'complete';
 
+  const gameBase = `/admin/leagues/${leagueId}/seasons/${seasonId}/games`;
+
+  // Returns win games (0-indexed) for a given team, sorted by game number.
+  const winGamesFor = (teamId: string): SeriesGame[] =>
+    (series.games ?? [])
+      .filter(
+        (g) =>
+          g.status === 'final' &&
+          ((g.home_team_id === teamId && g.home_goals > g.away_goals) ||
+            (g.away_team_id === teamId && g.away_goals > g.home_goals)),
+      )
+      .sort((a, b) => a.game_number_in_series - b.game_number_in_series);
+
+  const makeDotTooltip = (g: SeriesGame) => {
+    // Resolve codes relative to this specific game's home/away assignment
+    const gameHomeCode =
+      g.home_team_id === series.home_team_id ? series.home_team_code : series.away_team_code;
+    const gameAwayCode =
+      g.away_team_id === series.away_team_id ? series.away_team_code : series.home_team_code;
+
+    return (
+      <div className={styles.winDotTooltip}>
+        <span className={styles.winDotTooltipGame}>Game {g.game_number_in_series}</span>
+        {g.scheduled_at && (
+          <span className={styles.winDotTooltipDate}>
+            {DATE_FMT.format(new Date(g.scheduled_at))}
+          </span>
+        )}
+        {g.status === 'final' && (
+          <span className={styles.winDotTooltipScore}>
+            {gameAwayCode} {g.away_goals}
+            <span className={styles.winDotTooltipDash}>–</span>
+            {g.home_goals} {gameHomeCode}
+          </span>
+        )}
+      </div>
+    );
+  };
+
+  const WinDots = ({ teamId, wins }: { teamId: string; wins: number }) => {
+    const winGames = winGamesFor(teamId);
+    return (
+      <span className={styles.slotWinDots}>
+        {Array.from({ length: series.games_to_win }, (_, i) => {
+          const game = winGames[i];
+          const filled = i < wins;
+          const cls = `${styles.slotWinDot} ${filled ? styles.slotWinDotFilled : ''}`;
+          return game ? (
+            <Tooltip
+              key={i}
+              content={makeDotTooltip(game)}
+            >
+              <Link
+                to={`${gameBase}/${game.id}`}
+                className={cls}
+              >
+                <Icon
+                  name="check"
+                  size="10px"
+                />
+              </Link>
+            </Tooltip>
+          ) : (
+            <span
+              key={i}
+              className={cls}
+            />
+          );
+        })}
+      </span>
+    );
+  };
+
   return (
     <div className={`${styles.bracketSlot} ${styles.slotFilled}`}>
       <div
@@ -473,8 +563,22 @@ const BracketSlot = ({
           .filter(Boolean)
           .join(' ')}
       >
+        {series.away_team_logo ? (
+          <img
+            src={series.away_team_logo}
+            alt={series.away_team_code}
+            className={styles.slotTeamLogo}
+          />
+        ) : (
+          <span className={styles.slotTeamLogoPlaceholder}>
+            {series.away_team_code.slice(0, 3)}
+          </span>
+        )}
         <span className={styles.slotTeamName}>{series.away_team_name}</span>
-        <span className={styles.slotTeamWins}>{series.away_wins}</span>
+        <WinDots
+          teamId={series.away_team_id}
+          wins={series.away_wins}
+        />
       </div>
       <div className={styles.slotDivider} />
       <div
@@ -486,25 +590,22 @@ const BracketSlot = ({
           .filter(Boolean)
           .join(' ')}
       >
-        <span className={styles.slotTeamName}>{series.home_team_name}</span>
-        <span className={styles.slotTeamWins}>{series.home_wins}</span>
-      </div>
-      <div className={styles.slotFooter}>
-        <Badge
-          label={STATUS_LABEL[series.status]}
-          intent={STATUS_INTENT[series.status]}
-        />
-        <div className={styles.slotActions}>
-          <Button
-            variant="ghost"
-            intent="danger"
-            icon="delete"
-            size="sm"
-            tooltip="Delete series"
-            disabled={busy === series.id}
-            onClick={() => onDelete(series)}
+        {series.home_team_logo ? (
+          <img
+            src={series.home_team_logo}
+            alt={series.home_team_code}
+            className={styles.slotTeamLogo}
           />
-        </div>
+        ) : (
+          <span className={styles.slotTeamLogoPlaceholder}>
+            {series.home_team_code.slice(0, 3)}
+          </span>
+        )}
+        <span className={styles.slotTeamName}>{series.home_team_name}</span>
+        <WinDots
+          teamId={series.home_team_id}
+          wins={series.home_wins}
+        />
       </div>
     </div>
   );
@@ -830,6 +931,8 @@ const SeasonPlayoffsTab = ({
                             key={slotIndex}
                             series={roundSeries[slotIndex] ?? null}
                             busy={seriesBusy}
+                            leagueId={leagueId}
+                            seasonId={seasonId}
                             simulatedTeam1={
                               simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
                             }

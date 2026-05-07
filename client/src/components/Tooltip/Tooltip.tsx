@@ -2,7 +2,10 @@ import { ReactNode, useRef, useState } from 'react';
 import styles from './Tooltip.module.scss';
 
 interface TooltipProps {
-  text: string;
+  /** Simple text tooltip. Either `text` or `content` must be provided. */
+  text?: string;
+  /** Rich ReactNode tooltip content. When provided, overrides `text` and allows wrapping. */
+  content?: ReactNode;
   children: ReactNode;
   className?: string;
   /** Visual intent. 'error' renders the tip in danger/red colours. Default: 'default'. */
@@ -13,7 +16,8 @@ const MARGIN = 8; // min gap from viewport edge (px)
 const GAP = 8; // gap between trigger and tip (px)
 
 const Tooltip = (props: TooltipProps) => {
-  const { text, children, className = '', intent = 'default' } = props;
+  const { text, content, children, className = '', intent = 'default' } = props;
+  const isRich = content !== undefined;
   const wrapperRef = useRef<HTMLSpanElement>(null);
   const tipRef = useRef<HTMLSpanElement>(null);
   const [visible, setVisible] = useState(false);
@@ -62,6 +66,7 @@ const Tooltip = (props: TooltipProps) => {
     visible && styles.tipVisible,
     below && styles.tipBelow,
     intent === 'error' && styles.tipError,
+    isRich && styles.tipRich,
   ]
     .filter(Boolean)
     .join(' ');
@@ -86,7 +91,7 @@ const Tooltip = (props: TooltipProps) => {
           } as React.CSSProperties
         }
       >
-        {text}
+        {content ?? text}
       </span>
     </span>
   );

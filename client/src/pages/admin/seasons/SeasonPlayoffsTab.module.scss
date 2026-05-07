@@ -526,6 +526,29 @@
   flex: 1;
 }
 
+.slotTeamLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.slotTeamLogoPlaceholder {
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  background: $bg-input;
+  border: 1px solid $border;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: $text-dim;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
 .slotTeamName {
   flex: 1;
   font-size: $font-xs;
@@ -536,26 +559,110 @@
   text-overflow: ellipsis;
 }
 
-.slotTeamWins {
-  font-size: $font-sm;
+.slotWinDots {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.slotWinDot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1.5px solid $text-dim;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: transparent; // icon hidden on empty dots
+  transition:
+    background $transition-fast,
+    border-color $transition-fast,
+    opacity $transition-fast;
+
+  // When rendered as a <Link> (anchor element)
+  &:is(a) {
+    cursor: pointer;
+
+    &:hover {
+      opacity: 0.75;
+      border-color: $accent;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $accent;
+      outline-offset: 2px;
+    }
+  }
+}
+
+.slotWinDotFilled {
+  background: $success;
+  border-color: $success;
+  color: #fff; // makes the check icon visible
+}
+
+// ── Win dot tooltip content ───────────────────────────────────────────────────
+
+.winDotTooltip {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+  text-align: center;
+}
+
+.winDotTooltipGame {
+  font-weight: 600;
+  color: $text-bright;
+  width: 100%;
+  text-align: center;
+}
+
+.winDotTooltipDate {
+  color: $text-dim;
+  font-size: $font-xs;
+  width: 100%;
+  text-align: center;
+}
+
+.winDotTooltipScore {
+  color: $text-bright;
   font-weight: 700;
-  color: $text-body;
-  min-width: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.winDotTooltipDash {
+  color: $text-dim;
+  font-weight: 400;
+  flex: 1;
   text-align: center;
 }
 
 .slotTeamWinner {
-  .slotTeamName,
-  .slotTeamWins {
+  .slotTeamName {
     color: $success;
   }
 }
 
 .slotTeamLoser {
-  .slotTeamName,
-  .slotTeamWins {
+  .slotTeamName {
     color: $text-dim;
     opacity: 0.55;
+  }
+
+  .slotWinDot {
+    opacity: 0.35;
+  }
+
+  .slotWinDotFilled {
+    opacity: 0.6;
   }
 }
 
@@ -563,20 +670,6 @@
   height: 1px;
   background: $border;
   margin: 0 $space-sm;
-}
-
-.slotFooter {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 2px $space-xs;
-  border-top: 1px solid $border;
-}
-
-.slotActions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
 }
 
 // ── Series card ──────────────────────────────────────────────────────────────
