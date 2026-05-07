@@ -343,11 +343,18 @@ interface ChoicePick {
 interface ChoicePickModalProps {
   open: boolean;
   choices: ChoicePick[];
-  onConfirm: (picks: ChoicePick[]) => void;
+  confirmLabel?: string;
+  onConfirm: (picks: ChoicePick[]) => void | Promise<void>;
   onClose: () => void;
 }
 
-const ChoicePickModal = ({ open, choices, onConfirm, onClose }: ChoicePickModalProps) => {
+const ChoicePickModal = ({
+  open,
+  choices,
+  confirmLabel = 'Apply Simulation',
+  onConfirm,
+  onClose,
+}: ChoicePickModalProps) => {
   const [picks, setPicks] = useState<ChoicePick[]>([]);
 
   useEffect(() => {
@@ -369,7 +376,7 @@ const ChoicePickModal = ({ open, choices, onConfirm, onClose }: ChoicePickModalP
       open={open}
       title="Opponent Picks"
       onClose={onClose}
-      confirmLabel="Apply Simulation"
+      confirmLabel={confirmLabel}
       onConfirm={() => onConfirm(picks)}
       confirmDisabled={!allResolved}
     >
@@ -511,6 +518,8 @@ interface Props {
   bracketRuleSetId: string | null;
   groups: SeasonGroupRecord[];
   isEnded: boolean;
+  /** True once the admin has formally ended the regular season. */
+  playoffsStarted: boolean;
   playoffFormat: PlayoffFormatRule[] | null;
   bestOfPlayoff: number | null;
   bestOfShootout: number | null;
@@ -527,6 +536,7 @@ const SeasonPlayoffsTab = ({
   bracketRuleSetId,
   groups,
   isEnded,
+  playoffsStarted,
   playoffFormat,
   bestOfPlayoff,
   bestOfShootout,
@@ -540,6 +550,7 @@ const SeasonPlayoffsTab = ({
     series,
     loading: seriesLoading,
     busy: seriesBusy,
+    createSeries,
     deleteSeries,
   } = usePlayoffSeries(seasonId);
 
@@ -547,6 +558,12 @@ const SeasonPlayoffsTab = ({
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
 
   const { standings } = useSeasonStandings(seasonId);
+
+  // Build a name → team_id lookup so resolved slot names can be turned into IDs for createSeries.
+  const teamIdByName = useMemo(
+    () => new Map(standings.map((s) => [s.team_name, s.team_id])),
+    [standings],
+  );
 
   // ── Simulation state ──────────────────────────────────────────────────────────
   const [simulatedSlots, setSimulatedSlots] = useState<Record<string, string | null> | null>(null);
@@ -557,6 +574,40 @@ const SeasonPlayoffsTab = ({
   const [pendingChoices, setPendingChoices] = useState<ChoicePick[]>([]);
   const [partialSimResult, setPartialSimResult] = useState<Record<string, string | null>>({});
   const [pendingRuleSlots, setPendingRuleSlots] = useState<BracketSlotRule[]>([]);
+
+  /**
+   * Persists round 1 matchups to the database using the resolved slot map.
+   * Called instead of setSimulatedSlots when playoffsStarted is true.
+   */
+  const commitRound1Matchups = async (slots: Record<string, string | null>) => {
+    const matchupIndices = [
+      ...new Set(
+        Object.keys(slots)
+          .map((k) => k.match(/^r1m(\d+)/)?.[1])
+          .filter((v): v is string => v !== undefined),
+      ),
+    ]
+      .map(Number)
+      .sort((a, b) => a - b);
+
+    await Promise.all(
+      matchupIndices
+        .map((mi) => {
+          const awayName = slots[`r1m${mi}away`];
+          const homeName = slots[`r1m${mi}home`];
+          const awayId = awayName != null ? teamIdByName.get(awayName) : undefined;
+          const homeId = homeName != null ? teamIdByName.get(homeName) : undefined;
+          if (!awayId || !homeId) return null;
+          return createSeries({
+            season_id: seasonId,
+            round: 1,
+            away_team_id: awayId,
+            home_team_id: homeId,
+          });
+        })
+        .filter((p): p is Promise<boolean> => p !== null),
+    );
+  };
 
   const handleSimulate = async () => {
     if (!bracketRuleSetId) return;
@@ -600,8 +651,11 @@ const SeasonPlayoffsTab = ({
       // Check whether any slots require a human pick.
       const choiceSlots = ruleSet.slots.filter((s) => s.rule_type === 'choice');
       if (choiceSlots.length === 0) {
-        // No picks needed — show the bracket immediately.
-        setSimulatedSlots(result);
+        if (playoffsStarted) {
+          await commitRound1Matchups(result);
+        } else {
+          setSimulatedSlots(result);
+        }
         return;
       }
 
@@ -650,8 +704,9 @@ const SeasonPlayoffsTab = ({
    * Called when the user confirms all opponent picks in the ChoicePickModal.
    * Applies the chosen teams to 'choice' slots, then resolves 'unchosen' slots
    * by taking the first unassigned candidate from the referenced choice's pool.
+   * When playoffsStarted, commits round 1 series directly instead of previewing.
    */
-  const finalizeSimulation = (picks: ChoicePick[]) => {
+  const finalizeSimulation = async (picks: ChoicePick[]) => {
     const result = { ...partialSimResult };
 
     // Apply each picker's choice.
@@ -676,7 +731,11 @@ const SeasonPlayoffsTab = ({
       if (unchosen) assigned.add(unchosen);
     }
 
-    setSimulatedSlots(result);
+    if (playoffsStarted) {
+      await commitRound1Matchups(result);
+    } else {
+      setSimulatedSlots(result);
+    }
     setPickModalOpen(false);
     setPendingChoices([]);
     setPartialSimResult({});
@@ -705,6 +764,18 @@ const SeasonPlayoffsTab = ({
 
   return (
     <>
+      {playoffsStarted && !isEnded && series.length === 0 && !seriesLoading && (
+        <div className={styles.playoffsCallout}>
+          <Icon
+            name="emoji_events"
+            size="1.1em"
+          />
+          <span>
+            Regular season is over — use the <strong>Seed Matchups</strong> button or configure the
+            bracket settings below to seed your playoff matchups.
+          </span>
+        </div>
+      )}
       <div className={styles.layout}>
         {/* ── Left column — Playoff Bracket ── */}
         <div className={styles.layoutLeft}>
@@ -712,7 +783,10 @@ const SeasonPlayoffsTab = ({
           <Card
             title="Playoff Bracket"
             action={
-              bracketStructure && bracketRuleSetId ? (
+              bracketStructure &&
+              bracketRuleSetId &&
+              playoffsStarted &&
+              !series.some((s) => s.round === 1) ? (
                 simulatedSlots !== null ? (
                   <Button
                     variant="outlined"
@@ -725,14 +799,13 @@ const SeasonPlayoffsTab = ({
                   </Button>
                 ) : (
                   <Button
-                    variant="outlined"
-                    intent="accent"
+                    intent="success"
                     icon="play_arrow"
                     size="sm"
                     disabled={simulating || pickModalOpen}
                     onClick={handleSimulate}
                   >
-                    Simulate
+                    Seed Matchups
                   </Button>
                 )
               ) : null
@@ -827,7 +900,7 @@ const SeasonPlayoffsTab = ({
           <Card
             title="Bracket Rule Set"
             action={
-              bracketRuleSetId ? (
+              bracketRuleSetId && !playoffsStarted ? (
                 <Button
                   variant="outlined"
                   intent="neutral"
@@ -852,7 +925,7 @@ const SeasonPlayoffsTab = ({
                 onChange={async (id) => {
                   await updateSeason(seasonId, { bracket_rule_set_id: id });
                 }}
-                disabled={isEnded || ruleSetOptions.length === 0}
+                disabled={isEnded || playoffsStarted || ruleSetOptions.length === 0}
               />
               {!bracketRuleSetId && ruleSetOptions.length > 0 && (
                 <p className={styles.ruleSetHint}>
@@ -866,15 +939,17 @@ const SeasonPlayoffsTab = ({
           <Card
             title="Game Settings"
             action={
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                size="sm"
-                tooltip="Edit game settings"
-                disabled={isEnded}
-                onClick={() => setSettingsModalOpen(true)}
-              />
+              !playoffsStarted ? (
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="edit"
+                  size="sm"
+                  tooltip="Edit game settings"
+                  disabled={isEnded}
+                  onClick={() => setSettingsModalOpen(true)}
+                />
+              ) : null
             }
           >
             <div className={styles.settingsGrid}>
@@ -905,15 +980,17 @@ const SeasonPlayoffsTab = ({
           <Card
             title="Playoff Qualification Format"
             action={
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                size="sm"
-                tooltip="Edit qualification format"
-                disabled={isEnded}
-                onClick={() => setFormatModalOpen(true)}
-              />
+              !playoffsStarted ? (
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="edit"
+                  size="sm"
+                  tooltip="Edit qualification format"
+                  disabled={isEnded}
+                  onClick={() => setFormatModalOpen(true)}
+                />
+              ) : null
             }
           >
             {playoffFormat && playoffFormat.length > 0 ? (
@@ -992,6 +1069,7 @@ const SeasonPlayoffsTab = ({
         <ChoicePickModal
           open={pickModalOpen}
           choices={pendingChoices}
+          confirmLabel={playoffsStarted ? 'Seed Matchups' : 'Apply Simulation'}
           onConfirm={finalizeSimulation}
           onClose={() => {
             setPickModalOpen(false);

@@ -1,6 +1,26 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+// ── Playoffs-started callout banner ──────────────────────────────────────────
+
+.playoffsCallout {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-md $space-lg;
+  margin-bottom: $space-lg;
+  background: color-mix(in srgb, $accent 12%, transparent);
+  border: 1px solid color-mix(in srgb, $accent 30%, transparent);
+  border-radius: $radius-md;
+  font-size: $font-sm;
+  color: $text-body;
+
+  > span {
+    flex: 1;
+    line-height: 1.4;
+  }
+}
+
 // ── Two-column layout ────────────────────────────────────────────────────────
 
 .layout {
