@@ -63,13 +63,16 @@
   padding: 0;
   display: grid;
   grid-auto-flow: row;
-  grid-template-columns: repeat(2, 1fr);
+  // auto-fit wraps items when there isn't enough room — no fixed breakpoints needed.
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   align-items: start;
   gap: $space-md;
+}
 
-  @media (max-width: 1024px) {
-    grid-template-columns: 1fr;
-  }
+// Nested division list sits inside a narrower conference column, so use a
+// smaller minimum so divisions still appear 2-per-row inside each conference.
+.groupNestedList > .groupList {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
 // groupItem: list-item wrapper only — Accordion provides the visual border/radius.
@@ -374,13 +377,17 @@
 // ── Group label + role badge ───────────────────────────────────────────────────
 
 .groupLabel {
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: $space-sm;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
 }
 
 .groupRoleBadge {
   display: inline-block;
+  flex-shrink: 0;
   padding: 1px 7px;
   border-radius: $radius-sm;
   font-size: $font-xs;
@@ -598,6 +605,20 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: $space-2xl;
+
+  // When an odd number of cards leaves one alone in the last row, stretch it full width.
+  > *:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+
+    // Reset the full-width override — every card is already full-width.
+    > *:last-child:nth-child(odd) {
+      grid-column: unset;
+    }
+  }
 }
 
 @keyframes spin {

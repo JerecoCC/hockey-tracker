@@ -381,6 +381,7 @@ const GroupNode = ({
                 rightContent={{ type: 'code', value: t.code }}
                 primaryColor={t.primary_color}
                 textColor={t.text_color}
+                href={`/admin/leagues/${group.league_id}/teams/${t.id}`}
               />
             ))}
           </ul>
@@ -547,6 +548,7 @@ const SeasonTeamsCard = ({
                       rightContent={{ type: 'code', value: t.code }}
                       primaryColor={t.primary_color}
                       textColor={t.text_color}
+                      href={`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`}
                       actions={
                         [
                           {

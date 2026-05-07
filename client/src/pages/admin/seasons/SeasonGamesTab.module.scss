@@ -3,11 +3,13 @@
 
 .filters {
   display: flex;
+  flex-wrap: wrap;
   gap: $space-md;
   margin-bottom: $space-lg;
 
   > * {
-    flex: 0 0 160px;
+    flex: 1 0 140px;
+    max-width: 200px;
   }
 }
 
