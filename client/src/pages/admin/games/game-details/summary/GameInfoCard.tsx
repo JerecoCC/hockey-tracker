@@ -63,6 +63,18 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
             data={game.venue ?? null}
             full
           />
+          {game.playoff_round != null && (
+            <InfoItem
+              label="Round"
+              data={String(game.playoff_round)}
+            />
+          )}
+          {game.game_number_in_series != null && (
+            <InfoItem
+              label="Game in Series"
+              data={String(game.game_number_in_series)}
+            />
+          )}
           {game.game_number != null && (
             <InfoItem
               label="Game #"
