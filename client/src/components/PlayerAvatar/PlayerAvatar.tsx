@@ -9,6 +9,12 @@ interface Props {
   /** Diameter in pixels. Both width and height are set to this value. */
   size: number;
   className?: string;
+  /**
+   * When set, draws a solid ring of this color around the avatar using box-shadow
+   * (no layout impact). Useful when the photo is opaque and the team color needs
+   * to be visible as a border ring.
+   */
+  ringColor?: string | null;
 }
 
 /**
@@ -28,18 +34,28 @@ const mixWithWhite = (hex: string, ratio: number): string => {
   return `#${mix(r)}${mix(g)}${mix(b)}`;
 };
 
-const PlayerAvatar = ({ photo, initials, primaryColor, textColor, size, className }: Props) => {
+const PlayerAvatar = ({
+  photo,
+  initials,
+  primaryColor,
+  textColor,
+  size,
+  className,
+  ringColor,
+}: Props) => {
   const fontSize = Math.round(size * 0.38);
 
-  // When showing a photo: use a white-mixed tint so transparent PNGs get a
-  // solid light background. When showing initials: use the full primary color.
+  // Photos get a 20%-white tint so transparent PNGs are visible against the
+  // team color. Initials get the full primary color.
   const background = primaryColor
     ? photo
       ? mixWithWhite(primaryColor, 0.2)
       : primaryColor
     : undefined;
 
-  const wrapperStyle = { width: size, height: size, background };
+  const boxShadow = ringColor ? `0 0 0 2px ${ringColor}` : undefined;
+
+  const wrapperStyle = { width: size, height: size, background, boxShadow };
 
   return (
     <span

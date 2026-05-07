@@ -92,6 +92,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   groups: faPeopleGroup,
   group: faUsers,
   emoji_events: faTrophy,
+  leaderboard: faTableCells,
 
   // sort
   sort: faSort,

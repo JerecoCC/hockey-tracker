@@ -5,7 +5,7 @@ import InfoItem from '@/components/InfoItem/InfoItem';
 import type { GameRecord, UpdateGameInfoData } from '@/hooks/useGames';
 import GameInfoEditModal from '../GameInfoEditModal';
 import { GAME_TYPE_LABEL } from '../constants';
-import { DATE_FMT_SHORT, TIME_FMT, formatScheduledTime } from '../formatUtils';
+import { DATE_FMT_SHORT, TIME_FMT, formatScheduledTime, formatEndTime } from '../formatUtils';
 import styles from './GameInfoCard.module.scss';
 
 interface Props {
@@ -56,7 +56,7 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
           />
           <InfoItem
             label="End Time"
-            data={game.time_end ? TIME_FMT.format(new Date(game.time_end)) : null}
+            data={game.time_end ? formatEndTime(game.time_end, game.time_start) : null}
           />
           <InfoItem
             label="Venue"

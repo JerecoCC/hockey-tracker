@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/Icon/Icon';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import styles from './ThreeStarsCard.module.scss';
 
@@ -39,21 +40,20 @@ const StarCard = ({
 
   return (
     <div className={styles.starItem}>
-      {player.photo ? (
-        <img src={player.photo} alt="" className={styles.starPhoto} />
-      ) : (
-        <span
-          className={styles.starPhotoPlaceholder}
-          style={{ background: primaryColor, color: textColor }}
-        >
-          {player.first_name[0]}
-          {player.last_name[0]}
-        </span>
-      )}
-
+      <PlayerAvatar
+        photo={player.photo}
+        initials={`${player.first_name[0]}${player.last_name[0]}`}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        ringColor={primaryColor}
+        size={80}
+      />
       <span className={styles.starIcons}>
         {Array.from({ length: starCount }).map((_, i) => (
-          <Icon key={i} name="stars" />
+          <Icon
+            key={i}
+            name="stars"
+          />
         ))}
       </span>
 

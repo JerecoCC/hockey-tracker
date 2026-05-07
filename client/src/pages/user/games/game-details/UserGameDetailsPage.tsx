@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -18,6 +18,7 @@ import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import {
   formatPlayerName,
   formatScheduledTime,
+  formatEndTime,
   DATE_FMT_SHORT,
   TIME_FMT,
 } from '@/pages/admin/games/game-details/formatUtils';
@@ -164,6 +165,8 @@ const UserGameDetailsPage = () => {
   const isPlayoff = game.game_type === 'playoff';
   const otCount = game.overtime_periods ?? 1;
 
+  const useShortNums = isPlayoff && otCount > 1;
+
   // Shot periods — separate OT entries for playoff games.
   const hasOTShots =
     game.current_period === 'OT' ||
@@ -190,7 +193,6 @@ const UserGameDetailsPage = () => {
     (game.overtime_periods ?? 0) > 0 ||
     game.current_period === 'OT' ||
     game.current_period === 'SO';
-  const useShortNums = isPlayoff && otCount > 1;
   const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
     { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
     { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
@@ -283,6 +285,7 @@ const UserGameDetailsPage = () => {
                             initials={`${player.first_name[0]}${player.last_name[0]}`}
                             primaryColor={primaryColor}
                             textColor={textColor}
+                            ringColor={primaryColor}
                             size={56}
                           />
                           <span className={styles.starIcons}>
@@ -947,7 +950,7 @@ const UserGameDetailsPage = () => {
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>End Time</span>
                 <span className={game.time_end ? styles.infoValue : styles.infoValueMuted}>
-                  {game.time_end ? TIME_FMT.format(new Date(game.time_end)) : '—'}
+                  {game.time_end ? formatEndTime(game.time_end, game.time_start) : '—'}
                 </span>
               </div>
               <div className={`${styles.infoItem} ${styles.infoItemFull}`}>

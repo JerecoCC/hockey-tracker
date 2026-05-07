@@ -57,6 +57,19 @@ const sortBySkaterStat = (arr: SkaterStatRecord[], stat: SkaterStatType) =>
     .sort((a, b) => ((b[stat] as number) ?? 0) - ((a[stat] as number) ?? 0))
     .slice(0, PAGE_SIZE);
 
+/** Recursively collect all team IDs in a group and its descendant groups. */
+function getAllTeamIds(groupId: string, allGroups: SeasonGroupRecord[]): Set<string> {
+  const ids = new Set<string>();
+  const collect = (gid: string) => {
+    const group = allGroups.find((g) => g.id === gid);
+    if (!group) return;
+    group.teams.forEach((t) => ids.add(t.id));
+    allGroups.filter((g) => g.parent_id === gid).forEach((child) => collect(child.id));
+  };
+  collect(groupId);
+  return ids;
+}
+
 const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
   const navigate = useNavigate();
@@ -99,12 +112,14 @@ const SeasonDetailsPage = () => {
         season?.playoff_format ?? null,
         groups,
         season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+        season?.games_per_season,
       ),
     [
       standings,
       season?.playoff_format,
       season?.scoring_system,
       season?.league_scoring_system,
+      season?.games_per_season,
       groups,
     ],
   );
@@ -139,12 +154,14 @@ const SeasonDetailsPage = () => {
         season?.playoff_format ?? null,
         groups,
         season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+        season?.games_per_season,
       ),
     [
       standings,
       season?.playoff_format,
       season?.scoring_system,
       season?.league_scoring_system,
+      season?.games_per_season,
       groups,
     ],
   );
@@ -182,11 +199,63 @@ const SeasonDetailsPage = () => {
     dir: 'desc',
   });
   const [goaliePage, setGoaliePage] = useState(1);
-  // Standings sort
+  // Standings sort + sub-tab
   const [standingsSort, setStandingsSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({
     key: 'points',
     dir: 'desc',
   });
+  const [standingsSubTab, setStandingsSubTab] = useState<string>('all');
+
+  // Top-level (non-auto) groups — conferences or league-wide groupings.
+  const standingsTopGroups = useMemo(() => {
+    const groupIds = new Set(groups.map((g) => g.id));
+    return groups
+      .filter((g) => (!g.parent_id || !groupIds.has(g.parent_id)) && !g.is_auto)
+      .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }, [groups]);
+
+  // Division-level groups.
+  const standingsDivisionGroups = useMemo(
+    () =>
+      groups
+        .filter((g) => g.role === 'division')
+        .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
+    [groups],
+  );
+
+  // Pre-computed recursive team-ID set for every conference + division group.
+  const standingsGroupTeamIds = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const g of [...standingsTopGroups, ...standingsDivisionGroups]) {
+      if (!map.has(g.id)) map.set(g.id, getAllTeamIds(g.id, groups));
+    }
+    return map;
+  }, [standingsTopGroups, standingsDivisionGroups, groups]);
+
+  // Current division leader: the highest-ranked team (by pts) in each division.
+  // standings is already sorted points-desc from the API.
+  const divisionLeaderIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const div of standingsDivisionGroups) {
+      const divIds = standingsGroupTeamIds.get(div.id);
+      if (!divIds) continue;
+      const leader = standings.find((t) => divIds.has(t.team_id));
+      if (leader) ids.add(leader.team_id);
+    }
+    return ids;
+  }, [standingsDivisionGroups, standingsGroupTeamIds, standings]);
+
+  // Wildcard tab requires at least 2 conferences and at least 2 divisions.
+  const hasWildcard = standingsTopGroups.length >= 2 && standingsDivisionGroups.length >= 2;
+
+  // Fixed-label SegmentedControl options — categories only, not individual group names.
+  const standingsSubTabOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [{ value: 'all', label: 'League' }];
+    if (standingsTopGroups.length >= 2) opts.push({ value: 'conference', label: 'Conference' });
+    if (standingsDivisionGroups.length >= 2) opts.push({ value: 'division', label: 'Division' });
+    if (hasWildcard) opts.push({ value: 'wildcard', label: 'Wildcard' });
+    return opts;
+  }, [standingsTopGroups.length, standingsDivisionGroups.length, hasWildcard]);
 
   const computeTieRanks = (values: (number | null)[]): string[] =>
     values.map((val) => {
@@ -627,7 +696,6 @@ const SeasonDetailsPage = () => {
                     { value: 'Forwards', label: 'Forwards' },
                     { value: 'Defense', label: 'Defense' },
                     { value: 'Goalies', label: 'Goalies' },
-                    { value: 'Teams', label: 'Teams' },
                   ]}
                 />
 
@@ -850,32 +918,102 @@ const SeasonDetailsPage = () => {
                     )}
                   </Card>
                 )}
+              </div>
+            ),
+          },
+          {
+            label: 'Standings',
+            icon: 'leaderboard',
+            content: (
+              <div className={styles.statsSubTabs}>
+                {standingsSubTabOptions.length > 1 && (
+                  <SegmentedControl
+                    value={standingsSubTab}
+                    onChange={setStandingsSubTab}
+                    options={standingsSubTabOptions}
+                  />
+                )}
 
-                {statsSubTab === 'Teams' && (
-                  <Card>
-                    {standingsLoading ? (
+                {(() => {
+                  const sortRows = (rows: TeamStandingRecord[]) =>
+                    [...rows].sort((a, b) => {
+                      const av = (a as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
+                      const bv = (b as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
+                      const cmp = Number(bv) - Number(av);
+                      return standingsSort.dir === 'desc' ? cmp : -cmp;
+                    });
+
+                  const renderTable = (rows: TeamStandingRecord[], emptyMsg: string) =>
+                    standingsLoading ? (
                       <p className={styles.tabPlaceholder}>Loading standings…</p>
-                    ) : standings.length === 0 ? (
-                      <p className={styles.tabPlaceholder}>No standings data yet.</p>
+                    ) : rows.length === 0 ? (
+                      <p className={styles.tabPlaceholder}>{emptyMsg}</p>
                     ) : (
                       <Table
                         columns={standingsColumns}
-                        data={[...standings].sort((a, b) => {
-                          const av =
-                            (a as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
-                          const bv =
-                            (b as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
-                          const cmp = Number(bv) - Number(av);
-                          return standingsSort.dir === 'desc' ? cmp : -cmp;
-                        })}
+                        data={rows}
                         rowKey={(row) => row.team_id}
                         activeSortKey={standingsSort.key}
                         sortDir={standingsSort.dir}
                         onSort={(key, dir) => setStandingsSort({ key, dir })}
                       />
-                    )}
-                  </Card>
-                )}
+                    );
+
+                  // ── Conference: one card per conference ──────────────────────────
+                  if (standingsSubTab === 'conference') {
+                    return standingsTopGroups.map((conf) => {
+                      const ids = standingsGroupTeamIds.get(conf.id) ?? new Set<string>();
+                      const rows = sortRows(standings.filter((t) => ids.has(t.team_id)));
+                      return (
+                        <Card
+                          key={conf.id}
+                          title={conf.name}
+                        >
+                          {renderTable(rows, 'No standings data yet.')}
+                        </Card>
+                      );
+                    });
+                  }
+
+                  // ── Division: one card per division ──────────────────────────────
+                  if (standingsSubTab === 'division') {
+                    return standingsDivisionGroups.map((div) => {
+                      const ids = standingsGroupTeamIds.get(div.id) ?? new Set<string>();
+                      const rows = sortRows(standings.filter((t) => ids.has(t.team_id)));
+                      return (
+                        <Card
+                          key={div.id}
+                          title={div.name}
+                        >
+                          {renderTable(rows, 'No standings data yet.')}
+                        </Card>
+                      );
+                    });
+                  }
+
+                  // ── Wildcard: one card per conference, non-division-leaders only ─
+                  if (standingsSubTab === 'wildcard') {
+                    return standingsTopGroups.map((conf) => {
+                      const ids = standingsGroupTeamIds.get(conf.id) ?? new Set<string>();
+                      const rows = sortRows(
+                        standings.filter(
+                          (t) => ids.has(t.team_id) && !divisionLeaderIds.has(t.team_id),
+                        ),
+                      );
+                      return (
+                        <Card
+                          key={conf.id}
+                          title={conf.name}
+                        >
+                          {renderTable(rows, 'No wildcard contenders yet.')}
+                        </Card>
+                      );
+                    });
+                  }
+
+                  // ── League: all teams in one table (default) ─────────────────────
+                  return <Card>{renderTable(sortRows(standings), 'No standings data yet.')}</Card>;
+                })()}
               </div>
             ),
           },
@@ -944,7 +1082,7 @@ const SeasonDetailsPage = () => {
           const ok = await startPlayoffs();
           if (ok) {
             setShowStartPlayoffsConfirm(false);
-            handleTabChange(3); // index of 'Playoffs' tab
+            handleTabChange(5); // index of 'Playoffs' tab
           }
         }}
       />

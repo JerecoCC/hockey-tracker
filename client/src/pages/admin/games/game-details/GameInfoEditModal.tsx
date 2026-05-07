@@ -22,11 +22,12 @@ const isoToETHHMM = (iso: string): string => {
   return `${parts.find((p) => p.type === 'hour')!.value}:${parts.find((p) => p.type === 'minute')!.value}`;
 };
 
-/** Treats an "HH:mm" string as Eastern Time and returns a UTC ISO string. */
-const etHHMMtoISO = (hhmm: string): string => {
-  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    new Date(),
-  );
+/**
+ * Treats an "HH:mm" string as Eastern Time on the given base date and returns
+ * a UTC ISO string. Defaults to today when no base date is provided.
+ */
+const etHHMMtoISO = (hhmm: string, base: Date = new Date()): string => {
+  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(base);
   const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
   const tzName =
     new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
@@ -85,13 +86,29 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
   }, [open, game, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
+    const startISO = data.time_start ? etHHMMtoISO(data.time_start) : null;
+
+    // If the end time HH:mm is earlier than the start time HH:mm, the game ran
+    // past midnight — compute end time using the day after the start date.
+    let endISO: string | null = null;
+    if (data.time_end) {
+      const isPastMidnight = !!data.time_start && data.time_end < data.time_start;
+      if (isPastMidnight && startISO) {
+        const nextDay = new Date(startISO);
+        nextDay.setDate(nextDay.getDate() + 1);
+        endISO = etHHMMtoISO(data.time_end, nextDay);
+      } else {
+        endISO = etHHMMtoISO(data.time_end);
+      }
+    }
+
     const ok = await onSave({
       venue: data.venue || null,
       scheduled_at: data.scheduled_date || null,
       scheduled_time: data.scheduled_time || null,
       game_type: data.game_type,
-      time_start: data.time_start ? etHHMMtoISO(data.time_start) : null,
-      time_end: data.time_end ? etHHMMtoISO(data.time_end) : null,
+      time_start: startISO,
+      time_end: endISO,
     });
     if (ok) onClose();
   });
@@ -156,13 +173,6 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           control={control}
           name="time_end"
           disabled={isSubmitting || disabled || game.status !== 'final'}
-          rules={{
-            validate: (value, formValues) =>
-              !value ||
-              !formValues.time_start ||
-              value > formValues.time_start ||
-              'End time must be after start time',
-          }}
         />
         <div className={styles.formFieldFull}>
           <Field
