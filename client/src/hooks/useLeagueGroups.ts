@@ -21,6 +21,7 @@ export interface GroupTeamRecord {
   logo: string | null;
   primary_color: string;
   text_color: string;
+  home_arena?: string | null;
 }
 
 export interface GroupRecord {

@@ -63,6 +63,14 @@ const SeasonTeamOverrideModal = (props: Props) => {
       open={open}
       title={title}
       onClose={onClose}
+      onConfirm={handleSave}
+      confirmLabel={
+        saving
+          ? 'Saving…'
+          : `Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`
+      }
+      confirmDisabled={saving || leagueTeams.length === 0}
+      busy={saving}
     >
       <SearchableList
         key={group?.id ?? 'none'}
@@ -120,25 +128,6 @@ const SeasonTeamOverrideModal = (props: Props) => {
         emptyMessage={emptyMessage}
         noResultsMessage={(q) => `No teams match "${q}".`}
       />
-
-      <div className={styles.modalActions}>
-        <Button
-          variant="outlined"
-          intent="neutral"
-          onClick={onClose}
-          disabled={saving}
-        >
-          Cancel
-        </Button>
-        <Button
-          disabled={saving || leagueTeams.length === 0}
-          onClick={handleSave}
-        >
-          {saving
-            ? 'Saving…'
-            : `Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`}
-        </Button>
-      </div>
     </Modal>
   );
 };

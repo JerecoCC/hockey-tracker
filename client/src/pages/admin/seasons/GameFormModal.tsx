@@ -108,6 +108,8 @@ const GameFormModal = ({
   const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
     value: t.id,
     label: t.name,
+    logo: t.logo,
+    code: t.code,
   }));
 
   const onSubmit = handleSubmit(async (data) => {

@@ -104,6 +104,8 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
   const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
     value: t.id,
     label: t.name,
+    logo: t.logo,
+    code: t.code,
   }));
 
   // ── Filter state (with sessionStorage persistence) ────────────────────────

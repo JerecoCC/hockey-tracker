@@ -12,7 +12,10 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import useGames from '@/hooks/useGames';
-import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
+import useSeasonDetails, {
+  type SeasonGroupRecord,
+  type SeasonTeam,
+} from '@/hooks/useSeasonDetails';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import { computeClinched, computeEliminated } from '@/lib/computeClinched';
@@ -104,6 +107,29 @@ const SeasonDetailsPage = () => {
       groups,
     ],
   );
+
+  // When teams are managed via user groups (group-based seasons), the flat season_teams
+  // table is empty and seasonTeams will be []. Fall back to collecting unique teams from
+  // all groups so the game creation dropdowns always have options to pick from.
+  const effectiveSeasonTeams = useMemo<SeasonTeam[]>(() => {
+    if (seasonTeams.length > 0) return seasonTeams;
+    const seen = new Set<string>();
+    const result: SeasonTeam[] = [];
+    for (const group of groups) {
+      for (const t of group.teams) {
+        if (!seen.has(t.id)) {
+          seen.add(t.id);
+          result.push({
+            ...t,
+            secondary_color: '',
+            home_arena: t.home_arena ?? null,
+            inherited: false,
+          });
+        }
+      }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [seasonTeams, groups]);
 
   const eliminatedIds = useMemo(
     () =>
@@ -593,7 +619,7 @@ const SeasonDetailsPage = () => {
               <SeasonGamesTab
                 leagueId={leagueId!}
                 seasonId={id!}
-                seasonTeams={seasonTeams}
+                seasonTeams={effectiveSeasonTeams}
                 isEnded={season.is_ended}
               />
             ),

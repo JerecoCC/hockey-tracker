@@ -631,7 +631,8 @@ router.get('/:seasonId/groups', async (req, res) => {
             iter.code,
             iter.logo,
             t.primary_color,
-            t.text_color
+            t.text_color,
+            t.home_arena
           FROM resolved r
           JOIN teams t ON t.id = r.team_id
           LEFT JOIN LATERAL (
@@ -655,7 +656,8 @@ router.get('/:seasonId/groups', async (req, res) => {
         COALESCE(
           json_agg(
             json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo,
-                              'primary_color', v.primary_color, 'text_color', v.text_color)
+                              'primary_color', v.primary_color, 'text_color', v.text_color,
+                              'home_arena', v.home_arena)
             ORDER BY v.name
           ) FILTER (WHERE v.team_id IS NOT NULL),
           '[]'::json
