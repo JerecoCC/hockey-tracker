@@ -130,6 +130,7 @@ const TeamPlayerEditModal = ({
           name="photo"
           label="Player Photo"
           disabled={isSubmitting}
+          autoFocus
         />
         <div className={styles.nameRowWithJersey}>
           <Field
@@ -153,7 +154,6 @@ const TeamPlayerEditModal = ({
             name="first_name"
             rules={{ required: true }}
             placeholder="e.g. Connor"
-            autoFocus
             disabled={isSubmitting}
           />
           <Field

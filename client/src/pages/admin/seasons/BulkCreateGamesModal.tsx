@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { type Control, type UseFormSetValue, useFieldArray, useForm } from 'react-hook-form';
 import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -150,9 +150,17 @@ const BulkCreateGamesModal = ({
 
   const { fields, append, remove } = useFieldArray({ control, name: 'games' });
 
+  // Reset form every time the modal opens so useFieldArray's internal mutable
+  // ref is re-synced in a fresh render cycle. Without this, append() after a
+  // previous bulk-create reads a stale internal ref and restores the old list.
+  useEffect(() => {
+    if (open) {
+      reset({ games: [{ ...EMPTY_ROW }] });
+      setAutoFocusIndex(0);
+    }
+  }, [open, reset]);
+
   const handleClose = () => {
-    reset({ games: [{ ...EMPTY_ROW }] });
-    setAutoFocusIndex(0);
     onClose();
   };
 

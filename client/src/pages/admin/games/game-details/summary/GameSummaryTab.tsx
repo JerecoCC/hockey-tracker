@@ -943,8 +943,16 @@ const GameSummaryTab = ({
           open={shotsEditModalOpen}
           game={game}
           periods={shotsPeriods}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          goalieStats={goalieStats}
+          goals={goals}
+          lineup={lineup}
           onClose={() => setShotsEditModalOpen(false)}
           updatePeriodShots={updatePeriodShots}
+          upsertGoalieStat={async (data) => {
+            await upsertGoalieStat(data);
+          }}
         />
       )}
 

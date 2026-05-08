@@ -3,6 +3,7 @@ import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
@@ -172,20 +173,13 @@ const GoalieStatsEditModal = ({
                       {code?.slice(0, 1)}
                     </span>
                   )}
-                  {goalie.photo ? (
-                    <img
-                      src={goalie.photo}
-                      alt=""
-                      className={styles.goalScorerPhoto}
-                    />
-                  ) : (
-                    <span
-                      className={styles.goalScorerPhotoPlaceholder}
-                      style={{ background: primary, color: text }}
-                    >
-                      {goalie.last_name?.charAt(0)}
-                    </span>
-                  )}
+                  <PlayerAvatar
+                    photo={goalie.photo}
+                    initials={goalie.last_name?.charAt(0) ?? '?'}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={32}
+                  />
                   <div className={styles.goalInfo}>
                     {goalie.jersey_number != null && (
                       <span className={styles.goalAssists}>#{goalie.jersey_number}</span>

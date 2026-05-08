@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from 'react';
 import { useController, type Control, type RegisterOptions } from 'react-hook-form';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
@@ -11,15 +11,17 @@ interface Props {
   name: string;
   rules?: RegisterOptions;
   disabled?: boolean;
+  autoFocus?: boolean;
 }
 
 const LogoUpload = (props: Props) => {
-  const { label = 'Add Logo', control, name, rules, disabled } = props;
+  const { label = 'Add Logo', control, name, rules, disabled, autoFocus } = props;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
   const { field } = useController({ control: ctrl, name, rules });
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const labelRef = useRef<HTMLLabelElement>(null);
   const [preview, setPreview] = useState('');
 
   // When the field value is reset externally to null or a string URL, clear the local blob preview
@@ -56,6 +58,15 @@ const LogoUpload = (props: Props) => {
     field.onChange(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
+
+  // Auto-focus the label element when requested (e.g. when the modal opens).
+  useEffect(() => {
+    if (autoFocus && !disabled) {
+      labelRef.current?.focus();
+    }
+    // Run once on mount; intentionally omitting autoFocus/disabled since they don't change after mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Clipboard paste support — active while the component is mounted and not disabled
   useEffect(() => {
@@ -101,7 +112,17 @@ const LogoUpload = (props: Props) => {
           )}
         </div>
       ) : (
-        <label className={`${styles.fileLabel} ${disabled ? styles.fileLabelDisabled : ''}`}>
+        <label
+          ref={labelRef}
+          tabIndex={disabled ? -1 : 0}
+          className={`${styles.fileLabel} ${disabled ? styles.fileLabelDisabled : ''}`}
+          onKeyDown={(e: KeyboardEvent<HTMLLabelElement>) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+        >
           <Icon
             name="upload"
             size="1.5em"

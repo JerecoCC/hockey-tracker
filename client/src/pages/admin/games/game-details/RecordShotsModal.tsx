@@ -75,7 +75,7 @@ const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
  * opposing team's total shots (for the periods the goalie played) minus empty-net goals.
  * Respects goalie substitutions via `entered_period`.
  */
-const computeAutoSA = (
+export const computeAutoSA = (
   goalie: GameRosterEntry,
   goalieStats: GoalieStatRecord[],
   game: GameRecord,
