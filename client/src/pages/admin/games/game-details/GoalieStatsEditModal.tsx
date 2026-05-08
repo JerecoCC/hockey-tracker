@@ -4,6 +4,7 @@ import Field from '@/components/Field/Field';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
@@ -159,20 +160,14 @@ const GoalieStatsEditModal = ({
                   .join(' ')}
               >
                 <span className={styles.goalieNameCell}>
-                  {logo ? (
-                    <img
-                      src={logo}
-                      alt={code}
-                      className={styles.goalTeamLogo}
-                    />
-                  ) : (
-                    <span
-                      className={styles.goalTeamLogoPlaceholder}
-                      style={{ background: primary, color: text }}
-                    >
-                      {code?.slice(0, 1)}
-                    </span>
-                  )}
+                  <TeamLogo
+                    logo={logo}
+                    code={code}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={36}
+                    shape="square"
+                  />
                   <PlayerAvatar
                     photo={goalie.photo}
                     initials={goalie.last_name?.charAt(0) ?? '?'}

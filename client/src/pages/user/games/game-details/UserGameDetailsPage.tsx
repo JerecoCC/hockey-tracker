@@ -7,6 +7,7 @@ import Icon from '@/components/Icon/Icon';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion from '@/components/Accordion/Accordion';
 import TitleRow from '@/components/TitleRow/TitleRow';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useGameDetails, type LastFiveGame, type PreviousMeeting } from '@/hooks/useGames';
 import useGameGoals from '@/hooks/useGameGoals';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
@@ -384,20 +385,14 @@ const UserGameDetailsPage = () => {
                           >
                             <td className={styles.goalieTdName}>
                               <span className={styles.goalieNameCell}>
-                                {teamLogo ? (
-                                  <img
-                                    src={teamLogo}
-                                    alt={teamCode}
-                                    className={styles.goalTeamLogo}
-                                  />
-                                ) : (
-                                  <span
-                                    className={styles.goalTeamLogoPlaceholder}
-                                    style={{ background: primaryColor, color: textColor }}
-                                  >
-                                    {teamCode?.slice(0, 1)}
-                                  </span>
-                                )}
+                                <TeamLogo
+                                  logo={teamLogo}
+                                  code={teamCode ?? '?'}
+                                  primaryColor={primaryColor}
+                                  textColor={textColor}
+                                  size={36}
+                                  shape="square"
+                                />
                                 {goalie.photo ? (
                                   <img
                                     src={goalie.photo}
@@ -477,21 +472,16 @@ const UserGameDetailsPage = () => {
                         text: game.away_team.text_color,
                       };
                   const homeWon = pm.home_score > pm.away_score;
-                  const renderLogo = (t: typeof leftTeam) =>
-                    t.logo ? (
-                      <img
-                        src={t.logo}
-                        alt={t.code}
-                        className={styles.prevMeetingLogo}
-                      />
-                    ) : (
-                      <span
-                        className={styles.prevMeetingLogoPlaceholder}
-                        style={{ background: t.primary, color: t.text }}
-                      >
-                        {t.code?.slice(0, 3)}
-                      </span>
-                    );
+                  const renderLogo = (t: typeof leftTeam) => (
+                    <TeamLogo
+                      logo={t.logo}
+                      code={t.code}
+                      primaryColor={t.primary}
+                      textColor={t.text}
+                      size={32}
+                      shape="circle"
+                    />
+                  );
                   return (
                     <div
                       key={pm.game_id}
@@ -571,17 +561,12 @@ const UserGameDetailsPage = () => {
                       {lg.result}
                     </span>
                     <span className={styles.lastFiveListLogo}>
-                      {lg.opponent_logo ? (
-                        <img
-                          src={lg.opponent_logo}
-                          alt={lg.opponent_code}
-                          className={styles.lastFiveListLogoImg}
-                        />
-                      ) : (
-                        <span className={styles.lastFiveListLogoPlaceholder}>
-                          {lg.opponent_code?.slice(0, 3)}
-                        </span>
-                      )}
+                      <TeamLogo
+                        logo={lg.opponent_logo}
+                        code={lg.opponent_code}
+                        size={22}
+                        shape="square"
+                      />
                     </span>
                     <span className={styles.lastFiveListOpp}>
                       {lg.is_home ? 'vs' : '@'} {lg.opponent_name ?? lg.opponent_code}
@@ -612,20 +597,14 @@ const UserGameDetailsPage = () => {
                     variant="static"
                     label={
                       <span className={styles.linescoreTeam}>
-                        {logo ? (
-                          <img
-                            src={logo}
-                            alt={code}
-                            className={styles.linescoreLogo}
-                          />
-                        ) : (
-                          <span
-                            className={styles.goalTeamLogoPlaceholder}
-                            style={{ background: primary, color: text }}
-                          >
-                            {code?.slice(0, 1)}
-                          </span>
-                        )}
+                        <TeamLogo
+                          logo={logo}
+                          code={code}
+                          primaryColor={primary}
+                          textColor={text}
+                          size={24}
+                          shape="square"
+                        />
                         <span>{label}</span>
                       </span>
                     }
@@ -773,20 +752,14 @@ const UserGameDetailsPage = () => {
                     <tr key={row.teamId}>
                       <td className={styles.tdTeam}>
                         <span className={styles.linescoreTeam}>
-                          {row.teamLogo ? (
-                            <img
-                              src={row.teamLogo}
-                              alt={row.teamCode}
-                              className={styles.linescoreLogo}
-                            />
-                          ) : (
-                            <span
-                              className={styles.linescoreLogoPlaceholder}
-                              style={{ background: row.primaryColor, color: row.textColor }}
-                            >
-                              {row.teamCode?.slice(0, 1)}
-                            </span>
-                          )}
+                          <TeamLogo
+                            logo={row.teamLogo}
+                            code={row.teamCode ?? '?'}
+                            primaryColor={row.primaryColor}
+                            textColor={row.textColor}
+                            size={32}
+                            shape="square"
+                          />
                           <span className={styles.linescoreCode}>{row.teamCode}</span>
                         </span>
                       </td>
@@ -878,20 +851,14 @@ const UserGameDetailsPage = () => {
                     <tr key={row.key}>
                       <td className={styles.tdTeam}>
                         <span className={styles.linescoreTeam}>
-                          {row.logo ? (
-                            <img
-                              src={row.logo}
-                              alt={row.code}
-                              className={styles.linescoreLogo}
-                            />
-                          ) : (
-                            <span
-                              className={styles.linescoreLogoPlaceholder}
-                              style={{ background: row.primary, color: row.text }}
-                            >
-                              {row.code?.slice(0, 1)}
-                            </span>
-                          )}
+                          <TeamLogo
+                            logo={row.logo}
+                            code={row.code ?? '?'}
+                            primaryColor={row.primary}
+                            textColor={row.text}
+                            size={32}
+                            shape="square"
+                          />
                           <span className={styles.linescoreCode}>{row.code}</span>
                         </span>
                       </td>

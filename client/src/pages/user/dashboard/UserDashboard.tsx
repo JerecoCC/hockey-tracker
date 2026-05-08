@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useLeagues from '@/hooks/useLeagues';
 import useTeams, { TeamRecord } from '@/hooks/useTeams';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
@@ -18,20 +19,14 @@ interface TeamCardProps {
 const TeamCard = ({ team, favorited, onToggle }: TeamCardProps) => (
   <div className={`${styles.teamCard} ${favorited ? styles.teamCardFavorited : ''}`}>
     <div className={styles.teamCardLeft}>
-      {team.logo ? (
-        <img
-          src={team.logo}
-          alt=""
-          className={styles.teamLogo}
-        />
-      ) : (
-        <span
-          className={styles.teamLogoPlaceholder}
-          style={{ background: team.primary_color, color: team.text_color }}
-        >
-          {team.code.slice(0, 3)}
-        </span>
-      )}
+      <TeamLogo
+        logo={team.logo}
+        code={team.code}
+        primaryColor={team.primary_color}
+        textColor={team.text_color}
+        size={40}
+        shape="square"
+      />
       <div>
         <p className={styles.teamName}>{team.name}</p>
         <p className={styles.teamCode}>{team.code}</p>
@@ -96,9 +91,7 @@ const UserDashboard = () => {
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>My Teams</h3>
         {favoriteTeams.length === 0 ? (
-          <p className={styles.empty}>
-            No favorite teams yet — browse leagues below to add some.
-          </p>
+          <p className={styles.empty}>No favorite teams yet — browse leagues below to add some.</p>
         ) : (
           <div className={styles.teamsGrid}>
             {favoriteTeams.map((team) => (
@@ -131,20 +124,14 @@ const UserDashboard = () => {
                   className={styles.leagueCard}
                 >
                   <div className={styles.leagueHeader}>
-                    {league.logo ? (
-                      <img
-                        src={league.logo}
-                        alt=""
-                        className={styles.leagueLogo}
-                      />
-                    ) : (
-                      <span
-                        className={styles.leagueLogoPlaceholder}
-                        style={{ background: league.primary_color, color: league.text_color }}
-                      >
-                        {league.code.slice(0, 3)}
-                      </span>
-                    )}
+                    <TeamLogo
+                      logo={league.logo}
+                      code={league.code}
+                      primaryColor={league.primary_color}
+                      textColor={league.text_color}
+                      size={32}
+                      shape="square"
+                    />
                     <span className={styles.leagueName}>{league.name}</span>
                   </div>
                   <div className={styles.teamsGrid}>

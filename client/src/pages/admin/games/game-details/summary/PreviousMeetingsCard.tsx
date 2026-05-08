@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import Card from '@/components/Card/Card';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, PreviousMeeting } from '@/hooks/useGames';
 import { DATE_FMT_SHORT } from '../formatUtils';
 import styles from './PreviousMeetingsCard.module.scss';
@@ -15,22 +16,6 @@ interface Props {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 type TeamMeta = { code: string; logo: string | null; primary: string; text: string };
-
-const TeamLogo = ({ team }: { team: TeamMeta }) =>
-  team.logo ? (
-    <img
-      src={team.logo}
-      alt={team.code}
-      className={styles.prevMeetingLogo}
-    />
-  ) : (
-    <span
-      className={styles.prevMeetingLogoPlaceholder}
-      style={{ background: team.primary, color: team.text }}
-    >
-      {team.code?.slice(0, 3)}
-    </span>
-  );
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -86,7 +71,14 @@ const PreviousMeetingsCard = ({ game, leagueId, seasonId }: Props) => {
                 </span>
               )}
               <span className={styles.prevMeetingTeam}>
-                <TeamLogo team={leftTeam} />
+                <TeamLogo
+                  logo={leftTeam.logo}
+                  code={leftTeam.code}
+                  primaryColor={leftTeam.primary}
+                  textColor={leftTeam.text}
+                  size={32}
+                  shape="circle"
+                />
                 <span className={styles.prevMeetingCode}>{leftTeam.code}</span>
               </span>
               <span className={styles.prevMeetingScore}>
@@ -105,7 +97,14 @@ const PreviousMeetingsCard = ({ game, leagueId, seasonId }: Props) => {
               </span>
               <span className={`${styles.prevMeetingTeam} ${styles.prevMeetingTeamRight}`}>
                 <span className={styles.prevMeetingCode}>{rightTeam.code}</span>
-                <TeamLogo team={rightTeam} />
+                <TeamLogo
+                  logo={rightTeam.logo}
+                  code={rightTeam.code}
+                  primaryColor={rightTeam.primary}
+                  textColor={rightTeam.text}
+                  size={32}
+                  shape="circle"
+                />
               </span>
             </div>
           );

@@ -1,5 +1,6 @@
 import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import styles from './EntityHeader.module.scss';
 
 interface Swatch {
@@ -28,22 +29,14 @@ const EntityHeader = ({
 }: Props) => {
   return (
     <div className={styles.header}>
-      <div className={styles.logoWrapper}>
-        {logo ? (
-          <img
-            src={logo}
-            alt={name}
-            className={styles.logo}
-          />
-        ) : (
-          <span
-            className={styles.logoPlaceholder}
-            style={{ background: primaryColor, color: textColor }}
-          >
-            {code.slice(0, 3)}
-          </span>
-        )}
-      </div>
+      <TeamLogo
+        logo={logo}
+        code={code}
+        primaryColor={primaryColor}
+        textColor={textColor}
+        size={80}
+        shape="square"
+      />
 
       <div className={styles.nameBlock}>
         <h3 className={styles.name}>{name}</h3>

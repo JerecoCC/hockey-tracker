@@ -10,6 +10,7 @@ import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import usePlayerDetails, { type PlayerCareerStatRecord } from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
@@ -304,23 +305,14 @@ const PlayerDetailsPage = () => {
                           key={s.id}
                           className={styles.stintItem}
                         >
-                          {s.team_logo ? (
-                            <img
-                              src={s.team_logo}
-                              alt={s.team_name ?? ''}
-                              className={styles.stintLogo}
-                            />
-                          ) : (
-                            <span
-                              className={styles.stintLogoPlaceholder}
-                              style={{
-                                background: s.primary_color ?? undefined,
-                                color: s.text_color ?? undefined,
-                              }}
-                            >
-                              {(s.team_code ?? s.team_name ?? '?').slice(0, 3)}
-                            </span>
-                          )}
+                          <TeamLogo
+                            logo={s.team_logo}
+                            code={s.team_code ?? s.team_name ?? '?'}
+                            primaryColor={s.primary_color}
+                            textColor={s.text_color}
+                            size={32}
+                            shape="square"
+                          />
                           <div className={styles.stintInfo}>
                             <span className={styles.stintTeam}>{s.team_name ?? '—'}</span>
                             <span className={styles.stintMeta}>

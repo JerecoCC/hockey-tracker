@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import styles from './ScoreboardCard.module.scss';
 
@@ -101,15 +102,15 @@ const ScoreboardCard = ({
                 : undefined
             }
           >
-            {game.away_team.logo ? (
-              <img
-                src={game.away_team.logo}
-                alt={game.away_team.code}
-                className={styles.teamLogo}
-              />
-            ) : (
-              <span className={styles.teamLogoPlaceholder}>{game.away_team.code.slice(0, 3)}</span>
-            )}
+            <TeamLogo
+              logo={game.away_team.logo}
+              code={game.away_team.code}
+              primaryColor={game.away_team.primary_color}
+              textColor={game.away_team.text_color}
+              size={68}
+              shape="circle"
+              className={styles.teamLogoResponsive}
+            />
             <div className={styles.teamInfo}>
               <span className={styles.teamFullName}>{game.away_team.name}</span>
               <span className={styles.teamSubInfo}>{game.away_team.code}</span>
@@ -232,15 +233,15 @@ const ScoreboardCard = ({
               <span className={styles.teamFullName}>{game.home_team.name}</span>
               <span className={styles.teamSubInfo}>{game.home_team.code}</span>
             </div>
-            {game.home_team.logo ? (
-              <img
-                src={game.home_team.logo}
-                alt={game.home_team.code}
-                className={styles.teamLogo}
-              />
-            ) : (
-              <span className={styles.teamLogoPlaceholder}>{game.home_team.code.slice(0, 3)}</span>
-            )}
+            <TeamLogo
+              logo={game.home_team.logo}
+              code={game.home_team.code}
+              primaryColor={game.home_team.primary_color}
+              textColor={game.home_team.text_color}
+              size={68}
+              shape="circle"
+              className={styles.teamLogoResponsive}
+            />
           </button>
           {/* Right stripe — stacked mode only */}
           <div className={`${styles.teamStripe} ${styles.teamStripeRight}`}>

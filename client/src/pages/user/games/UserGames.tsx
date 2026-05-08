@@ -7,6 +7,7 @@ import Card from '@/components/Card/Card';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import Select, { type SelectOption } from '@/components/Select/Select';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import styles from './UserGames.module.scss';
 
@@ -133,20 +134,14 @@ interface TeamBlockProps {
 
 const TeamBlock = ({ name, code, logo, primaryColor, textColor, align }: TeamBlockProps) => (
   <div className={`${styles.team} ${align === 'right' ? styles.teamRight : ''}`}>
-    {logo ? (
-      <img
-        src={logo}
-        alt=""
-        className={styles.teamLogo}
-      />
-    ) : (
-      <span
-        className={styles.teamLogoPlaceholder}
-        style={{ background: primaryColor, color: textColor }}
-      >
-        {code.slice(0, 3)}
-      </span>
-    )}
+    <TeamLogo
+      logo={logo}
+      code={code}
+      primaryColor={primaryColor}
+      textColor={textColor}
+      size={32}
+      shape="circle"
+    />
     <span className={styles.teamName}>{name}</span>
   </div>
 );

@@ -4,6 +4,7 @@ import Badge from '@/components/Badge/Badge';
 import type { BadgeIntent } from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import type { ButtonIntent } from '@/components/Button/Button';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameType } from '@/hooks/useGames';
 import styles from './GameListItem.module.scss';
 
@@ -57,22 +58,6 @@ interface Props {
 }
 
 // ── Internal: small team logo block ──────────────────────────────────────────
-
-const TeamLogo = ({ logo, code, primaryColor, textColor }: TeamInfo) =>
-  logo ? (
-    <img
-      src={logo}
-      alt={code}
-      className={styles.logo}
-    />
-  ) : (
-    <span
-      className={styles.logoPlaceholder}
-      style={{ background: primaryColor, color: textColor }}
-    >
-      {code.slice(0, 3)}
-    </span>
-  );
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -139,7 +124,11 @@ const GameListItem = ({
 
         {/* Away row */}
         <div className={[styles.teamRow, awayLost && styles.teamLoser].filter(Boolean).join(' ')}>
-          <TeamLogo {...awayTeam} />
+          <TeamLogo
+            {...awayTeam}
+            size={24}
+            shape="circle"
+          />
           <span className={styles.teamCode}>{awayTeam.code}</span>
           {showScore && (
             <span
@@ -152,7 +141,11 @@ const GameListItem = ({
 
         {/* Home row */}
         <div className={[styles.teamRow, homeLost && styles.teamLoser].filter(Boolean).join(' ')}>
-          <TeamLogo {...homeTeam} />
+          <TeamLogo
+            {...homeTeam}
+            size={24}
+            shape="circle"
+          />
           <span className={styles.teamCode}>{homeTeam.code}</span>
           {showScore && (
             <span

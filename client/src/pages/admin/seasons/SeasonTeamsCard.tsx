@@ -9,6 +9,7 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type LeagueTeam, type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import SeasonTeamOverrideModal from './SeasonTeamOverrideModal';
 import styles from './SeasonDetails.module.scss';
@@ -128,20 +129,14 @@ const ManageTeamsModal = ({
                         />
                       )}
                     </span>
-                    {t.logo ? (
-                      <img
-                        src={t.logo}
-                        alt=""
-                        className={styles.teamLogoThumb}
-                      />
-                    ) : (
-                      <span
-                        className={styles.teamLogoPlaceholder}
-                        style={{ background: t.primary_color, color: t.text_color }}
-                      >
-                        {t.code.slice(0, 3)}
-                      </span>
-                    )}
+                    <TeamLogo
+                      logo={t.logo}
+                      code={t.code}
+                      primaryColor={t.primary_color}
+                      textColor={t.text_color}
+                      size={32}
+                      shape="square"
+                    />
                     <span className={styles.teamListName}>{t.name}</span>
                     <span className={styles.teamCode}>{t.code}</span>
                   </li>

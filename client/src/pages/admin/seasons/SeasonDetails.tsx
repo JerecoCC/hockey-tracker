@@ -25,6 +25,7 @@ import useSeasonStats, {
 } from '@/hooks/useSeasonStats';
 import useTabState from '@/hooks/useTabState';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
@@ -373,17 +374,12 @@ const SeasonDetailsPage = () => {
 
   const renderPlayerCell = (row: SkaterStatRecord | GoalieStatRecord) => (
     <div className={styles.statsPlayerCell}>
-      {row.team_logo ? (
-        <img
-          src={row.team_logo}
-          alt={row.team_name ?? ''}
-          className={styles.statsTeamLogo}
-        />
-      ) : (
-        <span className={styles.statsTeamLogoPlaceholder}>
-          {(row.team_code ?? '?').slice(0, 3)}
-        </span>
-      )}
+      <TeamLogo
+        logo={row.team_logo}
+        code={row.team_code ?? '?'}
+        size={24}
+        shape="square"
+      />
       <PlayerAvatar
         photo={row.photo}
         initials={`${row.first_name.charAt(0)}${row.last_name.charAt(0)}`}

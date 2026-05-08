@@ -1,3 +1,4 @@
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { DATE_FMT_SHORT } from '../formatUtils';
 import styles from './LastFiveCard.module.scss';
@@ -34,17 +35,12 @@ export default function LastGameList({ lg, onNavigate }: Props) {
     >
       <span className={`${styles.lastFiveListResult} ${resultClass}`}>{lg.result}</span>
       <span className={styles.lastFiveListLogo}>
-        {lg.opponent_logo ? (
-          <img
-            src={lg.opponent_logo}
-            alt={lg.opponent_code}
-            className={styles.lastFiveListLogoImg}
-          />
-        ) : (
-          <span className={styles.lastFiveListLogoPlaceholder}>
-            {lg.opponent_code?.slice(0, 3)}
-          </span>
-        )}
+        <TeamLogo
+          logo={lg.opponent_logo}
+          code={lg.opponent_code}
+          size={22}
+          shape="square"
+        />
       </span>
       <span className={styles.lastFiveListOpp}>
         {lg.is_home ? 'vs' : '@'} {lg.opponent_name ?? lg.opponent_code}

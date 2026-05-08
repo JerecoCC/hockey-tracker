@@ -6,6 +6,7 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import StartGameModal from '../StartGameModal';
 import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
@@ -648,20 +649,14 @@ const GameSummaryTab = ({
                       <tr key={row.teamId}>
                         <td className={styles.tdTeam}>
                           <span className={styles.linescoreTeam}>
-                            {row.teamLogo ? (
-                              <img
-                                src={row.teamLogo}
-                                alt={row.teamCode}
-                                className={styles.linescoreLogo}
-                              />
-                            ) : (
-                              <span
-                                className={styles.linescoreLogoPlaceholder}
-                                style={{ background: row.primaryColor, color: row.textColor }}
-                              >
-                                {row.teamCode?.slice(0, 1)}
-                              </span>
-                            )}
+                            <TeamLogo
+                              logo={row.teamLogo}
+                              code={row.teamCode ?? '?'}
+                              primaryColor={row.primaryColor}
+                              textColor={row.textColor}
+                              size={32}
+                              shape="square"
+                            />
                             <span className={styles.linescoreCode}>{row.teamCode}</span>
                           </span>
                         </td>
@@ -773,20 +768,14 @@ const GameSummaryTab = ({
                       <tr key={row.key}>
                         <td className={styles.tdTeam}>
                           <span className={styles.linescoreTeam}>
-                            {row.logo ? (
-                              <img
-                                src={row.logo}
-                                alt={row.code}
-                                className={styles.linescoreLogo}
-                              />
-                            ) : (
-                              <span
-                                className={styles.linescoreLogoPlaceholder}
-                                style={{ background: row.primary, color: row.text }}
-                              >
-                                {row.code?.slice(0, 1)}
-                              </span>
-                            )}
+                            <TeamLogo
+                              logo={row.logo}
+                              code={row.code ?? '?'}
+                              primaryColor={row.primary}
+                              textColor={row.text}
+                              size={32}
+                              shape="square"
+                            />
                             <span className={styles.linescoreCode}>{row.code}</span>
                           </span>
                         </td>

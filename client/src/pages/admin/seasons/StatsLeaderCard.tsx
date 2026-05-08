@@ -1,4 +1,5 @@
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import styles from './StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
@@ -59,11 +60,12 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
         </span>
 
         <div className={styles.meta}>
-          {featured.team_logo && (
-            <img
-              src={featured.team_logo}
-              alt=""
-              className={styles.metaLogo}
+          {featured.team_code && (
+            <TeamLogo
+              logo={featured.team_logo}
+              code={featured.team_code}
+              size={16}
+              shape="square"
             />
           )}
           {featured.team_code && <span>{featured.team_code}</span>}

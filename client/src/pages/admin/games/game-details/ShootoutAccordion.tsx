@@ -3,6 +3,7 @@ import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import { formatPlayerName } from './formatUtils';
@@ -324,39 +325,27 @@ const ShootoutAccordion = ({
           {/* Header row — away always left, home always right */}
           <div className={styles.soAttemptHeaderRow}>
             <div className={styles.soAttemptColHeader}>
-              {leftInfo.logo ? (
-                <img
-                  src={leftInfo.logo}
-                  alt={leftInfo.code}
-                  className={styles.soAttemptColLogo}
-                />
-              ) : (
-                <span
-                  className={styles.soAttemptColLogoPlaceholder}
-                  style={{ background: leftInfo.primary, color: leftInfo.text }}
-                >
-                  {leftInfo.code.slice(0, 1)}
-                </span>
-              )}
+              <TeamLogo
+                logo={leftInfo.logo}
+                code={leftInfo.code}
+                primaryColor={leftInfo.primary}
+                textColor={leftInfo.text}
+                size={20}
+                shape="square"
+              />
               <span>{leftInfo.code}</span>
               {awayShootsFirst && <span className={styles.soFirstShooterBadge}>shoots first</span>}
             </div>
             <div className={[styles.soAttemptColHeader, styles.soAttemptColHeaderAway].join(' ')}>
               {!awayShootsFirst && <span className={styles.soFirstShooterBadge}>shoots first</span>}
-              {rightInfo.logo ? (
-                <img
-                  src={rightInfo.logo}
-                  alt={rightInfo.code}
-                  className={styles.soAttemptColLogo}
-                />
-              ) : (
-                <span
-                  className={styles.soAttemptColLogoPlaceholder}
-                  style={{ background: rightInfo.primary, color: rightInfo.text }}
-                >
-                  {rightInfo.code.slice(0, 1)}
-                </span>
-              )}
+              <TeamLogo
+                logo={rightInfo.logo}
+                code={rightInfo.code}
+                primaryColor={rightInfo.primary}
+                textColor={rightInfo.text}
+                size={20}
+                shape="square"
+              />
               <span>{rightInfo.code}</span>
             </div>
           </div>

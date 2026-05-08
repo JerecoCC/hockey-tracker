@@ -4,6 +4,7 @@ import Button from '@/components/Button/Button';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Card from '@/components/Card/Card';
 import Tooltip from '@/components/Tooltip/Tooltip';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
@@ -117,20 +118,14 @@ const GoalieStatsCard = ({
                 >
                   <td className={styles.goalieTdName}>
                     <span className={styles.goalieNameCell}>
-                      {teamLogo ? (
-                        <img
-                          src={teamLogo}
-                          alt={teamCode}
-                          className={styles.goalTeamLogo}
-                        />
-                      ) : (
-                        <span
-                          className={styles.goalTeamLogoPlaceholder}
-                          style={{ background: primaryColor, color: textColor }}
-                        >
-                          {teamCode?.slice(0, 1)}
-                        </span>
-                      )}
+                      <TeamLogo
+                        logo={teamLogo}
+                        code={teamCode ?? '?'}
+                        primaryColor={primaryColor}
+                        textColor={textColor}
+                        size={36}
+                        shape="square"
+                      />
                       <PlayerAvatar
                         photo={goalie.photo}
                         initials={goalie.last_name?.charAt(0) ?? '?'}

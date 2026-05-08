@@ -3,6 +3,7 @@ import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ListItem from '@/components/ListItem/ListItem';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup, { type LineupEntry } from '@/hooks/useGameLineup';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
@@ -115,15 +116,14 @@ const GameLineupsTab = ({
       variant="static"
       label={
         <span className={styles.accordionTeamLabel}>
-          {teamLogo ? (
-            <img
-              src={teamLogo}
-              alt={teamCode}
-              className={styles.accordionTeamLogo}
-            />
-          ) : (
-            <span className={styles.accordionTeamLogoPlaceholder}>{teamCode.slice(0, 3)}</span>
-          )}
+          <TeamLogo
+            logo={teamLogo ?? null}
+            code={teamCode}
+            primaryColor={primaryColor}
+            textColor={textColor}
+            size={24}
+            shape="square"
+          />
           {teamName}
           <span className={styles.accordionTeamCount}>({rosterEntries.length}/23)</span>
         </span>

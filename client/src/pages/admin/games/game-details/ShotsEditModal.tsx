@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
@@ -159,20 +160,14 @@ const ShotsEditModal = ({
             <tr key={row.key}>
               <td className={styles.tdTeam}>
                 <span className={styles.linescoreTeam}>
-                  {row.logo ? (
-                    <img
-                      src={row.logo}
-                      alt={row.code}
-                      className={styles.linescoreLogo}
-                    />
-                  ) : (
-                    <span
-                      className={styles.linescoreLogoPlaceholder}
-                      style={{ background: row.primary, color: row.text }}
-                    >
-                      {row.code?.slice(0, 1)}
-                    </span>
-                  )}
+                  <TeamLogo
+                    logo={row.logo}
+                    code={row.code}
+                    primaryColor={row.primary}
+                    textColor={row.text}
+                    size={32}
+                    shape="square"
+                  />
                   <span className={styles.linescoreCode}>{row.code}</span>
                 </span>
               </td>

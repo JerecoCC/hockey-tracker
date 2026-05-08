@@ -7,6 +7,7 @@ import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, CurrentPeriod } from '@/hooks/useGames';
 import type { GoalRecord } from '@/hooks/useGameGoals';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
@@ -130,20 +131,14 @@ const ScoringCard = ({
             className={styles.goalItem}
           >
             <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
-            {goal.team_logo ? (
-              <img
-                src={goal.team_logo}
-                alt={goal.team_code}
-                className={styles.goalTeamLogo}
-              />
-            ) : (
-              <span
-                className={styles.goalTeamLogoPlaceholder}
-                style={{ background: goal.team_primary_color, color: goal.team_text_color }}
-              >
-                {goal.team_code?.slice(0, 1)}
-              </span>
-            )}
+            <TeamLogo
+              logo={goal.team_logo}
+              code={goal.team_code ?? '?'}
+              primaryColor={goal.team_primary_color}
+              textColor={goal.team_text_color}
+              size={36}
+              shape="square"
+            />
             <PlayerAvatar
               photo={goal.scorer_photo}
               initials={goal.scorer_last_name?.charAt(0) ?? '?'}

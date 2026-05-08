@@ -4,6 +4,7 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
@@ -431,29 +432,6 @@ const RecordShotsBody = ({
     },
   ];
 
-  const renderTeamLogo = (
-    logo: string | null,
-    code: string,
-    primary: string,
-    text: string,
-    cls: string,
-    placeholder: string,
-  ) =>
-    logo ? (
-      <img
-        src={logo}
-        alt={code}
-        className={cls}
-      />
-    ) : (
-      <span
-        className={placeholder}
-        style={{ background: primary, color: text }}
-      >
-        {code?.slice(0, 1)}
-      </span>
-    );
-
   return (
     <div className={styles.shotsModalBody}>
       {!(isEndGame && period === 'SO') && (
@@ -469,14 +447,14 @@ const RecordShotsBody = ({
               className={styles.shotsTeamRow}
             >
               <span className={styles.shotsTeamInfo}>
-                {renderTeamLogo(
-                  row.logo,
-                  row.code,
-                  row.primaryColor,
-                  row.textColor,
-                  styles.shotsTeamLogo,
-                  styles.shotsTeamLogoPlaceholder,
-                )}
+                <TeamLogo
+                  logo={row.logo}
+                  code={row.code}
+                  primaryColor={row.primaryColor}
+                  textColor={row.textColor}
+                  size={32}
+                  shape="circle"
+                />
                 <span className={styles.shotsTeamName}>{row.name}</span>
               </span>
               <div className={styles.shotsFieldWrap}>
@@ -522,14 +500,14 @@ const RecordShotsBody = ({
                 value: side,
                 label: (
                   <>
-                    {renderTeamLogo(
-                      logo,
-                      code,
-                      primary,
-                      text,
-                      styles.teamSegmentLogo,
-                      styles.teamSegmentLogoPlaceholder,
-                    )}
+                    <TeamLogo
+                      logo={logo}
+                      code={code}
+                      primaryColor={primary}
+                      textColor={text}
+                      size={20}
+                      shape="square"
+                    />
                     {code}
                   </>
                 ),
@@ -569,14 +547,14 @@ const RecordShotsBody = ({
                   .join(' ')}
               >
                 <span className={styles.goalieNameCell}>
-                  {renderTeamLogo(
-                    logo,
-                    code,
-                    primary,
-                    text,
-                    styles.goalTeamLogo,
-                    styles.goalTeamLogoPlaceholder,
-                  )}
+                  <TeamLogo
+                    logo={logo}
+                    code={code}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={36}
+                    shape="square"
+                  />
                   {goalie.photo ? (
                     <img
                       src={goalie.photo}

@@ -9,6 +9,7 @@ import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import Modal from '@/components/Modal/Modal';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import {
   type PlayoffSeriesRecord,
   type SeriesGame,
@@ -563,17 +564,12 @@ const BracketSlot = ({
           .filter(Boolean)
           .join(' ')}
       >
-        {series.away_team_logo ? (
-          <img
-            src={series.away_team_logo}
-            alt={series.away_team_code}
-            className={styles.slotTeamLogo}
-          />
-        ) : (
-          <span className={styles.slotTeamLogoPlaceholder}>
-            {series.away_team_code.slice(0, 3)}
-          </span>
-        )}
+        <TeamLogo
+          logo={series.away_team_logo}
+          code={series.away_team_code}
+          size={20}
+          shape="square"
+        />
         <span className={styles.slotTeamName}>{series.away_team_name}</span>
         <WinDots
           teamId={series.away_team_id}
@@ -590,17 +586,12 @@ const BracketSlot = ({
           .filter(Boolean)
           .join(' ')}
       >
-        {series.home_team_logo ? (
-          <img
-            src={series.home_team_logo}
-            alt={series.home_team_code}
-            className={styles.slotTeamLogo}
-          />
-        ) : (
-          <span className={styles.slotTeamLogoPlaceholder}>
-            {series.home_team_code.slice(0, 3)}
-          </span>
-        )}
+        <TeamLogo
+          logo={series.home_team_logo}
+          code={series.home_team_code}
+          size={20}
+          shape="square"
+        />
         <span className={styles.slotTeamName}>{series.home_team_name}</span>
         <WinDots
           teamId={series.home_team_id}
