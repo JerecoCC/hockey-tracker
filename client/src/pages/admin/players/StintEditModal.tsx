@@ -192,6 +192,7 @@ const StintEditModal = ({
           control={control}
           name="photo"
           label="Player Photo (this stint)"
+          shape="circle"
           disabled={isSubmitting}
         />
         <div className={styles.jerseyDateRow}>

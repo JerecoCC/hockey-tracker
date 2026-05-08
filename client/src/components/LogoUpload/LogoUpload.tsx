@@ -12,10 +12,13 @@ interface Props {
   rules?: RegisterOptions;
   disabled?: boolean;
   autoFocus?: boolean;
+  /** `'square'` (default) for logos; `'circle'` for player photos. */
+  shape?: 'square' | 'circle';
 }
 
 const LogoUpload = (props: Props) => {
-  const { label = 'Add Logo', control, name, rules, disabled, autoFocus } = props;
+  const { label = 'Add Logo', control, name, rules, disabled, autoFocus, shape = 'square' } = props;
+  const isCircle = shape === 'circle';
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
   const { field } = useController({ control: ctrl, name, rules });
@@ -97,7 +100,7 @@ const LogoUpload = (props: Props) => {
           <img
             src={displayUrl}
             alt="Preview"
-            className={styles.logoPreview}
+            className={`${styles.logoPreview} ${isCircle ? styles.logoPreviewCircle : ''}`}
           />
           {!disabled && (
             <Button
@@ -115,7 +118,7 @@ const LogoUpload = (props: Props) => {
         <label
           ref={labelRef}
           tabIndex={disabled ? -1 : 0}
-          className={`${styles.fileLabel} ${disabled ? styles.fileLabelDisabled : ''}`}
+          className={`${styles.fileLabel} ${isCircle ? styles.fileLabelCircle : ''} ${disabled ? styles.fileLabelDisabled : ''}`}
           onKeyDown={(e: KeyboardEvent<HTMLLabelElement>) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();

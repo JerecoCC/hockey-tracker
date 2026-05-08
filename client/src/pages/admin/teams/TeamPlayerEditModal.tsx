@@ -129,6 +129,7 @@ const TeamPlayerEditModal = ({
           control={control}
           name="photo"
           label="Player Photo"
+          shape="circle"
           disabled={isSubmitting}
           autoFocus
         />

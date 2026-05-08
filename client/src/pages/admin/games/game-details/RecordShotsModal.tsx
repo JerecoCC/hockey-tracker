@@ -3,6 +3,7 @@ import type { Control, FieldArrayWithId } from 'react-hook-form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
@@ -555,20 +556,13 @@ const RecordShotsBody = ({
                     size={36}
                     shape="square"
                   />
-                  {goalie.photo ? (
-                    <img
-                      src={goalie.photo}
-                      alt=""
-                      className={styles.goalScorerPhoto}
-                    />
-                  ) : (
-                    <span
-                      className={styles.goalScorerPhotoPlaceholder}
-                      style={{ background: primary, color: text }}
-                    >
-                      {goalie.last_name?.charAt(0)}
-                    </span>
-                  )}
+                  <PlayerAvatar
+                    photo={goalie.photo}
+                    initials={goalie.last_name?.charAt(0) ?? '?'}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={32}
+                  />
                   <div className={styles.goalInfo}>
                     {goalie.jersey_number != null && (
                       <span className={styles.goalAssists}>#{goalie.jersey_number}</span>

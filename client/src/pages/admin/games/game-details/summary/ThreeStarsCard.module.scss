@@ -43,6 +43,10 @@
 }
 
 .starTeam {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
   font-size: $font-xs;
   color: $text-dim;
 }

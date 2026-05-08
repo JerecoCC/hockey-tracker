@@ -40,6 +40,10 @@
   }
 }
 
+.fileLabelCircle {
+  border-radius: 50%;
+}
+
 .fileLabelHint {
   font-size: 9px;
   font-weight: 400;
@@ -60,10 +64,17 @@
 .logoPreview {
   width: 112px;
   height: 112px;
-  object-fit: contain;
+  object-fit: cover;
+  object-position: top;
   border-radius: $radius-md;
   border: 1px solid $border;
   background: $bg-input;
+}
+
+.logoPreviewCircle {
+  border-radius: 50%;
+  object-fit: cover;
+  object-position: top;
 }
 
 .clearBtn {

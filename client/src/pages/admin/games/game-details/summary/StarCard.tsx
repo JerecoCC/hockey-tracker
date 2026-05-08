@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import Icon from '@/components/Icon/Icon';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import styles from './ThreeStarsCard.module.scss';
 
@@ -13,6 +15,8 @@ interface Props {
   primaryColor: string;
   textColor: string;
   teamCode: string;
+  teamLogo?: string | null;
+  teamName?: string;
   stats: { goals: number; assists: number };
   goalieStatRecord?: { shots_against: number; saves: number } | null;
 }
@@ -26,13 +30,14 @@ const StarCard = ({
   primaryColor,
   textColor,
   teamCode,
+  teamLogo,
+  teamName,
   stats,
   goalieStatRecord,
 }: Props) => {
   const nameLabel = `${player.first_name} ${player.last_name}`;
   const subLabel = [
     player.jersey_number != null ? `#${player.jersey_number}` : null,
-    teamCode,
     player.position ?? null,
   ]
     .filter(Boolean)
@@ -64,7 +69,18 @@ const StarCard = ({
         {nameLabel}
       </Link>
 
-      <span className={styles.starTeam}>{subLabel}</span>
+      <span className={styles.starTeam}>
+        <Tooltip text={teamName ?? teamCode}>
+          <TeamLogo
+            logo={teamLogo}
+            code={teamCode}
+            primaryColor={primaryColor}
+            textColor={textColor}
+            size={24}
+          />
+        </Tooltip>
+        {subLabel && <span>{subLabel}</span>}
+      </span>
 
       {player.position === 'G' ? (
         goalieStatRecord ? (
