@@ -5,6 +5,7 @@
 // Default: normal in-place card appearance.
 .scoreboardCard {
   overflow: hidden;
+  margin-bottom: $space-lg;
 }
 
 // Entrance animation: card slides down from just above its final position and
@@ -38,6 +39,7 @@
   border-left: none !important;
   border-right: none !important;
   border-top: none !important;
+  margin-bottom: 0;
   // Shadow separates the pinned card from content scrolling beneath it
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
   // Slide + fade entrance
@@ -286,14 +288,11 @@
   color: $text-dim;
 }
 
-// When the card is stuck, the team colour fills the background so both text
-// elements need a contrasting shadow to stay legible against any team colour.
+// The team code (teamSubInfo) also switches to the team's own text colour.
 .scoreboardCardStuck {
-  .teamFullName,
   .teamSubInfo {
-    text-shadow:
-      0 1px 3px rgba(0, 0, 0, 0.7),
-      0 0 8px rgba(0, 0, 0, 0.4);
+    color: var(--team-text);
+    font-weight: 500;
   }
 }
 

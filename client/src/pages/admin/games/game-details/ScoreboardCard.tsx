@@ -93,10 +93,15 @@ const ScoreboardCard = ({
     const sentinel = sentinelRef.current;
     if (!sentinel || !portalContainer) return;
 
-    const headerHeight = () => (window.innerWidth <= 768 ? 88 : 52);
+    const isMobile = () => window.innerWidth <= 768;
+    const headerHeight = () => (isMobile() ? 88 : 52);
     const scrollEl = getScrollParent(sentinel);
 
     const check = () => {
+      if (isMobile()) {
+        setIsStuck(false);
+        return;
+      }
       const rect = sentinel.getBoundingClientRect();
       setIsStuck(rect.top <= headerHeight());
     };
