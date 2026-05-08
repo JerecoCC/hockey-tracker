@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/Badge/Badge';
-import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import { useScoreboardPortalContainer } from '@/context/ScoreboardPortalContext';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import styles from './ScoreboardCard.module.scss';
 
@@ -47,6 +48,17 @@ interface Props {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+// Walk up the DOM to find the nearest scrollable ancestor.
+const getScrollParent = (el: HTMLElement): HTMLElement => {
+  let p = el.parentElement;
+  while (p) {
+    const { overflowY } = getComputedStyle(p);
+    if (overflowY === 'auto' || overflowY === 'scroll') return p;
+    p = p.parentElement;
+  }
+  return document.documentElement;
+};
+
 const ScoreboardCard = ({
   game,
   isFinal,
@@ -57,10 +69,53 @@ const ScoreboardCard = ({
   leagueId,
 }: Props) => {
   const navigate = useNavigate();
+  const portalContainer = useScoreboardPortalContainer();
 
-  return (
+  // sentinelRef: zero-height div that stays in-place at all times so we can
+  // track where the card's natural top is relative to the viewport.
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  // wrapperRef: wraps the Card when rendered in-place; used to measure height.
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const [isStuck, setIsStuck] = useState(false);
+  const [cardHeight, setCardHeight] = useState(0);
+
+  // Track card height so the placeholder keeps the layout intact while portaled.
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const ro = new ResizeObserver(() => setCardHeight(wrapper.offsetHeight));
+    ro.observe(wrapper);
+    return () => ro.disconnect();
+  }, [isStuck]); // re-run when card mounts / unmounts (isStuck toggles)
+
+  // Detect when the sentinel's top edge passes under the PageHeader.
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel || !portalContainer) return;
+
+    const headerHeight = () => (window.innerWidth <= 768 ? 88 : 52);
+    const scrollEl = getScrollParent(sentinel);
+
+    const check = () => {
+      const rect = sentinel.getBoundingClientRect();
+      setIsStuck(rect.top <= headerHeight());
+    };
+
+    scrollEl.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check, { passive: true });
+    check(); // evaluate immediately on mount
+
+    return () => {
+      scrollEl.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, [portalContainer]);
+
+  const card = (
     <Card
-      className={styles.scoreboardCard}
+      className={[styles.scoreboardCard, isStuck ? styles.scoreboardCardStuck : '']
+        .filter(Boolean)
+        .join(' ')}
       style={{ padding: 0 }}
     >
       <div className={styles.scoreboard}>
@@ -261,6 +316,28 @@ const ScoreboardCard = ({
         </div>
       </div>
     </Card>
+  );
+
+  return (
+    <>
+      {/* Sentinel stays in the natural position at all times for scroll tracking */}
+      <div
+        ref={sentinelRef}
+        style={{ height: 0 }}
+      />
+      {isStuck ? (
+        <>
+          {/* Placeholder preserves the space the card occupied so content below doesn't jump */}
+          <div
+            style={{ height: cardHeight }}
+            aria-hidden="true"
+          />
+          {portalContainer && createPortal(card, portalContainer)}
+        </>
+      ) : (
+        <div ref={wrapperRef}>{card}</div>
+      )}
+    </>
   );
 };
 

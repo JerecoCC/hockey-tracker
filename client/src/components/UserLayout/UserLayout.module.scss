@@ -70,6 +70,18 @@ $bg-page: #0f172a;
   }
 }
 
+// ── Scoreboard portal slot ─────────────────────────────────────────────
+.scoreboardSlot {
+  flex-shrink: 0;
+  position: sticky;
+  top: 52px;
+  z-index: 4;
+
+  @media (max-width: 768px) {
+    top: 88px;
+  }
+}
+
 .main {
   width: 100%;
   max-width: $max-content-width;

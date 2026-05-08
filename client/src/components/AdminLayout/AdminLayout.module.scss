@@ -70,6 +70,21 @@ $bg-page: #0f172a;
   }
 }
 
+// ── Scoreboard portal slot ─────────────────────────────────────────────
+// ScoreboardCard from game-detail pages portals into this div so it lives
+// outside <main> and is never clipped by max-width / padding.
+// The slot itself is sticky, so the card it contains inherits the behaviour.
+.scoreboardSlot {
+  flex-shrink: 0;
+  position: sticky;
+  top: 52px; // flush under the PageHeader title row (52 px)
+  z-index: 4; // below PageHeader (z-index: 5)
+
+  @media (max-width: 768px) {
+    top: 88px; // 52 px title row + ~36 px mobile tab strip
+  }
+}
+
 .main {
   width: 100%;
   max-width: $max-content-width;
