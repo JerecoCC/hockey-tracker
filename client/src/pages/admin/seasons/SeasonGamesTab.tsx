@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
 import GameListItem from './GameListItem';
 import Select from '@/components/Select/Select';
+import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
 import type { SelectOption } from '@/components/Select/Select';
 import BulkCreateGamesModal from './BulkCreateGamesModal';
@@ -108,16 +109,31 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
     code: t.code,
   }));
 
+  const teamFilterOptions: MultiSelectOption[] = seasonTeams.map((t) => ({
+    value: t.id,
+    label: t.name,
+    logo: t.logo,
+    code: t.code,
+  }));
+
   // ── Filter state (with sessionStorage persistence) ────────────────────────
   const gameTypeKey = `season-games-type:${seasonId}`;
   const monthKey = `season-games-month:${seasonId}`;
   const statusKey = `season-games-status:${seasonId}`;
+  const teamKey = `season-games-team:${seasonId}`;
 
   const [gameTypeFilter, setGameTypeFilter] = useState(
     () => sessionStorage.getItem(gameTypeKey) ?? '',
   );
   const [monthFilter, setMonthFilter] = useState(() => sessionStorage.getItem(monthKey) ?? '');
   const [statusFilter, setStatusFilter] = useState(() => sessionStorage.getItem(statusKey) ?? '');
+  const [teamFilter, setTeamFilter] = useState<string[]>(() => {
+    try {
+      return JSON.parse(sessionStorage.getItem(teamKey) ?? '[]');
+    } catch {
+      return [];
+    }
+  });
 
   useEffect(() => {
     sessionStorage.setItem(gameTypeKey, gameTypeFilter);
@@ -130,6 +146,10 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
   useEffect(() => {
     sessionStorage.setItem(statusKey, statusFilter);
   }, [statusKey, statusFilter]);
+
+  useEffect(() => {
+    sessionStorage.setItem(teamKey, JSON.stringify(teamFilter));
+  }, [teamKey, teamFilter]);
 
   /** Month options derived from the fetched games (only months that have games). */
   const monthOptions = useMemo<SelectOption[]>(() => {
@@ -167,9 +187,15 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
       if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
       if (monthFilter && (g.scheduled_at?.slice(0, 7) ?? '') !== monthFilter) return false;
       if (statusFilter && g.status !== (statusFilter as GameStatus)) return false;
+      if (
+        teamFilter.length > 0 &&
+        !teamFilter.includes(g.home_team.id) &&
+        !teamFilter.includes(g.away_team.id)
+      )
+        return false;
       return true;
     });
-  }, [games, gameTypeFilter, monthFilter, statusFilter]);
+  }, [games, gameTypeFilter, monthFilter, statusFilter, teamFilter]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
@@ -233,6 +259,16 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
             options={STATUS_FILTER_OPTIONS}
             onChange={setStatusFilter}
           />
+          <div className={styles.teamFilter}>
+            <MultiSelect
+              value={teamFilter}
+              options={teamFilterOptions}
+              placeholder="All Teams"
+              emptyMessage="No teams in this season"
+              onChange={setTeamFilter}
+              searchable
+            />
+          </div>
         </div>
 
         {loading ? (

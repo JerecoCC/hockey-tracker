@@ -13,6 +13,12 @@
   }
 }
 
+// Team MultiSelect: wider so pills have room to breathe
+.teamFilter {
+  flex: 2 0 200px;
+  max-width: 400px;
+}
+
 .list {
   list-style: none;
   padding: 0;

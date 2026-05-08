@@ -1,0 +1,247 @@
+import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import cn from 'classnames';
+import Icon from '../Icon/Icon';
+import styles from './MultiSelect.module.scss';
+
+export type MultiSelectOption = {
+  value: string;
+  label: string;
+  logo?: string | null;
+  code?: string;
+};
+
+interface Props {
+  value: string[];
+  options: MultiSelectOption[];
+  placeholder?: string;
+  /** Message shown inside the dropdown when options is empty. */
+  emptyMessage?: string;
+  onChange: (values: string[]) => void;
+  disabled?: boolean;
+  /** When true the trigger renders with a red error border. */
+  error?: boolean;
+  /** When true, an inline text input filters options as the user types. */
+  searchable?: boolean;
+  /** Moves focus to the trigger on mount. */
+  autoFocus?: boolean;
+}
+
+const MultiSelect = ({
+  value,
+  options,
+  placeholder = '— Select —',
+  emptyMessage = 'No options available',
+  onChange,
+  disabled = false,
+  error = false,
+  searchable = false,
+  autoFocus = false,
+}: Props) => {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const [focusedIdx, setFocusedIdx] = useState(-1);
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLDivElement>(null);
+  const searchRef = useRef<HTMLInputElement>(null);
+  const menuId = useId();
+
+  useEffect(() => {
+    if (autoFocus) triggerRef.current?.focus();
+  }, [autoFocus]);
+
+  const measureMenu = () => {
+    const r = triggerRef.current?.getBoundingClientRect();
+    if (!r) return;
+    setMenuStyle({ top: r.bottom + 4, left: r.left, width: r.width });
+  };
+
+  const closeMenu = () => {
+    setOpen(false);
+    setQuery('');
+    setFocusedIdx(-1);
+  };
+
+  const openMenu = () => {
+    if (disabled) return;
+    measureMenu();
+    setOpen(true);
+    if (searchable) setTimeout(() => searchRef.current?.focus(), 0);
+  };
+
+  const toggle = (optValue: string) => {
+    onChange(value.includes(optValue) ? value.filter((v) => v !== optValue) : [...value, optValue]);
+  };
+
+  const visibleOptions =
+    searchable && query
+      ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
+      : options;
+
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      closeMenu();
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (!open) {
+        openMenu();
+        return;
+      }
+      setFocusedIdx((i) =>
+        e.key === 'ArrowDown' ? Math.min(i + 1, visibleOptions.length - 1) : Math.max(i - 1, 0),
+      );
+    } else if (e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      if (!open) {
+        openMenu();
+      } else if (focusedIdx >= 0 && visibleOptions[focusedIdx]) {
+        toggle(visibleOptions[focusedIdx].value);
+      }
+    } else if (e.key === 'Backspace' && searchable && !query && value.length > 0) {
+      onChange(value.slice(0, -1));
+    }
+  };
+
+  const selectedOptions = value
+    .map((v) => options.find((o) => o.value === v))
+    .filter(Boolean) as MultiSelectOption[];
+
+  return (
+    <div
+      className={styles.wrapper}
+      ref={wrapperRef}
+      onBlur={(e) => {
+        if (!wrapperRef.current?.contains(e.relatedTarget as Node)) closeMenu();
+      }}
+    >
+      <div
+        ref={triggerRef}
+        className={cn(
+          styles.trigger,
+          open && styles.triggerOpen,
+          disabled && styles.triggerDisabled,
+          error && !open && styles.triggerError,
+        )}
+        tabIndex={disabled ? -1 : 0}
+        role="combobox"
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-controls={menuId}
+        onClick={() => (open ? closeMenu() : openMenu())}
+        onKeyDown={handleKeyDown}
+      >
+        <div className={styles.pills}>
+          {selectedOptions.map((opt) => (
+            <span
+              key={opt.value}
+              className={styles.pill}
+            >
+              <span className={styles.pillLabel}>{opt.label}</span>
+              <button
+                type="button"
+                className={styles.pillRemove}
+                tabIndex={-1}
+                disabled={disabled}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggle(opt.value);
+                }}
+                aria-label={`Remove ${opt.label}`}
+              >
+                <Icon
+                  name="close"
+                  size="0.75em"
+                />
+              </button>
+            </span>
+          ))}
+          {searchable && open ? (
+            <input
+              ref={searchRef}
+              type="text"
+              className={styles.searchInput}
+              value={query}
+              placeholder={selectedOptions.length === 0 ? placeholder : 'Search…'}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setFocusedIdx(-1);
+              }}
+              onClick={(e) => e.stopPropagation()}
+              onKeyDown={handleKeyDown}
+              disabled={disabled}
+            />
+          ) : selectedOptions.length === 0 ? (
+            <span className={styles.placeholder}>{placeholder}</span>
+          ) : null}
+        </div>
+        <Icon
+          name="expand_more"
+          size="1em"
+          className={cn(styles.caret, open && styles.caretOpen)}
+        />
+      </div>
+
+      {open && (
+        <ul
+          id={menuId}
+          role="listbox"
+          aria-multiselectable="true"
+          className={styles.menu}
+          style={menuStyle}
+        >
+          {visibleOptions.length === 0 ? (
+            <li className={styles.emptyMessage}>
+              {searchable && query ? `No results for "${query}"` : emptyMessage}
+            </li>
+          ) : (
+            visibleOptions.map((opt, idx) => {
+              const isSelected = value.includes(opt.value);
+              return (
+                <li
+                  key={opt.value}
+                  role="option"
+                  aria-selected={isSelected}
+                >
+                  <button
+                    type="button"
+                    tabIndex={-1}
+                    className={cn(
+                      styles.option,
+                      isSelected && styles.optionSelected,
+                      focusedIdx === idx && styles.optionFocused,
+                    )}
+                    onClick={() => toggle(opt.value)}
+                    onMouseEnter={() => setFocusedIdx(idx)}
+                  >
+                    <span
+                      className={cn(styles.optionCheck, isSelected && styles.optionCheckSelected)}
+                    >
+                      {isSelected && (
+                        <Icon
+                          name="check"
+                          size="0.7em"
+                        />
+                      )}
+                    </span>
+                    {opt.logo ? (
+                      <img
+                        src={opt.logo}
+                        alt=""
+                        className={styles.optionLogo}
+                      />
+                    ) : opt.code ? (
+                      <span className={styles.optionNoLogo}>{opt.code.slice(0, 1)}</span>
+                    ) : null}
+                    {opt.label}
+                  </button>
+                </li>
+              );
+            })
+          )}
+        </ul>
+      )}
+    </div>
+  );
+};
+
+export default MultiSelect;
