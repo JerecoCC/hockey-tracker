@@ -44,11 +44,19 @@ const MultiSelect = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
   const menuId = useId();
 
   useEffect(() => {
     if (autoFocus) triggerRef.current?.focus();
   }, [autoFocus]);
+
+  // Scroll the keyboard-focused option into view on arrow-key navigation.
+  useEffect(() => {
+    if (!open || focusedIdx < 0 || !menuRef.current) return;
+    const items = menuRef.current.querySelectorAll<HTMLElement>('[role="option"]');
+    items[focusedIdx]?.scrollIntoView({ block: 'nearest' });
+  }, [focusedIdx, open]);
 
   const measureMenu = () => {
     const r = triggerRef.current?.getBoundingClientRect();
@@ -183,6 +191,7 @@ const MultiSelect = ({
 
       {open && (
         <ul
+          ref={menuRef}
           id={menuId}
           role="listbox"
           aria-multiselectable="true"

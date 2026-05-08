@@ -12,6 +12,8 @@ interface Props {
   onClose: () => void;
   children: ReactNode;
   size?: 'md' | 'lg' | 'xl';
+  /** When true, clicking the backdrop overlay does not close the modal. */
+  disableBackdropClose?: boolean;
 
   // ── Built-in footer ──────────────────────────────────────────────
   /** Called when the confirm button is clicked (non-form usage). */
@@ -47,6 +49,7 @@ const Modal = (props: Props) => {
     onClose,
     children,
     size = 'md',
+    disableBackdropClose = false,
     onConfirm,
     confirmLabel = 'Save',
     confirmIcon,
@@ -117,7 +120,7 @@ const Modal = (props: Props) => {
   return (
     <div
       className={`${styles.overlay} ${isClosing ? styles.closingOverlay : ''}`}
-      onClick={handleClose}
+      onClick={disableBackdropClose ? undefined : handleClose}
     >
       <div
         className={`${styles.modal}${modalSizeClass} ${isClosing ? styles.closing : ''}`}

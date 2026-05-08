@@ -46,6 +46,7 @@ const Select = (props: Props) => {
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const menuRef = useRef<HTMLUListElement>(null);
   const menuId = useId();
 
   /** Measure the trigger and compute fixed-position coordinates for the menu. */
@@ -82,6 +83,14 @@ const Select = (props: Props) => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  // Scroll the active option into view when the value changes while the menu
+  // is open (arrow-key navigation) or when the menu first opens.
+  useEffect(() => {
+    if (!open || !menuRef.current) return;
+    const active = menuRef.current.querySelector('[aria-selected="true"]') as HTMLElement | null;
+    active?.scrollIntoView({ block: 'nearest' });
+  }, [value, open]);
 
   // Options visible in the dropdown — when searching, dividers are stripped and
   // remaining selectable options are filtered by the query text.
@@ -226,6 +235,7 @@ const Select = (props: Props) => {
 
       {open && (
         <ul
+          ref={menuRef}
           id={menuId}
           role="listbox"
           className={styles.menu}

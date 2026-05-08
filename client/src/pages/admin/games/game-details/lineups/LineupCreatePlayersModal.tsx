@@ -229,31 +229,18 @@ const LineupCreatePlayersModal = ({
     // ── Duplicate validation ──────────────────────────────────────────────────
     const errors: string[] = [];
 
-    // Normalise existing roster for quick lookup
-    const rosterNames = new Set(
-      existingRoster.map(
-        (r) => `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
-      ),
-    );
+    // Normalise existing roster jerseys for quick lookup.
+    // Names are intentionally not checked — players can legitimately share the
+    // same first and last name (e.g. namesakes, common names).
     const rosterJerseys = new Set(
       existingRoster.filter((r) => r.jersey_number != null).map((r) => r.jersey_number!),
     );
 
-    // Also track within the form itself to catch row-vs-row duplicates
-    const formNames = new Set<string>();
+    // Track jersey numbers within the form to catch row-vs-row duplicates.
     const formJerseys = new Set<number>();
 
     for (const row of data.players) {
-      const nameKey = `${row.first_name.trim().toLowerCase()} ${row.last_name.trim().toLowerCase()}`;
       const jerseyNum = row.jersey_number !== '' ? Number(row.jersey_number) : null;
-
-      if (rosterNames.has(nameKey)) {
-        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" is already in the lineup.`);
-      } else if (formNames.has(nameKey)) {
-        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" appears more than once.`);
-      } else {
-        formNames.add(nameKey);
-      }
 
       if (jerseyNum != null) {
         if (rosterJerseys.has(jerseyNum)) {
@@ -352,6 +339,7 @@ const LineupCreatePlayersModal = ({
         title={`Create Players for ${teamName}`}
         size="lg"
         onClose={handleClose}
+        disableBackdropClose
         confirmLabel={
           isSubmitting ? 'Saving…' : `Save ${fields.length} Player${fields.length !== 1 ? 's' : ''}`
         }
