@@ -122,9 +122,9 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
         >
           {/* Column headers */}
           <div className={styles.headerRow}>
+            <span className={styles.headerCell}>Position</span>
             <span className={styles.headerCell}>First Name</span>
             <span className={styles.headerCell}>Last Name</span>
-            <span className={styles.headerCell}>Position</span>
             <span className={styles.headerCell}>Shoots</span>
             <span />
           </div>
@@ -136,23 +136,6 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
                 className={styles.playerRow}
               >
                 <Field
-                  control={control}
-                  name={`players.${index}.first_name`}
-                  required
-                  rules={{ required: true }}
-                  placeholder="First name"
-                  disabled={isSubmitting}
-                  autoFocus={index === 0}
-                />
-                <Field
-                  control={control}
-                  name={`players.${index}.last_name`}
-                  required
-                  rules={{ required: true }}
-                  placeholder="Last name"
-                  disabled={isSubmitting}
-                />
-                <Field
                   type="select"
                   control={control}
                   name={`players.${index}.position`}
@@ -160,6 +143,23 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
                   required
                   rules={{ required: true }}
                   placeholder="Position"
+                  disabled={isSubmitting}
+                  autoFocus={index === 0}
+                />
+                <Field
+                  control={control}
+                  name={`players.${index}.first_name`}
+                  required
+                  rules={{ required: true }}
+                  placeholder="First name"
+                  disabled={isSubmitting}
+                />
+                <Field
+                  control={control}
+                  name={`players.${index}.last_name`}
+                  required
+                  rules={{ required: true }}
+                  placeholder="Last name"
                   disabled={isSubmitting}
                 />
                 <Field

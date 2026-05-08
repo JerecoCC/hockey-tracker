@@ -353,9 +353,9 @@ const LineupCreatePlayersModal = ({
         >
           <div className={styles.headerRow}>
             <span className={styles.headerCell}>#</span>
-            <span className={styles.headerCell}>Last Name</span>
-            <span className={styles.headerCell}>First Name</span>
             <span className={styles.headerCell}>Position</span>
+            <span className={styles.headerCell}>First Name</span>
+            <span className={styles.headerCell}>Last Name</span>
             <span />
           </div>
 
@@ -383,11 +383,13 @@ const LineupCreatePlayersModal = ({
                       transform={(val) => val.replace(/[^0-9]/g, '').slice(0, 2)}
                     />
                     <Field
+                      type="select"
                       control={control}
-                      name={`players.${index}.last_name`}
+                      name={`players.${index}.position`}
+                      options={getPositionOptions(index)}
                       required
                       rules={{ required: true }}
-                      placeholder="Last name"
+                      placeholder="Position"
                       disabled={isSubmitting}
                     />
                     <Field
@@ -399,13 +401,11 @@ const LineupCreatePlayersModal = ({
                       disabled={isSubmitting}
                     />
                     <Field
-                      type="select"
                       control={control}
-                      name={`players.${index}.position`}
-                      options={getPositionOptions(index)}
+                      name={`players.${index}.last_name`}
                       required
                       rules={{ required: true }}
-                      placeholder="Position"
+                      placeholder="Last name"
                       disabled={isSubmitting}
                     />
                     <button

@@ -23,11 +23,19 @@ const isoToETHHMM = (iso: string): string => {
 };
 
 /**
- * Treats an "HH:mm" string as Eastern Time on the given base date and returns
- * a UTC ISO string. Defaults to today when no base date is provided.
+ * Treats an "HH:mm" string as Eastern Time on the given ET calendar date and
+ * returns a UTC ISO string.
+ *
+ * @param hhmm      - 24-hour time string, e.g. "22:12" or "00:49"
+ * @param etDateStr - ET calendar date as "YYYY-MM-DD". Defaults to today in ET
+ *                    when omitted. Always pass the game's scheduled date so that
+ *                    times are anchored to the correct day regardless of when
+ *                    the edit modal is opened.
  */
-const etHHMMtoISO = (hhmm: string, base: Date = new Date()): string => {
-  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(base);
+const etHHMMtoISO = (hhmm: string, etDateStr?: string): string => {
+  const etDate =
+    etDateStr ??
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
   const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
   const tzName =
     new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
@@ -35,6 +43,13 @@ const etHHMMtoISO = (hhmm: string, base: Date = new Date()): string => {
       .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
   const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
   return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
+};
+
+/** Advances a "YYYY-MM-DD" string by one calendar day. */
+const nextETDate = (etDateStr: string): string => {
+  const [y, m, d] = etDateStr.split('-').map(Number);
+  const next = new Date(y, m - 1, d + 1); // local Date arithmetic — no timezone ambiguity
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
 };
 
 type FormValues = {
@@ -86,19 +101,23 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
   }, [open, game, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
-    const startISO = data.time_start ? etHHMMtoISO(data.time_start) : null;
+    // Anchor all times to the game's scheduled ET date so edits made on a
+    // different day don't corrupt the stored timestamps.
+    const etBase = data.scheduled_date || undefined;
+
+    const startISO = data.time_start ? etHHMMtoISO(data.time_start, etBase) : null;
 
     // If the end time HH:mm is earlier than the start time HH:mm, the game ran
-    // past midnight — compute end time using the day after the start date.
+    // past midnight — compute end time on the next ET calendar day.
     let endISO: string | null = null;
     if (data.time_end) {
       const isPastMidnight = !!data.time_start && data.time_end < data.time_start;
-      if (isPastMidnight && startISO) {
-        const nextDay = new Date(startISO);
-        nextDay.setDate(nextDay.getDate() + 1);
-        endISO = etHHMMtoISO(data.time_end, nextDay);
+      if (isPastMidnight) {
+        // Use the ET date string directly to avoid browser-timezone issues with
+        // Date.setDate() / Date.getDate() operating in local time.
+        endISO = etHHMMtoISO(data.time_end, etBase ? nextETDate(etBase) : undefined);
       } else {
-        endISO = etHHMMtoISO(data.time_end);
+        endISO = etHHMMtoISO(data.time_end, etBase);
       }
     }
 
