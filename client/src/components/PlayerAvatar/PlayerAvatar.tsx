@@ -55,7 +55,7 @@ const PlayerAvatar = ({
 
   const boxShadow = ringColor ? `0 0 0 2px ${ringColor}` : undefined;
 
-  const wrapperStyle = { width: size, height: size, background, boxShadow };
+  const wrapperStyle = { width: size, height: size, background, boxShadow, '--avatar-size': size };
 
   return (
     <span

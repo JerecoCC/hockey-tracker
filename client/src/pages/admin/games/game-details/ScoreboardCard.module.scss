@@ -289,10 +289,19 @@
 }
 
 // The team code (teamSubInfo) also switches to the team's own text colour.
+// A shadow is applied only when the JS-computed contrast ratio is too low
+// (--team-text-shadow is 'transparent' when contrast is sufficient).
 .scoreboardCardStuck {
-  .teamSubInfo {
-    color: var(--team-text);
-    font-weight: 500;
+  .teamInfo {
+    .teamSubInfo {
+      color: var(--team-text);
+      font-weight: 500;
+    }
+
+    .teamFullName,
+    .teamSubInfo {
+      text-shadow: 0 1px 4px var(--team-text-shadow);
+    }
   }
 }
 
