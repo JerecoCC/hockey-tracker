@@ -9,10 +9,10 @@
 }
 
 .uploadArea {
-  // Height drives the size; width is derived from the hero aspect ratio (1080 × 980).
+  // Height drives the size; width is derived from the hero aspect ratio (1440 × 1307).
   // This keeps the preview proportional AND prevents the modal from scrolling.
   height: 48vh;
-  width: calc(48vh * (1080 / 980));
+  width: calc(48vh * (1440 / 1307));
   max-width: 100%;
   flex-shrink: 0;
   border-radius: $radius-md;

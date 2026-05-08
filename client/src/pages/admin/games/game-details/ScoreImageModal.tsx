@@ -7,18 +7,19 @@ import styles from './ScoreImageModal.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// Instagram Stories: 1080 × 1920  (9:16)
-const W = 1080;
-const H = 1920;
+// Instagram Stories – Samsung S25 Ultra: 1440 × 2560  (9:16)
+// Scale factor 4/3 vs original 1080 × 1920 layout
+const W = 1440;
+const H = 2560;
 
 // Section Y boundaries
-const HERO_H = 980;
+const HERO_H = 1307;
 const SEP_Y = HERO_H;
-const SEP_H = 92;
+const SEP_H = 123;
 const SCORE_Y = SEP_Y + SEP_H;
-const SCORE_H = 520;
-const BOT_Y = SCORE_Y + SCORE_H; // 1592
-const BOT_H = H - BOT_Y; // 328
+const SCORE_H = 693;
+const BOT_Y = SCORE_Y + SCORE_H; // 2123
+const BOT_H = H - BOT_Y; // 437
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -295,7 +296,7 @@ const ScoreImageModal = ({
         // Subtle horizontal scan-lines (ice texture)
         ctx.strokeStyle = 'rgba(255,255,255,0.025)';
         ctx.lineWidth = 1;
-        for (let y = 10; y < HERO_H; y += 22) {
+        for (let y = 13; y < HERO_H; y += 29) {
           ctx.beginPath();
           ctx.moveTo(0, y);
           ctx.lineTo(W, y);
@@ -321,7 +322,7 @@ const ScoreImageModal = ({
           awayImg,
           W * 0.25,
           HERO_H * 0.5,
-          400,
+          533,
           awayPrimary,
           game.away_team.text_color,
           game.away_team.code,
@@ -332,7 +333,7 @@ const ScoreImageModal = ({
           homeImg,
           W * 0.75,
           HERO_H * 0.5,
-          400,
+          533,
           homePrimary,
           game.home_team.text_color,
           game.home_team.code,
@@ -343,46 +344,46 @@ const ScoreImageModal = ({
       // League + season pill at top
       const leagueLine = [game.league_name, game.season_name].filter(Boolean).join('  ·  ');
       if (leagueLine) {
-        ctx.font = '700 28px "Inter",system-ui,sans-serif';
+        ctx.font = '700 37px "Inter",system-ui,sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const lm = ctx.measureText(leagueLine.toUpperCase());
-        const lpW = lm.width + 48;
-        const lpH = 52;
+        const lpW = lm.width + 64;
+        const lpH = 69;
         ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.beginPath();
-        ctx.roundRect(W / 2 - lpW / 2, 44, lpW, lpH, 10);
+        ctx.roundRect(W / 2 - lpW / 2, 59, lpW, lpH, 13);
         ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.12)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(W / 2 - lpW / 2, 44, lpW, lpH, 10);
+        ctx.roundRect(W / 2 - lpW / 2, 59, lpW, lpH, 13);
         ctx.stroke();
         ctx.fillStyle = 'rgba(226,232,240,0.92)';
-        ctx.fillText(leagueLine.toUpperCase(), W / 2, 44 + lpH / 2);
+        ctx.fillText(leagueLine.toUpperCase(), W / 2, 59 + lpH / 2);
       }
 
       // "VS" ghost text centred in hero
-      ctx.font = '900 110px "Inter",system-ui,sans-serif';
+      ctx.font = '900 147px "Inter",system-ui,sans-serif';
       ctx.fillStyle = 'rgba(255,255,255,0.06)';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('VS', W / 2, HERO_H * 0.5);
 
       // Team names at bottom corners of hero
-      ctx.font = 'bold 34px "Inter",system-ui,sans-serif';
+      ctx.font = 'bold 45px "Inter",system-ui,sans-serif';
       ctx.textBaseline = 'bottom';
       ctx.fillStyle = 'rgba(248,250,252,0.95)';
       ctx.textAlign = 'left';
-      ctx.fillText(game.away_team.name, 52, HERO_H - 44);
+      ctx.fillText(game.away_team.name, 69, HERO_H - 59);
       ctx.textAlign = 'right';
-      ctx.fillText(game.home_team.name, W - 52, HERO_H - 44);
+      ctx.fillText(game.home_team.name, W - 69, HERO_H - 59);
 
       // Bottom split color bar
       ctx.fillStyle = awayPrimary;
-      ctx.fillRect(0, HERO_H - 8, W / 2, 8);
+      ctx.fillRect(0, HERO_H - 11, W / 2, 11);
       ctx.fillStyle = homePrimary;
-      ctx.fillRect(W / 2, HERO_H - 8, W / 2, 8);
+      ctx.fillRect(W / 2, HERO_H - 11, W / 2, 11);
 
       // ════════════════════════════════════════════════════════════════════════
       // SECTION 2 — DIVIDER  (SEP_Y → SEP_Y + SEP_H)
@@ -391,7 +392,7 @@ const ScoreImageModal = ({
       ctx.fillRect(0, SEP_Y, W, SEP_H);
 
       const finalLabel = `FINAL SCORE${overtimeSuffix ? ` (${overtimeSuffix.replace('/', '')})` : ''}`;
-      ctx.font = '700 30px "Inter",system-ui,sans-serif';
+      ctx.font = '700 40px "Inter",system-ui,sans-serif';
       ctx.fillStyle = '#f8fafc';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
@@ -420,24 +421,24 @@ const ScoreImageModal = ({
 
       // Center ice-circle motif
       ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-      ctx.lineWidth = 4;
+      ctx.lineWidth = 5;
       ctx.beginPath();
-      ctx.arc(W / 2, scoreMidY - 14, 66, 0, Math.PI * 2);
+      ctx.arc(W / 2, scoreMidY - 19, 88, 0, Math.PI * 2);
       ctx.stroke();
       ctx.fillStyle = 'rgba(255,255,255,0.22)';
       ctx.beginPath();
-      ctx.arc(W / 2, scoreMidY - 14, 10, 0, Math.PI * 2);
+      ctx.arc(W / 2, scoreMidY - 19, 13, 0, Math.PI * 2);
       ctx.fill();
 
       // Team logos
-      const logoSize = 165;
+      const logoSize = 220;
       const awayLogoX = W * 0.15;
       const homeLogoX = W * 0.85;
       drawLogo(
         ctx,
         awayImg,
         awayLogoX,
-        scoreMidY - 18,
+        scoreMidY - 24,
         logoSize,
         awayPrimary,
         game.away_team.text_color,
@@ -447,7 +448,7 @@ const ScoreImageModal = ({
         ctx,
         homeImg,
         homeLogoX,
-        scoreMidY - 18,
+        scoreMidY - 24,
         logoSize,
         homePrimary,
         game.home_team.text_color,
@@ -455,12 +456,12 @@ const ScoreImageModal = ({
       );
 
       // Team codes beneath logos
-      ctx.font = '600 22px "Inter",system-ui,sans-serif';
+      ctx.font = '600 29px "Inter",system-ui,sans-serif';
       ctx.textBaseline = 'top';
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(148,163,184,0.9)';
-      ctx.fillText(game.away_team.code, awayLogoX, scoreMidY + logoSize / 2 - 6);
-      ctx.fillText(game.home_team.code, homeLogoX, scoreMidY + logoSize / 2 - 6);
+      ctx.fillText(game.away_team.code, awayLogoX, scoreMidY + logoSize / 2 - 8);
+      ctx.fillText(game.home_team.code, homeLogoX, scoreMidY + logoSize / 2 - 8);
 
       // Series win dots (playoff only)
       if (
@@ -470,11 +471,11 @@ const ScoreImageModal = ({
         game.series_away_wins != null
       ) {
         const total = game.series_games_to_win;
-        const dotR = 12;
-        const dotGap = 10;
+        const dotR = 16;
+        const dotGap = 13;
         const dotsW = total * dotR * 2 + (total - 1) * dotGap;
-        // y position: below the team code text (code baseline ≈ scoreMidY + logoSize/2 + 26)
-        const dotCY = scoreMidY + logoSize / 2 + 48;
+        // y position: below the team code text (code baseline ≈ scoreMidY + logoSize/2 + 35)
+        const dotCY = scoreMidY + logoSize / 2 + 64;
 
         // Which team maps to which position on canvas
         const awayIsSeriesHome = game.away_team.id === game.series_home_team_id;
@@ -504,13 +505,13 @@ const ScoreImageModal = ({
 
       // Score numbers
       ctx.textBaseline = 'middle';
-      ctx.font = 'bold 200px "Inter",system-ui,sans-serif';
+      ctx.font = 'bold 267px "Inter",system-ui,sans-serif';
       ctx.fillStyle = awayWon ? '#f8fafc' : '#475569';
       ctx.textAlign = 'right';
-      ctx.fillText(String(liveAwayScore), W / 2 - 86, scoreMidY - 18);
+      ctx.fillText(String(liveAwayScore), W / 2 - 115, scoreMidY - 24);
       ctx.fillStyle = homeWon ? '#f8fafc' : '#475569';
       ctx.textAlign = 'left';
-      ctx.fillText(String(liveHomeScore), W / 2 + 86, scoreMidY - 18);
+      ctx.fillText(String(liveHomeScore), W / 2 + 115, scoreMidY - 24);
 
       // ════════════════════════════════════════════════════════════════════════
       // SECTION 4 — BOTTOM INFO  (BOT_Y → H)
@@ -522,17 +523,17 @@ const ScoreImageModal = ({
       ctx.strokeStyle = 'rgba(255,255,255,0.07)';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.moveTo(60, BOT_Y + 1);
-      ctx.lineTo(W - 60, BOT_Y + 1);
+      ctx.moveTo(80, BOT_Y + 1);
+      ctx.lineTo(W - 80, BOT_Y + 1);
       ctx.stroke();
 
       // Date
       if (game.scheduled_at) {
-        ctx.font = '500 32px "Inter",system-ui,sans-serif';
+        ctx.font = '500 43px "Inter",system-ui,sans-serif';
         ctx.fillStyle = 'rgba(226,232,240,0.88)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText(DATE_FMT.format(new Date(game.scheduled_at)), W / 2, BOT_Y + 52);
+        ctx.fillText(DATE_FMT.format(new Date(game.scheduled_at)), W / 2, BOT_Y + 69);
       }
 
       // Playoff indicator — only rendered for playoff games
@@ -547,10 +548,10 @@ const ScoreImageModal = ({
 
         // "PLAYOFFS" pill
         const pillText = 'PLAYOFFS';
-        const pillPadX = 28;
-        const pillH = 40;
-        const pillY = BOT_Y + 104;
-        ctx.font = 'bold 21px "Inter",system-ui,sans-serif';
+        const pillPadX = 37;
+        const pillH = 53;
+        const pillY = BOT_Y + 139;
+        ctx.font = 'bold 28px "Inter",system-ui,sans-serif';
         const pillW = ctx.measureText(pillText).width + pillPadX * 2;
         const pillX = W / 2 - pillW / 2;
 
@@ -559,7 +560,7 @@ const ScoreImageModal = ({
         ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
         ctx.fill();
         ctx.strokeStyle = 'rgba(56,189,248,0.45)';
-        ctx.lineWidth = 1.5;
+        ctx.lineWidth = 2;
         ctx.stroke();
 
         ctx.fillStyle = 'rgb(56,189,248)';
@@ -569,20 +570,20 @@ const ScoreImageModal = ({
 
         // Round · Game line below the pill
         if (seriesLine) {
-          ctx.font = '500 30px "Inter",system-ui,sans-serif';
+          ctx.font = '500 40px "Inter",system-ui,sans-serif';
           ctx.fillStyle = 'rgba(226,232,240,0.9)';
           ctx.textBaseline = 'top';
-          ctx.fillText(seriesLine, W / 2, pillY + pillH + 14);
+          ctx.fillText(seriesLine, W / 2, pillY + pillH + 19);
         }
       }
 
       // League · Season at bottom
       if (leagueLine) {
-        ctx.font = '500 24px "Inter",system-ui,sans-serif';
+        ctx.font = '500 32px "Inter",system-ui,sans-serif';
         ctx.fillStyle = 'rgba(100,116,139,0.85)';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(leagueLine, W / 2, BOT_Y + BOT_H - 52);
+        ctx.fillText(leagueLine, W / 2, BOT_Y + BOT_H - 69);
       }
 
       // ── Download ────────────────────────────────────────────────────────────
