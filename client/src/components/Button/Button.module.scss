@@ -191,10 +191,10 @@
 .outlinedNeutral {
   background: transparent;
   color: $text-light;
-  border: 1px solid $border;
+  border: 1px solid $text-dim;
   &:hover:not(:disabled) {
     color: $text-bright;
-    border-color: $text-dim;
+    border-color: $text-light;
   }
 }
 
