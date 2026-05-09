@@ -27,6 +27,8 @@ interface Props {
   onClose: () => void;
   teamId: string;
   seasonId: string;
+  /** YYYY-MM-DD date of the game — used to filter players active on that date. */
+  gameDate?: string;
   teamName: string;
   existingPlayerIds: Set<string>;
   /** Called with selected player IDs to add them to the game roster */
@@ -40,6 +42,7 @@ const LineupRosterModal = ({
   onClose,
   teamId,
   seasonId,
+  gameDate,
   teamName,
   existingPlayerIds,
   addToGameRoster,
@@ -53,11 +56,11 @@ const LineupRosterModal = ({
   const [alreadyAdded, setAlreadyAdded] = useState<number[]>([]);
 
   const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId }],
+    queryKey: ['players', { team_id: teamId, season_id: seasonId, game_date: gameDate }],
     queryFn: async () => {
       const { data } = await axios.get<TeamPlayerRecord[]>(`${API}/admin/players`, {
         headers: authHeaders(),
-        params: { team_id: teamId, season_id: seasonId },
+        params: { team_id: teamId, season_id: seasonId, game_date: gameDate },
       });
       return data;
     },

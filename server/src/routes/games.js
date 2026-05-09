@@ -653,6 +653,7 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
+    home_team_id, away_team_id,
     scheduled_at, scheduled_time, venue, game_type, status,
     time_start, time_end,
     overtime_periods, shootout,
@@ -673,6 +674,8 @@ router.patch('/:id', async (req, res) => {
 
     await sql`
       UPDATE games SET
+        home_team_id             = COALESCE(${home_team_id             ?? null}::uuid, home_team_id),
+        away_team_id             = COALESCE(${away_team_id             ?? null}::uuid, away_team_id),
         scheduled_at          = COALESCE(${scheduled_at          ?? null}, scheduled_at),
         scheduled_time        = COALESCE(${scheduled_time        ?? null}, scheduled_time),
         venue                 = COALESCE(${venue                 ?? null}, venue),

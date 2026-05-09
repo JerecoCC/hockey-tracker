@@ -293,6 +293,7 @@ const GameLineupsTab = ({
           onClose={() => setLineupAddTeam(null)}
           teamId={lineupAddTeam === 'away' ? game.away_team.id : game.home_team.id}
           seasonId={seasonId!}
+          gameDate={game.scheduled_at?.slice(0, 10)}
           teamName={lineupAddTeam === 'away' ? game.away_team.name : game.home_team.name}
           existingPlayerIds={
             new Set((lineupAddTeam === 'away' ? awayRoster : homeRoster).map((e) => e.player_id))

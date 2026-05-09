@@ -44,7 +44,7 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 // Supports optional ?league_id= or ?team_id= to scope results.
 // ---------------------------------------------------------------------------
 router.get('/', async (req, res) => {
-  const { league_id, team_id, season_id } = req.query;
+  const { league_id, team_id, season_id, game_date } = req.query;
   try {
     const players = league_id && season_id
       ? await sql`
@@ -152,6 +152,44 @@ router.get('/', async (req, res) => {
                                 AND (pt.start_date IS NULL OR pt.start_date <= (NOW() AT TIME ZONE 'America/New_York')::date)
                                 AND (pt.end_date   IS NULL OR pt.end_date   >  (NOW() AT TIME ZONE 'America/New_York')::date)
             JOIN teams        t  ON t.id           = pt.team_id
+            LEFT JOIN LATERAL (
+              SELECT name FROM team_iterations
+              WHERE team_id = t.id
+              ORDER BY season_id DESC NULLS LAST
+              LIMIT 1
+            ) ti ON TRUE
+            ORDER BY p.id
+          ) sub
+          ORDER BY last_name, first_name
+        `
+      : team_id && season_id
+      ? await sql`
+          SELECT
+            id, first_name, last_name, photo,
+            date_of_birth::text AS date_of_birth,
+            birth_city, birth_country, nationality,
+            height_cm, weight_lbs, position, shoots,
+            is_active, created_at,
+            jersey_number, team_name, primary_color, text_color
+          FROM (
+            SELECT DISTINCT ON (p.id)
+              p.id, p.first_name, p.last_name,
+              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
+              p.date_of_birth,
+              p.birth_city, p.birth_country, p.nationality,
+              p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+              p.is_active, p.created_at,
+              pt.jersey_number,
+              ti.name       AS team_name,
+              t.primary_color,
+              t.text_color
+            FROM players p
+            JOIN player_teams pt ON pt.player_id = p.id
+                                AND pt.team_id   = ${team_id}
+                                AND pt.season_id = ${season_id}
+                                AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
+                                AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
+            JOIN teams        t  ON t.id          = pt.team_id
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations
               WHERE team_id = t.id

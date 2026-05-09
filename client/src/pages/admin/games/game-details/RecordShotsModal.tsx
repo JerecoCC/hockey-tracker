@@ -56,10 +56,17 @@ const isoToETHHMM = (iso: string): string => {
   return h && m ? `${h}:${m}` : '';
 };
 
-const etHHMMtoISO = (hhmm: string): string => {
-  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    new Date(),
-  );
+/** Advances a "YYYY-MM-DD" string by one calendar day. */
+const nextETDate = (etDateStr: string): string => {
+  const [y, m, d] = etDateStr.split('-').map(Number);
+  const next = new Date(y, m - 1, d + 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+};
+
+const etHHMMtoISO = (hhmm: string, etDateStr?: string): string => {
+  const etDate =
+    etDateStr ??
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
   const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
   const tzName =
     new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
@@ -332,7 +339,21 @@ const RecordShotsModal = ({
         }
       }
     }
-    if (isEndGame && end_time) await updateGameInfo({ time_end: etHHMMtoISO(end_time) });
+    if (isEndGame && end_time) {
+      // Anchor to the game's actual start date in ET (falling back to scheduled date).
+      // If the end time HH:mm is earlier than the start HH:mm the game ran past midnight —
+      // use the next ET calendar day, mirroring the logic in GameInfoEditModal.
+      const anchor = game.time_start ?? game.scheduled_at;
+      const etBase = anchor
+        ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
+            new Date(anchor),
+          )
+        : undefined;
+      const startHHMM = game.time_start ? isoToETHHMM(game.time_start) : null;
+      const isPastMidnight = !!startHHMM && end_time < startHHMM;
+      const endDate = isPastMidnight && etBase ? nextETDate(etBase) : etBase;
+      await updateGameInfo({ time_end: etHHMMtoISO(end_time, endDate) });
+    }
     if (showShootsFirst && soFirstTeam) {
       const firstTeamId = soFirstTeam === 'away' ? game.away_team.id : game.home_team.id;
       await updateGameInfo({ shootout_first_team_id: firstTeamId });
