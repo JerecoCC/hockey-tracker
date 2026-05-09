@@ -76,33 +76,44 @@ router.get('/games', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.overtime_periods, g.shootout,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
+        ps.round          AS playoff_round,
+        brs.round_names   AS playoff_round_names,
         gs.period_scores,
         g.period_shots,
-        -- Home team
-        g.home_team_id,
-        ht.name  AS home_team_name,
-        ht.code  AS home_team_code,
-        ht.logo  AS home_team_logo,
-        t_home.primary_color AS home_team_primary_color,
-        t_home.text_color    AS home_team_text_color,
+        -- Home team (same json_build_object shape as admin query)
+        json_build_object(
+          'id',              g.home_team_id,
+          'name',            ht.name,
+          'code',            ht.code,
+          'logo',            ht.logo,
+          'primary_color',   t_home.primary_color,
+          'secondary_color', t_home.secondary_color,
+          'text_color',      t_home.text_color
+        ) AS home_team,
         -- Away team
-        g.away_team_id,
-        at.name  AS away_team_name,
-        at.code  AS away_team_code,
-        at.logo  AS away_team_logo,
-        t_away.primary_color AS away_team_primary_color,
-        t_away.text_color    AS away_team_text_color,
+        json_build_object(
+          'id',              g.away_team_id,
+          'name',            at.name,
+          'code',            at.code,
+          'logo',            at.logo,
+          'primary_color',   t_away.primary_color,
+          'secondary_color', t_away.secondary_color,
+          'text_color',      t_away.text_color
+        ) AS away_team,
         -- Season / league context
-        s.name       AS season_name,
-        l.id         AS league_id,
-        l.name       AS league_name
+        s.name AS season_name,
+        l.id   AS league_id,
+        l.name AS league_name
       FROM games g
-      JOIN teams   t_home ON t_home.id = g.home_team_id
-      JOIN teams   t_away ON t_away.id = g.away_team_id
-      JOIN seasons s      ON s.id      = g.season_id
-      JOIN leagues l      ON l.id      = s.league_id
+      JOIN seasons          s      ON s.id      = g.season_id
+      JOIN leagues          l      ON l.id      = s.league_id
+      JOIN teams            t_home ON t_home.id = g.home_team_id
+      JOIN teams            t_away ON t_away.id = g.away_team_id
+      LEFT JOIN playoff_series    ps  ON ps.id  = g.playoff_series_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -131,17 +142,16 @@ router.get('/games', async (req, res) => {
         ) ps
       ) gs ON true
       WHERE
-        (${season_id  ?? null}::uuid IS NULL OR g.season_id    = ${season_id  ?? null}::uuid)
-        AND (${league_id  ?? null}::uuid IS NULL OR l.id           = ${league_id  ?? null}::uuid)
-        AND (${team_id    ?? null}::uuid IS NULL OR g.home_team_id = ${team_id    ?? null}::uuid
-                                                 OR g.away_team_id = ${team_id    ?? null}::uuid)
-        AND (${game_type  ?? null}::text IS NULL OR g.game_type = ${game_type ?? null})
-        AND (${status     ?? null}::text IS NULL OR g.status    = ${status    ?? null})
+        (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
+        AND (${league_id ?? null}::uuid IS NULL OR l.id        = ${league_id ?? null}::uuid)
+        AND (${team_id   ?? null}::uuid IS NULL OR g.home_team_id = ${team_id ?? null}::uuid
+                                                OR g.away_team_id = ${team_id ?? null}::uuid)
+        AND (${game_type ?? null}::text IS NULL OR g.game_type = ${game_type ?? null})
+        AND (${status    ?? null}::text IS NULL OR g.status    = ${status    ?? null})
       ORDER BY
         CASE g.status WHEN 'in_progress' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
-        CASE g.status WHEN 'scheduled' THEN g.scheduled_at END ASC NULLS LAST,
-        CASE g.status WHEN 'in_progress' THEN g.scheduled_at
-                      ELSE NULL END DESC NULLS LAST,
+        CASE g.status WHEN 'scheduled'   THEN g.scheduled_at END ASC NULLS LAST,
+        CASE g.status WHEN 'in_progress' THEN g.scheduled_at ELSE NULL END DESC NULLS LAST,
         g.scheduled_at DESC NULLS LAST,
         g.created_at DESC
     `;
@@ -172,9 +182,15 @@ router.get('/seasons', async (req, res) => {
   const { league_id } = req.query;
   try {
     const seasons = await sql`
-      SELECT id, name FROM seasons
-      WHERE (${league_id ?? null}::uuid IS NULL OR league_id = ${league_id ?? null}::uuid)
-      ORDER BY start_date DESC NULLS LAST, name DESC
+      SELECT
+        s.id,
+        s.name,
+        s.best_of_playoff,
+        l.best_of_playoff AS league_best_of_playoff
+      FROM seasons s
+      JOIN leagues l ON l.id = s.league_id
+      WHERE (${league_id ?? null}::uuid IS NULL OR s.league_id = ${league_id ?? null}::uuid)
+      ORDER BY s.start_date DESC NULLS LAST, s.name DESC
     `;
     return res.json(seasons);
   } catch (err) {

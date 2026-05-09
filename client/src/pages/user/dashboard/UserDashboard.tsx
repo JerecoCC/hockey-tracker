@@ -1,11 +1,13 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
+import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useLeagues from '@/hooks/useLeagues';
 import useTeams, { TeamRecord } from '@/hooks/useTeams';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
+import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import styles from './UserDashboard.module.scss';
 
 // ── Team card ────────────────────────────────────────────────────────────────
@@ -52,6 +54,7 @@ const UserDashboard = () => {
   const { leagues, loading: leaguesLoading } = useLeagues();
   const { teams, loading: teamsLoading } = useTeams();
   const { isFavorite, toggle } = useFavoriteTeams();
+  const [scoreImageOpen, setScoreImageOpen] = useState(false);
 
   const teamsByLeague = useMemo(() => {
     const map: Record<string, TeamRecord[]> = {};
@@ -86,6 +89,15 @@ const UserDashboard = () => {
           <p className={styles.welcomeEmail}>{user?.email}</p>
         </div>
       </div>
+
+      {/* Actions */}
+      <Button
+        icon="image"
+        iconSize="1.1em"
+        onClick={() => setScoreImageOpen(true)}
+      >
+        Generate Score Image
+      </Button>
 
       {/* My Teams */}
       <section className={styles.section}>
@@ -150,6 +162,12 @@ const UserDashboard = () => {
           </div>
         )}
       </section>
+
+      <ScoreImageModal
+        open={scoreImageOpen}
+        onClose={() => setScoreImageOpen(false)}
+        showForm
+      />
     </div>
   );
 };
