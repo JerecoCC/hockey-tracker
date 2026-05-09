@@ -176,6 +176,7 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, code, description, location, city, home_arena, logo, league_id, primary_color, secondary_color, text_color, start_season_id, latest_season_id } = req.body;
+  const descriptionInBody     = 'description'      in req.body;
   const logoInBody            = 'logo'             in req.body;
   const primaryColorInBody    = 'primary_color'    in req.body;
   const secondaryColorInBody  = 'secondary_color'  in req.body;
@@ -228,7 +229,7 @@ router.patch('/:id', async (req, res) => {
     // ── Non-identity fields → teams table ──────────────────────────────────
     await sql`
       UPDATE teams SET
-        description      = COALESCE(${description  ?? null}, description),
+        description      = CASE WHEN ${descriptionInBody}     THEN ${description     ?? null}      ELSE description      END,
         location         = COALESCE(${location     ?? null}, location),
         city             = COALESCE(${city         ?? null}, city),
         home_arena       = COALESCE(${home_arena   ?? null}, home_arena),

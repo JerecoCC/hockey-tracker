@@ -83,7 +83,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       text_color: data.text_color,
       city: data.city || undefined,
       home_arena: data.home_arena || undefined,
-      description: normalizeDescription(data.description) ?? undefined,
+      description: normalizeDescription(data.description),
     };
     const ok = await updateTeam(team.id, payload);
     if (ok) onClose();

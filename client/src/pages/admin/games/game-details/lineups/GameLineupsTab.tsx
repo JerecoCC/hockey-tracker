@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ListItem from '@/components/ListItem/ListItem';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -217,7 +216,7 @@ const GameLineupsTab = ({
                   isStarter
                     ? { type: 'tag', label: 'Starter', intent: 'accent' }
                     : isInheritedStarter
-                      ? { type: 'tag', label: 'Last Game', intent: 'neutral' }
+                      ? { type: 'tag', label: 'Last Starter', intent: 'neutral' }
                       : undefined
                 }
                 actions={

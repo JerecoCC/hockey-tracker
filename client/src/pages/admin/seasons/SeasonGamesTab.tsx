@@ -278,7 +278,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 variant="outlined"
                 intent="neutral"
                 icon="chevron_left"
-                iconHeight="field"
+                size="sm"
                 onClick={() => setWeekStart((d) => addDays(d, -7))}
               />
               <div className={styles.datePicker}>
@@ -291,7 +291,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 variant="outlined"
                 intent="neutral"
                 icon="chevron_right"
-                iconHeight="field"
+                size="sm"
                 onClick={() => setWeekStart((d) => addDays(d, 7))}
               />
             </span>

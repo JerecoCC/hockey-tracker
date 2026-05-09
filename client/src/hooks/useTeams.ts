@@ -24,7 +24,7 @@ export interface TeamRecord {
 export interface CreateTeamData {
   name: string;
   code: string;
-  description?: string;
+  description?: string | null;
   location?: string;
   city?: string;
   home_arena?: string;

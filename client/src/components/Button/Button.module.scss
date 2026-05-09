@@ -141,60 +141,60 @@
 .outlinedAccent {
   background: transparent;
   color: $accent-light;
-  border: 1px solid rgba($accent-light, 0.5);
+  border: 1px solid $accent;
   &:hover:not(:disabled) {
     background: rgba($accent, 0.15);
-    border-color: $accent-light;
+    border-color: $accent-hover;
   }
 }
 
 .outlinedSuccess {
   background: transparent;
   color: $success-light;
-  border: 1px solid rgba($success-light, 0.5);
+  border: 1px solid $success;
   &:hover:not(:disabled) {
     background: rgba($success, 0.15);
-    border-color: $success-light;
+    border-color: $success-hover;
   }
 }
 
 .outlinedWarning {
   background: transparent;
   color: $warning-light;
-  border: 1px solid rgba($warning-light, 0.5);
+  border: 1px solid $warning;
   &:hover:not(:disabled) {
     background: rgba($warning, 0.15);
-    border-color: $warning-light;
+    border-color: $warning-hover;
   }
 }
 
 .outlinedDanger {
   background: transparent;
   color: $danger-light;
-  border: 1px solid rgba($danger-light, 0.5);
+  border: 1px solid $danger;
   &:hover:not(:disabled) {
     background: rgba($danger, 0.15);
-    border-color: $danger-light;
+    border-color: $danger;
   }
 }
 
 .outlinedInfo {
   background: transparent;
   color: $info-light;
-  border: 1px solid rgba($info-light, 0.5);
+  border: 1px solid $info;
   &:hover:not(:disabled) {
     background: rgba($info, 0.15);
-    border-color: $info-light;
+    border-color: $info;
   }
 }
 
 .outlinedNeutral {
   background: transparent;
   color: $text-light;
-  border: 1px solid rgba($text-light, 0.5);
+  border: 1px solid $border;
   &:hover:not(:disabled) {
     color: $text-bright;
-    border-color: $text-light;
+    border-color: $text-dim;
   }
 }
 
