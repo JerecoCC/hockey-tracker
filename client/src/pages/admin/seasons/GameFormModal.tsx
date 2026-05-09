@@ -37,6 +37,11 @@ interface Props {
   defaultDate?: string;
 }
 
+const fmtModalDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+};
+
 const GameFormModal = ({
   open,
   seasonId,
@@ -138,7 +143,13 @@ const GameFormModal = ({
   return (
     <Modal
       open={open}
-      title={editTarget ? 'Edit Game' : 'Create Game'}
+      title={
+        editTarget
+          ? 'Edit Game'
+          : defaultDate
+            ? `Create Game — ${fmtModalDate(defaultDate)}`
+            : 'Create Game'
+      }
       size="md"
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Game'}
@@ -160,13 +171,14 @@ const GameFormModal = ({
             name="scheduled_date"
             placeholder="Select date…"
             disabled={isStarted || isSubmitting || (!editTarget && !!defaultDate)}
-            autoFocus
+            autoFocus={!defaultDate}
           />
           <Field
             label="Time"
             type="timepicker"
             control={control}
             name="scheduled_time"
+            autoFocus={!editTarget && !!defaultDate}
           />
         </div>
 

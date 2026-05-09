@@ -32,6 +32,11 @@ const EMPTY_ROW: RowValues = {
   venue: '',
 };
 
+const fmtModalDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+};
+
 // ── Per-row sub-component ─────────────────────────────────────────────────────
 
 interface GameRowProps {
@@ -70,13 +75,14 @@ const GameRow = ({
         name={`games.${index}.scheduled_date`}
         placeholder="Date…"
         disabled={isSubmitting || dateDisabled}
-        autoFocus={autoFocus}
+        autoFocus={autoFocus && !dateDisabled}
       />
       <Field
         type="timepicker"
         control={control}
         name={`games.${index}.scheduled_time`}
         disabled={isSubmitting}
+        autoFocus={autoFocus && !!dateDisabled}
       />
       <Field
         type="select"
@@ -195,7 +201,7 @@ const BulkCreateGamesModal = ({
     <>
       <Modal
         open={open}
-        title="Bulk Create Games"
+        title={defaultDate ? `Bulk Create — ${fmtModalDate(defaultDate)}` : 'Bulk Create Games'}
         size="xl"
         onClose={handleClose}
         confirmForm="bulk-create-games-form"

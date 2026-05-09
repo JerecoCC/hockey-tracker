@@ -435,6 +435,7 @@ const DatePicker = (props: Props) => {
           value={displayValue}
           data-empty={!cYear && !cMonth && !cDay}
           onChange={() => {}}
+          tabIndex={disabled ? -1 : undefined}
           onClick={!disabled ? handleInputClick : undefined}
           onKeyDown={!disabled ? handleKeyDown : undefined}
           onFocus={!disabled ? handleFocus : undefined}

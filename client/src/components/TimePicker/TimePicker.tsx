@@ -484,6 +484,7 @@ const TimePicker = ({
           data-empty={isEmpty}
           placeholder={placeholder}
           onChange={() => {}}
+          tabIndex={disabled ? -1 : undefined}
           onClick={!disabled ? handleInputClick : undefined}
           onKeyDown={!disabled ? handleKeyDown : undefined}
           onFocus={!disabled ? handleFocus : undefined}
