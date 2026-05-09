@@ -41,6 +41,7 @@ interface GameRowProps {
   seasonTeams: SeasonTeam[];
   teamOptions: SelectOption[];
   isSubmitting: boolean;
+  dateDisabled?: boolean;
   autoFocus?: boolean;
   onDelete: () => void;
 }
@@ -52,6 +53,7 @@ const GameRow = ({
   seasonTeams,
   teamOptions,
   isSubmitting,
+  dateDisabled,
   autoFocus,
   onDelete,
 }: GameRowProps) => {
@@ -67,7 +69,7 @@ const GameRow = ({
         control={control}
         name={`games.${index}.scheduled_date`}
         placeholder="Date…"
-        disabled={isSubmitting}
+        disabled={isSubmitting || dateDisabled}
         autoFocus={autoFocus}
       />
       <Field
@@ -130,6 +132,8 @@ interface Props {
   teamOptions: SelectOption[];
   bulkCreateGames: (data: CreateGameData[]) => Promise<boolean>;
   onClose: () => void;
+  /** When provided, pre-fills and locks the date field on every row. */
+  defaultDate?: string;
 }
 
 const BulkCreateGamesModal = ({
@@ -139,6 +143,7 @@ const BulkCreateGamesModal = ({
   teamOptions,
   bulkCreateGames,
   onClose,
+  defaultDate,
 }: Props) => {
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -155,10 +160,10 @@ const BulkCreateGamesModal = ({
   // previous bulk-create reads a stale internal ref and restores the old list.
   useEffect(() => {
     if (open) {
-      reset({ games: [{ ...EMPTY_ROW }] });
+      reset({ games: [{ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }] });
       setAutoFocusIndex(0);
     }
-  }, [open, reset]);
+  }, [open, defaultDate, reset]);
 
   const handleClose = () => {
     onClose();
@@ -225,6 +230,7 @@ const BulkCreateGamesModal = ({
                 seasonTeams={seasonTeams}
                 teamOptions={teamOptions}
                 isSubmitting={isSubmitting}
+                dateDisabled={!!defaultDate}
                 autoFocus={index === autoFocusIndex}
                 onDelete={() => handleDeleteClick(index)}
               />
@@ -236,7 +242,7 @@ const BulkCreateGamesModal = ({
             disabled={isSubmitting}
             onClick={() => {
               setAutoFocusIndex(fields.length);
-              append({ ...EMPTY_ROW });
+              append({ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' });
             }}
           />
         </form>

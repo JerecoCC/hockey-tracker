@@ -27,11 +27,17 @@
   &.iconOnly {
     padding: $space-sm;
   }
+  &.iconOnlyButton {
+    padding: $space-md;
+  }
 }
 
 .md {
   padding: $space-md $space-lg;
   &.iconOnly {
+    padding: $space-md;
+  }
+  &.iconOnlyButton {
     padding: $space-md;
   }
 }
@@ -42,6 +48,9 @@
   &.iconOnly {
     padding: $space-sm;
   }
+  &.iconOnlyButton {
+    padding: $space-md;
+  }
 }
 
 // ── Icon size ──────────────────────────────────────────────────────────
@@ -49,11 +58,28 @@
   font-size: $font-xs;
 }
 
-// ── Icon-only: tighter radius + square shape ───────────────────────────
+// ── Icon-only square variants ──────────────────────────────────────────
+// .iconOnly       → compact: tight padding, small radius (default)
+// .iconOnlyButton → same height as a labelled button, $radius-md
+// .iconOnlyField  → fixed 42px to match input/field height, $radius-md
 .iconOnly {
   border-radius: $radius-sm;
   aspect-ratio: 1 / 1;
   line-height: 1;
+}
+
+.iconOnlyButton {
+  border-radius: $radius-md;
+  aspect-ratio: 1 / 1;
+  line-height: 1;
+}
+
+.iconOnlyField {
+  border-radius: $radius-md;
+  width: 42px;
+  height: 42px;
+  line-height: 1;
+  padding: 0;
 }
 
 // ── Filled ────────────────────────────────────────────────────────────

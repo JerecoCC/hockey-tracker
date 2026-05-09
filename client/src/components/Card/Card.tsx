@@ -11,11 +11,13 @@ interface CardProps {
   /** Extra CSS class for layout/sizing concerns (max-width, grid column, margin, etc.). */
   className?: string;
   style?: CSSProperties;
+  /** When true, removes the bottom margin from the card header row. */
+  noHeaderMargin?: boolean;
   children: ReactNode;
 }
 
 const Card = (props: CardProps) => {
-  const { variant = 'admin', title, action, className, style, children } = props;
+  const { variant = 'admin', title, action, className, style, noHeaderMargin, children } = props;
   const classes = [styles.card, variant === 'light' ? styles.light : styles.admin, className]
     .filter(Boolean)
     .join(' ');
@@ -26,7 +28,11 @@ const Card = (props: CardProps) => {
       style={style}
     >
       {(title || action) && (
-        <div className={styles.cardHeader}>
+        <div
+          className={[styles.cardHeader, noHeaderMargin && styles.cardHeaderNoMargin]
+            .filter(Boolean)
+            .join(' ')}
+        >
           {title && <h3 className={styles.cardTitle}>{title}</h3>}
           {action}
         </div>

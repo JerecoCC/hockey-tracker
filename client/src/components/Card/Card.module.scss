@@ -31,6 +31,10 @@
   margin-bottom: $space-xl;
 }
 
+.cardHeaderNoMargin {
+  margin-bottom: 0;
+}
+
 .cardTitle {
   display: flex;
   align-items: center;

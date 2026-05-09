@@ -33,6 +33,8 @@ interface Props {
   createGame: ReturnType<typeof useGames>['createGame'];
   updateGame: ReturnType<typeof useGames>['updateGame'];
   onClose: () => void;
+  /** When provided (create mode only), pre-fills and locks the date field. */
+  defaultDate?: string;
 }
 
 const GameFormModal = ({
@@ -43,6 +45,7 @@ const GameFormModal = ({
   createGame,
   updateGame,
   onClose,
+  defaultDate,
 }: Props) => {
   const {
     control,
@@ -95,7 +98,7 @@ const GameFormModal = ({
         away_team_id: null,
         game_type: 'regular',
         status: 'scheduled',
-        scheduled_date: '',
+        scheduled_date: defaultDate ?? '',
         scheduled_time: '',
         venue: '',
         overtime_periods: '',
@@ -103,7 +106,7 @@ const GameFormModal = ({
         notes: '',
       });
     }
-  }, [open, editTarget, reset]);
+  }, [open, editTarget, defaultDate, reset]);
 
   const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
     value: t.id,
@@ -156,7 +159,7 @@ const GameFormModal = ({
             control={control}
             name="scheduled_date"
             placeholder="Select date…"
-            disabled={isStarted || isSubmitting}
+            disabled={isStarted || isSubmitting || (!editTarget && !!defaultDate)}
             autoFocus
           />
           <Field

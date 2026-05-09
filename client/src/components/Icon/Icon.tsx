@@ -20,6 +20,7 @@ import {
   faClipboardList,
   faClock,
   faEllipsisVertical,
+  faFilter,
   faFlag,
   faGauge,
   faCalendarDays,
@@ -101,6 +102,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // actions
   add: faPlus,
+  filter_list: faFilter,
   calendar: faCalendarDays,
   download: faDownload,
   play_arrow: faPlay,

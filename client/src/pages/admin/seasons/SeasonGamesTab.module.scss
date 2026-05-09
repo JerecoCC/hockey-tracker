@@ -1,22 +1,85 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+// ── Title divider (vertical rule between "Games" and the week nav) ────
+.titleDivider {
+  display: inline-block;
+  width: 1px;
+  height: 1.2em;
+  background: $border;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+// ── Week nav — inline inside the card title ───────────────────────────
+.weekNav {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: initial; // reset h3 font-size for child elements
+  font-weight: initial;
+}
+
+// Constrain the DatePicker trigger width
+.datePicker {
+  width: 160px;
+  flex-shrink: 0;
+}
+
+// Week range label (e.g. "May 5 – May 11, 2026")
+.weekRange {
+  font-size: $font-sm;
+  font-weight: 400;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+// ── Filters row ───────────────────────────────────────────────────────
 .filters {
   display: flex;
   flex-wrap: wrap;
   gap: $space-md;
-  margin-bottom: $space-lg;
+  justify-content: flex-end;
+  overflow: hidden;
+  max-height: 200px;
+  opacity: 1;
+  margin-top: $space-xl;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.25s ease,
+    margin-top 0.25s ease;
 
-  > * {
-    flex: 1 0 140px;
-    max-width: 200px;
+  > *:not(.teamFilter) {
+    flex: 1 0 130px;
+    max-width: 180px;
   }
+}
+
+.filtersHidden {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
 }
 
 // Team MultiSelect: wider so pills have room to breathe
 .teamFilter {
-  flex: 2 0 200px;
-  max-width: 400px;
+  flex: 3 0 220px;
+  max-width: 480px;
+}
+
+// ── Day cards list ─────────────────────────────────────────────────────
+.dayList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  margin-top: $space-md;
+}
+
+.dayEmpty {
+  margin: 0;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
 }
 
 .list {
