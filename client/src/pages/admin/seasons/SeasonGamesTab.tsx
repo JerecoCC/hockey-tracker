@@ -221,6 +221,8 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
       });
   }, [games, gameTypeFilter, statusFilter, teamFilter]);
 
+  const hasActiveFilters = !!(gameTypeFilter || statusFilter || teamFilter.length > 0);
+
   /** Filtered games grouped into 7 day-slots for the current week window. */
   const groupedByDate = useMemo(() => {
     const map = new Map<string, GameRecord[]>();
@@ -354,10 +356,6 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
       {/* ── Day cards ── */}
       {loading ? (
         <p className={styles.empty}>Loading…</p>
-      ) : games.length === 0 ? (
-        <p className={styles.empty}>No games scheduled yet.</p>
-      ) : filteredGames.length === 0 ? (
-        <p className={styles.empty}>No games match the selected filters.</p>
       ) : (
         <div className={styles.dayList}>
           {groupedByDate.map(([dateKey, dayGames]) => (
@@ -388,7 +386,9 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
               }
             >
               {dayGames.length === 0 ? (
-                <p className={styles.dayEmpty}>No games scheduled.</p>
+                <p className={styles.dayEmpty}>
+                  {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
+                </p>
               ) : (
                 <ul className={styles.list}>
                   {dayGames.map((game) => (
