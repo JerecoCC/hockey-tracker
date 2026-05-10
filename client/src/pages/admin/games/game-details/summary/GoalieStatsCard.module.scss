@@ -1,6 +1,13 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+.empty {
+  font-size: $font-sm;
+  color: $text-dim;
+  margin: 0;
+  padding: $space-xs 0;
+}
+
 // ── Table ─────────────────────────────────────────────────────────────────────
 
 .goalieTable {

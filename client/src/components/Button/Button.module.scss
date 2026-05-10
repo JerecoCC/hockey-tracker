@@ -54,8 +54,10 @@
 }
 
 // ── Icon size ──────────────────────────────────────────────────────────
+// 1em inherits the button's own font-size so icons and text carry
+// equal visual weight for the same intent — sm/md/lg all scale together.
 .btn svg {
-  font-size: $font-xs;
+  font-size: 1em;
 }
 
 // ── Icon-only square variants ──────────────────────────────────────────

@@ -10,6 +10,7 @@ import {
   faBars,
   faCheck,
   faDownload,
+  faFloppyDisk,
   faCircleCheck,
   faCircleInfo,
   faCircleMinus,
@@ -102,6 +103,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // actions
   add: faPlus,
+  save: faFloppyDisk,
   filter_list: faFilter,
   calendar: faCalendarDays,
   download: faDownload,

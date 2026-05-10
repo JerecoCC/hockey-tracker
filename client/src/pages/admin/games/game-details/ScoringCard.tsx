@@ -54,7 +54,6 @@ interface Props {
   onAddAttempt?: () => void;
   onEditAttempt?: (attempt: ShootoutAttempt) => void;
   onDeleteAttempt?: (attemptId: string) => void;
-  onSwitchGoalie?: () => void;
   onGoBackPeriod?: (prev: CurrentPeriod) => void;
   onGoBackOTPeriod?: (targetNum: number) => void;
   /** When provided, player names in goal rows become navigation links. */
@@ -84,7 +83,6 @@ const ScoringCard = ({
   onAddAttempt,
   onEditAttempt,
   onDeleteAttempt,
-  onSwitchGoalie,
   onGoBackPeriod,
   onGoBackOTPeriod,
   getPlayerHref,
@@ -259,15 +257,6 @@ const ScoringCard = ({
                         disabled: !!busy,
                         onClick: () => onScoreGoal(num as 1 | 2 | 3),
                       },
-                      onSwitchGoalie
-                        ? {
-                            icon: 'swap_horiz',
-                            tooltip: 'Switch Goalie',
-                            intent: 'neutral' as const,
-                            disabled: !!busy,
-                            onClick: onSwitchGoalie,
-                          }
-                        : null,
                       num < 3
                         ? {
                             icon: 'flag',
@@ -388,15 +377,6 @@ const ScoringCard = ({
                                     onOpenShotsModal(`OT${otNum}`, { type: 'next-ot' }, false),
                                 }
                               : null,
-                            onSwitchGoalie
-                              ? {
-                                  icon: 'swap_horiz',
-                                  tooltip: 'Switch Goalie',
-                                  intent: 'neutral' as const,
-                                  disabled: !!busy,
-                                  onClick: onSwitchGoalie,
-                                }
-                              : null,
                             periodGoals.length > 0
                               ? {
                                   icon: 'flag',
@@ -464,15 +444,6 @@ const ScoringCard = ({
                                   false,
                                   true,
                                 ),
-                            }
-                          : null,
-                        onSwitchGoalie
-                          ? {
-                              icon: 'swap_horiz',
-                              tooltip: 'Switch Goalie',
-                              intent: 'neutral' as const,
-                              disabled: !!busy,
-                              onClick: onSwitchGoalie,
                             }
                           : null,
                         otGoals.length > 0

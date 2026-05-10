@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
@@ -51,6 +51,7 @@ const GameDetailsPage = () => {
   // React Query deduplicates the request; GameSummaryTab also calls this hook.
   const { attempts } = useShootoutAttempts(id);
   const [activeTab, handleTabChange] = useTabState('tab:game-details');
+  const [isEditMode, setIsEditMode] = useState(false);
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -256,6 +257,7 @@ const GameDetailsPage = () => {
         game={game}
         isFinal={isFinal}
         isInProgress={isInProgress}
+        isEditMode={isEditMode}
         liveAwayScore={liveAwayScore}
         liveHomeScore={liveHomeScore}
         overtimeSuffix={overtimeSuffix}
@@ -275,6 +277,8 @@ const GameDetailsPage = () => {
                 game={game}
                 isFinal={isFinal}
                 isInProgress={isInProgress}
+                isEditMode={isEditMode}
+                setIsEditMode={setIsEditMode}
                 busy={busy}
                 leagueId={leagueId}
                 seasonId={seasonId ?? ''}

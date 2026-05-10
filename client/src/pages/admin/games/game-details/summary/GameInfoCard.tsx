@@ -11,7 +11,7 @@ import styles from './GameInfoCard.module.scss';
 interface Props {
   game: GameRecord;
   busy: string | null;
-  updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
+  updateGameInfo?: (data: UpdateGameInfoData) => Promise<boolean>;
 }
 
 const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
@@ -22,14 +22,16 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
       <Card
         title="Game Info"
         action={
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="edit"
-            size="sm"
-            tooltip="Edit game info"
-            onClick={() => setEditOpen(true)}
-          />
+          updateGameInfo ? (
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="edit"
+              size="sm"
+              tooltip="Edit game info"
+              onClick={() => setEditOpen(true)}
+            />
+          ) : undefined
         }
       >
         <div className={styles.infoGrid}>

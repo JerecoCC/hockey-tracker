@@ -25,7 +25,7 @@ interface Props {
 }
 
 type FormValues = {
-  team_side: 'away' | 'home';
+  team_side: 'away' | 'home' | '';
   goalie_id: string;
   entered_period: string;
   sub_time: string;
@@ -43,7 +43,7 @@ const GoalieSwitchModal = ({
   const [submitting, setSubmitting] = useState(false);
 
   const { control, reset, watch, handleSubmit } = useForm<FormValues>({
-    defaultValues: { team_side: 'away', goalie_id: '', entered_period: '2', sub_time: '' },
+    defaultValues: { team_side: '', goalie_id: '', entered_period: '', sub_time: '' },
   });
 
   const teamSide = watch('team_side');
@@ -107,7 +107,7 @@ const GoalieSwitchModal = ({
           disabled={submitting}
         />
         {goalieOptions.length === 0 ? (
-          <p style={{ color: 'var(--color-text-muted)', fontSize: '0.875rem' }}>
+          <p className={styles.noGoalsText}>
             No eligible backup goalies on the roster for this team.
           </p>
         ) : (

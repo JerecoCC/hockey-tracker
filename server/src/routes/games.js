@@ -683,7 +683,7 @@ router.patch('/:id', async (req, res) => {
         status                = COALESCE(${status                ?? null}, status),
         overtime_periods      = CASE
                                   WHEN ${status ?? null} = 'final' AND ${overtime_periods ?? null}::smallint IS NULL
-                                  THEN CASE WHEN current_period IN ('OT', 'SO') THEN 1 ELSE overtime_periods END
+                                  THEN CASE WHEN current_period IN ('OT', 'SO') THEN COALESCE(overtime_periods, 1) ELSE overtime_periods END
                                   ELSE COALESCE(${overtime_periods ?? null}::smallint, overtime_periods)
                                 END,
         shootout              = CASE

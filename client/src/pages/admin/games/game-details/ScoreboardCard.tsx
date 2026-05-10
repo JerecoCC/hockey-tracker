@@ -39,6 +39,7 @@ interface Props {
   game: GameRecord;
   isFinal: boolean;
   isInProgress: boolean;
+  isEditMode?: boolean;
   liveAwayScore: number;
   liveHomeScore: number;
   overtimeSuffix: string;
@@ -96,6 +97,7 @@ const ScoreboardCard = ({
   game,
   isFinal,
   isInProgress,
+  isEditMode = false,
   liveAwayScore,
   liveHomeScore,
   overtimeSuffix,
@@ -257,7 +259,12 @@ const ScoreboardCard = ({
                 })()}
               </span>
             )}
-            {isFinal ? (
+            {isEditMode ? (
+              <Badge
+                label="Editing"
+                intent="info"
+              />
+            ) : isFinal ? (
               <Badge
                 label={`Final${overtimeSuffix}`}
                 intent="success"

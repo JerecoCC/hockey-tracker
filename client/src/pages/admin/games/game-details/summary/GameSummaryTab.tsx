@@ -40,6 +40,8 @@ interface Props {
   game: GameRecord;
   isFinal: boolean;
   isInProgress: boolean;
+  isEditMode: boolean;
+  setIsEditMode: (value: boolean) => void;
   busy: string | null;
   leagueId: string;
   seasonId: string;
@@ -77,6 +79,8 @@ const GameSummaryTab = ({
   game,
   isFinal,
   isInProgress,
+  isEditMode,
+  setIsEditMode,
   busy,
   leagueId,
   seasonId,
@@ -274,8 +278,6 @@ const GameSummaryTab = ({
   // ── Goalie Switch modal state ────────────────────────────────────────────
   const [switchGoalieOpen, setSwitchGoalieOpen] = useState(false);
 
-  // ── Full Edit Mode (client-side toggle; DB status stays final) ───────────
-  const [isEditMode, setIsEditMode] = useState(false);
   // Treat the game as in-progress for all edit controls when edit mode is on.
   const isEditInProgress = isInProgress || isEditMode;
 
@@ -403,7 +405,6 @@ const GameSummaryTab = ({
                 goalieStats={goalieStats}
                 playerGameStats={playerGameStats}
                 leagueId={leagueId}
-                isFinal={isFinal}
                 onEdit={
                   isEditMode
                     ? () => {
@@ -436,7 +437,6 @@ const GameSummaryTab = ({
               onAddAttempt={openAttemptModal}
               onEditAttempt={openEditAttemptModal}
               onDeleteAttempt={handleDeleteAttempt}
-              onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
               onGoBackPeriod={isEditInProgress ? (prev) => advancePeriod(prev) : undefined}
               onGoBackOTPeriod={
                 isEditInProgress ? (targetNum) => revertOTPeriod(targetNum) : undefined
@@ -459,6 +459,8 @@ const GameSummaryTab = ({
                 lineup={lineup}
                 leagueId={leagueId}
                 isFinal={isFinal && isEditMode}
+                isInProgress={isEditInProgress}
+                onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
                 upsertGoalieStat={upsertGoalieStat}
                 removeGoalieStat={removeGoalieStat}
               />
@@ -554,7 +556,17 @@ const GameSummaryTab = ({
                         }}
                       />
                     )}
-                  {isFinal && (
+                  {isFinal && isEditMode && (
+                    <Button
+                      variant="filled"
+                      intent="info"
+                      icon="save"
+                      size="sm"
+                      tooltip="Finish editing"
+                      onClick={() => setIsEditMode(false)}
+                    />
+                  )}
+                  {isFinal && !isEditMode && (
                     <Button
                       variant="outlined"
                       intent="neutral"
@@ -571,7 +583,7 @@ const GameSummaryTab = ({
                         ...(isFinal && !isEditMode
                           ? [
                               {
-                                label: 'Full Edit Mode',
+                                label: 'Edit Mode',
                                 icon: 'edit',
                                 onClick: () => {
                                   setIsEditMode(true);
@@ -808,7 +820,7 @@ const GameSummaryTab = ({
             <GameInfoCard
               game={game}
               busy={busy}
-              updateGameInfo={updateGameInfo}
+              updateGameInfo={isEditMode ? updateGameInfo : undefined}
             />
           </div>
         </div>

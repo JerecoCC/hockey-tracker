@@ -14,7 +14,6 @@ interface Props {
   goalieStats: GoalieStatRecord[];
   playerGameStats: Map<string, { goals: number; assists: number }>;
   leagueId: string;
-  isFinal: boolean;
   onEdit?: () => void;
 }
 
@@ -26,7 +25,6 @@ const ThreeStarsCard = ({
   goalieStats,
   playerGameStats,
   leagueId,
-  isFinal,
   onEdit,
 }: Props) => {
   const starDefs = [
@@ -39,7 +37,7 @@ const ThreeStarsCard = ({
     <Card
       title="Three Stars"
       action={
-        isFinal ? (
+        onEdit ? (
           <Button
             variant="outlined"
             intent="neutral"
