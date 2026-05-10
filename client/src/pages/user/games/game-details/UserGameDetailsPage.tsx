@@ -189,11 +189,16 @@ const UserGameDetailsPage = () => {
       : []),
   ];
 
+  const hasSO =
+    !isPlayoff &&
+    (game.period_scores.some((ps) => ps.period === 'SO') ||
+      game.shootout ||
+      game.current_period === 'SO');
   const hasOT =
-    game.period_scores.some((ps) => ps.period === 'OT') ||
-    (game.overtime_periods ?? 0) > 0 ||
-    game.current_period === 'OT' ||
-    game.current_period === 'SO';
+    !hasSO &&
+    (game.period_scores.some((ps) => ps.period === 'OT') ||
+      (game.overtime_periods ?? 0) > 0 ||
+      game.current_period === 'OT');
   const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
     { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
     { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
@@ -207,12 +212,8 @@ const UserGameDetailsPage = () => {
           }))
         : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
       : []),
-    ...(!isPlayoff &&
-    (game.period_scores.some((ps) => ps.period === 'SO') ||
-      game.shootout ||
-      game.current_period === 'SO')
-      ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }]
-      : []),
+    // Shootouts don't exist in playoffs — suppress SO column for playoff games.
+    ...(hasSO ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }] : []),
   ];
 
   return (

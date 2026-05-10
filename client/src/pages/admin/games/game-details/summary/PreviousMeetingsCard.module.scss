@@ -1,6 +1,13 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+.seriesLabel {
+  font-size: $font-sm;
+  font-weight: 500;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
 .prevMeetingsRows {
   display: flex;
   flex-direction: column;

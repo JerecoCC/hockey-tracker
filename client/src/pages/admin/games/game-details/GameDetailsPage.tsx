@@ -191,11 +191,16 @@ const GameDetailsPage = () => {
   // Playoff games expand OT into separate columns: OT1, OT2, …
   const isPlayoff = game.game_type === 'playoff';
   const otCount = game.overtime_periods ?? 1;
+  const hasSO =
+    !isPlayoff &&
+    (game.period_scores.some((ps) => ps.period === 'SO') ||
+      game.shootout ||
+      game.current_period === 'SO');
   const hasOT =
-    game.period_scores.some((ps) => ps.period === 'OT') ||
-    (game.overtime_periods ?? 0) > 0 ||
-    game.current_period === 'OT' ||
-    game.current_period === 'SO';
+    !hasSO &&
+    (game.period_scores.some((ps) => ps.period === 'OT') ||
+      (game.overtime_periods ?? 0) > 0 ||
+      game.current_period === 'OT');
   // Compact numeric labels when multiple OT columns are present in a playoff game.
   const useShortNums = isPlayoff && otCount > 1;
   const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
@@ -212,12 +217,7 @@ const GameDetailsPage = () => {
         : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
       : []),
     // Shootouts don't exist in playoffs — suppress SO column for playoff games.
-    ...(!isPlayoff &&
-    (game.period_scores.some((ps) => ps.period === 'SO') ||
-      game.shootout ||
-      game.current_period === 'SO')
-      ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }]
-      : []),
+    ...(hasSO ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }] : []),
   ];
 
   return (

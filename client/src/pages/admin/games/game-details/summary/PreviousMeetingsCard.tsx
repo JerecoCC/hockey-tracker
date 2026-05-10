@@ -21,9 +21,9 @@ type TeamMeta = { code: string; logo: string | null; primary: string; text: stri
 
 const PreviousMeetingsCard = ({ game, leagueId, seasonId }: Props) => {
   const navigate = useNavigate();
-  const meetings = game.previous_meetings;
+  const meetings = game.previous_meetings ?? [];
 
-  if (!meetings || meetings.length === 0) return null;
+  if (meetings.length === 0) return null;
 
   const awayTeam: TeamMeta = {
     code: game.away_team.code,
@@ -38,8 +38,34 @@ const PreviousMeetingsCard = ({ game, leagueId, seasonId }: Props) => {
     text: game.home_team.text_color,
   };
 
+  // Tally wins from the perspective of current home/away teams
+  let homeWins = 0;
+  let awayWins = 0;
+  meetings.forEach((pm) => {
+    const historicalHomeWon = pm.home_score > pm.away_score;
+    if (pm.current_home_was_home) {
+      // historical home team === current home team
+      if (historicalHomeWon) homeWins++;
+      else awayWins++;
+    } else {
+      // historical home team === current away team
+      if (historicalHomeWon) awayWins++;
+      else homeWins++;
+    }
+  });
+
+  const seriesLabel =
+    homeWins > awayWins
+      ? `${game.home_team.code} leads ${homeWins}–${awayWins}`
+      : awayWins > homeWins
+        ? `${game.away_team.code} leads ${awayWins}–${homeWins}`
+        : `Tied ${homeWins}–${awayWins}`;
+
   return (
-    <Card title="Previous Meetings">
+    <Card
+      title="Previous Meetings"
+      action={seriesLabel ? <span className={styles.seriesLabel}>{seriesLabel}</span> : undefined}
+    >
       <div className={styles.prevMeetingsRows}>
         {meetings.map((pm: PreviousMeeting) => {
           const isOT = pm.overtime_periods != null && pm.overtime_periods > 0;
