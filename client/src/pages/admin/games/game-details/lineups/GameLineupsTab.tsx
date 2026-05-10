@@ -203,14 +203,16 @@ const GameLineupsTab = ({
             return (
               <ListItem
                 key={e.id}
-                image={e.photo}
-                image_shape="circle"
+                image_shape="square"
                 primaryColor={primaryColor}
                 textColor={textColor}
-                jerseyNumber={e.jersey_number ?? null}
                 eyebrow={positionPart}
                 name={`${e.last_name}, ${e.first_name}`}
-                placeholder={`${e.first_name[0]}${e.last_name[0]}`}
+                placeholder={
+                  e.jersey_number != null
+                    ? String(e.jersey_number)
+                    : `${e.first_name[0]}${e.last_name[0]}`
+                }
                 href={`/admin/leagues/${leagueId}/teams/${e.team_id}/players/${e.player_id}`}
                 rightContent={
                   isStarter

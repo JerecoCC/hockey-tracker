@@ -144,7 +144,7 @@ const ScoringCard = ({
               initials={goal.scorer_last_name?.charAt(0) ?? '?'}
               primaryColor={goal.team_primary_color}
               textColor={goal.team_text_color}
-              size={32}
+              size={48}
             />
             <div className={styles.goalInfo}>
               <span className={styles.goalScorer}>

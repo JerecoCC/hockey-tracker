@@ -131,7 +131,7 @@ const GoalieStatsCard = ({
                         initials={goalie.last_name?.charAt(0) ?? '?'}
                         primaryColor={primaryColor}
                         textColor={textColor}
-                        size={32}
+                        size={48}
                       />
                       <div className={styles.goalInfo}>
                         {goalie.jersey_number != null && (
