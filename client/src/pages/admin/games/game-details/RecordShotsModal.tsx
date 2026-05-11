@@ -82,7 +82,15 @@ const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
 /**
  * Computes the expected shots-against for a goalie in a game:
  * opposing team's total shots (for the periods the goalie played) minus empty-net goals.
- * Respects goalie substitutions via `entered_period`.
+ *
+ * Phase 2+: when the GoalieStatRecord has a `stints` array we walk each
+ * stint's window to determine which periods were covered, correctly handling
+ * pull-and-return scenarios.  A period P is considered "played" by a stint
+ * when: entered_period_ord ≤ p_ord AND (exited_period_ord > p_ord OR no exit).
+ * Note: if a goalie exited in P (same ordinal as P), P is not counted for them
+ * automatically — both goalies partially played it and the admin adjusts SA.
+ *
+ * Legacy fallback (no stints): uses entered_period aggregation as before.
  */
 export const computeAutoSA = (
   goalie: GameRosterEntry,
@@ -95,28 +103,35 @@ export const computeAutoSA = (
   const opposingTeamId = isAway ? game.home_team.id : game.away_team.id;
 
   const thisStat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
-  const enteredPeriod = thisStat?.entered_period ?? null;
+  const stints = thisStat?.stints;
 
-  // Find a substitute on the same team (has an entered_period)
-  const subStat = goalieStats.find(
-    (gs) =>
-      gs.team_id === goalie.team_id &&
-      gs.goalie_id !== goalie.player_id &&
-      gs.entered_period !== null,
-  );
+  let playedPeriod: (p: string) => boolean;
 
-  const playedPeriod = (p: string): boolean => {
-    if (enteredPeriod !== null) {
-      // This goalie is a sub — played from enteredPeriod onwards
-      return periodIdx(p) >= periodIdx(enteredPeriod);
-    }
-    if (subStat) {
-      // Starter with a sub — played until the sub entered
-      return periodIdx(p) < periodIdx(subStat.entered_period!);
-    }
-    // Sole goalie — played all periods
-    return true;
-  };
+  if (stints && stints.length > 0) {
+    // Phase 2+: derive from stint windows
+    playedPeriod = (p: string) => {
+      const pOrd = periodIdx(p);
+      return stints.some((st) => {
+        const enterOrd = periodIdx(st.entered_period);
+        const exitOrd = st.exited_period != null ? periodIdx(st.exited_period) : Infinity;
+        return pOrd >= enterOrd && pOrd < exitOrd;
+      });
+    };
+  } else {
+    // Legacy fallback: single entered_period on the aggregate record
+    const enteredPeriod = thisStat?.entered_period ?? null;
+    const subStat = goalieStats.find(
+      (gs) =>
+        gs.team_id === goalie.team_id &&
+        gs.goalie_id !== goalie.player_id &&
+        gs.entered_period !== null,
+    );
+    playedPeriod = (p: string) => {
+      if (enteredPeriod !== null) return periodIdx(p) >= periodIdx(enteredPeriod);
+      if (subStat) return periodIdx(p) < periodIdx(subStat.entered_period!);
+      return true;
+    };
+  }
 
   const totalOpposingShots = periodShots
     .filter((ps) => playedPeriod(ps.period))

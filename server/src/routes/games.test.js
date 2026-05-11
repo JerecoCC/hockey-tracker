@@ -590,6 +590,7 @@ describe('PUT /api/admin/games/:id/goalie-stats', () => {
   it('upserts goalie stats and returns the record', async () => {
     sql
       .mockResolvedValueOnce([]) // INSERT ON CONFLICT (no meaningful return)
+      .mockResolvedValueOnce([]) // SELECT rebuild_goalie_stints (legacy→stints sync)
       .mockResolvedValueOnce([GOALIE_STAT]); // SELECT full record
     const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
       goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
@@ -602,6 +603,7 @@ describe('PUT /api/admin/games/:id/goalie-stats', () => {
   it('returns the inserted record keyed by goalie_id and game_id', async () => {
     sql
       .mockResolvedValueOnce([]) // INSERT
+      .mockResolvedValueOnce([]) // SELECT rebuild_goalie_stints (legacy→stints sync)
       .mockResolvedValueOnce([GOALIE_STAT]); // SELECT
     const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
       goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,

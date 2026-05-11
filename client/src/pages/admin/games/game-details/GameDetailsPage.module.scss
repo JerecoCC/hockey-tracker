@@ -624,13 +624,15 @@
   }
 }
 
-// Goalie rows inside the shots modal (logo + name | SA input | SV input)
+// Column label row above per-stint data rows in GoalieStatsEditModal.
+// Padding matches .goalieStintRow so labels align with their inputs.
 .shotsGoalieHeader {
   display: flex;
   align-items: center;
   gap: $space-sm;
+  padding: 0 $space-sm;
 
-  // Title ("Goalie Stats") fills the left
+  // "Window" label fills the remaining space
   > span:first-child {
     flex: 1;
   }
@@ -669,6 +671,60 @@
 .shotsGoalieRowStarter {
   border: 1px solid rgba($info, 0.4);
   background: rgba($info, 0.07);
+}
+
+// Small label used between sections in GoalieSwitchModal / GoalieStatsEditModal.
+.goalieSubLabel {
+  margin: $space-xs $space-sm 0;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-weight: 500;
+}
+
+// Per-stint row in GoalieStatsEditModal.
+.goalieStintRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs $space-sm;
+  font-size: $font-sm;
+
+  // Stint timing summary (read-only label)
+  .goalieStintInfo {
+    flex: 1;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
+
+  // SA / GA inputs in the stint row
+  .goalieStintInputs {
+    display: flex;
+    gap: $space-sm;
+    flex-shrink: 0;
+
+    label {
+      display: block;
+      margin-bottom: 0;
+      width: 56px;
+      flex-shrink: 0;
+    }
+
+    input[type="number"] {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding-left: $space-sm;
+      padding-right: $space-sm;
+      text-align: center;
+    }
+  }
+}
+
+// Divider between goalie groups in GoalieStatsEditModal.
+.goalieGroupDivider {
+  border: none;
+  border-top: 1px solid $border;
+  margin: $space-xs 0 0;
 }
 
 .goalieSubRow {

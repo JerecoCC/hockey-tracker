@@ -1113,44 +1113,102 @@ router.get('/:id/stats', async (req, res) => {
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
       ),
       -- Per-stint GA: count goals against each goalie during their active window.
-      goalie_ranges AS (
+      -- Reads from game_goalie_stints using precise (period, time) position windows,
+      -- matching the same attribution logic used by the per-game goalie-stats endpoint.
+      stint_ranges AS (
         SELECT
-          ggs.id, ggs.game_id, ggs.team_id, ggs.goalie_id, ggs.shots_against,
-          pv.v AS from_ord,
-          LEAD(pv.v) OVER (
-            PARTITION BY ggs.game_id, ggs.team_id ORDER BY pv.v
-          ) AS until_ord
-        FROM game_goalie_stats ggs
-        JOIN games g ON g.id = ggs.game_id AND g.season_id = ${id} AND g.status = 'final'
-        JOIN period_vals pv ON pv.p = COALESCE(ggs.entered_period, '1')
+          st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
+          st.shots_against,
+          st.goals_against AS goals_against_override,
+          st.exited_period,
+          pv_in.v * 100000
+            + COALESCE(
+                SPLIT_PART(st.entered_time, ':', 1)::int * 60
+                + SPLIT_PART(st.entered_time, ':', 2)::int,
+                0
+              ) AS from_pos,
+          CASE
+            WHEN st.exited_period IS NULL THEN NULL
+            ELSE pv_out.v * 100000
+              + COALESCE(
+                  SPLIT_PART(st.exited_time, ':', 1)::int * 60
+                  + SPLIT_PART(st.exited_time, ':', 2)::int,
+                  0
+                )
+          END AS until_pos
+        FROM game_goalie_stints st
+        JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final'
+        JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
+        LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
       ),
-      goals_per_stint AS (
-        SELECT gr.id AS stat_id, COUNT(*) AS ga
-        FROM goalie_ranges gr
-        JOIN goals gl ON gl.game_id = gr.game_id AND gl.team_id != gr.team_id AND gl.empty_net = false
+      stint_ga_derived AS (
+        SELECT sr.id AS stint_id, COUNT(*)::int AS ga
+        FROM stint_ranges sr
+        JOIN goals gl
+          ON gl.game_id   = sr.game_id
+         AND gl.team_id  != sr.team_id
+         AND gl.empty_net = false
         JOIN period_vals pv ON pv.p = gl.period
-        WHERE pv.v >= gr.from_ord
-          AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)
-        GROUP BY gr.id
+        WHERE (pv.v * 100000
+               + COALESCE(
+                   SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                   + SPLIT_PART(gl.period_time, ':', 2)::int,
+                   0
+                 )) >= sr.from_pos
+          AND (sr.until_pos IS NULL
+               OR (pv.v * 100000
+                   + COALESCE(
+                       SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                       + SPLIT_PART(gl.period_time, ':', 2)::int,
+                       0
+                     )) < sr.until_pos)
+        GROUP BY sr.id
+      ),
+      stints_resolved AS (
+        SELECT
+          sr.*,
+          COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga
+        FROM stint_ranges sr
+        LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
+      ),
+      -- Per-game aggregation per goalie/team (one row per game per goalie)
+      goalie_game AS (
+        SELECT
+          game_id, goalie_id, team_id,
+          MIN(from_pos)           AS first_from_pos,
+          SUM(shots_against)::int AS shots_against,
+          SUM(resolved_ga)::int   AS goals_against
+        FROM stints_resolved
+        GROUP BY game_id, goalie_id, team_id
+      ),
+      -- Last goalie in net per team per game (highest stint_ord = never replaced)
+      team_game_last_goalie AS (
+        SELECT DISTINCT ON (game_id, team_id)
+          game_id, team_id, goalie_id
+        FROM stints_resolved
+        ORDER BY game_id, team_id, stint_ord DESC
       ),
       goalie_game_agg AS (
         SELECT
-          gr.goalie_id,
-          gr.team_id,
-          COUNT(DISTINCT gr.game_id)::int                       AS gp,
-          SUM(gr.shots_against)::int                            AS shots_against,
-          SUM(COALESCE(gps.ga, 0))::int                         AS goals_against,
-          (SUM(gr.shots_against) - SUM(COALESCE(gps.ga, 0)))::int AS saves,
-          -- Shutout: goalie played whole game (no entered_period) AND GA = 0
+          gg.goalie_id,
+          gg.team_id,
+          COUNT(*)::int                                          AS gp,
+          SUM(gg.shots_against)::int                            AS shots_against,
+          SUM(gg.goals_against)::int                            AS goals_against,
+          (SUM(gg.shots_against) - SUM(gg.goals_against))::int AS saves,
+          -- Shutout: goalie started at game start (period 1, 0:00 → from_pos = 100000),
+          -- was never replaced (last goalie for the team in that game),
+          -- faced at least one shot, and allowed zero goals.
           COUNT(*) FILTER (
-            WHERE gr.shots_against > 0
-              AND COALESCE(gps.ga, 0) = 0
-              AND gr.from_ord = 1
-              AND gr.until_ord IS NULL
+            WHERE gg.shots_against > 0
+              AND gg.goals_against = 0
+              AND gg.first_from_pos = 100000
+              AND tgl.goalie_id = gg.goalie_id
           )::int                                                 AS shutouts
-        FROM goalie_ranges gr
-        LEFT JOIN goals_per_stint gps ON gps.stat_id = gr.id
-        GROUP BY gr.goalie_id, gr.team_id
+        FROM goalie_game gg
+        JOIN team_game_last_goalie tgl
+          ON tgl.game_id = gg.game_id AND tgl.team_id = gg.team_id
+        GROUP BY gg.goalie_id, gg.team_id
       )
       SELECT
         p.id                                                   AS player_id,

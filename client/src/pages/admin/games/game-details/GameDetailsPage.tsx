@@ -46,7 +46,14 @@ const GameDetailsPage = () => {
     revertToEditMode,
     deleteGame,
   } = useGameDetails(id);
-  const { goalieStats, upsertGoalieStat, switchGoalie, removeGoalieStat } = useGameGoalieStats(id);
+  const {
+    goalieStats,
+    upsertGoalieStat,
+    switchGoalie,
+    removeGoalieStat,
+    updateGoalieStint,
+    removeGoalieStint,
+  } = useGameGoalieStats(id);
   // attempts is needed here only for soWinnerSide → liveScore calculation for ScoreboardCard.
   // React Query deduplicates the request; GameSummaryTab also calls this hook.
   const { attempts } = useShootoutAttempts(id);
@@ -296,6 +303,8 @@ const GameDetailsPage = () => {
                 upsertGoalieStat={upsertGoalieStat}
                 switchGoalie={switchGoalie}
                 removeGoalieStat={removeGoalieStat}
+                updateGoalieStint={updateGoalieStint}
+                removeGoalieStint={removeGoalieStint}
                 startGame={startGame}
                 updateStatus={updateStatus}
                 advancePeriod={advancePeriod}

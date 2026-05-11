@@ -1,36 +1,47 @@
 import { useState, useEffect } from 'react';
-import { useForm, useFieldArray, Controller } from 'react-hook-form';
-import Field from '@/components/Field/Field';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
-import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
-import { type LineupEntry } from '@/hooks/useGameLineup';
+import {
+  type GoalieStatRecord,
+  type GoalieStintRecord,
+  type UpdateGoalieStintData,
+} from '@/hooks/useGameGoalieStats';
 import styles from './GameDetailsPage.module.scss';
 import fieldStyles from '@/components/Field/Field.module.scss';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
-const PERIOD_OPTIONS = [
-  { value: '', label: '— None —' },
-  { value: '1', label: '1st Period' },
-  { value: '2', label: '2nd Period' },
-  { value: '3', label: '3rd Period' },
-  { value: 'OT', label: 'Overtime' },
-];
-
-type FormValues = {
-  goalies: Array<{
-    shots_against: string;
-    saves: string;
-    entered_period: string;
-    sub_time: string;
-  }>;
+const PERIOD_LABEL: Record<string, string> = {
+  '1': 'P1',
+  '2': 'P2',
+  '3': 'P3',
+  OT: 'OT',
+  SO: 'SO',
 };
+
+const fmtStintWindow = (stint: GoalieStintRecord) => {
+  const enter = `${PERIOD_LABEL[stint.entered_period] ?? stint.entered_period}${stint.entered_time ? ` ${stint.entered_time}` : ''}`;
+  if (!stint.exited_period) return `${enter} →`;
+  const exit = `${PERIOD_LABEL[stint.exited_period] ?? stint.exited_period}${stint.exited_time ? ` ${stint.exited_time}` : ''}`;
+  return `${enter} → ${exit}`;
+};
+
+interface StintRow {
+  id: string;
+  shots_against: string;
+  goals_against: string; // '' = no override (auto-derived)
+}
+
+interface GoalieEditRow {
+  stat: GoalieStatRecord;
+  rosterEntry: GameRosterEntry;
+  stints: StintRow[];
+}
 
 interface Props {
   open: boolean;
@@ -38,9 +49,12 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
-  lineup: LineupEntry[];
   onClose: () => void;
-  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<void>;
+  updateGoalieStint: (
+    stintId: string,
+    data: UpdateGoalieStintData,
+  ) => Promise<GoalieStatRecord[] | null>;
+  removeGoalieStint: (stintId: string) => Promise<boolean>;
   removeGoalieStat: (goalieId: string) => Promise<boolean>;
 }
 
@@ -50,76 +64,93 @@ const GoalieStatsEditModal = ({
   awayRoster,
   homeRoster,
   goalieStats,
-  lineup,
   onClose,
-  upsertGoalieStat,
+  updateGoalieStint,
+  removeGoalieStint,
   removeGoalieStat,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [rows, setRows] = useState<GoalieEditRow[]>([]);
 
-  // Only show goalies that have a stat entry (both starters and backup entries).
-  const allGoalies = [...awayRoster, ...homeRoster].filter((e) =>
-    goalieStats.some((gs) => gs.goalie_id === e.player_id),
-  );
-
-  const { control, reset, handleSubmit } = useForm<FormValues>({
-    defaultValues: { goalies: [] },
-  });
-  const { fields } = useFieldArray({ control, name: 'goalies' });
-
+  // Build per-goalie edit rows (one group per GoalieStatRecord, one StintRow per stint).
   useEffect(() => {
-    if (open) {
-      reset({
-        goalies: allGoalies.map((g) => {
-          const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          return {
-            shots_against: stat ? String(stat.shots_against) : '',
-            saves: stat ? String(stat.saves) : '',
-            entered_period: stat?.entered_period ?? '',
-            sub_time: stat?.sub_time ?? '',
-          };
-        }),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    if (!open) return;
+    const allRoster = [...awayRoster, ...homeRoster];
+    const built: GoalieEditRow[] = goalieStats
+      .map((stat) => {
+        const entry = allRoster.find((e) => e.player_id === stat.goalie_id);
+        if (!entry) return null;
+        return {
+          stat,
+          rosterEntry: entry,
+          stints: (stat.stints ?? []).map((st) => ({
+            id: st.id,
+            shots_against: String(st.shots_against),
+            // '' if no override stored (will not send goals_against on save)
+            goals_against:
+              st.goals_against_override != null ? String(st.goals_against_override) : '',
+          })),
+        };
+      })
+      .filter((r): r is GoalieEditRow => r !== null);
+    setRows(built);
+  }, [open, goalieStats, awayRoster, homeRoster]);
 
-  const handleConfirm = handleSubmit(async ({ goalies }) => {
+  const setStintField = (
+    goalieIdx: number,
+    stintIdx: number,
+    field: 'shots_against' | 'goals_against',
+    value: string,
+  ) => {
+    setRows((prev) =>
+      prev.map((row, gi) =>
+        gi !== goalieIdx
+          ? row
+          : {
+              ...row,
+              stints: row.stints.map((st, si) =>
+                si !== stintIdx ? st : { ...st, [field]: value.replace(/[^0-9]/g, '') },
+              ),
+            },
+      ),
+    );
+  };
+
+  const handleSave = async () => {
     setSubmitting(true);
-    for (let i = 0; i < allGoalies.length; i++) {
-      const goalie = allGoalies[i];
-      const row = goalies[i];
-      if (!row || !goalie) continue;
-      const shots = parseInt(row.shots_against, 10);
-      if (!isNaN(shots)) {
-        const isStarter = lineup.some(
-          (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
-        );
-        const sv = parseInt(row.saves, 10);
-        await upsertGoalieStat({
-          goalie_id: goalie.player_id,
-          team_id: goalie.team_id,
-          shots_against: shots,
-          // Derive GA from SV; null clears any stored override (reverts to goals-table calc)
-          goals_against: isNaN(sv) ? null : Math.max(0, shots - sv),
-          // Only send sub fields for non-starters (subs)
-          ...(!isStarter && {
-            entered_period: row.entered_period || null,
-            sub_time: row.sub_time || null,
-          }),
-        });
+    for (const row of rows) {
+      for (const stintRow of row.stints) {
+        const sa = parseInt(stintRow.shots_against, 10);
+        const patch: UpdateGoalieStintData = {};
+        if (!isNaN(sa)) patch.shots_against = sa;
+        // '' means "clear override" → send null; number string → send the number
+        if (stintRow.goals_against !== '') {
+          const ga = parseInt(stintRow.goals_against, 10);
+          patch.goals_against = isNaN(ga) ? null : ga;
+        }
+        if (Object.keys(patch).length > 0) {
+          await updateGoalieStint(stintRow.id, patch);
+        }
       }
     }
     setSubmitting(false);
     onClose();
-  });
+  };
 
-  const handleRemove = async (goalieId: string) => {
+  const handleRemoveStint = async (stintId: string) => {
+    setRemoving(stintId);
+    await removeGoalieStint(stintId);
+    setRemoving(null);
+  };
+
+  const handleRemoveGoalie = async (goalieId: string) => {
     setRemoving(goalieId);
     await removeGoalieStat(goalieId);
     setRemoving(null);
   };
+
+  const busy = submitting || !!removing;
 
   return (
     <Modal
@@ -127,38 +158,23 @@ const GoalieStatsEditModal = ({
       title="Edit Goalie Stats"
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : 'Save'}
-      onConfirm={handleConfirm}
-      confirmDisabled={submitting || !!removing}
+      onConfirm={handleSave}
+      confirmDisabled={busy}
       busy={submitting}
     >
       <div className={styles.shotsModalBody}>
-        <div className={styles.shotsGoalieHeader}>
-          <span />
-          <div className={styles.shotsGoalieInputs}>
-            <span className={styles.shotsGoalieColLabel}>SA</span>
-            <span className={styles.shotsGoalieColLabel}>SV</span>
-          </div>
-        </div>
-        {fields.map((field, i) => {
-          const goalie = allGoalies[i];
-          if (!goalie) return null;
-          const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
+        {rows.map((row, gi) => {
+          const { stat, rosterEntry: goalie } = row;
           const isAway = goalie.team_id === game.away_team.id;
           const logo = isAway ? game.away_team.logo : game.home_team.logo;
           const code = isAway ? game.away_team.code : game.home_team.code;
           const primary = isAway ? game.away_team.primary_color : game.home_team.primary_color;
           const text = isAway ? game.away_team.text_color : game.home_team.text_color;
-          const isStarter = lineup.some(
-            (e) => e.player_id === goalie.player_id && e.position_slot === 'G',
-          );
-          const isBackup = !isStarter;
           return (
-            <div key={field.id}>
-              <div
-                className={[styles.shotsGoalieRow, isStarter ? styles.shotsGoalieRowStarter : '']
-                  .filter(Boolean)
-                  .join(' ')}
-              >
+            <div key={stat.goalie_id}>
+              {gi > 0 && <hr className={styles.goalieGroupDivider} />}
+              {/* ── Goalie header row ── */}
+              <div className={styles.shotsGoalieRow}>
                 <span className={styles.goalieNameCell}>
                   <TeamLogo
                     logo={logo}
@@ -184,66 +200,86 @@ const GoalieStatsEditModal = ({
                     </span>
                   </div>
                 </span>
+                <Button
+                  variant="outlined"
+                  intent="danger"
+                  icon="delete"
+                  size="sm"
+                  tooltip="Remove all stints for this goalie"
+                  disabled={busy}
+                  onClick={() => handleRemoveGoalie(goalie.player_id)}
+                />
+              </div>
+
+              {/* ── Per-stint rows ── */}
+              <div className={styles.shotsGoalieHeader}>
+                <span
+                  className={styles.shotsGoalieColLabel}
+                  style={{ flex: 1 }}
+                >
+                  Window
+                </span>
                 <div className={styles.shotsGoalieInputs}>
-                  <Field
-                    type="number"
-                    control={control}
-                    name={`goalies.${i}.shots_against`}
-                    placeholder="0"
-                    min={0}
-                    disabled={submitting || !!removing}
-                    transform={(v) => v.replace(/[^0-9]/g, '')}
-                  />
-                  {/* SV — GA is derived on save as SA − SV */}
-                  <Controller
-                    control={control}
-                    name={`goalies.${i}.saves`}
-                    render={({ field }) => (
+                  <span className={styles.shotsGoalieColLabel}>SA</span>
+                  <span className={styles.shotsGoalieColLabel}>GA</span>
+                </div>
+                {/* Invisible placeholder so SA/GA labels align with their inputs */}
+                <Button
+                  aria-hidden
+                  tabIndex={-1}
+                  variant="outlined"
+                  intent="danger"
+                  icon="delete"
+                  size="sm"
+                  style={{ visibility: 'hidden' }}
+                />
+              </div>
+              {row.stints.map((stintRow, si) => {
+                const originalStint = (stat.stints ?? [])[si];
+                return (
+                  <div
+                    key={stintRow.id}
+                    className={styles.goalieStintRow}
+                  >
+                    <span className={styles.goalieStintInfo}>
+                      {originalStint ? fmtStintWindow(originalStint) : '—'}
+                    </span>
+                    <div className={styles.goalieStintInputs}>
                       <label>
                         <input
                           className={fieldStyles.field}
                           type="number"
                           min={0}
-                          placeholder="0"
-                          value={field.value ?? ''}
-                          disabled={submitting || !!removing}
-                          onChange={(e) => field.onChange(e.target.value.replace(/[^0-9]/g, ''))}
-                          onBlur={field.onBlur}
+                          placeholder="SA"
+                          value={stintRow.shots_against}
+                          disabled={busy}
+                          onChange={(e) => setStintField(gi, si, 'shots_against', e.target.value)}
                         />
                       </label>
-                    )}
-                  />
-                </div>
-              </div>
-              {isBackup && (
-                <div className={styles.goalieSubRow}>
-                  <Field
-                    type="select"
-                    control={control}
-                    name={`goalies.${i}.entered_period`}
-                    options={PERIOD_OPTIONS}
-                    placeholder="— Period —"
-                    disabled={submitting || !!removing}
-                  />
-                  <Field
-                    type="timepicker"
-                    mode="duration"
-                    control={control}
-                    name={`goalies.${i}.sub_time`}
-                    placeholder="MM:SS"
-                    disabled={submitting || !!removing}
-                  />
-                  <Button
-                    variant="outlined"
-                    intent="danger"
-                    icon="delete"
-                    size="sm"
-                    tooltip="Remove goalie switch"
-                    disabled={!!removing || submitting}
-                    onClick={() => handleRemove(goalie.player_id)}
-                  />
-                </div>
-              )}
+                      <label title="GA override (blank = auto)">
+                        <input
+                          className={fieldStyles.field}
+                          type="number"
+                          min={0}
+                          placeholder="auto"
+                          value={stintRow.goals_against}
+                          disabled={busy}
+                          onChange={(e) => setStintField(gi, si, 'goals_against', e.target.value)}
+                        />
+                      </label>
+                    </div>
+                    <Button
+                      variant="outlined"
+                      intent="danger"
+                      icon="delete"
+                      size="sm"
+                      tooltip="Remove this stint"
+                      disabled={busy}
+                      onClick={() => handleRemoveStint(stintRow.id)}
+                    />
+                  </div>
+                );
+              })}
             </div>
           );
         })}

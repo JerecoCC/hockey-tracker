@@ -8,7 +8,7 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
-import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
+import type { GoalieStatRecord, UpdateGoalieStintData } from '@/hooks/useGameGoalieStats';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
@@ -33,7 +33,11 @@ interface Props {
   isFinal: boolean;
   isInProgress?: boolean;
   onSwitchGoalie?: () => void;
-  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
+  updateGoalieStint: (
+    stintId: string,
+    data: UpdateGoalieStintData,
+  ) => Promise<GoalieStatRecord[] | null>;
+  removeGoalieStint: (stintId: string) => Promise<boolean>;
   removeGoalieStat: (goalieId: string) => Promise<boolean>;
 }
 
@@ -49,7 +53,8 @@ const GoalieStatsCard = ({
   isFinal,
   isInProgress,
   onSwitchGoalie,
-  upsertGoalieStat,
+  updateGoalieStint,
+  removeGoalieStint,
   removeGoalieStat,
 }: Props) => {
   const navigate = useNavigate();
@@ -187,11 +192,9 @@ const GoalieStatsCard = ({
         awayRoster={awayRoster}
         homeRoster={homeRoster}
         goalieStats={goalieStats}
-        lineup={lineup}
         onClose={() => setEditOpen(false)}
-        upsertGoalieStat={async (data) => {
-          await upsertGoalieStat(data);
-        }}
+        updateGoalieStint={updateGoalieStint}
+        removeGoalieStint={removeGoalieStint}
         removeGoalieStat={removeGoalieStat}
       />
     </>

@@ -23,6 +23,7 @@ import type {
   GoalieStatRecord,
   GoalieSwitchData,
   UpsertGoalieStatData,
+  UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
@@ -59,6 +60,11 @@ interface Props {
   upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
   switchGoalie: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
   removeGoalieStat: (goalieId: string) => Promise<boolean>;
+  updateGoalieStint: (
+    stintId: string,
+    data: UpdateGoalieStintData,
+  ) => Promise<GoalieStatRecord[] | null>;
+  removeGoalieStint: (stintId: string) => Promise<boolean>;
   startGame: (time_start: string) => Promise<boolean>;
   updateStatus: (status: GameStatus) => Promise<boolean>;
   advancePeriod: (nextPeriod: CurrentPeriod) => Promise<boolean>;
@@ -97,6 +103,8 @@ const GameSummaryTab = ({
   upsertGoalieStat,
   switchGoalie,
   removeGoalieStat,
+  updateGoalieStint,
+  removeGoalieStint,
   startGame,
   updateStatus,
   advancePeriod,
@@ -461,7 +469,8 @@ const GameSummaryTab = ({
                 isFinal={isFinal && isEditMode}
                 isInProgress={isEditInProgress}
                 onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
-                upsertGoalieStat={upsertGoalieStat}
+                updateGoalieStint={updateGoalieStint}
+                removeGoalieStint={removeGoalieStint}
                 removeGoalieStat={removeGoalieStat}
               />
             )}

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -25,10 +25,14 @@ interface Props {
 }
 
 type FormValues = {
-  team_side: 'away' | 'home' | '';
+  team_side: 'away' | 'home';
+  // Outgoing goalie — close their currently-open stint
+  exited_period: string;
+  exited_time: string;
+  // Incoming goalie — new stint
   goalie_id: string;
   entered_period: string;
-  sub_time: string;
+  entered_time: string;
 };
 
 const GoalieSwitchModal = ({
@@ -43,24 +47,57 @@ const GoalieSwitchModal = ({
   const [submitting, setSubmitting] = useState(false);
 
   const { control, reset, watch, handleSubmit } = useForm<FormValues>({
-    defaultValues: { team_side: '', goalie_id: '', entered_period: '', sub_time: '' },
+    defaultValues: {
+      team_side: 'away',
+      exited_period: '2',
+      exited_time: '',
+      goalie_id: '',
+      entered_period: '2',
+      entered_time: '',
+    },
   });
 
   const teamSide = watch('team_side');
-
-  // Goalies on the selected team who don't already have a stat entry (so we
-  // can't switch to a goalie who is already in the stats list as a starter).
   const teamId = teamSide === 'away' ? game.away_team.id : game.home_team.id;
   const roster = teamSide === 'away' ? awayRoster : homeRoster;
+
+  // Find the goalie currently in net (the team's most-recent open stint).
+  const currentInNetGoalieId = useMemo(() => {
+    const teamStats = existingStats.filter((s) => s.team_id === teamId);
+    for (const stat of teamStats) {
+      if ((stat.stints ?? []).some((st) => st.exited_period === null)) {
+        return stat.goalie_id;
+      }
+    }
+    return null;
+  }, [existingStats, teamId]);
+
+  const currentInNetName = useMemo(() => {
+    if (!currentInNetGoalieId) return null;
+    const entry = roster.find((e) => e.player_id === currentInNetGoalieId);
+    if (!entry) return null;
+    return `${entry.first_name} ${entry.last_name}${entry.jersey_number != null ? ` (#${entry.jersey_number})` : ''}`;
+  }, [currentInNetGoalieId, roster]);
+
+  // Incoming goalie options: all roster goalies except whoever is currently in net.
   const goalieOptions = roster
-    .filter((e) => e.position === 'G' && !existingStats.some((s) => s.goalie_id === e.player_id))
+    .filter((e) => e.position === 'G' && e.player_id !== currentInNetGoalieId)
     .map((e) => ({
       value: e.player_id,
       label: `${e.first_name} ${e.last_name}${e.jersey_number != null ? ` (#${e.jersey_number})` : ''}`,
     }));
 
   useEffect(() => {
-    if (open) reset({ team_side: 'away', goalie_id: '', entered_period: '2', sub_time: '' });
+    if (open) {
+      reset({
+        team_side: 'away',
+        exited_period: '2',
+        exited_time: '',
+        goalie_id: '',
+        entered_period: '2',
+        entered_time: '',
+      });
+    }
   }, [open, reset]);
 
   const onSubmit = async (values: FormValues) => {
@@ -70,22 +107,21 @@ const GoalieSwitchModal = ({
       goalie_id: values.goalie_id,
       team_id: teamId,
       entered_period: values.entered_period,
-      sub_time: values.sub_time || null,
+      entered_time: values.entered_time || null,
+      close_previous: currentInNetGoalieId
+        ? { exited_period: values.exited_period, exited_time: values.exited_time || null }
+        : undefined,
     });
     setSubmitting(false);
     onClose();
   };
 
   const teamOptions = [
-    {
-      value: 'away',
-      label: `${game.away_team.code} (Away)`,
-    },
-    {
-      value: 'home',
-      label: `${game.home_team.code} (Home)`,
-    },
+    { value: 'away', label: `${game.away_team.code} (Away)` },
+    { value: 'home', label: `${game.home_team.code} (Home)` },
   ];
+
+  const noIncoming = goalieOptions.length === 0;
 
   return (
     <Modal
@@ -94,7 +130,7 @@ const GoalieSwitchModal = ({
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : 'Record Switch'}
       onConfirm={handleSubmit(onSubmit)}
-      confirmDisabled={submitting || goalieOptions.length === 0}
+      confirmDisabled={submitting || noIncoming}
       busy={submitting}
     >
       <div className={styles.shotsModalBody}>
@@ -106,14 +142,43 @@ const GoalieSwitchModal = ({
           options={teamOptions}
           disabled={submitting}
         />
-        {goalieOptions.length === 0 ? (
-          <p className={styles.noGoalsText}>
-            No eligible backup goalies on the roster for this team.
-          </p>
+
+        {/* ── Outgoing goalie — close their open stint ── */}
+        {currentInNetGoalieId && (
+          <>
+            <p className={styles.goalieSubLabel}>
+              Outgoing: <strong>{currentInNetName ?? currentInNetGoalieId}</strong>
+            </p>
+            <div className={styles.goalieSubRow}>
+              <Field
+                label="Exited in Period"
+                type="select"
+                control={control}
+                name="exited_period"
+                options={PERIOD_OPTIONS}
+                required
+                disabled={submitting}
+              />
+              <Field
+                label="Exit Time"
+                type="timepicker"
+                mode="duration"
+                control={control}
+                name="exited_time"
+                placeholder="MM:SS"
+                disabled={submitting}
+              />
+            </div>
+          </>
+        )}
+
+        {/* ── Incoming goalie ── */}
+        {noIncoming ? (
+          <p className={styles.noGoalsText}>No other goalies on the roster for this team.</p>
         ) : (
           <>
+            <p className={styles.goalieSubLabel}>Incoming Goalie</p>
             <Field
-              label="Incoming Goalie"
               type="select"
               control={control}
               name="goalie_id"
@@ -121,24 +186,26 @@ const GoalieSwitchModal = ({
               required
               disabled={submitting}
             />
-            <Field
-              label="Entered in Period"
-              type="select"
-              control={control}
-              name="entered_period"
-              options={PERIOD_OPTIONS}
-              required
-              disabled={submitting}
-            />
-            <Field
-              label="Time of Sub"
-              type="timepicker"
-              mode="duration"
-              control={control}
-              name="sub_time"
-              placeholder="MM:SS"
-              disabled={submitting}
-            />
+            <div className={styles.goalieSubRow}>
+              <Field
+                label="Entered in Period"
+                type="select"
+                control={control}
+                name="entered_period"
+                options={PERIOD_OPTIONS}
+                required
+                disabled={submitting}
+              />
+              <Field
+                label="Entry Time"
+                type="timepicker"
+                mode="duration"
+                control={control}
+                name="entered_time"
+                placeholder="MM:SS"
+                disabled={submitting}
+              />
+            </div>
           </>
         )}
       </div>
