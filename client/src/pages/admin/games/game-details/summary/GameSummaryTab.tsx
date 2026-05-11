@@ -421,6 +421,7 @@ const GameSummaryTab = ({
               goals={goals}
               isFinal={isFinal && !isEditMode}
               isInProgress={isEditInProgress}
+              isEditMode={isEditMode}
               busy={busy}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}
@@ -559,7 +560,7 @@ const GameSummaryTab = ({
                   {isFinal && isEditMode && (
                     <Button
                       variant="filled"
-                      intent="info"
+                      intent="accent"
                       icon="save"
                       size="sm"
                       tooltip="Finish editing"

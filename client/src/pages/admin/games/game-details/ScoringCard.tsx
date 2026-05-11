@@ -32,6 +32,7 @@ interface Props {
   goals: GoalRecord[];
   isFinal: boolean;
   isInProgress: boolean;
+  isEditMode?: boolean;
   busy: string | null;
   liveAwayScore: number;
   liveHomeScore: number;
@@ -67,6 +68,7 @@ const ScoringCard = ({
   goals,
   isFinal,
   isInProgress,
+  isEditMode = false,
   busy,
   liveAwayScore,
   liveHomeScore,
@@ -289,7 +291,7 @@ const ScoringCard = ({
                               ),
                           }
                         : null,
-                      num === 3 && liveAwayScore !== liveHomeScore
+                      num === 3 && liveAwayScore !== liveHomeScore && !isEditMode
                         ? {
                             icon: 'flag',
                             tooltip: 'End Game',
@@ -371,13 +373,13 @@ const ScoringCard = ({
                               ? {
                                   icon: 'play_arrow',
                                   tooltip: 'Next Overtime Period',
-                                  intent: 'info' as const,
+                                  intent: 'accent' as const,
                                   disabled: !!busy,
                                   onClick: () =>
                                     onOpenShotsModal(`OT${otNum}`, { type: 'next-ot' }, false),
                                 }
                               : null,
-                            periodGoals.length > 0
+                            periodGoals.length > 0 && !isEditMode
                               ? {
                                   icon: 'flag',
                                   tooltip: 'End Game',
@@ -435,7 +437,7 @@ const ScoringCard = ({
                           ? {
                               icon: 'play_arrow',
                               tooltip: 'Go to Shootouts',
-                              intent: 'info' as const,
+                              intent: 'accent' as const,
                               disabled: !!busy,
                               onClick: () =>
                                 onOpenShotsModal(
@@ -446,7 +448,7 @@ const ScoringCard = ({
                                 ),
                             }
                           : null,
-                        otGoals.length > 0
+                        otGoals.length > 0 && !isEditMode
                           ? {
                               icon: 'flag',
                               tooltip: 'End Game',
@@ -491,7 +493,7 @@ const ScoringCard = ({
             onDeleteAttempt={onDeleteAttempt}
             getPlayerHref={getPlayerHref}
             onEndGame={
-              onOpenShotsModal
+              onOpenShotsModal && !isEditMode
                 ? () => onOpenShotsModal('SO', { type: 'end-game' }, true)
                 : undefined
             }
