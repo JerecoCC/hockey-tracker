@@ -8,7 +8,11 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
-import type { GoalieStatRecord, UpdateGoalieStintData } from '@/hooks/useGameGoalieStats';
+import type {
+  GoalieStatRecord,
+  GoalieStintRecord,
+  UpdateGoalieStintData,
+} from '@/hooks/useGameGoalieStats';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
@@ -19,6 +23,42 @@ const PERIOD_LABEL: Record<string, string> = {
   '3': 'P3',
   OT: 'OT',
   SO: 'SO',
+};
+
+/** Format a single stint's entry→exit window for display. */
+const fmtStintWindow = (stint: GoalieStintRecord) => {
+  const label = (p: string, t: string | null) => `${PERIOD_LABEL[p] ?? p}${t ? ` ${t}` : ''}`;
+  const enter = label(stint.entered_period, stint.entered_time);
+  const exit = stint.exited_period ? label(stint.exited_period, stint.exited_time) : null;
+  return exit ? `${enter} → ${exit}` : enter;
+};
+
+/**
+ * Returns the stint-window lines to show under a goalie's name:
+ * - Single game-start stint (P1, no entered_time) → nothing (starter, no extra info needed)
+ * - Single mid-game stint → one "Px @ time → Py" line (backup)
+ * - Multiple stints → one line per stint (starter who re-entered, etc.)
+ * Falls back to the legacy entered_period / sub_time fields for old data that
+ * has no stints array.
+ */
+const stintLabels = (stat: GoalieStatRecord): string[] => {
+  if (stat.stints && stat.stints.length > 0) {
+    // Pure game-start starter with one uninterrupted stint — nothing to annotate
+    if (
+      stat.stints.length === 1 &&
+      stat.stints[0].entered_period === '1' &&
+      !stat.stints[0].entered_time
+    ) {
+      return [];
+    }
+    return stat.stints.map(fmtStintWindow);
+  }
+  // Legacy fallback: no stints data, use the top-level entered_period / sub_time
+  if (stat.entered_period) {
+    const p = PERIOD_LABEL[stat.entered_period] ?? stat.entered_period;
+    return [`entered ${p}${stat.sub_time ? ` @ ${stat.sub_time}` : ''}`];
+  }
+  return [];
 };
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -130,7 +170,7 @@ const GoalieStatsCard = ({
                   stat.shots_against > 0
                     ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                     : '1.000';
-                const isBackup = !!stat.entered_period;
+                const windows = stintLabels(stat);
                 const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
                 return (
                   <tr
@@ -165,12 +205,14 @@ const GoalieStatsCard = ({
                           <span className={styles.goalScorer}>
                             {formatPlayerName(goalie.first_name, goalie.last_name)}
                           </span>
-                          {isBackup && (
-                            <span className={styles.goalAssists}>
-                              entered {PERIOD_LABEL[stat.entered_period!] ?? stat.entered_period}
-                              {stat.sub_time && ` @ ${stat.sub_time}`}
+                          {windows.map((w, i) => (
+                            <span
+                              key={i}
+                              className={styles.goalAssists}
+                            >
+                              {w}
                             </span>
-                          )}
+                          ))}
                         </div>
                       </span>
                     </td>
