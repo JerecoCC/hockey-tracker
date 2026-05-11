@@ -277,10 +277,15 @@ const ShootoutAccordion = ({
   // they lead even accounting for first team's remaining regular-round attempts.
   const secondWonEarly = roundUnbalanced && secondRegGoals > firstRegGoals + firstRemaining;
 
+  // First team clinched: second team cannot catch up even with their remaining
+  // regular-round attempts. e.g. Home shoots first, scores 2/3, Away is 0/2 —
+  // Away's 3rd shot cannot tie so the game is already decided.
+  const firstWonEarly = roundUnbalanced && firstRegGoals > secondRegGoals + secondRemaining;
+
   // Allow adding only when the game isn't decided, or when the round is
   // unbalanced and the second team still has a meaningful shot to take.
-  const canAddAttempt = !soComplete || (roundUnbalanced && !secondWonEarly);
-  const canEndGame = soComplete && (!roundUnbalanced || secondWonEarly);
+  const canAddAttempt = !soComplete || (roundUnbalanced && !secondWonEarly && !firstWonEarly);
+  const canEndGame = soComplete && (!roundUnbalanced || secondWonEarly || firstWonEarly);
 
   const hoverActions: AccordionAction[] | undefined =
     isSOActive && onAddAttempt && onEndGame
