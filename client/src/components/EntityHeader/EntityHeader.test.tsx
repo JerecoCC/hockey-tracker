@@ -80,6 +80,61 @@ describe('EntityHeader – edit button', () => {
   });
 });
 
+describe('EntityHeader – logo image preview', () => {
+  it('wraps the logo in a button when a logo is provided', () => {
+    render(
+      <EntityHeader
+        {...defaultProps}
+        logo="https://example.com/logo.png"
+      />,
+    );
+    expect(
+      screen.getByRole('button', { name: /view toronto maple leafs logo/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('does NOT wrap the logo in a button when no logo is provided', () => {
+    render(<EntityHeader {...defaultProps} />);
+    expect(screen.queryByRole('button', { name: /view toronto maple leafs logo/i })).toBeNull();
+  });
+
+  it('opens the image preview modal when the logo button is clicked', () => {
+    render(
+      <EntityHeader
+        {...defaultProps}
+        logo="https://example.com/logo.png"
+      />,
+    );
+    // Modal image is not in the DOM until the button is clicked
+    expect(screen.queryByAltText('Toronto Maple Leafs')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: /view toronto maple leafs logo/i }));
+
+    // After click, the preview modal renders an <img alt={name}>
+    const previewImg = screen.getByAltText('Toronto Maple Leafs') as HTMLImageElement;
+    expect(previewImg).toBeInTheDocument();
+    expect(previewImg.src).toBe('https://example.com/logo.png');
+  });
+
+  it('closes the preview modal when its close button is clicked', () => {
+    render(
+      <EntityHeader
+        {...defaultProps}
+        logo="https://example.com/logo.png"
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /view toronto maple leafs logo/i }));
+    expect(screen.getByAltText('Toronto Maple Leafs')).toBeInTheDocument();
+
+    // The preview modal close button is the only icon-only button (no text content)
+    // currently in the DOM since no onEdit was provided.
+    const allBtns = screen.getAllByRole('button');
+    const closeBtn = allBtns.find((b) => !b.textContent?.trim() && !b.getAttribute('aria-label'))!;
+    fireEvent.click(closeBtn);
+    expect(screen.queryByAltText('Toronto Maple Leafs')).toBeNull();
+  });
+});
+
 describe('EntityHeader – color swatches', () => {
   it('renders swatch labels when swatches are provided', () => {
     render(
