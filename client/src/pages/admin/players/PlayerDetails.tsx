@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
@@ -94,6 +95,7 @@ const PlayerDetailsPage = () => {
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
 
   const updatePlayer = async (
     playerId: string,
@@ -187,13 +189,30 @@ const PlayerDetailsPage = () => {
       {/* Hero card */}
       <Card>
         <div className={styles.hero}>
-          <PlayerAvatar
-            photo={photo}
-            initials={initials}
-            primaryColor={avatarBg}
-            textColor={avatarColor}
-            size={80}
-          />
+          {photo ? (
+            <button
+              type="button"
+              className={styles.avatarButton}
+              onClick={() => setPhotoPreviewOpen(true)}
+              aria-label={`View photo of ${fullName}`}
+            >
+              <PlayerAvatar
+                photo={photo}
+                initials={initials}
+                primaryColor={avatarBg}
+                textColor={avatarColor}
+                size={80}
+              />
+            </button>
+          ) : (
+            <PlayerAvatar
+              photo={photo}
+              initials={initials}
+              primaryColor={avatarBg}
+              textColor={avatarColor}
+              size={80}
+            />
+          )}
           <div className={styles.heroInfo}>
             <h2 className={styles.heroName}>{fullName}</h2>
             <div className={styles.heroMeta}>
@@ -381,6 +400,13 @@ const PlayerDetailsPage = () => {
         createStint={createStint}
         updateStint={updateStint}
         uploadStintPhoto={uploadStintPhoto}
+      />
+
+      <ImagePreviewModal
+        open={photoPreviewOpen}
+        src={photo}
+        alt={fullName}
+        onClose={() => setPhotoPreviewOpen(false)}
       />
     </>
   );
