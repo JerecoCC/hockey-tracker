@@ -127,6 +127,10 @@
   white-space: nowrap;
 }
 
+.metaLine {
+  color: $text-bright;
+}
+
 // ── Game type — left accent border ───────────────────────────────────────────
 // Overrides the left side of the base 1px $border to a thicker coloured stripe.
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
+import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
@@ -318,13 +319,13 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 </Button>
               </>
             )}
-            <Button
-              variant="outlined"
-              intent={filtersVisible ? 'accent' : 'neutral'}
+            <ToggleButton
+              active={filtersVisible}
+              onClick={() => setFiltersVisible((v) => !v)}
               icon="filter_list"
               iconHeight="button"
-              tooltip={filtersVisible ? 'Hide filters' : 'Show filters'}
-              onClick={() => setFiltersVisible((v) => !v)}
+              activeTooltip="Hide filters"
+              inactiveTooltip="Show filters"
             />
           </div>
         }
@@ -370,17 +371,15 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                       intent="accent"
                       icon="playlist_add"
                       size="sm"
+                      tooltip="Bulk Create"
                       onClick={() => setBulkDate(dateKey)}
-                    >
-                      Bulk Create
-                    </Button>
+                    />
                     <Button
                       icon="add"
                       size="sm"
+                      tooltip="Create Game"
                       onClick={() => handleAdd(dateKey)}
-                    >
-                      Add Game
-                    </Button>
+                    />
                   </div>
                 )
               }

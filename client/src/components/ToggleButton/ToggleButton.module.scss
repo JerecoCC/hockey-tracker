@@ -1,0 +1,7 @@
+@use "styles/colors" as *;
+
+// Applied when active=true — gives the outlined-accent button a persistent
+// background tint matching its hover state so it reads as "on".
+.active {
+  background: #1e3a8a !important; // blue-900 — solid active tint
+}

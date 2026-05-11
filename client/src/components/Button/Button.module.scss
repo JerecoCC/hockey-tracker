@@ -88,34 +88,37 @@
 .filledAccent {
   background: $accent;
   color: #fff;
-  border: none;
+  border: 1px solid $accent;
   &:hover:not(:disabled) {
     background: $accent-hover;
+    border-color: $accent-hover;
   }
 }
 
 .filledSuccess {
   background: $success;
   color: #fff;
-  border: none;
+  border: 1px solid $success;
   &:hover:not(:disabled) {
     background: $success-hover;
+    border-color: $success-hover;
   }
 }
 
 .filledWarning {
   background: $warning;
   color: #fff;
-  border: none;
+  border: 1px solid $warning;
   &:hover:not(:disabled) {
     background: $warning-hover;
+    border-color: $warning-hover;
   }
 }
 
 .filledDanger {
   background: $danger;
   color: #fff;
-  border: none;
+  border: 1px solid $danger;
   &:hover:not(:disabled) {
     opacity: 0.85;
   }
@@ -124,7 +127,7 @@
 .filledInfo {
   background: $info;
   color: #fff;
-  border: none;
+  border: 1px solid $info;
   &:hover:not(:disabled) {
     opacity: 0.85;
   }
@@ -133,9 +136,10 @@
 .filledNeutral {
   background: $border;
   color: $text-body;
-  border: none;
+  border: 1px solid $border;
   &:hover:not(:disabled) {
     background: $text-dim;
+    border-color: $text-dim;
   }
 }
 
