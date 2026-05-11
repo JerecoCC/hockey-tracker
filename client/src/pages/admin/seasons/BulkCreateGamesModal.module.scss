@@ -21,6 +21,11 @@ $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
   letter-spacing: 0.06em;
 }
 
+.required {
+  color: #f87171;
+  margin-left: $space-xs;
+}
+
 .gameList {
   display: flex;
   flex-direction: column;
@@ -41,7 +46,7 @@ $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
   display: grid;
   grid-template-columns: $cols;
   gap: $space-md;
-  align-items: center;
+  align-items: start;
   padding: $space-xs 0;
 
   &:not(:last-child) {
@@ -64,7 +69,7 @@ $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
   transition:
     color $transition-fast,
     background $transition-fast;
-  margin-bottom: 1px;
+  margin-top: $space-xs;
 
   &:hover:not(:disabled) {
     color: $danger;

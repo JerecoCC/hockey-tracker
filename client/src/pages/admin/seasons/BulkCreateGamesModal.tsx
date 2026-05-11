@@ -48,6 +48,7 @@ interface GameRowProps {
   isSubmitting: boolean;
   dateDisabled?: boolean;
   autoFocus?: boolean;
+  canDelete: boolean;
   onDelete: () => void;
 }
 
@@ -60,6 +61,7 @@ const GameRow = ({
   isSubmitting,
   dateDisabled,
   autoFocus,
+  canDelete,
   onDelete,
 }: GameRowProps) => {
   const handleHomeTeamChange = (teamId: string | null) => {
@@ -73,6 +75,8 @@ const GameRow = ({
         type="datepicker"
         control={control}
         name={`games.${index}.scheduled_date`}
+        required
+        rules={{ required: 'Date is required' }}
         placeholder="Date…"
         disabled={isSubmitting || dateDisabled}
         autoFocus={autoFocus && !dateDisabled}
@@ -89,7 +93,7 @@ const GameRow = ({
         control={control}
         name={`games.${index}.away_team_id`}
         required
-        rules={{ required: true }}
+        rules={{ required: 'Away team is required' }}
         options={teamOptions}
         placeholder="— Select away team —"
         disabled={isSubmitting}
@@ -100,7 +104,7 @@ const GameRow = ({
         control={control}
         name={`games.${index}.home_team_id`}
         required
-        rules={{ required: true }}
+        rules={{ required: 'Home team is required' }}
         options={teamOptions}
         placeholder="— Select home team —"
         disabled={isSubmitting}
@@ -113,18 +117,22 @@ const GameRow = ({
         placeholder="Arena"
         disabled={isSubmitting}
       />
-      <button
-        type="button"
-        className={styles.deleteBtn}
-        onClick={onDelete}
-        disabled={isSubmitting}
-        aria-label="Remove game"
-      >
-        <Icon
-          name="delete"
-          size="1em"
-        />
-      </button>
+      {canDelete ? (
+        <button
+          type="button"
+          className={styles.deleteBtn}
+          onClick={onDelete}
+          disabled={isSubmitting}
+          aria-label="Remove game"
+        >
+          <Icon
+            name="delete"
+            size="1em"
+          />
+        </button>
+      ) : (
+        <span />
+      )}
     </div>
   );
 };
@@ -218,10 +226,16 @@ const BulkCreateGamesModal = ({
           onSubmit={onSubmit}
         >
           <div className={styles.headerRow}>
-            <span className={styles.headerCell}>Date</span>
+            <span className={styles.headerCell}>
+              Date<span className={styles.required}>*</span>
+            </span>
             <span className={styles.headerCell}>Time</span>
-            <span className={styles.headerCell}>Away Team</span>
-            <span className={styles.headerCell}>Home Team</span>
+            <span className={styles.headerCell}>
+              Away Team<span className={styles.required}>*</span>
+            </span>
+            <span className={styles.headerCell}>
+              Home Team<span className={styles.required}>*</span>
+            </span>
             <span className={styles.headerCell}>Venue</span>
             <span />
           </div>
@@ -238,6 +252,7 @@ const BulkCreateGamesModal = ({
                 isSubmitting={isSubmitting}
                 dateDisabled={!!defaultDate}
                 autoFocus={index === autoFocusIndex}
+                canDelete={fields.length > 1}
                 onDelete={() => handleDeleteClick(index)}
               />
             ))}
