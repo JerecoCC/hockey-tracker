@@ -449,7 +449,10 @@ const DatePicker = (props: Props) => {
             role="button"
             aria-label="Clear"
           >
-            ×
+            <Icon
+              name="close"
+              size="0.75rem"
+            />
           </span>
         )}
       </div>

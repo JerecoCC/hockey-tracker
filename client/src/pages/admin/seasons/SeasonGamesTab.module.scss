@@ -20,9 +20,10 @@
   font-weight: initial;
 }
 
-// Constrain the DatePicker trigger width
+// DatePicker sizes to its content but won't go narrower than min-width
 .datePicker {
-  width: 160px;
+  width: fit-content;
+  min-width: 170px;
   flex-shrink: 0;
 }
 
