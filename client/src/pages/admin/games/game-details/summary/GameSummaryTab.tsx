@@ -4,7 +4,6 @@ import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import StartGameModal from '../StartGameModal';
@@ -31,8 +30,8 @@ import type { LineupEntry } from '@/hooks/useGameLineup';
 import PreviousMeetingsCard from './PreviousMeetingsCard';
 import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
+import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
-import { PERIOD_IDS } from '../constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -485,247 +484,51 @@ const GameSummaryTab = ({
 
           {/* ── Right column: Linescore + Shots + Game Info ── */}
           <div className={styles.summaryRight}>
-            <Card
-              title="Linescore"
-              action={
-                <div className={styles.linescoreActions}>
-                  {game.status === 'scheduled' && (
-                    <>
-                      <Button
-                        variant="filled"
-                        intent="success"
-                        icon="play_arrow"
-                        size="sm"
-                        tooltip={
-                          !rosterReady
-                            ? 'Set lineups for both teams first'
-                            : !lineupsReady
-                              ? 'Set starting lineups for both teams'
-                              : 'Start Game'
-                        }
-                        tooltipIntent={rosterReady && lineupsReady ? undefined : 'error'}
-                        disabled={!!busy || !rosterReady || !lineupsReady}
-                        onClick={openStartGameModal}
-                      />
-                      <MoreActionsMenu
-                        disabled={!!busy}
-                        items={[
-                          {
-                            label: 'Reschedule Game',
-                            icon: 'calendar',
-                            onClick: () => updateStatus('postponed'),
-                          },
-                          {
-                            label: 'Cancel Game',
-                            icon: 'close',
-                            intent: 'danger',
-                            onClick: () => updateStatus('cancelled'),
-                          },
-                          {
-                            label: 'Delete Game',
-                            icon: 'delete',
-                            intent: 'danger',
-                            onClick: () => setConfirmDeleteOpen(true),
-                          },
-                        ]}
-                      />
-                    </>
-                  )}
-                  {isInProgress &&
-                    ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
-                    (game.current_period !== 'SO' || soComplete) &&
-                    (game.current_period !== 'OT' || goals.some((g) => g.period === 'OT')) &&
-                    (game.current_period !== '3' || liveAwayScore !== liveHomeScore) && (
-                      <Button
-                        variant="filled"
-                        intent="danger"
-                        icon="flag"
-                        size="sm"
-                        tooltip="End Game"
-                        disabled={!!busy}
-                        onClick={() => {
-                          if (endGameReadyForStars) {
-                            setStarsEditMode(false);
-                            setStarsModalOpen(true);
-                          } else {
-                            openShotsModal(
-                              game.current_period ?? lastPlayedPeriod,
-                              { type: 'end-game' },
-                              true,
-                            );
-                          }
-                        }}
-                      />
-                    )}
-                  {isFinal && isEditMode && (
-                    <Button
-                      variant="filled"
-                      intent="accent"
-                      icon="save"
-                      size="sm"
-                      tooltip="Finish editing"
-                      onClick={() => setIsEditMode(false)}
-                    />
-                  )}
-                  {isFinal && !isEditMode && (
-                    <Button
-                      variant="outlined"
-                      intent="neutral"
-                      icon="download"
-                      size="sm"
-                      tooltip="Download score card"
-                      onClick={() => setScoreImageOpen(true)}
-                    />
-                  )}
-                  {game.status !== 'scheduled' && (
-                    <MoreActionsMenu
-                      disabled={!!busy}
-                      items={[
-                        ...(isFinal && !isEditMode
-                          ? [
-                              {
-                                label: 'Edit Mode',
-                                icon: 'edit',
-                                onClick: () => {
-                                  setIsEditMode(true);
-                                  setEndGameReadyForStars(false);
-                                  // For old games where current_period was never persisted
-                                  if (!game.current_period) revertToEditMode(lastPlayedPeriod);
-                                },
-                              },
-                            ]
-                          : []),
-                        ...(isEditMode
-                          ? [
-                              {
-                                label: 'Exit Edit Mode',
-                                icon: 'close',
-                                onClick: () => setIsEditMode(false),
-                              },
-                            ]
-                          : []),
-                        {
-                          label: 'Delete Game',
-                          icon: 'delete',
-                          intent: 'danger' as const,
-                          onClick: () => setConfirmDeleteOpen(true),
-                        },
-                      ]}
-                    />
-                  )}
-                </div>
+            <LinescoreCard
+              game={game}
+              isFinal={isFinal}
+              isInProgress={isInProgress}
+              isEditMode={isEditMode}
+              busy={busy}
+              liveAwayScore={liveAwayScore}
+              liveHomeScore={liveHomeScore}
+              linescorePeriods={linescorePeriods}
+              attempts={attempts}
+              rosterReady={rosterReady}
+              lineupsReady={lineupsReady}
+              canEndGame={
+                isInProgress &&
+                ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
+                (game.current_period !== 'SO' || soComplete) &&
+                (game.current_period !== 'OT' || goals.some((g) => g.period === 'OT')) &&
+                (game.current_period !== '3' || liveAwayScore !== liveHomeScore)
               }
-            >
-              <table className={styles.periodsTable}>
-                <thead>
-                  <tr>
-                    <th className={styles.thTeam}></th>
-                    {linescorePeriods.map((p) => (
-                      <th
-                        key={p.id}
-                        className={styles.thPeriod}
-                      >
-                        {p.shortLabel}
-                      </th>
-                    ))}
-                    <th className={styles.thTotal}>T</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const currentPeriodIdx = PERIOD_IDS.indexOf(
-                      game.current_period as '1' | '2' | '3',
-                    );
-                    // When the game is in OT or SO, all regular periods are complete.
-                    const isPostRegulation =
-                      game.current_period === 'OT' || game.current_period === 'SO';
-                    return [
-                      {
-                        teamId: game.away_team.id,
-                        teamCode: game.away_team.code,
-                        teamLogo: game.away_team.logo,
-                        primaryColor: game.away_team.primary_color,
-                        textColor: game.away_team.text_color,
-                        total: liveAwayScore,
-                        isLoser: isFinal && liveAwayScore < liveHomeScore,
-                      },
-                      {
-                        teamId: game.home_team.id,
-                        teamCode: game.home_team.code,
-                        teamLogo: game.home_team.logo,
-                        primaryColor: game.home_team.primary_color,
-                        textColor: game.home_team.text_color,
-                        total: liveHomeScore,
-                        isLoser: isFinal && liveHomeScore < liveAwayScore,
-                      },
-                    ].map((row) => (
-                      <tr key={row.teamId}>
-                        <td className={styles.tdTeam}>
-                          <span className={styles.linescoreTeam}>
-                            <TeamLogo
-                              logo={row.teamLogo}
-                              code={row.teamCode ?? '?'}
-                              primaryColor={row.primaryColor}
-                              textColor={row.textColor}
-                              size={32}
-                              shape="square"
-                            />
-                            <span className={styles.linescoreCode}>{row.teamCode}</span>
-                          </span>
-                        </td>
-                        {linescorePeriods.map((p) => {
-                          // For numbered OT periods (OT1, OT2, …) only the last one maps to
-                          // the actual 'OT' goals; earlier ones always show 0.
-                          const isNumberedOT = /^OT[0-9]+$/.test(p.id);
-                          const isLastOT =
-                            isNumberedOT && p.id === `OT${game.overtime_periods ?? 1}`;
-                          const ps = isNumberedOT
-                            ? isLastOT
-                              ? game.period_scores.find((s) => s.period === 'OT')
-                              : undefined
-                            : game.period_scores.find((s) => s.period === p.id);
-                          const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
-                          const isPeriodDone =
-                            (isFinal && !isEditMode) ||
-                            (pIdx >= 0 ? isPostRegulation || currentPeriodIdx > pIdx : true);
-                          if (p.id === 'SO') {
-                            const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);
-                            const soDisplay =
-                              teamAttempts.length > 0
-                                ? `${teamAttempts.filter((a) => a.scored).length}/${teamAttempts.length}`
-                                : '—';
-                            return (
-                              <td
-                                key={p.id}
-                                className={styles.tdGoals}
-                              >
-                                {soDisplay}
-                              </td>
-                            );
-                          }
-                          const rawGoals =
-                            row.teamId === game.away_team.id ? ps?.away_goals : ps?.home_goals;
-                          const goals2: number | string = rawGoals ?? (isPeriodDone ? 0 : '—');
-                          return (
-                            <td
-                              key={p.id}
-                              className={styles.tdGoals}
-                            >
-                              {goals2}
-                            </td>
-                          );
-                        })}
-                        <td
-                          className={`${styles.tdTotal}${row.isLoser ? ` ${styles.scoreNumberLoser}` : ''}`}
-                        >
-                          {row.total}
-                        </td>
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
-            </Card>
+              onStartGame={openStartGameModal}
+              onReschedule={() => updateStatus('postponed')}
+              onCancel={() => updateStatus('cancelled')}
+              onDelete={() => setConfirmDeleteOpen(true)}
+              onEndGame={() => {
+                if (endGameReadyForStars) {
+                  setStarsEditMode(false);
+                  setStarsModalOpen(true);
+                } else {
+                  openShotsModal(
+                    game.current_period ?? lastPlayedPeriod,
+                    { type: 'end-game' },
+                    true,
+                  );
+                }
+              }}
+              onFinishEditing={() => setIsEditMode(false)}
+              onDownloadScoreCard={() => setScoreImageOpen(true)}
+              onEnterEditMode={() => {
+                setIsEditMode(true);
+                setEndGameReadyForStars(false);
+                // For old games where current_period was never persisted
+                if (!game.current_period) revertToEditMode(lastPlayedPeriod);
+              }}
+              onExitEditMode={() => setIsEditMode(false)}
+            />
 
             {/* ── Shots breakdown card ── */}
             {(game.period_shots.length > 0 || isInProgress || isFinal) && (
