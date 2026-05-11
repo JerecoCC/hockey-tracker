@@ -512,10 +512,27 @@
 }
 
 .slotFilled {
+  position: relative;
   background: $bg-page;
   border: 1px solid $border;
   display: flex;
   flex-direction: column;
+
+  .slotActions {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: $space-xs;
+    background: rgba(0, 0, 0, 0.45);
+    border-radius: inherit;
+    z-index: 1;
+  }
+
+  &:hover .slotActions {
+    display: flex;
+  }
 }
 
 .slotTeam {

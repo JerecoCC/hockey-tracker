@@ -118,7 +118,7 @@ router.get('/playoff-series', async (req, res) => {
         ps.id, ps.season_id, ps.round, ps.series_letter,
         ps.home_team_id, ps.away_team_id,
         ps.games_to_win, ps.home_wins, ps.away_wins,
-        ps.status, ps.winner_team_id, ps.created_at,
+        ps.status, ps.winner_team_id, ps.bracket_slot_key, ps.created_at,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
         at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
         sg.games
@@ -174,6 +174,7 @@ router.post('/playoff-series', async (req, res) => {
     season_id, round, series_letter = null,
     home_team_id, away_team_id,
     status = 'upcoming',
+    bracket_slot_key = null,
   } = req.body;
 
   if (!season_id || !home_team_id || !away_team_id || !round) {
@@ -199,10 +200,10 @@ router.post('/playoff-series', async (req, res) => {
     }
 
     const rows = await sql`
-      INSERT INTO playoff_series (season_id, round, series_letter, home_team_id, away_team_id, games_to_win, status)
-      VALUES (${season_id}, ${round}, ${series_letter}, ${home_team_id}, ${away_team_id}, ${games_to_win}, ${status})
+      INSERT INTO playoff_series (season_id, round, series_letter, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+      VALUES (${season_id}, ${round}, ${series_letter}, ${home_team_id}, ${away_team_id}, ${games_to_win}, ${status}, ${bracket_slot_key})
       RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
-                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
+                games_to_win, home_wins, away_wins, status, winner_team_id, bracket_slot_key, created_at
     `;
     const series = rows[0];
 
@@ -252,12 +253,154 @@ router.patch('/playoff-series/:seriesId', async (req, res) => {
         games_to_win   = COALESCE(${games_to_win   ?? null}, games_to_win)
       WHERE id = ${seriesId}
       RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
-                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
+                games_to_win, home_wins, away_wins, status, winner_team_id, bracket_slot_key, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Playoff series not found' });
     return res.json(rows[0]);
   } catch (err) {
     console.error('playoff series update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/playoff-series/:seriesId/start  – generate games
+// Creates all possible games for an existing series that has no games yet.
+// Used when a series was auto-advanced (shell only, no games) and the admin
+// is ready to officially start it.
+// ---------------------------------------------------------------------------
+router.post('/playoff-series/:seriesId/start', async (req, res) => {
+  const { seriesId } = req.params;
+  try {
+    const seriesRows = await sql`SELECT * FROM playoff_series WHERE id = ${seriesId}`;
+    const series = seriesRows[0];
+    if (!series) return res.status(404).json({ error: 'Playoff series not found' });
+
+    if (!series.home_team_id || !series.away_team_id) {
+      return res.status(400).json({ error: 'Both teams must be set before starting a series' });
+    }
+
+    const existing = await sql`
+      SELECT id FROM games WHERE playoff_series_id = ${seriesId} LIMIT 1
+    `;
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Games already exist for this series' });
+    }
+
+    const maxGames = series.games_to_win * 2 - 1;
+    for (let i = 0; i < maxGames; i++) {
+      const team1IsHome = i < 2 ? true : i < 4 ? false : i % 2 === 0;
+      await sql`
+        INSERT INTO games (season_id, home_team_id, away_team_id, game_type, status, playoff_series_id, game_number_in_series)
+        VALUES (
+          ${series.season_id},
+          ${team1IsHome ? series.home_team_id : series.away_team_id},
+          ${team1IsHome ? series.away_team_id : series.home_team_id},
+          'playoff', 'scheduled', ${seriesId}, ${i + 1}
+        )
+      `;
+    }
+
+    return res.json({ message: 'Series games generated' });
+  } catch (err) {
+    console.error('playoff series start error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/playoff-series/:seriesId/force-advance
+// Manually advances the winner of a completed series to the next-round bracket
+// slot without waiting for the opposing feeder series to finish.
+// • If no next-round series exists yet:  creates a partial shell (one team set,
+//   the other NULL) using the bracket rule set to determine home/away position.
+// • If a partial next-round series already exists:  fills in the missing team.
+// • If a full next-round series already exists:  no-op (returns 200).
+// ---------------------------------------------------------------------------
+router.post('/playoff-series/:seriesId/force-advance', async (req, res) => {
+  const { seriesId } = req.params;
+  try {
+    const [series] = await sql`SELECT * FROM playoff_series WHERE id = ${seriesId}`;
+    if (!series) return res.status(404).json({ error: 'Playoff series not found' });
+    if (series.status !== 'complete') return res.status(400).json({ error: 'Series is not complete' });
+    if (!series.winner_team_id) return res.status(400).json({ error: 'Series has no winner' });
+
+    // Ensure bracket_slot_key is set — backfill by round + creation order if missing
+    let slotKey = series.bracket_slot_key;
+    if (!slotKey) {
+      const existing = await sql`
+        SELECT bracket_slot_key FROM playoff_series
+        WHERE season_id = ${series.season_id} AND round = ${series.round}
+          AND bracket_slot_key IS NOT NULL
+      `;
+      const usedIndices = new Set(
+        existing.map((r) => { const m = r.bracket_slot_key.match(/m(\d+)$/); return m ? Number(m[1]) : -1; }),
+      );
+      let nextIndex = 0;
+      while (usedIndices.has(nextIndex)) nextIndex++;
+      slotKey = `r${series.round}m${nextIndex}`;
+      await sql`UPDATE playoff_series SET bracket_slot_key = ${slotKey} WHERE id = ${seriesId}`;
+    }
+
+    const [seasonRow] = await sql`SELECT bracket_rule_set_id FROM seasons WHERE id = ${series.season_id}`;
+    const bracketRuleSetId = seasonRow?.bracket_rule_set_id;
+    if (!bracketRuleSetId) return res.status(400).json({ error: 'No bracket rule set configured for this season' });
+
+    // Find the next-round slot rule that references this matchup as a winner
+    const ruleRows = await sql`
+      SELECT slot_key FROM bracket_slot_rules
+      WHERE rule_set_id = ${bracketRuleSetId}
+        AND rule_type   = 'winner'
+        AND matchup_ref = ${slotKey}
+    `;
+    if (ruleRows.length === 0) return res.status(400).json({ error: 'No next-round slot defined for this series in the bracket rules' });
+
+    const ruleSlotKey  = ruleRows[0].slot_key;           // e.g. 'r2m0team2'
+    const nextMatchupKey = ruleSlotKey.replace(/team[12]$/, ''); // e.g. 'r2m0'
+    const isHomeSlot   = ruleSlotKey.endsWith('team1');  // team1 = home ice
+
+    const roundMatch = nextMatchupKey.match(/^r(\d+)/);
+    const nextRound  = roundMatch ? Number(roundMatch[1]) : null;
+    if (!nextRound) return res.status(500).json({ error: 'Invalid next matchup key' });
+
+    const [gtwRow] = await sql`
+      SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+      FROM seasons s JOIN leagues l ON l.id = s.league_id WHERE s.id = ${series.season_id}
+    `;
+    const gamesToWin = Math.ceil((gtwRow?.best_of ?? 7) / 2);
+    const winnerId   = series.winner_team_id;
+
+    const [existing] = await sql`
+      SELECT id, home_team_id, away_team_id FROM playoff_series
+      WHERE season_id = ${series.season_id} AND bracket_slot_key = ${nextMatchupKey}
+    `;
+
+    if (!existing) {
+      // Create partial series shell — opponent is TBD (NULL)
+      const homeId = isHomeSlot ? winnerId : null;
+      const awayId = isHomeSlot ? null : winnerId;
+      await sql`
+        INSERT INTO playoff_series
+          (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+        VALUES
+          (${series.season_id}, ${nextRound}, ${homeId}, ${awayId}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+      `;
+    } else {
+      // Fill in the missing team on an existing partial series
+      const alreadySet = isHomeSlot ? existing.home_team_id : existing.away_team_id;
+      if (!alreadySet) {
+        if (isHomeSlot) {
+          await sql`UPDATE playoff_series SET home_team_id = ${winnerId} WHERE id = ${existing.id}`;
+        } else {
+          await sql`UPDATE playoff_series SET away_team_id = ${winnerId} WHERE id = ${existing.id}`;
+        }
+      }
+      // If already set (same team), no-op
+    }
+
+    return res.json({ bracket_slot_key: nextMatchupKey });
+  } catch (err) {
+    console.error('force-advance error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -765,6 +908,118 @@ router.patch('/:id', async (req, res) => {
               winner_team_id = COALESCE(${winnerId}, winner_team_id)
             WHERE id = ${series.id}
           `;
+
+          // ── Auto-advance: create next-round series shell ────────────────────
+          // When a series completes and has a bracket_slot_key, check if the
+          // bracket rule set has a 'winner' slot referencing this matchup.
+          // If both feeder series are now complete, create the next-round series
+          // row (without games — admin starts it manually via /start endpoint).
+          if (seriesComplete && winnerId) {
+            const advRows = await sql`
+              SELECT bracket_slot_key, season_id
+              FROM playoff_series WHERE id = ${series.id}
+            `;
+            const slotKey = advRows[0]?.bracket_slot_key; // e.g. 'r1m0'
+            const seriesSeasonId = advRows[0]?.season_id;
+
+            if (slotKey && seriesSeasonId) {
+              const seasonRows = await sql`
+                SELECT bracket_rule_set_id FROM seasons WHERE id = ${seriesSeasonId}
+              `;
+              const bracketRuleSetId = seasonRows[0]?.bracket_rule_set_id;
+
+              if (bracketRuleSetId) {
+                // Find next-round slots that list this matchup as their winner source
+                const dependentSlots = await sql`
+                  SELECT slot_key FROM bracket_slot_rules
+                  WHERE rule_set_id = ${bracketRuleSetId}
+                    AND rule_type = 'winner'
+                    AND matchup_ref = ${slotKey}
+                `;
+
+                for (const { slot_key: depSlot } of dependentSlots) {
+                  // Strip team1/team2 suffix to get the next matchup key (e.g. 'r2m0')
+                  const nextMatchupKey = depSlot.replace(/team[12]$/, '');
+
+                  // Get the two winner slots for the next matchup
+                  const nextSlots = await sql`
+                    SELECT slot_key, matchup_ref FROM bracket_slot_rules
+                    WHERE rule_set_id = ${bracketRuleSetId}
+                      AND slot_key LIKE ${nextMatchupKey + '%'}
+                      AND rule_type = 'winner'
+                  `;
+                  const team1Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team1`);
+                  const team2Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team2`);
+
+                  if (!team1Slot?.matchup_ref || !team2Slot?.matchup_ref) continue;
+
+                  // Look up the completed series for each feeder matchup
+                  const [t1Series] = await sql`
+                    SELECT winner_team_id, status FROM playoff_series
+                    WHERE season_id = ${seriesSeasonId}
+                      AND bracket_slot_key = ${team1Slot.matchup_ref}
+                  `;
+                  const [t2Series] = await sql`
+                    SELECT winner_team_id, status FROM playoff_series
+                    WHERE season_id = ${seriesSeasonId}
+                      AND bracket_slot_key = ${team2Slot.matchup_ref}
+                  `;
+
+                  const bothComplete =
+                    t1Series?.status === 'complete' && t1Series?.winner_team_id &&
+                    t2Series?.status === 'complete' && t2Series?.winner_team_id;
+
+                  const [nextExisting] = await sql`
+                    SELECT id, home_team_id, away_team_id FROM playoff_series
+                    WHERE season_id = ${seriesSeasonId}
+                      AND bracket_slot_key = ${nextMatchupKey}
+                  `;
+
+                  if (bothComplete) {
+                    const roundMatch = nextMatchupKey.match(/^r(\d+)/);
+                    const nextRound = roundMatch ? Number(roundMatch[1]) : null;
+                    if (!nextRound) continue;
+
+                    const gtwRows = await sql`
+                      SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+                      FROM seasons s JOIN leagues l ON l.id = s.league_id
+                      WHERE s.id = ${seriesSeasonId}
+                    `;
+                    const bestOf = gtwRows[0]?.best_of ?? 7;
+                    const gamesToWin = Math.ceil(bestOf / 2);
+
+                    if (!nextExisting) {
+                      // Create the full series shell — no games yet
+                      await sql`
+                        INSERT INTO playoff_series
+                          (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+                        VALUES
+                          (${seriesSeasonId}, ${nextRound}, ${t1Series.winner_team_id},
+                           ${t2Series.winner_team_id}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+                      `;
+                    } else if (!nextExisting.home_team_id || !nextExisting.away_team_id) {
+                      // Partial series exists — fill in both teams in case one was missing
+                      await sql`
+                        UPDATE playoff_series
+                        SET home_team_id = ${t1Series.winner_team_id},
+                            away_team_id = ${t2Series.winner_team_id}
+                        WHERE id = ${nextExisting.id}
+                      `;
+                    }
+                  } else if (nextExisting && (!nextExisting.home_team_id || !nextExisting.away_team_id)) {
+                    // One feeder just completed — fill in the missing team on an existing partial series
+                    const isTeam1 = depSlot.endsWith('team1');
+                    const winnerOfThis = winnerId; // the series that just completed
+                    if (isTeam1 && !nextExisting.home_team_id) {
+                      await sql`UPDATE playoff_series SET home_team_id = ${winnerOfThis} WHERE id = ${nextExisting.id}`;
+                    } else if (!isTeam1 && !nextExisting.away_team_id) {
+                      await sql`UPDATE playoff_series SET away_team_id = ${winnerOfThis} WHERE id = ${nextExisting.id}`;
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

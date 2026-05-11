@@ -136,21 +136,24 @@ export interface PlayoffSeriesRecord {
   season_id:      string;
   round:          number;
   series_letter:  string | null;
-  home_team_id:   string;
-  home_team_name: string;
-  home_team_code: string;
+  /** Null when the team has not yet been determined (partial series shell). */
+  home_team_id:   string | null;
+  home_team_name: string | null;
+  home_team_code: string | null;
   home_team_logo: string | null;
-  away_team_id:   string;
-  away_team_name: string;
-  away_team_code: string;
+  /** Null when the team has not yet been determined (partial series shell). */
+  away_team_id:   string | null;
+  away_team_name: string | null;
+  away_team_code: string | null;
   away_team_logo: string | null;
   games_to_win:   number;
   home_wins:      number;
   away_wins:      number;
-  status:         SeriesStatus;
-  winner_team_id: string | null;
-  created_at:     string;
-  games:          SeriesGame[];
+  status:           SeriesStatus;
+  winner_team_id:   string | null;
+  bracket_slot_key: string | null;
+  created_at:       string;
+  games:            SeriesGame[];
 }
 
 export interface CreateGameData {
@@ -553,6 +556,7 @@ export interface CreateSeriesData {
   home_wins?: number;
   away_wins?: number;
   winner_team_id?: string | null;
+  bracket_slot_key?: string | null;
 }
 
 export const usePlayoffSeries = (seasonId: string | undefined) => {
@@ -627,6 +631,67 @@ export const usePlayoffSeries = (seasonId: string | undefined) => {
     }
   };
 
-  return { series, loading, busy, createSeries, updateSeries, deleteSeries };
+  const startSeries = async (id: string): Promise<boolean> => {
+    setBusy(id);
+    try {
+      await axios.post(
+        `${API}/admin/games/playoff-series/${id}/start`,
+        {},
+        { headers: authHeaders() },
+      );
+      toast.success('Series started — games generated!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to start series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const advanceBracket = async (): Promise<boolean> => {
+    setBusy('advancing');
+    try {
+      const { data } = await axios.post<{ created: number }>(
+        `${API}/admin/seasons/${seasonId}/advance-bracket`,
+        {},
+        { headers: authHeaders() },
+      );
+      if (data.created > 0) {
+        toast.success(`Bracket advanced — ${data.created} new series created!`);
+      } else {
+        toast.info('Bracket is already up to date.');
+      }
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to advance bracket'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const forceAdvance = async (seriesId: string): Promise<boolean> => {
+    setBusy(seriesId);
+    try {
+      await axios.post(
+        `${API}/admin/games/playoff-series/${seriesId}/force-advance`,
+        {},
+        { headers: authHeaders() },
+      );
+      toast.success('Winner advanced to next round!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to advance winner'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { series, loading, busy, createSeries, updateSeries, deleteSeries, startSeries, advanceBracket, forceAdvance };
 };
 

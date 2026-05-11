@@ -440,7 +440,15 @@ interface BracketSlotProps {
   simulatedTeam1?: string | null;
   /** Simulated team name for Team 2. Only shown when series is null. */
   simulatedTeam2?: string | null;
-  onDelete: (s: PlayoffSeriesRecord) => void;
+  /** True when both feeder series are complete and this slot has no series yet. */
+  canAdvance?: boolean;
+  /** True when this completed series' winner can be force-advanced to the next round. */
+  canAdvanceWinner?: boolean;
+  onStart: (s: PlayoffSeriesRecord) => void;
+  /** Bulk advance (empty slot) — runs advance-bracket for the whole season. */
+  onAdvance?: () => void;
+  /** Targeted force-advance — advances this specific series' winner to the next round. */
+  onForceAdvance?: () => void;
 }
 
 const BracketSlot = ({
@@ -450,7 +458,11 @@ const BracketSlot = ({
   seasonId,
   simulatedTeam1,
   simulatedTeam2,
-  onDelete,
+  canAdvance = false,
+  canAdvanceWinner = false,
+  onStart,
+  onAdvance,
+  onForceAdvance,
 }: BracketSlotProps) => {
   if (!series) {
     const isSimulated = simulatedTeam1 != null || simulatedTeam2 != null;
@@ -460,11 +472,24 @@ const BracketSlot = ({
           styles.bracketSlot,
           styles.slotFilled,
           isSimulated ? styles.slotSimulated : styles.slotEmptyMatchup,
-          styles.slotEmptyDisabled,
+          !canAdvance ? styles.slotEmptyDisabled : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
+        {canAdvance && onAdvance && (
+          <div className={styles.slotActions}>
+            <Button
+              variant="filled"
+              intent="accent"
+              icon="sync"
+              size="sm"
+              tooltip="Create next-round series"
+              disabled={busy === 'advancing'}
+              onClick={onAdvance}
+            />
+          </div>
+        )}
         <div className={`${styles.slotTeam} ${!simulatedTeam1 ? styles.slotTeamTbd : ''}`}>
           <span className={styles.slotTeamName}>{simulatedTeam1 ?? 'TBD'}</span>
         </div>
@@ -553,28 +578,64 @@ const BracketSlot = ({
     );
   };
 
+  const hasNoGames = (series.games ?? []).length === 0;
+  const bothTeamsSet = !!series.home_team_id && !!series.away_team_id;
+  const canStart = hasNoGames && series.status === 'upcoming' && bothTeamsSet;
+  const showOverlay = canStart || canAdvanceWinner;
+
   return (
     <div className={`${styles.bracketSlot} ${styles.slotFilled}`}>
+      {showOverlay && (
+        <div className={styles.slotActions}>
+          {canStart && (
+            <Button
+              variant="filled"
+              intent="accent"
+              icon="play_arrow"
+              size="sm"
+              tooltip="Start series"
+              disabled={busy === series.id}
+              onClick={() => onStart(series)}
+            />
+          )}
+          {canAdvanceWinner && onForceAdvance && (
+            <Button
+              variant="filled"
+              intent="accent"
+              icon="arrow_forward"
+              size="sm"
+              tooltip="Advance winner to next round"
+              disabled={!!busy}
+              onClick={onForceAdvance}
+            />
+          )}
+        </div>
+      )}
       <div
         className={[
           styles.slotTeam,
           awayWon ? styles.slotTeamWinner : '',
           isComplete && !awayWon ? styles.slotTeamLoser : '',
+          !series.away_team_id ? styles.slotTeamTbd : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        <TeamLogo
-          logo={series.away_team_logo}
-          code={series.away_team_code}
-          size={20}
-          shape="square"
-        />
-        <span className={styles.slotTeamName}>{series.away_team_name}</span>
-        <WinDots
-          teamId={series.away_team_id}
-          wins={series.away_wins}
-        />
+        {series.away_team_id && (
+          <TeamLogo
+            logo={series.away_team_logo}
+            code={series.away_team_code}
+            size={20}
+            shape="square"
+          />
+        )}
+        <span className={styles.slotTeamName}>{series.away_team_name ?? 'TBD'}</span>
+        {series.away_team_id && (
+          <WinDots
+            teamId={series.away_team_id}
+            wins={series.away_wins}
+          />
+        )}
       </div>
       <div className={styles.slotDivider} />
       <div
@@ -582,21 +643,26 @@ const BracketSlot = ({
           styles.slotTeam,
           homeWon ? styles.slotTeamWinner : '',
           isComplete && !homeWon ? styles.slotTeamLoser : '',
+          !series.home_team_id ? styles.slotTeamTbd : '',
         ]
           .filter(Boolean)
           .join(' ')}
       >
-        <TeamLogo
-          logo={series.home_team_logo}
-          code={series.home_team_code}
-          size={20}
-          shape="square"
-        />
-        <span className={styles.slotTeamName}>{series.home_team_name}</span>
-        <WinDots
-          teamId={series.home_team_id}
-          wins={series.home_wins}
-        />
+        {series.home_team_id && (
+          <TeamLogo
+            logo={series.home_team_logo}
+            code={series.home_team_code}
+            size={20}
+            shape="square"
+          />
+        )}
+        <span className={styles.slotTeamName}>{series.home_team_name ?? 'TBD'}</span>
+        {series.home_team_id && (
+          <WinDots
+            teamId={series.home_team_id}
+            wins={series.home_wins}
+          />
+        )}
       </div>
     </div>
   );
@@ -643,13 +709,67 @@ const SeasonPlayoffsTab = ({
     loading: seriesLoading,
     busy: seriesBusy,
     createSeries,
-    deleteSeries,
+    startSeries,
+    advanceBracket,
+    forceAdvance,
   } = usePlayoffSeries(seasonId);
 
   const { ruleSets, fetchRuleSet } = useBracketRuleSets(leagueId);
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
 
   const { standings } = useSeasonStandings(seasonId);
+
+  // ── Active rule set slots (needed to compute advanceable slots) ───────────────
+  const [activeRuleSetSlots, setActiveRuleSetSlots] = useState<BracketSlotRule[]>([]);
+  useEffect(() => {
+    if (!bracketRuleSetId) {
+      setActiveRuleSetSlots([]);
+      return;
+    }
+    fetchRuleSet(bracketRuleSetId).then((rs) => setActiveRuleSetSlots(rs?.slots ?? []));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bracketRuleSetId]);
+
+  /**
+   * Set of matchup keys (e.g. 'r2m0') where both feeder series are complete
+   * and no series for that slot exists yet — these empty slots can be advanced.
+   */
+  const advanceableSlots = useMemo(() => {
+    if (!activeRuleSetSlots.length) return new Set<string>();
+    const bySlotKey = new Map(
+      series.filter((s) => s.bracket_slot_key).map((s) => [s.bracket_slot_key!, s]),
+    );
+    // Build matchupKey → [feederMatchupRef, …] from 'winner' rules
+    const feedersFor = new Map<string, string[]>();
+    for (const rule of activeRuleSetSlots) {
+      if (rule.rule_type !== 'winner' || !rule.matchup_ref) continue;
+      const mk = rule.slot_key.replace(/team[12]$/, '');
+      if (!feedersFor.has(mk)) feedersFor.set(mk, []);
+      feedersFor.get(mk)!.push(rule.matchup_ref);
+    }
+    const result = new Set<string>();
+    for (const [mk, feeders] of feedersFor) {
+      if (feeders.length < 2) continue;
+      if (bySlotKey.has(mk)) continue; // series already exists
+      if (feeders.every((f) => bySlotKey.get(f)?.status === 'complete')) result.add(mk);
+    }
+    return result;
+  }, [activeRuleSetSlots, series]);
+
+  /**
+   * Set of bracket_slot_keys for completed series whose winner feeds directly
+   * into an advanceable next-round slot.  Used to show the "→ Advance" button
+   * on the completed series in the bracket.
+   */
+  const feedsIntoAdvanceable = useMemo(() => {
+    const result = new Set<string>();
+    for (const rule of activeRuleSetSlots) {
+      if (rule.rule_type !== 'winner' || !rule.matchup_ref) continue;
+      const nextMk = rule.slot_key.replace(/team[12]$/, '');
+      if (advanceableSlots.has(nextMk)) result.add(rule.matchup_ref);
+    }
+    return result;
+  }, [activeRuleSetSlots, advanceableSlots]);
 
   // Build a name → team_id lookup so resolved slot names can be turned into IDs for createSeries.
   const teamIdByName = useMemo(
@@ -696,6 +816,7 @@ const SeasonPlayoffsTab = ({
             round: 1,
             home_team_id: team1Id,
             away_team_id: team2Id,
+            bracket_slot_key: `r1m${mi}`,
           });
         })
         .filter((p): p is Promise<boolean> => p !== null),
@@ -856,13 +977,19 @@ const SeasonPlayoffsTab = ({
   const [bracketRulesModalOpen, setBracketRulesModalOpen] = useState(false);
 
   // ── Series state ─────────────────────────────────────────────────────────────
-  const [confirmDeleteSeries, setConfirmDeleteSeries] = useState<PlayoffSeriesRecord | null>(null);
-
   const seriesByRound = series.reduce<Record<number, PlayoffSeriesRecord[]>>((acc, s) => {
     if (!acc[s.round]) acc[s.round] = [];
     acc[s.round].push(s);
     return acc;
   }, {});
+
+  // Helper: extract matchup index from bracket_slot_key (e.g. 'r2m1' → 1)
+  const matchupIndex = (s: PlayoffSeriesRecord) => {
+    const m = s.bracket_slot_key?.match(/m(\d+)$/);
+    return m ? Number(m[1]) : Infinity;
+  };
+
+  const handleStartSeries = (s: PlayoffSeriesRecord) => startSeries(s.id);
 
   return (
     <>
@@ -918,7 +1045,23 @@ const SeasonPlayoffsTab = ({
             ) : bracketStructure ? (
               <div className={styles.bracketGrid}>
                 {bracketStructure.rounds.map((roundInfo) => {
-                  const roundSeries = seriesByRound[roundInfo.round] ?? [];
+                  // Sort by bracket_slot_key matchup index so auto-advanced series
+                  // always appear in the correct bracket position.
+                  const roundSeries = [...(seriesByRound[roundInfo.round] ?? [])].sort(
+                    (a, b) => matchupIndex(a) - matchupIndex(b),
+                  );
+
+                  // Fallback for legacy series without bracket_slot_key:
+                  // an empty slot is advanceable when all previous-round series are complete.
+                  const prevRound = seriesByRound[roundInfo.round - 1] ?? [];
+                  const prevRoundAllComplete =
+                    prevRound.length > 0 && prevRound.every((ps) => ps.status === 'complete');
+
+                  // Is there a later round? Used to suppress the advance button on the final.
+                  const hasNextRound = bracketStructure.rounds.some(
+                    (r) => r.round > roundInfo.round,
+                  );
+
                   return (
                     <div
                       key={roundInfo.round}
@@ -928,22 +1071,49 @@ const SeasonPlayoffsTab = ({
                         {getRoundLabel(roundInfo.round, bracketStructure.rounds.length, roundNames)}
                       </p>
                       <div className={styles.bracketSlots}>
-                        {Array.from({ length: roundInfo.series }, (_, slotIndex) => (
-                          <BracketSlot
-                            key={slotIndex}
-                            series={roundSeries[slotIndex] ?? null}
-                            busy={seriesBusy}
-                            leagueId={leagueId}
-                            seasonId={seasonId}
-                            simulatedTeam1={
-                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
-                            }
-                            simulatedTeam2={
-                              simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team2')]
-                            }
-                            onDelete={setConfirmDeleteSeries}
-                          />
-                        ))}
+                        {Array.from({ length: roundInfo.series }, (_, slotIndex) => {
+                          const slotKey = `r${roundInfo.round}m${slotIndex}`;
+                          const s = roundSeries[slotIndex] ?? null;
+
+                          // canAdvance: slot-key match OR legacy round-based fallback
+                          const canAdvance =
+                            advanceableSlots.has(slotKey) ||
+                            (!s && roundInfo.round > 1 && prevRoundAllComplete);
+
+                          // canAdvanceWinner: show on completed series when there's a next round
+                          // and the winner hasn't already been placed in a next-round series.
+                          const nextRoundSeries = seriesByRound[roundInfo.round + 1] ?? [];
+                          const winnerAlreadyAdvanced =
+                            !!s?.winner_team_id &&
+                            nextRoundSeries.some(
+                              (ns) =>
+                                ns.home_team_id === s.winner_team_id ||
+                                ns.away_team_id === s.winner_team_id,
+                            );
+                          const canAdvanceWinner =
+                            s?.status === 'complete' && hasNextRound && !winnerAlreadyAdvanced;
+
+                          return (
+                            <BracketSlot
+                              key={slotIndex}
+                              series={s}
+                              busy={seriesBusy}
+                              leagueId={leagueId}
+                              seasonId={seasonId}
+                              simulatedTeam1={
+                                simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
+                              }
+                              simulatedTeam2={
+                                simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team2')]
+                              }
+                              canAdvance={canAdvance}
+                              canAdvanceWinner={canAdvanceWinner}
+                              onStart={handleStartSeries}
+                              onAdvance={advanceBracket}
+                              onForceAdvance={s ? () => forceAdvance(s.id) : undefined}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   );
@@ -982,15 +1152,17 @@ const SeasonPlayoffsTab = ({
                               intent={STATUS_INTENT[s.status]}
                             />
                             <div className={styles.seriesRowActions}>
-                              <Button
-                                variant="ghost"
-                                intent="danger"
-                                icon="delete"
-                                size="sm"
-                                tooltip="Delete series"
-                                disabled={seriesBusy === s.id}
-                                onClick={() => setConfirmDeleteSeries(s)}
-                              />
+                              {s.games.length === 0 && s.status === 'upcoming' && (
+                                <Button
+                                  variant="ghost"
+                                  intent="accent"
+                                  icon="play_arrow"
+                                  size="sm"
+                                  tooltip="Start series"
+                                  disabled={seriesBusy === s.id}
+                                  onClick={() => handleStartSeries(s)}
+                                />
+                              )}
                             </div>
                           </div>
                         ))}
@@ -1184,27 +1356,6 @@ const SeasonPlayoffsTab = ({
             setPendingChoices([]);
             setPartialSimResult({});
             setPendingRuleSlots([]);
-          }}
-        />
-
-        <ConfirmModal
-          open={!!confirmDeleteSeries}
-          title="Delete Playoff Series"
-          body={
-            <>
-              Delete the series between <strong>{confirmDeleteSeries?.home_team_name}</strong> and{' '}
-              <strong>{confirmDeleteSeries?.away_team_name}</strong>? This cannot be undone.
-            </>
-          }
-          confirmLabel="Delete"
-          confirmIcon="delete"
-          variant="danger"
-          busy={seriesBusy === confirmDeleteSeries?.id}
-          onCancel={() => setConfirmDeleteSeries(null)}
-          onConfirm={async () => {
-            if (!confirmDeleteSeries) return;
-            await deleteSeries(confirmDeleteSeries.id);
-            setConfirmDeleteSeries(null);
           }}
         />
       </>

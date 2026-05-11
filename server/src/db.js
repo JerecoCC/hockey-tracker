@@ -1087,6 +1087,22 @@ async function initSchema() {
     END $$
   `;
 
+  // ── bracket_slot_key on playoff_series ───────────────────────────────────
+  // Stores the bracket matchup key (e.g. 'r1m0', 'r2m1') so the server can
+  // look up which next-round slot a completed series feeds into and
+  // auto-create that next-round series when both feeder series are done.
+  await sql`
+    ALTER TABLE playoff_series
+      ADD COLUMN IF NOT EXISTS bracket_slot_key TEXT
+  `;
+
+  // ── Allow partial series (one team TBD) ──────────────────────────────────
+  // A series can be created with only one team known when an admin manually
+  // advances a winner before the opposing series has finished.  Both columns
+  // are filled in (and games generated) only when both teams are determined.
+  await sql`ALTER TABLE playoff_series ALTER COLUMN home_team_id DROP NOT NULL`;
+  await sql`ALTER TABLE playoff_series ALTER COLUMN away_team_id DROP NOT NULL`;
+
   console.log('Database schema ready');
 }
 

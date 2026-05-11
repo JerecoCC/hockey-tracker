@@ -300,6 +300,159 @@ router.patch('/:id/playoffs', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/admin/seasons/:id/advance-bracket
+// Replays the auto-advance logic for every completed series in the season.
+// Creates next-round series shells for any matchups where both feeder series
+// are complete but no next-round series exists yet.  Idempotent — safe to
+// call multiple times.  Returns { created: N } where N is the count of new
+// series rows inserted.
+// ---------------------------------------------------------------------------
+router.post('/:id/advance-bracket', async (req, res) => {
+  const { id: seasonId } = req.params;
+  try {
+    // Resolve the bracket rule set for this season
+    const seasonRows = await sql`
+      SELECT bracket_rule_set_id FROM seasons WHERE id = ${seasonId}
+    `;
+    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    const bracketRuleSetId = seasonRows[0]?.bracket_rule_set_id;
+    if (!bracketRuleSetId) {
+      return res.status(400).json({ error: 'No bracket rule set configured for this season' });
+    }
+
+    // ── Backfill bracket_slot_key for legacy series that predate the feature ──
+    // Group all series without a slot key by round, then assign r{round}m{index}
+    // in creation order (oldest first = matchup 0, next = matchup 1, …).
+    const unkeyed = await sql`
+      SELECT id, round FROM playoff_series
+      WHERE season_id = ${seasonId}
+        AND bracket_slot_key IS NULL
+      ORDER BY round, created_at
+    `;
+    if (unkeyed.length > 0) {
+      // Group by round
+      const byRound = {};
+      for (const row of unkeyed) {
+        if (!byRound[row.round]) byRound[row.round] = [];
+        byRound[row.round].push(row.id);
+      }
+      for (const [round, ids] of Object.entries(byRound)) {
+        // Find the highest matchup index already in use for this round
+        const existing = await sql`
+          SELECT bracket_slot_key FROM playoff_series
+          WHERE season_id = ${seasonId}
+            AND round = ${Number(round)}
+            AND bracket_slot_key IS NOT NULL
+        `;
+        const usedIndices = new Set(
+          existing.map((r) => {
+            const m = r.bracket_slot_key.match(/m(\d+)$/);
+            return m ? Number(m[1]) : -1;
+          }),
+        );
+        let nextIndex = 0;
+        for (const seriesId of ids) {
+          while (usedIndices.has(nextIndex)) nextIndex++;
+          const slotKey = `r${round}m${nextIndex}`;
+          await sql`
+            UPDATE playoff_series SET bracket_slot_key = ${slotKey} WHERE id = ${seriesId}
+          `;
+          usedIndices.add(nextIndex);
+          nextIndex++;
+        }
+      }
+    }
+
+    // All completed series that occupy a known bracket slot
+    const completedSeries = await sql`
+      SELECT id, bracket_slot_key, winner_team_id, season_id
+      FROM playoff_series
+      WHERE season_id  = ${seasonId}
+        AND status     = 'complete'
+        AND winner_team_id IS NOT NULL
+        AND bracket_slot_key IS NOT NULL
+    `;
+
+    let created = 0;
+
+    for (const series of completedSeries) {
+      const slotKey = series.bracket_slot_key; // e.g. 'r1m0'
+
+      // Find next-round slots that reference this matchup as a winner source
+      const dependentSlots = await sql`
+        SELECT slot_key FROM bracket_slot_rules
+        WHERE rule_set_id = ${bracketRuleSetId}
+          AND rule_type   = 'winner'
+          AND matchup_ref = ${slotKey}
+      `;
+
+      for (const { slot_key: depSlot } of dependentSlots) {
+        const nextMatchupKey = depSlot.replace(/team[12]$/, ''); // e.g. 'r2m0'
+
+        // Get both winner slots for the next matchup
+        const nextSlots = await sql`
+          SELECT slot_key, matchup_ref FROM bracket_slot_rules
+          WHERE rule_set_id = ${bracketRuleSetId}
+            AND slot_key LIKE ${nextMatchupKey + '%'}
+            AND rule_type = 'winner'
+        `;
+        const team1Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team1`);
+        const team2Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team2`);
+        if (!team1Slot?.matchup_ref || !team2Slot?.matchup_ref) continue;
+
+        // Resolve winner from each feeder matchup
+        const [t1Series] = await sql`
+          SELECT winner_team_id, status FROM playoff_series
+          WHERE season_id = ${seasonId} AND bracket_slot_key = ${team1Slot.matchup_ref}
+        `;
+        const [t2Series] = await sql`
+          SELECT winner_team_id, status FROM playoff_series
+          WHERE season_id = ${seasonId} AND bracket_slot_key = ${team2Slot.matchup_ref}
+        `;
+
+        if (
+          t1Series?.status !== 'complete' || !t1Series?.winner_team_id ||
+          t2Series?.status !== 'complete' || !t2Series?.winner_team_id
+        ) continue;
+
+        // Skip if next-round series already exists
+        const [existing] = await sql`
+          SELECT id FROM playoff_series
+          WHERE season_id = ${seasonId} AND bracket_slot_key = ${nextMatchupKey}
+        `;
+        if (existing) continue;
+
+        const roundMatch = nextMatchupKey.match(/^r(\d+)/);
+        const nextRound = roundMatch ? Number(roundMatch[1]) : null;
+        if (!nextRound) continue;
+
+        const gtwRows = await sql`
+          SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+          FROM seasons s JOIN leagues l ON l.id = s.league_id
+          WHERE s.id = ${seasonId}
+        `;
+        const bestOf = gtwRows[0]?.best_of ?? 7;
+        const gamesToWin = Math.ceil(bestOf / 2);
+
+        await sql`
+          INSERT INTO playoff_series
+            (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+          VALUES
+            (${seasonId}, ${nextRound}, ${t1Series.winner_team_id},
+             ${t2Series.winner_team_id}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+        `;
+        created++;
+      }
+    }
+
+    return res.json({ created });
+  } catch (err) {
+    console.error('advance-bracket error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // DELETE /api/admin/seasons/:id  – delete a season
 // ---------------------------------------------------------------------------
 router.delete('/:id', async (req, res) => {
