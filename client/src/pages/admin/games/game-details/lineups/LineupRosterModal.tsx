@@ -279,10 +279,12 @@ const LineupRosterModal = ({
                   key={p.id}
                   checked={selected.has(p.id)}
                   onToggle={() => toggle(p.id)}
-                  jerseyNumber={p.jersey_number ?? null}
-                  image={p.photo}
-                  imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
-                  imageShape="circle"
+                  imagePlaceholder={
+                    p.jersey_number != null
+                      ? String(p.jersey_number)
+                      : `${p.first_name[0]}${p.last_name[0]}`
+                  }
+                  imageShape="square"
                   imagePrimaryColor={p.primary_color}
                   imageTextColor={p.text_color}
                   eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
