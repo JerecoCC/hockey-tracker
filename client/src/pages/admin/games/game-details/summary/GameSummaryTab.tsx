@@ -821,7 +821,9 @@ const GameSummaryTab = ({
             <GameInfoCard
               game={game}
               busy={busy}
-              updateGameInfo={isEditMode ? updateGameInfo : undefined}
+              updateGameInfo={
+                isEditMode || game.status === 'scheduled' ? updateGameInfo : undefined
+              }
             />
           </div>
         </div>
