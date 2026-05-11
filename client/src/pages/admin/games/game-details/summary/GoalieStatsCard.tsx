@@ -145,7 +145,10 @@ const GoalieStatsCard = ({
                         />
                         <PlayerAvatar
                           photo={goalie.photo}
-                          initials={goalie.last_name?.charAt(0) ?? '?'}
+                          initials={
+                            `${goalie.first_name?.charAt(0) ?? ''}${goalie.last_name?.charAt(0) ?? ''}`.trim() ||
+                            '?'
+                          }
                           primaryColor={primaryColor}
                           textColor={textColor}
                           size={48}

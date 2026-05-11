@@ -45,13 +45,8 @@ const PlayerAvatar = ({
 }: Props) => {
   const fontSize = Math.round(size * 0.38);
 
-  // Photos get a 20%-white tint so transparent PNGs are visible against the
-  // team color. Initials get the full primary color.
-  const background = primaryColor
-    ? photo
-      ? mixWithWhite(primaryColor, 0.2)
-      : primaryColor
-    : undefined;
+  // Both photos and initials get the same 20%-white tint over the team color.
+  const background = primaryColor ? mixWithWhite(primaryColor, 0.2) : undefined;
 
   const boxShadow = ringColor ? `0 0 0 2px ${ringColor}` : undefined;
 

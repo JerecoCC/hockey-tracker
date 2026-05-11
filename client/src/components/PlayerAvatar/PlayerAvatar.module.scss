@@ -26,10 +26,10 @@
   display: block;
 }
 
-// Inner shadow rendered BEHIND the photo so it only shows through
-// transparent areas (PNG cutouts). Opaque photos hide it entirely.
+// Inner shadow — visible through transparent PNG cutouts on photos,
+// and also applied to the initials placeholder for a consistent look.
 // z-index: -1 places it above the wrapper background but below the img.
-.wrapper:has(.img)::before {
+.wrapper::before {
   content: "";
   position: absolute;
   inset: 0;
@@ -46,4 +46,7 @@
   letter-spacing: 0;
   color: $text-dim; // fallback; overridden by inline style when team color is known
   line-height: 1;
+  text-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.4),
+    0 1px 1px rgba(0, 0, 0, 0.25);
 }

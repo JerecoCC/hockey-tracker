@@ -141,7 +141,10 @@ const ScoringCard = ({
             />
             <PlayerAvatar
               photo={goal.scorer_photo}
-              initials={goal.scorer_last_name?.charAt(0) ?? '?'}
+              initials={
+                `${goal.scorer_first_name?.charAt(0) ?? ''}${goal.scorer_last_name?.charAt(0) ?? ''}`.trim() ||
+                '?'
+              }
               primaryColor={goal.team_primary_color}
               textColor={goal.team_text_color}
               size={48}
