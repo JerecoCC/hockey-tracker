@@ -445,7 +445,7 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                                 tooltip: 'Edit game',
                                 onClick: () => handleEdit(game),
                               },
-                              {
+                              game.status === 'scheduled' && {
                                 icon: 'delete',
                                 intent: 'danger' as const,
                                 tooltip: 'Delete game',
