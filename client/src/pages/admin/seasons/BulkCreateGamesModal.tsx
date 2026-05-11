@@ -180,6 +180,11 @@ const BulkCreateGamesModal = ({
   }, [open, defaultDate, reset]);
 
   const handleClose = () => {
+    // Reset form state on close so reopening starts fresh and useFieldArray's
+    // internal ref is re-synced — otherwise appending rows after reopening can
+    // restore previously-removed empty rows.
+    reset({ games: [{ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }] });
+    setAutoFocusIndex(0);
     onClose();
   };
 
