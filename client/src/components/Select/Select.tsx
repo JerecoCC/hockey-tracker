@@ -47,6 +47,7 @@ const Select = (props: Props) => {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
+  const suppressNextFocusOpenRef = useRef(false);
   const menuId = useId();
 
   /** Measure the trigger and compute fixed-position coordinates for the menu. */
@@ -67,6 +68,7 @@ const Select = (props: Props) => {
   useEffect(() => {
     if (!autoFocus || !searchable) return;
     const frame = requestAnimationFrame(() => {
+      suppressNextFocusOpenRef.current = true;
       searchRef.current?.focus();
     });
     return () => cancelAnimationFrame(frame);
@@ -171,8 +173,18 @@ const Select = (props: Props) => {
             className={styles.searchInput}
             value={open ? query : (selected?.label ?? '')}
             placeholder={open && selected ? selected.label : placeholder}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              if (!open && !disabled) {
+                measureMenu();
+                setOpen(true);
+              }
+              setQuery(e.target.value);
+            }}
             onFocus={() => {
+              if (suppressNextFocusOpenRef.current) {
+                suppressNextFocusOpenRef.current = false;
+                return;
+              }
               if (!open && !disabled) {
                 measureMenu();
                 setOpen(true);
