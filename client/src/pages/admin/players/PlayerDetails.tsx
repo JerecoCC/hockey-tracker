@@ -12,7 +12,11 @@ import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import usePlayerDetails, { type PlayerCareerStatRecord } from '@/hooks/usePlayerDetails';
+import usePlayerDetails, {
+  usePlayerCurrentSeasonStats,
+  type PlayerCareerStatRecord,
+  type PlayerCurrentSeasonStatBlock,
+} from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
@@ -81,6 +85,7 @@ const PlayerDetailsPage = () => {
   const navigate = useNavigate();
   const { id, leagueId, teamId } = useParams<{ id: string; leagueId: string; teamId: string }>();
   const { player, stats, loading } = usePlayerDetails(id);
+  const { currentSeasonStats } = usePlayerCurrentSeasonStats(id);
   const { team: teamDetails } = useTeamDetails(teamId);
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
@@ -245,44 +250,56 @@ const PlayerDetailsPage = () => {
             {
               label: 'Info',
               content: (
-                <Card>
-                  <div className={styles.infoGrid}>
-                    <InfoCell
-                      label="Date of Birth"
-                      value={formatDate(player.date_of_birth)}
-                    />
-                    <InfoCell
-                      label="Birth City"
-                      value={player.birth_city}
-                    />
-                    <InfoCell
-                      label="Birth Country"
-                      value={player.birth_country}
-                    />
-                    <InfoCell
-                      label="Nationality"
-                      value={player.nationality}
-                    />
-                    <InfoCell
-                      label="Height"
-                      value={formatHeight(player.height_cm)}
-                    />
-                    <InfoCell
-                      label="Weight"
-                      value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
-                    />
-                    <InfoCell
-                      label="Position"
-                      value={positionLabel}
-                    />
-                    <InfoCell
-                      label="Shoots"
-                      value={
-                        player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null
-                      }
-                    />
-                  </div>
-                </Card>
+                <>
+                  <Card>
+                    <div className={styles.infoGrid}>
+                      <InfoCell
+                        label="Date of Birth"
+                        value={formatDate(player.date_of_birth)}
+                      />
+                      <InfoCell
+                        label="Birth City"
+                        value={player.birth_city}
+                      />
+                      <InfoCell
+                        label="Birth Country"
+                        value={player.birth_country}
+                      />
+                      <InfoCell
+                        label="Nationality"
+                        value={player.nationality}
+                      />
+                      <InfoCell
+                        label="Height"
+                        value={formatHeight(player.height_cm)}
+                      />
+                      <InfoCell
+                        label="Weight"
+                        value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
+                      />
+                      <InfoCell
+                        label="Shoots"
+                        value={
+                          player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null
+                        }
+                      />
+                    </div>
+                  </Card>
+                  {currentSeasonStats && (
+                    <div className={styles.currentSeasonCards}>
+                      <SeasonStatCard
+                        title={`${currentSeasonStats.season_name} – Regular Season`}
+                        stats={currentSeasonStats.regular}
+                        isGoalie={effectivePosition === 'G'}
+                      />
+                      <SeasonStatCard
+                        title={`${currentSeasonStats.season_name} – Playoffs`}
+                        stats={currentSeasonStats.playoffs}
+                        isGoalie={effectivePosition === 'G'}
+                      />
+                    </div>
+                  )}
+                </>
               ),
             },
             {
@@ -426,3 +443,72 @@ const InfoCell = ({ label, value }: { label: string; value: string | null | unde
 );
 
 export default PlayerDetailsPage;
+
+// ── Helper: current-season stat card ────────────────────────────────────────
+const SeasonStatCard = ({
+  title,
+  stats,
+  isGoalie,
+}: {
+  title: string;
+  stats: PlayerCurrentSeasonStatBlock | null;
+  isGoalie: boolean;
+}) => {
+  const fmtSavePct = (v: number | null) => {
+    if (v == null) return '—';
+    return v.toFixed(3).replace(/^0/, '');
+  };
+
+  return (
+    <Card title={title}>
+      {!stats ? (
+        <p className={styles.placeholder}>No games played.</p>
+      ) : isGoalie ? (
+        <div className={styles.statGrid}>
+          <StatCell
+            label="W"
+            value={stats.wins}
+          />
+          <StatCell
+            label="SO"
+            value={stats.shootout_wins}
+          />
+          <StatCell
+            label="GA"
+            value={stats.goals_against}
+          />
+          <StatCell
+            label="SV%"
+            value={fmtSavePct(stats.save_pct)}
+          />
+        </div>
+      ) : (
+        <div className={styles.statGrid}>
+          <StatCell
+            label="GP"
+            value={stats.gp}
+          />
+          <StatCell
+            label="G"
+            value={stats.goals}
+          />
+          <StatCell
+            label="A"
+            value={stats.assists}
+          />
+          <StatCell
+            label="P"
+            value={stats.points}
+          />
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const StatCell = ({ label, value }: { label: string; value: number | string }) => (
+  <div className={styles.statCell}>
+    <span className={styles.statCellLabel}>{label}</span>
+    <span className={value === '—' ? styles.statCellMuted : styles.statCellValue}>{value}</span>
+  </div>
+);
