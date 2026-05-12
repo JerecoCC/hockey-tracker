@@ -37,9 +37,10 @@ const getInitials = (name: string | undefined) =>
 
 interface PageHeaderProps {
   onMenuToggle?: () => void;
+  mobileTitleLeftRef?: (node: HTMLDivElement | null) => void;
 }
 
-const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
+const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
@@ -75,18 +76,10 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
       {/* ── Main title row ── */}
       <div className={styles.titleRow}>
         <div className={styles.left}>
-          {onMenuToggle && (
-            <button
-              className={styles.hamburger}
-              onClick={onMenuToggle}
-              aria-label="Open navigation"
-            >
-              <Icon
-                name="menu"
-                size="1.4rem"
-              />
-            </button>
-          )}
+          <div
+            ref={mobileTitleLeftRef}
+            className={styles.mobileTitleLeft}
+          />
           {/* Route title – hidden on mobile when tabs are present */}
           {title && (
             <h1
@@ -140,6 +133,18 @@ const PageHeader = ({ onMenuToggle }: PageHeaderProps) => {
                 </div>
               )}
             </div>
+          )}
+          {onMenuToggle && (
+            <button
+              className={styles.hamburger}
+              onClick={onMenuToggle}
+              aria-label="Open navigation"
+            >
+              <Icon
+                name="menu"
+                size="1.4rem"
+              />
+            </button>
           )}
         </div>
       </div>

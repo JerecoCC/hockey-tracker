@@ -130,14 +130,16 @@ $nav-collapsed-width: 56px;
   .nav {
     position: fixed;
     top: 0;
-    left: 0;
+    right: 0;
     height: 100dvh;
     width: $nav-width;
     z-index: 50;
-    transform: translateX(-100%);
+    transform: translateX(100%);
     transition: transform $transition-layout ease;
     // Reset the width transition used on desktop
     transition-property: transform;
+    border-right: none;
+    border-left: 1px solid $border;
   }
 
   .nav.mobileOpen {

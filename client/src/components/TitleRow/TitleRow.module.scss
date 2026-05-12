@@ -6,3 +6,14 @@
   gap: $space-lg;
   margin: 0 0 $space-xl;
 }
+
+.titleRowHiddenMobile {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.mobileHeaderAction {
+  display: flex;
+  align-items: center;
+}

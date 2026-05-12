@@ -6,6 +6,10 @@
   align-items: center;
   flex-wrap: wrap;
   gap: $space-xs;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .item {

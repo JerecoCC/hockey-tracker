@@ -34,6 +34,26 @@
   gap: $space-lg;
 }
 
+.left {
+  flex: 1;
+  min-width: 0;
+}
+
+.right {
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.mobileTitleLeft {
+  display: none;
+  align-items: center;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+}
+
 // ── Page title ─────────────────────────────────────────────────────────
 .title {
   font-size: $font-xl;
@@ -41,6 +61,8 @@
   color: $text-bright;
   margin: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 // On mobile: hidden when tabs are present (active tab label replaces it)
@@ -61,6 +83,8 @@
 
   @media (max-width: 768px) {
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 }
 
@@ -142,6 +166,7 @@
 
   @media (max-width: 768px) {
     display: flex;
+    order: 2;
   }
 }
 
