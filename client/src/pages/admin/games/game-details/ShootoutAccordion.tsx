@@ -188,7 +188,7 @@ const ShootoutAccordion = ({
         initials={attempt.shooter_last_name?.charAt(0) ?? '?'}
         primaryColor={teamInfo.primary}
         textColor={teamInfo.text}
-        size={30}
+        size={48}
       />
     );
 

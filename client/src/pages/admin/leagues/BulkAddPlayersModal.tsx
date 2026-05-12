@@ -1,16 +1,12 @@
-import { useState } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
-import AddRowBar from '@/components/AddRowBar/AddRowBar';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import BulkCreateModal, {
+  type BulkCreateRowRenderProps,
+} from '@/components/BulkCreateModal/BulkCreateModal';
 import Field from '@/components/Field/Field';
-import Icon from '@/components/Icon/Icon';
-import Modal from '@/components/Modal/Modal';
 import {
   type BulkPlayerInput,
   type PlayerPosition,
   type PlayerShoots,
 } from '@/hooks/useLeaguePlayers';
-import styles from './BulkAddPlayersModal.module.scss';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
@@ -42,171 +38,99 @@ interface RowValues {
   shoots: PlayerShoots | '';
 }
 
-interface FormValues {
-  players: RowValues[];
-}
-
 interface Props {
   open: boolean;
   onClose: () => void;
   bulkAddPlayers: (players: BulkPlayerInput[]) => Promise<boolean>;
 }
 
+const PlayerRowFields = ({
+  index,
+  control,
+  isSubmitting,
+  autoFocus,
+  deleteButton,
+}: BulkCreateRowRenderProps<{ rows: RowValues[] }, RowValues>) => (
+  <>
+    <Field
+      type="select"
+      control={control}
+      name={`rows.${index}.position`}
+      options={POSITION_OPTIONS}
+      required
+      rules={{ required: true }}
+      placeholder="Position"
+      disabled={isSubmitting}
+      autoFocus={autoFocus}
+    />
+    <Field
+      control={control}
+      name={`rows.${index}.first_name`}
+      required
+      rules={{ required: true }}
+      placeholder="First name"
+      disabled={isSubmitting}
+    />
+    <Field
+      control={control}
+      name={`rows.${index}.last_name`}
+      required
+      rules={{ required: true }}
+      placeholder="Last name"
+      disabled={isSubmitting}
+    />
+    <Field
+      type="select"
+      control={control}
+      name={`rows.${index}.shoots`}
+      options={SHOOTS_OPTIONS}
+      required
+      rules={{ required: true }}
+      placeholder="Shoots"
+      disabled={isSubmitting}
+    />
+    {deleteButton}
+  </>
+);
+
 const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
-  const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const { control, handleSubmit, reset } = useForm<FormValues>({
-    defaultValues: { players: [{ ...EMPTY_ROW }] },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control, name: 'players' });
-
-  // Live values — used to decide whether a row is "dirty" before confirming removal
-  const watchedPlayers = useWatch({ control, name: 'players' });
-  const isRowDirty = (index: number): boolean => {
-    const row = watchedPlayers?.[index];
-    return !!(row?.first_name || row?.last_name || row?.position || row?.shoots);
-  };
-
-  const handleDeleteClick = (index: number) => {
-    if (isRowDirty(index)) {
-      setConfirmRemoveIndex(index);
-    } else {
-      remove(index);
-    }
-  };
-
-  const handleClose = () => {
-    reset({ players: [{ ...EMPTY_ROW }] });
-    onClose();
-  };
-
-  const onSubmit = handleSubmit(async (data) => {
-    setIsSubmitting(true);
-    const payload: BulkPlayerInput[] = data.players.map((row) => ({
-      first_name: row.first_name,
-      last_name: row.last_name,
-      position: row.position as PlayerPosition,
-      shoots: row.shoots as PlayerShoots,
-    }));
-    const ok = await bulkAddPlayers(payload);
-    setIsSubmitting(false);
-    if (ok) handleClose();
-  });
-
-  const handleConfirmRemove = () => {
-    if (confirmRemoveIndex !== null) {
-      remove(confirmRemoveIndex);
-      setConfirmRemoveIndex(null);
-    }
-  };
-
   return (
-    <>
-      <Modal
-        open={open}
-        title="Bulk Create Players"
-        size="lg"
-        onClose={handleClose}
-        confirmLabel={
-          isSubmitting ? 'Saving…' : `Save ${fields.length} Player${fields.length !== 1 ? 's' : ''}`
-        }
-        confirmForm="bulk-add-players-form"
-        confirmDisabled={isSubmitting}
-        busy={isSubmitting}
-      >
-        <form
-          id="bulk-add-players-form"
-          onSubmit={onSubmit}
-        >
-          {/* Column headers */}
-          <div className={styles.headerRow}>
-            <span className={styles.headerCell}>Position</span>
-            <span className={styles.headerCell}>First Name</span>
-            <span className={styles.headerCell}>Last Name</span>
-            <span className={styles.headerCell}>Shoots</span>
-            <span />
-          </div>
-
-          <div className={styles.playerList}>
-            {fields.map((field, index) => (
-              <div
-                key={field.id}
-                className={styles.playerRow}
-              >
-                <Field
-                  type="select"
-                  control={control}
-                  name={`players.${index}.position`}
-                  options={POSITION_OPTIONS}
-                  required
-                  rules={{ required: true }}
-                  placeholder="Position"
-                  disabled={isSubmitting}
-                  autoFocus={index === 0}
-                />
-                <Field
-                  control={control}
-                  name={`players.${index}.first_name`}
-                  required
-                  rules={{ required: true }}
-                  placeholder="First name"
-                  disabled={isSubmitting}
-                />
-                <Field
-                  control={control}
-                  name={`players.${index}.last_name`}
-                  required
-                  rules={{ required: true }}
-                  placeholder="Last name"
-                  disabled={isSubmitting}
-                />
-                <Field
-                  type="select"
-                  control={control}
-                  name={`players.${index}.shoots`}
-                  options={SHOOTS_OPTIONS}
-                  required
-                  rules={{ required: true }}
-                  placeholder="Shoots"
-                  disabled={isSubmitting}
-                />
-                <button
-                  type="button"
-                  className={styles.deleteBtn}
-                  onClick={() => handleDeleteClick(index)}
-                  disabled={isSubmitting}
-                  aria-label="Remove player"
-                >
-                  <Icon
-                    name="delete"
-                    size="1em"
-                  />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <AddRowBar
-            label="Create Player"
-            onClick={() => append({ ...EMPTY_ROW })}
-            disabled={isSubmitting}
-          />
-        </form>
-      </Modal>
-
-      <ConfirmModal
-        open={confirmRemoveIndex !== null}
-        title="Remove Player"
-        body="Are you sure you want to remove this player from the list?"
-        confirmLabel="Remove"
-        confirmIcon="delete"
-        variant="danger"
-        onCancel={() => setConfirmRemoveIndex(null)}
-        onConfirm={handleConfirmRemove}
-      />
-    </>
+    <BulkCreateModal<{ rows: RowValues[] }, RowValues>
+      createDefaultValues={() => ({ rows: [{ ...EMPTY_ROW }] })}
+      rowArrayName="rows"
+      open={open}
+      title="Bulk Create Players"
+      size="lg"
+      onClose={onClose}
+      formId="bulk-add-players-form"
+      createRow={() => ({ ...EMPTY_ROW })}
+      columnsTemplate="1fr 1fr 1fr 1fr"
+      headerCells={[
+        { label: 'Position', required: true },
+        { label: 'First Name', required: true },
+        { label: 'Last Name', required: true },
+        { label: 'Shoots', required: true },
+      ]}
+      addRowLabel="Create Player"
+      itemLabel="player"
+      getConfirmLabel={(count, isSubmitting) =>
+        isSubmitting ? 'Saving…' : `Save ${count} Player${count !== 1 ? 's' : ''}`
+      }
+      shouldConfirmRemove={(row) =>
+        !!(row.first_name || row.last_name || row.position || row.shoots)
+      }
+      getRemoveConfirmBody={() => 'Are you sure you want to remove this player from the list?'}
+      onSubmitForm={async (data) => {
+        const payload: BulkPlayerInput[] = data.rows.map((row) => ({
+          first_name: row.first_name,
+          last_name: row.last_name,
+          position: row.position as PlayerPosition,
+          shoots: row.shoots as PlayerShoots,
+        }));
+        return bulkAddPlayers(payload);
+      }}
+      renderRow={(props) => <PlayerRowFields {...props} />}
+    />
   );
 };
 

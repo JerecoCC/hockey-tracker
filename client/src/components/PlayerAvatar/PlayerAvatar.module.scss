@@ -46,7 +46,4 @@
   letter-spacing: 0;
   color: $text-dim; // fallback; overridden by inline style when team color is known
   line-height: 1;
-  text-shadow:
-    0 1px 3px rgba(0, 0, 0, 0.4),
-    0 1px 1px rgba(0, 0, 0, 0.25);
 }
