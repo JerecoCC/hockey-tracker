@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
 import Card from '@/components/Card/Card';
 import ListItem from '@/components/ListItem/ListItem';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup, { type LineupEntry } from '@/hooks/useGameLineup';
@@ -60,6 +61,7 @@ const GameLineupsTab = ({
   const [lineupSetTeam, setLineupSetTeam] = useState<'away' | 'home' | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<{ entry: GameRosterEntry } | null>(null);
   const [removingFromRoster, setRemovingFromRoster] = useState(false);
+  const [visibleTeam, setVisibleTeam] = useState<'away' | 'home'>('away');
 
   const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
     game.away_team.id,
@@ -258,32 +260,73 @@ const GameLineupsTab = ({
   return (
     <>
       <div className={styles.tabContent}>
-        <Card title="Lineups">
+        <Card
+          title="Lineups"
+          action={
+            <div className={styles.lineupMobileToggle}>
+              <SegmentedControl
+                value={visibleTeam}
+                onChange={(value) => setVisibleTeam(value as 'away' | 'home')}
+                options={[
+                  {
+                    value: 'away',
+                    label: game.away_team.code,
+                    tooltip: game.away_team.name,
+                  },
+                  {
+                    value: 'home',
+                    label: game.home_team.code,
+                    tooltip: game.home_team.name,
+                  },
+                ]}
+                className={styles.lineupMobileToggleControl}
+              />
+            </div>
+          }
+        >
           <div className={styles.lineupGrid}>
-            {renderTeamAccordion(
-              'away',
-              game.away_team.name,
-              game.away_team.code,
-              game.away_team.logo,
-              game.away_team.primary_color,
-              game.away_team.text_color,
-              awayRoster,
-              awayLineupMap,
-              awayInheritedLineupMap,
-              awayRosterInherited,
-            )}
-            {renderTeamAccordion(
-              'home',
-              game.home_team.name,
-              game.home_team.code,
-              game.home_team.logo,
-              game.home_team.primary_color,
-              game.home_team.text_color,
-              homeRoster,
-              homeLineupMap,
-              homeInheritedLineupMap,
-              homeRosterInherited,
-            )}
+            <div
+              className={[
+                styles.lineupTeamPanel,
+                visibleTeam !== 'away' && styles.lineupTeamPanelMobileHidden,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {renderTeamAccordion(
+                'away',
+                game.away_team.name,
+                game.away_team.code,
+                game.away_team.logo,
+                game.away_team.primary_color,
+                game.away_team.text_color,
+                awayRoster,
+                awayLineupMap,
+                awayInheritedLineupMap,
+                awayRosterInherited,
+              )}
+            </div>
+            <div
+              className={[
+                styles.lineupTeamPanel,
+                visibleTeam !== 'home' && styles.lineupTeamPanelMobileHidden,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {renderTeamAccordion(
+                'home',
+                game.home_team.name,
+                game.home_team.code,
+                game.home_team.logo,
+                game.home_team.primary_color,
+                game.home_team.text_color,
+                homeRoster,
+                homeLineupMap,
+                homeInheritedLineupMap,
+                homeRosterInherited,
+              )}
+            </div>
           </div>
         </Card>
       </div>

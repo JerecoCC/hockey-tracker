@@ -370,6 +370,29 @@
   }
 }
 
+.lineupTeamPanel {
+  min-width: 0;
+}
+
+.lineupTeamPanelMobileHidden {
+  @media (max-width: 720px) {
+    display: none;
+  }
+}
+
+.lineupMobileToggle {
+  display: none;
+
+  @media (max-width: 720px) {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.lineupMobileToggleControl {
+  width: 156px;
+}
+
 // Player list rendered inside the static Accordion body
 .lineupPlayerList {
   list-style: none;
@@ -523,6 +546,10 @@
   display: flex;
   flex-direction: column;
   gap: $space-lg;
+
+  @container (max-width: #{$bp-tablet}) {
+    order: -1;
+  }
 }
 
 // ── Linescore card action row ──────────────────────────────────────────────────

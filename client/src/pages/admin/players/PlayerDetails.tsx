@@ -10,6 +10,7 @@ import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal'
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import usePlayerDetails, {
@@ -79,6 +80,17 @@ const statColumns: Column<PlayerCareerStatRecord>[] = [
   { header: 'A', key: 'assists', align: 'center' },
   { header: 'PTS', key: 'points', align: 'center' },
 ];
+
+const STAT_LABELS = {
+  GP: 'Games Played',
+  G: 'Goals',
+  A: 'Assists',
+  P: 'Points',
+  W: 'Wins',
+  SO: 'Shootout Wins',
+  GA: 'Goals Against',
+  'SV%': 'Save Percentage',
+} as const;
 
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
@@ -464,21 +476,30 @@ const SeasonStatCard = ({
       {!stats ? (
         <p className={styles.placeholder}>No games played.</p>
       ) : isGoalie ? (
-        <div className={styles.statGrid}>
+        <div className={`${styles.statGrid} ${styles.statGridGoalie}`}>
+          <StatCell
+            label="GP"
+            tooltip={STAT_LABELS.GP}
+            value={stats.gp}
+          />
           <StatCell
             label="W"
+            tooltip={STAT_LABELS.W}
             value={stats.wins}
           />
           <StatCell
             label="SO"
+            tooltip={STAT_LABELS.SO}
             value={stats.shootout_wins}
           />
           <StatCell
             label="GA"
+            tooltip={STAT_LABELS.GA}
             value={stats.goals_against}
           />
           <StatCell
             label="SV%"
+            tooltip={STAT_LABELS['SV%']}
             value={fmtSavePct(stats.save_pct)}
           />
         </div>
@@ -486,18 +507,22 @@ const SeasonStatCard = ({
         <div className={styles.statGrid}>
           <StatCell
             label="GP"
+            tooltip={STAT_LABELS.GP}
             value={stats.gp}
           />
           <StatCell
             label="G"
+            tooltip={STAT_LABELS.G}
             value={stats.goals}
           />
           <StatCell
             label="A"
+            tooltip={STAT_LABELS.A}
             value={stats.assists}
           />
           <StatCell
             label="P"
+            tooltip={STAT_LABELS.P}
             value={stats.points}
           />
         </div>
@@ -506,9 +531,19 @@ const SeasonStatCard = ({
   );
 };
 
-const StatCell = ({ label, value }: { label: string; value: number | string }) => (
+const StatCell = ({
+  label,
+  tooltip,
+  value,
+}: {
+  label: string;
+  tooltip: string;
+  value: number | string;
+}) => (
   <div className={styles.statCell}>
-    <span className={styles.statCellLabel}>{label}</span>
+    <Tooltip text={tooltip}>
+      <span className={styles.statCellLabel}>{label}</span>
+    </Tooltip>
     <span className={value === '—' ? styles.statCellMuted : styles.statCellValue}>{value}</span>
   </div>
 );
