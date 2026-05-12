@@ -31,6 +31,7 @@ import {
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
+import TradePlayerModal from '../teams/TradePlayerModal';
 import StintEditModal from './StintEditModal';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import styles from './PlayerDetails.module.scss';
@@ -113,6 +114,7 @@ const PlayerDetailsPage = () => {
   const [creatingStint, setCreatingStint] = useState(false);
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
+  const [tradePlayerOpen, setTradePlayerOpen] = useState(false);
 
   const updatePlayer = async (
     playerId: string,
@@ -143,6 +145,56 @@ const PlayerDetailsPage = () => {
     return updateStint(stint.id, payload);
   };
 
+  const tradePlayer = async (
+    playerId: string,
+    seasonId: string,
+    toTeamId: string,
+    tradeDate: string,
+    jerseyNumber?: number | null,
+    position?: string | null,
+  ): Promise<boolean> => {
+    try {
+      await axios.post(
+        `${API}/admin/player-teams/trade`,
+        {
+          player_id: playerId,
+          season_id: seasonId,
+          to_team_id: toTeamId,
+          trade_date: tradeDate,
+          jersey_number: jerseyNumber ?? null,
+          position: position ?? null,
+        },
+        { headers: authHeaders() },
+      );
+
+      toast.success('Player traded successfully!');
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['player', playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['teams', teamId] }),
+        queryClient.invalidateQueries({ queryKey: ['teams', toTeamId] }),
+        queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goals'] }),
+        queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
+      ]);
+
+      navigate(`/admin/leagues/${leagueId}/teams/${toTeamId}/players/${playerId}`);
+      return true;
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
+          ? err.response.data.error
+          : 'Failed to trade player';
+      toast.error(message);
+      return false;
+    }
+  };
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>
@@ -164,6 +216,11 @@ const PlayerDetailsPage = () => {
   const avatarBg = latestStint?.primary_color ?? undefined;
   const avatarColor = latestStint?.text_color ?? undefined;
   const effectivePosition = latestStint?.position ?? player.position;
+  const canTradePlayer = !!(
+    latestStint?.team_id &&
+    latestStint?.season_id &&
+    !latestStint?.end_date
+  );
   const positionLabel = effectivePosition
     ? (POSITION_LABELS[effectivePosition] ?? effectivePosition)
     : null;
@@ -243,14 +300,26 @@ const PlayerDetailsPage = () => {
           >
             {player.is_active ? 'Active' : 'Inactive'}
           </span>
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="edit"
-            size="sm"
-            tooltip="Edit player"
-            onClick={() => setEditPlayerOpen(true)}
-          />
+          <div className={styles.heroActions}>
+            {canTradePlayer && (
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="swap_horiz"
+                size="sm"
+                tooltip="Trade player"
+                onClick={() => setTradePlayerOpen(true)}
+              />
+            )}
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="edit"
+              size="sm"
+              tooltip="Edit player"
+              onClick={() => setEditPlayerOpen(true)}
+            />
+          </div>
         </div>
       </Card>
 
@@ -407,6 +476,16 @@ const PlayerDetailsPage = () => {
         updatePlayer={updatePlayer}
         updatePlayerTeam={updatePlayerTeam}
         uploadPlayerPhoto={uploadStintPhoto}
+      />
+
+      <TradePlayerModal
+        open={tradePlayerOpen}
+        player={playerEditTarget}
+        currentTeamId={latestStint?.team_id ?? teamId ?? ''}
+        seasonId={latestStint?.season_id ?? ''}
+        leagueId={leagueId ?? ''}
+        onClose={() => setTradePlayerOpen(false)}
+        tradePlayer={tradePlayer}
       />
 
       <ChangeJerseyModal

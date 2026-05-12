@@ -28,7 +28,7 @@ import type {
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
-import PreviousMeetingsCard from './PreviousMeetingsCard';
+import SeasonSeriesCard from './SeasonSeriesCard';
 import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
 import LinescoreCard from './LinescoreCard';
@@ -475,18 +475,20 @@ const GameSummaryTab = ({
               />
             )}
 
-            {/* ── Previous Meetings card ── */}
-            <PreviousMeetingsCard
-              game={game}
-              leagueId={leagueId}
-              seasonId={seasonId}
-            />
-
             {/* ── Last 5 Games card ── */}
             <LastFiveCard
               game={game}
               leagueId={leagueId}
               seasonId={seasonId}
+            />
+
+            {/* ── Season / Playoff Series card ── */}
+            <SeasonSeriesCard
+              game={game}
+              leagueId={leagueId}
+              seasonId={seasonId}
+              liveAwayScore={liveAwayScore}
+              liveHomeScore={liveHomeScore}
             />
           </div>
           {/* end summaryLeft */}

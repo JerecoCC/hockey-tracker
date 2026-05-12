@@ -1,0 +1,63 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.seriesLabel {
+  font-size: $font-sm;
+  font-weight: 500;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
+.prevMeetingsRows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: $space-xs 0;
+  gap: $space-sm;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.prevMeetingRow {
+  display: flex;
+  flex-direction: column;
+  padding: $space-md;
+  border: 1px solid #334155;
+  border-radius: $radius-sm;
+  color: $text-bright;
+}
+
+.prevMeetingRowClickable {
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+}
+
+.teamInfo {
+  display: flex;
+  align-items: center;
+  font-weight: bold;
+
+  .teamCode {
+    margin-left: $space-sm;
+  }
+
+  .teamScore {
+    margin-left: auto;
+  }
+}
+
+.teamInfoDim {
+  opacity: 0.55;
+}
+
+.gameInfo {
+  display: flex;
+  justify-content: space-between;
+  font-size: $font-sm;
+  color: $text-dim;
+}
