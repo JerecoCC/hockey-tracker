@@ -33,7 +33,14 @@ interface Props {
   createGame: ReturnType<typeof useGames>['createGame'];
   updateGame: ReturnType<typeof useGames>['updateGame'];
   onClose: () => void;
+  /** When provided (create mode only), pre-fills and locks the date field. */
+  defaultDate?: string;
 }
+
+const fmtModalDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+};
 
 const GameFormModal = ({
   open,
@@ -43,6 +50,7 @@ const GameFormModal = ({
   createGame,
   updateGame,
   onClose,
+  defaultDate,
 }: Props) => {
   const {
     control,
@@ -95,7 +103,7 @@ const GameFormModal = ({
         away_team_id: null,
         game_type: 'regular',
         status: 'scheduled',
-        scheduled_date: '',
+        scheduled_date: defaultDate ?? '',
         scheduled_time: '',
         venue: '',
         overtime_periods: '',
@@ -103,11 +111,13 @@ const GameFormModal = ({
         notes: '',
       });
     }
-  }, [open, editTarget, reset]);
+  }, [open, editTarget, defaultDate, reset]);
 
   const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
     value: t.id,
     label: t.name,
+    logo: t.logo,
+    code: t.code,
   }));
 
   const onSubmit = handleSubmit(async (data) => {
@@ -133,7 +143,13 @@ const GameFormModal = ({
   return (
     <Modal
       open={open}
-      title={editTarget ? 'Edit Game' : 'Create Game'}
+      title={
+        editTarget
+          ? 'Edit Game'
+          : defaultDate
+            ? `Create Game — ${fmtModalDate(defaultDate)}`
+            : 'Create Game'
+      }
       size="md"
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Game'}
@@ -154,14 +170,15 @@ const GameFormModal = ({
             control={control}
             name="scheduled_date"
             placeholder="Select date…"
-            disabled={isStarted || isSubmitting}
-            autoFocus
+            disabled={isStarted || isSubmitting || (!editTarget && !!defaultDate)}
+            autoFocus={!defaultDate}
           />
           <Field
             label="Time"
             type="timepicker"
             control={control}
             name="scheduled_time"
+            autoFocus={!editTarget && !!defaultDate}
           />
         </div>
 

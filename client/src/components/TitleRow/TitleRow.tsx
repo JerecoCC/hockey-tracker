@@ -14,8 +14,11 @@ interface TitleRowProps {
 
 const TitleRow = (props: TitleRowProps) => {
   const { left, right, className } = props;
-  const container = useTitleRowContainer();
-  const classes = [styles.titleRow, className].filter(Boolean).join(' ');
+  const { rowContainer, mobileLeftContainer } = useTitleRowContainer();
+  const hideRowOnMobile = !!left && !!right && !!mobileLeftContainer;
+  const classes = [styles.titleRow, hideRowOnMobile && styles.titleRowHiddenMobile, className]
+    .filter(Boolean)
+    .join(' ');
 
   const node = (
     <div className={classes}>
@@ -24,9 +27,20 @@ const TitleRow = (props: TitleRowProps) => {
     </div>
   );
 
+  const mobileLeftNode =
+    hideRowOnMobile && mobileLeftContainer
+      ? createPortal(<div className={styles.mobileHeaderAction}>{left}</div>, mobileLeftContainer)
+      : null;
+
   // When AdminLayout provides a portal target, render there (outside the page's
   // DOM tree but still inside <main>). Falls back to in-place rendering.
-  return container ? createPortal(node, container) : node;
+  const rowNode = rowContainer ? createPortal(node, rowContainer) : node;
+  return (
+    <>
+      {mobileLeftNode}
+      {rowNode}
+    </>
+  );
 };
 
 export default TitleRow;

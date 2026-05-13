@@ -51,6 +51,15 @@
   margin: 0;
 }
 
+.alreadyAddedNote {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-sm;
+  color: $info-light;
+  margin: 0;
+}
+
 .selectAllRow {
   list-style: none;
   margin: 0;

@@ -67,6 +67,47 @@ export const usePlayerCareerStats = (playerId: string | null | undefined) => {
   return { stats, loading };
 };
 
+// ── Current-season stats returned by GET /players/:id/current-season-stats ─
+export interface PlayerCurrentSeasonStatBlock {
+  gp: number;
+  goals: number;
+  assists: number;
+  points: number;
+  wins: number;
+  shootout_wins: number;
+  goals_against: number;
+  shots_against: number;
+  save_pct: number | null;
+}
+
+export interface PlayerCurrentSeasonStats {
+  season_id: string;
+  season_name: string;
+  regular: PlayerCurrentSeasonStatBlock | null;
+  playoffs: PlayerCurrentSeasonStatBlock | null;
+}
+
+export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined) => {
+  const { data: currentSeasonStats = null, isLoading: loading } =
+    useQuery<PlayerCurrentSeasonStats | null>({
+      queryKey: ['player-current-season-stats', playerId],
+      queryFn: async () => {
+        try {
+          const { data } = await axios.get<PlayerCurrentSeasonStats | null>(
+            `${API}/admin/players/${playerId}/current-season-stats`,
+            { headers: authHeaders() },
+          );
+          return data;
+        } catch {
+          toast.error('Failed to load current season stats');
+          return null;
+        }
+      },
+      enabled: !!playerId,
+    });
+  return { currentSeasonStats, loading };
+};
+
 // ── Combined hook ───────────────────────────────────────────────────────────
 const usePlayerDetails = (playerId: string | null | undefined) => {
   const { player, loading: playerLoading } = usePlayer(playerId);

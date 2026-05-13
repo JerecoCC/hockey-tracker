@@ -17,9 +17,14 @@ function getGroupTeamIds(groupId: string, groups: SeasonGroupRecord[]): Set<stri
   return ids;
 }
 
-/** Maximum possible points a team can still earn (pessimistic: assumes they win everything). */
+/**
+ * Maximum possible points a team can still earn (pessimistic: assumes they win everything).
+ * Returns Infinity when games_remaining is unknown — this prevents any clinch or
+ * elimination from being declared while the schedule hasn't been fully entered yet.
+ */
 function maxPossible(team: TeamStandingRecord, maxPtsPerGame: number): number {
-  return team.points + (team.games_remaining ?? 0) * maxPtsPerGame;
+  if (team.games_remaining == null) return Infinity;
+  return team.points + team.games_remaining * maxPtsPerGame;
 }
 
 // ── Main function ──────────────────────────────────────────────────────────────
@@ -34,19 +39,29 @@ function maxPossible(team: TeamStandingRecord, maxPtsPerGame: number): number {
  * This is a conservative check — clinching is always correct but may lag the
  * earliest possible clinching moment by a game or two in complex wildcard races.
  *
- * @param standings     Season standings sorted by points desc (as returned by the API).
- * @param playoffFormat Ordered list of qualification rules from the league/season config.
- * @param groups        Season groups (conferences and divisions with their team lists).
- * @param scoringSystem Active scoring system: '2-1-0' or '3-2-1-0'.
+ * @param standings       Season standings sorted by points desc (as returned by the API).
+ * @param playoffFormat   Ordered list of qualification rules from the league/season config.
+ * @param groups          Season groups (conferences and divisions with their team lists).
+ * @param scoringSystem   Active scoring system: '2-1-0' or '3-2-1-0'.
+ * @param gamesPerSeason  Target games per team for the season. Badges are suppressed until
+ *                        the team with the most games played has reached at least 50% of
+ *                        this value.
  */
 export function computeClinched(
   standings: TeamStandingRecord[],
   playoffFormat: PlayoffFormatRule[] | null,
   groups: SeasonGroupRecord[],
   scoringSystem: '2-1-0' | '3-2-1-0',
+  gamesPerSeason?: number | null,
 ): Set<string> {
   if (!playoffFormat || playoffFormat.length === 0) return new Set();
   if (standings.length === 0) return new Set();
+
+  // Don't show clinching indicators until at least half the season is played.
+  if (gamesPerSeason) {
+    const maxGp = Math.max(...standings.map((t) => t.gp));
+    if (maxGp < gamesPerSeason * 0.5) return new Set();
+  }
 
   const maxPts = scoringSystem === '3-2-1-0' ? 3 : 2;
   const clinched = new Set<string>();
@@ -122,15 +137,26 @@ export function computeClinched(
  * Rules are processed in order (same claiming logic as computeClinched) so
  * wildcard pools correctly exclude teams already placed via division/conference
  * rules.
+ *
+ * @param gamesPerSeason  Target games per team for the season. Badges are suppressed until
+ *                        the team with the most games played has reached at least 50% of
+ *                        this value.
  */
 export function computeEliminated(
   standings: TeamStandingRecord[],
   playoffFormat: PlayoffFormatRule[] | null,
   groups: SeasonGroupRecord[],
   scoringSystem: '2-1-0' | '3-2-1-0',
+  gamesPerSeason?: number | null,
 ): Set<string> {
   if (!playoffFormat || playoffFormat.length === 0) return new Set();
   if (standings.length === 0) return new Set();
+
+  // Don't show elimination indicators until at least half the season is played.
+  if (gamesPerSeason) {
+    const maxGp = Math.max(...standings.map((t) => t.gp));
+    if (maxGp < gamesPerSeason * 0.5) return new Set();
+  }
 
   const maxPts = scoringSystem === '3-2-1-0' ? 3 : 2;
   const claimed = new Set<string>();

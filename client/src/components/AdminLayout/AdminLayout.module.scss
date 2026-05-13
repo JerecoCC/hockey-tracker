@@ -49,10 +49,50 @@ $bg-page: #0f172a;
   flex-direction: column;
 }
 
+// ── Mobile overlay backdrop ────────────────────────────────────────────
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 49;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+// ── Mobile responsive ─────────────────────────────────────────────────
+// Don't use display:none — that hides position:fixed children too.
+// Instead collapse the wrapper to zero width and hide the desktop toggle.
+@media (max-width: 768px) {
+  .sidebarWrapper {
+    width: 0;
+  }
+
+  .sidebarToggle {
+    display: none;
+  }
+}
+
+// ── Scoreboard portal slot ─────────────────────────────────────────────
+// ScoreboardCard from game-detail pages portals into this div so it lives
+// outside <main> and is never clipped by max-width / padding.
+// The slot itself is sticky, so the card it contains inherits the behaviour.
+.scoreboardSlot {
+  flex-shrink: 0;
+  position: sticky;
+  top: 52px; // flush under the PageHeader title row (52 px)
+  z-index: 4; // below PageHeader (z-index: 5)
+
+  @media (max-width: 768px) {
+    top: 88px; // 52 px title row + ~36 px mobile tab strip
+  }
+}
+
 .main {
   width: 100%;
   max-width: $max-content-width;
   margin: 0 auto;
   padding: $space-4xl;
   flex: 1;
+
+  @media (max-width: 768px) {
+    padding: $space-2xl $space-lg;
+  }
 }

@@ -7,13 +7,23 @@
   top: 0;
   z-index: 5;
   display: flex;
+  flex-direction: column;
+  background: $bg-page;
+  border-bottom: 1px solid $border;
+  flex-shrink: 0;
+}
+
+// ── Title row (hamburger + title + profile) ────────────────────────────
+.titleRow {
+  display: flex;
   align-items: center;
   justify-content: space-between;
   height: 52px;
   padding: 0 $space-4xl;
-  background: $bg-page;
-  border-bottom: 1px solid $border;
-  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    padding: 0 $space-lg;
+  }
 }
 
 // ── Left / right slots ─────────────────────────────────────────────────
@@ -24,6 +34,26 @@
   gap: $space-lg;
 }
 
+.left {
+  flex: 1;
+  min-width: 0;
+}
+
+.right {
+  justify-content: flex-end;
+  flex-shrink: 0;
+}
+
+.mobileTitleLeft {
+  display: none;
+  align-items: center;
+  flex-shrink: 0;
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
+}
+
 // ── Page title ─────────────────────────────────────────────────────────
 .title {
   font-size: $font-xl;
@@ -31,6 +61,113 @@
   color: $text-bright;
   margin: 0;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// On mobile: hidden when tabs are present (active tab label replaces it)
+.titleHiddenMobile {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+// Active tab name shown in header title position – mobile only
+.titleMobileTab {
+  font-size: $font-xl;
+  font-weight: 700;
+  color: $text-bright;
+  margin: 0;
+  white-space: nowrap;
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+// ── Mobile tab strip ───────────────────────────────────────────────────
+.mobileTabBar {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: flex;
+    overflow-x: auto;
+    padding: 0 $space-lg;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+}
+
+.mobileTab {
+  flex-shrink: 0;
+  position: relative;
+  background: none;
+  border: none;
+  padding: $space-sm $space-2xl;
+  font-size: $font-nav;
+  font-weight: 500;
+  color: $text-light;
+  cursor: pointer;
+  transition: color $transition-fast;
+
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    border-radius: $radius-sm $radius-sm 0 0;
+    background: $accent;
+    opacity: 0;
+    transition: opacity $transition-fast;
+  }
+
+  &:hover {
+    color: $text-body;
+  }
+}
+
+.mobileTabActive {
+  color: $accent-light;
+
+  &::after {
+    opacity: 1;
+  }
+
+  &:hover {
+    color: $accent-light;
+  }
+}
+
+// ── Hamburger (mobile only) ────────────────────────────────────────────
+.hamburger {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: transparent;
+  border: none;
+  border-radius: $radius-md;
+  color: $text-bright;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+    order: 2;
+  }
 }
 
 // ── Switch panel button ────────────────────────────────────────────────

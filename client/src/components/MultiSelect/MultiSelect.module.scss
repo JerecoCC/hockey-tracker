@@ -1,0 +1,256 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.wrapper {
+  position: relative;
+  min-width: 0;
+}
+
+// ── Trigger ──────────────────────────────────────────────────────────────────
+
+.trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-body;
+  font-size: $font-base;
+  min-height: 42px;
+  padding: 6px $space-md 6px $space-lg;
+  outline: none;
+  cursor: pointer;
+  font-weight: 400;
+  text-align: left;
+  transition: border-color $transition-base;
+
+  &:focus {
+    border-color: $accent;
+  }
+
+  &.triggerOpen {
+    border-color: $accent;
+  }
+
+  &.triggerDisabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  &.triggerError {
+    border-color: $danger-light;
+  }
+}
+
+// ── Pills (selected value chips) ──────────────────────────────────────────────
+
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+  align-items: center;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba($accent, 0.2);
+  border-radius: $radius-sm;
+  padding: 2px 4px 2px 8px;
+  font-size: $font-sm;
+  color: $text-bright;
+  font-weight: 500;
+  max-width: 180px;
+  flex-shrink: 0;
+}
+
+.pillLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pillRemove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: inherit;
+  opacity: 0.65;
+  border-radius: 2px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: opacity $transition-fast;
+
+  &:hover {
+    opacity: 1;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+  }
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 80px;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: $text-body;
+  font-size: $font-base;
+  font-family: inherit;
+  padding: 2px 0;
+  cursor: text;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+}
+
+.placeholder {
+  color: $text-dim;
+  font-size: $font-base;
+  flex: 1;
+}
+
+.caret {
+  color: $text-dim;
+  flex-shrink: 0;
+  margin-left: auto;
+  transition: transform $transition-base ease;
+
+  &.caretOpen {
+    transform: rotate(180deg);
+  }
+}
+
+// ── Dropdown menu ─────────────────────────────────────────────────────────────
+
+.menu {
+  // top, left, width are applied via inline style so the menu renders at
+  // position:fixed — prevents overflow:auto ancestors from clipping it.
+  position: fixed;
+  background: $bg-card;
+  border: 1px solid $accent;
+  border-radius: $radius-md;
+  list-style: none;
+  margin: 0;
+  padding: $space-xs;
+  z-index: 200;
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  // Custom scrollbar — always visible as a thin $border track
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border;
+    border-radius: $radius-md;
+  }
+}
+
+.emptyMessage {
+  padding: $space-sm $space-md;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+  text-align: center;
+  list-style: none;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $space-md;
+  width: 100%;
+  min-height: 36px;
+  padding: 0 $space-md;
+  background: transparent;
+  border: none;
+  border-radius: $radius-sm;
+  color: $text-body;
+  font-size: $font-base;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover,
+  &.optionFocused {
+    background: rgba($accent, 0.12);
+  }
+
+  &.optionSelected {
+    color: $text-bright;
+    font-weight: 500;
+  }
+}
+
+// Checkbox mark on the left of each option
+.optionCheck {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border: 2px solid $border;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: $bg-card;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &.optionCheckSelected {
+    background: $text-bright;
+    border-color: $text-bright;
+  }
+}
+
+.optionLogo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: $radius-sm;
+  flex-shrink: 0;
+}
+
+.optionNoLogo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: $radius-sm;
+  background: $border;
+  flex-shrink: 0;
+  font-size: $font-xs;
+  font-weight: 700;
+  color: $text-body;
+  text-transform: uppercase;
+  letter-spacing: 0;
+}

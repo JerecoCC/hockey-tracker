@@ -3,9 +3,7 @@
 
 .wrapper {
   position: relative;
-  align-self: stretch;
   display: flex;
-  align-items: stretch;
 }
 
 .menu {
@@ -13,6 +11,7 @@
   top: calc(100% + 6px);
   right: 0;
   min-width: 168px;
+  width: max-content;
   background: $bg-card;
   border: 1px solid $border;
   border-radius: $radius-md;
@@ -26,7 +25,7 @@
   display: flex;
   align-items: center;
   gap: $space-sm;
-  padding: $space-sm $space-lg;
+  padding: $space-md $space-lg;
   background: transparent;
   border: none;
   color: $text-body;
@@ -34,6 +33,7 @@
   font-family: inherit;
   cursor: pointer;
   justify-content: flex-start;
+  white-space: nowrap;
   transition:
     background 0.12s,
     color 0.12s;

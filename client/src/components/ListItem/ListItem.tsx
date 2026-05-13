@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Badge, { type BadgeIntent } from '../Badge/Badge';
@@ -38,6 +39,8 @@ interface Props {
   /** Text color for the leading placeholder. */
   leadingImageTextColor?: string | null;
   image?: string | null;
+  /** Optional custom node that replaces the built-in image / placeholder block. */
+  imageNode?: ReactNode;
   /** Controls the shape of the image and placeholder. Defaults to 'square'. */
   image_shape?: 'square' | 'circle';
   name: string;
@@ -77,6 +80,7 @@ const ListItem = ({
   leadingImagePrimaryColor,
   leadingImageTextColor,
   image,
+  imageNode,
   image_shape = 'square',
   hideImage = false,
   name,
@@ -130,24 +134,27 @@ const ListItem = ({
 
       {/* Image or color-branded placeholder */}
       {!hideImage &&
-        (image ? (
-          <img
-            src={image}
-            alt=""
-            className={[styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')}
-          />
-        ) : (
-          <span
-            className={[styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
-              .filter(Boolean)
-              .join(' ')}
-            style={
-              primaryColor ? { background: primaryColor, color: textColor ?? undefined } : undefined
-            }
-          >
-            {placeholder ?? (codeValue ?? name ?? '').slice(0, 3)}
-          </span>
-        ))}
+        (imageNode ??
+          (image ? (
+            <img
+              src={image}
+              alt=""
+              className={[styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')}
+            />
+          ) : (
+            <span
+              className={[styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
+                .filter(Boolean)
+                .join(' ')}
+              style={
+                primaryColor
+                  ? { background: primaryColor, color: textColor ?? undefined }
+                  : undefined
+              }
+            >
+              {placeholder ?? (codeValue ?? name ?? '').slice(0, 3)}
+            </span>
+          )))}
 
       {/* Jersey number chip */}
       {jerseyNumber != null && <span className={styles.jerseyChip}>{jerseyNumber}</span>}

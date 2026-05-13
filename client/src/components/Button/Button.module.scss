@@ -27,12 +27,18 @@
   &.iconOnly {
     padding: $space-sm;
   }
+  &.iconOnlyButton {
+    padding: $space-md;
+  }
 }
 
 .md {
   padding: $space-md $space-lg;
   &.iconOnly {
-    padding: $space-sm;
+    padding: $space-md;
+  }
+  &.iconOnlyButton {
+    padding: $space-md;
   }
 }
 
@@ -42,52 +48,77 @@
   &.iconOnly {
     padding: $space-sm;
   }
+  &.iconOnlyButton {
+    padding: $space-md;
+  }
 }
 
 // ── Icon size ──────────────────────────────────────────────────────────
+// 1em inherits the button's own font-size so icons and text carry
+// equal visual weight for the same intent — sm/md/lg all scale together.
 .btn svg {
-  font-size: $font-xs;
+  font-size: 1em;
 }
 
-// ── Icon-only: tighter radius + square shape ───────────────────────────
+// ── Icon-only square variants ──────────────────────────────────────────
+// .iconOnly       → compact: tight padding, small radius (default)
+// .iconOnlyButton → same height as a labelled button, $radius-md
+// .iconOnlyField  → fixed 42px to match input/field height, $radius-md
 .iconOnly {
   border-radius: $radius-sm;
   aspect-ratio: 1 / 1;
   line-height: 1;
 }
 
+.iconOnlyButton {
+  border-radius: $radius-md;
+  aspect-ratio: 1 / 1;
+  line-height: 1;
+}
+
+.iconOnlyField {
+  border-radius: $radius-md;
+  width: 42px;
+  height: 42px;
+  line-height: 1;
+  padding: 0;
+}
+
 // ── Filled ────────────────────────────────────────────────────────────
 .filledAccent {
   background: $accent;
   color: #fff;
-  border: none;
+  border: 1px solid $accent;
   &:hover:not(:disabled) {
     background: $accent-hover;
+    border-color: $accent-hover;
   }
 }
 
 .filledSuccess {
   background: $success;
   color: #fff;
-  border: none;
+  border: 1px solid $success;
   &:hover:not(:disabled) {
     background: $success-hover;
+    border-color: $success-hover;
   }
 }
 
 .filledWarning {
   background: $warning;
   color: #fff;
-  border: none;
+  border: 1px solid $warning;
   &:hover:not(:disabled) {
     background: $warning-hover;
+    border-color: $warning-hover;
   }
 }
 
 .filledDanger {
   background: $danger;
   color: #fff;
-  border: none;
+  border: 1px solid $danger;
   &:hover:not(:disabled) {
     opacity: 0.85;
   }
@@ -96,7 +127,7 @@
 .filledInfo {
   background: $info;
   color: #fff;
-  border: none;
+  border: 1px solid $info;
   &:hover:not(:disabled) {
     opacity: 0.85;
   }
@@ -105,9 +136,10 @@
 .filledNeutral {
   background: $border;
   color: $text-body;
-  border: none;
+  border: 1px solid $border;
   &:hover:not(:disabled) {
     background: $text-dim;
+    border-color: $text-dim;
   }
 }
 
@@ -115,57 +147,57 @@
 .outlinedAccent {
   background: transparent;
   color: $accent-light;
-  border: 1px solid rgba($accent-light, 0.5);
+  border: 1px solid $accent;
   &:hover:not(:disabled) {
     background: rgba($accent, 0.15);
-    border-color: $accent-light;
+    border-color: $accent-hover;
   }
 }
 
 .outlinedSuccess {
   background: transparent;
   color: $success-light;
-  border: 1px solid rgba($success-light, 0.5);
+  border: 1px solid $success;
   &:hover:not(:disabled) {
     background: rgba($success, 0.15);
-    border-color: $success-light;
+    border-color: $success-hover;
   }
 }
 
 .outlinedWarning {
   background: transparent;
   color: $warning-light;
-  border: 1px solid rgba($warning-light, 0.5);
+  border: 1px solid $warning;
   &:hover:not(:disabled) {
     background: rgba($warning, 0.15);
-    border-color: $warning-light;
+    border-color: $warning-hover;
   }
 }
 
 .outlinedDanger {
   background: transparent;
   color: $danger-light;
-  border: 1px solid rgba($danger-light, 0.5);
+  border: 1px solid $danger;
   &:hover:not(:disabled) {
     background: rgba($danger, 0.15);
-    border-color: $danger-light;
+    border-color: $danger;
   }
 }
 
 .outlinedInfo {
   background: transparent;
   color: $info-light;
-  border: 1px solid rgba($info-light, 0.5);
+  border: 1px solid $info;
   &:hover:not(:disabled) {
     background: rgba($info, 0.15);
-    border-color: $info-light;
+    border-color: $info;
   }
 }
 
 .outlinedNeutral {
   background: transparent;
   color: $text-light;
-  border: 1px solid rgba($text-light, 0.5);
+  border: 1px solid $text-dim;
   &:hover:not(:disabled) {
     color: $text-bright;
     border-color: $text-light;

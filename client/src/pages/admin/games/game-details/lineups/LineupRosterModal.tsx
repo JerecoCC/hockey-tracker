@@ -27,6 +27,8 @@ interface Props {
   onClose: () => void;
   teamId: string;
   seasonId: string;
+  /** YYYY-MM-DD date of the game — used to filter players active on that date. */
+  gameDate?: string;
   teamName: string;
   existingPlayerIds: Set<string>;
   /** Called with selected player IDs to add them to the game roster */
@@ -40,6 +42,7 @@ const LineupRosterModal = ({
   onClose,
   teamId,
   seasonId,
+  gameDate,
   teamName,
   existingPlayerIds,
   addToGameRoster,
@@ -50,13 +53,14 @@ const LineupRosterModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [jerseyInput, setJerseyInput] = useState('');
   const [pendingMissing, setPendingMissing] = useState<number[]>([]);
+  const [alreadyAdded, setAlreadyAdded] = useState<number[]>([]);
 
   const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId }],
+    queryKey: ['players', { team_id: teamId, season_id: seasonId, game_date: gameDate }],
     queryFn: async () => {
       const { data } = await axios.get<TeamPlayerRecord[]>(`${API}/admin/players`, {
         headers: authHeaders(),
-        params: { team_id: teamId, season_id: seasonId },
+        params: { team_id: teamId, season_id: seasonId, game_date: gameDate },
       });
       return data;
     },
@@ -125,10 +129,18 @@ const LineupRosterModal = ({
 
     const matched: string[] = [];
     const missing: number[] = [];
+    const inLineup: number[] = [];
+
     for (const num of nums) {
-      const player = available.find((p) => p.jersey_number === num);
-      if (player) matched.push(player.id);
-      else missing.push(num);
+      const inAvailable = available.find((p) => p.jersey_number === num);
+      if (inAvailable) {
+        matched.push(inAvailable.id);
+      } else if (allPlayers.some((p) => p.jersey_number === num)) {
+        // Player exists on the team but is already in this lineup
+        inLineup.push(num);
+      } else {
+        missing.push(num);
+      }
     }
 
     if (matched.length > 0) {
@@ -139,6 +151,7 @@ const LineupRosterModal = ({
       });
     }
     setPendingMissing(missing);
+    setAlreadyAdded(inLineup);
     setJerseyInput('');
   };
 
@@ -147,6 +160,7 @@ const LineupRosterModal = ({
     setSelected(new Set());
     setJerseyInput('');
     setPendingMissing([]);
+    setAlreadyAdded([]);
     onClose();
   };
 
@@ -195,6 +209,7 @@ const LineupRosterModal = ({
               value={jerseyInput}
               onChange={(e) => setJerseyInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyJerseys()}
+              autoFocus
             />
             <Button
               size="sm"
@@ -206,6 +221,15 @@ const LineupRosterModal = ({
               Apply
             </Button>
           </div>
+          {alreadyAdded.length > 0 && (
+            <p className={styles.alreadyAddedNote}>
+              <Icon
+                name="info"
+                size="0.85em"
+              />
+              Already in lineup: {alreadyAdded.map((n) => `#${n}`).join(', ')}
+            </p>
+          )}
           {pendingMissing.length > 0 && (
             <p className={styles.missingNote}>
               <Icon
@@ -228,7 +252,6 @@ const LineupRosterModal = ({
               placeholder="Search players…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              autoFocus
             />
           </div>
         </div>
@@ -256,10 +279,12 @@ const LineupRosterModal = ({
                   key={p.id}
                   checked={selected.has(p.id)}
                   onToggle={() => toggle(p.id)}
-                  jerseyNumber={p.jersey_number ?? null}
-                  image={p.photo}
-                  imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
-                  imageShape="circle"
+                  imagePlaceholder={
+                    p.jersey_number != null
+                      ? String(p.jersey_number)
+                      : `${p.first_name[0]}${p.last_name[0]}`
+                  }
+                  imageShape="square"
                   imagePrimaryColor={p.primary_color}
                   imageTextColor={p.text_color}
                   eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}

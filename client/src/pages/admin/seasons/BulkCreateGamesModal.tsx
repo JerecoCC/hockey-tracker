@@ -1,14 +1,11 @@
-import { useState } from 'react';
-import { type Control, type UseFormSetValue, useFieldArray, useForm } from 'react-hook-form';
-import AddRowBar from '@/components/AddRowBar/AddRowBar';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import { type ReactNode, useCallback } from 'react';
 import Field from '@/components/Field/Field';
-import Icon from '@/components/Icon/Icon';
-import Modal from '@/components/Modal/Modal';
+import BulkCreateModal, {
+  type BulkCreateRowRenderProps,
+} from '@/components/BulkCreateModal/BulkCreateModal';
 import type { SelectOption } from '@/components/Select/Select';
 import { type CreateGameData } from '@/hooks/useGames';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
-import styles from './BulkCreateGamesModal.module.scss';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -20,10 +17,6 @@ interface RowValues {
   venue: string;
 }
 
-interface FormValues {
-  games: RowValues[];
-}
-
 const EMPTY_ROW: RowValues = {
   away_team_id: null,
   home_team_id: null,
@@ -32,17 +25,23 @@ const EMPTY_ROW: RowValues = {
   venue: '',
 };
 
+const fmtModalDate = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+};
+
 // ── Per-row sub-component ─────────────────────────────────────────────────────
 
 interface GameRowProps {
   index: number;
-  control: Control<FormValues>;
-  setValue: UseFormSetValue<FormValues>;
+  control: BulkCreateRowRenderProps<{ rows: RowValues[] }, RowValues>['control'];
+  setValue: BulkCreateRowRenderProps<{ rows: RowValues[] }, RowValues>['setValue'];
   seasonTeams: SeasonTeam[];
   teamOptions: SelectOption[];
   isSubmitting: boolean;
+  dateDisabled?: boolean;
   autoFocus?: boolean;
-  onDelete: () => void;
+  deleteButton: ReactNode;
 }
 
 const GameRow = ({
@@ -52,36 +51,40 @@ const GameRow = ({
   seasonTeams,
   teamOptions,
   isSubmitting,
+  dateDisabled,
   autoFocus,
-  onDelete,
+  deleteButton,
 }: GameRowProps) => {
   const handleHomeTeamChange = (teamId: string | null) => {
     const team = seasonTeams.find((t) => t.id === teamId);
-    setValue(`games.${index}.venue`, team?.home_arena ?? '');
+    setValue(`rows.${index}.venue`, team?.home_arena ?? '');
   };
 
   return (
-    <div className={styles.gameRow}>
+    <>
       <Field
         type="datepicker"
         control={control}
-        name={`games.${index}.scheduled_date`}
+        name={`rows.${index}.scheduled_date`}
+        required
+        rules={{ required: 'Date is required' }}
         placeholder="Date…"
-        disabled={isSubmitting}
-        autoFocus={autoFocus}
+        disabled={isSubmitting || dateDisabled}
+        autoFocus={autoFocus && !dateDisabled}
       />
       <Field
         type="timepicker"
         control={control}
-        name={`games.${index}.scheduled_time`}
+        name={`rows.${index}.scheduled_time`}
         disabled={isSubmitting}
+        autoFocus={autoFocus && !!dateDisabled}
       />
       <Field
         type="select"
         control={control}
-        name={`games.${index}.away_team_id`}
+        name={`rows.${index}.away_team_id`}
         required
-        rules={{ required: true }}
+        rules={{ required: 'Away team is required' }}
         options={teamOptions}
         placeholder="— Select away team —"
         disabled={isSubmitting}
@@ -90,9 +93,9 @@ const GameRow = ({
       <Field
         type="select"
         control={control}
-        name={`games.${index}.home_team_id`}
+        name={`rows.${index}.home_team_id`}
         required
-        rules={{ required: true }}
+        rules={{ required: 'Home team is required' }}
         options={teamOptions}
         placeholder="— Select home team —"
         disabled={isSubmitting}
@@ -101,23 +104,12 @@ const GameRow = ({
       />
       <Field
         control={control}
-        name={`games.${index}.venue`}
+        name={`rows.${index}.venue`}
         placeholder="Arena"
         disabled={isSubmitting}
       />
-      <button
-        type="button"
-        className={styles.deleteBtn}
-        onClick={onDelete}
-        disabled={isSubmitting}
-        aria-label="Remove game"
-      >
-        <Icon
-          name="delete"
-          size="1em"
-        />
-      </button>
-    </div>
+      {deleteButton}
+    </>
   );
 };
 
@@ -130,6 +122,8 @@ interface Props {
   teamOptions: SelectOption[];
   bulkCreateGames: (data: CreateGameData[]) => Promise<boolean>;
   onClose: () => void;
+  /** When provided, pre-fills and locks the date field on every row. */
+  defaultDate?: string;
 }
 
 const BulkCreateGamesModal = ({
@@ -139,115 +133,65 @@ const BulkCreateGamesModal = ({
   teamOptions,
   bulkCreateGames,
   onClose,
+  defaultDate,
 }: Props) => {
-  const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [autoFocusIndex, setAutoFocusIndex] = useState(0);
-
-  const { control, handleSubmit, reset, setValue } = useForm<FormValues>({
-    defaultValues: { games: [{ ...EMPTY_ROW }] },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control, name: 'games' });
-
-  const handleClose = () => {
-    reset({ games: [{ ...EMPTY_ROW }] });
-    setAutoFocusIndex(0);
-    onClose();
-  };
-
-  const handleDeleteClick = (index: number) => {
-    if (fields.length === 1) return; // keep at least one row
-    setConfirmRemoveIndex(index);
-  };
-
-  const onSubmit = handleSubmit(async (data) => {
-    setIsSubmitting(true);
-    const payload: CreateGameData[] = data.games.map((row) => ({
-      season_id: seasonId,
-      home_team_id: row.home_team_id!,
-      away_team_id: row.away_team_id!,
-      game_type: 'regular',
-      status: 'scheduled',
-      scheduled_at: row.scheduled_date || null,
-      scheduled_time: row.scheduled_time || null,
-      venue: row.venue || null,
-    }));
-    const ok = await bulkCreateGames(payload);
-    setIsSubmitting(false);
-    if (ok) handleClose();
-  });
+  const createRow = useCallback(
+    () => ({ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }),
+    [defaultDate],
+  );
 
   return (
-    <>
-      <Modal
-        open={open}
-        title="Bulk Create Games"
-        size="xl"
-        onClose={handleClose}
-        confirmForm="bulk-create-games-form"
-        confirmLabel={
-          isSubmitting
-            ? 'Creating…'
-            : `Create ${fields.length} Game${fields.length !== 1 ? 's' : ''}`
-        }
-        confirmDisabled={isSubmitting}
-        busy={isSubmitting}
-      >
-        <form
-          id="bulk-create-games-form"
-          onSubmit={onSubmit}
-        >
-          <div className={styles.headerRow}>
-            <span className={styles.headerCell}>Date</span>
-            <span className={styles.headerCell}>Time</span>
-            <span className={styles.headerCell}>Away Team</span>
-            <span className={styles.headerCell}>Home Team</span>
-            <span className={styles.headerCell}>Venue</span>
-            <span />
-          </div>
-
-          <div className={styles.gameList}>
-            {fields.map((field, index) => (
-              <GameRow
-                key={field.id}
-                index={index}
-                control={control}
-                setValue={setValue}
-                seasonTeams={seasonTeams}
-                teamOptions={teamOptions}
-                isSubmitting={isSubmitting}
-                autoFocus={index === autoFocusIndex}
-                onDelete={() => handleDeleteClick(index)}
-              />
-            ))}
-          </div>
-
-          <AddRowBar
-            label="Add Game"
-            disabled={isSubmitting}
-            onClick={() => {
-              setAutoFocusIndex(fields.length);
-              append({ ...EMPTY_ROW });
-            }}
-          />
-        </form>
-      </Modal>
-
-      <ConfirmModal
-        open={confirmRemoveIndex !== null}
-        title="Remove Row"
-        body="Remove this game from the list?"
-        confirmLabel="Remove"
-        confirmIcon="delete"
-        variant="danger"
-        onCancel={() => setConfirmRemoveIndex(null)}
-        onConfirm={() => {
-          if (confirmRemoveIndex !== null) remove(confirmRemoveIndex);
-          setConfirmRemoveIndex(null);
-        }}
-      />
-    </>
+    <BulkCreateModal<{ rows: RowValues[] }, RowValues>
+      createDefaultValues={() => ({ rows: [{ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }] })}
+      rowArrayName="rows"
+      open={open}
+      title={defaultDate ? `Bulk Create — ${fmtModalDate(defaultDate)}` : 'Bulk Create Games'}
+      size="xl"
+      onClose={onClose}
+      formId="bulk-create-games-form"
+      createRow={createRow}
+      columnsTemplate="0.9fr 0.8fr 1.1fr 1.1fr 1.2fr"
+      headerCells={[
+        { label: 'Date', required: true },
+        { label: 'Time' },
+        { label: 'Away Team', required: true },
+        { label: 'Home Team', required: true },
+        { label: 'Venue' },
+      ]}
+      addRowLabel="Add Game"
+      itemLabel="game"
+      getConfirmLabel={(count, isSubmitting) =>
+        isSubmitting ? 'Creating…' : `Create ${count} Game${count !== 1 ? 's' : ''}`
+      }
+      shouldConfirmRemove={() => true}
+      getRemoveConfirmBody={() => 'Remove this game from the list?'}
+      onSubmitForm={async (data) => {
+        const payload: CreateGameData[] = data.rows.map((row) => ({
+          season_id: seasonId,
+          home_team_id: row.home_team_id!,
+          away_team_id: row.away_team_id!,
+          game_type: 'regular',
+          status: 'scheduled',
+          scheduled_at: row.scheduled_date || null,
+          scheduled_time: row.scheduled_time || null,
+          venue: row.venue || null,
+        }));
+        return bulkCreateGames(payload);
+      }}
+      renderRow={({ index, control, setValue, isSubmitting, autoFocus, deleteButton }) => (
+        <GameRow
+          index={index}
+          control={control}
+          setValue={setValue}
+          seasonTeams={seasonTeams}
+          teamOptions={teamOptions}
+          isSubmitting={isSubmitting}
+          dateDisabled={!!defaultDate}
+          autoFocus={autoFocus}
+          deleteButton={deleteButton}
+        />
+      )}
+    />
   );
 };
 

@@ -106,6 +106,7 @@ const useLeaguePlayers = (leagueId?: string, seasonId?: string) => {
       await axios.patch(`${API}/admin/players/${playerId}`, payload, { headers: authHeaders() });
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update player'));

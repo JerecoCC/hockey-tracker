@@ -14,7 +14,6 @@ interface Props {
   goalieStats: GoalieStatRecord[];
   playerGameStats: Map<string, { goals: number; assists: number }>;
   leagueId: string;
-  isFinal: boolean;
   onEdit?: () => void;
 }
 
@@ -26,7 +25,6 @@ const ThreeStarsCard = ({
   goalieStats,
   playerGameStats,
   leagueId,
-  isFinal,
   onEdit,
 }: Props) => {
   const starDefs = [
@@ -39,7 +37,7 @@ const ThreeStarsCard = ({
     <Card
       title="Three Stars"
       action={
-        isFinal ? (
+        onEdit ? (
           <Button
             variant="outlined"
             intent="neutral"
@@ -57,9 +55,7 @@ const ThreeStarsCard = ({
           if (!player) return null;
 
           const isAway = player.team_id === game.away_team.id;
-          const teamCode = isAway ? game.away_team.code : game.home_team.code;
-          const primaryColor = isAway ? game.away_team.primary_color : game.home_team.primary_color;
-          const textColor = isAway ? game.away_team.text_color : game.home_team.text_color;
+          const team = isAway ? game.away_team : game.home_team;
           const stats = playerGameStats.get(playerId) ?? { goals: 0, assists: 0 };
           const goalieStatRecord = goalieStats.find((s) => s.goalie_id === playerId) ?? null;
 
@@ -69,9 +65,11 @@ const ThreeStarsCard = ({
               starCount={starCount}
               player={player}
               leagueId={leagueId}
-              primaryColor={primaryColor}
-              textColor={textColor}
-              teamCode={teamCode}
+              primaryColor={team.primary_color}
+              textColor={team.text_color}
+              teamCode={team.code}
+              teamLogo={team.logo}
+              teamName={team.name}
               stats={stats}
               goalieStatRecord={goalieStatRecord}
             />

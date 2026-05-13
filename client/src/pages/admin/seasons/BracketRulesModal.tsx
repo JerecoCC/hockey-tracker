@@ -12,6 +12,7 @@ export interface GroupEntry {
   role: 'conference' | 'division' | null;
 }
 import useBracketRuleSets, {
+  type BracketRuleSet,
   type BracketSlotRule,
   type SaveSlotsPayload,
 } from '@/hooks/useBracketRuleSets';
@@ -69,7 +70,12 @@ export interface BracketStructure {
   rounds: BracketRound[];
 }
 
-export const getRoundLabel = (round: number, totalRounds: number): string => {
+export const getRoundLabel = (
+  round: number,
+  totalRounds: number,
+  roundNames?: Record<string, string> | null,
+): string => {
+  if (roundNames?.[round]) return roundNames[round];
   if (round === totalRounds) return 'Final';
   if (round === 1) return 'First Round';
   if (round === totalRounds - 1) return 'Conference Finals';
@@ -117,16 +123,18 @@ interface SlotFormItem {
 interface BracketRulesFormValues {
   name: string;
   slots: SlotFormItem[];
+  /** Custom display name per round, keyed by round number string. Empty string = use default. */
+  roundNames: Record<string, string>;
 }
 
-export const makeSlotKey = (round: number, matchup: number, pos: 'away' | 'home') =>
+export const makeSlotKey = (round: number, matchup: number, pos: 'team1' | 'team2') =>
   `r${round}m${matchup}${pos}`;
 
 export const slotKeyToLabel = (key: string, rounds: BracketRound[]): string => {
-  const m = key.match(/^r(\d+)m(\d+)(away|home)$/);
+  const m = key.match(/^r(\d+)m(\d+)(team1|team2)$/);
   if (!m) return key;
   const roundInfo = rounds.find((r) => r.round === Number(m[1]));
-  return `${roundInfo?.label ?? `Round ${m[1]}`} · Matchup ${Number(m[2]) + 1} · Slot ${m[3] === 'away' ? '1' : '2'}`;
+  return `${roundInfo?.label ?? `Round ${m[1]}`} · Matchup ${Number(m[2]) + 1} · Team ${m[3] === 'team1' ? '1' : '2'}`;
 };
 
 const blankSlotItem = (key: string): SlotFormItem => ({
@@ -146,11 +154,15 @@ const buildDefaultSlots = (structure: BracketStructure): SlotFormItem[] => {
   if (!round1) return [];
   const slots: SlotFormItem[] = [];
   for (let mi = 0; mi < round1.series; mi++) {
-    slots.push(blankSlotItem(makeSlotKey(1, mi, 'away')));
-    slots.push(blankSlotItem(makeSlotKey(1, mi, 'home')));
+    slots.push(blankSlotItem(makeSlotKey(1, mi, 'team1')));
+    slots.push(blankSlotItem(makeSlotKey(1, mi, 'team2')));
   }
   return slots;
 };
+
+/** Maps a canonical team1/team2 key to its legacy away/home equivalent for backward compat. */
+const legacySlotKey = (key: string): string =>
+  key.replace(/team1$/, 'away').replace(/team2$/, 'home');
 
 const mergeApiSlots = (
   structure: BracketStructure,
@@ -159,7 +171,8 @@ const mergeApiSlots = (
   const apiMap: Record<string, BracketSlotRule> = {};
   for (const s of apiSlots) apiMap[s.slot_key] = s;
   return buildDefaultSlots(structure).map((blank) => {
-    const api = apiMap[blank.key];
+    // Try canonical key first, then the old away/home format for backward compat
+    const api = apiMap[blank.key] ?? apiMap[legacySlotKey(blank.key)];
     if (!api) return blank;
     return {
       key: blank.key,
@@ -209,12 +222,12 @@ const buildAutoWinnerSlots = (structure: BracketStructure): SaveSlotsPayload[] =
     if (r.round === 1) continue;
     for (let mi = 0; mi < r.series; mi++) {
       slots.push({
-        slot_key: makeSlotKey(r.round, mi, 'away'),
+        slot_key: makeSlotKey(r.round, mi, 'team1'),
         rule_type: 'winner',
         matchup_ref: `r${r.round - 1}m${mi * 2}`,
       });
       slots.push({
-        slot_key: makeSlotKey(r.round, mi, 'home'),
+        slot_key: makeSlotKey(r.round, mi, 'team2'),
         rule_type: 'winner',
         matchup_ref: `r${r.round - 1}m${mi * 2 + 1}`,
       });
@@ -470,6 +483,9 @@ const BracketRulesModal = ({
   // When no external structure is provided (league context), the user picks a size.
   const [selectedSize, setSelectedSize] = useState<number>(8);
 
+  // Fetched rule set data (null = create mode or loading)
+  const [loadedRuleSet, setLoadedRuleSet] = useState<BracketRuleSet | null>(null);
+
   const effectiveStructure = useMemo(
     () => externalStructure ?? deriveBracketStructureFromSize(selectedSize),
     [externalStructure, selectedSize],
@@ -481,35 +497,53 @@ const BracketRulesModal = ({
     reset,
     handleSubmit,
     formState: { isSubmitting },
-  } = useForm<BracketRulesFormValues>({ defaultValues: { name: '', slots: [] } });
+  } = useForm<BracketRulesFormValues>({ defaultValues: { name: '', slots: [], roundNames: {} } });
 
-  // Load existing rules (or blank defaults) whenever the modal opens
+  // Effect 1: Fetch rule set data when modal opens or ruleSetId changes.
+  // Separating the fetch from the form reset avoids a race where setSelectedSize and
+  // reset() compete for the same React render cycle.
   useEffect(() => {
     if (!open) return;
     if (ruleSetId) {
+      // Clear stale data immediately so Effect 2 doesn't flash old values
+      setLoadedRuleSet(null);
       fetchRuleSet(ruleSetId).then((ruleSet) => {
         if (ruleSet) {
-          // Infer size from existing slots when no external structure
+          // Infer size first so it's committed in the same batch as setLoadedRuleSet
           if (!externalStructure) {
-            const inferred = inferBracketSizeFromSlots(ruleSet.slots);
-            setSelectedSize(inferred);
-            const structure = deriveBracketStructureFromSize(inferred);
-            reset({ name: ruleSet.name ?? '', slots: mergeApiSlots(structure, ruleSet.slots) });
-          } else {
-            reset({
-              name: ruleSet.name ?? '',
-              slots: mergeApiSlots(externalStructure, ruleSet.slots),
-            });
+            setSelectedSize(inferBracketSizeFromSlots(ruleSet.slots));
           }
+          setLoadedRuleSet(ruleSet);
         }
       });
     } else {
-      reset({ name: '', slots: buildDefaultSlots(effectiveStructure) });
+      setLoadedRuleSet(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, ruleSetId]);
 
-  // Rebuild blank slots whenever size changes (league context only, no existing rule set being edited)
+  // Effect 2: Reset the form once the loaded data (and selectedSize) are stable.
+  // Both setSelectedSize and setLoadedRuleSet are called in the same .then() callback,
+  // so React 18 batches them into one render. This effect fires once with both updated,
+  // ensuring the correct structure is used when building the slot list.
+  useEffect(() => {
+    if (!open) return;
+    if (loadedRuleSet) {
+      const structure = externalStructure ?? deriveBracketStructureFromSize(selectedSize);
+      reset({
+        name: loadedRuleSet.name ?? '',
+        slots: mergeApiSlots(structure, loadedRuleSet.slots),
+        roundNames: loadedRuleSet.round_names ?? {},
+      });
+    } else if (!ruleSetId) {
+      // Create mode: reset to empty defaults
+      reset({ name: '', slots: buildDefaultSlots(effectiveStructure), roundNames: {} });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, loadedRuleSet]);
+
+  // Effect 3: Rebuild blank slots when bracket size changes (create mode only).
+  // Preserves any name the user has already typed via the functional reset form.
   useEffect(() => {
     if (!open || externalStructure || ruleSetId) return;
     reset((prev) => ({
@@ -525,8 +559,8 @@ const BracketRulesModal = ({
     let idx = 0;
     for (const roundInfo of effectiveStructure.rounds) {
       for (let mi = 0; mi < roundInfo.series; mi++) {
-        map[makeSlotKey(roundInfo.round, mi, 'away')] = idx++;
-        map[makeSlotKey(roundInfo.round, mi, 'home')] = idx++;
+        map[makeSlotKey(roundInfo.round, mi, 'team1')] = idx++;
+        map[makeSlotKey(roundInfo.round, mi, 'team2')] = idx++;
       }
     }
     return map;
@@ -544,13 +578,20 @@ const BracketRulesModal = ({
     [allSlots, effectiveStructure.rounds],
   );
 
-  const onSubmit = handleSubmit(async ({ name, slots }) => {
+  const onSubmit = handleSubmit(async ({ name, slots, roundNames }) => {
     const payload = [...serializeSlots(slots), ...buildAutoWinnerSlots(effectiveStructure)];
+    // Strip empty strings; send null when nothing is set.
+    // roundNames arrives as a sparse array (numeric-keyed paths → RHF array treatment),
+    // so index 0 may be undefined. Guard against that before calling .trim().
+    const cleaned = Object.fromEntries(
+      Object.entries(roundNames ?? {}).filter(([, v]) => v != null && v.trim() !== ''),
+    );
+    const roundNamesPayload = Object.keys(cleaned).length > 0 ? cleaned : null;
     let savedId = ruleSetId;
     if (ruleSetId) {
-      await updateSlots(ruleSetId, name || 'Bracket Rules', payload);
+      await updateSlots(ruleSetId, name || 'Bracket Rules', payload, roundNamesPayload);
     } else {
-      const created = await createRuleSet(name || 'Bracket Rules', payload);
+      const created = await createRuleSet(name || 'Bracket Rules', payload, roundNamesPayload);
       if (!created) return;
       savedId = created.id;
     }
@@ -577,6 +618,22 @@ const BracketRulesModal = ({
           placeholder="e.g. PWHL 2025 Bracket Rules"
           disabled={isSubmitting}
         />
+        {/* ── Round Labels (optional) ── */}
+        {effectiveStructure.rounds.map((r) => {
+          const defaultLabel = getRoundLabel(r.round, effectiveStructure.rounds.length);
+          return (
+            <Field
+              key={r.round}
+              type="text"
+              label={`${defaultLabel} Label`}
+              placeholder={`e.g. ${defaultLabel}`}
+              control={control}
+              name={`roundNames.${r.round}`}
+              disabled={isSubmitting}
+            />
+          );
+        })}
+
         {!externalStructure && (
           <label className={styles.bracketSizeLabel}>
             <span>Bracket Size</span>
@@ -602,8 +659,8 @@ const BracketRulesModal = ({
                   >
                     <span className={styles.bracketRulesMatchupLabel}>Matchup {mi + 1}</span>
                     <SingleSlotEditor
-                      label="1"
-                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'away')] ?? 0}
+                      label="Team 1"
+                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team1')] ?? 0}
                       round={1}
                       control={control}
                       setValue={setValue}
@@ -612,8 +669,8 @@ const BracketRulesModal = ({
                       prevRoundMatchupOptions={[]}
                     />
                     <SingleSlotEditor
-                      label="2"
-                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'home')] ?? 0}
+                      label="Team 2"
+                      slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team2')] ?? 0}
                       round={1}
                       control={control}
                       setValue={setValue}

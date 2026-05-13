@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
+const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
 
 // All season routes require the admin role
 router.use(requireAdmin);
@@ -15,7 +16,7 @@ router.get('/', async (req, res) => {
       ? await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
-                 s.is_ended,
+                 s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
                  s.created_at,
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
       : await sql`
           SELECT s.id, s.name, s.league_id,
                  (l.current_season_id = s.id) AS is_current,
-                 s.is_ended,
+                 s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
                  s.created_at,
@@ -53,7 +54,7 @@ router.get('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended,
+             s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.playoff_format,
@@ -122,6 +123,7 @@ router.patch('/:id', async (req, res) => {
     const existing = await sql`
       SELECT id, name, league_id,
              start_date::text AS start_date, end_date::text AS end_date, is_ended,
+             playoffs_started,
              games_per_season, playoff_format,
              best_of_playoff, best_of_shootout, scoring_system,
              bracket_rule_set_id
@@ -181,7 +183,7 @@ router.patch('/:id', async (req, res) => {
     const rows = await sql`
       SELECT s.id, s.name, s.league_id,
              (l.current_season_id = s.id) AS is_current,
-             s.is_ended,
+             s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.playoff_format,
@@ -253,6 +255,159 @@ router.patch('/:id/current', async (req, res) => {
     return res.json(rows[0]);
   } catch (err) {
     console.error('seasons set-current error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/seasons/:id/playoffs  – mark regular season as ended,
+// setting playoffs_started = true.  Does NOT set is_ended (the whole season
+// is not over — only the regular-season portion is complete).
+// ---------------------------------------------------------------------------
+router.patch('/:id/playoffs', async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const existing = await sql`SELECT id FROM seasons WHERE id = ${id}`;
+    if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+
+    await sql`
+      UPDATE seasons SET playoffs_started = TRUE WHERE id = ${id}
+    `;
+
+    const rows = await sql`
+      SELECT s.id, s.name, s.league_id,
+             (l.current_season_id = s.id) AS is_current,
+             s.is_ended, s.playoffs_started,
+             s.start_date::text AS start_date, s.end_date::text AS end_date,
+             s.games_per_season,
+             s.playoff_format,
+             s.bracket_rule_set_id,
+             s.best_of_playoff, s.best_of_shootout, s.scoring_system,
+             s.created_at,
+             l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
+             l.scoring_system   AS league_scoring_system,
+             l.best_of_playoff  AS league_best_of_playoff,
+             l.best_of_shootout AS league_best_of_shootout
+      FROM seasons s
+      JOIN leagues l ON l.id = s.league_id
+      WHERE s.id = ${id}
+    `;
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('seasons start-playoffs error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/seasons/:id/advance-bracket
+// Replays the auto-advance logic for every completed series in the season.
+// Creates next-round series shells for any matchups where both feeder series
+// are complete but no next-round series exists yet.  Idempotent — safe to
+// call multiple times.  Returns { created: N } where N is the count of new
+// series rows inserted.
+// ---------------------------------------------------------------------------
+router.post('/:id/advance-bracket', async (req, res) => {
+  const { id: seasonId } = req.params;
+  try {
+    // Resolve the bracket rule set for this season
+    const seasonRows = await sql`
+      SELECT bracket_rule_set_id FROM seasons WHERE id = ${seasonId}
+    `;
+    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    const bracketRuleSetId = seasonRows[0]?.bracket_rule_set_id;
+    if (!bracketRuleSetId) {
+      return res.status(400).json({ error: 'No bracket rule set configured for this season' });
+    }
+
+    await normalizeSeasonBracketSlotKeys(sql, seasonId, bracketRuleSetId);
+
+    // All completed series that occupy a known bracket slot
+    const completedSeries = await sql`
+      SELECT id, bracket_slot_key, winner_team_id, season_id
+      FROM playoff_series
+      WHERE season_id  = ${seasonId}
+        AND status     = 'complete'
+        AND winner_team_id IS NOT NULL
+        AND bracket_slot_key IS NOT NULL
+    `;
+
+    let created = 0;
+
+    for (const series of completedSeries) {
+      const slotKey = series.bracket_slot_key; // e.g. 'r1m0'
+
+      // Find next-round slots that reference this matchup as a winner source
+      const dependentSlots = await sql`
+        SELECT slot_key FROM bracket_slot_rules
+        WHERE rule_set_id = ${bracketRuleSetId}
+          AND rule_type   = 'winner'
+          AND matchup_ref = ${slotKey}
+      `;
+
+      for (const { slot_key: depSlot } of dependentSlots) {
+        const nextMatchupKey = depSlot.replace(/team[12]$/, ''); // e.g. 'r2m0'
+
+        // Get both winner slots for the next matchup
+        const nextSlots = await sql`
+          SELECT slot_key, matchup_ref FROM bracket_slot_rules
+          WHERE rule_set_id = ${bracketRuleSetId}
+            AND slot_key LIKE ${nextMatchupKey + '%'}
+            AND rule_type = 'winner'
+        `;
+        const team1Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team1`);
+        const team2Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team2`);
+        if (!team1Slot?.matchup_ref || !team2Slot?.matchup_ref) continue;
+
+        // Resolve winner from each feeder matchup
+        const [t1Series] = await sql`
+          SELECT winner_team_id, status FROM playoff_series
+          WHERE season_id = ${seasonId} AND bracket_slot_key = ${team1Slot.matchup_ref}
+        `;
+        const [t2Series] = await sql`
+          SELECT winner_team_id, status FROM playoff_series
+          WHERE season_id = ${seasonId} AND bracket_slot_key = ${team2Slot.matchup_ref}
+        `;
+
+        if (
+          t1Series?.status !== 'complete' || !t1Series?.winner_team_id ||
+          t2Series?.status !== 'complete' || !t2Series?.winner_team_id
+        ) continue;
+
+        // Skip if next-round series already exists
+        const [existing] = await sql`
+          SELECT id FROM playoff_series
+          WHERE season_id = ${seasonId} AND bracket_slot_key = ${nextMatchupKey}
+        `;
+        if (existing) continue;
+
+        const roundMatch = nextMatchupKey.match(/^r(\d+)/);
+        const nextRound = roundMatch ? Number(roundMatch[1]) : null;
+        if (!nextRound) continue;
+
+        const gtwRows = await sql`
+          SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+          FROM seasons s JOIN leagues l ON l.id = s.league_id
+          WHERE s.id = ${seasonId}
+        `;
+        const bestOf = gtwRows[0]?.best_of ?? 7;
+        const gamesToWin = Math.ceil(bestOf / 2);
+
+        await sql`
+          INSERT INTO playoff_series
+            (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+          VALUES
+            (${seasonId}, ${nextRound}, ${t1Series.winner_team_id},
+             ${t2Series.winner_team_id}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+        `;
+        created++;
+      }
+    }
+
+    return res.json({ created });
+  } catch (err) {
+    console.error('advance-bracket error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -589,7 +744,8 @@ router.get('/:seasonId/groups', async (req, res) => {
             iter.code,
             iter.logo,
             t.primary_color,
-            t.text_color
+            t.text_color,
+            t.home_arena
           FROM resolved r
           JOIN teams t ON t.id = r.team_id
           LEFT JOIN LATERAL (
@@ -613,7 +769,8 @@ router.get('/:seasonId/groups', async (req, res) => {
         COALESCE(
           json_agg(
             json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo,
-                              'primary_color', v.primary_color, 'text_color', v.text_color)
+                              'primary_color', v.primary_color, 'text_color', v.text_color,
+                              'home_arena', v.home_arena)
             ORDER BY v.name
           ) FILTER (WHERE v.team_id IS NOT NULL),
           '[]'::json
@@ -916,44 +1073,102 @@ router.get('/:id/stats', async (req, res) => {
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
       ),
       -- Per-stint GA: count goals against each goalie during their active window.
-      goalie_ranges AS (
+      -- Reads from game_goalie_stints using precise (period, time) position windows,
+      -- matching the same attribution logic used by the per-game goalie-stats endpoint.
+      stint_ranges AS (
         SELECT
-          ggs.id, ggs.game_id, ggs.team_id, ggs.goalie_id, ggs.shots_against,
-          pv.v AS from_ord,
-          LEAD(pv.v) OVER (
-            PARTITION BY ggs.game_id, ggs.team_id ORDER BY pv.v
-          ) AS until_ord
-        FROM game_goalie_stats ggs
-        JOIN games g ON g.id = ggs.game_id AND g.season_id = ${id} AND g.status = 'final'
-        JOIN period_vals pv ON pv.p = COALESCE(ggs.entered_period, '1')
+          st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
+          st.shots_against,
+          st.goals_against AS goals_against_override,
+          st.exited_period,
+          pv_in.v * 100000
+            + COALESCE(
+                SPLIT_PART(st.entered_time, ':', 1)::int * 60
+                + SPLIT_PART(st.entered_time, ':', 2)::int,
+                0
+              ) AS from_pos,
+          CASE
+            WHEN st.exited_period IS NULL THEN NULL
+            ELSE pv_out.v * 100000
+              + COALESCE(
+                  SPLIT_PART(st.exited_time, ':', 1)::int * 60
+                  + SPLIT_PART(st.exited_time, ':', 2)::int,
+                  0
+                )
+          END AS until_pos
+        FROM game_goalie_stints st
+        JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final'
+        JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
+        LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
       ),
-      goals_per_stint AS (
-        SELECT gr.id AS stat_id, COUNT(*) AS ga
-        FROM goalie_ranges gr
-        JOIN goals gl ON gl.game_id = gr.game_id AND gl.team_id != gr.team_id AND gl.empty_net = false
+      stint_ga_derived AS (
+        SELECT sr.id AS stint_id, COUNT(*)::int AS ga
+        FROM stint_ranges sr
+        JOIN goals gl
+          ON gl.game_id   = sr.game_id
+         AND gl.team_id  != sr.team_id
+         AND gl.empty_net = false
         JOIN period_vals pv ON pv.p = gl.period
-        WHERE pv.v >= gr.from_ord
-          AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)
-        GROUP BY gr.id
+        WHERE (pv.v * 100000
+               + COALESCE(
+                   SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                   + SPLIT_PART(gl.period_time, ':', 2)::int,
+                   0
+                 )) >= sr.from_pos
+          AND (sr.until_pos IS NULL
+               OR (pv.v * 100000
+                   + COALESCE(
+                       SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                       + SPLIT_PART(gl.period_time, ':', 2)::int,
+                       0
+                     )) < sr.until_pos)
+        GROUP BY sr.id
+      ),
+      stints_resolved AS (
+        SELECT
+          sr.*,
+          COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga
+        FROM stint_ranges sr
+        LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
+      ),
+      -- Per-game aggregation per goalie/team (one row per game per goalie)
+      goalie_game AS (
+        SELECT
+          game_id, goalie_id, team_id,
+          MIN(from_pos)           AS first_from_pos,
+          SUM(shots_against)::int AS shots_against,
+          SUM(resolved_ga)::int   AS goals_against
+        FROM stints_resolved
+        GROUP BY game_id, goalie_id, team_id
+      ),
+      -- Last goalie in net per team per game (highest stint_ord = never replaced)
+      team_game_last_goalie AS (
+        SELECT DISTINCT ON (game_id, team_id)
+          game_id, team_id, goalie_id
+        FROM stints_resolved
+        ORDER BY game_id, team_id, stint_ord DESC
       ),
       goalie_game_agg AS (
         SELECT
-          gr.goalie_id,
-          gr.team_id,
-          COUNT(DISTINCT gr.game_id)::int                       AS gp,
-          SUM(gr.shots_against)::int                            AS shots_against,
-          SUM(COALESCE(gps.ga, 0))::int                         AS goals_against,
-          (SUM(gr.shots_against) - SUM(COALESCE(gps.ga, 0)))::int AS saves,
-          -- Shutout: goalie played whole game (no entered_period) AND GA = 0
+          gg.goalie_id,
+          gg.team_id,
+          COUNT(*)::int                                          AS gp,
+          SUM(gg.shots_against)::int                            AS shots_against,
+          SUM(gg.goals_against)::int                            AS goals_against,
+          (SUM(gg.shots_against) - SUM(gg.goals_against))::int AS saves,
+          -- Shutout: goalie started at game start (period 1, 0:00 → from_pos = 100000),
+          -- was never replaced (last goalie for the team in that game),
+          -- faced at least one shot, and allowed zero goals.
           COUNT(*) FILTER (
-            WHERE gr.shots_against > 0
-              AND COALESCE(gps.ga, 0) = 0
-              AND gr.from_ord = 1
-              AND gr.until_ord IS NULL
+            WHERE gg.shots_against > 0
+              AND gg.goals_against = 0
+              AND gg.first_from_pos = 100000
+              AND tgl.goalie_id = gg.goalie_id
           )::int                                                 AS shutouts
-        FROM goalie_ranges gr
-        LEFT JOIN goals_per_stint gps ON gps.stat_id = gr.id
-        GROUP BY gr.goalie_id, gr.team_id
+        FROM goalie_game gg
+        JOIN team_game_last_goalie tgl
+          ON tgl.game_id = gg.game_id AND tgl.team_id = gg.team_id
+        GROUP BY gg.goalie_id, gg.team_id
       )
       SELECT
         p.id                                                   AS player_id,

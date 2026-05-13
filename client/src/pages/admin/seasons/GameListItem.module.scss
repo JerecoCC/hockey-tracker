@@ -108,17 +108,27 @@
   color: $text-dim;
 }
 
-// ── Venue — sits between teams and status badge ───────────────────────────────
+// ── Middle — always-present flex spacer between teams and badge ───────────────
 
-.venue {
+.middle {
   flex: 1;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.venue,
+.metaLine {
   font-size: $font-xs;
   color: $text-dim;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: left;
+}
+
+.metaLine {
+  color: $text-bright;
 }
 
 // ── Game type — left accent border ───────────────────────────────────────────

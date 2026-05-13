@@ -4,6 +4,7 @@ import Badge from '@/components/Badge/Badge';
 import type { BadgeIntent } from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import type { ButtonIntent } from '@/components/Button/Button';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameType } from '@/hooks/useGames';
 import styles from './GameListItem.module.scss';
 
@@ -42,6 +43,14 @@ interface Props {
   time?: string;
   /** Venue / arena name */
   venue?: string;
+  /** Playoff round number (1–4) */
+  round?: number | null;
+  /** Custom display label for the playoff round (overrides "Round N" when provided). */
+  roundLabel?: string | null;
+  /** Game number within a playoff series (1–7) */
+  gameNumberInSeries?: number | null;
+  /** Sequential game number within the regular season */
+  gameNumber?: number | null;
   gameType?: GameType;
   /** When provided, renders a stretched anchor so the item can be right-clicked to open in a new tab. */
   href?: string;
@@ -49,22 +58,6 @@ interface Props {
 }
 
 // ── Internal: small team logo block ──────────────────────────────────────────
-
-const TeamLogo = ({ logo, code, primaryColor, textColor }: TeamInfo) =>
-  logo ? (
-    <img
-      src={logo}
-      alt={code}
-      className={styles.logo}
-    />
-  ) : (
-    <span
-      className={styles.logoPlaceholder}
-      style={{ background: primaryColor, color: textColor }}
-    >
-      {code.slice(0, 3)}
-    </span>
-  );
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -86,6 +79,10 @@ const GameListItem = ({
   date,
   time,
   venue,
+  round,
+  roundLabel,
+  gameNumberInSeries,
+  gameNumber,
   gameType,
   href,
   actions,
@@ -95,7 +92,19 @@ const GameListItem = ({
   const awayLost = isFinal && awayScore < homeScore;
   const homeLost = isFinal && homeScore < awayScore;
 
-  const dateLine = [date, time].filter(Boolean).join(' • ');
+  const dateLine = [date, time].filter(Boolean).join(' • ') || 'TBD';
+
+  // Secondary meta line shown in the middle column.
+  // Playoff games: "Quarterfinals · Game 3" (or "Round 1 · Game 3")  Regular games: "Game 12"
+  const resolvedRoundLabel = round != null ? (roundLabel ?? `Round ${round}`) : null;
+  const metaLine =
+    resolvedRoundLabel != null && gameNumberInSeries != null
+      ? `${resolvedRoundLabel} · Game ${gameNumberInSeries}`
+      : resolvedRoundLabel != null && round != null
+        ? resolvedRoundLabel
+        : gameNumber != null
+          ? `Game ${gameNumber}`
+          : null;
 
   const itemClass = [styles.item, gameType && GAME_TYPE_CLASS[gameType]].filter(Boolean).join(' ');
 
@@ -111,11 +120,15 @@ const GameListItem = ({
       )}
       {/* Main: date line + stacked teams */}
       <div className={styles.main}>
-        {dateLine && <span className={styles.dateLine}>{dateLine}</span>}
+        <span className={styles.dateLine}>{dateLine}</span>
 
         {/* Away row */}
         <div className={[styles.teamRow, awayLost && styles.teamLoser].filter(Boolean).join(' ')}>
-          <TeamLogo {...awayTeam} />
+          <TeamLogo
+            {...awayTeam}
+            size={24}
+            shape="circle"
+          />
           <span className={styles.teamCode}>{awayTeam.code}</span>
           {showScore && (
             <span
@@ -128,7 +141,11 @@ const GameListItem = ({
 
         {/* Home row */}
         <div className={[styles.teamRow, homeLost && styles.teamLoser].filter(Boolean).join(' ')}>
-          <TeamLogo {...homeTeam} />
+          <TeamLogo
+            {...homeTeam}
+            size={24}
+            shape="circle"
+          />
           <span className={styles.teamCode}>{homeTeam.code}</span>
           {showScore && (
             <span
@@ -140,8 +157,11 @@ const GameListItem = ({
         </div>
       </div>
 
-      {/* Venue — between teams and status */}
-      {venue && <span className={styles.venue}>{venue}</span>}
+      {/* Middle — always present so the badge is always pushed to the right */}
+      <div className={styles.middle}>
+        {metaLine && <b className={styles.metaLine}>{metaLine}</b>}
+        {venue && <span className={styles.venue}>{venue}</span>}
+      </div>
 
       {/* Status badge — rightmost */}
       <Badge

@@ -112,8 +112,54 @@ $nav-collapsed-width: 56px;
   flex-shrink: 0;
 }
 
+// ── Bottom section (switch panel) ──────────────────────────────────────
+.bottom {
+  margin-top: auto;
+  border-top: 1px solid $border;
+  padding-top: $space-sm;
+}
+
 // ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
 .navTooltipWrapper {
   display: block;
   width: 100%;
+}
+
+// ── Mobile slide-out ───────────────────────────────────────────────────
+@media (max-width: 768px) {
+  .nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    height: 100dvh;
+    width: $nav-width;
+    z-index: 50;
+    transform: translateX(100%);
+    transition-property: transform;
+    transition-duration: $transition-layout;
+    transition-timing-function: ease;
+    border-right: none;
+    border-left: 1px solid $border;
+  }
+
+  .nav.mobileOpen {
+    transform: translateX(0);
+  }
+
+  // Keep full width even when desktop-collapsed state is true
+  .collapsed {
+    width: $nav-width;
+  }
+
+  // Restore left-aligned item layout when the slideout is open
+  .collapsed.mobileOpen {
+    .navItem {
+      justify-content: flex-start;
+      padding: $space-md $space-xl;
+
+      &.active {
+        padding-left: calc(#{$space-xl} - 3px);
+      }
+    }
+  }
 }

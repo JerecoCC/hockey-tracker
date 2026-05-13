@@ -435,6 +435,7 @@ const DatePicker = (props: Props) => {
           value={displayValue}
           data-empty={!cYear && !cMonth && !cDay}
           onChange={() => {}}
+          tabIndex={disabled ? -1 : undefined}
           onClick={!disabled ? handleInputClick : undefined}
           onKeyDown={!disabled ? handleKeyDown : undefined}
           onFocus={!disabled ? handleFocus : undefined}
@@ -448,7 +449,10 @@ const DatePicker = (props: Props) => {
             role="button"
             aria-label="Clear"
           >
-            ×
+            <Icon
+              name="close"
+              size="0.75rem"
+            />
           </span>
         )}
       </div>

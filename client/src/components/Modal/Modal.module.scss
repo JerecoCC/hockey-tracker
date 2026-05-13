@@ -36,7 +36,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: $space-2xl;
+  margin-bottom: $space-lg;
   flex-shrink: 0;
 }
 
@@ -101,4 +101,79 @@
 
 .closeBtn {
   padding: $space-sm;
+}
+
+// ── Mobile bottom sheet ────────────────────────────────────────────────
+@keyframes slideUpSheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDownSheet {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes fadeOutOverlay {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .overlay {
+    align-items: flex-end;
+  }
+
+  .closingOverlay {
+    animation: fadeOutOverlay $transition-layout ease forwards;
+  }
+
+  .modal,
+  .modalLg,
+  .modalXl {
+    max-width: 100%;
+    width: 100%;
+    border-radius: $radius-xl $radius-xl 0 0;
+    border-bottom: none;
+    max-height: 100dvh;
+    animation: slideUpSheet $transition-layout ease;
+  }
+
+  .closing {
+    animation: slideDownSheet $transition-layout ease forwards;
+  }
+
+  // Extra bottom padding for home-bar / thumb comfort
+  .footer {
+    padding-bottom: $space-4xl;
+  }
+
+  // Keep footer actions stacked full-width for easier tapping
+  .footerRow {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: $space-sm;
+  }
+
+  .footerActions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: $space-sm;
+  }
+
+  .footerStart {
+    text-align: center;
+  }
 }

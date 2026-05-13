@@ -1,11 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Badge from '@/components/Badge/Badge';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, CurrentPeriod } from '@/hooks/useGames';
 import type { GoalRecord } from '@/hooks/useGameGoals';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
@@ -30,6 +32,7 @@ interface Props {
   goals: GoalRecord[];
   isFinal: boolean;
   isInProgress: boolean;
+  isEditMode?: boolean;
   busy: string | null;
   liveAwayScore: number;
   liveHomeScore: number;
@@ -52,8 +55,8 @@ interface Props {
   onAddAttempt?: () => void;
   onEditAttempt?: (attempt: ShootoutAttempt) => void;
   onDeleteAttempt?: (attemptId: string) => void;
-  onSwitchGoalie?: () => void;
   onGoBackPeriod?: (prev: CurrentPeriod) => void;
+  onGoBackOTPeriod?: (targetNum: number) => void;
   /** When provided, player names in goal rows become navigation links. */
   getPlayerHref?: (playerId: string) => string;
 }
@@ -65,6 +68,7 @@ const ScoringCard = ({
   goals,
   isFinal,
   isInProgress,
+  isEditMode = false,
   busy,
   liveAwayScore,
   liveHomeScore,
@@ -81,8 +85,8 @@ const ScoringCard = ({
   onAddAttempt,
   onEditAttempt,
   onDeleteAttempt,
-  onSwitchGoalie,
   onGoBackPeriod,
+  onGoBackOTPeriod,
   getPlayerHref,
 }: Props) => {
   // ── Helpers ────────────────────────────────────────────────────────────────
@@ -127,34 +131,24 @@ const ScoringCard = ({
             className={styles.goalItem}
           >
             <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
-            {goal.team_logo ? (
-              <img
-                src={goal.team_logo}
-                alt={goal.team_code}
-                className={styles.goalTeamLogo}
-              />
-            ) : (
-              <span
-                className={styles.goalTeamLogoPlaceholder}
-                style={{ background: goal.team_primary_color, color: goal.team_text_color }}
-              >
-                {goal.team_code?.slice(0, 1)}
-              </span>
-            )}
-            {goal.scorer_photo ? (
-              <img
-                src={goal.scorer_photo}
-                alt=""
-                className={styles.goalScorerPhoto}
-              />
-            ) : (
-              <span
-                className={styles.goalScorerPhotoPlaceholder}
-                style={{ background: goal.team_primary_color, color: goal.team_text_color }}
-              >
-                {goal.scorer_last_name?.charAt(0)}
-              </span>
-            )}
+            <TeamLogo
+              logo={goal.team_logo}
+              code={goal.team_code ?? '?'}
+              primaryColor={goal.team_primary_color}
+              textColor={goal.team_text_color}
+              size={36}
+              shape="square"
+            />
+            <PlayerAvatar
+              photo={goal.scorer_photo}
+              initials={
+                `${goal.scorer_first_name?.charAt(0) ?? ''}${goal.scorer_last_name?.charAt(0) ?? ''}`.trim() ||
+                '?'
+              }
+              primaryColor={goal.team_primary_color}
+              textColor={goal.team_text_color}
+              size={48}
+            />
             <div className={styles.goalInfo}>
               <span className={styles.goalScorer}>
                 {getPlayerHref ? (
@@ -268,15 +262,6 @@ const ScoringCard = ({
                         disabled: !!busy,
                         onClick: () => onScoreGoal(num as 1 | 2 | 3),
                       },
-                      onSwitchGoalie
-                        ? {
-                            icon: 'swap_horiz',
-                            tooltip: 'Switch Goalie',
-                            intent: 'neutral' as const,
-                            disabled: !!busy,
-                            onClick: onSwitchGoalie,
-                          }
-                        : null,
                       num < 3
                         ? {
                             icon: 'flag',
@@ -309,7 +294,7 @@ const ScoringCard = ({
                               ),
                           }
                         : null,
-                      num === 3 && liveAwayScore !== liveHomeScore
+                      num === 3 && liveAwayScore !== liveHomeScore && !isEditMode
                         ? {
                             icon: 'flag',
                             tooltip: 'End Game',
@@ -333,16 +318,97 @@ const ScoringCard = ({
           );
         })}
 
-        {/* ── Overtime accordion ── */}
+        {/* ── Overtime accordion(s) ── */}
         {(game.current_period === 'OT' ||
           game.current_period === 'SO' ||
           goals.some((g) => g.period === 'OT') ||
           (isFinal && (game.overtime_periods ?? 0) > 0) ||
           (isFinal && game.shootout)) &&
           (() => {
+            const isPlayoff = game.game_type === 'playoff';
             const isOTActive = !isFinal && game.current_period === 'OT';
             const isOTDone = isFinal || game.current_period === 'SO';
             const otGoals = sortedByTime(goals.filter((g) => g.period === 'OT'));
+            const otCount = game.overtime_periods ?? 1;
+
+            if (isPlayoff) {
+              // Render a separate accordion for each OT period played.
+              // Since OT is sudden-death, goals only ever appear in the last period.
+              return Array.from({ length: otCount }, (_, i) => {
+                const otNum = i + 1;
+                const isLast = otNum === otCount;
+                const isThisActive = isOTActive && isLast;
+                const isThisDone = isOTDone || !isLast;
+                const periodGoals = isLast ? otGoals : [];
+                return (
+                  <Accordion
+                    key={`OT${otNum}`}
+                    ref={isLast && setAccordionRef ? setAccordionRef('OT') : undefined}
+                    variant="static"
+                    className={isThisActive ? styles.periodItemActive : undefined}
+                    label={<span className={styles.periodLabel}>Overtime {otNum}</span>}
+                    hoverActions={
+                      isThisActive && onScoreGoal && onOpenShotsModal
+                        ? ([
+                            // Go back: OT1 → period 3; OT2+ → previous OT period.
+                            (onGoBackPeriod || onGoBackOTPeriod) && periodGoals.length === 0
+                              ? {
+                                  icon: 'undo',
+                                  tooltip: 'Go Back to Previous Period',
+                                  intent: 'neutral' as const,
+                                  disabled: !!busy,
+                                  onClick: () =>
+                                    otNum === 1
+                                      ? onGoBackPeriod?.('3')
+                                      : onGoBackOTPeriod?.(otNum - 1),
+                                }
+                              : null,
+                            periodGoals.length === 0
+                              ? {
+                                  icon: 'sports_hockey',
+                                  tooltip: 'Score Goal',
+                                  intent: 'success' as const,
+                                  disabled: !!busy,
+                                  onClick: () => onScoreGoal('OT'),
+                                }
+                              : null,
+                            periodGoals.length === 0
+                              ? {
+                                  icon: 'play_arrow',
+                                  tooltip: 'Next Overtime Period',
+                                  intent: 'accent' as const,
+                                  disabled: !!busy,
+                                  onClick: () =>
+                                    onOpenShotsModal(`OT${otNum}`, { type: 'next-ot' }, false),
+                                }
+                              : null,
+                            periodGoals.length > 0 && !isEditMode
+                              ? {
+                                  icon: 'flag',
+                                  tooltip: 'End Game',
+                                  intent: 'danger' as const,
+                                  disabled: !!busy,
+                                  onClick: () =>
+                                    onOpenShotsModal(`OT${otNum}`, { type: 'end-game' }, true),
+                                }
+                              : null,
+                          ].filter(Boolean) as AccordionAction[])
+                        : undefined
+                    }
+                  >
+                    {periodGoals.length === 0 ? (
+                      isThisActive || isThisDone ? (
+                        <p className={styles.noGoalsText}>No goals scored</p>
+                      ) : null
+                    ) : (
+                      renderGoalList(periodGoals)
+                    )}
+                  </Accordion>
+                );
+              });
+            }
+
+            // Regular season: single OT accordion.
             return (
               <Accordion
                 ref={setAccordionRef ? setAccordionRef('OT') : undefined}
@@ -374,7 +440,7 @@ const ScoringCard = ({
                           ? {
                               icon: 'play_arrow',
                               tooltip: 'Go to Shootouts',
-                              intent: 'info' as const,
+                              intent: 'accent' as const,
                               disabled: !!busy,
                               onClick: () =>
                                 onOpenShotsModal(
@@ -385,16 +451,7 @@ const ScoringCard = ({
                                 ),
                             }
                           : null,
-                        onSwitchGoalie
-                          ? {
-                              icon: 'swap_horiz',
-                              tooltip: 'Switch Goalie',
-                              intent: 'neutral' as const,
-                              disabled: !!busy,
-                              onClick: onSwitchGoalie,
-                            }
-                          : null,
-                        otGoals.length > 0
+                        otGoals.length > 0 && !isEditMode
                           ? {
                               icon: 'flag',
                               tooltip: 'End Game',
@@ -439,7 +496,7 @@ const ScoringCard = ({
             onDeleteAttempt={onDeleteAttempt}
             getPlayerHref={getPlayerHref}
             onEndGame={
-              onOpenShotsModal
+              onOpenShotsModal && !isEditMode
                 ? () => onOpenShotsModal('SO', { type: 'end-game' }, true)
                 : undefined
             }

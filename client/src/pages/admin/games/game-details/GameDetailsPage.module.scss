@@ -66,28 +66,6 @@
   text-transform: uppercase;
 }
 
-// Circular scorer avatar
-.goalScorerPhoto {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.goalScorerPhotoPlaceholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
 // Flex row: team logo + player photo + info column
 .goalieNameCell {
   display: flex;
@@ -392,6 +370,29 @@
   }
 }
 
+.lineupTeamPanel {
+  min-width: 0;
+}
+
+.lineupTeamPanelMobileHidden {
+  @media (max-width: 720px) {
+    display: none;
+  }
+}
+
+.lineupMobileToggle {
+  display: none;
+
+  @media (max-width: 720px) {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.lineupMobileToggleControl {
+  width: 156px;
+}
+
 // Player list rendered inside the static Accordion body
 .lineupPlayerList {
   list-style: none;
@@ -498,11 +499,57 @@
   gap: $space-lg;
 }
 
+// ── Three Stars card ──────────────────────────────────────────────────────────
+.starsRow {
+  display: flex;
+  gap: $space-xl;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.starItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  text-align: center;
+  min-width: 80px;
+}
+
+.starIcons {
+  display: flex;
+  gap: 2px;
+  color: $accent;
+  font-size: 0.85rem;
+}
+
+.starName {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-bright;
+  line-height: 1.2;
+}
+
+.starTeam {
+  font-size: $font-xs;
+  color: $text-dim;
+}
+
+.starStats {
+  font-size: $font-xs;
+  color: $text-dim;
+  font-variant-numeric: tabular-nums;
+}
+
 // Right column — Game Info + Linescore stacked
 .summaryRight {
   display: flex;
   flex-direction: column;
   gap: $space-lg;
+
+  @container (max-width: #{$bp-tablet}) {
+    order: -1;
+  }
 }
 
 // ── Linescore card action row ──────────────────────────────────────────────────
@@ -604,13 +651,15 @@
   }
 }
 
-// Goalie rows inside the shots modal (logo + name | SA input | SV input)
+// Column label row above per-stint data rows in GoalieStatsEditModal.
+// Padding matches .goalieStintRow so labels align with their inputs.
 .shotsGoalieHeader {
   display: flex;
   align-items: center;
   gap: $space-sm;
+  padding: 0 $space-sm;
 
-  // Title ("Goalie Stats") fills the left
+  // "Window" label fills the remaining space
   > span:first-child {
     flex: 1;
   }
@@ -649,6 +698,60 @@
 .shotsGoalieRowStarter {
   border: 1px solid rgba($info, 0.4);
   background: rgba($info, 0.07);
+}
+
+// Small label used between sections in GoalieSwitchModal / GoalieStatsEditModal.
+.goalieSubLabel {
+  margin: $space-xs $space-sm 0;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-weight: 500;
+}
+
+// Per-stint row in GoalieStatsEditModal.
+.goalieStintRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: $space-xs $space-sm;
+  font-size: $font-sm;
+
+  // Stint timing summary (read-only label)
+  .goalieStintInfo {
+    flex: 1;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
+
+  // SA / GA inputs in the stint row
+  .goalieStintInputs {
+    display: flex;
+    gap: $space-sm;
+    flex-shrink: 0;
+
+    label {
+      display: block;
+      margin-bottom: 0;
+      width: 56px;
+      flex-shrink: 0;
+    }
+
+    input[type="number"] {
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      padding-left: $space-sm;
+      padding-right: $space-sm;
+      text-align: center;
+    }
+  }
+}
+
+// Divider between goalie groups in GoalieStatsEditModal.
+.goalieGroupDivider {
+  border: none;
+  border-top: 1px solid $border;
+  margin: $space-xs 0 0;
 }
 
 .goalieSubRow {

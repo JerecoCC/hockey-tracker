@@ -2,13 +2,17 @@
 @use "styles/mixins" as *;
 
 .wrapper {
-  border: 1px solid $accent;
+  border: 1px solid $border;
   border-radius: $radius-md;
   background: $bg-input;
   overflow: hidden;
   transition:
     border-color $transition-fast,
     opacity $transition-fast;
+
+  &:focus-within {
+    border-color: $accent;
+  }
 }
 
 .wrapperDisabled {
@@ -36,6 +40,7 @@
   font-size: $font-sm;
   font-family: inherit;
   line-height: 1;
+  user-select: none;
   transition:
     background $transition-fast,
     color $transition-fast;

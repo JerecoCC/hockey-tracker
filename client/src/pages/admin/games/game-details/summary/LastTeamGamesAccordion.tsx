@@ -1,5 +1,6 @@
 import Accordion from '@/components/Accordion/Accordion';
 import Tooltip from '@/components/Tooltip/Tooltip';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { buildFormRecord } from '../gameUtils';
 import LastGameList from './LastGameList';
@@ -38,16 +39,14 @@ export default function LastTeamGamesAccordion({
       variant="static"
       label={
         <span className={styles.linescoreTeam}>
-          {logo ? (
-            <img src={logo} alt={code} className={styles.linescoreLogo} />
-          ) : (
-            <span
-              className={styles.goalTeamLogoPlaceholder}
-              style={{ background: primary, color: text }}
-            >
-              {code?.slice(0, 1)}
-            </span>
-          )}
+          <TeamLogo
+            logo={logo}
+            code={code}
+            primaryColor={primary}
+            textColor={text}
+            size={24}
+            shape="square"
+          />
           <span>{label}</span>
         </span>
       }
@@ -76,7 +75,11 @@ export default function LastTeamGamesAccordion({
       ) : view === 'list' ? (
         <div className={styles.lastFiveListRows}>
           {games.map((lg) => (
-            <LastGameList key={lg.game_id} lg={lg} onNavigate={onNavigate} />
+            <LastGameList
+              key={lg.game_id}
+              lg={lg}
+              onNavigate={onNavigate}
+            />
           ))}
         </div>
       ) : (

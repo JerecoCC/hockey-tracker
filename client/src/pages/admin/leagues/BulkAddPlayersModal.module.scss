@@ -41,7 +41,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr 1fr 1fr 2rem;
   gap: $space-md;
-  align-items: end;
+  align-items: center;
   padding: $space-xs 0;
 
   &:not(:last-child) {

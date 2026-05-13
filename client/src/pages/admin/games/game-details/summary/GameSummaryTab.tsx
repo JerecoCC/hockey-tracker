@@ -4,8 +4,8 @@ import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import StartGameModal from '../StartGameModal';
 import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
@@ -23,15 +23,16 @@ import type {
   GoalieStatRecord,
   GoalieSwitchData,
   UpsertGoalieStatData,
+  UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
-import PreviousMeetingsCard from './PreviousMeetingsCard';
+import SeasonSeriesCard from './SeasonSeriesCard';
 import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
+import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
-import { PERIOD_IDS } from '../constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -39,13 +40,15 @@ interface Props {
   game: GameRecord;
   isFinal: boolean;
   isInProgress: boolean;
+  isEditMode: boolean;
+  setIsEditMode: (value: boolean) => void;
   busy: string | null;
   leagueId: string;
   seasonId: string;
   liveAwayScore: number;
   liveHomeScore: number;
   overtimeSuffix: string;
-  linescorePeriods: { id: string; label: string }[];
+  linescorePeriods: { id: string; label: string; shortLabel: string }[];
   goalieStats: GoalieStatRecord[];
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
@@ -57,9 +60,16 @@ interface Props {
   upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
   switchGoalie: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
   removeGoalieStat: (goalieId: string) => Promise<boolean>;
+  updateGoalieStint: (
+    stintId: string,
+    data: UpdateGoalieStintData,
+  ) => Promise<GoalieStatRecord[] | null>;
+  removeGoalieStint: (stintId: string) => Promise<boolean>;
   startGame: (time_start: string) => Promise<boolean>;
   updateStatus: (status: GameStatus) => Promise<boolean>;
   advancePeriod: (nextPeriod: CurrentPeriod) => Promise<boolean>;
+  advanceOTPeriod: (currentOTPeriods: number) => Promise<boolean>;
+  revertOTPeriod: (targetOTPeriods: number) => Promise<boolean>;
   endGame: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateStars: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
@@ -74,6 +84,8 @@ const GameSummaryTab = ({
   game,
   isFinal,
   isInProgress,
+  isEditMode,
+  setIsEditMode,
   busy,
   leagueId,
   seasonId,
@@ -91,9 +103,13 @@ const GameSummaryTab = ({
   upsertGoalieStat,
   switchGoalie,
   removeGoalieStat,
+  updateGoalieStint,
+  removeGoalieStint,
   startGame,
   updateStatus,
   advancePeriod,
+  advanceOTPeriod,
+  revertOTPeriod,
   endGame,
   updateStars,
   updateGameInfo,
@@ -110,6 +126,30 @@ const GameSummaryTab = ({
   // Only the last recorded goal in the active period can be edited or deleted.
   const currentPeriodGoals = goals.filter((g) => g.period === game.current_period);
   const lastCurrentPeriodGoalId = currentPeriodGoals[currentPeriodGoals.length - 1]?.id;
+
+  // Shot periods — OT periods are separate entries for playoff games so each
+  // OT period's shots can be tracked independently.
+  const isPlayoff = game.game_type === 'playoff';
+  const hasOTShots =
+    game.current_period === 'OT' ||
+    game.current_period === 'SO' ||
+    game.period_shots.some((ps) => /^OT/.test(ps.period)) ||
+    (game.overtime_periods ?? 0) > 0;
+  const useShortNums = isPlayoff && (game.overtime_periods ?? 0) > 1;
+  const shotsPeriods: { id: string; label: string; shortLabel: string }[] = [
+    { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
+    { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
+    { id: '3', label: '3rd', shortLabel: useShortNums ? '3' : '3rd' },
+    ...(hasOTShots
+      ? isPlayoff
+        ? Array.from({ length: game.overtime_periods ?? 1 }, (_, i) => ({
+            id: `OT${i + 1}`,
+            label: `Overtime ${i + 1}`,
+            shortLabel: `OT${i + 1}`,
+          }))
+        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
+      : []),
+  ];
 
   /**
    * True when the shootout has a winner and "End Game" can be offered.
@@ -245,8 +285,6 @@ const GameSummaryTab = ({
   // ── Goalie Switch modal state ────────────────────────────────────────────
   const [switchGoalieOpen, setSwitchGoalieOpen] = useState(false);
 
-  // ── Full Edit Mode (client-side toggle; DB status stays final) ───────────
-  const [isEditMode, setIsEditMode] = useState(false);
   // Treat the game as in-progress for all edit controls when edit mode is on.
   const isEditInProgress = isInProgress || isEditMode;
 
@@ -374,7 +412,6 @@ const GameSummaryTab = ({
                 goalieStats={goalieStats}
                 playerGameStats={playerGameStats}
                 leagueId={leagueId}
-                isFinal={isFinal}
                 onEdit={
                   isEditMode
                     ? () => {
@@ -391,6 +428,7 @@ const GameSummaryTab = ({
               goals={goals}
               isFinal={isFinal && !isEditMode}
               isInProgress={isEditInProgress}
+              isEditMode={isEditMode}
               busy={busy}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}
@@ -407,8 +445,10 @@ const GameSummaryTab = ({
               onAddAttempt={openAttemptModal}
               onEditAttempt={openEditAttemptModal}
               onDeleteAttempt={handleDeleteAttempt}
-              onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
               onGoBackPeriod={isEditInProgress ? (prev) => advancePeriod(prev) : undefined}
+              onGoBackOTPeriod={
+                isEditInProgress ? (targetNum) => revertOTPeriod(targetNum) : undefined
+              }
               getPlayerHref={(playerId) => {
                 const teamId = playerTeamMap.get(playerId);
                 return teamId
@@ -427,17 +467,13 @@ const GameSummaryTab = ({
                 lineup={lineup}
                 leagueId={leagueId}
                 isFinal={isFinal && isEditMode}
-                upsertGoalieStat={upsertGoalieStat}
+                isInProgress={isEditInProgress}
+                onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
+                updateGoalieStint={updateGoalieStint}
+                removeGoalieStint={removeGoalieStint}
                 removeGoalieStat={removeGoalieStat}
               />
             )}
-
-            {/* ── Previous Meetings card ── */}
-            <PreviousMeetingsCard
-              game={game}
-              leagueId={leagueId}
-              seasonId={seasonId}
-            />
 
             {/* ── Last 5 Games card ── */}
             <LastFiveCard
@@ -445,236 +481,65 @@ const GameSummaryTab = ({
               leagueId={leagueId}
               seasonId={seasonId}
             />
+
+            {/* ── Season / Playoff Series card ── */}
+            <SeasonSeriesCard
+              game={game}
+              leagueId={leagueId}
+              seasonId={seasonId}
+              liveAwayScore={liveAwayScore}
+              liveHomeScore={liveHomeScore}
+            />
           </div>
           {/* end summaryLeft */}
 
           {/* ── Right column: Linescore + Shots + Game Info ── */}
           <div className={styles.summaryRight}>
-            <Card
-              title="Linescore"
-              action={
-                <div className={styles.linescoreActions}>
-                  {game.status === 'scheduled' && (
-                    <>
-                      <Button
-                        variant="filled"
-                        intent="success"
-                        icon="play_arrow"
-                        size="sm"
-                        tooltip={
-                          !rosterReady
-                            ? 'Set lineups for both teams first'
-                            : !lineupsReady
-                              ? 'Set starting lineups for both teams'
-                              : 'Start Game'
-                        }
-                        tooltipIntent={rosterReady && lineupsReady ? undefined : 'error'}
-                        disabled={!!busy || !rosterReady || !lineupsReady}
-                        onClick={openStartGameModal}
-                      />
-                      <MoreActionsMenu
-                        disabled={!!busy}
-                        items={[
-                          {
-                            label: 'Reschedule Game',
-                            icon: 'calendar',
-                            onClick: () => updateStatus('postponed'),
-                          },
-                          {
-                            label: 'Cancel Game',
-                            icon: 'close',
-                            intent: 'danger',
-                            onClick: () => updateStatus('cancelled'),
-                          },
-                          {
-                            label: 'Delete Game',
-                            icon: 'delete',
-                            intent: 'danger',
-                            onClick: () => setConfirmDeleteOpen(true),
-                          },
-                        ]}
-                      />
-                    </>
-                  )}
-                  {isInProgress &&
-                    ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
-                    (game.current_period !== 'SO' || soComplete) &&
-                    (game.current_period !== 'OT' || goals.some((g) => g.period === 'OT')) &&
-                    (game.current_period !== '3' || liveAwayScore !== liveHomeScore) && (
-                      <Button
-                        variant="filled"
-                        intent="danger"
-                        icon="flag"
-                        size="sm"
-                        tooltip="End Game"
-                        disabled={!!busy}
-                        onClick={() => {
-                          if (endGameReadyForStars) {
-                            setStarsEditMode(false);
-                            setStarsModalOpen(true);
-                          } else {
-                            openShotsModal(
-                              game.current_period ?? lastPlayedPeriod,
-                              { type: 'end-game' },
-                              true,
-                            );
-                          }
-                        }}
-                      />
-                    )}
-                  {isFinal && (
-                    <Button
-                      variant="outlined"
-                      intent="neutral"
-                      icon="download"
-                      size="sm"
-                      tooltip="Download score card"
-                      onClick={() => setScoreImageOpen(true)}
-                    />
-                  )}
-                  {game.status !== 'scheduled' && (
-                    <MoreActionsMenu
-                      disabled={!!busy}
-                      items={[
-                        ...(isFinal && !isEditMode
-                          ? [
-                              {
-                                label: 'Full Edit Mode',
-                                icon: 'edit',
-                                onClick: () => {
-                                  setIsEditMode(true);
-                                  setEndGameReadyForStars(false);
-                                  // For old games where current_period was never persisted
-                                  if (!game.current_period) revertToEditMode(lastPlayedPeriod);
-                                },
-                              },
-                            ]
-                          : []),
-                        ...(isEditMode
-                          ? [
-                              {
-                                label: 'Exit Edit Mode',
-                                icon: 'close',
-                                onClick: () => setIsEditMode(false),
-                              },
-                            ]
-                          : []),
-                        {
-                          label: 'Delete Game',
-                          icon: 'delete',
-                          intent: 'danger' as const,
-                          onClick: () => setConfirmDeleteOpen(true),
-                        },
-                      ]}
-                    />
-                  )}
-                </div>
+            <LinescoreCard
+              game={game}
+              isFinal={isFinal}
+              isInProgress={isInProgress}
+              isEditMode={isEditMode}
+              busy={busy}
+              liveAwayScore={liveAwayScore}
+              liveHomeScore={liveHomeScore}
+              linescorePeriods={linescorePeriods}
+              attempts={attempts}
+              rosterReady={rosterReady}
+              lineupsReady={lineupsReady}
+              canEndGame={
+                isInProgress &&
+                ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
+                (game.current_period !== 'SO' || soComplete) &&
+                (game.current_period !== 'OT' || goals.some((g) => g.period === 'OT')) &&
+                (game.current_period !== '3' || liveAwayScore !== liveHomeScore)
               }
-            >
-              <table className={styles.periodsTable}>
-                <thead>
-                  <tr>
-                    <th className={styles.thTeam}></th>
-                    {linescorePeriods.map((p) => (
-                      <th
-                        key={p.id}
-                        className={styles.thPeriod}
-                      >
-                        {p.label}
-                      </th>
-                    ))}
-                    <th className={styles.thTotal}>T</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(() => {
-                    const currentPeriodIdx = PERIOD_IDS.indexOf(
-                      game.current_period as '1' | '2' | '3',
-                    );
-                    return [
-                      {
-                        teamId: game.away_team.id,
-                        teamCode: game.away_team.code,
-                        teamLogo: game.away_team.logo,
-                        primaryColor: game.away_team.primary_color,
-                        textColor: game.away_team.text_color,
-                        total: liveAwayScore,
-                        isLoser: isFinal && liveAwayScore < liveHomeScore,
-                      },
-                      {
-                        teamId: game.home_team.id,
-                        teamCode: game.home_team.code,
-                        teamLogo: game.home_team.logo,
-                        primaryColor: game.home_team.primary_color,
-                        textColor: game.home_team.text_color,
-                        total: liveHomeScore,
-                        isLoser: isFinal && liveHomeScore < liveAwayScore,
-                      },
-                    ].map((row) => (
-                      <tr key={row.teamId}>
-                        <td className={styles.tdTeam}>
-                          <span className={styles.linescoreTeam}>
-                            {row.teamLogo ? (
-                              <img
-                                src={row.teamLogo}
-                                alt={row.teamCode}
-                                className={styles.linescoreLogo}
-                              />
-                            ) : (
-                              <span
-                                className={styles.linescoreLogoPlaceholder}
-                                style={{ background: row.primaryColor, color: row.textColor }}
-                              >
-                                {row.teamCode?.slice(0, 1)}
-                              </span>
-                            )}
-                            <span className={styles.linescoreCode}>{row.teamCode}</span>
-                          </span>
-                        </td>
-                        {linescorePeriods.map((p) => {
-                          const ps = game.period_scores.find((s) => s.period === p.id);
-                          const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
-                          const isPeriodDone =
-                            (isFinal && !isEditMode) ||
-                            (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
-                          if (p.id === 'SO') {
-                            const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);
-                            const soDisplay =
-                              teamAttempts.length > 0
-                                ? `${teamAttempts.filter((a) => a.scored).length}/${teamAttempts.length}`
-                                : '—';
-                            return (
-                              <td
-                                key={p.id}
-                                className={styles.tdGoals}
-                              >
-                                {soDisplay}
-                              </td>
-                            );
-                          }
-                          const rawGoals =
-                            row.teamId === game.away_team.id ? ps?.away_goals : ps?.home_goals;
-                          const goals2: number | string = rawGoals ?? (isPeriodDone ? 0 : '—');
-                          return (
-                            <td
-                              key={p.id}
-                              className={styles.tdGoals}
-                            >
-                              {goals2}
-                            </td>
-                          );
-                        })}
-                        <td
-                          className={`${styles.tdTotal}${row.isLoser ? ` ${styles.scoreNumberLoser}` : ''}`}
-                        >
-                          {row.total}
-                        </td>
-                      </tr>
-                    ));
-                  })()}
-                </tbody>
-              </table>
-            </Card>
+              onStartGame={openStartGameModal}
+              onReschedule={() => updateStatus('postponed')}
+              onCancel={() => updateStatus('cancelled')}
+              onDelete={() => setConfirmDeleteOpen(true)}
+              onEndGame={() => {
+                if (endGameReadyForStars) {
+                  setStarsEditMode(false);
+                  setStarsModalOpen(true);
+                } else {
+                  openShotsModal(
+                    game.current_period ?? lastPlayedPeriod,
+                    { type: 'end-game' },
+                    true,
+                  );
+                }
+              }}
+              onFinishEditing={() => setIsEditMode(false)}
+              onDownloadScoreCard={() => setScoreImageOpen(true)}
+              onEnterEditMode={() => {
+                setIsEditMode(true);
+                setEndGameReadyForStars(false);
+                // For old games where current_period was never persisted
+                if (!game.current_period) revertToEditMode(lastPlayedPeriod);
+              }}
+              onExitEditMode={() => setIsEditMode(false)}
+            />
 
             {/* ── Shots breakdown card ── */}
             {(game.period_shots.length > 0 || isInProgress || isFinal) && (
@@ -697,16 +562,14 @@ const GameSummaryTab = ({
                   <thead>
                     <tr>
                       <th className={styles.thTeam}></th>
-                      {linescorePeriods
-                        .filter((p) => p.id !== 'SO')
-                        .map((p) => (
-                          <th
-                            key={p.id}
-                            className={styles.thPeriod}
-                          >
-                            {p.label}
-                          </th>
-                        ))}
+                      {shotsPeriods.map((p) => (
+                        <th
+                          key={p.id}
+                          className={styles.thPeriod}
+                        >
+                          {p.shortLabel}
+                        </th>
+                      ))}
                       <th className={styles.thTotal}>T</th>
                     </tr>
                   </thead>
@@ -732,37 +595,29 @@ const GameSummaryTab = ({
                       <tr key={row.key}>
                         <td className={styles.tdTeam}>
                           <span className={styles.linescoreTeam}>
-                            {row.logo ? (
-                              <img
-                                src={row.logo}
-                                alt={row.code}
-                                className={styles.linescoreLogo}
-                              />
-                            ) : (
-                              <span
-                                className={styles.linescoreLogoPlaceholder}
-                                style={{ background: row.primary, color: row.text }}
-                              >
-                                {row.code?.slice(0, 1)}
-                              </span>
-                            )}
+                            <TeamLogo
+                              logo={row.logo}
+                              code={row.code ?? '?'}
+                              primaryColor={row.primary}
+                              textColor={row.text}
+                              size={32}
+                              shape="square"
+                            />
                             <span className={styles.linescoreCode}>{row.code}</span>
                           </span>
                         </td>
-                        {linescorePeriods
-                          .filter((p) => p.id !== 'SO')
-                          .map((p) => {
-                            const ps = game.period_shots.find((s) => s.period === p.id);
-                            const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
-                            return (
-                              <td
-                                key={p.id}
-                                className={styles.tdGoals}
-                              >
-                                {shots ?? '—'}
-                              </td>
-                            );
-                          })}
+                        {shotsPeriods.map((p) => {
+                          const ps = game.period_shots.find((s) => s.period === p.id);
+                          const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
+                          return (
+                            <td
+                              key={p.id}
+                              className={styles.tdGoals}
+                            >
+                              {shots ?? '—'}
+                            </td>
+                          );
+                        })}
                         <td className={styles.tdTotal}>
                           {game.period_shots.reduce(
                             (sum, ps) => sum + (row.isAway ? ps.away_shots : ps.home_shots),
@@ -780,7 +635,9 @@ const GameSummaryTab = ({
             <GameInfoCard
               game={game}
               busy={busy}
-              updateGameInfo={updateGameInfo}
+              updateGameInfo={
+                isEditMode || game.status === 'scheduled' ? updateGameInfo : undefined
+              }
             />
           </div>
         </div>
@@ -889,6 +746,7 @@ const GameSummaryTab = ({
           }}
           updateGameInfo={updateGameInfo}
           onAdvancePeriod={advancePeriod}
+          onNextOTPeriod={() => advanceOTPeriod(game.overtime_periods ?? 1)}
           onEndGameReady={() => {
             setEndGameReadyForStars(true);
             setStarsEditMode(false);
@@ -902,9 +760,17 @@ const GameSummaryTab = ({
         <ShotsEditModal
           open={shotsEditModalOpen}
           game={game}
-          periods={linescorePeriods}
+          periods={shotsPeriods}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          goalieStats={goalieStats}
+          goals={goals}
+          lineup={lineup}
           onClose={() => setShotsEditModalOpen(false)}
           updatePeriodShots={updatePeriodShots}
+          upsertGoalieStat={async (data) => {
+            await upsertGoalieStat(data);
+          }}
         />
       )}
 

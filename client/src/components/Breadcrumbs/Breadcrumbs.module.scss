@@ -6,6 +6,10 @@
   align-items: center;
   flex-wrap: wrap;
   gap: $space-xs;
+
+  @media (max-width: 768px) {
+    display: none;
+  }
 }
 
 .item {
@@ -44,4 +48,19 @@
   font-size: $font-base;
   font-weight: 600;
   color: $text-bright;
+}
+
+// ── Short label (mobile only) ──────────────────────────────────────────
+.fullLabel {
+  @media (max-width: 768px) {
+    display: none;
+  }
+}
+
+.shortLabel {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: inline;
+  }
 }

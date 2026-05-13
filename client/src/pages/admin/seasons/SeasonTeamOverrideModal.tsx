@@ -3,6 +3,7 @@ import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import SearchableList from '@/components/SearchableList/SearchableList';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type SeasonGroupRecord, type LeagueTeam } from '@/hooks/useSeasonDetails';
 import styles from './SeasonDetails.module.scss';
 
@@ -63,6 +64,14 @@ const SeasonTeamOverrideModal = (props: Props) => {
       open={open}
       title={title}
       onClose={onClose}
+      onConfirm={handleSave}
+      confirmLabel={
+        saving
+          ? 'Saving…'
+          : `Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`
+      }
+      confirmDisabled={saving || leagueTeams.length === 0}
+      busy={saving}
     >
       <SearchableList
         key={group?.id ?? 'none'}
@@ -94,20 +103,14 @@ const SeasonTeamOverrideModal = (props: Props) => {
                     )}
                   </span>
 
-                  {t.logo ? (
-                    <img
-                      src={t.logo}
-                      alt=""
-                      className={styles.teamLogoThumb}
-                    />
-                  ) : (
-                    <span
-                      className={styles.teamLogoPlaceholder}
-                      style={{ background: t.primary_color, color: t.text_color }}
-                    >
-                      {t.code.slice(0, 3)}
-                    </span>
-                  )}
+                  <TeamLogo
+                    logo={t.logo}
+                    code={t.code}
+                    primaryColor={t.primary_color}
+                    textColor={t.text_color}
+                    size={32}
+                    shape="square"
+                  />
 
                   <span className={styles.teamListName}>{t.name}</span>
                   <span className={styles.teamCode}>{t.code}</span>
@@ -120,25 +123,6 @@ const SeasonTeamOverrideModal = (props: Props) => {
         emptyMessage={emptyMessage}
         noResultsMessage={(q) => `No teams match "${q}".`}
       />
-
-      <div className={styles.modalActions}>
-        <Button
-          variant="outlined"
-          intent="neutral"
-          onClick={onClose}
-          disabled={saving}
-        >
-          Cancel
-        </Button>
-        <Button
-          disabled={saving || leagueTeams.length === 0}
-          onClick={handleSave}
-        >
-          {saving
-            ? 'Saving…'
-            : `Save Override (${selectedIds.size} team${selectedIds.size === 1 ? '' : 's'})`}
-        </Button>
-      </div>
     </Modal>
   );
 };

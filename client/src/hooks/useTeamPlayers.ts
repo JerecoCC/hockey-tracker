@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
@@ -115,6 +116,7 @@ export const useStintActions = (playerId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
@@ -139,6 +141,7 @@ export const useStintActions = (playerId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
@@ -188,6 +191,7 @@ export const useStintActions = (playerId: string | null) => {
       await queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update jersey number'));
@@ -255,6 +259,8 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
       await axios.patch(`${API}/admin/players/${playerId}`, payload, { headers: authHeaders() });
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update player'));
@@ -279,6 +285,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
       );
       toast.success('Jersey number updated!');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update jersey number'));
@@ -327,6 +334,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
       return true;
     } catch (err) {
@@ -386,17 +394,27 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     sId: string,
     players: Array<Omit<BulkPlayerInput, 'shoots'> & { shoots?: BulkPlayerInput['shoots']; jersey_number?: number | null }>,
   ): Promise<string[] | null> => {
+    // Step 1: bulk-create the new players.
+    // If this fails, nothing was written — return null so the modal stays open.
+    let created: Array<{ id: string }>;
     try {
-      // Step 1: bulk-create the new players
       const { data: createData } = await axios.post(
         `${API}/admin/players/bulk`,
         { players: players.map(({ jersey_number: _jn, ...p }) => p) },
         { headers: authHeaders() },
       );
-      const created: Array<{ id: string }> = createData.created ?? [];
+      created = createData.created ?? [];
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to create players'));
+      return null;
+    }
 
-      // Step 2: add them to the team roster for the season
-      if (created.length > 0) {
+    // Step 2: add the newly created players to the season roster.
+    // If this fails the players already exist in the DB, so we still return
+    // their IDs — the modal will close and won't offer a retry that would
+    // create duplicates. A separate toast warns about the rostering failure.
+    if (created.length > 0) {
+      try {
         await axios.post(
           `${API}/admin/player-teams/bulk`,
           {
@@ -409,16 +427,15 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
           },
           { headers: authHeaders() },
         );
+      } catch (err) {
+        toast.error(apiError(err, 'Players created but could not be added to the season roster'));
       }
-
-      const n = created.length;
-      toast.success(`${n} player${n !== 1 ? 's' : ''} created and added to roster!`);
-      await queryClient.invalidateQueries({ queryKey: ['players'] });
-      return created.map((p) => p.id);
-    } catch (err) {
-      toast.error(apiError(err, 'Failed to create players'));
-      return null;
     }
+
+    const n = created.length;
+    toast.success(`${n} player${n !== 1 ? 's' : ''} created and added to roster!`);
+    await queryClient.invalidateQueries({ queryKey: ['players'] });
+    return created.map((p) => p.id);
   };
 
   /**

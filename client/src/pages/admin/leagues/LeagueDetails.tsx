@@ -110,7 +110,10 @@ const LeagueDetailsPage = () => {
         }
         right={
           <Breadcrumbs
-            items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: league.name }]}
+            items={[
+              { label: 'Leagues', path: '/admin/leagues' },
+              { label: league.name, shortLabel: league.code },
+            ]}
           />
         }
       />
@@ -121,6 +124,7 @@ const LeagueDetailsPage = () => {
         tabs={[
           {
             label: 'Info',
+            icon: 'info',
             content: (
               <div className={styles.grid}>
                 <LeagueInfoCard
@@ -133,6 +137,7 @@ const LeagueDetailsPage = () => {
           },
           {
             label: 'Seasons',
+            icon: 'calendar_month',
             content: (
               <div className={styles.grid}>
                 <LeagueSeasonsCard
@@ -159,6 +164,7 @@ const LeagueDetailsPage = () => {
           },
           {
             label: 'Teams',
+            icon: 'group',
             content: (
               <div className={styles.grid}>
                 <LeagueTeamsTab
@@ -182,6 +188,7 @@ const LeagueDetailsPage = () => {
           },
           {
             label: 'Players',
+            icon: 'groups',
             content: (
               <div className={styles.grid}>
                 <LeaguePlayersTab
@@ -209,6 +216,7 @@ const LeagueDetailsPage = () => {
           },
           {
             label: 'Playoffs',
+            icon: 'emoji_events',
             content: (
               <div className={styles.grid}>
                 <LeaguePlayoffsTab

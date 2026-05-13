@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useMobileTabs } from '@/context/MobileTabsContext';
 import Icon from '../Icon/Icon';
-import Tooltip from '../Tooltip/Tooltip';
 import styles from './PageHeader.module.scss';
 
 const EXACT_TITLES: Record<string, string> = {
@@ -35,17 +35,26 @@ const getInitials = (name: string | undefined) =>
     .join('')
     .toUpperCase();
 
-const PageHeader = () => {
+interface PageHeaderProps {
+  onMenuToggle?: () => void;
+  mobileTitleLeftRef?: (node: HTMLDivElement | null) => void;
+}
+
+const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { mobileTabs } = useMobileTabs();
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  const title = getTitle(pathname);
-  const isAdmin = user?.role === 'admin';
-  const isAdminPanel = pathname.startsWith('/admin');
+  const routeTitle = getTitle(pathname);
+  // On mobile, swap the route title for "{RoutePrefix} {ActiveTab}", e.g. "Season Info".
+  const activeTabLabel = mobileTabs?.tabs[mobileTabs.activeIndex];
+  const routePrefix = routeTitle.split(' ')[0]; // "League Details" → "League"
+  const mobileTabTitle = activeTabLabel ? `${routePrefix} ${activeTabLabel}` : null;
+  const title = routeTitle;
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -62,74 +71,114 @@ const PageHeader = () => {
     navigate('/login');
   };
 
-  const handleSwitchPanel = () => {
-    if (isAdminPanel) navigate('/leagues');
-    else navigate('/admin/leagues');
-  };
-
   return (
     <header className={styles.header}>
-      <div className={styles.left}>{title && <h1 className={styles.title}>{title}</h1>}</div>
-
-      <div className={styles.right}>
-        {user && (
+      {/* ── Main title row ── */}
+      <div className={styles.titleRow}>
+        <div className={styles.left}>
           <div
-            className={styles.profileChip}
-            ref={dropdownRef}
-          >
-            {isAdmin && (
-              <Tooltip text={isAdminPanel ? 'User View' : 'Admin Panel'}>
-                <button
-                  className={styles.switchBtn}
-                  onClick={handleSwitchPanel}
-                >
-                  <Icon
-                    name={isAdminPanel ? 'apps' : 'shield'}
-                    size="1.1rem"
-                  />
-                </button>
-              </Tooltip>
-            )}
-            <button
-              className={styles.profileBtn}
-              onClick={() => setDropdownOpen((o) => !o)}
+            ref={mobileTitleLeftRef}
+            className={styles.mobileTitleLeft}
+          />
+          {/* Route title – hidden on mobile when tabs are present */}
+          {title && (
+            <h1
+              className={[styles.title, mobileTabs ? styles.titleHiddenMobile : '']
+                .filter(Boolean)
+                .join(' ')}
             >
-              {user.photo ? (
-                <img
-                  src={user.photo}
-                  alt={user.display_name ?? user.displayName}
-                  className={styles.avatar}
-                />
-              ) : (
-                <span className={styles.avatarInitials}>
-                  {getInitials(user.display_name ?? user.displayName)}
-                </span>
+              {title}
+            </h1>
+          )}
+          {/* Prefixed tab title – only shown on mobile when tabs are present */}
+          {mobileTabTitle && <h1 className={styles.titleMobileTab}>{mobileTabTitle}</h1>}
+        </div>
+
+        <div className={styles.right}>
+          {user && (
+            <div
+              className={styles.profileChip}
+              ref={dropdownRef}
+            >
+              <button
+                className={styles.profileBtn}
+                onClick={() => setDropdownOpen((o) => !o)}
+                aria-label="Account menu"
+              >
+                {user.photo ? (
+                  <img
+                    src={user.photo}
+                    alt={user.display_name ?? user.displayName}
+                    className={styles.avatar}
+                  />
+                ) : (
+                  <span className={styles.avatarInitials}>
+                    {getInitials(user.display_name ?? user.displayName)}
+                  </span>
+                )}
+              </button>
+
+              {dropdownOpen && (
+                <div className={styles.dropdown}>
+                  <button
+                    className={styles.dropdownItem}
+                    onClick={handleSignOut}
+                  >
+                    <Icon
+                      name="logout"
+                      size="1rem"
+                    />
+                    Sign out
+                  </button>
+                </div>
               )}
-              <span className={styles.displayName}>{user.display_name ?? user.displayName}</span>
+            </div>
+          )}
+          {onMenuToggle && (
+            <button
+              className={styles.hamburger}
+              onClick={onMenuToggle}
+              aria-label="Open navigation"
+            >
               <Icon
-                name="expand_more"
-                size="1rem"
-                className={dropdownOpen ? styles.chevronOpen : styles.chevron}
+                name="menu"
+                size="1.4rem"
               />
             </button>
-
-            {dropdownOpen && (
-              <div className={styles.dropdown}>
-                <button
-                  className={styles.dropdownItem}
-                  onClick={handleSignOut}
-                >
-                  <Icon
-                    name="logout"
-                    size="1rem"
-                  />
-                  Sign out
-                </button>
-              </div>
-            )}
-          </div>
-        )}
+          )}
+        </div>
       </div>
+
+      {/* ── Mobile tab strip (below title row) ── */}
+      {mobileTabs && (
+        <div className={styles.mobileTabBar}>
+          {mobileTabs.tabs.map((label, i) => {
+            const iconName = mobileTabs.icons[i];
+            return (
+              <button
+                key={label}
+                aria-label={label}
+                className={[
+                  styles.mobileTab,
+                  mobileTabs.activeIndex === i ? styles.mobileTabActive : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => mobileTabs.onChange(i)}
+              >
+                {iconName ? (
+                  <Icon
+                    name={iconName}
+                    size="1.1rem"
+                  />
+                ) : (
+                  label
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
     </header>
   );
 };

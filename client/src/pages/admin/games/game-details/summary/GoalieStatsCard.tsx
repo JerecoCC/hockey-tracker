@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Card from '@/components/Card/Card';
 import Tooltip from '@/components/Tooltip/Tooltip';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
-import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
+import type {
+  GoalieStatRecord,
+  GoalieStintRecord,
+  UpdateGoalieStintData,
+} from '@/hooks/useGameGoalieStats';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
@@ -19,6 +25,42 @@ const PERIOD_LABEL: Record<string, string> = {
   SO: 'SO',
 };
 
+/** Format a single stint's entry→exit window for display. */
+const fmtStintWindow = (stint: GoalieStintRecord) => {
+  const label = (p: string, t: string | null) => `${PERIOD_LABEL[p] ?? p}${t ? ` ${t}` : ''}`;
+  const enter = label(stint.entered_period, stint.entered_time);
+  const exit = stint.exited_period ? label(stint.exited_period, stint.exited_time) : null;
+  return exit ? `${enter} → ${exit}` : enter;
+};
+
+/**
+ * Returns the stint-window lines to show under a goalie's name:
+ * - Single game-start stint (P1, no entered_time) → nothing (starter, no extra info needed)
+ * - Single mid-game stint → one "Px @ time → Py" line (backup)
+ * - Multiple stints → one line per stint (starter who re-entered, etc.)
+ * Falls back to the legacy entered_period / sub_time fields for old data that
+ * has no stints array.
+ */
+const stintLabels = (stat: GoalieStatRecord): string[] => {
+  if (stat.stints && stat.stints.length > 0) {
+    // Pure game-start starter with one uninterrupted stint — nothing to annotate
+    if (
+      stat.stints.length === 1 &&
+      stat.stints[0].entered_period === '1' &&
+      !stat.stints[0].entered_time
+    ) {
+      return [];
+    }
+    return stat.stints.map(fmtStintWindow);
+  }
+  // Legacy fallback: no stints data, use the top-level entered_period / sub_time
+  if (stat.entered_period) {
+    const p = PERIOD_LABEL[stat.entered_period] ?? stat.entered_period;
+    return [`entered ${p}${stat.sub_time ? ` @ ${stat.sub_time}` : ''}`];
+  }
+  return [];
+};
+
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -29,7 +71,13 @@ interface Props {
   lineup: LineupEntry[];
   leagueId: string;
   isFinal: boolean;
-  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<GoalieStatRecord | null>;
+  isInProgress?: boolean;
+  onSwitchGoalie?: () => void;
+  updateGoalieStint: (
+    stintId: string,
+    data: UpdateGoalieStintData,
+  ) => Promise<GoalieStatRecord[] | null>;
+  removeGoalieStint: (stintId: string) => Promise<boolean>;
   removeGoalieStat: (goalieId: string) => Promise<boolean>;
 }
 
@@ -43,7 +91,10 @@ const GoalieStatsCard = ({
   lineup,
   leagueId,
   isFinal,
-  upsertGoalieStat,
+  isInProgress,
+  onSwitchGoalie,
+  updateGoalieStint,
+  removeGoalieStint,
   removeGoalieStat,
 }: Props) => {
   const navigate = useNavigate();
@@ -54,121 +105,127 @@ const GoalieStatsCard = ({
     goalieStats.some((gs) => gs.goalie_id === g.player_id),
   );
 
-  if (goaliesWithStats.length === 0) return null;
-
   return (
     <>
       <Card
         title="Goalie Stats"
         action={
-          isFinal ? (
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="edit"
-              size="sm"
-              tooltip="Edit goalie stats"
-              onClick={() => setEditOpen(true)}
-            />
-          ) : undefined
+          <div style={{ display: 'flex', gap: '8px' }}>
+            {isInProgress && onSwitchGoalie && (
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="swap_horiz"
+                size="sm"
+                tooltip="Switch Goalie"
+                onClick={onSwitchGoalie}
+              />
+            )}
+            {isFinal && (
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="edit"
+                size="sm"
+                tooltip="Edit goalie stats"
+                onClick={() => setEditOpen(true)}
+              />
+            )}
+          </div>
         }
       >
-        <table className={styles.goalieTable}>
-          <thead>
-            <tr>
-              <th className={styles.goalieThTeam}></th>
-              <th className={styles.goalieTh}>
-                <Tooltip text="Shots Against">SA</Tooltip>
-              </th>
-              <th className={styles.goalieTh}>
-                <Tooltip text="Saves">SV</Tooltip>
-              </th>
-              <th className={styles.goalieTh}>
-                <Tooltip text="Goals Against">GA</Tooltip>
-              </th>
-              <th className={styles.goalieTh}>
-                <Tooltip text="Save Percentage">SV%</Tooltip>
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {goaliesWithStats.map((goalie) => {
-              const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
-              if (!stat) return null;
-              const isAway = goalie.team_id === game.away_team.id;
-              const primaryColor = isAway
-                ? game.away_team.primary_color
-                : game.home_team.primary_color;
-              const textColor = isAway ? game.away_team.text_color : game.home_team.text_color;
-              const teamLogo = isAway ? game.away_team.logo : game.home_team.logo;
-              const teamCode = isAway ? game.away_team.code : game.home_team.code;
-              const svPct =
-                stat.shots_against > 0
-                  ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
-                  : '1.000';
-              const isBackup = !!stat.entered_period;
-              const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
-              return (
-                <tr
-                  key={goalie.player_id}
-                  className={styles.goalieRow}
-                  onClick={() => navigate(playerHref)}
-                >
-                  <td className={styles.goalieTdName}>
-                    <span className={styles.goalieNameCell}>
-                      {teamLogo ? (
-                        <img
-                          src={teamLogo}
-                          alt={teamCode}
-                          className={styles.goalTeamLogo}
+        {goaliesWithStats.length === 0 ? (
+          <p className={styles.empty}>No goalie stats recorded yet.</p>
+        ) : (
+          <table className={styles.goalieTable}>
+            <thead>
+              <tr>
+                <th className={styles.goalieThTeam}></th>
+                <th className={styles.goalieTh}>
+                  <Tooltip text="Shots Against">SA</Tooltip>
+                </th>
+                <th className={styles.goalieTh}>
+                  <Tooltip text="Saves">SV</Tooltip>
+                </th>
+                <th className={styles.goalieTh}>
+                  <Tooltip text="Goals Against">GA</Tooltip>
+                </th>
+                <th className={styles.goalieTh}>
+                  <Tooltip text="Save Percentage">SV%</Tooltip>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {goaliesWithStats.map((goalie) => {
+                const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
+                if (!stat) return null;
+                const isAway = goalie.team_id === game.away_team.id;
+                const primaryColor = isAway
+                  ? game.away_team.primary_color
+                  : game.home_team.primary_color;
+                const textColor = isAway ? game.away_team.text_color : game.home_team.text_color;
+                const teamLogo = isAway ? game.away_team.logo : game.home_team.logo;
+                const teamCode = isAway ? game.away_team.code : game.home_team.code;
+                const svPct =
+                  stat.shots_against > 0
+                    ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
+                    : '1.000';
+                const windows = stintLabels(stat);
+                const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
+                return (
+                  <tr
+                    key={goalie.player_id}
+                    className={styles.goalieRow}
+                    onClick={() => navigate(playerHref)}
+                  >
+                    <td className={styles.goalieTdName}>
+                      <span className={styles.goalieNameCell}>
+                        <TeamLogo
+                          logo={teamLogo}
+                          code={teamCode ?? '?'}
+                          primaryColor={primaryColor}
+                          textColor={textColor}
+                          size={36}
+                          shape="square"
                         />
-                      ) : (
-                        <span
-                          className={styles.goalTeamLogoPlaceholder}
-                          style={{ background: primaryColor, color: textColor }}
-                        >
-                          {teamCode?.slice(0, 1)}
-                        </span>
-                      )}
-                      {goalie.photo ? (
-                        <img
-                          src={goalie.photo}
-                          alt=""
-                          className={styles.goalScorerPhoto}
+                        <PlayerAvatar
+                          photo={goalie.photo}
+                          initials={
+                            `${goalie.first_name?.charAt(0) ?? ''}${goalie.last_name?.charAt(0) ?? ''}`.trim() ||
+                            '?'
+                          }
+                          primaryColor={primaryColor}
+                          textColor={textColor}
+                          size={48}
                         />
-                      ) : (
-                        <span
-                          className={styles.goalScorerPhotoPlaceholder}
-                          style={{ background: primaryColor, color: textColor }}
-                        >
-                          {goalie.last_name?.charAt(0)}
-                        </span>
-                      )}
-                      <div className={styles.goalInfo}>
-                        {goalie.jersey_number != null && (
-                          <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                        )}
-                        <span className={styles.goalScorer}>
-                          {formatPlayerName(goalie.first_name, goalie.last_name)}
-                        </span>
-                        {isBackup && (
-                          <span className={styles.goalAssists}>
-                            entered {PERIOD_LABEL[stat.entered_period!] ?? stat.entered_period}
-                            {stat.sub_time && ` @ ${stat.sub_time}`}
+                        <div className={styles.goalInfo}>
+                          {goalie.jersey_number != null && (
+                            <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
+                          )}
+                          <span className={styles.goalScorer}>
+                            {formatPlayerName(goalie.first_name, goalie.last_name)}
                           </span>
-                        )}
-                      </div>
-                    </span>
-                  </td>
-                  <td className={styles.goalieTd}>{stat.shots_against}</td>
-                  <td className={styles.goalieTd}>{stat.saves}</td>
-                  <td className={styles.goalieTd}>{stat.goals_against}</td>
-                  <td className={styles.goalieTd}>{svPct}</td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                          {windows.map((w, i) => (
+                            <span
+                              key={i}
+                              className={styles.goalAssists}
+                            >
+                              {w}
+                            </span>
+                          ))}
+                        </div>
+                      </span>
+                    </td>
+                    <td className={styles.goalieTd}>{stat.shots_against}</td>
+                    <td className={styles.goalieTd}>{stat.saves}</td>
+                    <td className={styles.goalieTd}>{stat.goals_against}</td>
+                    <td className={styles.goalieTd}>{svPct}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </Card>
 
       <GoalieStatsEditModal
@@ -177,11 +234,9 @@ const GoalieStatsCard = ({
         awayRoster={awayRoster}
         homeRoster={homeRoster}
         goalieStats={goalieStats}
-        lineup={lineup}
         onClose={() => setEditOpen(false)}
-        upsertGoalieStat={async (data) => {
-          await upsertGoalieStat(data);
-        }}
+        updateGoalieStint={updateGoalieStint}
+        removeGoalieStint={removeGoalieStint}
         removeGoalieStat={removeGoalieStat}
       />
     </>

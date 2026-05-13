@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select from '@/components/Select/Select';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type PostAttemptData, type PutAttemptData } from '@/hooks/useShootoutAttempts';
@@ -73,20 +74,14 @@ const ShootoutAttemptModal = ({
       value: side,
       label: (
         <>
-          {logo ? (
-            <img
-              src={logo}
-              alt={code}
-              className={styles.teamSegmentLogo}
-            />
-          ) : (
-            <span
-              className={styles.teamSegmentLogoPlaceholder}
-              style={{ background: primary, color: text }}
-            >
-              {code.slice(0, 1)}
-            </span>
-          )}
+          <TeamLogo
+            logo={logo}
+            code={code}
+            primaryColor={primary}
+            textColor={text}
+            size={20}
+            shape="square"
+          />
           {code}
         </>
       ),

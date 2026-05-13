@@ -65,6 +65,12 @@
   }
 }
 
+// ── Rich (ReactNode) content ─────────────────────────────────────────────
+.tipRich {
+  white-space: normal;
+  min-width: 120px;
+}
+
 // ── Flipped below ────────────────────────────────────────────────────────
 .tipBelow {
   transform: translateY(-4px); // slide-in from below

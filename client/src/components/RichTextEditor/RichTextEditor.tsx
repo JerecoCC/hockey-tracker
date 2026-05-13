@@ -21,6 +21,7 @@ const ToolbarButton = (props: ToolbarButtonProps) => {
         e.preventDefault(); // keep editor focus
         onClick();
       }}
+      tabIndex={-1}
       title={title}
       disabled={disabled}
     >
@@ -50,9 +51,13 @@ const RichTextEditor = (props: Props) => {
     if (editor) editor.setEditable(editable);
   }, [editor, editable]);
 
-  // Sync external content changes (e.g. form reset populating the field after mount)
+  // Sync external content changes (e.g. form reset populating the field after mount).
+  // Guard with !editor.isFocused to avoid reverting the user's keystrokes: if the
+  // user types faster than React re-renders, `content` can lag behind
+  // `editor.getHTML()`, making them appear unequal and triggering an unwanted
+  // setContent that scrambles the cursor and causes flickering.
   useEffect(() => {
-    if (editor && content !== editor.getHTML()) {
+    if (editor && !editor.isFocused && content !== editor.getHTML()) {
       editor.commands.setContent(content, false);
     }
   }, [editor, content]);

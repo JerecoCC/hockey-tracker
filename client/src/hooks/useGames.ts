@@ -89,6 +89,12 @@ export interface GameRecord {
   playoff_series_id:        string | null;
   game_number_in_series: number | null;
   game_number:           number | null;
+  playoff_round:         number | null;
+  series_home_team_id:   string | null;
+  series_away_team_id:   string | null;
+  series_home_wins:      number | null;
+  series_away_wins:      number | null;
+  series_games_to_win:   number | null;
   notes:                 string | null;
   created_at:            string;
   current_period?:       CurrentPeriod | null;
@@ -110,6 +116,19 @@ export interface GameRecord {
   previous_meetings?:    PreviousMeeting[];
   /** Number of regulation shootout rounds before sudden death (from the league settings). */
   best_of_shootout:      number;
+  /** Custom display names for each playoff round from the season's bracket rule set (detail endpoint only). */
+  playoff_round_names?:  Record<string, string> | null;
+}
+
+export interface SeriesGame {
+  id:                    string;
+  game_number_in_series: number;
+  status:                string;
+  scheduled_at:          string | null;
+  home_team_id:          string;
+  away_team_id:          string;
+  home_goals:            number;
+  away_goals:            number;
 }
 
 export interface PlayoffSeriesRecord {
@@ -117,20 +136,24 @@ export interface PlayoffSeriesRecord {
   season_id:      string;
   round:          number;
   series_letter:  string | null;
-  home_team_id:   string;
-  home_team_name: string;
-  home_team_code: string;
+  /** Null when the team has not yet been determined (partial series shell). */
+  home_team_id:   string | null;
+  home_team_name: string | null;
+  home_team_code: string | null;
   home_team_logo: string | null;
-  away_team_id:   string;
-  away_team_name: string;
-  away_team_code: string;
+  /** Null when the team has not yet been determined (partial series shell). */
+  away_team_id:   string | null;
+  away_team_name: string | null;
+  away_team_code: string | null;
   away_team_logo: string | null;
   games_to_win:   number;
   home_wins:      number;
   away_wins:      number;
-  status:         SeriesStatus;
-  winner_team_id: string | null;
-  created_at:     string;
+  status:           SeriesStatus;
+  winner_team_id:   string | null;
+  bracket_slot_key: string | null;
+  created_at:       string;
+  games:            SeriesGame[];
 }
 
 export interface CreateGameData {
@@ -477,7 +500,47 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, startGame, updateStatus, advancePeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
+  /** Go back to a specific OT period number (keeps current_period = 'OT', sets overtime_periods = targetNum). */
+  const revertOTPeriod = async (targetOTPeriods: number): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('advance-period');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { current_period: 'OT', overtime_periods: targetOTPeriods },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to revert overtime period'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  /** Advance to the next overtime period for playoff games (keeps current_period = 'OT', increments overtime_periods). */
+  const advanceOTPeriod = async (currentOvertimePeriods: number): Promise<boolean> => {
+    if (!id) return false;
+    setBusy('advance-period');
+    try {
+      await axios.patch(
+        `${API}/admin/games/${id}`,
+        { current_period: 'OT', overtime_periods: currentOvertimePeriods + 1 },
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to advance overtime period'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { game, loading, busy, startGame, updateStatus, advancePeriod, advanceOTPeriod, revertOTPeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
 };
 
 // ── Playoff series hook ────────────────────────────────────────────────────────
@@ -493,6 +556,7 @@ export interface CreateSeriesData {
   home_wins?: number;
   away_wins?: number;
   winner_team_id?: string | null;
+  bracket_slot_key?: string | null;
 }
 
 export const usePlayoffSeries = (seasonId: string | undefined) => {
@@ -517,7 +581,10 @@ export const usePlayoffSeries = (seasonId: string | undefined) => {
   });
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['playoff-series', seasonId] });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['playoff-series', seasonId] }),
+      queryClient.invalidateQueries({ queryKey: ['games', { season_id: seasonId }] }),
+    ]);
 
   const createSeries = async (data: CreateSeriesData): Promise<boolean> => {
     setBusy('creating');
@@ -564,6 +631,67 @@ export const usePlayoffSeries = (seasonId: string | undefined) => {
     }
   };
 
-  return { series, loading, busy, createSeries, updateSeries, deleteSeries };
+  const startSeries = async (id: string): Promise<boolean> => {
+    setBusy(id);
+    try {
+      await axios.post(
+        `${API}/admin/games/playoff-series/${id}/start`,
+        {},
+        { headers: authHeaders() },
+      );
+      toast.success('Series started — games generated!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to start series'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const advanceBracket = async (): Promise<boolean> => {
+    setBusy('advancing');
+    try {
+      const { data } = await axios.post<{ created: number }>(
+        `${API}/admin/seasons/${seasonId}/advance-bracket`,
+        {},
+        { headers: authHeaders() },
+      );
+      if (data.created > 0) {
+        toast.success(`Bracket advanced — ${data.created} new series created!`);
+      } else {
+        toast.info('Bracket is already up to date.');
+      }
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to advance bracket'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const forceAdvance = async (seriesId: string): Promise<boolean> => {
+    setBusy(seriesId);
+    try {
+      await axios.post(
+        `${API}/admin/games/playoff-series/${seriesId}/force-advance`,
+        {},
+        { headers: authHeaders() },
+      );
+      toast.success('Winner advanced to next round!');
+      await invalidate();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to advance winner'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return { series, loading, busy, createSeries, updateSeries, deleteSeries, startSeries, advanceBracket, forceAdvance };
 };
 

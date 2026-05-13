@@ -3,13 +3,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faArrowRight,
   faArrowRotateLeft,
   faArrowRotateRight,
   faChartLine,
   faArrowUpRightFromSquare,
+  faBars,
   faCheck,
   faDownload,
+  faFloppyDisk,
   faCircleCheck,
+  faCircleInfo,
   faCircleMinus,
   faCircleXmark,
   faClone,
@@ -18,6 +22,7 @@ import {
   faClipboardList,
   faClock,
   faEllipsisVertical,
+  faFilter,
   faFlag,
   faGauge,
   faCalendarDays,
@@ -75,10 +80,15 @@ import {
 const ICON_MAP: Record<string, IconDefinition> = {
   // navigation / admin
   arrow_back: faArrowLeft,
+  arrow_forward: faArrowRight,
   chevron_left: faChevronLeft,
   chevron_right: faChevronRight,
   expand_more: faChevronDown,
+  menu: faBars,
   shield: faShield,
+
+  // info
+  info: faCircleInfo,
 
   // nav items
   calendar_month: faCalendarDays,
@@ -86,6 +96,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   groups: faPeopleGroup,
   group: faUsers,
   emoji_events: faTrophy,
+  leaderboard: faTableCells,
 
   // sort
   sort: faSort,
@@ -94,6 +105,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // actions
   add: faPlus,
+  save: faFloppyDisk,
+  filter_list: faFilter,
   calendar: faCalendarDays,
   download: faDownload,
   play_arrow: faPlay,

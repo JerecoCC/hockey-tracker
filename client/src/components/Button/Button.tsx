@@ -19,6 +19,13 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   icon?: string;
   /** Overrides the icon font-size (e.g. "1.25rem"). Defaults to inheriting from button. */
   iconSize?: string;
+  /**
+   * Controls the height of an icon-only button.
+   * - undefined / 'default' → compact square (tight padding, small radius)
+   * - 'button'              → same height as a labelled button ($radius-md)
+   * - 'field'               → fixed 42px to match input/field height ($radius-md)
+   */
+  iconHeight?: 'default' | 'button' | 'field';
   /** When provided, wraps the button in a Tooltip. */
   tooltip?: string;
   /** Optional className forwarded to the Tooltip wrapper span. */
@@ -76,6 +83,7 @@ const Button = (props: ButtonProps) => {
     size = 'md',
     icon,
     iconSize,
+    iconHeight,
     tooltip,
     tooltipClassName,
     tooltipIntent,
@@ -89,7 +97,12 @@ const Button = (props: ButtonProps) => {
     styles.btn,
     SIZE[size],
     VARIANT_INTENT[variant][intent],
-    isIconOnly && styles.iconOnly,
+    isIconOnly &&
+      (iconHeight === 'button'
+        ? styles.iconOnlyButton
+        : iconHeight === 'field'
+          ? styles.iconOnlyField
+          : styles.iconOnly),
     className,
   );
 

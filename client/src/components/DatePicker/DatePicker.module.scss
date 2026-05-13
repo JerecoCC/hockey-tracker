@@ -74,9 +74,9 @@
 }
 
 .clear {
+  display: flex;
+  align-items: center;
   color: $text-dim;
-  font-size: 1.1rem;
-  line-height: 1;
   cursor: pointer;
   padding: 0 2px;
   border-radius: $radius-sm;

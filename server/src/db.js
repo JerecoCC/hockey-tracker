@@ -735,6 +735,176 @@ async function initSchema() {
   await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS sub_time TEXT CHECK (sub_time ~ '^[0-9]{1,2}:[0-5][0-9]$')`;
   await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS goals_against INTEGER CHECK (goals_against >= 0)`;
 
+  // ── Goalie stints ─────────────────────────────────────────────────────────
+  // One row per goalie stint within a game. Supports a goalie being pulled and
+  // re-inserted any number of times (including within the same period).
+  // entered_period/entered_time mark the stint start; exited_period/exited_time
+  // mark the stint end (NULL exit = goalie was still in net at game end).
+  // shots_against and goals_against are stored per-stint; goals_against NULL
+  // means "fall back to derivation from the goals table for this window".
+  // stint_ord is 1-based and unique per (game_id, team_id).
+  // Phase 1 of the goalie-stints migration: this table is dual-written from
+  // the same admin endpoints that write game_goalie_stats; reads still come
+  // from game_goalie_stats. See rebuild_goalie_stints() below.
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_goalie_stints (
+      id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      game_id         UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      team_id         UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      goalie_id       UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      stint_ord       SMALLINT NOT NULL CHECK (stint_ord >= 1),
+      entered_period  TEXT NOT NULL CHECK (entered_period IN ('1','2','3','OT','SO')),
+      entered_time    TEXT CHECK (entered_time ~ '^[0-9]{1,2}:[0-5][0-9]$'),
+      exited_period   TEXT CHECK (exited_period  IN ('1','2','3','OT','SO')),
+      exited_time     TEXT CHECK (exited_time   ~ '^[0-9]{1,2}:[0-5][0-9]$'),
+      shots_against   SMALLINT NOT NULL DEFAULT 0 CHECK (shots_against >= 0),
+      goals_against   INTEGER  CHECK (goals_against >= 0),
+      created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (game_id, team_id, stint_ord)
+    )
+  `;
+  await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_game_idx   ON game_goalie_stints(game_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_goalie_idx ON game_goalie_stints(goalie_id)`;
+
+  // ── Helper function: rebuild_goalie_stints ────────────────────────────────
+  // Idempotently rebuilds the per-stint rows for an entire game from the
+  // legacy game_goalie_stats table. Called from each admin write endpoint
+  // (PUT/POST switch/DELETE) so the stints table stays in sync without
+  // requiring callers to perform multiple ordered statements. Will be removed
+  // in Phase 5 once the legacy table is dropped.
+  await sql`
+    CREATE OR REPLACE FUNCTION rebuild_goalie_stints(p_game_id uuid)
+    RETURNS void
+    LANGUAGE plpgsql
+    AS $func$
+    BEGIN
+      DELETE FROM game_goalie_stints WHERE game_id = p_game_id;
+      INSERT INTO game_goalie_stints (
+        game_id, team_id, goalie_id, stint_ord,
+        entered_period, entered_time, exited_period, exited_time,
+        shots_against, goals_against
+      )
+      WITH period_vals (p, v) AS (
+        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+      ),
+      ordered AS (
+        SELECT
+          gs.game_id, gs.team_id, gs.goalie_id,
+          gs.shots_against, gs.goals_against,
+          COALESCE(gs.entered_period, '1')                                    AS entered_period,
+          gs.sub_time                                                         AS entered_time,
+          ROW_NUMBER() OVER (PARTITION BY gs.team_id ORDER BY pv.v)::smallint AS stint_ord,
+          LEAD(COALESCE(gs.entered_period, '1')) OVER (
+            PARTITION BY gs.team_id ORDER BY pv.v
+          )                                                                   AS exited_period,
+          LEAD(gs.sub_time) OVER (
+            PARTITION BY gs.team_id ORDER BY pv.v
+          )                                                                   AS exited_time
+        FROM game_goalie_stats gs
+        JOIN period_vals pv ON pv.p = COALESCE(gs.entered_period, '1')
+        WHERE gs.game_id = p_game_id
+      )
+      SELECT
+        game_id, team_id, goalie_id, stint_ord,
+        entered_period, entered_time, exited_period, exited_time,
+        shots_against, goals_against
+      FROM ordered;
+    END;
+    $func$
+  `;
+
+  // ── Helper function: rebuild_legacy_goalie_stats ─────────────────────────
+  // Reverse direction of rebuild_goalie_stints: summarizes all stints for a
+  // game back into the legacy game_goalie_stats table (one row per goalie).
+  // Called from each /goalie-stints write endpoint so consumers that still
+  // read the legacy table (notably seasons.js) keep working until Phase 5.
+  // The reduction is lossy by design — multi-stint goalies collapse to:
+  //   shots_against    = SUM(stints.shots_against)
+  //   entered_period   = first stint's entered_period (NULL if starter from P1 puck-drop)
+  //   sub_time         = first stint's entered_time   (NULL if starter from P1 puck-drop)
+  //   goals_against    = SUM(stints.goals_against) when ALL stints have an
+  //                      override; NULL otherwise so the legacy CTE can derive.
+  // Will be removed in Phase 5 when the legacy table is dropped.
+  await sql`
+    CREATE OR REPLACE FUNCTION rebuild_legacy_goalie_stats(p_game_id uuid)
+    RETURNS void
+    LANGUAGE plpgsql
+    AS $func$
+    BEGIN
+      DELETE FROM game_goalie_stats WHERE game_id = p_game_id;
+      WITH period_vals (p, v) AS (
+        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+      ),
+      stint_pos AS (
+        SELECT
+          st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
+          st.entered_period, st.entered_time,
+          st.shots_against, st.goals_against AS override_ga,
+          pv.v * 100000
+            + COALESCE(
+                SPLIT_PART(st.entered_time, ':', 1)::int * 60
+                + SPLIT_PART(st.entered_time, ':', 2)::int,
+                0
+              ) AS pos
+        FROM game_goalie_stints st
+        JOIN period_vals pv ON pv.p = st.entered_period
+        WHERE st.game_id = p_game_id
+      ),
+      per_goalie AS (
+        SELECT
+          game_id, team_id, goalie_id,
+          SUM(shots_against)::smallint            AS total_sa,
+          SUM(COALESCE(override_ga, 0))::int      AS sum_overrides,
+          BOOL_AND(override_ga IS NOT NULL)       AS all_overrides
+        FROM stint_pos
+        GROUP BY game_id, team_id, goalie_id
+      ),
+      first_stint AS (
+        SELECT DISTINCT ON (game_id, team_id, goalie_id)
+          game_id, team_id, goalie_id,
+          entered_period AS first_entered_period,
+          entered_time   AS first_entered_time,
+          stint_ord      AS first_stint_ord
+        FROM stint_pos
+        ORDER BY game_id, team_id, goalie_id, stint_ord
+      )
+      INSERT INTO game_goalie_stats (
+        game_id, team_id, goalie_id, shots_against,
+        entered_period, sub_time, goals_against
+      )
+      SELECT
+        pg.game_id, pg.team_id, pg.goalie_id, pg.total_sa,
+        CASE WHEN fs.first_stint_ord = 1
+              AND fs.first_entered_period = '1'
+              AND fs.first_entered_time IS NULL
+             THEN NULL ELSE fs.first_entered_period END,
+        CASE WHEN fs.first_stint_ord = 1
+              AND fs.first_entered_period = '1'
+              AND fs.first_entered_time IS NULL
+             THEN NULL ELSE fs.first_entered_time END,
+        CASE WHEN pg.all_overrides THEN pg.sum_overrides ELSE NULL END
+      FROM per_goalie pg
+      JOIN first_stint fs
+        ON fs.game_id = pg.game_id
+       AND fs.team_id = pg.team_id
+       AND fs.goalie_id = pg.goalie_id;
+    END;
+    $func$
+  `;
+
+  // One-time backfill: if the stints table is empty but legacy stats exist,
+  // rebuild every game with goalie stats. Safe to re-run — the function does a
+  // full DELETE+INSERT per game, but the guard ensures we only pay the cost
+  // once. After Phase 1 ships, every write keeps the table in sync.
+  const stintsCount = await sql`SELECT COUNT(*)::int AS c FROM game_goalie_stints`;
+  if (stintsCount[0].c === 0) {
+    await sql`
+      SELECT rebuild_goalie_stints(g.id)
+      FROM games g
+      WHERE EXISTS (SELECT 1 FROM game_goalie_stats gs WHERE gs.game_id = g.id)
+    `;
+  }
+
   // ── Shootout attempts ──────────────────────────────────────────────────────
   // One row per shot attempt in a shootout (both scored and missed).
   // attempt_order is the overall sequence number across both teams (1-based).
@@ -897,7 +1067,8 @@ async function initSchema() {
   // One row per configured bracket slot within a rule set.  Slots with no rule
   // ('none') are omitted — they default to unassigned at query time.
   //
-  // slot_key   : 'r{round}m{matchupIndex}{away|home}', e.g. 'r1m0away'
+  // slot_key   : 'r{round}m{matchupIndex}{team1|team2}', e.g. 'r1m0team1'
+  //              team1 always holds home-ice advantage for the series.
   // rule_type  : 'seed' | 'choice' | 'unchosen' | 'winner'
   //   seed     — #rank team from scope (league / conference / division)
   //   choice   — a high seed picks from a pool of eligibles (pool JSONB)
@@ -919,6 +1090,17 @@ async function initSchema() {
       created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (rule_set_id, slot_key)
     )
+  `;
+
+  // ── Migrate slot_key suffix: home→team2, away→team1 ─────────────────────────
+  // The old convention used 'home'/'away'; the new convention uses 'team1'/'team2'
+  // where team1 always holds home-ice advantage.
+  await sql`
+    UPDATE bracket_slot_rules
+    SET slot_key = regexp_replace(
+                    regexp_replace(slot_key, 'home$', 'team2'),
+                    'away$', 'team1')
+    WHERE slot_key ~ '(home|away)$'
   `;
 
   // ── Widen bracket_slot_rules.scope to include specific_conference / specific_division ──
@@ -950,6 +1132,14 @@ async function initSchema() {
         REFERENCES bracket_rule_sets(id) ON DELETE SET NULL
   `;
 
+  // Custom display names for each playoff round, keyed by round number string.
+  // e.g. { "1": "Wild Card", "2": "Division Series", "3": "Conference Finals", "4": "Stanley Cup Final" }
+  // Null means all rounds fall back to the default label (getRoundLabel).
+  await sql`
+    ALTER TABLE bracket_rule_sets
+      ADD COLUMN IF NOT EXISTS round_names JSONB
+  `;
+
   // Game-rule overrides per season — nullable, falls back to league defaults when NULL.
   // best_of_playoff: number of games needed to win a series (2=Bo3, 3=Bo5, 4=Bo7).
   await sql`
@@ -969,6 +1159,119 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS scoring_system TEXT
         CHECK (scoring_system IN ('2-1-0', '3-2-1-0'))
   `;
+
+  // playoffs_started: true once the admin has formally ended the regular season
+  // and the bracket / playoff matchup configuration phase has begun.
+  // Distinct from is_ended (which marks the whole season complete, including playoffs).
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS playoffs_started BOOLEAN NOT NULL DEFAULT FALSE
+  `;
+
+  // ── One-time data migration tracking ─────────────────────────────────────────
+  // Lightweight table so non-idempotent data fixes run exactly once.
+  await sql`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      name       TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ── Swap home/away on existing scheduled playoff games ────────────────────
+  // The old bracket slot convention used 'home'/'away' suffixes where 'away'
+  // mapped to Team 1 (home ice). The new convention uses 'team1'/'team2', and
+  // home_team_id in both the series and generated games must be Team 1.
+  // This one-time fix swaps home_team_id ↔ away_team_id for all scheduled
+  // playoff games so they match the corrected seeding logic.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'swap_playoff_game_home_away_v1'
+      ) THEN
+        UPDATE games
+        SET home_team_id = away_team_id,
+            away_team_id = home_team_id
+        WHERE game_type = 'playoff'
+          AND status    = 'scheduled';
+
+        INSERT INTO _migrations (name) VALUES ('swap_playoff_game_home_away_v1');
+      END IF;
+    END $$
+  `;
+
+  // ── Backfill playoff series win counts from finalized games ──────────────
+  // Before automatic win tracking was added, home_wins / away_wins were never
+  // incremented when a game was finalized. This one-time migration recalculates
+  // win counts for every playoff series by counting goals in final games.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_playoff_series_wins_v1'
+      ) THEN
+        UPDATE playoff_series ps
+        SET
+          home_wins = wins.home_wins,
+          away_wins = wins.away_wins,
+          status = CASE
+            WHEN wins.home_wins >= ps.games_to_win OR wins.away_wins >= ps.games_to_win THEN 'complete'
+            WHEN wins.home_wins > 0 OR wins.away_wins > 0 THEN 'active'
+            ELSE ps.status
+          END,
+          winner_team_id = CASE
+            WHEN wins.home_wins >= ps.games_to_win THEN ps.home_team_id
+            WHEN wins.away_wins >= ps.games_to_win THEN ps.away_team_id
+            ELSE ps.winner_team_id
+          END
+        FROM (
+          SELECT
+            g.playoff_series_id,
+            SUM(CASE
+              WHEN goal_counts.home_goals > goal_counts.away_goals AND g.home_team_id = ps2.home_team_id THEN 1
+              WHEN goal_counts.away_goals > goal_counts.home_goals AND g.away_team_id = ps2.home_team_id THEN 1
+              ELSE 0
+            END)::int AS home_wins,
+            SUM(CASE
+              WHEN goal_counts.home_goals > goal_counts.away_goals AND g.home_team_id = ps2.away_team_id THEN 1
+              WHEN goal_counts.away_goals > goal_counts.home_goals AND g.away_team_id = ps2.away_team_id THEN 1
+              ELSE 0
+            END)::int AS away_wins
+          FROM games g
+          JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
+          JOIN LATERAL (
+            SELECT
+              COUNT(*) FILTER (WHERE go.team_id = g.home_team_id) AS home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = g.away_team_id) AS away_goals
+            FROM goals go
+            WHERE go.game_id = g.id
+          ) goal_counts ON true
+          WHERE g.status = 'final'
+            AND g.playoff_series_id IS NOT NULL
+          GROUP BY g.playoff_series_id
+        ) wins
+        WHERE ps.id = wins.playoff_series_id;
+
+        INSERT INTO _migrations (name) VALUES ('backfill_playoff_series_wins_v1');
+      END IF;
+    END $$
+  `;
+
+  // ── bracket_slot_key on playoff_series ───────────────────────────────────
+  // Stores the bracket matchup key (e.g. 'r1m0', 'r2m1') so the server can
+  // look up which next-round slot a completed series feeds into and
+  // auto-create that next-round series when both feeder series are done.
+  await sql`
+    ALTER TABLE playoff_series
+      ADD COLUMN IF NOT EXISTS bracket_slot_key TEXT
+  `;
+
+  // ── Allow partial series (one team TBD) ──────────────────────────────────
+  // A series can be created with only one team known when an admin manually
+  // advances a winner before the opposing series has finished.  Both columns
+  // are filled in (and games generated) only when both teams are determined.
+  await sql`ALTER TABLE playoff_series ALTER COLUMN home_team_id DROP NOT NULL`;
+  await sql`ALTER TABLE playoff_series ALTER COLUMN away_team_id DROP NOT NULL`;
 
   console.log('Database schema ready');
 }

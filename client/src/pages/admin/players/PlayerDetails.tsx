@@ -6,10 +6,18 @@ import { toast } from 'react-toastify';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import TitleRow from '@/components/TitleRow/TitleRow';
-import usePlayerDetails, { type PlayerCareerStatRecord } from '@/hooks/usePlayerDetails';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import usePlayerDetails, {
+  usePlayerCurrentSeasonStats,
+  type PlayerCareerStatRecord,
+  type PlayerCurrentSeasonStatBlock,
+} from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
@@ -23,6 +31,7 @@ import {
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
+import TradePlayerModal from '../teams/TradePlayerModal';
 import StintEditModal from './StintEditModal';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import styles from './PlayerDetails.module.scss';
@@ -73,11 +82,23 @@ const statColumns: Column<PlayerCareerStatRecord>[] = [
   { header: 'PTS', key: 'points', align: 'center' },
 ];
 
+const STAT_LABELS = {
+  GP: 'Games Played',
+  G: 'Goals',
+  A: 'Assists',
+  P: 'Points',
+  W: 'Wins',
+  SO: 'Shootout Wins',
+  GA: 'Goals Against',
+  'SV%': 'Save Percentage',
+} as const;
+
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
   const { id, leagueId, teamId } = useParams<{ id: string; leagueId: string; teamId: string }>();
   const { player, stats, loading } = usePlayerDetails(id);
+  const { currentSeasonStats } = usePlayerCurrentSeasonStats(id);
   const { team: teamDetails } = useTeamDetails(teamId);
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
@@ -92,6 +113,8 @@ const PlayerDetailsPage = () => {
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
+  const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
+  const [tradePlayerOpen, setTradePlayerOpen] = useState(false);
 
   const updatePlayer = async (
     playerId: string,
@@ -102,6 +125,7 @@ const PlayerDetailsPage = () => {
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch {
       toast.error('Failed to update player');
@@ -119,6 +143,56 @@ const PlayerDetailsPage = () => {
     const stint = stints[0];
     if (!stint) return false;
     return updateStint(stint.id, payload);
+  };
+
+  const tradePlayer = async (
+    playerId: string,
+    seasonId: string,
+    toTeamId: string,
+    tradeDate: string,
+    jerseyNumber?: number | null,
+    position?: string | null,
+  ): Promise<boolean> => {
+    try {
+      await axios.post(
+        `${API}/admin/player-teams/trade`,
+        {
+          player_id: playerId,
+          season_id: seasonId,
+          to_team_id: toTeamId,
+          trade_date: tradeDate,
+          jersey_number: jerseyNumber ?? null,
+          position: position ?? null,
+        },
+        { headers: authHeaders() },
+      );
+
+      toast.success('Player traded successfully!');
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['player', playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['jersey-history', playerId] }),
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['teams', teamId] }),
+        queryClient.invalidateQueries({ queryKey: ['teams', toTeamId] }),
+        queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goals'] }),
+        queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
+      ]);
+
+      navigate(`/admin/leagues/${leagueId}/teams/${toTeamId}/players/${playerId}`);
+      return true;
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
+          ? err.response.data.error
+          : 'Failed to trade player';
+      toast.error(message);
+      return false;
+    }
   };
 
   if (loading) {
@@ -142,6 +216,11 @@ const PlayerDetailsPage = () => {
   const avatarBg = latestStint?.primary_color ?? undefined;
   const avatarColor = latestStint?.text_color ?? undefined;
   const effectivePosition = latestStint?.position ?? player.position;
+  const canTradePlayer = !!(
+    latestStint?.team_id &&
+    latestStint?.season_id &&
+    !latestStint?.end_date
+  );
   const positionLabel = effectivePosition
     ? (POSITION_LABELS[effectivePosition] ?? effectivePosition)
     : null;
@@ -184,22 +263,30 @@ const PlayerDetailsPage = () => {
       {/* Hero card */}
       <Card>
         <div className={styles.hero}>
-          <div className={styles.avatarWrapper}>
-            {photo ? (
-              <img
-                src={photo}
-                alt={fullName}
-                className={styles.avatar}
+          {photo ? (
+            <button
+              type="button"
+              className={styles.avatarButton}
+              onClick={() => setPhotoPreviewOpen(true)}
+              aria-label={`View photo of ${fullName}`}
+            >
+              <PlayerAvatar
+                photo={photo}
+                initials={initials}
+                primaryColor={avatarBg}
+                textColor={avatarColor}
+                size={80}
               />
-            ) : (
-              <span
-                className={styles.avatarInitials}
-                style={{ background: avatarBg, color: avatarColor }}
-              >
-                {initials}
-              </span>
-            )}
-          </div>
+            </button>
+          ) : (
+            <PlayerAvatar
+              photo={photo}
+              initials={initials}
+              primaryColor={avatarBg}
+              textColor={avatarColor}
+              size={80}
+            />
+          )}
           <div className={styles.heroInfo}>
             <h2 className={styles.heroName}>{fullName}</h2>
             <div className={styles.heroMeta}>
@@ -213,14 +300,26 @@ const PlayerDetailsPage = () => {
           >
             {player.is_active ? 'Active' : 'Inactive'}
           </span>
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="edit"
-            size="sm"
-            tooltip="Edit player"
-            onClick={() => setEditPlayerOpen(true)}
-          />
+          <div className={styles.heroActions}>
+            {canTradePlayer && (
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="swap_horiz"
+                size="sm"
+                tooltip="Trade player"
+                onClick={() => setTradePlayerOpen(true)}
+              />
+            )}
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="edit"
+              size="sm"
+              tooltip="Edit player"
+              onClick={() => setEditPlayerOpen(true)}
+            />
+          </div>
         </div>
       </Card>
 
@@ -232,44 +331,56 @@ const PlayerDetailsPage = () => {
             {
               label: 'Info',
               content: (
-                <Card>
-                  <div className={styles.infoGrid}>
-                    <InfoCell
-                      label="Date of Birth"
-                      value={formatDate(player.date_of_birth)}
-                    />
-                    <InfoCell
-                      label="Birth City"
-                      value={player.birth_city}
-                    />
-                    <InfoCell
-                      label="Birth Country"
-                      value={player.birth_country}
-                    />
-                    <InfoCell
-                      label="Nationality"
-                      value={player.nationality}
-                    />
-                    <InfoCell
-                      label="Height"
-                      value={formatHeight(player.height_cm)}
-                    />
-                    <InfoCell
-                      label="Weight"
-                      value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
-                    />
-                    <InfoCell
-                      label="Position"
-                      value={positionLabel}
-                    />
-                    <InfoCell
-                      label="Shoots"
-                      value={
-                        player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null
-                      }
-                    />
-                  </div>
-                </Card>
+                <>
+                  <Card>
+                    <div className={styles.infoGrid}>
+                      <InfoCell
+                        label="Date of Birth"
+                        value={formatDate(player.date_of_birth)}
+                      />
+                      <InfoCell
+                        label="Birth City"
+                        value={player.birth_city}
+                      />
+                      <InfoCell
+                        label="Birth Country"
+                        value={player.birth_country}
+                      />
+                      <InfoCell
+                        label="Nationality"
+                        value={player.nationality}
+                      />
+                      <InfoCell
+                        label="Height"
+                        value={formatHeight(player.height_cm)}
+                      />
+                      <InfoCell
+                        label="Weight"
+                        value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
+                      />
+                      <InfoCell
+                        label="Shoots"
+                        value={
+                          player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null
+                        }
+                      />
+                    </div>
+                  </Card>
+                  {currentSeasonStats && (
+                    <div className={styles.currentSeasonCards}>
+                      <SeasonStatCard
+                        title={`${currentSeasonStats.season_name} – Regular Season`}
+                        stats={currentSeasonStats.regular}
+                        isGoalie={effectivePosition === 'G'}
+                      />
+                      <SeasonStatCard
+                        title={`${currentSeasonStats.season_name} – Playoffs`}
+                        stats={currentSeasonStats.playoffs}
+                        isGoalie={effectivePosition === 'G'}
+                      />
+                    </div>
+                  )}
+                </>
               ),
             },
             {
@@ -311,23 +422,14 @@ const PlayerDetailsPage = () => {
                           key={s.id}
                           className={styles.stintItem}
                         >
-                          {s.team_logo ? (
-                            <img
-                              src={s.team_logo}
-                              alt={s.team_name ?? ''}
-                              className={styles.stintLogo}
-                            />
-                          ) : (
-                            <span
-                              className={styles.stintLogoPlaceholder}
-                              style={{
-                                background: s.primary_color ?? undefined,
-                                color: s.text_color ?? undefined,
-                              }}
-                            >
-                              {(s.team_code ?? s.team_name ?? '?').slice(0, 3)}
-                            </span>
-                          )}
+                          <TeamLogo
+                            logo={s.team_logo}
+                            code={s.team_code ?? s.team_name ?? '?'}
+                            primaryColor={s.primary_color}
+                            textColor={s.text_color}
+                            size={32}
+                            shape="square"
+                          />
                           <div className={styles.stintInfo}>
                             <span className={styles.stintTeam}>{s.team_name ?? '—'}</span>
                             <span className={styles.stintMeta}>
@@ -376,6 +478,16 @@ const PlayerDetailsPage = () => {
         uploadPlayerPhoto={uploadStintPhoto}
       />
 
+      <TradePlayerModal
+        open={tradePlayerOpen}
+        player={playerEditTarget}
+        currentTeamId={latestStint?.team_id ?? teamId ?? ''}
+        seasonId={latestStint?.season_id ?? ''}
+        leagueId={leagueId ?? ''}
+        onClose={() => setTradePlayerOpen(false)}
+        tradePlayer={tradePlayer}
+      />
+
       <ChangeJerseyModal
         open={!!changingJerseyStint}
         stint={changingJerseyStint}
@@ -397,6 +509,13 @@ const PlayerDetailsPage = () => {
         updateStint={updateStint}
         uploadStintPhoto={uploadStintPhoto}
       />
+
+      <ImagePreviewModal
+        open={photoPreviewOpen}
+        src={photo}
+        alt={fullName}
+        onClose={() => setPhotoPreviewOpen(false)}
+      />
     </>
   );
 };
@@ -415,3 +534,95 @@ const InfoCell = ({ label, value }: { label: string; value: string | null | unde
 );
 
 export default PlayerDetailsPage;
+
+// ── Helper: current-season stat card ────────────────────────────────────────
+const SeasonStatCard = ({
+  title,
+  stats,
+  isGoalie,
+}: {
+  title: string;
+  stats: PlayerCurrentSeasonStatBlock | null;
+  isGoalie: boolean;
+}) => {
+  const fmtSavePct = (v: number | null) => {
+    if (v == null) return '—';
+    return v.toFixed(3).replace(/^0/, '');
+  };
+
+  return (
+    <Card title={title}>
+      {!stats ? (
+        <p className={styles.placeholder}>No games played.</p>
+      ) : isGoalie ? (
+        <div className={`${styles.statGrid} ${styles.statGridGoalie}`}>
+          <StatCell
+            label="GP"
+            tooltip={STAT_LABELS.GP}
+            value={stats.gp}
+          />
+          <StatCell
+            label="W"
+            tooltip={STAT_LABELS.W}
+            value={stats.wins}
+          />
+          <StatCell
+            label="SO"
+            tooltip={STAT_LABELS.SO}
+            value={stats.shootout_wins}
+          />
+          <StatCell
+            label="GA"
+            tooltip={STAT_LABELS.GA}
+            value={stats.goals_against}
+          />
+          <StatCell
+            label="SV%"
+            tooltip={STAT_LABELS['SV%']}
+            value={fmtSavePct(stats.save_pct)}
+          />
+        </div>
+      ) : (
+        <div className={styles.statGrid}>
+          <StatCell
+            label="GP"
+            tooltip={STAT_LABELS.GP}
+            value={stats.gp}
+          />
+          <StatCell
+            label="G"
+            tooltip={STAT_LABELS.G}
+            value={stats.goals}
+          />
+          <StatCell
+            label="A"
+            tooltip={STAT_LABELS.A}
+            value={stats.assists}
+          />
+          <StatCell
+            label="P"
+            tooltip={STAT_LABELS.P}
+            value={stats.points}
+          />
+        </div>
+      )}
+    </Card>
+  );
+};
+
+const StatCell = ({
+  label,
+  tooltip,
+  value,
+}: {
+  label: string;
+  tooltip: string;
+  value: number | string;
+}) => (
+  <div className={styles.statCell}>
+    <Tooltip text={tooltip}>
+      <span className={styles.statCellLabel}>{label}</span>
+    </Tooltip>
+    <span className={value === '—' ? styles.statCellMuted : styles.statCellValue}>{value}</span>
+  </div>
+);

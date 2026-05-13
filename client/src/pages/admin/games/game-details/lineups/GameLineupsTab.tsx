@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
-import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ListItem from '@/components/ListItem/ListItem';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
 import useGameLineup, { type LineupEntry } from '@/hooks/useGameLineup';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
@@ -60,6 +61,7 @@ const GameLineupsTab = ({
   const [lineupSetTeam, setLineupSetTeam] = useState<'away' | 'home' | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<{ entry: GameRosterEntry } | null>(null);
   const [removingFromRoster, setRemovingFromRoster] = useState(false);
+  const [visibleTeam, setVisibleTeam] = useState<'away' | 'home'>('away');
 
   const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
     game.away_team.id,
@@ -115,15 +117,14 @@ const GameLineupsTab = ({
       variant="static"
       label={
         <span className={styles.accordionTeamLabel}>
-          {teamLogo ? (
-            <img
-              src={teamLogo}
-              alt={teamCode}
-              className={styles.accordionTeamLogo}
-            />
-          ) : (
-            <span className={styles.accordionTeamLogoPlaceholder}>{teamCode.slice(0, 3)}</span>
-          )}
+          <TeamLogo
+            logo={teamLogo ?? null}
+            code={teamCode}
+            primaryColor={primaryColor}
+            textColor={textColor}
+            size={24}
+            shape="square"
+          />
           {teamName}
           <span className={styles.accordionTeamCount}>({rosterEntries.length}/23)</span>
         </span>
@@ -204,20 +205,22 @@ const GameLineupsTab = ({
             return (
               <ListItem
                 key={e.id}
-                image={e.photo}
-                image_shape="circle"
+                image_shape="square"
                 primaryColor={primaryColor}
                 textColor={textColor}
-                jerseyNumber={e.jersey_number ?? null}
                 eyebrow={positionPart}
                 name={`${e.last_name}, ${e.first_name}`}
-                placeholder={`${e.first_name[0]}${e.last_name[0]}`}
+                placeholder={
+                  e.jersey_number != null
+                    ? String(e.jersey_number)
+                    : `${e.first_name[0]}${e.last_name[0]}`
+                }
                 href={`/admin/leagues/${leagueId}/teams/${e.team_id}/players/${e.player_id}`}
                 rightContent={
                   isStarter
                     ? { type: 'tag', label: 'Starter', intent: 'accent' }
                     : isInheritedStarter
-                      ? { type: 'tag', label: 'Last Game', intent: 'neutral' }
+                      ? { type: 'tag', label: 'Last Starter', intent: 'neutral' }
                       : undefined
                 }
                 actions={
@@ -257,32 +260,73 @@ const GameLineupsTab = ({
   return (
     <>
       <div className={styles.tabContent}>
-        <Card title="Lineups">
+        <Card
+          title="Lineups"
+          action={
+            <div className={styles.lineupMobileToggle}>
+              <SegmentedControl
+                value={visibleTeam}
+                onChange={(value) => setVisibleTeam(value as 'away' | 'home')}
+                options={[
+                  {
+                    value: 'away',
+                    label: game.away_team.code,
+                    tooltip: game.away_team.name,
+                  },
+                  {
+                    value: 'home',
+                    label: game.home_team.code,
+                    tooltip: game.home_team.name,
+                  },
+                ]}
+                className={styles.lineupMobileToggleControl}
+              />
+            </div>
+          }
+        >
           <div className={styles.lineupGrid}>
-            {renderTeamAccordion(
-              'away',
-              game.away_team.name,
-              game.away_team.code,
-              game.away_team.logo,
-              game.away_team.primary_color,
-              game.away_team.text_color,
-              awayRoster,
-              awayLineupMap,
-              awayInheritedLineupMap,
-              awayRosterInherited,
-            )}
-            {renderTeamAccordion(
-              'home',
-              game.home_team.name,
-              game.home_team.code,
-              game.home_team.logo,
-              game.home_team.primary_color,
-              game.home_team.text_color,
-              homeRoster,
-              homeLineupMap,
-              homeInheritedLineupMap,
-              homeRosterInherited,
-            )}
+            <div
+              className={[
+                styles.lineupTeamPanel,
+                visibleTeam !== 'away' && styles.lineupTeamPanelMobileHidden,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {renderTeamAccordion(
+                'away',
+                game.away_team.name,
+                game.away_team.code,
+                game.away_team.logo,
+                game.away_team.primary_color,
+                game.away_team.text_color,
+                awayRoster,
+                awayLineupMap,
+                awayInheritedLineupMap,
+                awayRosterInherited,
+              )}
+            </div>
+            <div
+              className={[
+                styles.lineupTeamPanel,
+                visibleTeam !== 'home' && styles.lineupTeamPanelMobileHidden,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              {renderTeamAccordion(
+                'home',
+                game.home_team.name,
+                game.home_team.code,
+                game.home_team.logo,
+                game.home_team.primary_color,
+                game.home_team.text_color,
+                homeRoster,
+                homeLineupMap,
+                homeInheritedLineupMap,
+                homeRosterInherited,
+              )}
+            </div>
           </div>
         </Card>
       </div>
@@ -294,6 +338,7 @@ const GameLineupsTab = ({
           onClose={() => setLineupAddTeam(null)}
           teamId={lineupAddTeam === 'away' ? game.away_team.id : game.home_team.id}
           seasonId={seasonId!}
+          gameDate={game.scheduled_at?.slice(0, 10)}
           teamName={lineupAddTeam === 'away' ? game.away_team.name : game.home_team.name}
           existingPlayerIds={
             new Set((lineupAddTeam === 'away' ? awayRoster : homeRoster).map((e) => e.player_id))

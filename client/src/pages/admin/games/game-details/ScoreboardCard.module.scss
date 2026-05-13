@@ -2,9 +2,48 @@
 @use "styles/mixins" as *;
 
 // ── Scoreboard card ────────────────────────────────────────────────────────────
+// Default: normal in-place card appearance.
 .scoreboardCard {
-  margin-bottom: $space-xl;
   overflow: hidden;
+  margin-bottom: $space-lg;
+}
+
+// Entrance animation: card slides down from just above its final position and
+// fades in. Fires automatically on mount since the card is re-portaled each
+// time it becomes stuck.
+@keyframes scoreboardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-40%);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Team-colour backgrounds fade in separately so they don't flash on mount.
+@keyframes scoreboardBgFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Stuck: card is portaled to the layout slot (outside <main>), so it is
+// full-width. Apply edge-to-edge styling only in this state.
+.scoreboardCardStuck {
+  border-radius: 0 !important;
+  border-left: none !important;
+  border-right: none !important;
+  border-top: none !important;
+  margin-bottom: 0;
+  // Shadow separates the pinned card from content scrolling beneath it
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  // Slide + fade entrance
+  animation: scoreboardSlideIn 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .scoreboard {
@@ -56,6 +95,37 @@
     flex-direction: row;
     order: 2;
     border-bottom: none;
+  }
+}
+
+// On desktop, when the card is stuck (portaled full-width), apply team colour
+// backgrounds and stretch the logo buttons edge-to-edge.
+@media (min-width: 901px) {
+  .scoreboardCardStuck .teamSide {
+    background: var(--team-primary);
+    // Slant the inner edge of the background to match the stripe's diagonal.
+    // Away panel: right edge tapers from (100% - 20px) at the top to 100% at
+    // the bottom — same angular direction as the away stripe clip-path.
+    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 100%, 0 100%);
+    // Stagger the colour fill slightly behind the slide so it feels like the
+    // card "opens up" rather than flashing colour on entry.
+    animation: scoreboardBgFadeIn 0.3s 0.08s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
+  }
+
+  // Home panel: left edge tapers from 20px at the top to 0% at the bottom —
+  // mirror of the away slant, matching the home stripe's diagonal direction.
+  .scoreboardCardStuck .teamSideHome {
+    clip-path: polygon(20px 0, 100% 0, 100% 100%, 0 100%);
+  }
+
+  .scoreboardCardStuck .teamLogoBtn {
+    flex: 1;
+  }
+
+  // When stuck, move the primary stripe to the inner edge of each panel
+  // (right of away, left of home) so it sits adjacent to the score center.
+  .scoreboardCardStuck .teamStripe {
+    order: 1;
   }
 }
 
@@ -186,36 +256,14 @@
 }
 
 // ── Team logo / placeholder ────────────────────────────────────────────────────
-.teamLogo {
-  width: 68px;
-  height: 68px;
-  object-fit: contain;
-  display: block;
-  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.12));
+// Overrides the inline size from TeamLogo so we can apply a media-query breakpoint
+.teamLogoResponsive {
+  width: 68px !important;
+  height: 68px !important;
 
   @media (max-width: 900px) {
-    width: 44px;
-    height: 44px;
-  }
-}
-
-.teamLogoPlaceholder {
-  width: 68px;
-  height: 68px;
-  border-radius: 50%;
-  background: $bg-input;
-  border: 1px solid $border;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-dim;
-  letter-spacing: 0.04em;
-
-  @media (max-width: 900px) {
-    width: 44px;
-    height: 44px;
+    width: 44px !important;
+    height: 44px !important;
   }
 }
 
@@ -238,6 +286,23 @@
 .teamSubInfo {
   font-size: $font-sm;
   color: $text-dim;
+}
+
+// The team code (teamSubInfo) also switches to the team's own text colour.
+// A shadow is applied only when the JS-computed contrast ratio is too low
+// (--team-text-shadow is 'transparent' when contrast is sufficient).
+.scoreboardCardStuck {
+  .teamInfo {
+    .teamSubInfo {
+      color: var(--team-text);
+      font-weight: 500;
+    }
+
+    .teamFullName,
+    .teamSubInfo {
+      text-shadow: 0 1px 4px var(--team-text-shadow);
+    }
+  }
 }
 
 // ── Center: score numbers flanking the status block ───────────────────────────
@@ -284,6 +349,14 @@
 
 .scoreNumberLoser {
   color: $text-dim;
+}
+
+.scoreMeta {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 .scoreDate {

@@ -2,9 +2,17 @@ import { createContext, useContext } from 'react';
 
 /**
  * Provides the DOM node that TitleRow portals into.
- * AdminLayout sets this via a state ref callback; TitleRow reads it to portal.
+ * Layouts provide a desktop row container plus an optional mobile header-left slot.
  */
-const TitleRowContext = createContext<HTMLDivElement | null>(null);
+export interface TitleRowPortalTargets {
+  rowContainer: HTMLDivElement | null;
+  mobileLeftContainer: HTMLDivElement | null;
+}
+
+const TitleRowContext = createContext<TitleRowPortalTargets>({
+  rowContainer: null,
+  mobileLeftContainer: null,
+});
 
 export const useTitleRowContainer = () => useContext(TitleRowContext);
 

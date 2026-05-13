@@ -145,21 +145,40 @@ const SetLineupModal = ({
       title={`Set Starting Lineup — ${teamName}`}
       onClose={handleClose}
       size="md"
-      onConfirm={handleSave}
-      confirmLabel={saving ? 'Saving…' : 'Save Lineup'}
-      confirmIcon="set_lineup"
-      confirmDisabled={saving || !allFilled || !hasChanges}
       busy={saving}
-      footerStart={
-        <Button
-          variant="outlined"
-          intent="neutral"
-          icon="clear_all"
-          onClick={handleClear}
-          disabled={saving || isDraftEmpty}
-        >
-          Clear
-        </Button>
+      footer={
+        <div className={styles.footerActions}>
+          <Button
+            variant="outlined"
+            intent="danger"
+            icon="clear_all"
+            onClick={handleClear}
+            disabled={saving || isDraftEmpty}
+            className={styles.footerClear}
+          >
+            Clear
+          </Button>
+          <Button
+            variant="outlined"
+            intent="neutral"
+            onClick={handleClose}
+            type="button"
+            disabled={saving}
+            className={styles.footerCancel}
+          >
+            Cancel
+          </Button>
+          <Button
+            intent="accent"
+            icon="set_lineup"
+            onClick={handleSave}
+            type="button"
+            disabled={saving || !allFilled || !hasChanges}
+            className={styles.footerSave}
+          >
+            {saving ? 'Saving…' : 'Save Lineup'}
+          </Button>
+        </div>
       }
     >
       <div className={styles.grid}>

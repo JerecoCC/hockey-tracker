@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './UserNav.module.scss';
@@ -17,20 +18,33 @@ const NAV_ITEMS: NavItem[] = [
 interface UserNavProps {
   collapsed: boolean;
   onToggle: () => void;
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
 }
 
 const UserNav = (props: UserNavProps) => {
-  const { collapsed } = props;
+  const { collapsed, mobileOpen, onMobileClose } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
+  const showExpanded = !collapsed || !!mobileOpen;
+
+  const handleNavClick = (path: string) => {
+    navigate(path);
+    onMobileClose?.();
+  };
+
   return (
-    <nav className={`${styles.nav} ${collapsed ? styles.collapsed : ''}`}>
+    <nav
+      className={`${styles.nav} ${collapsed ? styles.collapsed : ''} ${mobileOpen ? styles.mobileOpen : ''}`}
+    >
       <div className={styles.top}>
         <div className={styles.brandRow}>
-          {!collapsed && (
+          {showExpanded && (
             <span className={styles.brand}>
               <Icon
                 name="sports_hockey"
@@ -48,20 +62,42 @@ const UserNav = (props: UserNavProps) => {
                 variant="ghost"
                 intent="neutral"
                 className={`${styles.navItem} ${isActive(path) ? styles.active : ''}`}
-                onClick={() => navigate(path)}
-                tooltip={collapsed ? label : undefined}
-                tooltipClassName={collapsed ? styles.navTooltipWrapper : undefined}
+                onClick={() => handleNavClick(path)}
+                tooltip={!showExpanded ? label : undefined}
+                tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
               >
                 <Icon
                   name={icon}
                   className={styles.icon}
                 />
-                {!collapsed && <span className={styles.label}>{label}</span>}
+                {showExpanded && <span className={styles.label}>{label}</span>}
               </Button>
             </li>
           ))}
         </ul>
       </div>
+
+      {isAdmin && (
+        <div className={styles.bottom}>
+          <Button
+            variant="ghost"
+            intent="neutral"
+            className={styles.navItem}
+            onClick={() => {
+              navigate('/admin/leagues');
+              onMobileClose?.();
+            }}
+            tooltip={!showExpanded ? 'Admin Panel' : undefined}
+            tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
+          >
+            <Icon
+              name="shield"
+              className={styles.icon}
+            />
+            {showExpanded && <span className={styles.label}>Admin Panel</span>}
+          </Button>
+        </div>
+      )}
     </nav>
   );
 };

@@ -1,6 +1,13 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+.empty {
+  font-size: $font-sm;
+  color: $text-dim;
+  margin: 0;
+  padding: $space-xs 0;
+}
+
 // ── Table ─────────────────────────────────────────────────────────────────────
 
 .goalieTable {
@@ -73,27 +80,6 @@
   width: 36px;
   height: 36px;
   border-radius: $radius-sm;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-
-.goalScorerPhoto {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-}
-
-.goalScorerPhotoPlaceholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
   flex-shrink: 0;
   display: flex;
   align-items: center;

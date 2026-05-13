@@ -11,7 +11,11 @@ import Table, { type Column } from '@/components/Table/Table';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Tabs from '@/components/Tabs/Tabs';
 import TitleRow from '@/components/TitleRow/TitleRow';
-import useSeasonDetails, { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
+import useGames from '@/hooks/useGames';
+import useSeasonDetails, {
+  type SeasonGroupRecord,
+  type SeasonTeam,
+} from '@/hooks/useSeasonDetails';
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import { computeClinched, computeEliminated } from '@/lib/computeClinched';
@@ -20,6 +24,8 @@ import useSeasonStats, {
   type GoalieStatRecord,
 } from '@/hooks/useSeasonStats';
 import useTabState from '@/hooks/useTabState';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import SeasonEndModal from './SeasonEndModal';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
@@ -52,6 +58,19 @@ const sortBySkaterStat = (arr: SkaterStatRecord[], stat: SkaterStatType) =>
     .sort((a, b) => ((b[stat] as number) ?? 0) - ((a[stat] as number) ?? 0))
     .slice(0, PAGE_SIZE);
 
+/** Recursively collect all team IDs in a group and its descendant groups. */
+function getAllTeamIds(groupId: string, allGroups: SeasonGroupRecord[]): Set<string> {
+  const ids = new Set<string>();
+  const collect = (gid: string) => {
+    const group = allGroups.find((g) => g.id === gid);
+    if (!group) return;
+    group.teams.forEach((t) => ids.add(t.id));
+    allGroups.filter((g) => g.parent_id === gid).forEach((child) => collect(child.id));
+  };
+  collect(groupId);
+  return ids;
+}
+
 const SeasonDetailsPage = () => {
   const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
   const navigate = useNavigate();
@@ -73,12 +92,19 @@ const SeasonDetailsPage = () => {
     updateGroup,
     deleteGroup,
     setCurrentSeason,
+    startPlayoffs,
     endSeason,
     updateSeason,
   } = useSeasonDetails(id);
 
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
   const { standings, loading: standingsLoading } = useSeasonStandings(id);
+
+  // Shared cache with SeasonGamesTab — no extra network request when that tab is loaded.
+  const { games } = useGames({ seasonId: id });
+  const hasUnfinishedRegularGames = games.some(
+    (g) => g.game_type === 'regular' && (g.status === 'scheduled' || g.status === 'in_progress'),
+  );
 
   const clinchedIds = useMemo(
     () =>
@@ -87,15 +113,40 @@ const SeasonDetailsPage = () => {
         season?.playoff_format ?? null,
         groups,
         season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+        season?.games_per_season,
       ),
     [
       standings,
       season?.playoff_format,
       season?.scoring_system,
       season?.league_scoring_system,
+      season?.games_per_season,
       groups,
     ],
   );
+
+  // When teams are managed via user groups (group-based seasons), the flat season_teams
+  // table is empty and seasonTeams will be []. Fall back to collecting unique teams from
+  // all groups so the game creation dropdowns always have options to pick from.
+  const effectiveSeasonTeams = useMemo<SeasonTeam[]>(() => {
+    if (seasonTeams.length > 0) return seasonTeams;
+    const seen = new Set<string>();
+    const result: SeasonTeam[] = [];
+    for (const group of groups) {
+      for (const t of group.teams) {
+        if (!seen.has(t.id)) {
+          seen.add(t.id);
+          result.push({
+            ...t,
+            secondary_color: '',
+            home_arena: t.home_arena ?? null,
+            inherited: false,
+          });
+        }
+      }
+    }
+    return result.sort((a, b) => a.name.localeCompare(b.name));
+  }, [seasonTeams, groups]);
 
   const eliminatedIds = useMemo(
     () =>
@@ -104,12 +155,14 @@ const SeasonDetailsPage = () => {
         season?.playoff_format ?? null,
         groups,
         season?.scoring_system ?? season?.league_scoring_system ?? '2-1-0',
+        season?.games_per_season,
       ),
     [
       standings,
       season?.playoff_format,
       season?.scoring_system,
       season?.league_scoring_system,
+      season?.games_per_season,
       groups,
     ],
   );
@@ -117,6 +170,7 @@ const SeasonDetailsPage = () => {
   const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showStartPlayoffsConfirm, setShowStartPlayoffsConfirm] = useState(false);
 
   // ── Stats state ───────────────────────────────────────────────────────────────
   type GoalieLeaderStat = 'save_pct' | 'gaa' | 'shutouts';
@@ -146,11 +200,63 @@ const SeasonDetailsPage = () => {
     dir: 'desc',
   });
   const [goaliePage, setGoaliePage] = useState(1);
-  // Standings sort
+  // Standings sort + sub-tab
   const [standingsSort, setStandingsSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({
     key: 'points',
     dir: 'desc',
   });
+  const [standingsSubTab, setStandingsSubTab] = useState<string>('all');
+
+  // Top-level (non-auto) groups — conferences or league-wide groupings.
+  const standingsTopGroups = useMemo(() => {
+    const groupIds = new Set(groups.map((g) => g.id));
+    return groups
+      .filter((g) => (!g.parent_id || !groupIds.has(g.parent_id)) && !g.is_auto)
+      .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
+  }, [groups]);
+
+  // Division-level groups.
+  const standingsDivisionGroups = useMemo(
+    () =>
+      groups
+        .filter((g) => g.role === 'division')
+        .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name)),
+    [groups],
+  );
+
+  // Pre-computed recursive team-ID set for every conference + division group.
+  const standingsGroupTeamIds = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const g of [...standingsTopGroups, ...standingsDivisionGroups]) {
+      if (!map.has(g.id)) map.set(g.id, getAllTeamIds(g.id, groups));
+    }
+    return map;
+  }, [standingsTopGroups, standingsDivisionGroups, groups]);
+
+  // Current division leader: the highest-ranked team (by pts) in each division.
+  // standings is already sorted points-desc from the API.
+  const divisionLeaderIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const div of standingsDivisionGroups) {
+      const divIds = standingsGroupTeamIds.get(div.id);
+      if (!divIds) continue;
+      const leader = standings.find((t) => divIds.has(t.team_id));
+      if (leader) ids.add(leader.team_id);
+    }
+    return ids;
+  }, [standingsDivisionGroups, standingsGroupTeamIds, standings]);
+
+  // Wildcard tab requires at least 2 conferences and at least 2 divisions.
+  const hasWildcard = standingsTopGroups.length >= 2 && standingsDivisionGroups.length >= 2;
+
+  // Fixed-label SegmentedControl options — categories only, not individual group names.
+  const standingsSubTabOptions = useMemo(() => {
+    const opts: { value: string; label: string }[] = [{ value: 'all', label: 'League' }];
+    if (standingsTopGroups.length >= 2) opts.push({ value: 'conference', label: 'Conference' });
+    if (standingsDivisionGroups.length >= 2) opts.push({ value: 'division', label: 'Division' });
+    if (hasWildcard) opts.push({ value: 'wildcard', label: 'Wildcard' });
+    return opts;
+  }, [standingsTopGroups.length, standingsDivisionGroups.length, hasWildcard]);
 
   const computeTieRanks = (values: (number | null)[]): string[] =>
     values.map((val) => {
@@ -268,35 +374,19 @@ const SeasonDetailsPage = () => {
 
   const renderPlayerCell = (row: SkaterStatRecord | GoalieStatRecord) => (
     <div className={styles.statsPlayerCell}>
-      {row.team_logo ? (
-        <img
-          src={row.team_logo}
-          alt={row.team_name ?? ''}
-          className={styles.statsTeamLogo}
-        />
-      ) : (
-        <span className={styles.statsTeamLogoPlaceholder}>
-          {(row.team_code ?? '?').slice(0, 3)}
-        </span>
-      )}
-      {row.photo ? (
-        <img
-          src={row.photo}
-          alt={`${row.first_name} ${row.last_name}`}
-          className={styles.statsPlayerPhoto}
-        />
-      ) : (
-        <span
-          className={styles.statsPlayerPhotoPlaceholder}
-          style={{
-            background: row.team_primary_color ?? undefined,
-            color: row.team_text_color ?? undefined,
-          }}
-        >
-          {row.first_name.charAt(0)}
-          {row.last_name.charAt(0)}
-        </span>
-      )}
+      <TeamLogo
+        logo={row.team_logo}
+        code={row.team_code ?? '?'}
+        size={24}
+        shape="square"
+      />
+      <PlayerAvatar
+        photo={row.photo}
+        initials={`${row.first_name.charAt(0)}${row.last_name.charAt(0)}`}
+        primaryColor={row.team_primary_color}
+        textColor={row.team_text_color}
+        size={28}
+      />
       <span className={styles.statsPlayerName}>
         {row.last_name}, {row.first_name}
       </span>
@@ -439,7 +529,7 @@ const SeasonDetailsPage = () => {
           <Breadcrumbs
             items={[
               { label: 'Leagues', path: '/admin/leagues' },
-              { label: season.league_name, path: leagueHref },
+              { label: season.league_name, shortLabel: season.league_code, path: leagueHref },
               { label: season.name },
             ]}
           />
@@ -452,15 +542,22 @@ const SeasonDetailsPage = () => {
         tabs={[
           {
             label: 'Info',
+            icon: 'info',
             content: (
               <Card
                 title={
                   <>
                     {season.name}
-                    {season.is_current && (
+                    {season.is_current && !season.playoffs_started && (
                       <Badge
                         label="Current"
                         intent="success"
+                      />
+                    )}
+                    {season.is_current && season.playoffs_started && (
+                      <Badge
+                        label="Playoffs"
+                        intent="accent"
                       />
                     )}
                     {season.is_ended && (
@@ -481,8 +578,8 @@ const SeasonDetailsPage = () => {
                     >
                       Edit
                     </Button>
-                    <MoreActionsMenu
-                      items={[
+                    {(() => {
+                      const moreItems = [
                         ...(!season.is_current
                           ? [
                               {
@@ -490,6 +587,18 @@ const SeasonDetailsPage = () => {
                                 icon: 'stars',
                                 disabled: busy === 'set-current',
                                 onClick: () => setCurrentSeason(true),
+                              },
+                            ]
+                          : []),
+                        ...(season.is_current &&
+                        !season.playoffs_started &&
+                        !hasUnfinishedRegularGames
+                          ? [
+                              {
+                                label: 'End Regular Season',
+                                icon: 'emoji_events',
+                                disabled: busy === 'start-playoffs',
+                                onClick: () => setShowStartPlayoffsConfirm(true),
                               },
                             ]
                           : []),
@@ -504,8 +613,15 @@ const SeasonDetailsPage = () => {
                               },
                             ]
                           : []),
-                      ]}
-                    />
+                      ];
+                      return moreItems.length > 0 ? (
+                        <MoreActionsMenu
+                          size="md"
+                          buttonClassName={styles.moreActionsBtn}
+                          items={moreItems}
+                        />
+                      ) : null;
+                    })()}
                   </div>
                 }
               >
@@ -532,6 +648,7 @@ const SeasonDetailsPage = () => {
           },
           {
             label: 'Teams',
+            icon: 'group',
             content: (
               <SeasonTeamsCard
                 seasonTeams={seasonTeams}
@@ -552,17 +669,19 @@ const SeasonDetailsPage = () => {
           },
           {
             label: 'Games',
+            icon: 'sports_hockey',
             content: (
               <SeasonGamesTab
                 leagueId={leagueId!}
                 seasonId={id!}
-                seasonTeams={seasonTeams}
+                seasonTeams={effectiveSeasonTeams}
                 isEnded={season.is_ended}
               />
             ),
           },
           {
             label: 'Stats',
+            icon: 'query_stats',
             content: (
               <div className={styles.statsSubTabs}>
                 <SegmentedControl
@@ -573,7 +692,6 @@ const SeasonDetailsPage = () => {
                     { value: 'Forwards', label: 'Forwards' },
                     { value: 'Defense', label: 'Defense' },
                     { value: 'Goalies', label: 'Goalies' },
-                    { value: 'Teams', label: 'Teams' },
                   ]}
                 />
 
@@ -796,37 +914,108 @@ const SeasonDetailsPage = () => {
                     )}
                   </Card>
                 )}
+              </div>
+            ),
+          },
+          {
+            label: 'Standings',
+            icon: 'leaderboard',
+            content: (
+              <div className={styles.statsSubTabs}>
+                {standingsSubTabOptions.length > 1 && (
+                  <SegmentedControl
+                    value={standingsSubTab}
+                    onChange={setStandingsSubTab}
+                    options={standingsSubTabOptions}
+                  />
+                )}
 
-                {statsSubTab === 'Teams' && (
-                  <Card>
-                    {standingsLoading ? (
+                {(() => {
+                  const sortRows = (rows: TeamStandingRecord[]) =>
+                    [...rows].sort((a, b) => {
+                      const av = (a as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
+                      const bv = (b as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
+                      const cmp = Number(bv) - Number(av);
+                      return standingsSort.dir === 'desc' ? cmp : -cmp;
+                    });
+
+                  const renderTable = (rows: TeamStandingRecord[], emptyMsg: string) =>
+                    standingsLoading ? (
                       <p className={styles.tabPlaceholder}>Loading standings…</p>
-                    ) : standings.length === 0 ? (
-                      <p className={styles.tabPlaceholder}>No standings data yet.</p>
+                    ) : rows.length === 0 ? (
+                      <p className={styles.tabPlaceholder}>{emptyMsg}</p>
                     ) : (
                       <Table
                         columns={standingsColumns}
-                        data={[...standings].sort((a, b) => {
-                          const av =
-                            (a as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
-                          const bv =
-                            (b as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
-                          const cmp = Number(bv) - Number(av);
-                          return standingsSort.dir === 'desc' ? cmp : -cmp;
-                        })}
+                        data={rows}
                         rowKey={(row) => row.team_id}
                         activeSortKey={standingsSort.key}
                         sortDir={standingsSort.dir}
                         onSort={(key, dir) => setStandingsSort({ key, dir })}
                       />
-                    )}
-                  </Card>
-                )}
+                    );
+
+                  // ── Conference: one card per conference ──────────────────────────
+                  if (standingsSubTab === 'conference') {
+                    return standingsTopGroups.map((conf) => {
+                      const ids = standingsGroupTeamIds.get(conf.id) ?? new Set<string>();
+                      const rows = sortRows(standings.filter((t) => ids.has(t.team_id)));
+                      return (
+                        <Card
+                          key={conf.id}
+                          title={conf.name}
+                        >
+                          {renderTable(rows, 'No standings data yet.')}
+                        </Card>
+                      );
+                    });
+                  }
+
+                  // ── Division: one card per division ──────────────────────────────
+                  if (standingsSubTab === 'division') {
+                    return standingsDivisionGroups.map((div) => {
+                      const ids = standingsGroupTeamIds.get(div.id) ?? new Set<string>();
+                      const rows = sortRows(standings.filter((t) => ids.has(t.team_id)));
+                      return (
+                        <Card
+                          key={div.id}
+                          title={div.name}
+                        >
+                          {renderTable(rows, 'No standings data yet.')}
+                        </Card>
+                      );
+                    });
+                  }
+
+                  // ── Wildcard: one card per conference, non-division-leaders only ─
+                  if (standingsSubTab === 'wildcard') {
+                    return standingsTopGroups.map((conf) => {
+                      const ids = standingsGroupTeamIds.get(conf.id) ?? new Set<string>();
+                      const rows = sortRows(
+                        standings.filter(
+                          (t) => ids.has(t.team_id) && !divisionLeaderIds.has(t.team_id),
+                        ),
+                      );
+                      return (
+                        <Card
+                          key={conf.id}
+                          title={conf.name}
+                        >
+                          {renderTable(rows, 'No wildcard contenders yet.')}
+                        </Card>
+                      );
+                    });
+                  }
+
+                  // ── League: all teams in one table (default) ─────────────────────
+                  return <Card>{renderTable(sortRows(standings), 'No standings data yet.')}</Card>;
+                })()}
               </div>
             ),
           },
           {
             label: 'Playoffs',
+            icon: 'emoji_events',
             content: (
               <SeasonPlayoffsTab
                 seasonId={id!}
@@ -834,6 +1023,7 @@ const SeasonDetailsPage = () => {
                 bracketRuleSetId={season.bracket_rule_set_id ?? null}
                 groups={groups}
                 isEnded={season.is_ended}
+                playoffsStarted={season.playoffs_started}
                 playoffFormat={season.playoff_format ?? null}
                 bestOfPlayoff={season.best_of_playoff ?? null}
                 bestOfShootout={season.best_of_shootout ?? null}
@@ -866,6 +1056,30 @@ const SeasonDetailsPage = () => {
           if (!confirmDeleteGroup) return;
           await deleteGroup(confirmDeleteGroup.id);
           setConfirmDeleteGroup(null);
+        }}
+      />
+
+      <ConfirmModal
+        open={showStartPlayoffsConfirm}
+        title="End Regular Season"
+        body={
+          <>
+            This will mark the regular season as complete and open the playoff matchup
+            configuration. Regular-season games can still be edited, but standings will be
+            considered final. Continue?
+          </>
+        }
+        confirmLabel={busy === 'start-playoffs' ? 'Starting…' : 'Start Playoffs'}
+        confirmIcon="emoji_events"
+        variant="accent"
+        busy={busy === 'start-playoffs'}
+        onCancel={() => setShowStartPlayoffsConfirm(false)}
+        onConfirm={async () => {
+          const ok = await startPlayoffs();
+          if (ok) {
+            setShowStartPlayoffsConfirm(false);
+            handleTabChange(5); // index of 'Playoffs' tab
+          }
         }}
       />
 

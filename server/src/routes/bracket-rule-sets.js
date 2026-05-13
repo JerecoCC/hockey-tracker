@@ -40,7 +40,7 @@ router.get('/', async (req, res) => {
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   try {
     const rows = await sql`
-      SELECT id, league_id, name, created_at
+      SELECT id, league_id, name, round_names, created_at
       FROM bracket_rule_sets
       WHERE league_id = ${league_id}
       ORDER BY name ASC
@@ -59,7 +59,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const sets = await sql`
-      SELECT id, league_id, name, created_at
+      SELECT id, league_id, name, round_names, created_at
       FROM bracket_rule_sets WHERE id = ${id}
     `;
     if (sets.length === 0) return res.status(404).json({ error: 'Rule set not found' });
@@ -79,14 +79,14 @@ router.get('/:id', async (req, res) => {
 // Body: { league_id, name, slots?: SlotRule[] }
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { league_id, name, slots = [] } = req.body;
+  const { league_id, name, slots = [], round_names = null } = req.body;
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
     const sets = await sql`
-      INSERT INTO bracket_rule_sets (league_id, name)
-      VALUES (${league_id}, ${name.trim()})
-      RETURNING id, league_id, name, created_at
+      INSERT INTO bracket_rule_sets (league_id, name, round_names)
+      VALUES (${league_id}, ${name.trim()}, ${round_names ? JSON.stringify(round_names) : null}::jsonb)
+      RETURNING id, league_id, name, round_names, created_at
     `;
     const savedSlots = await upsertSlots(sets[0].id, slots);
     return res.status(201).json({ ...sets[0], slots: savedSlots });
@@ -104,14 +104,26 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name, round_names } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
+  // When round_names is present in the body (even null), write it; otherwise keep existing.
+  const roundNamesJson = round_names != null ? JSON.stringify(round_names) : null;
   try {
-    const rows = await sql`
-      UPDATE bracket_rule_sets SET name = ${name.trim()}
-      WHERE id = ${id}
-      RETURNING id, league_id, name, created_at
-    `;
+    const rows =
+      round_names !== undefined
+        ? await sql`
+            UPDATE bracket_rule_sets
+            SET name        = ${name.trim()},
+                round_names = ${roundNamesJson}::jsonb
+            WHERE id = ${id}
+            RETURNING id, league_id, name, round_names, created_at
+          `
+        : await sql`
+            UPDATE bracket_rule_sets
+            SET name = ${name.trim()}
+            WHERE id = ${id}
+            RETURNING id, league_id, name, round_names, created_at
+          `;
     if (rows.length === 0) return res.status(404).json({ error: 'Rule set not found' });
     return res.json(rows[0]);
   } catch (err) {

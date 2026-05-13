@@ -26,3 +26,44 @@
   letter-spacing: 0.06em;
   color: $text-dim;
 }
+
+.footerActions {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.footerCancel {
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .spanFull {
+    grid-column: auto;
+  }
+
+  .footerActions {
+    flex-wrap: wrap;
+    gap: $space-sm;
+  }
+
+  .footerClear {
+    order: 1;
+    flex: 1;
+  }
+
+  .footerSave {
+    order: 2;
+    flex: 1;
+  }
+
+  .footerCancel {
+    order: 3;
+    margin-left: 0;
+    width: 100%;
+  }
+}

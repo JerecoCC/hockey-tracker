@@ -14,6 +14,21 @@ export const TIME_FMT = new Intl.DateTimeFormat('en-US', {
   timeZoneName: 'short',
 });
 
+const ET_DATE_FMT = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' });
+
+/**
+ * Formats a game end timestamp the same as TIME_FMT, but appends " (+1)" when
+ * the end time falls on a later calendar date than the start time in ET —
+ * i.e. the game ran past midnight.
+ */
+export const formatEndTime = (timeEnd: string, timeStart?: string | null): string => {
+  const formatted = TIME_FMT.format(new Date(timeEnd));
+  if (!timeStart) return formatted;
+  const startDay = ET_DATE_FMT.format(new Date(timeStart));
+  const endDay   = ET_DATE_FMT.format(new Date(timeEnd));
+  return startDay !== endDay ? `${formatted} (+1)` : formatted;
+};
+
 /**
  * Returns 'EST' or 'EDT' for the America/New_York timezone on the given date.
  * Pass a game's scheduled_at ISO string; falls back to today if omitted.

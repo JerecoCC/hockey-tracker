@@ -1,11 +1,13 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Icon from '@/components/Icon/Icon';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion from '@/components/Accordion/Accordion';
 import TitleRow from '@/components/TitleRow/TitleRow';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useGameDetails, type LastFiveGame, type PreviousMeeting } from '@/hooks/useGames';
 import useGameGoals from '@/hooks/useGameGoals';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
@@ -17,6 +19,7 @@ import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import {
   formatPlayerName,
   formatScheduledTime,
+  formatEndTime,
   DATE_FMT_SHORT,
   TIME_FMT,
 } from '@/pages/admin/games/game-details/formatUtils';
@@ -160,21 +163,57 @@ const UserGameDetailsPage = () => {
   const currentPeriodGoals = goals.filter((g) => g.period === game.current_period);
   const lastCurrentPeriodGoalId = currentPeriodGoals[currentPeriodGoals.length - 1]?.id;
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
-  const linescorePeriods: { id: string; label: string }[] = [
-    { id: '1', label: '1st' },
-    { id: '2', label: '2nd' },
-    { id: '3', label: '3rd' },
-    ...(game.period_scores.some((ps) => ps.period === 'OT') ||
-    (game.overtime_periods ?? 0) > 0 ||
+  const isPlayoff = game.game_type === 'playoff';
+  const otCount = game.overtime_periods ?? 1;
+
+  const useShortNums = isPlayoff && otCount > 1;
+
+  // Shot periods — separate OT entries for playoff games.
+  const hasOTShots =
     game.current_period === 'OT' ||
-    game.current_period === 'SO'
-      ? [{ id: 'OT', label: 'OT' }]
+    game.current_period === 'SO' ||
+    game.period_shots.some((ps) => /^OT/.test(ps.period)) ||
+    (game.overtime_periods ?? 0) > 0;
+  const shotsPeriods: { id: string; label: string; shortLabel: string }[] = [
+    { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
+    { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
+    { id: '3', label: '3rd', shortLabel: useShortNums ? '3' : '3rd' },
+    ...(hasOTShots
+      ? isPlayoff
+        ? Array.from({ length: otCount }, (_, i) => ({
+            id: `OT${i + 1}`,
+            label: `Overtime ${i + 1}`,
+            shortLabel: `OT${i + 1}`,
+          }))
+        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
       : []),
-    ...(game.period_scores.some((ps) => ps.period === 'SO') ||
-    game.shootout ||
-    game.current_period === 'SO'
-      ? [{ id: 'SO', label: 'SO' }]
+  ];
+
+  const hasSO =
+    !isPlayoff &&
+    (game.period_scores.some((ps) => ps.period === 'SO') ||
+      game.shootout ||
+      game.current_period === 'SO');
+  const hasOT =
+    !hasSO &&
+    (game.period_scores.some((ps) => ps.period === 'OT') ||
+      (game.overtime_periods ?? 0) > 0 ||
+      game.current_period === 'OT');
+  const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
+    { id: '1', label: '1st', shortLabel: useShortNums ? '1' : '1st' },
+    { id: '2', label: '2nd', shortLabel: useShortNums ? '2' : '2nd' },
+    { id: '3', label: '3rd', shortLabel: useShortNums ? '3' : '3rd' },
+    ...(hasOT
+      ? isPlayoff
+        ? Array.from({ length: otCount }, (_, i) => ({
+            id: `OT${i + 1}`,
+            label: `Overtime ${i + 1}`,
+            shortLabel: `OT${i + 1}`,
+          }))
+        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
       : []),
+    // Shootouts don't exist in playoffs — suppress SO column for playoff games.
+    ...(hasSO ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }] : []),
   ];
 
   return (
@@ -243,21 +282,14 @@ const UserGameDetailsPage = () => {
                           key={starCount}
                           className={styles.starItem}
                         >
-                          {player.photo ? (
-                            <img
-                              src={player.photo}
-                              alt=""
-                              className={styles.starPhoto}
-                            />
-                          ) : (
-                            <span
-                              className={styles.starPhotoPlaceholder}
-                              style={{ background: primaryColor, color: textColor }}
-                            >
-                              {player.first_name[0]}
-                              {player.last_name[0]}
-                            </span>
-                          )}
+                          <PlayerAvatar
+                            photo={player.photo}
+                            initials={`${player.first_name[0]}${player.last_name[0]}`}
+                            primaryColor={primaryColor}
+                            textColor={textColor}
+                            ringColor={primaryColor}
+                            size={56}
+                          />
                           <span className={styles.starIcons}>
                             {Array.from({ length: starCount }).map((_, i) => (
                               <Icon
@@ -354,34 +386,21 @@ const UserGameDetailsPage = () => {
                           >
                             <td className={styles.goalieTdName}>
                               <span className={styles.goalieNameCell}>
-                                {teamLogo ? (
-                                  <img
-                                    src={teamLogo}
-                                    alt={teamCode}
-                                    className={styles.goalTeamLogo}
-                                  />
-                                ) : (
-                                  <span
-                                    className={styles.goalTeamLogoPlaceholder}
-                                    style={{ background: primaryColor, color: textColor }}
-                                  >
-                                    {teamCode?.slice(0, 1)}
-                                  </span>
-                                )}
-                                {goalie.photo ? (
-                                  <img
-                                    src={goalie.photo}
-                                    alt=""
-                                    className={styles.goalScorerPhoto}
-                                  />
-                                ) : (
-                                  <span
-                                    className={styles.goalScorerPhotoPlaceholder}
-                                    style={{ background: primaryColor, color: textColor }}
-                                  >
-                                    {goalie.last_name?.charAt(0)}
-                                  </span>
-                                )}
+                                <TeamLogo
+                                  logo={teamLogo}
+                                  code={teamCode ?? '?'}
+                                  primaryColor={primaryColor}
+                                  textColor={textColor}
+                                  size={36}
+                                  shape="square"
+                                />
+                                <PlayerAvatar
+                                  photo={goalie.photo}
+                                  initials={goalie.last_name?.charAt(0) ?? '?'}
+                                  primaryColor={primaryColor}
+                                  textColor={textColor}
+                                  size={32}
+                                />
                                 <div className={styles.goalInfo}>
                                   {goalie.jersey_number != null && (
                                     <span className={styles.goalAssists}>
@@ -447,21 +466,16 @@ const UserGameDetailsPage = () => {
                         text: game.away_team.text_color,
                       };
                   const homeWon = pm.home_score > pm.away_score;
-                  const renderLogo = (t: typeof leftTeam) =>
-                    t.logo ? (
-                      <img
-                        src={t.logo}
-                        alt={t.code}
-                        className={styles.prevMeetingLogo}
-                      />
-                    ) : (
-                      <span
-                        className={styles.prevMeetingLogoPlaceholder}
-                        style={{ background: t.primary, color: t.text }}
-                      >
-                        {t.code?.slice(0, 3)}
-                      </span>
-                    );
+                  const renderLogo = (t: typeof leftTeam) => (
+                    <TeamLogo
+                      logo={t.logo}
+                      code={t.code}
+                      primaryColor={t.primary}
+                      textColor={t.text}
+                      size={32}
+                      shape="circle"
+                    />
+                  );
                   return (
                     <div
                       key={pm.game_id}
@@ -541,17 +555,12 @@ const UserGameDetailsPage = () => {
                       {lg.result}
                     </span>
                     <span className={styles.lastFiveListLogo}>
-                      {lg.opponent_logo ? (
-                        <img
-                          src={lg.opponent_logo}
-                          alt={lg.opponent_code}
-                          className={styles.lastFiveListLogoImg}
-                        />
-                      ) : (
-                        <span className={styles.lastFiveListLogoPlaceholder}>
-                          {lg.opponent_code?.slice(0, 3)}
-                        </span>
-                      )}
+                      <TeamLogo
+                        logo={lg.opponent_logo}
+                        code={lg.opponent_code}
+                        size={22}
+                        shape="square"
+                      />
                     </span>
                     <span className={styles.lastFiveListOpp}>
                       {lg.is_home ? 'vs' : '@'} {lg.opponent_name ?? lg.opponent_code}
@@ -582,20 +591,14 @@ const UserGameDetailsPage = () => {
                     variant="static"
                     label={
                       <span className={styles.linescoreTeam}>
-                        {logo ? (
-                          <img
-                            src={logo}
-                            alt={code}
-                            className={styles.linescoreLogo}
-                          />
-                        ) : (
-                          <span
-                            className={styles.goalTeamLogoPlaceholder}
-                            style={{ background: primary, color: text }}
-                          >
-                            {code?.slice(0, 1)}
-                          </span>
-                        )}
+                        <TeamLogo
+                          logo={logo}
+                          code={code}
+                          primaryColor={primary}
+                          textColor={text}
+                          size={24}
+                          shape="square"
+                        />
                         <span>{label}</span>
                       </span>
                     }
@@ -707,7 +710,7 @@ const UserGameDetailsPage = () => {
                       key={p.id}
                       className={styles.thPeriod}
                     >
-                      {p.label}
+                      {p.shortLabel}
                     </th>
                   ))}
                   <th className={styles.thTotal}>T</th>
@@ -718,6 +721,8 @@ const UserGameDetailsPage = () => {
                   const currentPeriodIdx = PERIOD_IDS.indexOf(
                     game.current_period as '1' | '2' | '3',
                   );
+                  const isPostRegulation =
+                    game.current_period === 'OT' || game.current_period === 'SO';
                   return [
                     {
                       teamId: game.away_team.id,
@@ -741,28 +746,29 @@ const UserGameDetailsPage = () => {
                     <tr key={row.teamId}>
                       <td className={styles.tdTeam}>
                         <span className={styles.linescoreTeam}>
-                          {row.teamLogo ? (
-                            <img
-                              src={row.teamLogo}
-                              alt={row.teamCode}
-                              className={styles.linescoreLogo}
-                            />
-                          ) : (
-                            <span
-                              className={styles.linescoreLogoPlaceholder}
-                              style={{ background: row.primaryColor, color: row.textColor }}
-                            >
-                              {row.teamCode?.slice(0, 1)}
-                            </span>
-                          )}
+                          <TeamLogo
+                            logo={row.teamLogo}
+                            code={row.teamCode ?? '?'}
+                            primaryColor={row.primaryColor}
+                            textColor={row.textColor}
+                            size={32}
+                            shape="square"
+                          />
                           <span className={styles.linescoreCode}>{row.teamCode}</span>
                         </span>
                       </td>
                       {linescorePeriods.map((p) => {
-                        const ps = game.period_scores.find((s) => s.period === p.id);
+                        const isNumberedOT = /^OT[0-9]+$/.test(p.id);
+                        const isLastOT = isNumberedOT && p.id === `OT${game.overtime_periods ?? 1}`;
+                        const ps = isNumberedOT
+                          ? isLastOT
+                            ? game.period_scores.find((s) => s.period === 'OT')
+                            : undefined
+                          : game.period_scores.find((s) => s.period === p.id);
                         const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
                         const isPeriodDone =
-                          isFinal || (pIdx >= 0 ? currentPeriodIdx > pIdx : true);
+                          isFinal ||
+                          (pIdx >= 0 ? isPostRegulation || currentPeriodIdx > pIdx : true);
                         if (p.id === 'SO') {
                           const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);
                           return (
@@ -806,16 +812,14 @@ const UserGameDetailsPage = () => {
                 <thead>
                   <tr>
                     <th className={styles.thTeam}></th>
-                    {linescorePeriods
-                      .filter((p) => p.id !== 'SO')
-                      .map((p) => (
-                        <th
-                          key={p.id}
-                          className={styles.thPeriod}
-                        >
-                          {p.label}
-                        </th>
-                      ))}
+                    {shotsPeriods.map((p) => (
+                      <th
+                        key={p.id}
+                        className={styles.thPeriod}
+                      >
+                        {p.shortLabel}
+                      </th>
+                    ))}
                     <th className={styles.thTotal}>T</th>
                   </tr>
                 </thead>
@@ -841,37 +845,29 @@ const UserGameDetailsPage = () => {
                     <tr key={row.key}>
                       <td className={styles.tdTeam}>
                         <span className={styles.linescoreTeam}>
-                          {row.logo ? (
-                            <img
-                              src={row.logo}
-                              alt={row.code}
-                              className={styles.linescoreLogo}
-                            />
-                          ) : (
-                            <span
-                              className={styles.linescoreLogoPlaceholder}
-                              style={{ background: row.primary, color: row.text }}
-                            >
-                              {row.code?.slice(0, 1)}
-                            </span>
-                          )}
+                          <TeamLogo
+                            logo={row.logo}
+                            code={row.code ?? '?'}
+                            primaryColor={row.primary}
+                            textColor={row.text}
+                            size={32}
+                            shape="square"
+                          />
                           <span className={styles.linescoreCode}>{row.code}</span>
                         </span>
                       </td>
-                      {linescorePeriods
-                        .filter((p) => p.id !== 'SO')
-                        .map((p) => {
-                          const ps = game.period_shots.find((s) => s.period === p.id);
-                          const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
-                          return (
-                            <td
-                              key={p.id}
-                              className={styles.tdGoals}
-                            >
-                              {shots ?? '—'}
-                            </td>
-                          );
-                        })}
+                      {shotsPeriods.map((p) => {
+                        const ps = game.period_shots.find((s) => s.period === p.id);
+                        const shots = row.isAway ? ps?.away_shots : ps?.home_shots;
+                        return (
+                          <td
+                            key={p.id}
+                            className={styles.tdGoals}
+                          >
+                            {shots ?? '—'}
+                          </td>
+                        );
+                      })}
                       <td className={styles.tdTotal}>
                         {game.period_shots.reduce(
                           (sum, ps) => sum + (row.isAway ? ps.away_shots : ps.home_shots),
@@ -915,7 +911,7 @@ const UserGameDetailsPage = () => {
               <div className={styles.infoItem}>
                 <span className={styles.infoLabel}>End Time</span>
                 <span className={game.time_end ? styles.infoValue : styles.infoValueMuted}>
-                  {game.time_end ? TIME_FMT.format(new Date(game.time_end)) : '—'}
+                  {game.time_end ? formatEndTime(game.time_end, game.time_start) : '—'}
                 </span>
               </div>
               <div className={`${styles.infoItem} ${styles.infoItemFull}`}>

@@ -1,0 +1,59 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: $space-4xl;
+  cursor: zoom-out;
+}
+
+// inline-block so the wrapper shrink-fits to the image's actual rendered size,
+// allowing the close button to hug the image's top-right corner regardless of
+// aspect ratio.
+.imageWrapper {
+  position: relative;
+  display: inline-block;
+  cursor: default;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.img {
+  display: block;
+  // Subtract the overlay's padding from the viewport so the image scales to fit
+  // within the visible area while preserving its natural aspect ratio.
+  max-width: calc(100vw - #{$space-4xl} * 2);
+  max-height: calc(100vh - #{$space-4xl} * 2);
+  width: auto;
+  height: auto;
+  border-radius: $radius-lg;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6);
+  user-select: none;
+}
+
+// Position the Tooltip wrapper at the image's corner; the wrapper's placement
+// is what the Tooltip uses to compute the bubble position, so the tip aligns
+// correctly with the button.
+.closeBtn {
+  position: absolute;
+  top: $space-sm;
+  right: $space-sm;
+  z-index: 1;
+}
+
+// Visual styling for the button itself (rendered inside the Tooltip wrapper).
+.closeBtnInner {
+  background: rgba(0, 0, 0, 0.5);
+  border-radius: 50%;
+  color: $text-bright;
+
+  &:hover {
+    background: rgba(0, 0, 0, 0.75);
+  }
+}

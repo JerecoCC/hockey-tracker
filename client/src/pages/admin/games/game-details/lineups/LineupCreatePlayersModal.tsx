@@ -1,12 +1,9 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import Button from '@/components/Button/Button';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import BulkCreateModal from '@/components/BulkCreateModal/BulkCreateModal';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
-import Modal from '@/components/Modal/Modal';
 import { type PlayerPosition } from '@/hooks/useLeaguePlayers';
 import styles from './LineupCreatePlayersModal.module.scss';
 
@@ -82,6 +79,55 @@ interface Props {
   initialJerseyNumbers?: number[];
 }
 
+const buildRowWarnings = (rows: RowValues[] = [], existingRoster: ExistingRosterEntry[]) => {
+  const rosterNameMap = new Map(
+    existingRoster.map((r) => [
+      `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
+      r,
+    ]),
+  );
+  const rosterJerseyMap = new Map(
+    existingRoster.filter((r) => r.jersey_number != null).map((r) => [r.jersey_number!, r]),
+  );
+
+  const seenNames = new Map<string, number>();
+  const seenJerseys = new Map<number, number>();
+
+  return rows.map((row) => {
+    const result: { name?: string; jersey?: string } = {};
+    const fn = row?.first_name?.trim() ?? '';
+    const ln = row?.last_name?.trim() ?? '';
+
+    if (fn && ln) {
+      const nameKey = `${fn.toLowerCase()} ${ln.toLowerCase()}`;
+      const fullName = `${fn} ${ln}`;
+      if (rosterNameMap.has(nameKey)) {
+        const match = rosterNameMap.get(nameKey)!;
+        result.name = `${fullName} is already on this team's roster${match.jersey_number != null ? ` (#${match.jersey_number})` : ''}.`;
+      } else if (seenNames.has(nameKey)) {
+        result.name = `${fullName} appears more than once.`;
+      } else {
+        seenNames.set(nameKey, seenNames.size);
+      }
+    }
+
+    const jerseyNum =
+      row?.jersey_number !== '' && row?.jersey_number != null ? Number(row.jersey_number) : null;
+    if (jerseyNum != null && !isNaN(jerseyNum)) {
+      if (rosterJerseyMap.has(jerseyNum)) {
+        const match = rosterJerseyMap.get(jerseyNum)!;
+        result.jersey = `#${jerseyNum} is already worn by ${match.first_name} ${match.last_name}.`;
+      } else if (seenJerseys.has(jerseyNum)) {
+        result.jersey = `#${jerseyNum} appears more than once in this form.`;
+      } else {
+        seenJerseys.set(jerseyNum, seenJerseys.size);
+      }
+    }
+
+    return result;
+  });
+};
+
 const LineupCreatePlayersModal = ({
   open,
   onClose,
@@ -96,248 +142,23 @@ const LineupCreatePlayersModal = ({
   onPlayersCreated,
   initialJerseyNumbers,
 }: Props) => {
-  const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateErrors, setDuplicateErrors] = useState<string[]>([]);
   const [crossTeamWarnings, setCrossTeamWarnings] = useState<string[]>([]);
   const crossTeamConfirmedRef = useRef(false);
 
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitted },
-  } = useForm<FormValues>({
-    defaultValues: { players: [{ ...EMPTY_ROW }] },
-  });
-
-  const { fields, append, remove } = useFieldArray({ control, name: 'players' });
-  const watchedPlayers = useWatch({ control, name: 'players' });
-
-  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
-
-  // Pre-populate rows from initialJerseyNumbers when the modal opens
-  useEffect(() => {
-    if (!open || !initialJerseyNumbers || initialJerseyNumbers.length === 0) return;
-    const rows = initialJerseyNumbers.map((n) => ({ ...EMPTY_ROW, jersey_number: String(n) }));
-    reset({ players: rows });
-    setCrossTeamWarnings([]);
-    crossTeamConfirmedRef.current = false;
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // Focus first row's jersey input when the modal opens
   useEffect(() => {
     if (!open) return;
-    const id = setTimeout(() => {
-      rowRefs.current[0]?.querySelector<HTMLInputElement>('input')?.focus();
-    }, 0);
-    return () => clearTimeout(id);
+    setDuplicateErrors([]);
+    setCrossTeamWarnings([]);
+    crossTeamConfirmedRef.current = false;
   }, [open]);
 
-  // Focus the jersey input of newly appended rows
-  const prevFieldsLength = useRef(fields.length);
-  useEffect(() => {
-    if (fields.length > prevFieldsLength.current) {
-      rowRefs.current[fields.length - 1]?.querySelector<HTMLInputElement>('input')?.focus();
-    }
-    prevFieldsLength.current = fields.length;
-  }, [fields.length]);
-
-  const slotsLeft = MAX_ROSTER - existingCount;
-  const canAddMore = fields.length < slotsLeft;
-
-  const goaliesInForm = (watchedPlayers ?? []).filter((p) => p?.position === 'G').length;
-  const goalieCapReached = existingGoalieCount + goaliesInForm >= MAX_GOALIES;
-
-  const getPositionOptions = (index: number) => {
-    const rowIsGoalie = watchedPlayers?.[index]?.position === 'G';
-    if (goalieCapReached && !rowIsGoalie) {
-      return POSITION_OPTIONS.filter((o) => o.value !== 'G');
-    }
-    return POSITION_OPTIONS;
-  };
-
-  const isRowDirty = (index: number) => {
-    const row = watchedPlayers?.[index];
-    return !!(row?.first_name || row?.last_name || row?.position);
-  };
-
-  // Per-row inline warnings — recomputed live as the user types.
-  const rowWarnings = useMemo(() => {
-    const rosterNameMap = new Map(
-      existingRoster.map((r) => [
-        `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
-        r,
-      ]),
-    );
-    const rosterJerseyMap = new Map(
-      existingRoster.filter((r) => r.jersey_number != null).map((r) => [r.jersey_number!, r]),
-    );
-
-    const seenNames = new Map<string, number>(); // nameKey → first row index
-    const seenJerseys = new Map<number, number>(); // jerseyNum → first row index
-
-    return (watchedPlayers ?? []).map((row) => {
-      const result: { name?: string; jersey?: string } = {};
-      const fn = row?.first_name?.trim() ?? '';
-      const ln = row?.last_name?.trim() ?? '';
-
-      if (fn && ln) {
-        const nameKey = `${fn.toLowerCase()} ${ln.toLowerCase()}`;
-        const fullName = `${fn} ${ln}`;
-        if (rosterNameMap.has(nameKey)) {
-          const match = rosterNameMap.get(nameKey)!;
-          result.name = `${fullName} is already on this team's roster${match.jersey_number != null ? ` (#${match.jersey_number})` : ''}.`;
-        } else if (seenNames.has(nameKey)) {
-          result.name = `${fullName} appears more than once.`;
-        } else {
-          seenNames.set(nameKey, seenNames.size);
-        }
-      }
-
-      const jerseyNum =
-        row?.jersey_number !== '' && row?.jersey_number != null ? Number(row.jersey_number) : null;
-      if (jerseyNum != null && !isNaN(jerseyNum)) {
-        if (rosterJerseyMap.has(jerseyNum)) {
-          const match = rosterJerseyMap.get(jerseyNum)!;
-          result.jersey = `#${jerseyNum} is already worn by ${match.first_name} ${match.last_name}.`;
-        } else if (seenJerseys.has(jerseyNum)) {
-          result.jersey = `#${jerseyNum} appears more than once in this form.`;
-        } else {
-          seenJerseys.set(jerseyNum, seenJerseys.size);
-        }
-      }
-
-      return result;
-    });
-  }, [watchedPlayers, existingRoster]);
-
-  const handleDeleteClick = (index: number) => {
-    if (isRowDirty(index)) setConfirmRemoveIndex(index);
-    else remove(index);
-  };
-
   const handleClose = () => {
-    reset({ players: [{ ...EMPTY_ROW }] });
     setDuplicateErrors([]);
     setCrossTeamWarnings([]);
     crossTeamConfirmedRef.current = false;
     onClose();
   };
-
-  const onSubmit = handleSubmit(async (data) => {
-    // ── Duplicate validation ──────────────────────────────────────────────────
-    const errors: string[] = [];
-
-    // Normalise existing roster for quick lookup
-    const rosterNames = new Set(
-      existingRoster.map(
-        (r) => `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
-      ),
-    );
-    const rosterJerseys = new Set(
-      existingRoster.filter((r) => r.jersey_number != null).map((r) => r.jersey_number!),
-    );
-
-    // Also track within the form itself to catch row-vs-row duplicates
-    const formNames = new Set<string>();
-    const formJerseys = new Set<number>();
-
-    for (const row of data.players) {
-      const nameKey = `${row.first_name.trim().toLowerCase()} ${row.last_name.trim().toLowerCase()}`;
-      const jerseyNum = row.jersey_number !== '' ? Number(row.jersey_number) : null;
-
-      if (rosterNames.has(nameKey)) {
-        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" is already in the lineup.`);
-      } else if (formNames.has(nameKey)) {
-        errors.push(`"${row.first_name.trim()} ${row.last_name.trim()}" appears more than once.`);
-      } else {
-        formNames.add(nameKey);
-      }
-
-      if (jerseyNum != null) {
-        if (rosterJerseys.has(jerseyNum)) {
-          errors.push(`Jersey #${jerseyNum} is already in use in this lineup.`);
-        } else if (formJerseys.has(jerseyNum)) {
-          errors.push(`Jersey #${jerseyNum} is listed more than once.`);
-        } else {
-          formJerseys.add(jerseyNum);
-        }
-      }
-    }
-
-    if (errors.length > 0) {
-      setDuplicateErrors(errors);
-      return;
-    }
-    setDuplicateErrors([]);
-
-    // ── Cross-team duplicate check (soft warning, bypass-able) ───────────────
-    if (!crossTeamConfirmedRef.current) {
-      try {
-        const { data: allPlayers } = await axios.get<
-          Array<{
-            first_name: string;
-            last_name: string;
-            team_id?: string | null;
-            team_name?: string | null;
-          }>
-        >(`${API}/admin/players`, {
-          headers: authHeaders(),
-          params: { league_id: leagueId, season_id: seasonId },
-        });
-
-        // Only check names against other teams — jersey numbers can change on trade,
-        // and players on this team are already covered by the inline roster warnings.
-        const otherTeamPlayers = allPlayers.filter((p) => p.team_id !== teamId);
-
-        const formNameKeys = new Set(
-          data.players.map(
-            (r) => `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
-          ),
-        );
-        const warnings: string[] = [];
-        for (const p of otherTeamPlayers) {
-          const key = `${p.first_name.trim().toLowerCase()} ${p.last_name.trim().toLowerCase()}`;
-          if (formNameKeys.has(key)) {
-            const formRow = data.players.find(
-              (r) =>
-                `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}` === key,
-            )!;
-            const teamLabel = p.team_name ?? 'another team';
-            warnings.push(
-              `"${formRow.first_name.trim()} ${formRow.last_name.trim()}" already exists on ${teamLabel}.`,
-            );
-            formNameKeys.delete(key); // avoid double-warning for same name
-          }
-        }
-        if (warnings.length > 0) {
-          setCrossTeamWarnings(warnings);
-          return;
-        }
-      } catch {
-        // Non-fatal — proceed without the cross-team check if the fetch fails
-      }
-    }
-    setCrossTeamWarnings([]);
-
-    // ── Submit ────────────────────────────────────────────────────────────────
-    setIsSubmitting(true);
-    const payload = data.players.map((row) => ({
-      first_name: row.first_name,
-      last_name: row.last_name,
-      position: row.position as PlayerPosition,
-      jersey_number: row.jersey_number !== '' ? Number(row.jersey_number) : null,
-    }));
-    const createdIds = await createAndRosterPlayers(teamId, seasonId, payload);
-    if (createdIds !== null) {
-      if (createdIds.length > 0 && onPlayersCreated) {
-        await onPlayersCreated(createdIds);
-      }
-      handleClose();
-    }
-    setIsSubmitting(false);
-  });
 
   const handleCreateAnyway = () => {
     crossTeamConfirmedRef.current = true;
@@ -345,130 +166,217 @@ const LineupCreatePlayersModal = ({
     document.getElementById('lineup-create-players-form')?.requestSubmit();
   };
 
+  const getDefaultValues = (): FormValues => ({
+    players:
+      initialJerseyNumbers && initialJerseyNumbers.length > 0
+        ? initialJerseyNumbers.map((n) => ({ ...EMPTY_ROW, jersey_number: String(n) }))
+        : [{ ...EMPTY_ROW }],
+  });
+
   return (
-    <>
-      <Modal
-        open={open}
-        title={`Create Players for ${teamName}`}
-        size="lg"
-        onClose={handleClose}
-        confirmLabel={
-          isSubmitting ? 'Saving…' : `Save ${fields.length} Player${fields.length !== 1 ? 's' : ''}`
+    <BulkCreateModal<FormValues, RowValues>
+      open={open}
+      title={`Create Players for ${teamName}`}
+      size="lg"
+      disableBackdropClose
+      onClose={handleClose}
+      formId="lineup-create-players-form"
+      createDefaultValues={getDefaultValues}
+      rowArrayName="players"
+      createRow={() => ({ ...EMPTY_ROW })}
+      columnsTemplate="4rem 1fr 1fr 1fr"
+      headerCells={[
+        { label: '#' },
+        { label: 'Position', required: true },
+        { label: 'First Name', required: true },
+        { label: 'Last Name', required: true },
+      ]}
+      addRowLabel="Add Player"
+      addRowDisabled={({ rowCount }) => rowCount >= MAX_ROSTER - existingCount}
+      addRowHint={({ rowCount }) => `${existingCount + rowCount} / ${MAX_ROSTER} players`}
+      itemLabel="player"
+      getConfirmLabel={(count, isSubmitting) =>
+        isSubmitting ? 'Saving…' : `Save ${count} Player${count !== 1 ? 's' : ''}`
+      }
+      shouldConfirmRemove={(row) => !!(row.first_name || row.last_name || row.position)}
+      getRemoveConfirmBody={() => 'This row has data. Are you sure you want to remove it?'}
+      onSubmitForm={async (data) => {
+        // ── Duplicate validation ──────────────────────────────────────────────────
+        const errors: string[] = [];
+
+        // Normalise existing roster jerseys for quick lookup.
+        // Names are intentionally not checked — players can legitimately share the
+        // same first and last name (e.g. namesakes, common names).
+        const rosterJerseys = new Set(
+          existingRoster.filter((r) => r.jersey_number != null).map((r) => r.jersey_number!),
+        );
+
+        // Track jersey numbers within the form to catch row-vs-row duplicates.
+        const formJerseys = new Set<number>();
+
+        for (const row of data.players) {
+          const jerseyNum = row.jersey_number !== '' ? Number(row.jersey_number) : null;
+
+          if (jerseyNum != null) {
+            if (rosterJerseys.has(jerseyNum)) {
+              errors.push(`Jersey #${jerseyNum} is already in use in this lineup.`);
+            } else if (formJerseys.has(jerseyNum)) {
+              errors.push(`Jersey #${jerseyNum} is listed more than once.`);
+            } else {
+              formJerseys.add(jerseyNum);
+            }
+          }
         }
-        confirmForm="lineup-create-players-form"
-        confirmDisabled={isSubmitting}
-        busy={isSubmitting}
-      >
-        <form
-          id="lineup-create-players-form"
-          onSubmit={onSubmit}
-        >
-          <div className={styles.headerRow}>
-            <span className={styles.headerCell}>#</span>
-            <span className={styles.headerCell}>Last Name</span>
-            <span className={styles.headerCell}>First Name</span>
-            <span className={styles.headerCell}>Position</span>
-            <span />
-          </div>
 
-          <div className={styles.playerList}>
-            {fields.map((field, index) => {
-              const warn = rowWarnings[index];
-              return (
-                <div
-                  key={field.id}
-                  className={styles.playerItem}
-                >
-                  <div
-                    className={styles.playerRow}
-                    ref={(el) => {
-                      rowRefs.current[index] = el;
-                    }}
-                  >
-                    <Field
-                      control={control}
-                      name={`players.${index}.jersey_number`}
-                      placeholder="—"
-                      disabled={isSubmitting}
-                      inputMode="numeric"
-                      maxLength={2}
-                      transform={(val) => val.replace(/[^0-9]/g, '').slice(0, 2)}
-                    />
-                    <Field
-                      control={control}
-                      name={`players.${index}.last_name`}
-                      required
-                      rules={{ required: true }}
-                      placeholder="Last name"
-                      disabled={isSubmitting}
-                    />
-                    <Field
-                      control={control}
-                      name={`players.${index}.first_name`}
-                      required
-                      rules={{ required: true }}
-                      placeholder="First name"
-                      disabled={isSubmitting}
-                    />
-                    <Field
-                      type="select"
-                      control={control}
-                      name={`players.${index}.position`}
-                      options={getPositionOptions(index)}
-                      required
-                      rules={{ required: true }}
-                      placeholder="Position"
-                      disabled={isSubmitting}
-                    />
-                    <button
-                      type="button"
-                      className={styles.deleteBtn}
-                      onClick={() => handleDeleteClick(index)}
-                      disabled={isSubmitting}
-                      aria-label="Remove player"
-                      style={{ visibility: fields.length === 1 ? 'hidden' : undefined }}
-                    >
-                      <Icon
-                        name="delete"
-                        size="1em"
-                      />
-                    </button>
-                  </div>
-                  {(warn?.name || warn?.jersey) && (
-                    <div className={styles.rowWarnings}>
-                      {warn.name && (
-                        <p className={styles.rowWarning}>
-                          <Icon
-                            name="warning"
-                            size="0.85em"
-                          />
-                          {warn.name}
-                        </p>
-                      )}
-                      {warn.jersey && (
-                        <p className={styles.rowWarning}>
-                          <Icon
-                            name="warning"
-                            size="0.85em"
-                          />
-                          {warn.jersey}
-                        </p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+        if (errors.length > 0) {
+          setDuplicateErrors(errors);
+          return false;
+        }
+        setDuplicateErrors([]);
 
-          <AddRowBar
-            label="Add Player"
-            onClick={() => append({ ...EMPTY_ROW })}
-            disabled={isSubmitting || !canAddMore}
-            hint={`${existingCount + fields.length} / ${MAX_ROSTER} players`}
-          />
+        // ── Cross-team duplicate check (soft warning, bypass-able) ───────────────
+        if (!crossTeamConfirmedRef.current) {
+          try {
+            const { data: allPlayers } = await axios.get<
+              Array<{
+                first_name: string;
+                last_name: string;
+                team_id?: string | null;
+                team_name?: string | null;
+              }>
+            >(`${API}/admin/players`, {
+              headers: authHeaders(),
+              params: { league_id: leagueId, season_id: seasonId },
+            });
 
-          {isSubmitted && errors.players && (
+            // Only check names against other teams — jersey numbers can change on trade,
+            // and players on this team are already covered by the inline roster warnings.
+            const otherTeamPlayers = allPlayers.filter((p) => p.team_id !== teamId);
+
+            const formNameKeys = new Set(
+              data.players.map(
+                (r) => `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
+              ),
+            );
+            const warnings: string[] = [];
+            for (const p of otherTeamPlayers) {
+              const key = `${p.first_name.trim().toLowerCase()} ${p.last_name.trim().toLowerCase()}`;
+              if (formNameKeys.has(key)) {
+                const formRow = data.players.find(
+                  (r) =>
+                    `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}` ===
+                    key,
+                )!;
+                const teamLabel = p.team_name ?? 'another team';
+                warnings.push(
+                  `"${formRow.first_name.trim()} ${formRow.last_name.trim()}" already exists on ${teamLabel}.`,
+                );
+                formNameKeys.delete(key);
+              }
+            }
+            if (warnings.length > 0) {
+              setCrossTeamWarnings(warnings);
+              return false;
+            }
+          } catch {
+            // Non-fatal — proceed without the cross-team check if the fetch fails
+          }
+        }
+        setCrossTeamWarnings([]);
+
+        const payload = data.players.map((row) => ({
+          first_name: row.first_name,
+          last_name: row.last_name,
+          position: row.position as PlayerPosition,
+          jersey_number: row.jersey_number !== '' ? Number(row.jersey_number) : null,
+        }));
+        const createdIds = await createAndRosterPlayers(teamId, seasonId, payload);
+        if (createdIds === null) return false;
+        if (createdIds.length > 0 && onPlayersCreated) {
+          await onPlayersCreated(createdIds);
+        }
+        return true;
+      }}
+      renderRow={({ index, control, rows, isSubmitting, autoFocus, deleteButton }) => {
+        const goaliesInForm = rows.filter((p) => p?.position === 'G').length;
+        const goalieCapReached = existingGoalieCount + goaliesInForm >= MAX_GOALIES;
+        const rowIsGoalie = rows[index]?.position === 'G';
+        const positionOptions =
+          goalieCapReached && !rowIsGoalie
+            ? POSITION_OPTIONS.filter((o) => o.value !== 'G')
+            : POSITION_OPTIONS;
+        const warn = buildRowWarnings(rows, existingRoster)[index];
+
+        return (
+          <>
+            <Field
+              control={control}
+              name={`players.${index}.jersey_number`}
+              placeholder="—"
+              disabled={isSubmitting}
+              autoFocus={autoFocus}
+              inputMode="numeric"
+              maxLength={2}
+              transform={(val) => val.replace(/[^0-9]/g, '').slice(0, 2)}
+            />
+            <Field
+              type="select"
+              control={control}
+              name={`players.${index}.position`}
+              options={positionOptions}
+              required
+              rules={{ required: true }}
+              placeholder="Position"
+              disabled={isSubmitting}
+            />
+            <Field
+              control={control}
+              name={`players.${index}.first_name`}
+              required
+              rules={{ required: true }}
+              placeholder="First name"
+              disabled={isSubmitting}
+            />
+            <Field
+              control={control}
+              name={`players.${index}.last_name`}
+              required
+              rules={{ required: true }}
+              placeholder="Last name"
+              disabled={isSubmitting}
+            />
+            {deleteButton}
+            {(warn?.name || warn?.jersey) && (
+              <div
+                className={styles.rowWarnings}
+                style={{ gridColumn: '1 / -1' }}
+              >
+                {warn.name && (
+                  <p className={styles.rowWarning}>
+                    <Icon
+                      name="warning"
+                      size="0.85em"
+                    />
+                    {warn.name}
+                  </p>
+                )}
+                {warn.jersey && (
+                  <p className={styles.rowWarning}>
+                    <Icon
+                      name="warning"
+                      size="0.85em"
+                    />
+                    {warn.jersey}
+                  </p>
+                )}
+              </div>
+            )}
+          </>
+        );
+      }}
+      renderAfterRows={({ formState }) => (
+        <>
+          {formState.isSubmitted && formState.errors.players && (
             <p className={styles.formError}>Please fill in all required fields before saving.</p>
           )}
           {duplicateErrors.length > 0 && (
@@ -508,23 +416,9 @@ const LineupCreatePlayersModal = ({
               </div>
             </div>
           )}
-        </form>
-      </Modal>
-
-      <ConfirmModal
-        open={confirmRemoveIndex !== null}
-        title="Remove player?"
-        body="This row has data. Are you sure you want to remove it?"
-        confirmLabel="Remove"
-        onConfirm={() => {
-          if (confirmRemoveIndex !== null) {
-            remove(confirmRemoveIndex);
-            setConfirmRemoveIndex(null);
-          }
-        }}
-        onCancel={() => setConfirmRemoveIndex(null)}
-      />
-    </>
+        </>
+      )}
+    />
   );
 };
 

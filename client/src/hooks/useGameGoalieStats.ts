@@ -30,8 +30,41 @@ export interface GoalieSwitchData {
   goalie_id: string;
   team_id: string;
   entered_period: string;
-  /** MM:SS timestamp within the period when the sub occurred. */
-  sub_time?: string | null;
+  /** MM:SS timestamp within the entered period when the new goalie entered. */
+  entered_time?: string | null;
+  /**
+   * Close the team's currently-open stint before opening the new one.
+   * - true → close it at the new entered_period / entered_time.
+   * - object → close at an explicit point (must be ≤ new entered point).
+   */
+  close_previous?: boolean | { exited_period: string; exited_time?: string | null };
+}
+
+export interface UpdateGoalieStintData {
+  goalie_id?: string;
+  team_id?: string;
+  entered_period?: string;
+  entered_time?: string | null;
+  exited_period?: string | null;
+  exited_time?: string | null;
+  shots_against?: number;
+  /** Override GA for this stint. null removes the override (reverts to goal-table derivation). */
+  goals_against?: number | null;
+}
+
+export interface GoalieStintRecord {
+  id: string;
+  stint_ord: number;
+  entered_period: string;
+  entered_time: string | null;
+  exited_period: string | null;
+  exited_time: string | null;
+  shots_against: number;
+  /** Resolved GA: override if set, otherwise derived from goals table for this stint window. */
+  goals_against: number;
+  /** Raw stored override (null = no override → derived). */
+  goals_against_override: number | null;
+  saves: number;
 }
 
 export interface GoalieStatRecord {
@@ -45,6 +78,8 @@ export interface GoalieStatRecord {
   entered_period: string | null;
   sub_time: string | null;
   created_at: string;
+  /** Per-stint detail (Phase 2+). One entry per stint; aggregated fields above SUM across these. */
+  stints: GoalieStintRecord[];
   goalie_first_name: string;
   goalie_last_name: string;
   goalie_photo: string | null;
@@ -101,12 +136,13 @@ const useGameGoalieStats = (gameId: string | undefined) => {
     }
   };
 
+  // Phase 3+: switch → POST /goalie-stints (with optional close_previous)
   const switchGoalie = async (data: GoalieSwitchData): Promise<GoalieStatRecord[] | null> => {
     if (!gameId) return null;
     setBusy(data.goalie_id);
     try {
       const { data: rows } = await axios.post<GoalieStatRecord[]>(
-        `${API}/admin/games/${gameId}/goalie-stats/switch`,
+        `${API}/admin/games/${gameId}/goalie-stints`,
         data,
         { headers: authHeaders() },
       );
@@ -115,6 +151,46 @@ const useGameGoalieStats = (gameId: string | undefined) => {
     } catch (err) {
       toast.error(apiError(err, 'Failed to record goalie switch'));
       return null;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const updateGoalieStint = async (
+    stintId: string,
+    data: UpdateGoalieStintData,
+  ): Promise<GoalieStatRecord[] | null> => {
+    if (!gameId) return null;
+    setBusy(stintId);
+    try {
+      const { data: rows } = await axios.put<GoalieStatRecord[]>(
+        `${API}/admin/games/${gameId}/goalie-stints/${stintId}`,
+        data,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey });
+      return rows;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update goalie stint'));
+      return null;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const removeGoalieStint = async (stintId: string): Promise<boolean> => {
+    if (!gameId) return false;
+    setBusy(stintId);
+    try {
+      await axios.delete(
+        `${API}/admin/games/${gameId}/goalie-stints/${stintId}`,
+        { headers: authHeaders() },
+      );
+      await queryClient.invalidateQueries({ queryKey });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to remove goalie stint'));
+      return false;
     } finally {
       setBusy(null);
     }
@@ -138,7 +214,11 @@ const useGameGoalieStats = (gameId: string | undefined) => {
     }
   };
 
-  return { goalieStats, loading, busy, upsertGoalieStat, switchGoalie, removeGoalieStat };
+  return {
+    goalieStats, loading, busy,
+    upsertGoalieStat, switchGoalie, removeGoalieStat,
+    updateGoalieStint, removeGoalieStint,
+  };
 };
 
 export default useGameGoalieStats;

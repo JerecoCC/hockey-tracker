@@ -1,24 +1,37 @@
-import { type ChangeEvent, useEffect, useRef, useState } from 'react';
+import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
 import Button from '@/components/Button/Button';
+import Checkbox from '@/components/Checkbox/Checkbox';
+import DatePicker from '@/components/DatePicker/DatePicker';
+import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
+import Select, { type SelectOption } from '@/components/Select/Select';
 import type { GameRecord } from '@/hooks/useGames';
+import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
+import useTeams, { type TeamRecord } from '@/hooks/useTeams';
 import styles from './ScoreImageModal.module.scss';
+
+const API = import.meta.env.VITE_API_URL || '/api';
+const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// Instagram Stories: 1080 × 1920  (9:16)
-const W = 1080;
-const H = 1920;
+// Instagram Stories – Samsung S25 Ultra: 1440 × 2560  (9:16)
+// Scale factor 4/3 vs original 1080 × 1920 layout
+const W = 1440;
+const H = 2560;
 
 // Section Y boundaries
-const HERO_H = 980;
+const HERO_H = 1307;
 const SEP_Y = HERO_H;
-const SEP_H = 92;
+const SEP_H = 123;
 const SCORE_Y = SEP_Y + SEP_H;
-const SCORE_H = 520;
-const BOT_Y = SCORE_Y + SCORE_H; // 1592
-const BOT_H = H - BOT_Y; // 328
+const SCORE_H = 693;
+const BOT_Y = SCORE_Y + SCORE_H; // 2123
+const BOT_H = H - BOT_Y; // 437
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
@@ -95,15 +108,46 @@ function drawLogo(
   ctx.restore();
 }
 
+// ── Minimal game shape required by the canvas renderer ────────────────────────
+
+interface DrawTeam {
+  id: string;
+  name: string;
+  code: string;
+  logo: string | null;
+  primary_color: string;
+  secondary_color: string;
+  text_color: string;
+}
+
+interface DrawGameType {
+  away_team: DrawTeam;
+  home_team: DrawTeam;
+  league_name?: string | null;
+  season_name?: string | null;
+  game_type?: string | null;
+  series_games_to_win?: number | null;
+  series_home_wins?: number | null;
+  series_away_wins?: number | null;
+  series_home_team_id?: string | null;
+  game_number_in_series?: number | null;
+  playoff_round?: number | null;
+  playoff_round_names?: Record<number, string> | null;
+  scheduled_at?: string | null;
+}
+
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
   open: boolean;
-  game: GameRecord;
-  liveAwayScore: number;
-  liveHomeScore: number;
-  overtimeSuffix: string;
+  /** When omitted the modal renders as a standalone graphic generator (hero + form overlays only). */
+  game?: GameRecord;
+  liveAwayScore?: number;
+  liveHomeScore?: number;
+  overtimeSuffix?: string;
   onClose: () => void;
+  /** When true, renders the headline/caption/toggle form below the upload area. */
+  showForm?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -115,6 +159,7 @@ const ScoreImageModal = ({
   liveHomeScore,
   overtimeSuffix,
   onClose,
+  showForm = false,
 }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -129,6 +174,126 @@ const ScoreImageModal = ({
   const [cropY, setCropY] = useState(50);
   const [cropZoom, setCropZoom] = useState(1);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Form fields — customize what appears in the generated image
+  const [headline, setHeadline] = useState('');
+  const [caption, setCaption] = useState('');
+  const [showDate, setShowDate] = useState(true);
+  const [showLeagueSeason, setShowLeagueSeason] = useState(true);
+
+  // ── Game-data form state (standalone / showForm mode only) ────────────────
+  const [formLeagueId, setFormLeagueId] = useState('');
+  const [formSeasonId, setFormSeasonId] = useState('');
+  const [formAwayTeamId, setFormAwayTeamId] = useState('');
+  const [formHomeTeamId, setFormHomeTeamId] = useState('');
+  const [formGameDate, setFormGameDate] = useState('');
+  const [formIsPlayoff, setFormIsPlayoff] = useState(false);
+  const [formPlayoffRound, setFormPlayoffRound] = useState('');
+
+  // Number inputs managed via react-hook-form so we can use the Field component
+  const {
+    control: numControl,
+    watch: watchNums,
+    reset: resetNums,
+  } = useForm({
+    defaultValues: { awayScore: 0, homeScore: 0, playoffGameNum: 1, awayWins: 0, homeWins: 0 },
+  });
+  const numVals = watchNums();
+
+  const isStandaloneForm = showForm && !game;
+
+  // Leagues + teams come from existing hooks (data cached by UserDashboard)
+  const { leagues: allLeagues } = useLeagues();
+  const { teams: allTeams } = useTeams();
+
+  // Seasons filtered by selected league — fetched via the user seasons endpoint
+  const { data: formSeasons = [] } = useQuery<
+    {
+      id: string;
+      name: string;
+      best_of_playoff: number | null;
+      league_best_of_playoff: number;
+    }[]
+  >({
+    queryKey: ['user-form-seasons', formLeagueId],
+    queryFn: async () => {
+      const { data } = await axios.get(`${API}/user/seasons`, {
+        headers: authHeaders(),
+        params: { league_id: formLeagueId },
+      });
+      return data;
+    },
+    enabled: isStandaloneForm && !!formLeagueId,
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Derived selections
+  const formLeague = (allLeagues as LeagueRecord[]).find((l) => l.id === formLeagueId) ?? null;
+  const formSeason = formSeasons.find((s) => s.id === formSeasonId) ?? null;
+
+  // Effective wins-needed: season override → league default → hard fallback 4 (best-of-7).
+  // Guard all paths against undefined/NaN so the canvas dot loop always receives a valid integer.
+  const formGamesToWin = (() => {
+    const bestOf =
+      formSeason?.best_of_playoff ??
+      formSeason?.league_best_of_playoff ??
+      formLeague?.best_of_playoff;
+    return bestOf ? Math.ceil(bestOf / 2) : 4;
+  })();
+  const formTeams = formLeagueId
+    ? (allTeams as TeamRecord[]).filter((t) => t.league_id === formLeagueId)
+    : (allTeams as TeamRecord[]);
+  const formAwayTeam = formTeams.find((t) => t.id === formAwayTeamId) ?? null;
+  const formHomeTeam = formTeams.find((t) => t.id === formHomeTeamId) ?? null;
+
+  // Synthetic game built from form data; null until both teams are selected
+  const synthGame = useMemo((): DrawGameType | null => {
+    if (!isStandaloneForm || !formAwayTeam || !formHomeTeam) return null;
+    return {
+      away_team: {
+        id: formAwayTeam.id,
+        name: formAwayTeam.name,
+        code: formAwayTeam.code,
+        logo: formAwayTeam.logo,
+        primary_color: formAwayTeam.primary_color,
+        secondary_color: formAwayTeam.secondary_color,
+        text_color: formAwayTeam.text_color,
+      },
+      home_team: {
+        id: formHomeTeam.id,
+        name: formHomeTeam.name,
+        code: formHomeTeam.code,
+        logo: formHomeTeam.logo,
+        primary_color: formHomeTeam.primary_color,
+        secondary_color: formHomeTeam.secondary_color,
+        text_color: formHomeTeam.text_color,
+      },
+      league_name: formLeague?.name ?? null,
+      season_name: formSeason?.name ?? null,
+      game_type: formIsPlayoff ? 'playoff' : 'regular',
+      series_games_to_win: formIsPlayoff ? formGamesToWin : null,
+      series_home_wins: formIsPlayoff ? Number(numVals.homeWins) : null,
+      series_away_wins: formIsPlayoff ? Number(numVals.awayWins) : null,
+      series_home_team_id: formIsPlayoff ? formHomeTeam.id : null,
+      game_number_in_series: formIsPlayoff ? Number(numVals.playoffGameNum) : null,
+      playoff_round: formIsPlayoff && formPlayoffRound ? 1 : null,
+      playoff_round_names: formIsPlayoff && formPlayoffRound ? { 1: formPlayoffRound } : null,
+      scheduled_at: formGameDate ? `${formGameDate}T00:00:00` : null,
+    };
+  }, [
+    isStandaloneForm,
+    formAwayTeam,
+    formHomeTeam,
+    formLeague,
+    formSeason,
+    formIsPlayoff,
+    formGamesToWin,
+    numVals.homeWins,
+    numVals.awayWins,
+    numVals.playoffGameNum,
+    formPlayoffRound,
+    formGameDate,
+  ]);
 
   // Stable drag snapshot (avoids stale-closure issues with pointer events)
   const dragRef = useRef<{
@@ -146,7 +311,7 @@ const ScoreImageModal = ({
     setCropZoom(1);
   };
 
-  // Clear hero image + crop whenever the modal closes
+  // Clear hero image, crop, and form fields whenever the modal closes
   useEffect(() => {
     if (!open) {
       setHeroFile(null);
@@ -156,12 +321,31 @@ const ScoreImageModal = ({
       });
       if (fileInputRef.current) fileInputRef.current.value = '';
       resetCrop();
+      setHeadline('');
+      setCaption('');
+      setShowDate(true);
+      setShowLeagueSeason(true);
+      // Game-data form fields
+      setFormLeagueId('');
+      setFormSeasonId('');
+      setFormAwayTeamId('');
+      setFormHomeTeamId('');
+      setFormGameDate('');
+      setFormIsPlayoff(false);
+      setFormPlayoffRound('');
+      resetNums();
     }
   }, [open]);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
+    applyImageFile(file);
+  };
+
+  // ── Clipboard paste support ───────────────────────────────────────────────────
+
+  const applyImageFile = (file: File) => {
     setHeroPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
@@ -169,6 +353,26 @@ const ScoreImageModal = ({
     setHeroFile(file);
     resetCrop();
   };
+
+  useEffect(() => {
+    if (!open) return;
+    const handlePaste = (e: ClipboardEvent) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of Array.from(items)) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            applyImageFile(file);
+            e.preventDefault();
+          }
+          break;
+        }
+      }
+    };
+    document.addEventListener('paste', handlePaste);
+    return () => document.removeEventListener('paste', handlePaste);
+  }, [open]);
 
   const handleClear = () => {
     setHeroPreviewUrl((prev) => {
@@ -219,16 +423,24 @@ const ScoreImageModal = ({
 
     setGenerating(true);
     try {
+      // Resolve the effective game (prop takes priority; fall back to synth game from form)
+      const drawGame = (game ?? synthGame) as DrawGameType | null;
+      const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
+      const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
+      const drawOvertimeSuffix = overtimeSuffix ?? '';
+
       const [awayImg, homeImg, heroImg] = await Promise.all([
-        game.away_team.logo ? loadImage(game.away_team.logo) : Promise.resolve(null),
-        game.home_team.logo ? loadImage(game.home_team.logo) : Promise.resolve(null),
+        drawGame?.away_team.logo ? loadImage(drawGame.away_team.logo) : Promise.resolve(null),
+        drawGame?.home_team.logo ? loadImage(drawGame.home_team.logo) : Promise.resolve(null),
         heroFile ? loadLocalImage(heroFile) : Promise.resolve(null),
       ]);
 
-      const awayWon = liveAwayScore > liveHomeScore;
-      const homeWon = liveHomeScore > liveAwayScore;
-      const awayPrimary = game.away_team.primary_color;
-      const homePrimary = game.home_team.primary_color;
+      const away = drawAwayScore;
+      const home = drawHomeScore;
+      const awayWon = away > home;
+      const homeWon = home > away;
+      const awayPrimary = drawGame?.away_team.primary_color ?? '#334155';
+      const homePrimary = drawGame?.home_team.primary_color ?? '#334155';
 
       // ════════════════════════════════════════════════════════════════════════
       // SECTION 1 — HERO  (y 0 → HERO_H)
@@ -254,22 +466,24 @@ const ScoreImageModal = ({
         // Dark overlay so text stays legible
         ctx.fillStyle = 'rgba(0,0,0,0.45)';
         ctx.fillRect(0, 0, W, HERO_H);
-        // Subtle team-color tints on each side
-        const lh1 = ctx.createLinearGradient(0, 0, W * 0.6, 0);
-        lh1.addColorStop(0, hexToRgba(awayPrimary, 0.3));
-        lh1.addColorStop(1, hexToRgba(awayPrimary, 0));
-        ctx.fillStyle = lh1;
-        ctx.fillRect(0, 0, W * 0.6, HERO_H);
-        const lh2 = ctx.createLinearGradient(W, 0, W * 0.4, 0);
-        lh2.addColorStop(0, hexToRgba(homePrimary, 0.3));
-        lh2.addColorStop(1, hexToRgba(homePrimary, 0));
-        ctx.fillStyle = lh2;
-        ctx.fillRect(W * 0.4, 0, W * 0.6, HERO_H);
-      } else {
+        // Subtle team-color tints on each side (only when game is available)
+        if (drawGame) {
+          const lh1 = ctx.createLinearGradient(0, 0, W * 0.6, 0);
+          lh1.addColorStop(0, hexToRgba(awayPrimary, 0.3));
+          lh1.addColorStop(1, hexToRgba(awayPrimary, 0));
+          ctx.fillStyle = lh1;
+          ctx.fillRect(0, 0, W * 0.6, HERO_H);
+          const lh2 = ctx.createLinearGradient(W, 0, W * 0.4, 0);
+          lh2.addColorStop(0, hexToRgba(homePrimary, 0.3));
+          lh2.addColorStop(1, hexToRgba(homePrimary, 0));
+          ctx.fillStyle = lh2;
+          ctx.fillRect(W * 0.4, 0, W * 0.6, HERO_H);
+        }
+      } else if (drawGame) {
         // Subtle horizontal scan-lines (ice texture)
         ctx.strokeStyle = 'rgba(255,255,255,0.025)';
         ctx.lineWidth = 1;
-        for (let y = 10; y < HERO_H; y += 22) {
+        for (let y = 13; y < HERO_H; y += 29) {
           ctx.beginPath();
           ctx.moveTo(0, y);
           ctx.lineTo(W, y);
@@ -295,10 +509,10 @@ const ScoreImageModal = ({
           awayImg,
           W * 0.25,
           HERO_H * 0.5,
-          400,
+          533,
           awayPrimary,
-          game.away_team.text_color,
-          game.away_team.code,
+          drawGame.away_team.text_color,
+          drawGame.away_team.code,
           0.13,
         );
         drawLogo(
@@ -306,183 +520,294 @@ const ScoreImageModal = ({
           homeImg,
           W * 0.75,
           HERO_H * 0.5,
-          400,
+          533,
           homePrimary,
-          game.home_team.text_color,
-          game.home_team.code,
+          drawGame.home_team.text_color,
+          drawGame.home_team.code,
           0.13,
         );
       }
 
       // League + season pill at top
-      const leagueLine = [game.league_name, game.season_name].filter(Boolean).join('  ·  ');
-      if (leagueLine) {
-        ctx.font = '700 28px "Inter",system-ui,sans-serif';
+      const leagueLine = drawGame
+        ? [drawGame.league_name, drawGame.season_name].filter(Boolean).join('  ·  ')
+        : '';
+      if (showLeagueSeason && leagueLine) {
+        ctx.font = '700 37px "Inter",system-ui,sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         const lm = ctx.measureText(leagueLine.toUpperCase());
-        const lpW = lm.width + 48;
-        const lpH = 52;
+        const lpW = lm.width + 64;
+        const lpH = 69;
         ctx.fillStyle = 'rgba(255,255,255,0.08)';
         ctx.beginPath();
-        ctx.roundRect(W / 2 - lpW / 2, 44, lpW, lpH, 10);
+        ctx.roundRect(W / 2 - lpW / 2, 59, lpW, lpH, 13);
         ctx.fill();
         ctx.strokeStyle = 'rgba(255,255,255,0.12)';
         ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.roundRect(W / 2 - lpW / 2, 44, lpW, lpH, 10);
+        ctx.roundRect(W / 2 - lpW / 2, 59, lpW, lpH, 13);
         ctx.stroke();
         ctx.fillStyle = 'rgba(226,232,240,0.92)';
-        ctx.fillText(leagueLine.toUpperCase(), W / 2, 44 + lpH / 2);
+        ctx.fillText(leagueLine.toUpperCase(), W / 2, 59 + lpH / 2);
       }
 
-      // "VS" ghost text centred in hero
-      ctx.font = '900 110px "Inter",system-ui,sans-serif';
-      ctx.fillStyle = 'rgba(255,255,255,0.06)';
+      // Headline / caption (user-supplied) OR "VS" ghost fallback
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('VS', W / 2, HERO_H * 0.5);
-
-      // Team names at bottom corners of hero
-      ctx.font = 'bold 34px "Inter",system-ui,sans-serif';
-      ctx.textBaseline = 'bottom';
-      ctx.fillStyle = 'rgba(248,250,252,0.95)';
-      ctx.textAlign = 'left';
-      ctx.fillText(game.away_team.name, 52, HERO_H - 44);
-      ctx.textAlign = 'right';
-      ctx.fillText(game.home_team.name, W - 52, HERO_H - 44);
-
-      // Bottom split color bar
-      ctx.fillStyle = awayPrimary;
-      ctx.fillRect(0, HERO_H - 8, W / 2, 8);
-      ctx.fillStyle = homePrimary;
-      ctx.fillRect(W / 2, HERO_H - 8, W / 2, 8);
-
-      // ════════════════════════════════════════════════════════════════════════
-      // SECTION 2 — DIVIDER  (SEP_Y → SEP_Y + SEP_H)
-      // ════════════════════════════════════════════════════════════════════════
-      ctx.fillStyle = '#111827';
-      ctx.fillRect(0, SEP_Y, W, SEP_H);
-
-      const finalLabel = `FINAL SCORE${overtimeSuffix ? ` (${overtimeSuffix.replace('/', '')})` : ''}`;
-      ctx.font = '700 30px "Inter",system-ui,sans-serif';
-      ctx.fillStyle = '#f8fafc';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(finalLabel, W / 2, SEP_Y + SEP_H / 2);
-
-      // ════════════════════════════════════════════════════════════════════════
-      // SECTION 3 — SCORE  (SCORE_Y → SCORE_Y + SCORE_H)
-      // ════════════════════════════════════════════════════════════════════════
-      const scoreMidY = SCORE_Y + SCORE_H / 2;
-
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(0, SCORE_Y, W, SCORE_H);
-
-      // Team color panels behind scores
-      const lgs1 = ctx.createLinearGradient(0, 0, W * 0.44, 0);
-      lgs1.addColorStop(0, hexToRgba(awayPrimary, 0.55));
-      lgs1.addColorStop(1, hexToRgba(awayPrimary, 0));
-      ctx.fillStyle = lgs1;
-      ctx.fillRect(0, SCORE_Y, W * 0.44, SCORE_H);
-
-      const lgs2 = ctx.createLinearGradient(W, 0, W * 0.56, 0);
-      lgs2.addColorStop(0, hexToRgba(homePrimary, 0.55));
-      lgs2.addColorStop(1, hexToRgba(homePrimary, 0));
-      ctx.fillStyle = lgs2;
-      ctx.fillRect(W * 0.56, SCORE_Y, W * 0.44, SCORE_H);
-
-      // Center ice-circle motif
-      ctx.strokeStyle = 'rgba(255,255,255,0.14)';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(W / 2, scoreMidY - 14, 66, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.fillStyle = 'rgba(255,255,255,0.22)';
-      ctx.beginPath();
-      ctx.arc(W / 2, scoreMidY - 14, 10, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Team logos
-      const logoSize = 165;
-      const awayLogoX = W * 0.15;
-      const homeLogoX = W * 0.85;
-      drawLogo(
-        ctx,
-        awayImg,
-        awayLogoX,
-        scoreMidY - 18,
-        logoSize,
-        awayPrimary,
-        game.away_team.text_color,
-        game.away_team.code,
-      );
-      drawLogo(
-        ctx,
-        homeImg,
-        homeLogoX,
-        scoreMidY - 18,
-        logoSize,
-        homePrimary,
-        game.home_team.text_color,
-        game.home_team.code,
-      );
-
-      // Team codes beneath logos
-      ctx.font = '600 22px "Inter",system-ui,sans-serif';
-      ctx.textBaseline = 'top';
-      ctx.textAlign = 'center';
-      ctx.fillStyle = 'rgba(148,163,184,0.9)';
-      ctx.fillText(game.away_team.code, awayLogoX, scoreMidY + logoSize / 2 - 6);
-      ctx.fillText(game.home_team.code, homeLogoX, scoreMidY + logoSize / 2 - 6);
-
-      // Score numbers
-      ctx.textBaseline = 'middle';
-      ctx.font = 'bold 200px "Inter",system-ui,sans-serif';
-      ctx.fillStyle = awayWon ? '#f8fafc' : '#475569';
-      ctx.textAlign = 'right';
-      ctx.fillText(String(liveAwayScore), W / 2 - 86, scoreMidY - 18);
-      ctx.fillStyle = homeWon ? '#f8fafc' : '#475569';
-      ctx.textAlign = 'left';
-      ctx.fillText(String(liveHomeScore), W / 2 + 86, scoreMidY - 18);
-
-      // ════════════════════════════════════════════════════════════════════════
-      // SECTION 4 — BOTTOM INFO  (BOT_Y → H)
-      // ════════════════════════════════════════════════════════════════════════
-      ctx.fillStyle = '#0b1120';
-      ctx.fillRect(0, BOT_Y, W, BOT_H);
-
-      // Top divider line
-      ctx.strokeStyle = 'rgba(255,255,255,0.07)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(60, BOT_Y + 1);
-      ctx.lineTo(W - 60, BOT_Y + 1);
-      ctx.stroke();
-
-      // Date
-      if (game.scheduled_at) {
-        ctx.font = '500 32px "Inter",system-ui,sans-serif';
-        ctx.fillStyle = 'rgba(226,232,240,0.88)';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(DATE_FMT.format(new Date(game.scheduled_at)), W / 2, BOT_Y + 52);
+      if (headline) {
+        const headlineY = caption ? HERO_H * 0.44 : HERO_H * 0.5;
+        ctx.shadowColor = 'rgba(0,0,0,0.65)';
+        ctx.shadowBlur = 32;
+        ctx.font = 'bold 108px "Inter",system-ui,sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.97)';
+        ctx.fillText(headline.toUpperCase(), W / 2, headlineY);
+        if (caption) {
+          ctx.font = '500 58px "Inter",system-ui,sans-serif';
+          ctx.fillStyle = 'rgba(226,232,240,0.88)';
+          ctx.shadowBlur = 20;
+          ctx.fillText(caption, W / 2, HERO_H * 0.58);
+        }
+        ctx.shadowBlur = 0;
+      } else {
+        ctx.font = '900 147px "Inter",system-ui,sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.06)';
+        ctx.fillText('VS', W / 2, HERO_H * 0.5);
       }
 
-      // League · Season at bottom
-      if (leagueLine) {
-        ctx.font = '500 24px "Inter",system-ui,sans-serif';
-        ctx.fillStyle = 'rgba(100,116,139,0.85)';
-        ctx.textAlign = 'center';
+      // Team names at bottom corners of hero (only when game is available)
+      if (drawGame) {
+        ctx.font = 'bold 45px "Inter",system-ui,sans-serif';
         ctx.textBaseline = 'bottom';
-        ctx.fillText(leagueLine, W / 2, BOT_Y + BOT_H - 52);
+        ctx.fillStyle = 'rgba(248,250,252,0.95)';
+        ctx.textAlign = 'left';
+        ctx.fillText(drawGame.away_team.name, 69, HERO_H - 59);
+        ctx.textAlign = 'right';
+        ctx.fillText(drawGame.home_team.name, W - 69, HERO_H - 59);
+
+        // Bottom split color bar
+        ctx.fillStyle = awayPrimary;
+        ctx.fillRect(0, HERO_H - 11, W / 2, 11);
+        ctx.fillStyle = homePrimary;
+        ctx.fillRect(W / 2, HERO_H - 11, W / 2, 11);
       }
+
+      // ════════════════════════════════════════════════════════════════════════
+      // SECTIONS 2-4 — only rendered when game data is available
+      // ════════════════════════════════════════════════════════════════════════
+      if (drawGame) {
+        // ════════════════════════════════════════════════════════════════════════
+        // SECTION 2 — DIVIDER  (SEP_Y → SEP_Y + SEP_H)
+        // ════════════════════════════════════════════════════════════════════════
+        ctx.fillStyle = '#111827';
+        ctx.fillRect(0, SEP_Y, W, SEP_H);
+
+        const finalLabel = `FINAL SCORE${drawOvertimeSuffix ? ` (${drawOvertimeSuffix.replace('/', '')})` : ''}`;
+        ctx.font = '700 40px "Inter",system-ui,sans-serif';
+        ctx.fillStyle = '#f8fafc';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(finalLabel, W / 2, SEP_Y + SEP_H / 2);
+
+        // ════════════════════════════════════════════════════════════════════════
+        // SECTION 3 — SCORE  (SCORE_Y → SCORE_Y + SCORE_H)
+        // ════════════════════════════════════════════════════════════════════════
+        const scoreMidY = SCORE_Y + SCORE_H / 2;
+
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(0, SCORE_Y, W, SCORE_H);
+
+        // Team color panels behind scores
+        const lgs1 = ctx.createLinearGradient(0, 0, W * 0.44, 0);
+        lgs1.addColorStop(0, hexToRgba(awayPrimary, 0.55));
+        lgs1.addColorStop(1, hexToRgba(awayPrimary, 0));
+        ctx.fillStyle = lgs1;
+        ctx.fillRect(0, SCORE_Y, W * 0.44, SCORE_H);
+
+        const lgs2 = ctx.createLinearGradient(W, 0, W * 0.56, 0);
+        lgs2.addColorStop(0, hexToRgba(homePrimary, 0.55));
+        lgs2.addColorStop(1, hexToRgba(homePrimary, 0));
+        ctx.fillStyle = lgs2;
+        ctx.fillRect(W * 0.56, SCORE_Y, W * 0.44, SCORE_H);
+
+        // Center ice-circle motif
+        ctx.strokeStyle = 'rgba(255,255,255,0.14)';
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(W / 2, scoreMidY - 19, 88, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,0.22)';
+        ctx.beginPath();
+        ctx.arc(W / 2, scoreMidY - 19, 13, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Team logos
+        const logoSize = 220;
+        const awayLogoX = W * 0.15;
+        const homeLogoX = W * 0.85;
+        drawLogo(
+          ctx,
+          awayImg,
+          awayLogoX,
+          scoreMidY - 24,
+          logoSize,
+          awayPrimary,
+          drawGame.away_team.text_color,
+          drawGame.away_team.code,
+        );
+        drawLogo(
+          ctx,
+          homeImg,
+          homeLogoX,
+          scoreMidY - 24,
+          logoSize,
+          homePrimary,
+          drawGame.home_team.text_color,
+          drawGame.home_team.code,
+        );
+
+        // Team codes beneath logos
+        ctx.font = '600 29px "Inter",system-ui,sans-serif';
+        ctx.textBaseline = 'top';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = 'rgba(148,163,184,0.9)';
+        ctx.fillText(drawGame.away_team.code, awayLogoX, scoreMidY + logoSize / 2 - 8);
+        ctx.fillText(drawGame.home_team.code, homeLogoX, scoreMidY + logoSize / 2 - 8);
+
+        // Series win dots (playoff only)
+        if (
+          drawGame.game_type === 'playoff' &&
+          drawGame.series_games_to_win != null &&
+          drawGame.series_home_wins != null &&
+          drawGame.series_away_wins != null
+        ) {
+          const total = drawGame.series_games_to_win;
+          const dotR = 16;
+          const dotGap = 13;
+          const dotsW = total * dotR * 2 + (total - 1) * dotGap;
+          // y position: below the team code text (code baseline ≈ scoreMidY + logoSize/2 + 35)
+          const dotCY = scoreMidY + logoSize / 2 + 64;
+
+          // Which team maps to which position on canvas
+          const awayIsSeriesHome = drawGame.away_team.id === drawGame.series_home_team_id;
+          const awayWins = awayIsSeriesHome ? drawGame.series_home_wins : drawGame.series_away_wins;
+          const homeWins = awayIsSeriesHome ? drawGame.series_away_wins : drawGame.series_home_wins;
+
+          const drawDots = (centerX: number, wins: number, isWinner: boolean) => {
+            for (let i = 0; i < total; i++) {
+              const cx = centerX - dotsW / 2 + i * (dotR * 2 + dotGap) + dotR;
+              const filled = i < wins;
+              ctx.beginPath();
+              ctx.arc(cx, dotCY, dotR, 0, Math.PI * 2);
+              if (filled) {
+                ctx.fillStyle = '#22c55e'; // green
+                ctx.fill();
+              } else {
+                ctx.strokeStyle = isWinner ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.18)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+              }
+            }
+          };
+
+          drawDots(awayLogoX, awayWins, awayWon);
+          drawDots(homeLogoX, homeWins, homeWon);
+        }
+
+        // Score numbers
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 267px "Inter",system-ui,sans-serif';
+        ctx.fillStyle = awayWon ? '#f8fafc' : '#475569';
+        ctx.textAlign = 'right';
+        ctx.fillText(String(drawAwayScore), W / 2 - 115, scoreMidY - 24);
+        ctx.fillStyle = homeWon ? '#f8fafc' : '#475569';
+        ctx.textAlign = 'left';
+        ctx.fillText(String(drawHomeScore), W / 2 + 115, scoreMidY - 24);
+
+        // ════════════════════════════════════════════════════════════════════════
+        // SECTION 4 — BOTTOM INFO  (BOT_Y → H)
+        // ════════════════════════════════════════════════════════════════════════
+        ctx.fillStyle = '#0b1120';
+        ctx.fillRect(0, BOT_Y, W, BOT_H);
+
+        // Top divider line
+        ctx.strokeStyle = 'rgba(255,255,255,0.07)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(80, BOT_Y + 1);
+        ctx.lineTo(W - 80, BOT_Y + 1);
+        ctx.stroke();
+
+        // Date
+        if (showDate && drawGame.scheduled_at) {
+          ctx.font = '500 43px "Inter",system-ui,sans-serif';
+          ctx.fillStyle = 'rgba(226,232,240,0.88)';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(DATE_FMT.format(new Date(drawGame.scheduled_at)), W / 2, BOT_Y + 69);
+        }
+
+        // Playoff indicator — only rendered for playoff games
+        if (drawGame.game_type === 'playoff') {
+          const roundLabel =
+            drawGame.playoff_round != null
+              ? (drawGame.playoff_round_names?.[drawGame.playoff_round] ??
+                `Round ${drawGame.playoff_round}`)
+              : null;
+          const gameLabel =
+            drawGame.game_number_in_series != null
+              ? `Game ${drawGame.game_number_in_series}`
+              : null;
+          const seriesLine = [roundLabel, gameLabel].filter(Boolean).join(' · ');
+
+          // "PLAYOFFS" pill
+          const pillText = 'PLAYOFFS';
+          const pillPadX = 37;
+          const pillH = 53;
+          const pillY = BOT_Y + 139;
+          ctx.font = 'bold 28px "Inter",system-ui,sans-serif';
+          const pillW = ctx.measureText(pillText).width + pillPadX * 2;
+          const pillX = W / 2 - pillW / 2;
+
+          ctx.fillStyle = 'rgba(56,189,248,0.12)';
+          ctx.beginPath();
+          ctx.roundRect(pillX, pillY, pillW, pillH, pillH / 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(56,189,248,0.45)';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgb(56,189,248)';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(pillText, W / 2, pillY + pillH / 2);
+
+          // Round · Game line below the pill
+          if (seriesLine) {
+            ctx.font = '500 40px "Inter",system-ui,sans-serif';
+            ctx.fillStyle = 'rgba(226,232,240,0.9)';
+            ctx.textBaseline = 'top';
+            ctx.fillText(seriesLine, W / 2, pillY + pillH + 19);
+          }
+        }
+
+        // League · Season at bottom
+        if (showLeagueSeason && leagueLine) {
+          ctx.font = '500 32px "Inter",system-ui,sans-serif';
+          ctx.fillStyle = 'rgba(100,116,139,0.85)';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'bottom';
+          ctx.fillText(leagueLine, W / 2, BOT_Y + BOT_H - 69);
+        }
+      } // end if (drawGame)
 
       // ── Download ────────────────────────────────────────────────────────────
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${game.away_team.code}-vs-${game.home_team.code}-final.png`;
+      a.download = drawGame
+        ? `${drawGame.away_team.code}-vs-${drawGame.home_team.code}-final.png`
+        : 'score-graphic.png';
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -520,7 +845,7 @@ const ScoreImageModal = ({
     >
       {/* Hero image upload zone */}
       <div className={styles.uploadAreaWrap}>
-        <div className={styles.uploadArea}>
+        <div className={`${styles.uploadArea}${!showForm ? ` ${styles.uploadAreaLarge}` : ''}`}>
           {heroPreviewUrl ? (
             <div
               ref={previewRef}
@@ -577,7 +902,7 @@ const ScoreImageModal = ({
               />
               <span className={styles.uploadLabelPrimary}>Upload Hero Image</span>
               <span className={styles.uploadLabelSub}>
-                Optional · used as the background of the hero section
+                Click to browse · or paste an image from clipboard
               </span>
               <input
                 ref={fileInputRef}
@@ -591,11 +916,174 @@ const ScoreImageModal = ({
         </div>
       </div>
 
+      {/* ── Image options form (user dashboard only) ── */}
+      {showForm && (
+        <div className={styles.formSection}>
+          {/* ── Game data (standalone mode) ── */}
+          {isStandaloneForm &&
+            (() => {
+              const leagueOptions: SelectOption[] = allLeagues.map((l) => ({
+                value: l.id,
+                label: l.name,
+                logo: l.logo,
+                code: l.code,
+              }));
+              const seasonOptions: SelectOption[] = formSeasons.map((s) => ({
+                value: s.id,
+                label: s.name,
+              }));
+              const teamOptions: SelectOption[] = formTeams.map((t) => ({
+                value: t.id,
+                label: t.name,
+                logo: t.logo,
+                code: t.code,
+              }));
+              return (
+                <>
+                  {/* Row: League | Season */}
+                  <div className={styles.formRow}>
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>League</label>
+                      <Select
+                        value={formLeagueId || null}
+                        options={leagueOptions}
+                        placeholder="— Select league —"
+                        onChange={(val) => {
+                          setFormLeagueId(val);
+                          setFormSeasonId('');
+                          setFormAwayTeamId('');
+                          setFormHomeTeamId('');
+                        }}
+                        searchable
+                      />
+                    </div>
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>Season</label>
+                      <Select
+                        value={formSeasonId || null}
+                        options={seasonOptions}
+                        placeholder="— Select season —"
+                        onChange={setFormSeasonId}
+                        disabled={!formLeagueId}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row: Away Team | Home Team */}
+                  <div className={styles.formRow}>
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>Away Team</label>
+                      <Select
+                        value={formAwayTeamId || null}
+                        options={teamOptions}
+                        placeholder="— Select team —"
+                        onChange={setFormAwayTeamId}
+                        disabled={!formLeagueId}
+                        searchable
+                      />
+                    </div>
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>Home Team</label>
+                      <Select
+                        value={formHomeTeamId || null}
+                        options={teamOptions}
+                        placeholder="— Select team —"
+                        onChange={setFormHomeTeamId}
+                        disabled={!formLeagueId}
+                        searchable
+                      />
+                    </div>
+                  </div>
+
+                  {/* Row: Date | Away Score | Home Score */}
+                  <div className={styles.formRow3}>
+                    <div className={styles.formField}>
+                      <label className={styles.formLabel}>Game Date</label>
+                      <DatePicker
+                        value={formGameDate}
+                        onChange={setFormGameDate}
+                        placeholder="Select date"
+                      />
+                    </div>
+                    <Field
+                      label="Away Score"
+                      type="number"
+                      control={numControl}
+                      name="awayScore"
+                      min={0}
+                    />
+                    <Field
+                      label="Home Score"
+                      type="number"
+                      control={numControl}
+                      name="homeScore"
+                      min={0}
+                    />
+                  </div>
+
+                  {/* Playoff checkbox */}
+                  <div className={styles.formCheckboxRow}>
+                    <Checkbox
+                      checked={formIsPlayoff}
+                      onChange={() => setFormIsPlayoff(!formIsPlayoff)}
+                    />
+                    <span className={styles.formCheckboxLabel}>Playoff Game</span>
+                  </div>
+
+                  {/* Playoff sub-section */}
+                  {formIsPlayoff && (
+                    <div className={styles.playoffSection}>
+                      <div className={styles.formRow}>
+                        <div className={styles.formField}>
+                          <label className={styles.formLabel}>Round</label>
+                          <input
+                            type="text"
+                            className={styles.formInput}
+                            placeholder="e.g. Quarterfinals"
+                            value={formPlayoffRound}
+                            onChange={(e) => setFormPlayoffRound(e.target.value)}
+                          />
+                        </div>
+                        <Field
+                          label="Game #"
+                          type="number"
+                          control={numControl}
+                          name="playoffGameNum"
+                          min={1}
+                          max={7}
+                        />
+                      </div>
+                      <div className={styles.formRow}>
+                        <Field
+                          label="Away Wins"
+                          type="number"
+                          control={numControl}
+                          name="awayWins"
+                          min={0}
+                          max={4}
+                        />
+                        <Field
+                          label="Home Wins"
+                          type="number"
+                          control={numControl}
+                          name="homeWins"
+                          min={0}
+                          max={4}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+        </div>
+      )}
+
       {/* Canvas is rendered off-screen; only used to produce the PNG */}
       <canvas
         ref={canvasRef}
         width={W}
-        height={H}
+        height={synthGame || game ? H : HERO_H}
         className={styles.canvas}
       />
     </Modal>

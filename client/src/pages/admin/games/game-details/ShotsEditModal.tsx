@@ -2,7 +2,13 @@ import { useState, useEffect } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
+import { type GameRosterEntry } from '@/hooks/useGameRoster';
+import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
+import { type GoalRecord } from '@/hooks/useGameGoals';
+import { type LineupEntry } from '@/hooks/useGameLineup';
+import { computeAutoSA } from './RecordShotsModal';
 import styles from './GameDetailsPage.module.scss';
 
 type ShotsEditFormValues = { periods: Array<{ away_shots: string; home_shots: string }> };
@@ -16,11 +22,29 @@ interface Props {
   open: boolean;
   game: GameRecord;
   periods: LinescorePeriod[];
+  awayRoster: GameRosterEntry[];
+  homeRoster: GameRosterEntry[];
+  goalieStats: GoalieStatRecord[];
+  goals: GoalRecord[];
+  lineup: LineupEntry[];
   onClose: () => void;
   updatePeriodShots: (period: string, home: number, away: number) => Promise<boolean | undefined>;
+  upsertGoalieStat: (data: UpsertGoalieStatData) => Promise<void>;
 }
 
-const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Props) => {
+const ShotsEditModal = ({
+  open,
+  game,
+  periods,
+  awayRoster,
+  homeRoster,
+  goalieStats,
+  goals,
+  lineup,
+  onClose,
+  updatePeriodShots,
+  upsertGoalieStat,
+}: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const { control, reset, getValues } = useForm<ShotsEditFormValues>({
     defaultValues: { periods: [] },
@@ -45,14 +69,45 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
   const handleConfirm = async () => {
     const { periods: rows } = getValues();
     setSubmitting(true);
-    for (let i = 0; i < periods.length; i++) {
+
+    // Build the complete merged period shots from form values.
+    const mergedShots = periods.map((p, i) => {
       const row = rows[i];
+      const away = parseInt(row?.away_shots || '0', 10);
+      const home = parseInt(row?.home_shots || '0', 10);
+      return {
+        period: p.id,
+        away_shots: isNaN(away) ? 0 : away,
+        home_shots: isNaN(home) ? 0 : home,
+      };
+    });
+
+    // Save all period shots first.
+    for (let i = 0; i < periods.length; i++) {
       const periodId = periods[i]?.id;
-      if (!row || !periodId) continue;
-      const away = parseInt(row.away_shots || '0', 10);
-      const home = parseInt(row.home_shots || '0', 10);
-      await updatePeriodShots(periodId, home, away);
+      const ps = mergedShots[i];
+      if (!periodId || !ps) continue;
+      await updatePeriodShots(periodId, ps.home_shots, ps.away_shots);
     }
+
+    // Recompute and upsert goalie shots-against based on the new shot totals.
+    const allRosterGoalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
+    const lineupGoalieIds = new Set(
+      lineup.filter((l) => l.position_slot === 'G').map((l) => l.player_id),
+    );
+    const goalieRosterList = allRosterGoalies.filter((g) => lineupGoalieIds.has(g.player_id));
+
+    for (const goalie of goalieRosterList) {
+      const sa = parseInt(computeAutoSA(goalie, goalieStats, game, mergedShots, goals), 10);
+      if (!isNaN(sa)) {
+        await upsertGoalieStat({
+          goalie_id: goalie.player_id,
+          team_id: goalie.team_id,
+          shots_against: sa,
+        });
+      }
+    }
+
     setSubmitting(false);
     onClose();
   };
@@ -105,20 +160,14 @@ const ShotsEditModal = ({ open, game, periods, onClose, updatePeriodShots }: Pro
             <tr key={row.key}>
               <td className={styles.tdTeam}>
                 <span className={styles.linescoreTeam}>
-                  {row.logo ? (
-                    <img
-                      src={row.logo}
-                      alt={row.code}
-                      className={styles.linescoreLogo}
-                    />
-                  ) : (
-                    <span
-                      className={styles.linescoreLogoPlaceholder}
-                      style={{ background: row.primary, color: row.text }}
-                    >
-                      {row.code?.slice(0, 1)}
-                    </span>
-                  )}
+                  <TeamLogo
+                    logo={row.logo}
+                    code={row.code}
+                    primaryColor={row.primary}
+                    textColor={row.text}
+                    size={32}
+                    shape="square"
+                  />
                   <span className={styles.linescoreCode}>{row.code}</span>
                 </span>
               </td>

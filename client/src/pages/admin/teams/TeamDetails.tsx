@@ -21,7 +21,11 @@ const TeamDetailsPage = () => {
   const [activeTab, handleTabChange] = useTabState('tab:team-details');
   const breadcrumbItems = [
     { label: 'Leagues', path: '/admin/leagues' },
-    { label: team?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
+    {
+      label: team?.league_name ?? '…',
+      shortLabel: team?.league_code ?? undefined,
+      path: `/admin/leagues/${leagueId}`,
+    },
     { label: team?.name ?? '…' },
   ];
 
@@ -62,6 +66,7 @@ const TeamDetailsPage = () => {
         tabs={[
           {
             label: 'Info',
+            icon: 'info',
             content: (
               <TeamInfoTab
                 team={team}
@@ -73,6 +78,7 @@ const TeamDetailsPage = () => {
           },
           {
             label: 'Games',
+            icon: 'sports_hockey',
             content: (
               <TeamGamesTab
                 teamId={team.id}
@@ -82,6 +88,7 @@ const TeamDetailsPage = () => {
           },
           {
             label: 'Roster',
+            icon: 'set_lineup',
             content: (
               <TeamRosterTab
                 teamId={team.id}
@@ -90,9 +97,10 @@ const TeamDetailsPage = () => {
               />
             ),
           },
-          { label: 'Prospects', content: <TeamProspectsTab /> },
+          { label: 'Prospects', icon: 'search', content: <TeamProspectsTab /> },
           {
             label: 'History',
+            icon: 'history',
             content: (
               <TeamHistoryTab
                 teamId={team.id}

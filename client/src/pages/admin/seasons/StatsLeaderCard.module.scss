@@ -22,26 +22,9 @@
   gap: $space-xs;
 }
 
-.photo {
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  object-fit: cover;
+// Adds a border ring to the PlayerAvatar in the featured slot
+.featuredAvatar {
   border: 2px solid $border;
-}
-
-.photoPH {
-  width: 110px;
-  height: 110px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 2rem;
-  font-weight: 700;
-  background: $border;
-  color: $text-dim;
-  text-transform: uppercase;
 }
 
 .name {

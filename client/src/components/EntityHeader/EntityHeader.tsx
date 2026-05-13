@@ -1,5 +1,8 @@
+import { useState } from 'react';
 import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
+import ImagePreviewModal from '../ImagePreviewModal/ImagePreviewModal';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import styles from './EntityHeader.module.scss';
 
 interface Swatch {
@@ -26,24 +29,33 @@ const EntityHeader = ({
   swatches = [],
   onEdit,
 }: Props) => {
+  const [previewOpen, setPreviewOpen] = useState(false);
+
+  const logoEl = (
+    <TeamLogo
+      logo={logo}
+      code={code}
+      primaryColor={primaryColor}
+      textColor={textColor}
+      size={80}
+      shape="square"
+    />
+  );
+
   return (
     <div className={styles.header}>
-      <div className={styles.logoWrapper}>
-        {logo ? (
-          <img
-            src={logo}
-            alt={name}
-            className={styles.logo}
-          />
-        ) : (
-          <span
-            className={styles.logoPlaceholder}
-            style={{ background: primaryColor, color: textColor }}
-          >
-            {code.slice(0, 3)}
-          </span>
-        )}
-      </div>
+      {logo ? (
+        <button
+          type="button"
+          className={styles.logoButton}
+          onClick={() => setPreviewOpen(true)}
+          aria-label={`View ${name} logo`}
+        >
+          {logoEl}
+        </button>
+      ) : (
+        logoEl
+      )}
 
       <div className={styles.nameBlock}>
         <h3 className={styles.name}>{name}</h3>
@@ -75,6 +87,13 @@ const EntityHeader = ({
           )}
         </div>
       )}
+
+      <ImagePreviewModal
+        open={previewOpen}
+        src={logo}
+        alt={name}
+        onClose={() => setPreviewOpen(false)}
+      />
     </div>
   );
 };

@@ -3,6 +3,7 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
+const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
 
 router.use(requireAdmin);
 
@@ -29,8 +30,11 @@ router.get('/', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.overtime_periods, g.shootout,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
+        ps.round AS playoff_round,
+        brs.round_names AS playoff_round_names,
         gs.period_scores,
         g.period_shots,
         -- Home team
@@ -50,8 +54,11 @@ router.get('/', async (req, res) => {
           'text_color', t_away.text_color
         ) AS away_team
       FROM games g
+      JOIN seasons s ON s.id = g.season_id
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
+      LEFT JOIN playoff_series ps ON ps.id = g.playoff_series_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -88,7 +95,11 @@ router.get('/', async (req, res) => {
                                                 OR g.away_team_id = ${team_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type   = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status      = ${status    ?? null})
-      ORDER BY g.scheduled_at DESC NULLS LAST, g.scheduled_time DESC NULLS LAST, g.created_at DESC
+      ORDER BY
+        ps.round ASC NULLS LAST,
+        g.game_number_in_series ASC NULLS LAST,
+        g.game_number ASC NULLS LAST,
+        g.scheduled_at ASC NULLS LAST, g.scheduled_time ASC NULLS LAST, g.created_at ASC
     `;
     return res.json(games);
   } catch (err) {
@@ -108,9 +119,10 @@ router.get('/playoff-series', async (req, res) => {
         ps.id, ps.season_id, ps.round, ps.series_letter,
         ps.home_team_id, ps.away_team_id,
         ps.games_to_win, ps.home_wins, ps.away_wins,
-        ps.status, ps.winner_team_id, ps.created_at,
+        ps.status, ps.winner_team_id, ps.bracket_slot_key, ps.created_at,
         ht.name AS home_team_name, ht.code AS home_team_code, ht.logo AS home_team_logo,
-        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo
+        at.name AS away_team_name, at.code AS away_team_code, at.logo AS away_team_logo,
+        sg.games
       FROM playoff_series ps
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
@@ -124,6 +136,26 @@ router.get('/playoff-series', async (req, res) => {
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) at ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'id',                   g.id,
+              'game_number_in_series', g.game_number_in_series,
+              'status',               g.status,
+              'scheduled_at',         g.scheduled_at,
+              'home_team_id',         g.home_team_id,
+              'away_team_id',         g.away_team_id,
+              'home_goals', (SELECT COUNT(*) FROM goals go WHERE go.game_id = g.id AND go.team_id = g.home_team_id),
+              'away_goals', (SELECT COUNT(*) FROM goals go WHERE go.game_id = g.id AND go.team_id = g.away_team_id)
+            )
+            ORDER BY g.game_number_in_series ASC NULLS LAST
+          ),
+          '[]'::json
+        ) AS games
+        FROM games g
+        WHERE g.playoff_series_id = ps.id
+      ) sg ON true
       WHERE (${season_id ?? null}::uuid IS NULL OR ps.season_id = ${season_id ?? null}::uuid)
       ORDER BY ps.round ASC, ps.series_letter ASC NULLS LAST, ps.created_at ASC
     `;
@@ -136,12 +168,14 @@ router.get('/playoff-series', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/games/playoff-series  – create a playoff series
+// Auto-generates all possible games using the 2-2-1-1-1 home/away pattern.
 // ---------------------------------------------------------------------------
 router.post('/playoff-series', async (req, res) => {
   const {
     season_id, round, series_letter = null,
     home_team_id, away_team_id,
-    games_to_win = 4, status = 'upcoming',
+    status = 'upcoming',
+    bracket_slot_key = null,
   } = req.body;
 
   if (!season_id || !home_team_id || !away_team_id || !round) {
@@ -152,13 +186,49 @@ router.post('/playoff-series', async (req, res) => {
   }
 
   try {
+    // Derive games_to_win from the explicit body value, or look up the season's
+    // best_of_playoff setting (falling back to the league default).
+    let games_to_win = req.body.games_to_win ? Number(req.body.games_to_win) : null;
+    if (!games_to_win) {
+      const seasonRows = await sql`
+        SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+        FROM seasons s
+        JOIN leagues l ON l.id = s.league_id
+        WHERE s.id = ${season_id}
+      `;
+      const bestOf = seasonRows[0]?.best_of ?? 7;
+      games_to_win = Math.ceil(bestOf / 2);
+    }
+
     const rows = await sql`
-      INSERT INTO playoff_series (season_id, round, series_letter, home_team_id, away_team_id, games_to_win, status)
-      VALUES (${season_id}, ${round}, ${series_letter}, ${home_team_id}, ${away_team_id}, ${games_to_win}, ${status})
+      INSERT INTO playoff_series (season_id, round, series_letter, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+      VALUES (${season_id}, ${round}, ${series_letter}, ${home_team_id}, ${away_team_id}, ${games_to_win}, ${status}, ${bracket_slot_key})
       RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
-                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
+                games_to_win, home_wins, away_wins, status, winner_team_id, bracket_slot_key, created_at
     `;
-    return res.status(201).json(rows[0]);
+    const series = rows[0];
+
+    // Auto-generate every possible game for this series.
+    // 2-2-1-1-1 home/away rotation: games 1-2 at home_team, 3-4 at away_team,
+    // then alternating one game at a time (home, away, home…).
+    const maxGames = series.games_to_win * 2 - 1;
+    for (let i = 0; i < maxGames; i++) {
+      const team1IsHome = i < 2 ? true : i < 4 ? false : i % 2 === 0;
+      await sql`
+        INSERT INTO games (season_id, home_team_id, away_team_id, game_type, status, playoff_series_id, game_number_in_series)
+        VALUES (
+          ${series.season_id},
+          ${team1IsHome ? series.home_team_id : series.away_team_id},
+          ${team1IsHome ? series.away_team_id : series.home_team_id},
+          'playoff',
+          'scheduled',
+          ${series.id},
+          ${i + 1}
+        )
+      `;
+    }
+
+    return res.status(201).json(series);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid season_id or team_id' });
     console.error('playoff series create error:', err);
@@ -184,12 +254,147 @@ router.patch('/playoff-series/:seriesId', async (req, res) => {
         games_to_win   = COALESCE(${games_to_win   ?? null}, games_to_win)
       WHERE id = ${seriesId}
       RETURNING id, season_id, round, series_letter, home_team_id, away_team_id,
-                games_to_win, home_wins, away_wins, status, winner_team_id, created_at
+                games_to_win, home_wins, away_wins, status, winner_team_id, bracket_slot_key, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Playoff series not found' });
     return res.json(rows[0]);
   } catch (err) {
     console.error('playoff series update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/playoff-series/:seriesId/start  – generate games
+// Creates all possible games for an existing series that has no games yet.
+// Used when a series was auto-advanced (shell only, no games) and the admin
+// is ready to officially start it.
+// ---------------------------------------------------------------------------
+router.post('/playoff-series/:seriesId/start', async (req, res) => {
+  const { seriesId } = req.params;
+  try {
+    const seriesRows = await sql`SELECT * FROM playoff_series WHERE id = ${seriesId}`;
+    const series = seriesRows[0];
+    if (!series) return res.status(404).json({ error: 'Playoff series not found' });
+
+    if (!series.home_team_id || !series.away_team_id) {
+      return res.status(400).json({ error: 'Both teams must be set before starting a series' });
+    }
+
+    const existing = await sql`
+      SELECT id FROM games WHERE playoff_series_id = ${seriesId} LIMIT 1
+    `;
+    if (existing.length > 0) {
+      return res.status(400).json({ error: 'Games already exist for this series' });
+    }
+
+    const maxGames = series.games_to_win * 2 - 1;
+    for (let i = 0; i < maxGames; i++) {
+      const team1IsHome = i < 2 ? true : i < 4 ? false : i % 2 === 0;
+      await sql`
+        INSERT INTO games (season_id, home_team_id, away_team_id, game_type, status, playoff_series_id, game_number_in_series)
+        VALUES (
+          ${series.season_id},
+          ${team1IsHome ? series.home_team_id : series.away_team_id},
+          ${team1IsHome ? series.away_team_id : series.home_team_id},
+          'playoff', 'scheduled', ${seriesId}, ${i + 1}
+        )
+      `;
+    }
+
+    return res.json({ message: 'Series games generated' });
+  } catch (err) {
+    console.error('playoff series start error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/playoff-series/:seriesId/force-advance
+// Manually advances the winner of a completed series to the next-round bracket
+// slot without waiting for the opposing feeder series to finish.
+// • If no next-round series exists yet:  creates a partial shell (one team set,
+//   the other NULL) using the bracket rule set to determine home/away position.
+// • If a partial next-round series already exists:  fills in the missing team.
+// • If a full next-round series already exists:  no-op (returns 200).
+// ---------------------------------------------------------------------------
+router.post('/playoff-series/:seriesId/force-advance', async (req, res) => {
+  const { seriesId } = req.params;
+  try {
+    const [series] = await sql`SELECT * FROM playoff_series WHERE id = ${seriesId}`;
+    if (!series) return res.status(404).json({ error: 'Playoff series not found' });
+    if (series.status !== 'complete') return res.status(400).json({ error: 'Series is not complete' });
+    if (!series.winner_team_id) return res.status(400).json({ error: 'Series has no winner' });
+
+    const [seasonRow] = await sql`SELECT bracket_rule_set_id FROM seasons WHERE id = ${series.season_id}`;
+    const bracketRuleSetId = seasonRow?.bracket_rule_set_id;
+    if (!bracketRuleSetId) return res.status(400).json({ error: 'No bracket rule set configured for this season' });
+
+    await normalizeSeasonBracketSlotKeys(sql, series.season_id, bracketRuleSetId);
+
+    const [normalizedSeries] = await sql`
+      SELECT bracket_slot_key FROM playoff_series WHERE id = ${seriesId}
+    `;
+    const slotKey = normalizedSeries?.bracket_slot_key;
+    if (!slotKey) {
+      return res.status(400).json({ error: 'This series is not assigned to a valid bracket slot' });
+    }
+
+    // Find the next-round slot rule that references this matchup as a winner
+    const ruleRows = await sql`
+      SELECT slot_key FROM bracket_slot_rules
+      WHERE rule_set_id = ${bracketRuleSetId}
+        AND rule_type   = 'winner'
+        AND matchup_ref = ${slotKey}
+    `;
+    if (ruleRows.length === 0) return res.status(400).json({ error: 'No next-round slot defined for this series in the bracket rules' });
+
+    const ruleSlotKey  = ruleRows[0].slot_key;           // e.g. 'r2m0team2'
+    const nextMatchupKey = ruleSlotKey.replace(/team[12]$/, ''); // e.g. 'r2m0'
+    const isHomeSlot   = ruleSlotKey.endsWith('team1');  // team1 = home ice
+
+    const roundMatch = nextMatchupKey.match(/^r(\d+)/);
+    const nextRound  = roundMatch ? Number(roundMatch[1]) : null;
+    if (!nextRound) return res.status(500).json({ error: 'Invalid next matchup key' });
+
+    const [gtwRow] = await sql`
+      SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+      FROM seasons s JOIN leagues l ON l.id = s.league_id WHERE s.id = ${series.season_id}
+    `;
+    const gamesToWin = Math.ceil((gtwRow?.best_of ?? 7) / 2);
+    const winnerId   = series.winner_team_id;
+
+    const [existing] = await sql`
+      SELECT id, home_team_id, away_team_id FROM playoff_series
+      WHERE season_id = ${series.season_id} AND bracket_slot_key = ${nextMatchupKey}
+    `;
+
+    if (!existing) {
+      // Create partial series shell — opponent is TBD (NULL)
+      const homeId = isHomeSlot ? winnerId : null;
+      const awayId = isHomeSlot ? null : winnerId;
+      await sql`
+        INSERT INTO playoff_series
+          (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+        VALUES
+          (${series.season_id}, ${nextRound}, ${homeId}, ${awayId}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+      `;
+    } else {
+      // Fill in the missing team on an existing partial series
+      const alreadySet = isHomeSlot ? existing.home_team_id : existing.away_team_id;
+      if (!alreadySet) {
+        if (isHomeSlot) {
+          await sql`UPDATE playoff_series SET home_team_id = ${winnerId} WHERE id = ${existing.id}`;
+        } else {
+          await sql`UPDATE playoff_series SET away_team_id = ${winnerId} WHERE id = ${existing.id}`;
+        }
+      }
+      // If already set (same team), no-op
+    }
+
+    return res.json({ bracket_slot_key: nextMatchupKey });
+  } catch (err) {
+    console.error('force-advance error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -221,8 +426,16 @@ router.get('/:id', async (req, res) => {
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
         g.overtime_periods, g.shootout, g.shootout_first_team_id,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
+        ps2.round         AS playoff_round,
+        ps2.home_team_id  AS series_home_team_id,
+        ps2.away_team_id  AS series_away_team_id,
+        ps2.home_wins     AS series_home_wins,
+        ps2.away_wins     AS series_away_wins,
+        ps2.games_to_win  AS series_games_to_win,
+        brs.round_names   AS playoff_round_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(
@@ -251,6 +464,8 @@ router.get('/:id', async (req, res) => {
       JOIN leagues l ON l.id = s.league_id
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
+      LEFT JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
@@ -332,6 +547,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
             AND (g2.home_team_id = g.home_team_id OR g2.away_team_id = g.home_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -395,6 +611,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
             AND (g2.home_team_id = g.away_team_id OR g2.away_team_id = g.away_team_id)
             AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
@@ -445,6 +662,7 @@ router.get('/:id', async (req, res) => {
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
             AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
             AND (
               (g2.home_team_id = g.home_team_id AND g2.away_team_id = g.away_team_id)
               OR
@@ -572,6 +790,7 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
+    home_team_id, away_team_id,
     scheduled_at, scheduled_time, venue, game_type, status,
     time_start, time_end,
     overtime_periods, shootout,
@@ -592,6 +811,8 @@ router.patch('/:id', async (req, res) => {
 
     await sql`
       UPDATE games SET
+        home_team_id             = COALESCE(${home_team_id             ?? null}::uuid, home_team_id),
+        away_team_id             = COALESCE(${away_team_id             ?? null}::uuid, away_team_id),
         scheduled_at          = COALESCE(${scheduled_at          ?? null}, scheduled_at),
         scheduled_time        = COALESCE(${scheduled_time        ?? null}, scheduled_time),
         venue                 = COALESCE(${venue                 ?? null}, venue),
@@ -599,7 +820,7 @@ router.patch('/:id', async (req, res) => {
         status                = COALESCE(${status                ?? null}, status),
         overtime_periods      = CASE
                                   WHEN ${status ?? null} = 'final' AND ${overtime_periods ?? null}::smallint IS NULL
-                                  THEN CASE WHEN current_period IN ('OT', 'SO') THEN 1 ELSE overtime_periods END
+                                  THEN CASE WHEN current_period IN ('OT', 'SO') THEN COALESCE(overtime_periods, 1) ELSE overtime_periods END
                                   ELSE COALESCE(${overtime_periods ?? null}::smallint, overtime_periods)
                                 END,
         shootout              = CASE
@@ -618,6 +839,193 @@ router.patch('/:id', async (req, res) => {
         shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)
       WHERE id = ${id}
     `;
+
+    // ── Auto-update playoff series win counts ─────────────────────────────────
+    // When a playoff game is finalized, recount wins from actual game results
+    // and sync home_wins / away_wins on the playoff_series row. Also mark the
+    // series complete when either team reaches games_to_win.
+    if (status === 'final') {
+      const gameRows = await sql`
+        SELECT playoff_series_id, home_team_id, away_team_id
+        FROM games WHERE id = ${id}
+      `;
+      const game = gameRows[0];
+      if (game?.playoff_series_id) {
+        const seriesRows = await sql`
+          SELECT id, home_team_id, away_team_id, games_to_win
+          FROM playoff_series WHERE id = ${game.playoff_series_id}
+        `;
+        const series = seriesRows[0];
+        if (series) {
+          // Count goals per team for every final game in this series
+          const winRows = await sql`
+            SELECT
+              g.home_team_id,
+              g.away_team_id,
+              COUNT(*) FILTER (WHERE go.team_id = g.home_team_id) AS home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = g.away_team_id) AS away_goals
+            FROM games g
+            LEFT JOIN goals go ON go.game_id = g.id
+            WHERE g.playoff_series_id = ${series.id}
+              AND g.status = 'final'
+            GROUP BY g.id, g.home_team_id, g.away_team_id
+          `;
+
+          let homeWins = 0;
+          let awayWins = 0;
+          for (const row of winRows) {
+            const hg = Number(row.home_goals);
+            const ag = Number(row.away_goals);
+            if (hg > ag) {
+              // The home team of THIS game won — attribute to the series home/away
+              if (row.home_team_id === series.home_team_id) homeWins++;
+              else awayWins++;
+            } else if (ag > hg) {
+              if (row.away_team_id === series.home_team_id) homeWins++;
+              else awayWins++;
+            }
+          }
+
+          const seriesComplete =
+            homeWins >= series.games_to_win || awayWins >= series.games_to_win;
+          const winnerId = seriesComplete
+            ? homeWins >= series.games_to_win
+              ? series.home_team_id
+              : series.away_team_id
+            : null;
+
+          await sql`
+            UPDATE playoff_series SET
+              home_wins      = ${homeWins},
+              away_wins      = ${awayWins},
+              status         = ${seriesComplete ? 'complete' : awayWins > 0 || homeWins > 0 ? 'active' : 'upcoming'},
+              winner_team_id = COALESCE(${winnerId}, winner_team_id)
+            WHERE id = ${series.id}
+          `;
+
+          // ── Auto-advance: create next-round series shell ────────────────────
+          // When a series completes and has a bracket_slot_key, check if the
+          // bracket rule set has a 'winner' slot referencing this matchup.
+          // If both feeder series are now complete, create the next-round series
+          // row (without games — admin starts it manually via /start endpoint).
+          if (seriesComplete && winnerId) {
+            const advRows = await sql`
+              SELECT bracket_slot_key, season_id
+              FROM playoff_series WHERE id = ${series.id}
+            `;
+            const slotKey = advRows[0]?.bracket_slot_key; // e.g. 'r1m0'
+            const seriesSeasonId = advRows[0]?.season_id;
+
+            if (slotKey && seriesSeasonId) {
+              const seasonRows = await sql`
+                SELECT bracket_rule_set_id FROM seasons WHERE id = ${seriesSeasonId}
+              `;
+              const bracketRuleSetId = seasonRows[0]?.bracket_rule_set_id;
+
+              if (bracketRuleSetId) {
+                await normalizeSeasonBracketSlotKeys(sql, seriesSeasonId, bracketRuleSetId);
+
+                const normalizedSeriesRows = await sql`
+                  SELECT bracket_slot_key FROM playoff_series WHERE id = ${series.id}
+                `;
+                const slotKey = normalizedSeriesRows[0]?.bracket_slot_key;
+                if (slotKey) {
+                  // Find next-round slots that list this matchup as their winner source
+                  const dependentSlots = await sql`
+                    SELECT slot_key FROM bracket_slot_rules
+                    WHERE rule_set_id = ${bracketRuleSetId}
+                      AND rule_type = 'winner'
+                      AND matchup_ref = ${slotKey}
+                  `;
+
+                  for (const { slot_key: depSlot } of dependentSlots) {
+                  // Strip team1/team2 suffix to get the next matchup key (e.g. 'r2m0')
+                    const nextMatchupKey = depSlot.replace(/team[12]$/, '');
+
+                    // Get the two winner slots for the next matchup
+                    const nextSlots = await sql`
+                      SELECT slot_key, matchup_ref FROM bracket_slot_rules
+                      WHERE rule_set_id = ${bracketRuleSetId}
+                        AND slot_key LIKE ${nextMatchupKey + '%'}
+                        AND rule_type = 'winner'
+                    `;
+                    const team1Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team1`);
+                    const team2Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team2`);
+
+                  if (!team1Slot?.matchup_ref || !team2Slot?.matchup_ref) continue;
+
+                  // Look up the completed series for each feeder matchup
+                  const [t1Series] = await sql`
+                    SELECT winner_team_id, status FROM playoff_series
+                    WHERE season_id = ${seriesSeasonId}
+                      AND bracket_slot_key = ${team1Slot.matchup_ref}
+                  `;
+                  const [t2Series] = await sql`
+                    SELECT winner_team_id, status FROM playoff_series
+                    WHERE season_id = ${seriesSeasonId}
+                      AND bracket_slot_key = ${team2Slot.matchup_ref}
+                  `;
+
+                  const bothComplete =
+                    t1Series?.status === 'complete' && t1Series?.winner_team_id &&
+                    t2Series?.status === 'complete' && t2Series?.winner_team_id;
+
+                  const [nextExisting] = await sql`
+                    SELECT id, home_team_id, away_team_id FROM playoff_series
+                    WHERE season_id = ${seriesSeasonId}
+                      AND bracket_slot_key = ${nextMatchupKey}
+                  `;
+
+                  if (bothComplete) {
+                    const roundMatch = nextMatchupKey.match(/^r(\d+)/);
+                    const nextRound = roundMatch ? Number(roundMatch[1]) : null;
+                    if (!nextRound) continue;
+
+                    const gtwRows = await sql`
+                      SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+                      FROM seasons s JOIN leagues l ON l.id = s.league_id
+                      WHERE s.id = ${seriesSeasonId}
+                    `;
+                    const bestOf = gtwRows[0]?.best_of ?? 7;
+                    const gamesToWin = Math.ceil(bestOf / 2);
+
+                    if (!nextExisting) {
+                      // Create the full series shell — no games yet
+                      await sql`
+                        INSERT INTO playoff_series
+                          (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+                        VALUES
+                          (${seriesSeasonId}, ${nextRound}, ${t1Series.winner_team_id},
+                           ${t2Series.winner_team_id}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+                      `;
+                    } else if (!nextExisting.home_team_id || !nextExisting.away_team_id) {
+                      // Partial series exists — fill only the missing team(s)
+                      await sql`
+                        UPDATE playoff_series
+                        SET home_team_id = COALESCE(home_team_id, ${t1Series.winner_team_id}),
+                            away_team_id = COALESCE(away_team_id, ${t2Series.winner_team_id})
+                        WHERE id = ${nextExisting.id}
+                      `;
+                    }
+                  } else if (nextExisting && (!nextExisting.home_team_id || !nextExisting.away_team_id)) {
+                    // One feeder just completed — fill in the missing team on an existing partial series
+                    const isTeam1 = depSlot.endsWith('team1');
+                    const winnerOfThis = winnerId; // the series that just completed
+                    if (isTeam1 && !nextExisting.home_team_id) {
+                      await sql`UPDATE playoff_series SET home_team_id = ${winnerOfThis} WHERE id = ${nextExisting.id}`;
+                    } else if (!isTeam1 && !nextExisting.away_team_id) {
+                      await sql`UPDATE playoff_series SET away_team_id = ${winnerOfThis} WHERE id = ${nextExisting.id}`;
+                    }
+                  }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
     const updated = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
@@ -1130,13 +1538,15 @@ router.get('/:id/goals', async (req, res) => {
         a2p.last_name                                         AS assist_2_last_name,
         COALESCE(a2pt.photo, best_player_photo(a2p.id), a2p.photo)                       AS assist_2_photo,
         COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number)  AS assist_2_jersey_number,
-        -- prior-game cumulative stats (finalized games in same season before this game)
+        -- prior-game cumulative stats (finalized games in same season before this game;
+        -- for playoff games, only count other playoff games)
         (SELECT COUNT(*)::int
           FROM goals g2
           JOIN games gm2 ON gm2.id = g2.game_id
           WHERE g2.scorer_id = go.scorer_id
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
             AND gm2.scheduled_at < g.scheduled_at
         ) AS scorer_prior_goals,
         (SELECT COUNT(*)::int
@@ -1146,6 +1556,7 @@ router.get('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_1_prior_assists,
         (SELECT COUNT(*)::int
@@ -1155,6 +1566,7 @@ router.get('/:id/goals', async (req, res) => {
             AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
             AND gm2.season_id = g.season_id
             AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
             AND gm2.scheduled_at < g.scheduled_at
         ) AS assist_2_prior_assists
       FROM goals go
@@ -1390,9 +1802,16 @@ router.patch('/:id/shots', async (req, res) => {
         SELECT COALESCE(
           jsonb_agg(
             entry
-            ORDER BY CASE entry->>'period'
-              WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3
-              WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+            ORDER BY CASE
+              WHEN entry->>'period' = '1'  THEN 10
+              WHEN entry->>'period' = '2'  THEN 20
+              WHEN entry->>'period' = '3'  THEN 30
+              WHEN entry->>'period' = 'OT' THEN 40
+              WHEN entry->>'period' LIKE 'OT%' THEN
+                40 + COALESCE(NULLIF(regexp_replace(entry->>'period','[^0-9]','','g'),'')::int, 0)
+              WHEN entry->>'period' = 'SO' THEN 100
+              ELSE 200
+            END
           ),
           '[]'::jsonb
         )
@@ -1420,58 +1839,230 @@ router.patch('/:id/shots', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// Shared CTE fragment – derive goals_against per goalie from the goals table.
-// entered_period (NULL = '1') defines the start of each goalie's active window;
-// the end is the next goalie's entered_period for the same team (LEAD).
+// Shared validators + helpers used by the goalie-stints write endpoints.
+// Mirrors the period/time scalar used by goalieStintsCTE so chronological
+// checks done in JS line up with what the aggregation will derive.
 // ---------------------------------------------------------------------------
-const goalieStatsCTE = (gameId) => sql`
+const VALID_PERIODS = ['1', '2', '3', 'OT', 'SO'];
+const PERIOD_ORDS = { '1': 1, '2': 2, '3': 3, 'OT': 4, 'SO': 5 };
+const TIME_RE = /^[0-9]{1,2}:[0-5][0-9]$/;
+
+const stintPosition = (period, time) => {
+  const ord = PERIOD_ORDS[period];
+  if (ord == null) return null;
+  if (!time) return ord * 100000;
+  const [m, s] = time.split(':').map(Number);
+  return ord * 100000 + m * 60 + s;
+};
+
+// ---------------------------------------------------------------------------
+// Shared CTE fragment – aggregate per-stint rows from game_goalie_stints into
+// a per-goalie shape compatible with the legacy GoalieStatRecord response.
+//
+// Goal-against attribution per stint uses (period, time-in-period) windows
+// converted to a scalar "position" (period_ord * 100000 + seconds), so a stint
+// that closes mid-period only gets credit for goals before the close.
+//   - entered_time NULL  → start of entered_period
+//   - exited_period NULL → still in net (no upper bound)
+//   - exited_time NULL   → start of exited_period (boundary handed to next)
+// Empty-net goals are excluded, matching the legacy CTE.
+//
+// Outer queries should JOIN goalie_agg (per-goalie totals + stints[] JSON) and
+// goalie_first_stint (earliest stint per goalie, used for legacy
+// entered_period / sub_time fields).
+// ---------------------------------------------------------------------------
+const goalieStintsCTE = (gameId) => sql`
   WITH period_vals (p, v) AS (
     VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
   ),
-  goalie_ranges AS (
+  stint_ranges AS (
     SELECT
-      gs.id, gs.game_id, gs.team_id, gs.goalie_id,
-      gs.shots_against, gs.entered_period,
-      pv.v AS from_ord,
-      LEAD(pv.v) OVER (
-        PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v
-      ) AS until_ord
-    FROM game_goalie_stats gs
-    JOIN period_vals pv ON pv.p = COALESCE(gs.entered_period, '1')
-    WHERE gs.game_id = ${gameId}
+      st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
+      st.entered_period, st.entered_time,
+      st.exited_period,  st.exited_time,
+      st.shots_against,
+      st.goals_against AS goals_against_override,
+      st.created_at,
+      pv_in.v * 100000
+        + COALESCE(
+            SPLIT_PART(st.entered_time, ':', 1)::int * 60
+            + SPLIT_PART(st.entered_time, ':', 2)::int,
+            0
+          ) AS from_pos,
+      CASE
+        WHEN st.exited_period IS NULL THEN NULL
+        ELSE pv_out.v * 100000
+          + COALESCE(
+              SPLIT_PART(st.exited_time, ':', 1)::int * 60
+              + SPLIT_PART(st.exited_time, ':', 2)::int,
+              0
+            )
+      END AS until_pos
+    FROM game_goalie_stints st
+    JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
+    LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
+    WHERE st.game_id = ${gameId}
   ),
-  goals_per_goalie AS (
-    SELECT gr.id AS stat_id, COUNT(*) AS ga
-    FROM goalie_ranges gr
-    JOIN goals g ON g.game_id = gr.game_id AND g.team_id != gr.team_id AND g.empty_net = false
+  stint_ga_derived AS (
+    SELECT sr.id AS stint_id, COUNT(*)::int AS ga
+    FROM stint_ranges sr
+    JOIN goals g
+      ON g.game_id   = sr.game_id
+     AND g.team_id  != sr.team_id
+     AND g.empty_net = false
     JOIN period_vals pv ON pv.p = g.period
-    WHERE pv.v >= gr.from_ord
-      AND (gr.until_ord IS NULL OR pv.v < gr.until_ord)
-    GROUP BY gr.id
+    WHERE (pv.v * 100000
+           + COALESCE(
+               SPLIT_PART(g.period_time, ':', 1)::int * 60
+               + SPLIT_PART(g.period_time, ':', 2)::int,
+               0
+             )) >= sr.from_pos
+      AND (sr.until_pos IS NULL
+           OR (pv.v * 100000
+               + COALESCE(
+                   SPLIT_PART(g.period_time, ':', 1)::int * 60
+                   + SPLIT_PART(g.period_time, ':', 2)::int,
+                   0
+                 )) < sr.until_pos)
+    GROUP BY sr.id
+  ),
+  stints_resolved AS (
+    SELECT
+      sr.*,
+      COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga
+    FROM stint_ranges sr
+    LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
+  ),
+  goalie_agg AS (
+    SELECT
+      game_id, team_id, goalie_id,
+      MIN(from_pos)              AS first_pos,
+      MIN(stint_ord)             AS first_stint_ord,
+      MIN(created_at)            AS first_created_at,
+      SUM(shots_against)::int    AS total_sa,
+      SUM(resolved_ga)::int      AS total_ga,
+      JSONB_AGG(
+        JSONB_BUILD_OBJECT(
+          'id',                     id,
+          'stint_ord',              stint_ord,
+          'entered_period',         entered_period,
+          'entered_time',           entered_time,
+          'exited_period',          exited_period,
+          'exited_time',            exited_time,
+          'shots_against',          shots_against,
+          'goals_against',          resolved_ga,
+          'goals_against_override', goals_against_override,
+          'saves',                  shots_against - resolved_ga
+        )
+        ORDER BY stint_ord
+      ) AS stints
+    FROM stints_resolved
+    GROUP BY game_id, team_id, goalie_id
+  ),
+  goalie_first_stint AS (
+    SELECT DISTINCT ON (game_id, team_id, goalie_id)
+      game_id, team_id, goalie_id,
+      id             AS first_stint_id,
+      stint_ord      AS first_stint_ord,
+      entered_period AS first_entered_period,
+      entered_time   AS first_entered_time
+    FROM stints_resolved
+    ORDER BY game_id, team_id, goalie_id, stint_ord
   )
+`;
+
+// Used by the new /goalie-stints write endpoints (Phase 3) to return the
+// full per-game goalie list in the same shape the GET endpoint returns,
+// so the client can refresh in a single round-trip.
+const fetchGoalieStatsForGame = (gameId) => sql`
+  ${goalieStintsCTE(gameId)}
+  SELECT
+    fs.first_stint_id                       AS id,
+    ga.game_id, ga.team_id, ga.goalie_id,
+    ga.total_sa                             AS shots_against,
+    ga.total_ga                             AS goals_against,
+    (ga.total_sa - ga.total_ga)             AS saves,
+    CASE
+      WHEN fs.first_stint_ord = 1
+       AND fs.first_entered_period = '1'
+       AND fs.first_entered_time IS NULL
+      THEN NULL ELSE fs.first_entered_period
+    END                                     AS entered_period,
+    CASE
+      WHEN fs.first_stint_ord = 1
+       AND fs.first_entered_period = '1'
+       AND fs.first_entered_time IS NULL
+      THEN NULL ELSE fs.first_entered_time
+    END                                     AS sub_time,
+    ga.first_created_at                     AS created_at,
+    ga.stints,
+    p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
+    COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
+    COALESCE(pt_jnh.jersey_number, pt.jersey_number)     AS goalie_jersey_number,
+    ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
+    t.primary_color AS team_primary_color, t.text_color AS team_text_color
+  FROM goalie_agg ga
+  JOIN goalie_first_stint fs
+    ON fs.game_id = ga.game_id AND fs.team_id = ga.team_id AND fs.goalie_id = ga.goalie_id
+  JOIN games g   ON g.id  = ga.game_id
+  JOIN players p ON p.id  = ga.goalie_id
+  JOIN teams t   ON t.id  = ga.team_id
+  LEFT JOIN player_teams pt
+    ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
+    AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+    AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+  LEFT JOIN LATERAL (
+    SELECT jersey_number FROM jersey_number_history
+    WHERE player_teams_id = pt.id
+      AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+    ORDER BY effective_from DESC LIMIT 1
+  ) pt_jnh ON true
+  LEFT JOIN LATERAL (
+    SELECT name, code, logo FROM team_iterations
+    WHERE team_id = ga.team_id
+    ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+    LIMIT 1
+  ) ti ON true
+  ORDER BY ti.code ASC, ga.first_pos ASC, COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST
 `;
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games/:id/goalie-stats  – list goalie stats for both teams
-// GA prefers the manually stored value; falls back to goals-table derivation.
-// saves = shots_against - goals_against.
+// Phase 2: reads from game_goalie_stints; per-goalie row aggregates SA/GA
+// across all stints and embeds the per-stint detail under `stints`.
+// Legacy `entered_period` / `sub_time` are NULL only for goalies whose first
+// stint was at the very start of the game (P1, no time) — preserving the
+// existing "starter vs backup" UI distinction.
 // ---------------------------------------------------------------------------
 router.get('/:id/goalie-stats', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      ${goalieStatsCTE(id)}
+      ${goalieStintsCTE(id)}
       SELECT
-        gr.id,
-        gr.game_id,
-        gr.team_id,
-        gr.goalie_id,
-        gr.shots_against,
-        gr.entered_period,
-        gs.sub_time,
-        COALESCE(gs.goals_against, gpg.ga, 0)::int                              AS goals_against,
-        (gr.shots_against - COALESCE(gs.goals_against, gpg.ga, 0))::int        AS saves,
-        gs.created_at,
+        fs.first_stint_id                       AS id,
+        ga.game_id,
+        ga.team_id,
+        ga.goalie_id,
+        ga.total_sa                             AS shots_against,
+        ga.total_ga                             AS goals_against,
+        (ga.total_sa - ga.total_ga)             AS saves,
+        CASE
+          WHEN fs.first_stint_ord = 1
+           AND fs.first_entered_period = '1'
+           AND fs.first_entered_time IS NULL
+          THEN NULL
+          ELSE fs.first_entered_period
+        END                                     AS entered_period,
+        CASE
+          WHEN fs.first_stint_ord = 1
+           AND fs.first_entered_period = '1'
+           AND fs.first_entered_time IS NULL
+          THEN NULL
+          ELSE fs.first_entered_time
+        END                                     AS sub_time,
+        ga.first_created_at                     AS created_at,
+        ga.stints,
         p.first_name AS goalie_first_name,
         p.last_name  AS goalie_last_name,
         COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
@@ -1481,15 +2072,15 @@ router.get('/:id/goalie-stats', async (req, res) => {
         ti.logo  AS team_logo,
         t.primary_color AS team_primary_color,
         t.text_color    AS team_text_color
-      FROM goalie_ranges gr
-      LEFT JOIN goals_per_goalie gpg ON gpg.stat_id = gr.id
-      JOIN game_goalie_stats gs ON gs.id = gr.id
-      JOIN games g  ON g.id  = gr.game_id
-      JOIN players p ON p.id = gr.goalie_id
-      JOIN teams t   ON t.id = gr.team_id
+      FROM goalie_agg ga
+      JOIN goalie_first_stint fs
+        ON fs.game_id = ga.game_id AND fs.team_id = ga.team_id AND fs.goalie_id = ga.goalie_id
+      JOIN games g   ON g.id  = ga.game_id
+      JOIN players p ON p.id  = ga.goalie_id
+      JOIN teams t   ON t.id  = ga.team_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gr.goalie_id
-        AND pt.team_id  = gr.team_id
+        ON pt.player_id = ga.goalie_id
+        AND pt.team_id  = ga.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1500,11 +2091,11 @@ router.get('/:id/goalie-stats', async (req, res) => {
       ) pt_jnh ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
-        WHERE team_id = gr.team_id
+        WHERE team_id = ga.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      ORDER BY ti.code ASC, gr.from_ord ASC, COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST
+      ORDER BY ti.code ASC, ga.first_pos ASC, COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST
     `;
     return res.json(rows);
   } catch (err) {
@@ -1563,27 +2154,44 @@ router.put('/:id/goalie-stats', async (req, res) => {
             ${stValue !== undefined ? sql`, sub_time       = EXCLUDED.sub_time`       : sql``}
             ${gaValue !== undefined ? sql`, goals_against  = EXCLUDED.goals_against`  : sql``}
     `;
+    // Keep game_goalie_stints in sync with the legacy table; reads now come
+    // from the stints table via goalieStintsCTE below.
+    await sql`SELECT rebuild_goalie_stints(${id})`;
     const rows = await sql`
-      ${goalieStatsCTE(id)}
+      ${goalieStintsCTE(id)}
       SELECT
-        gr.id, gr.game_id, gr.team_id, gr.goalie_id,
-        gr.shots_against, gr.entered_period, gs.sub_time,
-        COALESCE(gs.goals_against, gpg.ga, 0)::int                       AS goals_against,
-        (gr.shots_against - COALESCE(gs.goals_against, gpg.ga, 0))::int  AS saves,
-        gs.created_at,
+        fs.first_stint_id                       AS id,
+        ga.game_id, ga.team_id, ga.goalie_id,
+        ga.total_sa                             AS shots_against,
+        ga.total_ga                             AS goals_against,
+        (ga.total_sa - ga.total_ga)             AS saves,
+        CASE
+          WHEN fs.first_stint_ord = 1
+           AND fs.first_entered_period = '1'
+           AND fs.first_entered_time IS NULL
+          THEN NULL ELSE fs.first_entered_period
+        END                                     AS entered_period,
+        CASE
+          WHEN fs.first_stint_ord = 1
+           AND fs.first_entered_period = '1'
+           AND fs.first_entered_time IS NULL
+          THEN NULL ELSE fs.first_entered_time
+        END                                     AS sub_time,
+        ga.first_created_at                     AS created_at,
+        ga.stints,
         p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
         COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color
-      FROM goalie_ranges gr
-      LEFT JOIN goals_per_goalie gpg ON gpg.stat_id = gr.id
-      JOIN game_goalie_stats gs ON gs.id = gr.id
-      JOIN games g  ON g.id  = gr.game_id
-      JOIN players p ON p.id = gr.goalie_id
-      JOIN teams t   ON t.id = gr.team_id
+      FROM goalie_agg ga
+      JOIN goalie_first_stint fs
+        ON fs.game_id = ga.game_id AND fs.team_id = ga.team_id AND fs.goalie_id = ga.goalie_id
+      JOIN games g   ON g.id  = ga.game_id
+      JOIN players p ON p.id  = ga.goalie_id
+      JOIN teams t   ON t.id  = ga.team_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gr.goalie_id AND pt.team_id = gr.team_id
+        ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1594,11 +2202,11 @@ router.put('/:id/goalie-stats', async (req, res) => {
       ) pt_jnh ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
-        WHERE team_id = gr.team_id
+        WHERE team_id = ga.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      WHERE gr.goalie_id = ${goalie_id}
+      WHERE ga.goalie_id = ${goalie_id}
     `;
     return res.json(rows[0]);
   } catch (err) {
@@ -1638,28 +2246,44 @@ router.post('/:id/goalie-stats/switch', async (req, res) => {
       ON CONFLICT (game_id, goalie_id)
       DO UPDATE SET entered_period = EXCLUDED.entered_period, sub_time = EXCLUDED.sub_time
     `;
+    // Keep game_goalie_stints in sync with the legacy table.
+    await sql`SELECT rebuild_goalie_stints(${id})`;
     // Return the full updated list so the client can refresh in one round-trip.
     const rows = await sql`
-      ${goalieStatsCTE(id)}
+      ${goalieStintsCTE(id)}
       SELECT
-        gr.id, gr.game_id, gr.team_id, gr.goalie_id,
-        gr.shots_against, gr.entered_period, gs.sub_time,
-        COALESCE(gs.goals_against, gpg.ga, 0)::int                       AS goals_against,
-        (gr.shots_against - COALESCE(gs.goals_against, gpg.ga, 0))::int  AS saves,
-        gs.created_at,
+        fs.first_stint_id                       AS id,
+        ga.game_id, ga.team_id, ga.goalie_id,
+        ga.total_sa                             AS shots_against,
+        ga.total_ga                             AS goals_against,
+        (ga.total_sa - ga.total_ga)             AS saves,
+        CASE
+          WHEN fs.first_stint_ord = 1
+           AND fs.first_entered_period = '1'
+           AND fs.first_entered_time IS NULL
+          THEN NULL ELSE fs.first_entered_period
+        END                                     AS entered_period,
+        CASE
+          WHEN fs.first_stint_ord = 1
+           AND fs.first_entered_period = '1'
+           AND fs.first_entered_time IS NULL
+          THEN NULL ELSE fs.first_entered_time
+        END                                     AS sub_time,
+        ga.first_created_at                     AS created_at,
+        ga.stints,
         p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
         COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS goalie_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number)     AS goalie_jersey_number,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color
-      FROM goalie_ranges gr
-      LEFT JOIN goals_per_goalie gpg ON gpg.stat_id = gr.id
-      JOIN game_goalie_stats gs ON gs.id = gr.id
-      JOIN games g  ON g.id  = gr.game_id
-      JOIN players p ON p.id = gr.goalie_id
-      JOIN teams t   ON t.id = gr.team_id
+      FROM goalie_agg ga
+      JOIN goalie_first_stint fs
+        ON fs.game_id = ga.game_id AND fs.team_id = ga.team_id AND fs.goalie_id = ga.goalie_id
+      JOIN games g   ON g.id  = ga.game_id
+      JOIN players p ON p.id  = ga.goalie_id
+      JOIN teams t   ON t.id  = ga.team_id
       LEFT JOIN player_teams pt
-        ON pt.player_id = gr.goalie_id AND pt.team_id = gr.team_id
+        ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1670,11 +2294,11 @@ router.post('/:id/goalie-stats/switch', async (req, res) => {
       ) pt_jnh ON true
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
-        WHERE team_id = gr.team_id
+        WHERE team_id = ga.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      ORDER BY ti.code ASC, gr.from_ord ASC
+      ORDER BY ti.code ASC, ga.first_pos ASC
     `;
     return res.json(rows);
   } catch (err) {
@@ -1697,9 +2321,256 @@ router.delete('/:id/goalie-stats/:goalieId', async (req, res) => {
       RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Goalie stat not found' });
+    // Keep game_goalie_stints in sync (grace period — drop game_goalie_stats next release).
+    await sql`SELECT rebuild_goalie_stints(${id})`;
     return res.json({ message: 'Goalie stat removed' });
   } catch (err) {
     console.error('goalie stats delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ===========================================================================
+// Stint-native write APIs
+// ---------------------------------------------------------------------------
+// These endpoints write directly to game_goalie_stints and let admins record
+// non-sequential stints (pull-and-return, multiple goalie changes within a
+// single period, etc.) — something the legacy /goalie-stats endpoints can
+// not express because they are limited to one row per goalie per game.
+//
+// seasons.js now reads from game_goalie_stints directly, so there is no
+// longer any need to back-fill game_goalie_stats after a stint write.
+// game_goalie_stats will be dropped in the next release.
+// ===========================================================================
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/:id/goalie-stints  – open a new stint for a goalie
+// Body:
+//   {
+//     team_id, goalie_id,
+//     entered_period, entered_time?,            // when this stint starts
+//     exited_period?, exited_time?,             // optional — leave open if omitted
+//     shots_against?, goals_against?,           // optional initial values
+//     close_previous?: bool | { exited_period, exited_time? }
+//                                                // close the team's currently
+//                                                // open stint (if any) at the
+//                                                // given point. true ⇒ close
+//                                                // it at the new entered point.
+//   }
+// Returns the full updated goalie-stats list for the game.
+// ---------------------------------------------------------------------------
+router.post('/:id/goalie-stints', async (req, res) => {
+  const { id } = req.params;
+  const {
+    team_id, goalie_id,
+    entered_period, entered_time,
+    exited_period, exited_time,
+    shots_against, goals_against,
+    close_previous,
+  } = req.body || {};
+
+  if (!team_id || !goalie_id || !entered_period) {
+    return res.status(400).json({ error: 'team_id, goalie_id, and entered_period are required' });
+  }
+  if (!VALID_PERIODS.includes(entered_period)) {
+    return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
+  }
+  if (entered_time != null && entered_time !== '' && !TIME_RE.test(entered_time)) {
+    return res.status(400).json({ error: 'entered_time must be in MM:SS format' });
+  }
+  if (exited_period != null && !VALID_PERIODS.includes(exited_period)) {
+    return res.status(400).json({ error: 'exited_period must be one of 1, 2, 3, OT, SO' });
+  }
+  if (exited_time != null && exited_time !== '' && !TIME_RE.test(exited_time)) {
+    return res.status(400).json({ error: 'exited_time must be in MM:SS format' });
+  }
+
+  const enteredAt = entered_time || null;
+  const exitedPd  = exited_period || null;
+  const exitedAt  = exited_time   || null;
+  const newPos    = stintPosition(entered_period, enteredAt);
+  if (exitedPd && stintPosition(exitedPd, exitedAt) < newPos) {
+    return res.status(400).json({ error: 'exited point must be at or after entered point' });
+  }
+
+  // Resolve close_previous spec into { period, time } or null.
+  let closeSpec = null;
+  if (close_previous === true) {
+    closeSpec = { period: entered_period, time: enteredAt };
+  } else if (close_previous && typeof close_previous === 'object') {
+    if (!VALID_PERIODS.includes(close_previous.exited_period)) {
+      return res.status(400).json({ error: 'close_previous.exited_period must be one of 1, 2, 3, OT, SO' });
+    }
+    if (close_previous.exited_time != null && close_previous.exited_time !== ''
+        && !TIME_RE.test(close_previous.exited_time)) {
+      return res.status(400).json({ error: 'close_previous.exited_time must be in MM:SS format' });
+    }
+    closeSpec = { period: close_previous.exited_period, time: close_previous.exited_time || null };
+    if (stintPosition(closeSpec.period, closeSpec.time) > newPos) {
+      return res.status(400).json({ error: 'close_previous point must be at or before the new stint entered point' });
+    }
+  }
+
+  try {
+    if (closeSpec) {
+      const open = await sql`
+        SELECT id, entered_period, entered_time
+        FROM game_goalie_stints
+        WHERE game_id = ${id} AND team_id = ${team_id} AND exited_period IS NULL
+        ORDER BY stint_ord DESC
+        LIMIT 1
+      `;
+      if (open.length > 0) {
+        const openPos = stintPosition(open[0].entered_period, open[0].entered_time);
+        if (stintPosition(closeSpec.period, closeSpec.time) < openPos) {
+          return res.status(400).json({ error: 'close_previous point precedes the open stint entered point' });
+        }
+        await sql`
+          UPDATE game_goalie_stints
+          SET exited_period = ${closeSpec.period}, exited_time = ${closeSpec.time}
+          WHERE id = ${open[0].id}
+        `;
+      }
+    }
+
+    const ord = await sql`
+      SELECT COALESCE(MAX(stint_ord), 0) + 1 AS next FROM game_goalie_stints
+      WHERE game_id = ${id} AND team_id = ${team_id}
+    `;
+    await sql`
+      INSERT INTO game_goalie_stints (
+        game_id, team_id, goalie_id, stint_ord,
+        entered_period, entered_time,
+        exited_period,  exited_time,
+        shots_against,  goals_against
+      ) VALUES (
+        ${id}, ${team_id}, ${goalie_id}, ${ord[0].next},
+        ${entered_period}, ${enteredAt},
+        ${exitedPd},       ${exitedAt},
+        ${shots_against == null ? 0 : Number(shots_against)},
+        ${goals_against == null ? null : Number(goals_against)}
+      )
+    `;
+    const rows = await fetchGoalieStatsForGame(id);
+    return res.json(rows);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
+    if (err.code === '23505') return res.status(409).json({ error: 'Stint ordering conflict; retry' });
+    console.error('goalie stints post error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/goalie-stints/:stintId  – patch a single stint
+// Body: any subset of {
+//   goalie_id, team_id,
+//   entered_period, entered_time,
+//   exited_period,  exited_time,
+//   shots_against,  goals_against
+// }
+// Explicit null clears nullable columns (entered_time, exited_period,
+// exited_time, goals_against). Returns the full updated goalie-stats list.
+// ---------------------------------------------------------------------------
+router.put('/:id/goalie-stints/:stintId', async (req, res) => {
+  const { id, stintId } = req.params;
+  const body = req.body || {};
+  const has = (k) => Object.prototype.hasOwnProperty.call(body, k);
+
+  if (has('entered_period') && !VALID_PERIODS.includes(body.entered_period)) {
+    return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
+  }
+  if (has('exited_period') && body.exited_period != null && !VALID_PERIODS.includes(body.exited_period)) {
+    return res.status(400).json({ error: 'exited_period must be one of 1, 2, 3, OT, SO' });
+  }
+  for (const k of ['entered_time', 'exited_time']) {
+    if (has(k) && body[k] != null && body[k] !== '' && !TIME_RE.test(body[k])) {
+      return res.status(400).json({ error: `${k} must be in MM:SS format` });
+    }
+  }
+
+  // Build dynamic SET fragments. Each entry contributes ", col = ${val}".
+  const sets = [];
+  const norm = (v) => (v === '' ? null : v);
+  if (has('goalie_id'))      sets.push(sql`goalie_id      = ${body.goalie_id}`);
+  if (has('team_id'))        sets.push(sql`team_id        = ${body.team_id}`);
+  if (has('entered_period')) sets.push(sql`entered_period = ${body.entered_period}`);
+  if (has('entered_time'))   sets.push(sql`entered_time   = ${norm(body.entered_time)}`);
+  if (has('exited_period'))  sets.push(sql`exited_period  = ${norm(body.exited_period)}`);
+  if (has('exited_time'))    sets.push(sql`exited_time    = ${norm(body.exited_time)}`);
+  if (has('shots_against'))  sets.push(sql`shots_against  = ${Number(body.shots_against)}`);
+  if (has('goals_against'))  sets.push(sql`goals_against  = ${body.goals_against == null ? null : Number(body.goals_against)}`);
+
+  if (sets.length === 0) {
+    return res.status(400).json({ error: 'no updatable fields supplied' });
+  }
+
+  // Compose SET fragments separated by commas using sql tagged-template reduction.
+  const setExpr = sets.reduce((acc, frag, i) => (i === 0 ? frag : sql`${acc}, ${frag}`));
+
+  try {
+    const updated = await sql`
+      UPDATE game_goalie_stints
+      SET ${setExpr}
+      WHERE id = ${stintId} AND game_id = ${id}
+      RETURNING id, team_id, entered_period, entered_time, exited_period, exited_time
+    `;
+    if (updated.length === 0) {
+      return res.status(404).json({ error: 'Stint not found' });
+    }
+    const row = updated[0];
+    if (row.exited_period
+        && stintPosition(row.exited_period, row.exited_time)
+           < stintPosition(row.entered_period, row.entered_time)) {
+      return res.status(400).json({ error: 'exited point must be at or after entered point' });
+    }
+    const rows = await fetchGoalieStatsForGame(id);
+    return res.json(rows);
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid team_id or goalie_id' });
+    console.error('goalie stints put error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/games/:id/goalie-stints/:stintId  – remove a stint and
+// renumber the remaining stints for that team so stint_ord stays contiguous.
+// ---------------------------------------------------------------------------
+router.delete('/:id/goalie-stints/:stintId', async (req, res) => {
+  const { id, stintId } = req.params;
+  try {
+    const removed = await sql`
+      DELETE FROM game_goalie_stints
+      WHERE id = ${stintId} AND game_id = ${id}
+      RETURNING team_id
+    `;
+    if (removed.length === 0) {
+      return res.status(404).json({ error: 'Stint not found' });
+    }
+    const teamId = removed[0].team_id;
+    // Two-step renumber to avoid intermediate UNIQUE (game_id, team_id, stint_ord)
+    // collisions: shift all rows by a large offset, then renumber sequentially.
+    await sql`
+      UPDATE game_goalie_stints
+      SET stint_ord = stint_ord + 1000000
+      WHERE game_id = ${id} AND team_id = ${teamId}
+    `;
+    await sql`
+      WITH ranked AS (
+        SELECT id, ROW_NUMBER() OVER (ORDER BY stint_ord) AS new_ord
+        FROM game_goalie_stints
+        WHERE game_id = ${id} AND team_id = ${teamId}
+      )
+      UPDATE game_goalie_stints t
+      SET stint_ord = r.new_ord
+      FROM ranked r
+      WHERE t.id = r.id
+    `;
+    const rows = await fetchGoalieStatsForGame(id);
+    return res.json(rows);
+  } catch (err) {
+    console.error('goalie stints delete error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

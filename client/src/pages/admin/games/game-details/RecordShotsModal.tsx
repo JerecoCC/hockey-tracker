@@ -3,7 +3,9 @@ import type { Control, FieldArrayWithId } from 'react-hook-form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
@@ -13,6 +15,7 @@ import styles from './GameDetailsPage.module.scss';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }
+  | { type: 'next-ot' }
   | { type: 'end-game' };
 
 type ShotsFormValues = {
@@ -53,10 +56,17 @@ const isoToETHHMM = (iso: string): string => {
   return h && m ? `${h}:${m}` : '';
 };
 
-const etHHMMtoISO = (hhmm: string): string => {
-  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    new Date(),
-  );
+/** Advances a "YYYY-MM-DD" string by one calendar day. */
+const nextETDate = (etDateStr: string): string => {
+  const [y, m, d] = etDateStr.split('-').map(Number);
+  const next = new Date(y, m - 1, d + 1);
+  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
+};
+
+const etHHMMtoISO = (hhmm: string, etDateStr?: string): string => {
+  const etDate =
+    etDateStr ??
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
   const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
   const tzName =
     new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
@@ -72,9 +82,17 @@ const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
 /**
  * Computes the expected shots-against for a goalie in a game:
  * opposing team's total shots (for the periods the goalie played) minus empty-net goals.
- * Respects goalie substitutions via `entered_period`.
+ *
+ * Phase 2+: when the GoalieStatRecord has a `stints` array we walk each
+ * stint's window to determine which periods were covered, correctly handling
+ * pull-and-return scenarios.  A period P is considered "played" by a stint
+ * when: entered_period_ord ≤ p_ord AND (exited_period_ord > p_ord OR no exit).
+ * Note: if a goalie exited in P (same ordinal as P), P is not counted for them
+ * automatically — both goalies partially played it and the admin adjusts SA.
+ *
+ * Legacy fallback (no stints): uses entered_period aggregation as before.
  */
-const computeAutoSA = (
+export const computeAutoSA = (
   goalie: GameRosterEntry,
   goalieStats: GoalieStatRecord[],
   game: GameRecord,
@@ -85,28 +103,35 @@ const computeAutoSA = (
   const opposingTeamId = isAway ? game.home_team.id : game.away_team.id;
 
   const thisStat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
-  const enteredPeriod = thisStat?.entered_period ?? null;
+  const stints = thisStat?.stints;
 
-  // Find a substitute on the same team (has an entered_period)
-  const subStat = goalieStats.find(
-    (gs) =>
-      gs.team_id === goalie.team_id &&
-      gs.goalie_id !== goalie.player_id &&
-      gs.entered_period !== null,
-  );
+  let playedPeriod: (p: string) => boolean;
 
-  const playedPeriod = (p: string): boolean => {
-    if (enteredPeriod !== null) {
-      // This goalie is a sub — played from enteredPeriod onwards
-      return periodIdx(p) >= periodIdx(enteredPeriod);
-    }
-    if (subStat) {
-      // Starter with a sub — played until the sub entered
-      return periodIdx(p) < periodIdx(subStat.entered_period!);
-    }
-    // Sole goalie — played all periods
-    return true;
-  };
+  if (stints && stints.length > 0) {
+    // Phase 2+: derive from stint windows
+    playedPeriod = (p: string) => {
+      const pOrd = periodIdx(p);
+      return stints.some((st) => {
+        const enterOrd = periodIdx(st.entered_period);
+        const exitOrd = st.exited_period != null ? periodIdx(st.exited_period) : Infinity;
+        return pOrd >= enterOrd && pOrd < exitOrd;
+      });
+    };
+  } else {
+    // Legacy fallback: single entered_period on the aggregate record
+    const enteredPeriod = thisStat?.entered_period ?? null;
+    const subStat = goalieStats.find(
+      (gs) =>
+        gs.team_id === goalie.team_id &&
+        gs.goalie_id !== goalie.player_id &&
+        gs.entered_period !== null,
+    );
+    playedPeriod = (p: string) => {
+      if (enteredPeriod !== null) return periodIdx(p) >= periodIdx(enteredPeriod);
+      if (subStat) return periodIdx(p) < periodIdx(subStat.entered_period!);
+      return true;
+    };
+  }
 
   const totalOpposingShots = periodShots
     .filter((ps) => playedPeriod(ps.period))
@@ -139,6 +164,7 @@ interface Props {
     shootout_first_team_id?: string | null;
   }) => Promise<boolean>;
   onAdvancePeriod: (next: CurrentPeriod) => void;
+  onNextOTPeriod: () => void;
   onEndGameReady: () => void;
 }
 
@@ -159,6 +185,7 @@ const RecordShotsModal = ({
   upsertGoalieStat,
   updateGameInfo,
   onAdvancePeriod,
+  onNextOTPeriod,
   onEndGameReady,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
@@ -275,18 +302,28 @@ const RecordShotsModal = ({
   const endTimeValid = !isEndGame || !!endTimeValue;
   const shootsFirstValid = !showShootsFirst || !!soFirstTeam;
 
+  const isNextOT = nextAction.type === 'next-ot';
+  // "OT1", "OT2", etc. → "Overtime 1", "Overtime 2", etc.
+  const otNumMatch = /^OT([0-9]+)$/.exec(period);
+  const periodTitleLabel = otNumMatch
+    ? `Overtime ${otNumMatch[1]}`
+    : (PERIOD_TITLE_LABEL[period] ?? period);
   const modalTitle = showShootsFirst
     ? 'Go To Shootout'
     : isEndGame
-      ? `End Game — ${PERIOD_TITLE_LABEL[period] ?? period}`
-      : `Record Shots — ${PERIOD_LABEL[period] ?? period} Period`;
+      ? `End Game — ${periodTitleLabel}`
+      : isNextOT
+        ? `Record Shots — ${periodTitleLabel}`
+        : `Record Shots — ${PERIOD_LABEL[period] ?? period} Period`;
   const confirmLabel = submitting
     ? 'Saving…'
     : isEndGame
       ? 'Award Three Stars'
       : nextAction.type === 'advance'
         ? nextAction.label
-        : 'Confirm';
+        : isNextOT
+          ? 'Next Overtime'
+          : 'Confirm';
 
   const handleConfirm = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -317,7 +354,21 @@ const RecordShotsModal = ({
         }
       }
     }
-    if (isEndGame && end_time) await updateGameInfo({ time_end: etHHMMtoISO(end_time) });
+    if (isEndGame && end_time) {
+      // Anchor to the game's actual start date in ET (falling back to scheduled date).
+      // If the end time HH:mm is earlier than the start HH:mm the game ran past midnight —
+      // use the next ET calendar day, mirroring the logic in GameInfoEditModal.
+      const anchor = game.time_start ?? game.scheduled_at;
+      const etBase = anchor
+        ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
+            new Date(anchor),
+          )
+        : undefined;
+      const startHHMM = game.time_start ? isoToETHHMM(game.time_start) : null;
+      const isPastMidnight = !!startHHMM && end_time < startHHMM;
+      const endDate = isPastMidnight && etBase ? nextETDate(etBase) : etBase;
+      await updateGameInfo({ time_end: etHHMMtoISO(end_time, endDate) });
+    }
     if (showShootsFirst && soFirstTeam) {
       const firstTeamId = soFirstTeam === 'away' ? game.away_team.id : game.home_team.id;
       await updateGameInfo({ shootout_first_team_id: firstTeamId });
@@ -326,6 +377,8 @@ const RecordShotsModal = ({
     onClose();
     if (nextAction.type === 'advance') {
       onAdvancePeriod(nextAction.next);
+    } else if (nextAction.type === 'next-ot') {
+      onNextOTPeriod();
     } else {
       onEndGameReady();
     }
@@ -416,29 +469,6 @@ const RecordShotsBody = ({
     },
   ];
 
-  const renderTeamLogo = (
-    logo: string | null,
-    code: string,
-    primary: string,
-    text: string,
-    cls: string,
-    placeholder: string,
-  ) =>
-    logo ? (
-      <img
-        src={logo}
-        alt={code}
-        className={cls}
-      />
-    ) : (
-      <span
-        className={placeholder}
-        style={{ background: primary, color: text }}
-      >
-        {code?.slice(0, 1)}
-      </span>
-    );
-
   return (
     <div className={styles.shotsModalBody}>
       {!(isEndGame && period === 'SO') && (
@@ -454,14 +484,14 @@ const RecordShotsBody = ({
               className={styles.shotsTeamRow}
             >
               <span className={styles.shotsTeamInfo}>
-                {renderTeamLogo(
-                  row.logo,
-                  row.code,
-                  row.primaryColor,
-                  row.textColor,
-                  styles.shotsTeamLogo,
-                  styles.shotsTeamLogoPlaceholder,
-                )}
+                <TeamLogo
+                  logo={row.logo}
+                  code={row.code}
+                  primaryColor={row.primaryColor}
+                  textColor={row.textColor}
+                  size={32}
+                  shape="circle"
+                />
                 <span className={styles.shotsTeamName}>{row.name}</span>
               </span>
               <div className={styles.shotsFieldWrap}>
@@ -507,14 +537,14 @@ const RecordShotsBody = ({
                 value: side,
                 label: (
                   <>
-                    {renderTeamLogo(
-                      logo,
-                      code,
-                      primary,
-                      text,
-                      styles.teamSegmentLogo,
-                      styles.teamSegmentLogoPlaceholder,
-                    )}
+                    <TeamLogo
+                      logo={logo}
+                      code={code}
+                      primaryColor={primary}
+                      textColor={text}
+                      size={20}
+                      shape="square"
+                    />
                     {code}
                   </>
                 ),
@@ -554,28 +584,21 @@ const RecordShotsBody = ({
                   .join(' ')}
               >
                 <span className={styles.goalieNameCell}>
-                  {renderTeamLogo(
-                    logo,
-                    code,
-                    primary,
-                    text,
-                    styles.goalTeamLogo,
-                    styles.goalTeamLogoPlaceholder,
-                  )}
-                  {goalie.photo ? (
-                    <img
-                      src={goalie.photo}
-                      alt=""
-                      className={styles.goalScorerPhoto}
-                    />
-                  ) : (
-                    <span
-                      className={styles.goalScorerPhotoPlaceholder}
-                      style={{ background: primary, color: text }}
-                    >
-                      {goalie.last_name?.charAt(0)}
-                    </span>
-                  )}
+                  <TeamLogo
+                    logo={logo}
+                    code={code}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={36}
+                    shape="square"
+                  />
+                  <PlayerAvatar
+                    photo={goalie.photo}
+                    initials={goalie.last_name?.charAt(0) ?? '?'}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={32}
+                  />
                   <div className={styles.goalInfo}>
                     {goalie.jersey_number != null && (
                       <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
