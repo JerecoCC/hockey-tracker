@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
+const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
 
 // All season routes require the admin role
 router.use(requireAdmin);
@@ -320,48 +321,7 @@ router.post('/:id/advance-bracket', async (req, res) => {
       return res.status(400).json({ error: 'No bracket rule set configured for this season' });
     }
 
-    // ── Backfill bracket_slot_key for legacy series that predate the feature ──
-    // Group all series without a slot key by round, then assign r{round}m{index}
-    // in creation order (oldest first = matchup 0, next = matchup 1, …).
-    const unkeyed = await sql`
-      SELECT id, round FROM playoff_series
-      WHERE season_id = ${seasonId}
-        AND bracket_slot_key IS NULL
-      ORDER BY round, created_at
-    `;
-    if (unkeyed.length > 0) {
-      // Group by round
-      const byRound = {};
-      for (const row of unkeyed) {
-        if (!byRound[row.round]) byRound[row.round] = [];
-        byRound[row.round].push(row.id);
-      }
-      for (const [round, ids] of Object.entries(byRound)) {
-        // Find the highest matchup index already in use for this round
-        const existing = await sql`
-          SELECT bracket_slot_key FROM playoff_series
-          WHERE season_id = ${seasonId}
-            AND round = ${Number(round)}
-            AND bracket_slot_key IS NOT NULL
-        `;
-        const usedIndices = new Set(
-          existing.map((r) => {
-            const m = r.bracket_slot_key.match(/m(\d+)$/);
-            return m ? Number(m[1]) : -1;
-          }),
-        );
-        let nextIndex = 0;
-        for (const seriesId of ids) {
-          while (usedIndices.has(nextIndex)) nextIndex++;
-          const slotKey = `r${round}m${nextIndex}`;
-          await sql`
-            UPDATE playoff_series SET bracket_slot_key = ${slotKey} WHERE id = ${seriesId}
-          `;
-          usedIndices.add(nextIndex);
-          nextIndex++;
-        }
-      }
-    }
+    await normalizeSeasonBracketSlotKeys(sql, seasonId, bracketRuleSetId);
 
     // All completed series that occupy a known bracket slot
     const completedSeries = await sql`

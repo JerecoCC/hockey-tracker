@@ -3,6 +3,7 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
+const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
 
 router.use(requireAdmin);
 
@@ -325,26 +326,19 @@ router.post('/playoff-series/:seriesId/force-advance', async (req, res) => {
     if (series.status !== 'complete') return res.status(400).json({ error: 'Series is not complete' });
     if (!series.winner_team_id) return res.status(400).json({ error: 'Series has no winner' });
 
-    // Ensure bracket_slot_key is set — backfill by round + creation order if missing
-    let slotKey = series.bracket_slot_key;
-    if (!slotKey) {
-      const existing = await sql`
-        SELECT bracket_slot_key FROM playoff_series
-        WHERE season_id = ${series.season_id} AND round = ${series.round}
-          AND bracket_slot_key IS NOT NULL
-      `;
-      const usedIndices = new Set(
-        existing.map((r) => { const m = r.bracket_slot_key.match(/m(\d+)$/); return m ? Number(m[1]) : -1; }),
-      );
-      let nextIndex = 0;
-      while (usedIndices.has(nextIndex)) nextIndex++;
-      slotKey = `r${series.round}m${nextIndex}`;
-      await sql`UPDATE playoff_series SET bracket_slot_key = ${slotKey} WHERE id = ${seriesId}`;
-    }
-
     const [seasonRow] = await sql`SELECT bracket_rule_set_id FROM seasons WHERE id = ${series.season_id}`;
     const bracketRuleSetId = seasonRow?.bracket_rule_set_id;
     if (!bracketRuleSetId) return res.status(400).json({ error: 'No bracket rule set configured for this season' });
+
+    await normalizeSeasonBracketSlotKeys(sql, series.season_id, bracketRuleSetId);
+
+    const [normalizedSeries] = await sql`
+      SELECT bracket_slot_key FROM playoff_series WHERE id = ${seriesId}
+    `;
+    const slotKey = normalizedSeries?.bracket_slot_key;
+    if (!slotKey) {
+      return res.status(400).json({ error: 'This series is not assigned to a valid bracket slot' });
+    }
 
     // Find the next-round slot rule that references this matchup as a winner
     const ruleRows = await sql`
@@ -929,27 +923,34 @@ router.patch('/:id', async (req, res) => {
               const bracketRuleSetId = seasonRows[0]?.bracket_rule_set_id;
 
               if (bracketRuleSetId) {
-                // Find next-round slots that list this matchup as their winner source
-                const dependentSlots = await sql`
-                  SELECT slot_key FROM bracket_slot_rules
-                  WHERE rule_set_id = ${bracketRuleSetId}
-                    AND rule_type = 'winner'
-                    AND matchup_ref = ${slotKey}
+                await normalizeSeasonBracketSlotKeys(sql, seriesSeasonId, bracketRuleSetId);
+
+                const normalizedSeriesRows = await sql`
+                  SELECT bracket_slot_key FROM playoff_series WHERE id = ${series.id}
                 `;
-
-                for (const { slot_key: depSlot } of dependentSlots) {
-                  // Strip team1/team2 suffix to get the next matchup key (e.g. 'r2m0')
-                  const nextMatchupKey = depSlot.replace(/team[12]$/, '');
-
-                  // Get the two winner slots for the next matchup
-                  const nextSlots = await sql`
-                    SELECT slot_key, matchup_ref FROM bracket_slot_rules
+                const slotKey = normalizedSeriesRows[0]?.bracket_slot_key;
+                if (slotKey) {
+                  // Find next-round slots that list this matchup as their winner source
+                  const dependentSlots = await sql`
+                    SELECT slot_key FROM bracket_slot_rules
                     WHERE rule_set_id = ${bracketRuleSetId}
-                      AND slot_key LIKE ${nextMatchupKey + '%'}
                       AND rule_type = 'winner'
+                      AND matchup_ref = ${slotKey}
                   `;
-                  const team1Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team1`);
-                  const team2Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team2`);
+
+                  for (const { slot_key: depSlot } of dependentSlots) {
+                  // Strip team1/team2 suffix to get the next matchup key (e.g. 'r2m0')
+                    const nextMatchupKey = depSlot.replace(/team[12]$/, '');
+
+                    // Get the two winner slots for the next matchup
+                    const nextSlots = await sql`
+                      SELECT slot_key, matchup_ref FROM bracket_slot_rules
+                      WHERE rule_set_id = ${bracketRuleSetId}
+                        AND slot_key LIKE ${nextMatchupKey + '%'}
+                        AND rule_type = 'winner'
+                    `;
+                    const team1Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team1`);
+                    const team2Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team2`);
 
                   if (!team1Slot?.matchup_ref || !team2Slot?.matchup_ref) continue;
 
@@ -998,11 +999,11 @@ router.patch('/:id', async (req, res) => {
                            ${t2Series.winner_team_id}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
                       `;
                     } else if (!nextExisting.home_team_id || !nextExisting.away_team_id) {
-                      // Partial series exists — fill in both teams in case one was missing
+                      // Partial series exists — fill only the missing team(s)
                       await sql`
                         UPDATE playoff_series
-                        SET home_team_id = ${t1Series.winner_team_id},
-                            away_team_id = ${t2Series.winner_team_id}
+                        SET home_team_id = COALESCE(home_team_id, ${t1Series.winner_team_id}),
+                            away_team_id = COALESCE(away_team_id, ${t2Series.winner_team_id})
                         WHERE id = ${nextExisting.id}
                       `;
                     }
@@ -1015,6 +1016,7 @@ router.patch('/:id', async (req, res) => {
                     } else if (!isTeam1 && !nextExisting.away_team_id) {
                       await sql`UPDATE playoff_series SET away_team_id = ${winnerOfThis} WHERE id = ${nextExisting.id}`;
                     }
+                  }
                   }
                 }
               }

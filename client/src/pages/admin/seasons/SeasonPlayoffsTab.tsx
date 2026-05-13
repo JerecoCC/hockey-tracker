@@ -4,7 +4,6 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import InfoItem from '@/components/InfoItem/InfoItem';
@@ -614,33 +613,6 @@ const BracketSlot = ({
       <div
         className={[
           styles.slotTeam,
-          awayWon ? styles.slotTeamWinner : '',
-          isComplete && !awayWon ? styles.slotTeamLoser : '',
-          !series.away_team_id ? styles.slotTeamTbd : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-      >
-        {series.away_team_id && (
-          <TeamLogo
-            logo={series.away_team_logo}
-            code={series.away_team_code}
-            size={20}
-            shape="square"
-          />
-        )}
-        <span className={styles.slotTeamName}>{series.away_team_name ?? 'TBD'}</span>
-        {series.away_team_id && (
-          <WinDots
-            teamId={series.away_team_id}
-            wins={series.away_wins}
-          />
-        )}
-      </div>
-      <div className={styles.slotDivider} />
-      <div
-        className={[
-          styles.slotTeam,
           homeWon ? styles.slotTeamWinner : '',
           isComplete && !homeWon ? styles.slotTeamLoser : '',
           !series.home_team_id ? styles.slotTeamTbd : '',
@@ -661,6 +633,33 @@ const BracketSlot = ({
           <WinDots
             teamId={series.home_team_id}
             wins={series.home_wins}
+          />
+        )}
+      </div>
+      <div className={styles.slotDivider} />
+      <div
+        className={[
+          styles.slotTeam,
+          awayWon ? styles.slotTeamWinner : '',
+          isComplete && !awayWon ? styles.slotTeamLoser : '',
+          !series.away_team_id ? styles.slotTeamTbd : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {series.away_team_id && (
+          <TeamLogo
+            logo={series.away_team_logo}
+            code={series.away_team_code}
+            size={20}
+            shape="square"
+          />
+        )}
+        <span className={styles.slotTeamName}>{series.away_team_name ?? 'TBD'}</span>
+        {series.away_team_id && (
+          <WinDots
+            teamId={series.away_team_id}
+            wins={series.away_wins}
           />
         )}
       </div>
@@ -755,21 +754,6 @@ const SeasonPlayoffsTab = ({
     }
     return result;
   }, [activeRuleSetSlots, series]);
-
-  /**
-   * Set of bracket_slot_keys for completed series whose winner feeds directly
-   * into an advanceable next-round slot.  Used to show the "→ Advance" button
-   * on the completed series in the bracket.
-   */
-  const feedsIntoAdvanceable = useMemo(() => {
-    const result = new Set<string>();
-    for (const rule of activeRuleSetSlots) {
-      if (rule.rule_type !== 'winner' || !rule.matchup_ref) continue;
-      const nextMk = rule.slot_key.replace(/team[12]$/, '');
-      if (advanceableSlots.has(nextMk)) result.add(rule.matchup_ref);
-    }
-    return result;
-  }, [activeRuleSetSlots, advanceableSlots]);
 
   // Build a name → team_id lookup so resolved slot names can be turned into IDs for createSeries.
   const teamIdByName = useMemo(
