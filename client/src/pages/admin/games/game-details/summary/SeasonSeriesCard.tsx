@@ -28,6 +28,18 @@ const formatStatusLabel = (status: GameRecord['status'], suffix: string | null) 
   return suffix ? `${base}${suffix}` : base;
 };
 
+const sortableTime = (value: string | null | undefined) => {
+  if (!value) return Number.MAX_SAFE_INTEGER;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) ? time : Number.MAX_SAFE_INTEGER;
+};
+
+const compareMeetings = (a: PreviousMeeting, b: PreviousMeeting) => {
+  const scheduledDiff = sortableTime(a.scheduled_at) - sortableTime(b.scheduled_at);
+  if (scheduledDiff !== 0) return scheduledDiff;
+  return sortableTime(a.created_at) - sortableTime(b.created_at);
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const SeasonSeriesCard = ({ game, leagueId, seasonId, liveAwayScore, liveHomeScore }: Props) => {
@@ -50,6 +62,8 @@ const SeasonSeriesCard = ({ game, leagueId, seasonId, liveAwayScore, liveHomeSco
   const currentMeeting: PreviousMeeting = {
     game_id: game.id,
     scheduled_at: game.scheduled_at,
+    created_at: game.created_at,
+    status: game.status,
     current_home_was_home: true,
     home_score: liveHomeScore,
     away_score: liveAwayScore,
@@ -57,11 +71,11 @@ const SeasonSeriesCard = ({ game, leagueId, seasonId, liveAwayScore, liveHomeSco
     shootout: game.shootout,
   };
 
-  const seriesMeetings = [...meetings, currentMeeting];
+  const seriesMeetings = [...meetings, currentMeeting].sort(compareMeetings);
 
   if (seriesMeetings.length === 0) return null;
 
-  const completedMeetings = game.status === 'final' ? seriesMeetings : meetings;
+  const completedMeetings = seriesMeetings.filter((meeting) => meeting.status === 'final');
 
   // Tally wins from the perspective of current home/away teams
   let homeWins = 0;
@@ -96,20 +110,14 @@ const SeasonSeriesCard = ({ game, leagueId, seasonId, liveAwayScore, liveHomeSco
       <div className={styles.prevMeetingsRows}>
         {seriesMeetings.map((pm: PreviousMeeting) => {
           const isCurrentGame = pm.game_id === game.id;
-          const status = isCurrentGame ? game.status : 'final';
-          const isFinalGame = status === 'final';
-          const leftScore = isFinalGame
-            ? pm.current_home_was_home
-              ? pm.away_score
-              : pm.home_score
-            : '-';
-          const rightScore = isFinalGame
-            ? pm.current_home_was_home
-              ? pm.home_score
-              : pm.away_score
-            : '-';
-          const leftLost = !isFinalGame || leftScore < rightScore;
-          const rightLost = !isFinalGame || rightScore < leftScore;
+          const status = pm.status;
+          const showScores = status === 'final' || (isCurrentGame && status === 'in_progress');
+          const leftNumericScore = pm.current_home_was_home ? pm.away_score : pm.home_score;
+          const rightNumericScore = pm.current_home_was_home ? pm.home_score : pm.away_score;
+          const leftScore = showScores ? leftNumericScore : '-';
+          const rightScore = showScores ? rightNumericScore : '-';
+          const leftLost = !showScores || leftNumericScore < rightNumericScore;
+          const rightLost = !showScores || rightNumericScore < leftNumericScore;
           const suffix = pm.shootout ? '/SO' : (pm.overtime_periods ?? 0) > 0 ? '/OT' : null;
 
           return (

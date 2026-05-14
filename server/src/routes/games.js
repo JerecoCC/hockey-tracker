@@ -624,13 +624,15 @@ router.get('/:id', async (req, res) => {
           LIMIT 1
         ) opp_ti ON true
       ) away_l5 ON true
-      -- All previous meetings between home and away teams in the same season
+      -- All other meetings between home and away teams in the same season
       LEFT JOIN LATERAL (
         SELECT COALESCE(
           json_agg(
             json_build_object(
               'game_id',               lg.id,
               'scheduled_at',          lg.scheduled_at,
+              'created_at',            lg.created_at,
+              'status',                lg.status,
               'current_home_was_home', (lg.home_team_id = g.home_team_id),
               'home_score',            lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
               'away_score',            lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
@@ -642,7 +644,7 @@ router.get('/:id', async (req, res) => {
         ) AS previous_meetings
         FROM (
           SELECT
-            g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
+            g2.id, g2.scheduled_at, g2.created_at, g2.status, g2.overtime_periods, g2.shootout,
             g2.home_team_id, g2.away_team_id,
             (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
             (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
@@ -661,14 +663,12 @@ router.get('/:id', async (req, res) => {
           FROM games g2
           WHERE g2.season_id = g.season_id
             AND g2.id != g.id
-            AND g2.status = 'final'
             AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
             AND (
               (g2.home_team_id = g.home_team_id AND g2.away_team_id = g.away_team_id)
               OR
               (g2.home_team_id = g.away_team_id AND g2.away_team_id = g.home_team_id)
             )
-            AND g2.scheduled_at < g.scheduled_at
           ORDER BY g2.scheduled_at ASC NULLS LAST, g2.created_at ASC
         ) lg
       ) prev ON true
@@ -794,7 +794,7 @@ router.patch('/:id', async (req, res) => {
     scheduled_at, scheduled_time, venue, game_type, status,
     time_start, time_end,
     overtime_periods, shootout,
-    playoff_series_id, notes,
+    playoff_series_id, playoff_round, game_number_in_series, notes,
     current_period,
     star_1_id, star_2_id, star_3_id,
     shootout_first_team_id,
@@ -806,8 +806,13 @@ router.patch('/:id', async (req, res) => {
     : (current_period ?? null);
 
   try {
-    const existing = await sql`SELECT id FROM games WHERE id = ${id}`;
+    const existing = await sql`SELECT id, playoff_series_id FROM games WHERE id = ${id}`;
     if (existing.length === 0) return res.status(404).json({ error: 'Game not found' });
+
+    const targetSeriesId = playoff_series_id ?? existing[0].playoff_series_id ?? null;
+    if (playoff_round != null && !targetSeriesId) {
+      return res.status(400).json({ error: 'Cannot set playoff round without a linked playoff series' });
+    }
 
     await sql`
       UPDATE games SET
@@ -829,6 +834,7 @@ router.patch('/:id', async (req, res) => {
                                   ELSE COALESCE(${shootout ?? null}::boolean, shootout)
                                 END,
         playoff_series_id     = COALESCE(${playoff_series_id     ?? null}, playoff_series_id),
+        game_number_in_series = COALESCE(${game_number_in_series ?? null}::smallint, game_number_in_series),
         notes                 = COALESCE(${notes                 ?? null}, notes),
         current_period        = COALESCE(${effectivePeriod},             current_period),
         star_1_id             = COALESCE(${star_1_id             ?? null}, star_1_id),
@@ -839,6 +845,14 @@ router.patch('/:id', async (req, res) => {
         shootout_first_team_id   = COALESCE(${shootout_first_team_id   ?? null}, shootout_first_team_id)
       WHERE id = ${id}
     `;
+
+    if (playoff_round != null && targetSeriesId) {
+      await sql`
+        UPDATE playoff_series
+        SET round = ${playoff_round}::smallint
+        WHERE id = ${targetSeriesId}
+      `;
+    }
 
     // ── Auto-update playoff series win counts ─────────────────────────────────
     // When a playoff game is finalized, recount wins from actual game results
@@ -1032,8 +1046,11 @@ router.patch('/:id', async (req, res) => {
         g.scheduled_at, g.scheduled_time, g.venue,
         g.time_start, g.time_end,
         g.overtime_periods, g.shootout, g.shootout_first_team_id,
-        g.playoff_series_id, g.notes, g.current_period, g.created_at,
+        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
+        ps2.round AS playoff_round,
+        brs.round_names AS playoff_round_names,
         gs.period_scores,
         g.period_shots,
         json_build_object(
@@ -1051,8 +1068,11 @@ router.patch('/:id', async (req, res) => {
           'text_color', t_away.text_color
         ) AS away_team
       FROM games g
+      JOIN seasons s ON s.id = g.season_id
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
+      LEFT JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id

@@ -57,6 +57,8 @@ type FormValues = {
   scheduled_date: string;
   scheduled_time: string;
   game_type: GameType;
+  playoff_round: string;
+  game_number_in_series: string;
   time_start: string;
   time_end: string;
 };
@@ -76,16 +78,21 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
     handleSubmit,
     reset,
     formState: { isSubmitting, isDirty },
+    watch,
   } = useForm<FormValues>({
     defaultValues: {
       venue: '',
       scheduled_date: '',
       scheduled_time: '',
       game_type: 'regular',
+      playoff_round: '',
+      game_number_in_series: '',
       time_start: '',
       time_end: '',
     },
   });
+
+  const gameType = watch('game_type');
 
   useEffect(() => {
     if (open) {
@@ -94,6 +101,9 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
         scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
         scheduled_time: game.scheduled_time ?? '',
         game_type: game.game_type,
+        playoff_round: game.playoff_round != null ? String(game.playoff_round) : '',
+        game_number_in_series:
+          game.game_number_in_series != null ? String(game.game_number_in_series) : '',
         time_start: game.time_start ? isoToETHHMM(game.time_start) : '',
         time_end: game.time_end ? isoToETHHMM(game.time_end) : '',
       });
@@ -126,6 +136,18 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       scheduled_at: data.scheduled_date || null,
       scheduled_time: data.scheduled_time || null,
       game_type: data.game_type,
+      playoff_round:
+        data.game_type === 'playoff' && game.playoff_series_id
+          ? data.playoff_round !== ''
+            ? Number(data.playoff_round)
+            : null
+          : undefined,
+      game_number_in_series:
+        data.game_type === 'playoff'
+          ? data.game_number_in_series !== ''
+            ? Number(data.game_number_in_series)
+            : null
+          : undefined,
       time_start: startISO,
       time_end: endISO,
     });
@@ -159,6 +181,39 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
             required
           />
         </div>
+        {gameType === 'playoff' && (
+          <>
+            <Field
+              label="Round"
+              type="number"
+              control={control}
+              name="playoff_round"
+              min={1}
+              max={4}
+              disabled={isSubmitting || disabled || !game.playoff_series_id}
+              rules={{
+                validate: (value) =>
+                  !value || (/^[0-9]+$/.test(value) && Number(value) >= 1 && Number(value) <= 4)
+                    ? true
+                    : 'Round must be between 1 and 4',
+              }}
+            />
+            <Field
+              label="Game in Series"
+              type="number"
+              control={control}
+              name="game_number_in_series"
+              min={1}
+              disabled={isSubmitting || disabled}
+              rules={{
+                validate: (value) =>
+                  !value || (/^[0-9]+$/.test(value) && Number(value) >= 1)
+                    ? true
+                    : 'Game in series must be 1 or greater',
+              }}
+            />
+          </>
+        )}
         <Field
           label="Date"
           type="datepicker"

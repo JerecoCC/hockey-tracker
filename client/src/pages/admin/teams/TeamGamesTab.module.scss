@@ -1,0 +1,203 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.seasonSelect {
+  min-width: 180px;
+}
+
+.viewToggle {
+  display: flex;
+  gap: $space-xs;
+}
+
+.calendarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.calendarToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  flex-wrap: wrap;
+}
+
+.calendarToolbarLabel {
+  font-size: $font-lg;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+.calendarToolbarControls {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.calendarMonthPicker {
+  min-width: 170px;
+}
+
+.calendarScroll {
+  overflow-x: auto;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: $space-sm;
+  min-width: 840px;
+}
+
+.calendarDayName {
+  text-align: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+.calendarEmptyCell,
+.calendarDayCell {
+  min-height: 160px;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
+}
+
+.calendarEmptyCell {
+  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.calendarDayCell {
+  overflow: hidden;
+}
+
+.calendarDayNumber {
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-bright;
+  line-height: 1;
+}
+
+.calendarDayEmpty {
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-start;
+  width: 100%;
+  height: 100%;
+  padding: $space-sm;
+}
+
+.calendarDayGamesFilled {
+  width: 100%;
+  height: 100%;
+}
+
+.calendarGameTooltip {
+  width: 100%;
+  height: 100%;
+}
+
+.calendarGame {
+  width: 84px;
+  min-height: 108px;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-xs;
+  padding: $space-sm $space-xs;
+  cursor: pointer;
+  transition:
+    transform $transition-fast,
+    opacity $transition-fast;
+  text-align: center;
+
+  &:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+  }
+}
+
+.calendarGameFillDay {
+  width: 100%;
+  min-height: 100%;
+  border: 0;
+  border-radius: inherit;
+  padding: $space-sm;
+  justify-content: flex-start;
+}
+
+.calendarGameAway {
+  background: #ffffff;
+  border-color: color-mix(in srgb, #{$border}, black 20%);
+  color: #14181f;
+}
+
+.calendarGameHome {
+  background: var(--calendar-primary);
+  border-color: var(--calendar-primary);
+  color: #ffffff;
+}
+
+.calendarGameLive {
+  box-shadow: 0 0 0 1px rgba($warning, 0.55);
+}
+
+.calendarGameDayNumber {
+  align-self: flex-start;
+  font-size: $font-sm;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.calendarGameBody {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-md;
+}
+
+.calendarGameLogoWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  min-height: 76px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.calendarGameHome .calendarGameLogoWrap {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.calendarGameAway .calendarGameLogoWrap {
+  background: rgba(15, 23, 42, 0.04);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+}
+
+.calendarGameDetail {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}

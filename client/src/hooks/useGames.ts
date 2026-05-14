@@ -20,21 +20,25 @@ export interface UpdateGameInfoData {
   scheduled_at?: string | null;
   scheduled_time?: string | null;
   game_type?: GameType;
+  playoff_round?: number | null;
+  game_number_in_series?: number | null;
   time_start?: string | null;
   time_end?: string | null;
   shootout_first_team_id?: string | null;
 }
 export type SeriesStatus = 'upcoming' | 'active' | 'complete';
 
-/** A previous head-to-head meeting between the two teams in the current game's season. */
+/** A head-to-head meeting between the two teams in the current game's season. */
 export interface PreviousMeeting {
   game_id:               string;
   scheduled_at:          string | null;
-  /** True when the current game's home team was also home in this past meeting. */
+  created_at:            string;
+  status:                GameStatus;
+  /** True when the current game's home team was also home in this meeting. */
   current_home_was_home: boolean;
-  /** Score of the historical home team (not necessarily the current game's home team). */
+  /** Score of the meeting's home team (not necessarily the current game's home team). */
   home_score:            number;
-  /** Score of the historical away team (not necessarily the current game's away team). */
+  /** Score of the meeting's away team (not necessarily the current game's away team). */
   away_score:            number;
   overtime_periods:      number | null;
   shootout:              boolean;
@@ -112,7 +116,7 @@ export interface GameRecord {
   home_last_five?:       LastFiveGame[];
   /** Last 5 final games for the away team within the same season (detail endpoint only). */
   away_last_five?:       LastFiveGame[];
-  /** All previous final meetings between home and away teams this season (detail endpoint only). */
+  /** All other meetings between home and away teams this season (detail endpoint only). */
   previous_meetings?:    PreviousMeeting[];
   /** Number of regulation shootout rounds before sudden death (from the league settings). */
   best_of_shootout:      number;

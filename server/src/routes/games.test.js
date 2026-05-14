@@ -37,6 +37,8 @@ const GAME = {
   scheduled_at: '2024-10-15T19:00:00Z', venue: 'SAP Center',
   overtime_periods: null, shootout: false, shootout_first_team_id: null,
   game_number: null, game_number_in_series: null,
+  playoff_round: null,
+  playoff_round_names: null,
   playoff_series_id: null, notes: null, created_at: new Date().toISOString(),
   home_last_five: [LAST_FIVE_GAME],
   away_last_five: [],
@@ -124,6 +126,24 @@ describe('GET /api/admin/games/:id', () => {
     });
   });
 
+  it('queries all other season-series meetings, including future non-final games', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/admin/games/game-1');
+
+    expect(res.status).toBe(200);
+
+    const queryText = sql.mock.calls[0][0].join(' ');
+    const prevMeetingsStart = queryText.indexOf('-- All other meetings between home and away teams in the same season');
+    const prevMeetingsEnd = queryText.indexOf(') prev ON true', prevMeetingsStart);
+    const prevMeetingsSection = queryText.slice(prevMeetingsStart, prevMeetingsEnd);
+
+    expect(prevMeetingsSection).toMatch(/'status',\s+lg\.status/);
+    expect(prevMeetingsSection).toMatch(/'created_at',\s+lg\.created_at/);
+    expect(prevMeetingsSection).not.toMatch(/g2\.status\s*=\s*'final'/);
+    expect(prevMeetingsSection).not.toMatch(/g2\.scheduled_at\s*<\s*g\.scheduled_at/);
+  });
+
   it('returns 404 when game not found', async () => {
     sql.mockResolvedValueOnce([]);
     const res = await request(app).get('/api/admin/games/nope');
@@ -205,7 +225,7 @@ describe('POST /api/admin/games', () => {
 describe('PATCH /api/admin/games/:id', () => {
   it('updates a game and returns the updated record', async () => {
     sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])            // existence check
+      .mockResolvedValueOnce([{ id: 'game-1', playoff_series_id: null }]) // existence check
       .mockResolvedValueOnce([])                             // UPDATE
       .mockResolvedValueOnce([{ ...GAME, status: 'final', home_score: 3, away_score: 2 }]); // re-fetch
     const res = await request(app).patch('/api/admin/games/game-1')
@@ -223,10 +243,44 @@ describe('PATCH /api/admin/games/:id', () => {
     expect(res.body.error).toMatch(/not found/i);
   });
 
+  it('updates playoff round and game number in series when provided', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'game-1', playoff_series_id: 'series-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          ...GAME,
+          game_type: 'playoff',
+          playoff_series_id: 'series-1',
+          game_number_in_series: 3,
+          playoff_round: 2,
+          playoff_round_names: { 2: 'Semifinal' },
+        },
+      ]);
+
+    const res = await request(app).patch('/api/admin/games/game-1').send({
+      playoff_round: 2,
+      game_number_in_series: 3,
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.playoff_round).toBe(2);
+    expect(res.body.game_number_in_series).toBe(3);
+
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries.some((query) => query.includes('game_number_in_series'))).toBe(true);
+    expect(
+      queries.some(
+        (query) => query.includes('UPDATE playoff_series') && query.includes('SET round ='),
+      ),
+    ).toBe(true);
+  });
+
   it('returns 400 on check constraint violation', async () => {
     const checkErr = Object.assign(new Error('check'), { code: '23514' });
     sql
-      .mockResolvedValueOnce([{ id: 'game-1' }])
+      .mockResolvedValueOnce([{ id: 'game-1', playoff_series_id: null }])
       .mockRejectedValueOnce(checkErr);
     const res = await request(app).patch('/api/admin/games/game-1')
       .send({ status: 'in_progress' });
