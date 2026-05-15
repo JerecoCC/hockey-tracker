@@ -1,13 +1,22 @@
-import { type CSSProperties, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
+  type MouseEvent as ReactMouseEvent,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import Icon from '../Icon/Icon';
 import styles from './DatePicker.module.scss';
 
 interface Props {
-  value: string; // YYYY-MM-DD or ''
+  value: string; // YYYY-MM-DD, YYYY-MM, or ''
   onChange: (val: string) => void;
   placeholder?: string;
   disabled?: boolean;
   autoFocus?: boolean;
+  granularity?: 'day' | 'month';
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -60,7 +69,7 @@ const todayParts = () => {
 const parseISO = (iso: string) => {
   if (!iso) return null;
   const [y, m, d] = iso.split('-').map(Number);
-  return { y, m, d };
+  return { y, m, d: Number.isFinite(d) ? d : null };
 };
 
 const isValidDate = (y: number, m: number, d: number) => {
@@ -71,13 +80,15 @@ const isValidDate = (y: number, m: number, d: number) => {
 const toISO = (y: number, m: number, d: number) =>
   `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
 
+const toMonthISO = (y: number, m: number) => `${y}-${String(m).padStart(2, '0')}`;
+
 const daysInMonth = (y: number, m: number) => new Date(y, m, 0).getDate();
 const firstDayOfWeek = (y: number, m: number) => new Date(y, m - 1, 1).getDay();
 
 // ── Segment types & constants ────────────────────────────────────────────────
 type Segment = 'year' | 'month' | 'day';
 
-const SEGMENT_INFO: Record<
+const DAY_SEGMENT_INFO: Record<
   Segment,
   { start: number; end: number; placeholder: string; maxLen: number }
 > = {
@@ -86,7 +97,17 @@ const SEGMENT_INFO: Record<
   year: { start: 6, end: 10, placeholder: 'YYYY', maxLen: 4 },
 };
 
-const SEGMENT_ORDER: Segment[] = ['month', 'day', 'year'];
+const MONTH_SEGMENT_INFO: Record<
+  Segment,
+  { start: number; end: number; placeholder: string; maxLen: number }
+> = {
+  month: { start: 0, end: 2, placeholder: 'MM', maxLen: 2 },
+  day: { start: 0, end: 0, placeholder: '', maxLen: 0 },
+  year: { start: 3, end: 7, placeholder: 'YYYY', maxLen: 4 },
+};
+
+const DAY_SEGMENT_ORDER: Segment[] = ['month', 'day', 'year'];
+const MONTH_SEGMENT_ORDER: Segment[] = ['month', 'year'];
 
 /**
  * Build the 10-char display string (e.g. "MM/DD/2024") from committed segment
@@ -98,23 +119,30 @@ const buildDisplay = (
   cDay: number | null,
   activeSeg: Segment | null,
   buf: string,
+  granularity: 'day' | 'month',
+  segmentInfo: Record<Segment, { start: number; end: number; placeholder: string; maxLen: number }>,
 ): string => {
   const seg = (s: Segment, committed: number | null): string => {
-    const info = SEGMENT_INFO[s];
+    const info = segmentInfo[s];
     if (s === activeSeg && buf.length > 0) {
       return buf + info.placeholder.slice(buf.length);
     }
     return committed !== null ? String(committed).padStart(info.maxLen, '0') : info.placeholder;
   };
+  if (granularity === 'month') {
+    return `${seg('month', cMonth)}/${seg('year', cYear)}`;
+  }
   return `${seg('month', cMonth)}/${seg('day', cDay)}/${seg('year', cYear)}`;
 };
 
 const DatePicker = (props: Props) => {
-  const { value, onChange, disabled, autoFocus } = props;
+  const { value, onChange, disabled, autoFocus, granularity = 'day' } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
   const parsed = parseISO(value);
   const t = todayParts();
+  const segmentInfo = granularity === 'month' ? MONTH_SEGMENT_INFO : DAY_SEGMENT_INFO;
+  const segmentOrder = granularity === 'month' ? MONTH_SEGMENT_ORDER : DAY_SEGMENT_ORDER;
   const [viewYear, setViewYear] = useState(parsed?.y ?? t.y);
   const [viewMonth, setViewMonth] = useState(parsed?.m ?? t.m);
   const [yearBase, setYearBase] = useState(() => Math.floor((parsed?.y ?? t.y) / 12) * 12);
@@ -149,10 +177,20 @@ const DatePicker = (props: Props) => {
   });
 
   // Derive display value from committed segments + active digit buffer
-  const displayValue = buildDisplay(cYear, cMonth, cDay, activeSeg, buf);
+  const displayValue = buildDisplay(cYear, cMonth, cDay, activeSeg, buf, granularity, segmentInfo);
 
   // Emit ISO date or '' to parent whenever segments change
   const emitChange = (y: number | null, m: number | null, d: number | null) => {
+    if (granularity === 'month') {
+      if (y !== null && m !== null) {
+        const iso = toMonthISO(y, m);
+        if (iso !== value) onChange(iso);
+      } else if (value !== '') {
+        onChange('');
+      }
+      return;
+    }
+
     if (y !== null && m !== null && d !== null && isValidDate(y, m, d)) {
       const iso = toISO(y, m, d);
       if (iso !== value) onChange(iso);
@@ -167,7 +205,7 @@ const DatePicker = (props: Props) => {
     if (p) {
       setCYear(p.y);
       setCMonth(p.m);
-      setCDay(p.d);
+      setCDay(granularity === 'day' ? p.d : null);
       setViewYear(p.y);
       setViewMonth(p.m);
       setYearBase(Math.floor(p.y / 12) * 12);
@@ -178,7 +216,7 @@ const DatePicker = (props: Props) => {
     }
     setActiveSeg(null);
     setBuf('');
-  }, [value]);
+  }, [granularity, value]);
 
   // Auto-focus the text input on mount when requested
   useEffect(() => {
@@ -205,7 +243,7 @@ const DatePicker = (props: Props) => {
   }, [open]);
 
   const openPicker = () => {
-    setView('day');
+    setView(granularity === 'month' ? 'month' : 'day');
     if (!open) measureDropdown();
     setOpen((o) => !o);
   };
@@ -226,10 +264,10 @@ const DatePicker = (props: Props) => {
     setOpen(false);
   };
   const selectToday = () => {
-    onChange(toISO(t.y, t.m, t.d));
+    onChange(granularity === 'month' ? toMonthISO(t.y, t.m) : toISO(t.y, t.m, t.d));
     setOpen(false);
   };
-  const clearDate = (e?: React.MouseEvent) => {
+  const clearDate = (e?: ReactMouseEvent) => {
     e?.stopPropagation();
     onChange('');
     setCYear(null);
@@ -243,11 +281,15 @@ const DatePicker = (props: Props) => {
   const activateSegment = (seg: Segment) => {
     setActiveSeg(seg);
     setBuf('');
-    pendingSelRef.current = [SEGMENT_INFO[seg].start, SEGMENT_INFO[seg].end];
+    pendingSelRef.current = [segmentInfo[seg].start, segmentInfo[seg].end];
   };
 
   const handleInputClick = () => {
     const pos = inputRef.current?.selectionStart ?? 0;
+    if (granularity === 'month') {
+      activateSegment(pos <= 2 ? 'month' : 'year');
+      return;
+    }
     activateSegment(pos <= 2 ? 'month' : pos <= 5 ? 'day' : 'year');
   };
 
@@ -260,20 +302,20 @@ const DatePicker = (props: Props) => {
     setActiveSeg(null);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: ReactKeyboardEvent<HTMLInputElement>) => {
     // Allow browser / OS shortcuts (copy, paste, etc.)
     if (e.ctrlKey || e.metaKey) return;
 
     const seg = activeSeg;
     if (!seg) return;
 
-    const info = SEGMENT_INFO[seg];
-    const segIdx = SEGMENT_ORDER.indexOf(seg);
+    const info = segmentInfo[seg];
+    const segIdx = segmentOrder.indexOf(seg);
 
     const goToSeg = (s: Segment) => {
       setActiveSeg(s);
       setBuf('');
-      pendingSelRef.current = [SEGMENT_INFO[s].start, SEGMENT_INFO[s].end];
+      pendingSelRef.current = [segmentInfo[s].start, segmentInfo[s].end];
     };
 
     if (e.key >= '0' && e.key <= '9') {
@@ -323,10 +365,10 @@ const DatePicker = (props: Props) => {
         setBuf('');
         emitChange(newY, newM, newD);
 
-        const nextSeg = SEGMENT_ORDER[segIdx + 1];
+        const nextSeg = segmentOrder[segIdx + 1];
         if (nextSeg) {
           setActiveSeg(nextSeg);
-          pendingSelRef.current = [SEGMENT_INFO[nextSeg].start, SEGMENT_INFO[nextSeg].end];
+          pendingSelRef.current = [segmentInfo[nextSeg].start, segmentInfo[nextSeg].end];
         } else {
           setActiveSeg(null);
         }
@@ -354,23 +396,23 @@ const DatePicker = (props: Props) => {
     } else if (e.key === 'ArrowLeft') {
       e.preventDefault();
       setBuf('');
-      const prevSeg = SEGMENT_ORDER[segIdx - 1];
+      const prevSeg = segmentOrder[segIdx - 1];
       if (prevSeg) goToSeg(prevSeg);
     } else if (e.key === 'ArrowRight') {
       e.preventDefault();
       setBuf('');
-      const nextSeg = SEGMENT_ORDER[segIdx + 1];
+      const nextSeg = segmentOrder[segIdx + 1];
       if (nextSeg) goToSeg(nextSeg);
     } else if (e.key === 'Tab') {
       if (!e.shiftKey) {
-        const nextSeg = SEGMENT_ORDER[segIdx + 1];
+        const nextSeg = segmentOrder[segIdx + 1];
         if (nextSeg) {
           e.preventDefault();
           goToSeg(nextSeg);
         }
         // else: let Tab move focus naturally to the next form element
       } else {
-        const prevSeg = SEGMENT_ORDER[segIdx - 1];
+        const prevSeg = segmentOrder[segIdx - 1];
         if (prevSeg) {
           e.preventDefault();
           goToSeg(prevSeg);
@@ -384,6 +426,11 @@ const DatePicker = (props: Props) => {
   };
   const selectMonth = (m: number) => {
     setViewMonth(m);
+    if (granularity === 'month') {
+      onChange(toMonthISO(viewYear, m));
+      setOpen(false);
+      return;
+    }
     setView('day');
   };
   const selectYear = (y: number) => {
@@ -463,7 +510,7 @@ const DatePicker = (props: Props) => {
           style={dropdownStyle}
         >
           {/* ── Day view ── */}
-          {view === 'day' && (
+          {granularity === 'day' && view === 'day' && (
             <>
               <div className={styles.calHeader}>
                 <button
@@ -590,6 +637,24 @@ const DatePicker = (props: Props) => {
                   );
                 })}
               </div>
+              <div className={styles.footer}>
+                <button
+                  type="button"
+                  className={styles.footerBtn}
+                  onClick={selectToday}
+                >
+                  Today
+                </button>
+                {value && (
+                  <button
+                    type="button"
+                    className={`${styles.footerBtn} ${styles.footerBtnClear}`}
+                    onClick={() => clearDate()}
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
             </>
           )}
 
@@ -639,6 +704,24 @@ const DatePicker = (props: Props) => {
                     </button>
                   );
                 })}
+              </div>
+              <div className={styles.footer}>
+                <button
+                  type="button"
+                  className={styles.footerBtn}
+                  onClick={selectToday}
+                >
+                  Today
+                </button>
+                {value && (
+                  <button
+                    type="button"
+                    className={`${styles.footerBtn} ${styles.footerBtnClear}`}
+                    onClick={() => clearDate()}
+                  >
+                    Clear
+                  </button>
+                )}
               </div>
             </>
           )}

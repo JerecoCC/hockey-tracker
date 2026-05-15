@@ -8,6 +8,22 @@ const defaultProps = {
   children: <p>Modal body content</p>,
 };
 
+beforeAll(() => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('Modal', () => {
@@ -44,6 +60,20 @@ describe('Modal', () => {
     const overlay = container.firstChild as HTMLElement;
     fireEvent.click(overlay);
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('does NOT call onClose when backdrop close is disabled', () => {
+    const onClose = jest.fn();
+    const { container } = render(
+      <Modal
+        {...defaultProps}
+        onClose={onClose}
+        disableBackdropClose
+      />,
+    );
+    const overlay = container.firstChild as HTMLElement;
+    fireEvent.click(overlay);
+    expect(onClose).not.toHaveBeenCalled();
   });
 
   it('does NOT call onClose when the modal panel itself is clicked', () => {

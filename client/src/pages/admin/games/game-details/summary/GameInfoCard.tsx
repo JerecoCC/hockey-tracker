@@ -16,6 +16,10 @@ interface Props {
 
 const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
   const [editOpen, setEditOpen] = useState(false);
+  const playoffRoundLabel =
+    game.playoff_round != null
+      ? (game.playoff_round_names?.[game.playoff_round] ?? `Round ${game.playoff_round}`)
+      : null;
 
   return (
     <>
@@ -40,10 +44,10 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
             data={GAME_TYPE_LABEL[game.game_type]}
             full
           />
-          {game.playoff_round != null && (
+          {playoffRoundLabel && (
             <InfoItem
               label="Round"
-              data={String(game.playoff_round)}
+              data={playoffRoundLabel}
             />
           )}
           {game.game_number_in_series != null && (

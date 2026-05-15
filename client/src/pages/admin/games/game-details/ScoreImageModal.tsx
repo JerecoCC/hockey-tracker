@@ -1,11 +1,17 @@
-import { type ChangeEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import {
+  type ChangeEvent,
+  type PointerEvent as ReactPointerEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
+import { Controller, type Control, useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import Button from '@/components/Button/Button';
 import Checkbox from '@/components/Checkbox/Checkbox';
 import DatePicker from '@/components/DatePicker/DatePicker';
-import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import Select, { type SelectOption } from '@/components/Select/Select';
@@ -150,6 +156,55 @@ interface Props {
   showForm?: boolean;
 }
 
+type ScoreCardFormValues = {
+  awayScore: number;
+  homeScore: number;
+  playoffGameNum: number;
+  awayWins: number;
+  homeWins: number;
+};
+
+interface ScoreCardNumberFieldProps {
+  control: Control<ScoreCardFormValues>;
+  name: keyof ScoreCardFormValues;
+  label: string;
+  min?: number;
+  max?: number;
+}
+
+const ScoreCardNumberField = ({ control, name, label, min, max }: ScoreCardNumberFieldProps) => {
+  const inputId = `score-card-${name}`;
+
+  return (
+    <div className={styles.formField}>
+      <label
+        htmlFor={inputId}
+        className={styles.formLabel}
+      >
+        {label}
+      </label>
+      <Controller
+        control={control}
+        name={name}
+        render={({ field }) => (
+          <input
+            {...field}
+            id={inputId}
+            type="number"
+            min={min}
+            max={max}
+            step={1}
+            inputMode="numeric"
+            className={styles.formInput}
+            value={field.value ?? ''}
+            onChange={(e) => field.onChange(e.target.value)}
+          />
+        )}
+      />
+    </div>
+  );
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const ScoreImageModal = ({
@@ -190,12 +245,12 @@ const ScoreImageModal = ({
   const [formIsPlayoff, setFormIsPlayoff] = useState(false);
   const [formPlayoffRound, setFormPlayoffRound] = useState('');
 
-  // Number inputs managed via react-hook-form so we can use the Field component
+  // Number inputs managed via react-hook-form for consistent score-card field spacing.
   const {
     control: numControl,
     watch: watchNums,
     reset: resetNums,
-  } = useForm({
+  } = useForm<ScoreCardFormValues>({
     defaultValues: { awayScore: 0, homeScore: 0, playoffGameNum: 1, awayWins: 0, homeWins: 0 },
   });
   const numVals = watchNums();
@@ -386,7 +441,7 @@ const ScoreImageModal = ({
 
   // ── Drag-to-pan handlers ──────────────────────────────────────────────────────
 
-  const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = {
       startX: e.clientX,
@@ -399,7 +454,7 @@ const ScoreImageModal = ({
     setIsDragging(true);
   };
 
-  const handlePointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+  const handlePointerMove = (e: ReactPointerEvent<HTMLDivElement>) => {
     const d = dragRef.current;
     if (!d) return;
     // Full-width drag → 100% crop range, scaled by zoom for finer control at high zoom
@@ -822,6 +877,7 @@ const ScoreImageModal = ({
       title="Generate Score Card"
       onClose={onClose}
       size="xl"
+      disableBackdropClose={isStandaloneForm}
       footer={
         <div className={styles.footer}>
           <Button
@@ -1005,16 +1061,14 @@ const ScoreImageModal = ({
                         placeholder="Select date"
                       />
                     </div>
-                    <Field
+                    <ScoreCardNumberField
                       label="Away Score"
-                      type="number"
                       control={numControl}
                       name="awayScore"
                       min={0}
                     />
-                    <Field
+                    <ScoreCardNumberField
                       label="Home Score"
-                      type="number"
                       control={numControl}
                       name="homeScore"
                       min={0}
@@ -1022,10 +1076,13 @@ const ScoreImageModal = ({
                   </div>
 
                   {/* Playoff checkbox */}
-                  <div className={styles.formCheckboxRow}>
+                  <div
+                    className={styles.formCheckboxRow}
+                    onClick={() => setFormIsPlayoff((value) => !value)}
+                  >
                     <Checkbox
                       checked={formIsPlayoff}
-                      onChange={() => setFormIsPlayoff(!formIsPlayoff)}
+                      onChange={() => setFormIsPlayoff((value) => !value)}
                     />
                     <span className={styles.formCheckboxLabel}>Playoff Game</span>
                   </div>
@@ -1033,8 +1090,8 @@ const ScoreImageModal = ({
                   {/* Playoff sub-section */}
                   {formIsPlayoff && (
                     <div className={styles.playoffSection}>
-                      <div className={styles.formRow}>
-                        <div className={styles.formField}>
+                      <div className={styles.playoffFieldsRow}>
+                        <div className={`${styles.formField} ${styles.playoffRoundField}`}>
                           <label className={styles.formLabel}>Round</label>
                           <input
                             type="text"
@@ -1044,27 +1101,22 @@ const ScoreImageModal = ({
                             onChange={(e) => setFormPlayoffRound(e.target.value)}
                           />
                         </div>
-                        <Field
+                        <ScoreCardNumberField
                           label="Game #"
-                          type="number"
                           control={numControl}
                           name="playoffGameNum"
                           min={1}
                           max={7}
                         />
-                      </div>
-                      <div className={styles.formRow}>
-                        <Field
+                        <ScoreCardNumberField
                           label="Away Wins"
-                          type="number"
                           control={numControl}
                           name="awayWins"
                           min={0}
                           max={4}
                         />
-                        <Field
+                        <ScoreCardNumberField
                           label="Home Wins"
-                          type="number"
                           control={numControl}
                           name="homeWins"
                           min={0}
