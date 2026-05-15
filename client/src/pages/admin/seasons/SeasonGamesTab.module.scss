@@ -22,8 +22,7 @@
 
 // DatePicker sizes to its content but won't go narrower than min-width
 .datePicker {
-  width: fit-content;
-  min-width: 170px;
+  width: 180px;
   flex-shrink: 0;
 }
 
@@ -52,7 +51,6 @@
 
   > *:not(.teamFilter) {
     flex: 1 0 130px;
-    max-width: 180px;
   }
 }
 

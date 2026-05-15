@@ -38,6 +38,8 @@
   border-radius: $radius-md;
   color: $text-dim;
   cursor: pointer;
+  padding: $space-md;
+  text-align: center;
   transition:
     border-color $transition-base,
     color $transition-base;
@@ -196,7 +198,7 @@
 .formField {
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
+  gap: 0.25rem;
 }
 
 .formLabel {
@@ -210,11 +212,13 @@
 .formInput {
   background: $bg-input;
   border: 1px solid $border;
-  border-radius: $radius-sm;
+  border-radius: $radius-md;
   color: $text-body;
   font-size: $font-base;
   font-family: inherit;
-  padding: $space-sm $space-md;
+  height: 42px;
+  padding: 0 $space-md;
+  box-sizing: border-box;
   outline: none;
   transition: border-color $transition-base;
 
@@ -225,6 +229,16 @@
   &:focus {
     border-color: $accent;
   }
+
+  &[type="number"] {
+    appearance: textfield;
+  }
+
+  &[type="number"]::-webkit-outer-spin-button,
+  &[type="number"]::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
 }
 
 .formRow3 {
@@ -234,10 +248,11 @@
 }
 
 .formCheckboxRow {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: $space-sm;
   cursor: pointer;
+  width: fit-content;
 
   &:hover .formCheckboxLabel {
     color: $text-bright;
@@ -258,6 +273,30 @@
   background: rgba(255, 255, 255, 0.03);
   border: 1px solid $border;
   border-radius: $radius-md;
+}
+
+.playoffFieldsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
+  gap: $space-md;
+  align-items: end;
+}
+
+.playoffRoundField {
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .playoffFieldsRow {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .formRow3,
+  .playoffFieldsRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 // ── Modal footer ─────────────────────────────────────────────────────────────
