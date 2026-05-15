@@ -53,7 +53,9 @@ const SERIES = {
   status: 'upcoming', winner_team_id: null, created_at: new Date().toISOString(),
 };
 
-afterEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  sql.mockReset();
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games
@@ -97,8 +99,8 @@ describe('GET /api/admin/games/:id', () => {
     sql.mockResolvedValueOnce([GAME]);
     const res = await request(app).get('/api/admin/games/game-1');
     expect(res.status).toBe(200);
-    expect(res.body.home_team_secondary_color).toBe('#EA7200');
-    expect(res.body.away_team_secondary_color).toBe('#A2AAAD');
+    expect(res.body.home_team.secondary_color).toBe('#EA7200');
+    expect(res.body.away_team.secondary_color).toBe('#A2AAAD');
   });
 
   it('includes home_last_five and away_last_five arrays', async () => {
@@ -227,6 +229,7 @@ describe('PATCH /api/admin/games/:id', () => {
     sql
       .mockResolvedValueOnce([{ id: 'game-1', playoff_series_id: null }]) // existence check
       .mockResolvedValueOnce([])                             // UPDATE
+      .mockResolvedValueOnce([{ playoff_series_id: null, home_team_id: 'team-1', away_team_id: 'team-2' }]) // final-status follow-up
       .mockResolvedValueOnce([{ ...GAME, status: 'final', home_score: 3, away_score: 2 }]); // re-fetch
     const res = await request(app).patch('/api/admin/games/game-1')
       .send({ status: 'final', home_score: 3, away_score: 2 });
@@ -341,7 +344,10 @@ describe('POST /api/admin/games/playoff-series', () => {
   });
 
   it('creates a playoff series and returns 201', async () => {
-    sql.mockResolvedValueOnce([SERIES]);
+    sql
+      .mockResolvedValue([])
+      .mockResolvedValueOnce([{ best_of: 7 }])
+      .mockResolvedValueOnce([SERIES]);
     const res = await request(app).post('/api/admin/games/playoff-series').send({
       season_id: 'season-1', home_team_id: 'team-1', away_team_id: 'team-2', round: 1,
     });
@@ -415,6 +421,12 @@ const GOALIE_STAT = {
   goalie_photo: null, goalie_jersey_number: 31,
   team_name: 'Sharks', team_code: 'SJS', team_logo: null,
   team_primary_color: '#006272', team_text_color: '#ffffff',
+};
+
+const mockSqlFragments = (count) => {
+  for (let i = 0; i < count; i += 1) {
+    sql.mockReturnValueOnce('');
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -607,6 +619,7 @@ describe('PATCH /api/admin/games/:id/shots', () => {
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/games/:id/goalie-stats', () => {
   it('returns an array of goalie stats', async () => {
+    mockSqlFragments(1); // goalieStintsCTE(id)
     sql.mockResolvedValueOnce([GOALIE_STAT]);
     const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
     expect(res.status).toBe(200);
@@ -617,6 +630,7 @@ describe('GET /api/admin/games/:id/goalie-stats', () => {
   });
 
   it('returns an empty array when no goalie stats exist', async () => {
+    mockSqlFragments(1); // goalieStintsCTE(id)
     sql.mockResolvedValueOnce([]);
     const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
     expect(res.status).toBe(200);
@@ -624,6 +638,7 @@ describe('GET /api/admin/games/:id/goalie-stats', () => {
   });
 
   it('returns 500 on DB error', async () => {
+    mockSqlFragments(1); // goalieStintsCTE(id)
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
     expect(res.status).toBe(500);
@@ -642,9 +657,11 @@ describe('PUT /api/admin/games/:id/goalie-stats', () => {
   });
 
   it('upserts goalie stats and returns the record', async () => {
+    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
     sql
       .mockResolvedValueOnce([]) // INSERT ON CONFLICT (no meaningful return)
       .mockResolvedValueOnce([]) // SELECT rebuild_goalie_stints (legacy→stints sync)
+      .mockReturnValueOnce('') // goalieStintsCTE(id)
       .mockResolvedValueOnce([GOALIE_STAT]); // SELECT full record
     const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
       goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
@@ -655,9 +672,11 @@ describe('PUT /api/admin/games/:id/goalie-stats', () => {
   });
 
   it('returns the inserted record keyed by goalie_id and game_id', async () => {
+    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
     sql
       .mockResolvedValueOnce([]) // INSERT
       .mockResolvedValueOnce([]) // SELECT rebuild_goalie_stints (legacy→stints sync)
+      .mockReturnValueOnce('') // goalieStintsCTE(id)
       .mockResolvedValueOnce([GOALIE_STAT]); // SELECT
     const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
       goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
@@ -667,6 +686,7 @@ describe('PUT /api/admin/games/:id/goalie-stats', () => {
   });
 
   it('returns 400 on FK violation', async () => {
+    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
     sql.mockRejectedValueOnce(Object.assign(new Error('fk'), { code: '23503' }));
     const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
       goalie_id: 'bad-player', team_id: 'team-1', shots_against: 30, saves: 28,
@@ -676,6 +696,7 @@ describe('PUT /api/admin/games/:id/goalie-stats', () => {
   });
 
   it('returns 500 on generic DB error', async () => {
+    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
       goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
