@@ -195,16 +195,10 @@
 .calendarGameCard {
   position: relative;
   width: 100%;
-  display: grid;
-  grid-template-columns: 20px 32px 1fr 20px 32px;
-  grid-template-rows: auto auto auto;
-  align-items: center;
-  justify-items: center;
-  gap: 0;
-  border: 1px solid color-mix(in srgb, var(--game-league-primary) 65%, white);
+  border: 2px solid var(--game-league-primary);
   border-radius: $radius-md;
-  padding: $space-sm $space-md;
-  background: color-mix(in srgb, var(--game-league-primary) 90%, #0f172a 10%);
+  padding: $space-sm;
+  background: color-mix(in srgb, var(--game-league-primary) 50%, #2d3820 50%);
   color: var(--game-league-text);
   transition:
     background $transition-fast,
@@ -245,10 +239,9 @@
   padding-bottom: $space-xs;
   border-bottom: 1px solid color-mix(in srgb, var(--game-league-text) 18%, transparent);
   font-size: $font-sm;
-  font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  color: inherit;
+  color: $text-body;
 }
 
 .calendarGameLive {
@@ -256,8 +249,21 @@
 }
 
 .calendarGameCardUnwatched {
-  background: color-mix(in srgb, var(--game-league-primary) 12%, #{$border});
-  border-color: color-mix(in srgb, var(--game-league-primary) 22%, #{$border});
+  background: var(--game-league-primary);
+  border-color: var(--game-league-primary);
+}
+
+.calendarGameTeam {
+  width: fit-content;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.calendarGameInfo {
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .calendarGameScore,
@@ -267,6 +273,21 @@
   color: inherit;
 }
 
+.calendarGameScore {
+  line-height: 20px;
+  padding: 2px $space-xs;
+  background-color: var(--game-league-primary);
+  border-radius: 2px;
+}
+
+.calendarGameScoreWin {
+  background-color: #067400;
+}
+
+.calendarGameScoreLose {
+  background-color: #d40000;
+}
+
 .calendarGameAt {
   display: inline-flex;
   flex-direction: column;
@@ -274,6 +295,7 @@
   justify-content: center;
   gap: 2px;
   line-height: 1;
+  width: 100%;
 }
 
 .calendarGamePlayoffMeta {
@@ -283,16 +305,6 @@
   text-transform: uppercase;
   color: color-mix(in srgb, var(--game-league-text) 84%, transparent);
   white-space: nowrap;
-}
-
-.calendarGameDotsAway {
-  grid-column: 1 / span 2;
-  margin-top: $space-xs;
-}
-
-.calendarGameDotsHome {
-  grid-column: 4 / span 2;
-  margin-top: $space-xs;
 }
 
 .playoffDots {

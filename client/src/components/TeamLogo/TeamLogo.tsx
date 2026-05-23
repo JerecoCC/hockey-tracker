@@ -2,7 +2,7 @@ import styles from './TeamLogo.module.scss';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
-interface Props {
+export interface TeamLogoProps {
   logo?: string | null;
   /** Short team code — shown as fallback text when there is no logo. */
   code: string;
@@ -28,7 +28,7 @@ const TeamLogo = ({
   size,
   shape = 'square',
   className,
-}: Props) => {
+}: TeamLogoProps) => {
   // 3-char codes need a slightly smaller ratio than 2-char initials in PlayerAvatar
   const fontSize = Math.round(size * 0.32);
   const shapeClass = shape === 'circle' ? styles.circle : styles.square;

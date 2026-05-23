@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import UserGames from './UserGames';
+import styles from './UserGames.module.scss';
 
 const mockNavigate = jest.fn();
 const mockInvalidateQueries = jest.fn();
@@ -429,6 +430,26 @@ describe('UserGames calendar view', () => {
     expect(screen.getByText('R2 - G3')).toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 1 of 4')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
+  });
+
+  it('styles watched calendar teams differently for winners and losers', () => {
+    render(<UserGames />);
+
+    const watchedCard = screen
+      .getByRole('button', { name: 'Download score card' })
+      .closest(`.${styles.calendarGameCard}`);
+
+    expect(watchedCard).not.toBeNull();
+
+    const winnerScore = within(watchedCard as HTMLElement)
+      .getByText('2')
+      .closest(`.${styles.calendarGameScore}`);
+    const loserScore = within(watchedCard as HTMLElement)
+      .getByText('1')
+      .closest(`.${styles.calendarGameScore}`);
+
+    expect(winnerScore).toHaveClass(styles.calendarGameScoreWin);
+    expect(loserScore).toHaveClass(styles.calendarGameScoreLose);
   });
 
   it('opens the score card modal from a watched game hover action', async () => {

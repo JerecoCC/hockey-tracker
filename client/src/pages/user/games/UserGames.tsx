@@ -11,7 +11,7 @@ import Icon from '@/components/Icon/Icon';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import Modal from '@/components/Modal/Modal';
 import Select, { type SelectOption } from '@/components/Select/Select';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import TeamLogo, { TeamLogoProps } from '@/components/TeamLogo/TeamLogo';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
 import styles from './UserGames.module.scss';
@@ -63,18 +63,6 @@ const toDateKeyInZone = (date: Date, timeZone?: string) => {
   const month = parts.find((part) => part.type === 'month')?.value;
   const day = parts.find((part) => part.type === 'day')?.value;
   return year && month && day ? `${year}-${month}-${day}` : null;
-};
-
-const toTimeKeyInZone = (date: Date, timeZone: string) => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone,
-    hour: '2-digit',
-    minute: '2-digit',
-    hourCycle: 'h23',
-  }).formatToParts(date);
-  const hour = parts.find((part) => part.type === 'hour')?.value;
-  const minute = parts.find((part) => part.type === 'minute')?.value;
-  return hour && minute ? `${hour}:${minute}` : null;
 };
 
 const getRawDateKey = (value: string | null) => value?.match(ISO_DATE_PREFIX_RE)?.[1] ?? null;
@@ -162,11 +150,6 @@ const getEtAbbrForDateKey = (dateKey: string): string => {
       .formatToParts(new Date(`${dateKey}T17:00:00Z`))
       .find((p) => p.type === 'timeZoneName')?.value ?? 'ET'
   );
-};
-
-const getEtAbbr = (scheduledAt: string | null): string => {
-  const dateKey = getRawDateKey(scheduledAt) ?? toDateKeyInZone(new Date(), 'America/New_York');
-  return dateKey ? getEtAbbrForDateKey(dateKey) : 'ET';
 };
 
 const getEtDateKey = (scheduledAt: string | null, scheduledTime: string | null) => {
@@ -662,13 +645,13 @@ const downloadMonthScheduleImage = async ({
 }) => {
   const visibleGames = cells.flatMap((cell) => cell.games);
   const uniqueLogoEntries = Array.from(
-    new Map(
-      visibleGames
-        .flatMap((game) => [
-          [game.home_team.id, game.home_team.logo],
-          [game.away_team.id, game.away_team.logo],
-        ])
-        .filter(([, logo]) => !!logo),
+    new Map<string, string>(
+      visibleGames.flatMap((game): [string, string][] => {
+        const entries: [string, string][] = [];
+        if (game.home_team.logo) entries.push([game.home_team.id, game.home_team.logo]);
+        if (game.away_team.logo) entries.push([game.away_team.id, game.away_team.logo]);
+        return entries;
+      }),
     ).entries(),
   );
   const loadedLogoPairs = await Promise.all(
@@ -1051,6 +1034,56 @@ const GameCard = ({
   );
 };
 
+const CalendarGameTeam = ({
+  code,
+  gameStatus,
+  logo,
+  primaryColor,
+  score,
+  showPlayoffSeriesDots,
+  seriesTotalWins = 0,
+  seriesWins = 0,
+  textColor,
+}: Pick<TeamLogoProps, 'logo' | 'code' | 'primaryColor' | 'textColor'> & {
+  gameStatus: 'pending' | 'win' | 'lose';
+  score: string | number;
+  showPlayoffSeriesDots?: boolean;
+  seriesTotalWins: number | null;
+  seriesWins: number | null;
+}) => {
+  return (
+    <div className={styles.calendarGameTeam}>
+      <div className={styles.calendarGameInfo}>
+        <span
+          className={[
+            styles.calendarGameScore,
+            gameStatus === 'win' ? styles.calendarGameScoreWin : '',
+            gameStatus === 'lose' ? styles.calendarGameScoreLose : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          {score}
+        </span>
+        <TeamLogo
+          logo={logo}
+          code={code}
+          primaryColor={primaryColor}
+          textColor={textColor}
+          size={28}
+          shape="circle"
+        />
+      </div>
+      {showPlayoffSeriesDots && (
+        <PlayoffSeriesDots
+          wins={seriesWins || 0}
+          total={seriesTotalWins || 0}
+        />
+      )}
+    </div>
+  );
+};
+
 const CalendarGameCard = ({
   game,
   tzPref,
@@ -1083,6 +1116,10 @@ const CalendarGameCard = ({
   const showScore = shouldShowWatchedScore(game);
   const home = game.home_score;
   const away = game.away_score;
+  const awayGameStatus: 'pending' | 'win' | 'lose' =
+    !showScore || away === home ? 'pending' : away > home ? 'win' : 'lose';
+  const homeGameStatus: 'pending' | 'win' | 'lose' =
+    !showScore || home === away ? 'pending' : home > away ? 'win' : 'lose';
   const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
   const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
@@ -1105,9 +1142,6 @@ const CalendarGameCard = ({
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
     >
-      {originalDateLabel && (
-        <div className={styles.calendarGameOriginalDate}>{originalDateLabel}</div>
-      )}
       <GameHoverActions
         watched={!!game.watched_by_user}
         scheduled={!!game.scheduled_for}
@@ -1119,46 +1153,43 @@ const CalendarGameCard = ({
         onSchedule={onSchedule}
         onSkip={onSkip}
       />
-      <span className={styles.calendarGameScore}>{showScore ? away : '–'}</span>
-      <TeamLogo
-        logo={game.away_team.logo}
-        code={game.away_team.code}
-        primaryColor={game.away_team.primary_color}
-        textColor={game.away_team.text_color}
-        size={28}
-        shape="circle"
-      />
-      <span className={styles.calendarGameAt}>
-        {playoffMetaLabel && (
-          <span className={styles.calendarGamePlayoffMeta}>{playoffMetaLabel}</span>
-        )}
-        <span className={styles.calendarGameAtSymbol}>@</span>
-      </span>
-      <span className={styles.calendarGameScore}>{showScore ? home : '–'}</span>
-      <TeamLogo
-        logo={game.home_team.logo}
-        code={game.home_team.code}
-        primaryColor={game.home_team.primary_color}
-        textColor={game.home_team.text_color}
-        size={28}
-        shape="circle"
-      />
-      {!!game.watched_by_user && seriesTotalWins != null && awaySeriesWins != null && (
-        <span className={styles.calendarGameDotsAway}>
-          <PlayoffSeriesDots
-            wins={awaySeriesWins}
-            total={seriesTotalWins}
-          />
-        </span>
+      {originalDateLabel && (
+        <div className={styles.calendarGameOriginalDate}>{originalDateLabel}</div>
       )}
-      {!!game.watched_by_user && seriesTotalWins != null && homeSeriesWins != null && (
-        <span className={styles.calendarGameDotsHome}>
-          <PlayoffSeriesDots
-            wins={homeSeriesWins}
-            total={seriesTotalWins}
-          />
+      <div className={styles.calendarGameInfo}>
+        <CalendarGameTeam
+          code={game.away_team.code}
+          gameStatus={awayGameStatus}
+          logo={game.away_team.logo}
+          primaryColor={game.away_team.primary_color}
+          score={showScore ? away : '–'}
+          showPlayoffSeriesDots={
+            !!game.watched_by_user && seriesTotalWins != null && awaySeriesWins != null
+          }
+          seriesTotalWins={seriesTotalWins}
+          seriesWins={awaySeriesWins}
+          textColor={game.away_team.text_color}
+        />
+        <span className={styles.calendarGameAt}>
+          {playoffMetaLabel && (
+            <span className={styles.calendarGamePlayoffMeta}>{playoffMetaLabel}</span>
+          )}
+          <span className={styles.calendarGameAtSymbol}>@</span>
         </span>
-      )}
+        <CalendarGameTeam
+          code={game.home_team.code}
+          gameStatus={homeGameStatus}
+          logo={game.home_team.logo}
+          primaryColor={game.home_team.primary_color}
+          score={showScore ? home : '–'}
+          showPlayoffSeriesDots={
+            !!game.watched_by_user && seriesTotalWins != null && homeSeriesWins != null
+          }
+          seriesTotalWins={seriesTotalWins}
+          seriesWins={homeSeriesWins}
+          textColor={game.home_team.text_color}
+        />
+      </div>
     </div>
   );
 };
