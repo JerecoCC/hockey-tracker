@@ -82,7 +82,7 @@
   background: color-mix(in srgb, #{$accent} 12%, #{$bg-card});
 }
 
-// ── Filter selects row (league · season · status) ─────────────────────
+// ── Filter row (league · favorite teams · status · timezone) ──────────
 .filters {
   display: flex;
   align-items: center;
@@ -92,6 +92,11 @@
 
 .filterSelect {
   min-width: 150px;
+}
+
+.teamFilter {
+  min-width: 260px;
+  flex: 1 1 260px;
 }
 
 // ── Empty / loading ────────────────────────────────────────────────────
@@ -151,6 +156,11 @@
   min-width: 0;
 }
 
+.calendarDayCellDropTarget {
+  border-color: $accent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #{$accent} 55%, transparent);
+}
+
 .calendarDayHeader {
   display: flex;
   justify-content: flex-end;
@@ -207,6 +217,15 @@
       pointer-events: auto;
     }
   }
+}
+
+.calendarGameCardDraggable {
+  cursor: grab;
+}
+
+.calendarGameCardDragging {
+  opacity: 0.55;
+  cursor: grabbing;
 }
 
 .calendarGameOriginalDate {

@@ -1,12 +1,14 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
+import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import Modal from '@/components/Modal/Modal';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -528,6 +530,10 @@ const CalendarGameCard = ({
   onUnwatch,
   onSchedule,
   onSkip,
+  onDragStart,
+  onDragEnd,
+  draggable,
+  dragging,
   busy,
 }: {
   game: GameRecord;
@@ -537,6 +543,10 @@ const CalendarGameCard = ({
   onUnwatch: () => Promise<void>;
   onSchedule: () => void;
   onSkip: () => Promise<void>;
+  onDragStart?: (event: DragEvent<HTMLDivElement>) => void;
+  onDragEnd?: () => void;
+  draggable?: boolean;
+  dragging?: boolean;
   busy: boolean;
 }) => {
   const showScore = shouldShowWatchedScore(game);
@@ -549,10 +559,15 @@ const CalendarGameCard = ({
         styles.calendarGameCard,
         game.status === 'in_progress' ? styles.calendarGameLive : '',
         !game.watched_by_user ? styles.calendarGameCardUnwatched : '',
+        draggable ? styles.calendarGameCardDraggable : '',
+        dragging ? styles.calendarGameCardDragging : '',
       ]
         .filter(Boolean)
         .join(' ')}
       style={getLeagueStyle(game)}
+      draggable={draggable}
+      onDragStart={draggable ? onDragStart : undefined}
+      onDragEnd={draggable ? onDragEnd : undefined}
     >
       {originalDateLabel && (
         <div className={styles.calendarGameOriginalDate}>{originalDateLabel}</div>
@@ -598,10 +613,13 @@ const UserGames = () => {
   const [weekStart, setWeekStart] = useState<Date>(() => toDay(new Date()));
   const [view, setView] = useState<'list' | 'calendar'>('calendar');
   const [leagueId, setLeagueId] = useState<string>('all');
-  const [seasonId, setSeasonId] = useState<string>('all');
+  const [teamFilter, setTeamFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [tzPref, setTzPref] = useState<TzPref>(() => getStoredTzPref());
   const [actionGameId, setActionGameId] = useState<string | null>(null);
+  const [dragGameId, setDragGameId] = useState<string | null>(null);
+  const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
+  const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
@@ -624,26 +642,24 @@ const UserGames = () => {
     },
   });
 
-  const leagueSelected = leagueId !== 'all';
-
-  const { data: seasons = [] } = useQuery<{ id: string; name: string }[]>({
-    queryKey: ['user-seasons', leagueId],
+  const { data: favoriteTeamIds = [] } = useQuery<string[]>({
+    queryKey: ['user-favorites'],
     queryFn: async () => {
-      const { data } = await axios.get(`${API}/user/seasons`, {
+      const { data } = await axios.get<string[]>(`${API}/user/favorites`, {
         headers: authHeaders(),
-        params: leagueSelected ? { league_id: leagueId } : undefined,
       });
       return data;
     },
   });
 
+  const leagueSelected = leagueId !== 'all';
+
   const { data: games = [], isLoading } = useQuery<GameRecord[]>({
-    queryKey: ['user-games', statusFilter, leagueId, seasonId],
+    queryKey: ['user-games', statusFilter, leagueId],
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (leagueSelected) params.league_id = leagueId;
-      if (seasonId !== 'all') params.season_id = seasonId;
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
         headers: authHeaders(),
         params,
@@ -652,9 +668,46 @@ const UserGames = () => {
     },
   });
 
+  const favoriteTeamOptions = useMemo<MultiSelectOption[]>(() => {
+    const favoriteTeamIdSet = new Set(favoriteTeamIds);
+    const options = new Map<string, MultiSelectOption>();
+
+    for (const game of games) {
+      for (const team of [game.home_team, game.away_team]) {
+        if (!favoriteTeamIdSet.has(team.id) || options.has(team.id)) continue;
+        options.set(team.id, {
+          value: team.id,
+          label: team.name,
+          logo: team.logo ?? undefined,
+          code: team.code,
+        });
+      }
+    }
+
+    return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [games, favoriteTeamIds]);
+
+  useEffect(() => {
+    const availableIds = new Set(favoriteTeamOptions.map((option) => option.value));
+    setTeamFilter((current) => {
+      const next = current.filter((teamId) => availableIds.has(teamId));
+      return next.length === current.length &&
+        next.every((teamId, index) => teamId === current[index])
+        ? current
+        : next;
+    });
+  }, [favoriteTeamOptions]);
+
+  const filteredGames = useMemo(() => {
+    if (teamFilter.length === 0) return games;
+    return games.filter(
+      (game) => teamFilter.includes(game.home_team.id) || teamFilter.includes(game.away_team.id),
+    );
+  }, [games, teamFilter]);
+
   const scheduledGames = useMemo(
-    () => games.filter((game) => !!getEffectiveUserDateKey(game, tzPref)),
-    [games, tzPref],
+    () => filteredGames.filter((game) => !!getEffectiveUserDateKey(game, tzPref)),
+    [filteredGames, tzPref],
   );
 
   const preferredMonth = useMemo(() => {
@@ -689,7 +742,7 @@ const UserGames = () => {
   // Build a 7-slot array (one per day in the window), each with its games.
   const groupedByDate = useMemo(() => {
     const map = new Map<string, GameRecord[]>();
-    for (const g of games) {
+    for (const g of filteredGames) {
       const key = getEffectiveUserDateKey(g, tzPref);
       if (!key) continue;
       const d = toDay(dateKeyToDate(key));
@@ -703,7 +756,7 @@ const UserGames = () => {
       const dayGames = (map.get(key) ?? []).slice().sort(sortGamesByTime);
       return [key, dayGames] as [string, GameRecord[]];
     });
-  }, [games, weekStart, weekEnd, tzPref]);
+  }, [filteredGames, weekStart, weekEnd, tzPref]);
 
   const gamesByCalendarDate = useMemo(() => {
     const map = new Map<string, GameRecord[]>();
@@ -734,15 +787,40 @@ const UserGames = () => {
     { value: 'all', label: 'All Leagues' },
     ...leagues.map((l) => ({ value: l.id, label: l.code, logo: l.logo })),
   ];
-  const seasonOptions: SelectOption[] = [
-    { value: 'all', label: 'All Seasons' },
-    ...seasons.map((s) => ({ value: s.id, label: s.name })),
-  ];
 
   const openGame = (gameId: string) => navigate(`/games/${gameId}`);
+  const openSkipConfirm = (game: GameRecord) => setConfirmSkipGame(game);
   const openScheduleModal = (game: GameRecord) => {
     setScheduleTarget(game);
     setScheduleDate(getScheduledWatchDateKey(game.scheduled_for) ?? '');
+  };
+
+  const saveScheduleForGame = async (gameId: string, scheduledFor: string | null) => {
+    if (actionGameId === gameId || scheduleBusy) return false;
+    setActionGameId(gameId);
+    try {
+      await axios.put(
+        `${API}/user/watched-games/${gameId}/schedule`,
+        { scheduled_for: scheduledFor },
+        { headers: authHeaders() },
+      );
+      preserveCalendarMonthRef.current = true;
+      queryClient.setQueriesData(
+        { queryKey: ['user-games'] },
+        (existing: GameRecord[] | undefined) => {
+          if (!Array.isArray(existing)) return existing;
+          return existing.map((game) =>
+            game.id === gameId ? { ...game, scheduled_for: scheduledFor } : game,
+          );
+        },
+      );
+      return true;
+    } catch {
+      toast.error('Failed to save watch schedule');
+      return false;
+    } finally {
+      setActionGameId(null);
+    }
   };
 
   const markGameWatched = async (gameId: string) => {
@@ -827,28 +905,48 @@ const UserGames = () => {
     const normalizedScheduleDate = getScheduledWatchDateKey(scheduleDate);
     setScheduleBusy(true);
     try {
-      await axios.put(
-        `${API}/user/watched-games/${targetGameId}/schedule`,
-        { scheduled_for: normalizedScheduleDate },
-        { headers: authHeaders() },
-      );
-      preserveCalendarMonthRef.current = true;
-      queryClient.setQueriesData(
-        { queryKey: ['user-games'] },
-        (existing: GameRecord[] | undefined) => {
-          if (!Array.isArray(existing)) return existing;
-          return existing.map((game) =>
-            game.id === targetGameId ? { ...game, scheduled_for: normalizedScheduleDate } : game,
-          );
-        },
-      );
+      const ok = await saveScheduleForGame(targetGameId, normalizedScheduleDate);
+      if (!ok) return;
       setScheduleTarget(null);
       setScheduleDate('');
-    } catch {
-      toast.error('Failed to save watch schedule');
     } finally {
       setScheduleBusy(false);
     }
+  };
+
+  const handleCalendarDragStart = (game: GameRecord) => (event: DragEvent<HTMLDivElement>) => {
+    setDragGameId(game.id);
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/user-game-id', game.id);
+  };
+
+  const handleCalendarDragEnd = () => {
+    setDragGameId(null);
+    setDragOverDateKey(null);
+  };
+
+  const handleCalendarDragOver = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+    const draggedId = dragGameId || event.dataTransfer.getData('text/user-game-id');
+    if (!draggedId) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    if (dragOverDateKey !== dateKey) setDragOverDateKey(dateKey);
+  };
+
+  const handleCalendarDrop = (dateKey: string) => async (event: DragEvent<HTMLDivElement>) => {
+    event.preventDefault();
+    const draggedId = dragGameId || event.dataTransfer.getData('text/user-game-id');
+    setDragOverDateKey(null);
+    setDragGameId(null);
+    if (!draggedId) return;
+
+    const draggedGame = games.find((game) => game.id === draggedId);
+    if (!draggedGame || draggedGame.watched_by_user) return;
+    const originalDateKey = getOriginalGameDateKey(draggedGame, tzPref);
+    const normalizedScheduleDate = originalDateKey === dateKey ? null : dateKey;
+    if (getScheduledWatchDateKey(draggedGame.scheduled_for) === normalizedScheduleDate) return;
+
+    await saveScheduleForGame(draggedId, normalizedScheduleDate);
   };
 
   return (
@@ -929,18 +1027,17 @@ const UserGames = () => {
             <Select
               value={leagueId}
               options={leagueOptions}
-              onChange={(v) => {
-                setLeagueId(v);
-                setSeasonId('all');
-              }}
+              onChange={setLeagueId}
             />
           </div>
-          <div className={styles.filterSelect}>
-            <Select
-              value={seasonId}
-              options={seasonOptions}
-              onChange={setSeasonId}
-              placeholder="All Seasons"
+          <div className={`${styles.filterSelect} ${styles.teamFilter}`}>
+            <MultiSelect
+              value={teamFilter}
+              options={favoriteTeamOptions}
+              placeholder="All Favorite Teams"
+              emptyMessage="No favorite teams available"
+              onChange={setTeamFilter}
+              searchable
             />
           </div>
           <div className={styles.filterSelect}>
@@ -982,7 +1079,7 @@ const UserGames = () => {
                       onMarkWatched={() => markGameWatched(g.id)}
                       onUnwatch={() => unwatchGame(g.id)}
                       onSchedule={() => openScheduleModal(g)}
-                      onSkip={() => skipGame(g.id)}
+                      onSkip={() => openSkipConfirm(g)}
                       busy={actionGameId === g.id}
                     />
                   ))}
@@ -1022,7 +1119,15 @@ const UserGames = () => {
               return (
                 <div
                   key={dateKey}
-                  className={styles.calendarDayCell}
+                  className={[
+                    styles.calendarDayCell,
+                    dragOverDateKey === dateKey ? styles.calendarDayCellDropTarget : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  data-date-key={dateKey}
+                  onDragOver={handleCalendarDragOver(dateKey)}
+                  onDrop={handleCalendarDrop(dateKey)}
                 >
                   <div className={styles.calendarDayHeader}>
                     <span className={styles.calendarDayNumber}>{day}</span>
@@ -1038,7 +1143,11 @@ const UserGames = () => {
                           onMarkWatched={() => markGameWatched(game.id)}
                           onUnwatch={() => unwatchGame(game.id)}
                           onSchedule={() => openScheduleModal(game)}
-                          onSkip={() => skipGame(game.id)}
+                          onSkip={() => openSkipConfirm(game)}
+                          onDragStart={handleCalendarDragStart(game)}
+                          onDragEnd={handleCalendarDragEnd}
+                          draggable={!game.watched_by_user && actionGameId !== game.id}
+                          dragging={dragGameId === game.id}
                           busy={actionGameId === game.id}
                         />
                       ))}
@@ -1063,6 +1172,29 @@ const UserGames = () => {
           setScheduleDate('');
         }}
         onSave={saveSchedule}
+      />
+
+      <ConfirmModal
+        open={!!confirmSkipGame}
+        title="Won’t Watch Game"
+        body={
+          confirmSkipGame
+            ? `Hide ${confirmSkipGame.away_team.code} @ ${confirmSkipGame.home_team.code} from your games feed?`
+            : ''
+        }
+        confirmLabel="Hide game"
+        confirmIcon="visibility_off"
+        variant="danger"
+        busy={actionGameId === confirmSkipGame?.id}
+        onCancel={() => {
+          if (actionGameId === confirmSkipGame?.id) return;
+          setConfirmSkipGame(null);
+        }}
+        onConfirm={async () => {
+          if (!confirmSkipGame) return;
+          await skipGame(confirmSkipGame.id);
+          setConfirmSkipGame(null);
+        }}
       />
     </div>
   );

@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -84,6 +84,32 @@ jest.mock('@/components/Select/Select', () => ({
     </select>
   ),
 }));
+jest.mock('@/components/MultiSelect/MultiSelect', () => ({
+  __esModule: true,
+  default: ({ value, options, onChange, placeholder }: any) => (
+    <div
+      role="combobox"
+      aria-label={placeholder ?? 'multi-select'}
+    >
+      {options.map((option: any) => (
+        <button
+          key={option.value}
+          type="button"
+          aria-label={`Toggle ${option.label}`}
+          onClick={() =>
+            onChange(
+              value.includes(option.value)
+                ? value.filter((entry: string) => entry !== option.value)
+                : [...value, option.value],
+            )
+          }
+        >
+          Toggle {option.label}
+        </button>
+      ))}
+    </div>
+  ),
+}));
 
 const mockUseQuery = useQuery as jest.Mock;
 const mockUseQueryClient = useQueryClient as jest.Mock;
@@ -164,6 +190,19 @@ const localDateKeyForIso = (iso: string, scheduledTime: string | null) => {
 };
 const scheduledWatchDate = localDateString(0);
 const watchedDate = localDateString(1);
+const alternateCurrentMonthDate = (excluded: string[] = []) => {
+  const year = currentDate.getFullYear();
+  const monthIndex = currentDate.getMonth();
+  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
+  const excludedSet = new Set(excluded);
+
+  for (let day = 1; day <= lastDay; day++) {
+    const candidate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (!excludedSet.has(candidate)) return candidate;
+  }
+
+  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
+};
 
 const games = [
   {
@@ -299,22 +338,21 @@ beforeEach(() => {
   mockUseQuery.mockImplementation(({ queryKey }: any) => {
     if (queryKey[0] === 'user-leagues')
       return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
-    if (queryKey[0] === 'user-seasons') return { data: [{ id: 'season-1', name: '2024-25' }] };
+    if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
     if (queryKey[0] === 'user-games') return { data: games, isLoading: false };
     return { data: [], isLoading: false };
   });
 });
 
 describe('UserGames calendar view', () => {
-  it('keeps all seasons available and hides status text in list view', async () => {
+  it('shows favorite team filtering and hides status text in list view', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'List view' }));
 
-    const seasonsCall = mockUseQuery.mock.calls.find(
-      ([options]) => options.queryKey[0] === 'user-seasons',
-    )?.[0];
-    expect(seasonsCall?.enabled).not.toBe(false);
+    expect(screen.getByRole('combobox', { name: 'All Favorite Teams' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toggle Home Team' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Toggle Opponent' })).toBeInTheDocument();
 
     const firstGameCard = screen.getAllByText('Away Team')[0].closest('[style]');
     expect(within(firstGameCard as HTMLElement).queryByText('Upcoming')).not.toBeInTheDocument();
@@ -363,6 +401,111 @@ describe('UserGames calendar view', () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
+  it('filters user games by selected favorite teams', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+    await user.click(screen.getByRole('button', { name: 'Toggle Opponent' }));
+
+    expect(screen.queryByText('Away Team')).not.toBeInTheDocument();
+    expect(screen.getByText('Opponent')).toBeInTheDocument();
+  });
+
+  it('allows dragging a calendar game to another date to schedule it', async () => {
+    render(<UserGames />);
+
+    const originalDate = etDateKeyForIso(games[0].scheduled_at, games[0].scheduled_time);
+    const targetDate = alternateCurrentMonthDate([originalDate, scheduledWatchDate]);
+    const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
+    const targetCell = document.querySelector(`[data-date-key="${targetDate}"]`);
+    const dataTransfer = {
+      store: {} as Record<string, string>,
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(type: string, value: string) {
+        this.store[type] = value;
+      },
+      getData(type: string) {
+        return this.store[type] ?? '';
+      },
+    };
+
+    expect(sourceCard).not.toBeNull();
+    expect(targetCell).not.toBeNull();
+
+    fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(targetCell as Element, { dataTransfer });
+    fireEvent.drop(targetCell as Element, { dataTransfer });
+    fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
+
+    await waitFor(() =>
+      expect(mockAxios.put).toHaveBeenCalledWith(
+        expect.stringContaining('/user/watched-games/game-1/schedule'),
+        { scheduled_for: targetDate },
+        expect.objectContaining({ headers: expect.any(Object) }),
+      ),
+    );
+
+    expect(mockSetQueriesData).toHaveBeenCalledWith(
+      { queryKey: ['user-games'] },
+      expect.any(Function),
+    );
+
+    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    expect(updater(games)[0]).toEqual(
+      expect.objectContaining({
+        id: 'game-1',
+        scheduled_for: targetDate,
+      }),
+    );
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('clears the schedule when dragging a game back to its original date', async () => {
+    render(<UserGames />);
+
+    const originalDate = etDateKeyForIso(games[0].scheduled_at, games[0].scheduled_time);
+    const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
+    const targetCell = document.querySelector(`[data-date-key="${originalDate}"]`);
+    const dataTransfer = {
+      store: {} as Record<string, string>,
+      effectAllowed: 'all',
+      dropEffect: 'move',
+      setData(type: string, value: string) {
+        this.store[type] = value;
+      },
+      getData(type: string) {
+        return this.store[type] ?? '';
+      },
+    };
+
+    expect(sourceCard).not.toBeNull();
+    expect(targetCell).not.toBeNull();
+
+    fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
+    fireEvent.dragOver(targetCell as Element, { dataTransfer });
+    fireEvent.drop(targetCell as Element, { dataTransfer });
+    fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
+
+    await waitFor(() =>
+      expect(mockAxios.put).toHaveBeenCalledWith(
+        expect.stringContaining('/user/watched-games/game-1/schedule'),
+        { scheduled_for: null },
+        expect.objectContaining({ headers: expect.any(Object) }),
+      ),
+    );
+
+    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    expect(updater(games)[0]).toEqual(
+      expect.objectContaining({
+        id: 'game-1',
+        scheduled_for: null,
+      }),
+    );
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
   it('marks an unwatched game as watched from the hover action', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
@@ -395,6 +538,12 @@ describe('UserGames calendar view', () => {
     render(<UserGames />);
 
     await user.click(screen.getAllByRole('button', { name: 'Won’t watch' })[0]);
+
+    expect(screen.getByText('Won’t Watch Game')).toBeInTheDocument();
+    expect(screen.getByText('Hide AWY @ HOM from your games feed?')).toBeInTheDocument();
+    expect(mockAxios.post).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Hide game' }));
 
     expect(mockAxios.post).toHaveBeenCalledWith(
       expect.stringContaining('/user/watched-games/game-1/skip'),
@@ -558,7 +707,7 @@ describe('UserGames calendar view', () => {
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
       if (queryKey[0] === 'user-leagues')
         return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
-      if (queryKey[0] === 'user-seasons') return { data: [{ id: 'season-1', name: '2024-25' }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-tz'] };
       if (queryKey[0] === 'user-games') return { data: [timezoneSensitiveGame], isLoading: false };
       return { data: [], isLoading: false };
     });
