@@ -144,7 +144,7 @@ const GameSummaryTab = ({
       ? isPlayoff
         ? Array.from({ length: game.overtime_periods ?? 1 }, (_, i) => ({
             id: `OT${i + 1}`,
-            label: `Overtime ${i + 1}`,
+            label: `OT ${i + 1}`,
             shortLabel: `OT${i + 1}`,
           }))
         : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
@@ -498,7 +498,6 @@ const GameSummaryTab = ({
             <LinescoreCard
               game={game}
               isFinal={isFinal}
-              isInProgress={isInProgress}
               isEditMode={isEditMode}
               busy={busy}
               liveAwayScore={liveAwayScore}

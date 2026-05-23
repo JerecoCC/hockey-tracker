@@ -79,18 +79,20 @@ const StarCard = ({
             size={24}
           />
         </Tooltip>
+        {' • '}
         {subLabel && <span>{subLabel}</span>}
       </span>
 
       {player.position === 'G' ? (
         goalieStatRecord ? (
           <span className={styles.starStats}>
-            SA: {goalieStatRecord.shots_against} | SV: {goalieStatRecord.saves}
+            SA: {goalieStatRecord.shots_against} | SV: {goalieStatRecord.saves} | SV%:{' '}
+            {(goalieStatRecord.saves / goalieStatRecord.shots_against).toFixed(3).replace(/^0/, '')}
           </span>
         ) : null
       ) : (
         <span className={styles.starStats}>
-          G: {stats.goals} | A: {stats.assists}
+          G: {stats.goals} | A: {stats.assists} | P: {stats.goals + stats.assists}
         </span>
       )}
     </div>

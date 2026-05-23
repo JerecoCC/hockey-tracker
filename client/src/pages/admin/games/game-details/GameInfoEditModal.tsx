@@ -234,20 +234,22 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
               !value || !!formValues.scheduled_date || 'A date is required when time is set',
           }}
         />
-        <Field
-          label="Start Time"
-          type="timepicker"
-          control={control}
-          name="time_start"
-          disabled={isSubmitting || disabled || game.status === 'scheduled'}
-        />
-        <Field
-          label="End Time"
-          type="timepicker"
-          control={control}
-          name="time_end"
-          disabled={isSubmitting || disabled || game.status !== 'final'}
-        />
+        {game.status !== 'scheduled' && game.status !== 'final' && (
+          <>
+            <Field
+              label="Start Time"
+              type="timepicker"
+              control={control}
+              name="time_start"
+            />
+            <Field
+              label="End Time"
+              type="timepicker"
+              control={control}
+              name="time_end"
+            />
+          </>
+        )}
         <div className={styles.formFieldFull}>
           <Field
             label="Venue"

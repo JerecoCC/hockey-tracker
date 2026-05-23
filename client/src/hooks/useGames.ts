@@ -88,6 +88,8 @@ export interface GameRecord {
   away_team:             TeamInfo;
   overtime_periods:         number | null;
   shootout:                 boolean;
+  /** Winning team for a completed game when it can be derived from goals / shootout attempts. */
+  winner_team_id?:          string | null;
   /** UUID of the team that shoots first in a shootout, or null if not applicable. */
   shootout_first_team_id:   string | null;
   playoff_series_id:        string | null;

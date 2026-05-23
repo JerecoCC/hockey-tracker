@@ -10,8 +10,24 @@ jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('@/hooks/useGames', () => jest.fn());
 jest.mock('@/hooks/useSeasons', () => jest.fn());
 jest.mock('@/pages/admin/seasons/GameListItem', () => {
-  function MockGameListItem() {
-    return <li>Game List Item</li>;
+  interface MockGameListItemProps {
+    awayTeam: { code: string };
+    homeTeam: { code: string };
+    awayScore: number;
+    homeScore: number;
+    statusLabel: string;
+  }
+
+  function MockGameListItem({
+    awayTeam,
+    homeTeam,
+    awayScore,
+    homeScore,
+    statusLabel,
+  }: MockGameListItemProps) {
+    return (
+      <li>{`${awayTeam.code} ${awayScore} - ${homeTeam.code} ${homeScore} ${statusLabel}`}</li>
+    );
   }
 
   return MockGameListItem;
@@ -137,6 +153,63 @@ const games = [
     playoff_round_names: null,
   },
   {
+    id: 'game-shootout',
+    season_id: 'season-1',
+    game_type: 'regular',
+    status: 'final',
+    scheduled_at: currentMonthIso(18),
+    scheduled_time: '19:30',
+    venue: 'Shootout Arena',
+    time_start: null,
+    time_end: null,
+    home_team: {
+      id: 'team-1',
+      name: 'Home Team',
+      code: 'HOM',
+      logo: null,
+      primary_color: '#123456',
+      secondary_color: '#000',
+      text_color: '#ffffff',
+    },
+    away_team: {
+      id: 'team-5',
+      name: 'Shootout Opponent',
+      code: 'SHO',
+      logo: null,
+      primary_color: '#0f172a',
+      secondary_color: '#000',
+      text_color: '#ffffff',
+    },
+    overtime_periods: 1,
+    shootout: true,
+    winner_team_id: 'team-1',
+    shootout_first_team_id: 'team-5',
+    playoff_series_id: null,
+    game_number_in_series: null,
+    game_number: 4,
+    playoff_round: null,
+    series_home_team_id: null,
+    series_away_team_id: null,
+    series_home_wins: null,
+    series_away_wins: null,
+    series_games_to_win: null,
+    notes: null,
+    created_at: '2024-01-01T00:00:00Z',
+    current_period: null,
+    period_scores: [
+      { period: 1, away_goals: 1, home_goals: 0 },
+      { period: 2, away_goals: 0, home_goals: 1 },
+      { period: 3, away_goals: 1, home_goals: 1 },
+      { period: 'SO', away_goals: 0, home_goals: 1 },
+    ],
+    period_shots: [],
+    star_1_id: null,
+    star_2_id: null,
+    star_3_id: null,
+    best_of_shootout: 3,
+    playoff_round_names: null,
+  },
+  {
     id: 'game-same-day-second',
     season_id: 'season-1',
     game_type: 'regular',
@@ -208,7 +281,7 @@ describe('TeamGamesTab', () => {
       />,
     );
 
-    expect(container.querySelectorAll('.calendarGameHome')).toHaveLength(1);
+    expect(container.querySelectorAll('.calendarGameHome')).toHaveLength(2);
     expect(container.querySelectorAll('.calendarGameAway')).toHaveLength(1);
     expect(container.querySelector('.calendarGameHome')).toHaveStyle('--calendar-primary: #123456');
     expect(
@@ -218,6 +291,7 @@ describe('TeamGamesTab', () => {
 
     expect(container.querySelector('.tipVisible')).toHaveTextContent('Away Team');
     expect(screen.getByText('W 4 - 5 (OT)')).toBeInTheDocument();
+    expect(screen.getByText('W 2 - 3 (SO)')).toBeInTheDocument();
     expect(screen.queryByText('AWY')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Open game vs Second Opponent')).not.toBeInTheDocument();
 
@@ -236,5 +310,20 @@ describe('TeamGamesTab', () => {
     expect(mockNavigate).toHaveBeenCalledWith(
       '/admin/leagues/league-1/seasons/season-1/games/game-home',
     );
+  });
+
+  it('adds the winner point for shootout games in list view', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <TeamGamesTab
+        teamId="team-1"
+        leagueId="league-1"
+      />,
+    );
+
+    await user.click(screen.getByLabelText('List view'));
+
+    expect(screen.getByText('SHO 2 - HOM 3 Final/SO')).toBeInTheDocument();
   });
 });

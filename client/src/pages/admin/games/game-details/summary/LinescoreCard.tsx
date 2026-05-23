@@ -16,7 +16,6 @@ interface LinescorePeriod {
 interface Props {
   game: GameRecord;
   isFinal: boolean;
-  isInProgress: boolean;
   isEditMode: boolean;
   busy: string | null;
   liveAwayScore: number;
@@ -42,7 +41,6 @@ interface Props {
 const LinescoreCard = ({
   game,
   isFinal,
-  isInProgress,
   isEditMode,
   busy,
   liveAwayScore,
@@ -233,8 +231,7 @@ const LinescoreCard = ({
                     </td>
                   );
                 }
-                const rawGoals =
-                  row.teamId === game.away_team.id ? ps?.away_goals : ps?.home_goals;
+                const rawGoals = row.teamId === game.away_team.id ? ps?.away_goals : ps?.home_goals;
                 const goals: number | string = rawGoals ?? (isPeriodDone ? 0 : '—');
                 return (
                   <td

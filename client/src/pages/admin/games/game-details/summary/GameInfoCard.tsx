@@ -68,14 +68,18 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
                 : null
             }
           />
-          <InfoItem
-            label="Start Time"
-            data={game.time_start ? TIME_FMT.format(new Date(game.time_start)) : null}
-          />
-          <InfoItem
-            label="End Time"
-            data={game.time_end ? formatEndTime(game.time_end, game.time_start) : null}
-          />
+          {game.status !== 'cancelled' && game.status !== 'scheduled' && (
+            <>
+              <InfoItem
+                label="Start Time"
+                data={game.time_start ? TIME_FMT.format(new Date(game.time_start)) : null}
+              />
+              <InfoItem
+                label="End Time"
+                data={game.time_end ? formatEndTime(game.time_end, game.time_start) : null}
+              />
+            </>
+          )}
           <InfoItem
             label="Venue"
             data={game.venue ?? null}

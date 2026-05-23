@@ -30,6 +30,7 @@ router.get('/', async (req, res) => {
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
         g.overtime_periods, g.shootout,
+        wr.winner_team_id,
         g.playoff_series_id, g.game_number_in_series, g.game_number,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
@@ -89,6 +90,33 @@ router.get('/', async (req, res) => {
           GROUP BY go.period
         ) ps
       ) gs ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          CASE
+            WHEN g.shootout THEN so.so_winner_team_id
+            WHEN score.home_goals > score.away_goals THEN g.home_team_id
+            WHEN score.away_goals > score.home_goals THEN g.away_team_id
+            ELSE NULL
+          END AS winner_team_id
+        FROM (
+          SELECT
+            (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id)::int AS home_goals,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id)::int AS away_goals
+        ) score
+        LEFT JOIN LATERAL (
+          SELECT CASE
+            WHEN COUNT(*) FILTER (WHERE team_id = g.home_team_id AND scored)
+              > COUNT(*) FILTER (WHERE team_id = g.away_team_id AND scored)
+              THEN g.home_team_id
+            WHEN COUNT(*) FILTER (WHERE team_id = g.away_team_id AND scored)
+              > COUNT(*) FILTER (WHERE team_id = g.home_team_id AND scored)
+              THEN g.away_team_id
+            ELSE NULL
+          END AS so_winner_team_id
+          FROM shootout_attempts
+          WHERE game_id = g.id
+        ) so ON true
+      ) wr ON true
       WHERE
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${team_id   ?? null}::uuid IS NULL OR g.home_team_id = ${team_id ?? null}::uuid

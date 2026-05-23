@@ -19,6 +19,7 @@ import styles from '../GameDetailsPage.module.scss';
 
 interface Props {
   game: GameRecord;
+  isEditMode: boolean;
   isFinal: boolean;
   leagueId: string;
   seasonId: string | undefined;
@@ -36,6 +37,7 @@ interface Props {
 
 const GameLineupsTab = ({
   game,
+  isEditMode,
   isFinal,
   leagueId,
   seasonId,
@@ -130,7 +132,7 @@ const GameLineupsTab = ({
         </span>
       }
       hoverActions={
-        isFinal
+        isFinal && !isEditMode
           ? []
           : [
               ...(inheritedEntries.length > 0 && rosterEntries.length === 0

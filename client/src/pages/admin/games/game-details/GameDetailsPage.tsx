@@ -325,6 +325,7 @@ const GameDetailsPage = () => {
             content: (
               <GameLineupsTab
                 game={game}
+                isEditMode={isEditMode}
                 isFinal={isFinal}
                 leagueId={leagueId}
                 seasonId={seasonId}
