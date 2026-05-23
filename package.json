@@ -1,10 +1,6 @@
 {
   "name": "hockey-tracker",
-<<<<<<< HEAD
-  "version": "1.10.1",
-=======
   "version": "1.11.0",
->>>>>>> user-view
   "description": "",
   "main": "index.js",
   "scripts": {
