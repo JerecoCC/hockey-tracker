@@ -65,10 +65,166 @@ router.delete('/favorites/:teamId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// POST /api/user/watched-games/:gameId  – mark a game as watched (idempotent)
+// ---------------------------------------------------------------------------
+router.post('/watched-games/:gameId', async (req, res) => {
+  const userId = req.user.id;
+  const { gameId } = req.params;
+  try {
+    const game = await sql`SELECT id FROM games WHERE id = ${gameId}`;
+    if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
+
+    const [saved] = await sql`
+      INSERT INTO user_watched_games (user_id, game_id, watched_at, watched_on, scheduled_for)
+      VALUES (${userId}, ${gameId}, NOW(), CURRENT_DATE, NULL)
+      ON CONFLICT (user_id, game_id)
+      DO UPDATE SET
+        watched_at = NOW(),
+        watched_on = COALESCE(user_watched_games.scheduled_for, CURRENT_DATE),
+        skipped_at = NULL
+      RETURNING watched_on::text AS watched_on, scheduled_for::text AS scheduled_for
+    `;
+
+    return res.status(201).json({
+      user_id: userId,
+      game_id: gameId,
+      watched_on: saved?.watched_on ?? new Date().toISOString().slice(0, 10),
+      scheduled_for: saved?.scheduled_for ?? null,
+    });
+  } catch (err) {
+    console.error('user watched-games add error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PUT /api/user/watched-games/:gameId/schedule  – schedule/clear a watch date
+// Body: { scheduled_for: 'YYYY-MM-DD' | null }
+// ---------------------------------------------------------------------------
+router.put('/watched-games/:gameId/schedule', async (req, res) => {
+  const userId = req.user.id;
+  const { gameId } = req.params;
+  const scheduledFor = typeof req.body?.scheduled_for === 'string' ? req.body.scheduled_for : null;
+
+  try {
+    const game = await sql`SELECT id FROM games WHERE id = ${gameId}`;
+    if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
+
+    await sql`
+      INSERT INTO user_watched_games (user_id, game_id, scheduled_for)
+      VALUES (${userId}, ${gameId}, ${scheduledFor}::date)
+      ON CONFLICT (user_id, game_id)
+      DO UPDATE SET
+        scheduled_for = ${scheduledFor}::date,
+        skipped_at = NULL
+    `;
+
+    return res.json({
+      user_id: userId,
+      game_id: gameId,
+      scheduled_for: scheduledFor,
+    });
+  } catch (err) {
+    console.error('user watched-games schedule error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/user/watched-games/:gameId  – clear watched state for a game
+// Preserves scheduled_for if the user has a future watch date set.
+// ---------------------------------------------------------------------------
+router.delete('/watched-games/:gameId', async (req, res) => {
+  const userId = req.user.id;
+  const { gameId } = req.params;
+  try {
+    const existing = await sql`
+      SELECT scheduled_for::text AS scheduled_for
+      FROM user_watched_games
+      WHERE user_id = ${userId} AND game_id = ${gameId}
+      LIMIT 1
+    `;
+
+    if (existing.length === 0) {
+      return res.status(404).json({ error: 'Watched game record not found' });
+    }
+
+    const scheduledFor = existing[0].scheduled_for ?? null;
+
+    if (scheduledFor) {
+      await sql`
+        UPDATE user_watched_games
+        SET watched_at = NULL,
+            watched_on = NULL,
+            skipped_at = NULL
+        WHERE user_id = ${userId} AND game_id = ${gameId}
+      `;
+
+      return res.json({
+        user_id: userId,
+        game_id: gameId,
+        watched_on: null,
+        scheduled_for: scheduledFor,
+      });
+    }
+
+    await sql`
+      DELETE FROM user_watched_games
+      WHERE user_id = ${userId} AND game_id = ${gameId}
+    `;
+
+    return res.json({
+      user_id: userId,
+      game_id: gameId,
+      watched_on: null,
+      scheduled_for: null,
+      deleted: true,
+    });
+  } catch (err) {
+    console.error('user watched-games delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/user/watched-games/:gameId/skip  – hide a game from the user feed
+// ---------------------------------------------------------------------------
+router.post('/watched-games/:gameId/skip', async (req, res) => {
+  const userId = req.user.id;
+  const { gameId } = req.params;
+  try {
+    const game = await sql`SELECT id FROM games WHERE id = ${gameId}`;
+    if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
+
+    await sql`
+      INSERT INTO user_watched_games (user_id, game_id, watched_at, watched_on, skipped_at, scheduled_for)
+      VALUES (${userId}, ${gameId}, NULL, NULL, NOW(), NULL)
+      ON CONFLICT (user_id, game_id)
+      DO UPDATE SET
+        watched_at = NULL,
+        watched_on = NULL,
+        skipped_at = NOW(),
+        scheduled_for = NULL
+    `;
+
+    return res.status(201).json({
+      user_id: userId,
+      game_id: gameId,
+      skipped: true,
+    });
+  } catch (err) {
+    console.error('user watched-games skip error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/user/games  – read-only game list for authenticated users
-// Query params: season_id, team_id, game_type, status
+// Query params: season_id, league_id, team_id, game_type, status
+// Results are scoped to games involving the user's favourite teams.
 // ---------------------------------------------------------------------------
 router.get('/games', async (req, res) => {
+  const userId = req.user.id;
   const { season_id, league_id, team_id, game_type, status } = req.query;
   try {
     const games = await sql`
@@ -106,7 +262,12 @@ router.get('/games', async (req, res) => {
         -- Season / league context
         s.name AS season_name,
         l.id   AS league_id,
-        l.name AS league_name
+        l.name AS league_name,
+        l.primary_color AS league_primary_color,
+        l.text_color AS league_text_color,
+        COALESCE(uwg.watched_on, uwg.watched_at::date) AS watched_on,
+        uwg.scheduled_for,
+        (uwg.game_id IS NOT NULL AND (uwg.watched_on IS NOT NULL OR uwg.watched_at IS NOT NULL)) AS watched_by_user
       FROM games g
       JOIN seasons          s      ON s.id      = g.season_id
       JOIN leagues          l      ON l.id      = s.league_id
@@ -141,7 +302,20 @@ router.get('/games', async (req, res) => {
           FROM goals go WHERE go.game_id = g.id GROUP BY go.period
         ) ps
       ) gs ON true
+      LEFT JOIN user_watched_games uwg
+        ON uwg.user_id = ${userId}
+       AND uwg.game_id = g.id
       WHERE
+        EXISTS (
+          SELECT 1
+          FROM user_favorite_teams uft
+          WHERE uft.user_id = ${userId}
+            AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+        )
+        AND
+        g.status <> 'cancelled'
+        AND uwg.skipped_at IS NULL
+        AND
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${league_id ?? null}::uuid IS NULL OR l.id        = ${league_id ?? null}::uuid)
         AND (${team_id   ?? null}::uuid IS NULL OR g.home_team_id = ${team_id ?? null}::uuid
