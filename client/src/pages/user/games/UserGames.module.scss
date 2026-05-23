@@ -194,14 +194,14 @@
   border: 1px solid color-mix(in srgb, var(--game-league-primary) 65%, white);
   border-radius: $radius-md;
   padding: $space-sm $space-md;
-  background: color-mix(in srgb, var(--game-league-primary) 88%, #0f172a 12%);
+  background: color-mix(in srgb, var(--game-league-primary) 90%, #0f172a 10%);
   color: var(--game-league-text);
   transition:
     background $transition-fast,
     border-color $transition-fast;
 
   &:hover {
-    background: color-mix(in srgb, var(--game-league-primary) 92%, #0f172a 8%);
+    background: color-mix(in srgb, var(--game-league-primary) 94%, #0f172a 6%);
     border-color: color-mix(in srgb, var(--game-league-primary) 82%, white);
   }
 
@@ -273,7 +273,7 @@
 
 .gameCard {
   position: relative;
-  background: color-mix(in srgb, var(--game-league-primary) 14%, #{$bg-page});
+  background: color-mix(in srgb, var(--game-league-primary) 18%, #{$bg-card});
   border: 1px solid color-mix(in srgb, var(--game-league-primary) 44%, #{$border});
   border-radius: $radius-lg;
   padding: $space-lg $space-2xl;

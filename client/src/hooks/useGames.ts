@@ -86,6 +86,8 @@ export interface GameRecord {
   time_end:              string | null;
   home_team:             TeamInfo;
   away_team:             TeamInfo;
+  home_score:            number;
+  away_score:            number;
   overtime_periods:         number | null;
   shootout:                 boolean;
   /** Winning team for a completed game when it can be derived from goals / shootout attempts. */

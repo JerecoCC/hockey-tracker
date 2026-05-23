@@ -27,6 +27,9 @@ const GAME = {
   scheduled_at: '2024-10-10T19:00:00Z',
   scheduled_time: '19:00',
   venue: null,
+  home_score: 0,
+  away_score: 0,
+  winner_team_id: null,
   overtime_periods: null,
   shootout: false,
   playoff_series_id: null,
@@ -77,6 +80,7 @@ describe('GET /api/user/games', () => {
     expect(res.body[0].id).toBe('game-1');
     expect(res.body[0].watched_by_user).toBe(false);
     expect(res.body[0].scheduled_for).toBe('2024-10-12');
+    expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(queryText).toContain("g.status <> 'cancelled'");
     expect(queryText).toContain('uwg.skipped_at IS NULL');

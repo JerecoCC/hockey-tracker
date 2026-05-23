@@ -201,11 +201,6 @@ const getScheduledWatchDateKey = (value: string | null | undefined) => {
 const getEffectiveUserDateKey = (game: GameRecord, tzPref: TzPref) =>
   getScheduledWatchDateKey(game.scheduled_for) ?? getOriginalGameDateKey(game, tzPref);
 
-const totalScore = (periods: GameRecord['period_scores']) => ({
-  home: periods.reduce((s, p) => s + p.home_goals, 0),
-  away: periods.reduce((s, p) => s + p.away_goals, 0),
-});
-
 const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   if (!a.scheduled_time && !b.scheduled_time) return 0;
   if (!a.scheduled_time) return 1;
@@ -437,7 +432,8 @@ const GameCard = ({
   busy: boolean;
 }) => {
   const showScore = shouldShowWatchedScore(game);
-  const { home, away } = totalScore(game.period_scores);
+  const home = game.home_score;
+  const away = game.away_score;
   const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
   const isWatched = !!game.watched_by_user;
 
@@ -550,7 +546,8 @@ const CalendarGameCard = ({
   busy: boolean;
 }) => {
   const showScore = shouldShowWatchedScore(game);
-  const { home, away } = totalScore(game.period_scores);
+  const home = game.home_score;
+  const away = game.away_score;
   const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
 
   return (

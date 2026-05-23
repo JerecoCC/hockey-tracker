@@ -35,6 +35,7 @@ const GAME = {
   },
   game_type: 'regular', status: 'scheduled',
   scheduled_at: '2024-10-15T19:00:00Z', venue: 'SAP Center',
+  home_score: 0, away_score: 0, winner_team_id: null,
   overtime_periods: null, shootout: false, shootout_first_team_id: null,
   game_number: null, game_number_in_series: null,
   playoff_round: null,
@@ -67,6 +68,7 @@ describe('GET /api/admin/games', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBe('game-1');
+    expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
   });
 
   it('accepts season_id, game_type and status query params', async () => {
@@ -93,6 +95,7 @@ describe('GET /api/admin/games/:id', () => {
     const res = await request(app).get('/api/admin/games/game-1');
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('game-1');
+    expect(res.body).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
   });
 
   it('includes home and away secondary_color fields', async () => {

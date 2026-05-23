@@ -188,18 +188,13 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
-  // Scores are always derived from the goals table (period_scores); the DB columns were removed.
-  // The SO winner's +1 is never written as a goal row, so period_scores has no SO entry.
-  // Apply a client-side adjustment whenever the winner is known from attempts and no SO goal
-  // exists in the goals table — this covers both in-progress and final states.
+  // Use the backend-computed score as the canonical base.
+  // For an in-progress shootout, the backend intentionally stays on the goal-based tied score,
+  // so we still apply a temporary +1 client-side when the current attempts already reveal a winner.
   const hasSoPeriodScore = game.period_scores.some((ps) => ps.period === 'SO');
-  const soScoreAdj = soWinnerSide && !hasSoPeriodScore ? 1 : 0;
-  const liveAwayScore =
-    game.period_scores.reduce((sum, ps) => sum + ps.away_goals, 0) +
-    (soWinnerSide === 'away' ? soScoreAdj : 0);
-  const liveHomeScore =
-    game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0) +
-    (soWinnerSide === 'home' ? soScoreAdj : 0);
+  const soScoreAdj = !isFinal && soWinnerSide && !hasSoPeriodScore ? 1 : 0;
+  const liveAwayScore = game.away_score + (soWinnerSide === 'away' ? soScoreAdj : 0);
+  const liveHomeScore = game.home_score + (soWinnerSide === 'home' ? soScoreAdj : 0);
 
   // Derive OT/SO from period_scores (source of truth); stored columns are a fallback
   // for legacy games created before goal tracking was introduced.

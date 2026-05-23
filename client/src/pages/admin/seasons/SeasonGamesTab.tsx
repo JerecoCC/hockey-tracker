@@ -407,8 +407,8 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                         primaryColor: game.home_team.primary_color,
                         textColor: game.home_team.text_color,
                       }}
-                      awayScore={game.period_scores.reduce((s, ps) => s + ps.away_goals, 0)}
-                      homeScore={game.period_scores.reduce((s, ps) => s + ps.home_goals, 0)}
+                      awayScore={game.away_score}
+                      homeScore={game.home_score}
                       showScore={game.status === 'final' || game.status === 'in_progress'}
                       isFinal={game.status === 'final'}
                       statusLabel={formatStatusLabel(game)}

@@ -71,41 +71,10 @@ const fromMonthPickerValue = (value: string) => {
 };
 
 const displayScore = (game: GameRecord) => {
-  const base = game.period_scores.reduce(
-    (sum, ps) => ({
-      away: sum.away + (ps.period === 'SO' ? 0 : ps.away_goals),
-      home: sum.home + (ps.period === 'SO' ? 0 : ps.home_goals),
-    }),
-    { away: 0, home: 0 },
-  );
-
-  const shootoutPeriod = game.period_scores.find((ps) => ps.period === 'SO');
-  const shootoutWinnerTeamId = shootoutPeriod
-    ? shootoutPeriod.home_goals > shootoutPeriod.away_goals
-      ? game.home_team.id
-      : shootoutPeriod.away_goals > shootoutPeriod.home_goals
-        ? game.away_team.id
-        : null
-    : null;
-
-  const winnerTeamId = game.winner_team_id ?? shootoutWinnerTeamId ?? null;
-  const isExtraTimeFinal =
-    game.status === 'final' &&
-    (game.shootout ||
-      (game.overtime_periods ?? 0) > 0 ||
-      game.period_scores.some((ps) => ps.period === 'OT' || ps.period === 'SO'));
-
-  if (isExtraTimeFinal && winnerTeamId && base.home === base.away) {
-    return {
-      away: base.away + (winnerTeamId === game.away_team.id ? 1 : 0),
-      home: base.home + (winnerTeamId === game.home_team.id ? 1 : 0),
-      winnerTeamId,
-    };
-  }
-
   return {
-    ...base,
-    winnerTeamId,
+    away: game.away_score,
+    home: game.home_score,
+    winnerTeamId: game.winner_team_id ?? null,
   };
 };
 
