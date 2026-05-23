@@ -102,6 +102,8 @@ export interface GameRecord {
   series_away_team_id:   string | null;
   series_home_wins:      number | null;
   series_away_wins:      number | null;
+  series_home_wins_at_game?: number | null;
+  series_away_wins_at_game?: number | null;
   series_games_to_win:   number | null;
   notes:                 string | null;
   created_at:            string;

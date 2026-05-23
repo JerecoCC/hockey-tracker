@@ -208,7 +208,7 @@ const games = [
   {
     id: 'game-1',
     season_id: 'season-1',
-    game_type: 'regular',
+    game_type: 'playoff',
     status: 'final',
     scheduled_at: currentMonthIso(1),
     scheduled_time: '19:00',
@@ -238,15 +238,17 @@ const games = [
     overtime_periods: null,
     shootout: false,
     shootout_first_team_id: null,
-    playoff_series_id: null,
-    game_number_in_series: null,
+    playoff_series_id: 'series-1',
+    game_number_in_series: 3,
     game_number: 1,
-    playoff_round: null,
-    series_home_team_id: null,
-    series_away_team_id: null,
-    series_home_wins: null,
-    series_away_wins: null,
-    series_games_to_win: null,
+    playoff_round: 2,
+    series_home_team_id: 'team-home',
+    series_away_team_id: 'team-away',
+    series_home_wins: 2,
+    series_away_wins: 3,
+    series_home_wins_at_game: 2,
+    series_away_wins_at_game: 1,
+    series_games_to_win: 4,
     notes: null,
     created_at: '2024-01-01T00:00:00Z',
     current_period: null,
@@ -256,7 +258,7 @@ const games = [
     star_2_id: null,
     star_3_id: null,
     best_of_shootout: 3,
-    playoff_round_names: null,
+    playoff_round_names: { 2: 'Round 2' },
     season_name: '2024-25',
     league_id: 'league-1',
     league_name: 'NHL',
@@ -307,6 +309,8 @@ const games = [
     series_away_team_id: null,
     series_home_wins: null,
     series_away_wins: null,
+    series_home_wins_at_game: null,
+    series_away_wins_at_game: null,
     series_games_to_win: null,
     notes: null,
     created_at: '2024-01-01T00:00:00Z',
@@ -403,6 +407,139 @@ describe('UserGames calendar view', () => {
     expect(
       screen.getAllByRole('button', { name: 'Mark as watched' }).length,
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('shows playoff round metadata on calendar cards but hides series dots until watched', () => {
+    render(<UserGames />);
+
+    expect(screen.getByText('R2 - G3')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Series record 1 of 4')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
+  });
+
+  it('shows playoff series dots once a playoff game has been watched', () => {
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-games')
+        return {
+          data: [
+            {
+              ...games[0],
+              watched_by_user: true,
+              watched_on: watchedDate,
+            },
+            games[1],
+          ],
+          isLoading: false,
+        };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    expect(screen.getByLabelText('Series record 1 of 4')).toBeInTheDocument();
+    expect(screen.getByLabelText('Series record 2 of 4')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Series record 3 of 4')).not.toBeInTheDocument();
+  });
+
+  it('uses the game-specific series score for a watched game 1 instead of the final series total', () => {
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-games')
+        return {
+          data: [
+            {
+              ...games[0],
+              game_number_in_series: 1,
+              series_home_wins: 4,
+              series_away_wins: 1,
+              series_home_wins_at_game: 1,
+              series_away_wins_at_game: 0,
+              watched_by_user: true,
+              watched_on: watchedDate,
+              scheduled_for: null,
+            },
+            games[1],
+          ],
+          isLoading: false,
+        };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    expect(screen.getByLabelText('Series record 1 of 4')).toBeInTheDocument();
+    expect(screen.getByLabelText('Series record 0 of 4')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Series record 4 of 4')).not.toBeInTheDocument();
+  });
+
+  it('keeps ET date placement correct for games with a date-only scheduled_at', async () => {
+    const user = userEvent.setup();
+    const dateOnlyKey = localDateString(1);
+    const dateOnlyGame = {
+      ...games[0],
+      id: 'game-date-only',
+      away_team: { ...games[0].away_team, name: 'Date Only Team', code: 'DOT' },
+      scheduled_for: null,
+      scheduled_at: dateOnlyKey,
+      scheduled_time: '19:00',
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-away'] };
+      if (queryKey[0] === 'user-games') return { data: [dateOnlyGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+
+    const daySection = screen.getByText(formatHeading(dateOnlyKey)).parentElement;
+    expect(daySection).not.toBeNull();
+    expect(within(daySection as HTMLElement).getByText('Date Only Team')).toBeInTheDocument();
+  });
+
+  it('keeps ET date placement correct for midnight-UTC scheduled_at placeholders', async () => {
+    const user = userEvent.setup();
+    const intendedEtDate = localDateString(1);
+    const previousEtDate = localDateString(0);
+    const midnightPlaceholderGame = {
+      ...games[0],
+      id: 'game-midnight-placeholder',
+      away_team: { ...games[0].away_team, name: 'Midnight Placeholder', code: 'MDN' },
+      scheduled_for: null,
+      scheduled_at: `${intendedEtDate}T00:00:00.000Z`,
+      scheduled_time: '19:00',
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-away'] };
+      if (queryKey[0] === 'user-games')
+        return { data: [midnightPlaceholderGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+
+    const intendedDaySection = screen.getByText(formatHeading(intendedEtDate)).parentElement;
+    expect(intendedDaySection).not.toBeNull();
+    expect(
+      within(intendedDaySection as HTMLElement).getByText('Midnight Placeholder'),
+    ).toBeInTheDocument();
+
+    const previousDaySection = screen.getByText(formatHeading(previousEtDate)).parentElement;
+    expect(
+      within(previousDaySection as HTMLElement).queryByText('Midnight Placeholder'),
+    ).not.toBeInTheDocument();
   });
 
   it('filters user games by selected favorite teams', async () => {

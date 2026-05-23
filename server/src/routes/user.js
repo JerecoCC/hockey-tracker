@@ -236,6 +236,13 @@ router.get('/games', async (req, res) => {
         score.home_score,
         score.away_score,
         g.playoff_series_id, g.game_number_in_series, g.game_number,
+        ps.home_team_id    AS series_home_team_id,
+        ps.away_team_id    AS series_away_team_id,
+        ps.home_wins       AS series_home_wins,
+        ps.away_wins       AS series_away_wins,
+        series_progress.series_home_wins_at_game,
+        series_progress.series_away_wins_at_game,
+        ps.games_to_win    AS series_games_to_win,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
         ps.round          AS playoff_round,
@@ -372,6 +379,60 @@ router.get('/games', async (req, res) => {
           ) so
         ) resolved ON true
       ) score ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*) FILTER (WHERE sg_score.winner_team_id = ps.home_team_id)::int AS series_home_wins_at_game,
+          COUNT(*) FILTER (WHERE sg_score.winner_team_id = ps.away_team_id)::int AS series_away_wins_at_game
+        FROM games sg
+        LEFT JOIN LATERAL (
+          SELECT
+            CASE
+              WHEN sg.shootout OR sg_totals.so_home_goals > 0 OR sg_totals.so_away_goals > 0 THEN
+                CASE
+                  WHEN sg_so.home_goals > sg_so.away_goals THEN sg.home_team_id
+                  WHEN sg_so.away_goals > sg_so.home_goals THEN sg.away_team_id
+                  WHEN sg_totals.so_home_goals > sg_totals.so_away_goals THEN sg.home_team_id
+                  WHEN sg_totals.so_away_goals > sg_totals.so_home_goals THEN sg.away_team_id
+                  WHEN sg_totals.home_goals > sg_totals.away_goals THEN sg.home_team_id
+                  WHEN sg_totals.away_goals > sg_totals.home_goals THEN sg.away_team_id
+                  ELSE NULL
+                END
+              WHEN sg_totals.home_goals > sg_totals.away_goals THEN sg.home_team_id
+              WHEN sg_totals.away_goals > sg_totals.home_goals THEN sg.away_team_id
+              ELSE NULL
+            END AS winner_team_id
+          FROM (
+            SELECT
+              COUNT(*) FILTER (WHERE go.team_id = sg.home_team_id AND go.period <> 'SO')::int AS home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = sg.away_team_id AND go.period <> 'SO')::int AS away_goals,
+              COUNT(*) FILTER (WHERE go.team_id = sg.home_team_id AND go.period = 'SO')::int AS so_home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = sg.away_team_id AND go.period = 'SO')::int AS so_away_goals
+            FROM goals go
+            WHERE go.game_id = sg.id
+          ) sg_totals
+          CROSS JOIN LATERAL (
+            SELECT
+              COUNT(*) FILTER (WHERE team_id = sg.home_team_id AND scored)::int AS home_goals,
+              COUNT(*) FILTER (WHERE team_id = sg.away_team_id AND scored)::int AS away_goals
+            FROM shootout_attempts
+            WHERE game_id = sg.id
+          ) sg_so
+        ) sg_score ON true
+        WHERE ps.id IS NOT NULL
+          AND sg.playoff_series_id = ps.id
+          AND sg.status = 'final'
+          AND ROW(
+            COALESCE(sg.game_number_in_series, sg.game_number, 2147483647),
+            COALESCE(sg.scheduled_at, 'infinity'::timestamptz),
+            sg.created_at,
+            sg.id::text
+          ) <= ROW(
+            COALESCE(g.game_number_in_series, g.game_number, 2147483647),
+            COALESCE(g.scheduled_at, 'infinity'::timestamptz),
+            g.created_at,
+            g.id::text
+          )
+      ) series_progress ON true
       LEFT JOIN user_watched_games uwg
         ON uwg.user_id = ${userId}
        AND uwg.game_id = g.id

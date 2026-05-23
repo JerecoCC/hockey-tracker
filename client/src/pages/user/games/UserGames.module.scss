@@ -188,6 +188,7 @@
   width: 100%;
   display: grid;
   grid-template-columns: 20px 32px 1fr 20px 32px;
+  grid-template-rows: auto auto auto;
   align-items: center;
   justify-items: center;
   gap: 0;
@@ -251,10 +252,57 @@
 }
 
 .calendarGameScore,
-.calendarGameAt {
+.calendarGameAtSymbol {
   font-size: $font-lg;
   font-weight: 700;
   color: inherit;
+}
+
+.calendarGameAt {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.calendarGamePlayoffMeta {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--game-league-text) 84%, transparent);
+  white-space: nowrap;
+}
+
+.calendarGameDotsAway {
+  grid-column: 1 / span 2;
+  margin-top: $space-xs;
+}
+
+.calendarGameDotsHome {
+  grid-column: 4 / span 2;
+  margin-top: $space-xs;
+}
+
+.playoffDots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.playoffDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--game-league-text) 28%, transparent);
+  background: transparent;
+}
+
+.playoffDotFilled {
+  border-color: $success;
+  background: $success;
 }
 
 // ── Game card ──────────────────────────────────────────────────────────

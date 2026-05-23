@@ -44,6 +44,8 @@ const toLocalDateKey = (iso: string) => {
 };
 
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
+const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
 
 const toDateKeyInZone = (date: Date, timeZone?: string) => {
   const parts = new Intl.DateTimeFormat('en-US', {
@@ -58,6 +60,20 @@ const toDateKeyInZone = (date: Date, timeZone?: string) => {
   const day = parts.find((part) => part.type === 'day')?.value;
   return year && month && day ? `${year}-${month}-${day}` : null;
 };
+
+const toTimeKeyInZone = (date: Date, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone,
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(date);
+  const hour = parts.find((part) => part.type === 'hour')?.value;
+  const minute = parts.find((part) => part.type === 'minute')?.value;
+  return hour && minute ? `${hour}:${minute}` : null;
+};
+
+const getRawDateKey = (value: string | null) => value?.match(ISO_DATE_PREFIX_RE)?.[1] ?? null;
 
 const dateKeyToDate = (key: string) => {
   const [year, month, day] = key.split('-').map(Number);
@@ -123,19 +139,63 @@ const getStoredTzPref = (): TzPref => {
 };
 
 /** Returns 'EST' or 'EDT' for the America/New_York timezone on the given game date. */
-const getEtAbbr = (scheduledAt: string | null): string => {
-  const base = scheduledAt ? new Date(scheduledAt) : new Date();
-  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    base,
-  );
+const getEtAbbrForDateKey = (dateKey: string): string => {
   return (
     new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/New_York',
       timeZoneName: 'short',
     })
-      .formatToParts(new Date(`${etDatePart}T12:00:00`))
+      .formatToParts(new Date(`${dateKey}T17:00:00Z`))
       .find((p) => p.type === 'timeZoneName')?.value ?? 'ET'
   );
+};
+
+const getEtAbbr = (scheduledAt: string | null): string => {
+  const dateKey = getRawDateKey(scheduledAt) ?? toDateKeyInZone(new Date(), 'America/New_York');
+  return dateKey ? getEtAbbrForDateKey(dateKey) : 'ET';
+};
+
+const getEtDateKey = (scheduledAt: string | null, scheduledTime: string | null) => {
+  if (!scheduledAt) return null;
+  if (DATE_ONLY_RE.test(scheduledAt)) return scheduledAt;
+  const rawDateKey = getRawDateKey(scheduledAt);
+  const isMidnightPlaceholder =
+    !!scheduledTime &&
+    scheduledTime !== '00:00' &&
+    !!rawDateKey &&
+    ISO_MIDNIGHT_RE.test(scheduledAt);
+  if (isMidnightPlaceholder) return rawDateKey;
+  const base = new Date(scheduledAt);
+  if (Number.isNaN(base.getTime())) return rawDateKey;
+  return toDateKeyInZone(base, 'America/New_York');
+};
+
+const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string | null) => {
+  if (!scheduledAt) return null;
+
+  const direct = new Date(scheduledAt);
+  const hasDirectInstant = !Number.isNaN(direct.getTime());
+  const rawDateKey = getRawDateKey(scheduledAt);
+  const isMidnightPlaceholder =
+    !!scheduledTime &&
+    scheduledTime !== '00:00' &&
+    !!rawDateKey &&
+    ISO_MIDNIGHT_RE.test(scheduledAt);
+
+  if (!scheduledTime) {
+    if (DATE_ONLY_RE.test(scheduledAt)) return new Date(`${scheduledAt}T17:00:00Z`);
+    return hasDirectInstant ? direct : null;
+  }
+
+  if (hasDirectInstant && !DATE_ONLY_RE.test(scheduledAt) && !isMidnightPlaceholder) {
+    return direct;
+  }
+
+  const etDatePart =
+    getEtDateKey(scheduledAt, scheduledTime) ??
+    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
+  const offset = getEtAbbrForDateKey(etDatePart) === 'EDT' ? '-04:00' : '-05:00';
+  return new Date(`${etDatePart}T${scheduledTime}:00${offset}`);
 };
 
 /**
@@ -152,44 +212,32 @@ const fmtGameTime = (
   scheduledTime: string | null,
   tzPref: TzPref,
 ): string => {
-  if (!scheduledTime) return '';
-  const [h, m] = scheduledTime.split(':').map(Number);
-  const abbr = getEtAbbr(scheduledAt);
+  const instant = getScheduledInstant(scheduledAt, scheduledTime);
+  if (!instant) return '';
 
   if (tzPref === 'ET') {
-    return `${h % 12 || 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'} ${abbr}`;
+    return new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/New_York',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZoneName: 'short',
+    }).format(instant);
   }
 
-  // Derive the ET calendar date for this game so we can reconstruct the full
-  // Eastern moment even if scheduled_at only carries a date (no time).
-  const base = scheduledAt ? new Date(scheduledAt) : new Date();
-  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    base,
-  );
-  const offset = abbr === 'EDT' ? '-04:00' : '-05:00';
-
-  // Build the exact UTC moment and format in the browser's local timezone.
-  const d = new Date(`${etDatePart}T${scheduledTime}:00${offset}`);
-  return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-};
-
-const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string | null) => {
-  if (!scheduledAt) return null;
-  if (!scheduledTime) return new Date(scheduledAt);
-
-  const abbr = getEtAbbr(scheduledAt);
-  const base = new Date(scheduledAt);
-  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    base,
-  );
-  const offset = abbr === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDatePart}T${scheduledTime}:00${offset}`);
+  return instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 };
 
 const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
+  if (game.scheduled_at && DATE_ONLY_RE.test(game.scheduled_at) && !game.scheduled_time) {
+    return game.scheduled_at;
+  }
   const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
   if (!instant) return null;
-  return tzPref === 'ET' ? toDateKeyInZone(instant, 'America/New_York') : toDateKeyInZone(instant);
+  return tzPref === 'ET'
+    ? (getEtDateKey(game.scheduled_at, game.scheduled_time) ??
+        toDateKeyInZone(instant, 'America/New_York'))
+    : toDateKeyInZone(instant);
 };
 
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
@@ -200,6 +248,46 @@ const getScheduledWatchDateKey = (value: string | null | undefined) => {
 
 const getEffectiveUserDateKey = (game: GameRecord, tzPref: TzPref) =>
   getScheduledWatchDateKey(game.scheduled_for) ?? getOriginalGameDateKey(game, tzPref);
+
+const getPlayoffRoundShortLabel = (game: GameRecord) => {
+  if (game.game_type !== 'playoff' || game.playoff_round == null) return null;
+  const customLabel = game.playoff_round_names?.[game.playoff_round] ?? null;
+  if (!customLabel) return `R${game.playoff_round}`;
+
+  const trimmed = customLabel.trim();
+  const bareNumber = trimmed.match(/^([0-9]+)$/);
+  if (bareNumber) return `R${bareNumber[1]}`;
+
+  const roundNumber = trimmed.match(/^round\s+([0-9]+)$/i);
+  if (roundNumber) return `R${roundNumber[1]}`;
+
+  const tokens = trimmed.match(/[A-Za-z0-9]+/g) ?? [];
+  const initials = tokens
+    .map((token) => (/^[0-9]+$/.test(token) ? token : (token[0]?.toUpperCase() ?? '')))
+    .join('');
+
+  return initials || `R${game.playoff_round}`;
+};
+
+const getPlayoffGameMetaLabel = (game: GameRecord) => {
+  const round = getPlayoffRoundShortLabel(game);
+  const gameNumber = game.game_number_in_series ?? game.game_number;
+  if (!round && gameNumber == null) return null;
+  if (!round) return `G${gameNumber}`;
+  if (gameNumber == null) return round;
+  return `${round} - G${gameNumber}`;
+};
+
+const getSeriesWinsForTeam = (game: GameRecord, teamId: string) => {
+  if (game.series_games_to_win == null) return null;
+  if (teamId === game.series_home_team_id) {
+    return game.series_home_wins_at_game ?? null;
+  }
+  if (teamId === game.series_away_team_id) {
+    return game.series_away_wins_at_game ?? null;
+  }
+  return null;
+};
 
 const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   if (!a.scheduled_time && !b.scheduled_time) return 0;
@@ -351,6 +439,22 @@ const TeamBlock = ({ name, code, logo, primaryColor, textColor, align }: TeamBlo
     />
     <span className={styles.teamName}>{name}</span>
   </div>
+);
+
+const PlayoffSeriesDots = ({ wins, total }: { wins: number; total: number }) => (
+  <span
+    className={styles.playoffDots}
+    aria-label={`Series record ${wins} of ${total}`}
+  >
+    {Array.from({ length: total }, (_, i) => (
+      <span
+        key={i}
+        className={[styles.playoffDot, i < wins ? styles.playoffDotFilled : '']
+          .filter(Boolean)
+          .join(' ')}
+      />
+    ))}
+  </span>
 );
 
 const ScheduleWatchModal = ({
@@ -549,6 +653,10 @@ const CalendarGameCard = ({
   const home = game.home_score;
   const away = game.away_score;
   const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
+  const playoffMetaLabel = getPlayoffGameMetaLabel(game);
+  const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
+  const homeSeriesWins = getSeriesWinsForTeam(game, game.home_team.id);
+  const seriesTotalWins = game.series_games_to_win;
 
   return (
     <div
@@ -588,7 +696,12 @@ const CalendarGameCard = ({
         size={28}
         shape="circle"
       />
-      <span className={styles.calendarGameAt}>@</span>
+      <span className={styles.calendarGameAt}>
+        {playoffMetaLabel && (
+          <span className={styles.calendarGamePlayoffMeta}>{playoffMetaLabel}</span>
+        )}
+        <span className={styles.calendarGameAtSymbol}>@</span>
+      </span>
       <span className={styles.calendarGameScore}>{showScore ? home : '–'}</span>
       <TeamLogo
         logo={game.home_team.logo}
@@ -598,6 +711,22 @@ const CalendarGameCard = ({
         size={28}
         shape="circle"
       />
+      {!!game.watched_by_user && seriesTotalWins != null && awaySeriesWins != null && (
+        <span className={styles.calendarGameDotsAway}>
+          <PlayoffSeriesDots
+            wins={awaySeriesWins}
+            total={seriesTotalWins}
+          />
+        </span>
+      )}
+      {!!game.watched_by_user && seriesTotalWins != null && homeSeriesWins != null && (
+        <span className={styles.calendarGameDotsHome}>
+          <PlayoffSeriesDots
+            wins={homeSeriesWins}
+            total={seriesTotalWins}
+          />
+        </span>
+      )}
     </div>
   );
 };
