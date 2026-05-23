@@ -94,6 +94,15 @@
   min-width: 150px;
 }
 
+.filterAction {
+  min-width: auto;
+  flex: 0 0 auto;
+}
+
+.calendarExportButton {
+  white-space: nowrap;
+}
+
 .teamFilter {
   min-width: 260px;
   flex: 1 1 260px;

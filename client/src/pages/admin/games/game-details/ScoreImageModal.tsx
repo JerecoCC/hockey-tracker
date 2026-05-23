@@ -45,6 +45,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   year: 'numeric',
 });
+const DATE_KEY_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -73,6 +74,21 @@ async function loadLocalImage(file: File): Promise<HTMLImageElement | null> {
     };
     img.src = url;
   });
+}
+
+function getFileDateLabel(scheduledAt?: string | null) {
+  if (!scheduledAt) return 'unknown-date';
+  const rawDate = scheduledAt.match(DATE_KEY_RE)?.[1];
+  if (rawDate) return rawDate;
+
+  const parsed = new Date(scheduledAt);
+  if (Number.isNaN(parsed.getTime())) return 'unknown-date';
+  return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}-${String(parsed.getDate()).padStart(2, '0')}`;
+}
+
+function getDownloadFilename(drawGame: DrawGameType | null) {
+  if (!drawGame) return 'score-graphic.png';
+  return `${drawGame.away_team.code} vs ${drawGame.home_team.code} - ${getFileDateLabel(drawGame.scheduled_at)}.png`;
 }
 
 /** Convert a hex color string to rgba(...) with the given alpha. */
@@ -860,9 +876,7 @@ const ScoreImageModal = ({
       const url = canvas.toDataURL('image/png');
       const a = document.createElement('a');
       a.href = url;
-      a.download = drawGame
-        ? `${drawGame.away_team.code}-vs-${drawGame.home_team.code}-final.png`
-        : 'score-graphic.png';
+      a.download = getDownloadFilename(drawGame);
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);

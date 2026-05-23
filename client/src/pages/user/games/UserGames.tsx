@@ -12,12 +12,15 @@ import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/Mu
 import Modal from '@/components/Modal/Modal';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
 import styles from './UserGames.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const TZ_STORAGE_KEY = 'user-games-tz-pref';
+const WEEK_STORAGE_KEY = 'user-games-week-start';
+const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -44,6 +47,7 @@ const toLocalDateKey = (iso: string) => {
 };
 
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+const MONTH_ONLY_RE = /^[0-9]{4}-[0-9]{2}$/;
 const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
 const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
 
@@ -129,6 +133,16 @@ const toMonthPickerValue = (d: Date) =>
 const fromMonthPickerValue = (value: string) => {
   const [year, month] = value.split('-').map(Number);
   return new Date(year, month - 1, 1);
+};
+
+const getStoredWeekStart = () => {
+  const stored = sessionStorage.getItem(WEEK_STORAGE_KEY);
+  return stored && DATE_ONLY_RE.test(stored) ? fromISODate(stored) : toDay(new Date());
+};
+
+const getStoredCalendarMonth = () => {
+  const stored = sessionStorage.getItem(CALENDAR_MONTH_STORAGE_KEY);
+  return stored && MONTH_ONLY_RE.test(stored) ? fromMonthPickerValue(stored) : null;
 };
 
 type TzPref = 'ET' | 'local';
@@ -317,11 +331,26 @@ const getOriginalGameDateLabel = (game: GameRecord, tzPref: TzPref) => {
 const shouldShowWatchedScore = (game: GameRecord) =>
   !!game.watched_by_user && (game.status === 'final' || game.status === 'in_progress');
 
+const getOvertimeSuffix = (game: GameRecord) => {
+  if (game.shootout || game.period_scores.some((ps) => ps.period === 'SO')) return '/SO';
+  if ((game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT')) {
+    return '/OT';
+  }
+  return '';
+};
+
+const getScoreCardGame = (game: GameRecord): GameRecord => ({
+  ...game,
+  series_home_wins: game.series_home_wins_at_game ?? null,
+  series_away_wins: game.series_away_wins_at_game ?? null,
+});
+
 interface GameActionsProps {
   watched: boolean;
   scheduled: boolean;
   busy: boolean;
   onView: () => void;
+  onDownloadScoreCard: () => void;
   onMarkWatched: () => void;
   onUnwatch: () => void;
   onSchedule: () => void;
@@ -333,6 +362,7 @@ const GameHoverActions = ({
   scheduled,
   busy,
   onView,
+  onDownloadScoreCard,
   onMarkWatched,
   onUnwatch,
   onSchedule,
@@ -350,6 +380,20 @@ const GameHoverActions = ({
         onClick={(e) => {
           e.stopPropagation();
           onView();
+        }}
+      />
+    )}
+    {watched && (
+      <Button
+        type="button"
+        variant="outlined"
+        intent="neutral"
+        icon="download"
+        size="sm"
+        tooltip="Download score card"
+        onClick={(e) => {
+          e.stopPropagation();
+          onDownloadScoreCard();
         }}
       />
     )}
@@ -457,6 +501,388 @@ const PlayoffSeriesDots = ({ wins, total }: { wins: number; total: number }) => 
   </span>
 );
 
+type CalendarExportCell = {
+  day: number | null;
+  dateKey: string | null;
+  games: GameRecord[];
+};
+
+const EXPORT_COLORS = {
+  pageBg: '#020617',
+  panelBg: '#0f172a',
+  cellBg: '#111827',
+  cellBorder: '#334155',
+  emptyCellBg: '#0b1220',
+  emptyCellBorder: '#1f2937',
+  text: '#f8fafc',
+  textDim: '#94a3b8',
+  accent: '#38bdf8',
+  success: '#22c55e',
+};
+
+const parseColor = (value: string | null | undefined) => {
+  if (!value) return { r: 51, g: 65, b: 85 };
+  const trimmed = value.trim();
+  const hex = trimmed.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (hex) {
+    const raw =
+      hex[1].length === 3
+        ? hex[1]
+            .split('')
+            .map((c) => c + c)
+            .join('')
+        : hex[1];
+    return {
+      r: parseInt(raw.slice(0, 2), 16),
+      g: parseInt(raw.slice(2, 4), 16),
+      b: parseInt(raw.slice(4, 6), 16),
+    };
+  }
+  const rgb = trimmed.match(/^rgba?\(([0-9]+),\s*([0-9]+),\s*([0-9]+)/i);
+  if (rgb) {
+    return { r: Number(rgb[1]), g: Number(rgb[2]), b: Number(rgb[3]) };
+  }
+  return { r: 51, g: 65, b: 85 };
+};
+
+const rgbToString = (color: { r: number; g: number; b: number }, alpha?: number) =>
+  alpha == null
+    ? `rgb(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)})`
+    : `rgba(${Math.round(color.r)}, ${Math.round(color.g)}, ${Math.round(color.b)}, ${alpha})`;
+
+const mixColors = (a: string | null | undefined, b: string | null | undefined, weightA: number) => {
+  const ca = parseColor(a);
+  const cb = parseColor(b);
+  const weightB = 1 - weightA;
+  return rgbToString({
+    r: ca.r * weightA + cb.r * weightB,
+    g: ca.g * weightA + cb.g * weightB,
+    b: ca.b * weightA + cb.b * weightB,
+  });
+};
+
+const loadLogoImage = async (src: string | null | undefined): Promise<HTMLImageElement | null> => {
+  if (!src) return null;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = () => resolve(null);
+    img.src = src;
+  });
+};
+
+const drawCircleLogo = (
+  ctx: CanvasRenderingContext2D,
+  img: HTMLImageElement | null,
+  cx: number,
+  cy: number,
+  size: number,
+  code: string,
+  primaryColor: string,
+  textColor: string,
+) => {
+  const radius = size / 2;
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.closePath();
+  ctx.clip();
+  if (img) {
+    ctx.drawImage(img, cx - radius, cy - radius, size, size);
+  } else {
+    ctx.fillStyle = primaryColor;
+    ctx.fillRect(cx - radius, cy - radius, size, size);
+    ctx.fillStyle = textColor;
+    ctx.font = `700 ${Math.round(size * 0.3)}px system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(code.slice(0, 3), cx, cy + 1);
+  }
+  ctx.restore();
+  ctx.strokeStyle = 'rgba(255,255,255,0.18)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+  ctx.stroke();
+};
+
+const drawSeriesDotsOnCanvas = (
+  ctx: CanvasRenderingContext2D,
+  centerX: number,
+  y: number,
+  wins: number,
+  total: number,
+) => {
+  const radius = 4.5;
+  const gap = 5;
+  const totalWidth = total * radius * 2 + (total - 1) * gap;
+  const startX = centerX - totalWidth / 2 + radius;
+  for (let i = 0; i < total; i++) {
+    const cx = startX + i * (radius * 2 + gap);
+    ctx.beginPath();
+    ctx.arc(cx, y, radius, 0, Math.PI * 2);
+    if (i < wins) {
+      ctx.fillStyle = EXPORT_COLORS.success;
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = 'rgba(255,255,255,0.22)';
+      ctx.lineWidth = 1.25;
+      ctx.stroke();
+    }
+  }
+};
+
+const getCalendarCardHeight = (game: GameRecord, tzPref: TzPref) =>
+  getOriginalGameDateLabel(game, tzPref) ? 88 : 68;
+
+const buildCalendarExportCells = (
+  calendarCells: (number | null)[],
+  calendarMonth: Date,
+  gamesByCalendarDate: Map<string, GameRecord[]>,
+): CalendarExportCell[] =>
+  calendarCells.map((day) => {
+    if (day == null) return { day: null, dateKey: null, games: [] };
+    const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return {
+      day,
+      dateKey,
+      games: gamesByCalendarDate.get(dateKey) ?? [],
+    };
+  });
+
+const downloadMonthScheduleImage = async ({
+  cells,
+  calendarMonth,
+  tzPref,
+}: {
+  cells: CalendarExportCell[];
+  calendarMonth: Date;
+  tzPref: TzPref;
+}) => {
+  const visibleGames = cells.flatMap((cell) => cell.games);
+  const uniqueLogoEntries = Array.from(
+    new Map(
+      visibleGames
+        .flatMap((game) => [
+          [game.home_team.id, game.home_team.logo],
+          [game.away_team.id, game.away_team.logo],
+        ])
+        .filter(([, logo]) => !!logo),
+    ).entries(),
+  );
+  const loadedLogoPairs = await Promise.all(
+    uniqueLogoEntries.map(async ([teamId, logo]) => [teamId, await loadLogoImage(logo)] as const),
+  );
+  const logoMap = new Map<string, HTMLImageElement | null>(loadedLogoPairs);
+
+  const outerPad = 24;
+  const headerH = 66;
+  const dayNameH = 24;
+  const gridGap = 10;
+  const cellPad = 10;
+  const cardGap = 8;
+  const cellWidth = 184;
+  const weeks = Math.max(1, Math.ceil(cells.length / 7));
+  const maxContentHeight = Math.max(
+    0,
+    ...Array.from({ length: weeks }, (_, weekIndex) => {
+      const weekCells = cells.slice(weekIndex * 7, weekIndex * 7 + 7);
+      return Math.max(
+        0,
+        ...weekCells.map((cell) => {
+          const cardsHeight = cell.games.reduce(
+            (sum, game, index) =>
+              sum + getCalendarCardHeight(game, tzPref) + (index > 0 ? cardGap : 0),
+            0,
+          );
+          return cardsHeight;
+        }),
+      );
+    }),
+  );
+  const cellHeight = Math.max(240, 28 + maxContentHeight + cellPad * 2);
+  const width = outerPad * 2 + cellWidth * 7 + gridGap * 6;
+  const height =
+    outerPad * 2 + headerH + dayNameH + 8 + cellHeight * weeks + gridGap * Math.max(0, weeks - 1);
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) throw new Error('Canvas unavailable');
+
+  ctx.fillStyle = EXPORT_COLORS.pageBg;
+  ctx.fillRect(0, 0, width, height);
+
+  ctx.fillStyle = EXPORT_COLORS.text;
+  ctx.font = '700 28px system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'top';
+  ctx.fillText(MONTH_LABEL_FMT.format(calendarMonth), outerPad, outerPad);
+
+  ctx.fillStyle = EXPORT_COLORS.textDim;
+  ctx.font = '500 14px system-ui, sans-serif';
+  ctx.fillText('Personalized schedule', outerPad, outerPad + 34);
+  ctx.textAlign = 'right';
+  ctx.fillText(tzPref === 'ET' ? 'Eastern Time' : 'My Timezone', width - outerPad, outerPad + 10);
+
+  const weekdayY = outerPad + headerH;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = EXPORT_COLORS.textDim;
+  ctx.font = '700 13px system-ui, sans-serif';
+  DAY_LABELS.forEach((label, index) => {
+    ctx.fillText(
+      label,
+      outerPad + index * (cellWidth + gridGap) + cellWidth / 2,
+      weekdayY + dayNameH / 2,
+    );
+  });
+
+  cells.forEach((cell, index) => {
+    const row = Math.floor(index / 7);
+    const col = index % 7;
+    const x = outerPad + col * (cellWidth + gridGap);
+    const y = outerPad + headerH + dayNameH + 8 + row * (cellHeight + gridGap);
+
+    ctx.fillStyle = cell.day == null ? EXPORT_COLORS.emptyCellBg : EXPORT_COLORS.cellBg;
+    ctx.fillRect(x, y, cellWidth, cellHeight);
+    ctx.strokeStyle = cell.day == null ? EXPORT_COLORS.emptyCellBorder : EXPORT_COLORS.cellBorder;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x, y, cellWidth, cellHeight);
+
+    if (cell.day == null) return;
+
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = EXPORT_COLORS.text;
+    ctx.font = '700 14px system-ui, sans-serif';
+    ctx.fillText(String(cell.day), x + cellWidth - cellPad, y + cellPad - 2);
+
+    let cardY = y + 28;
+    cell.games.forEach((game) => {
+      const cardH = getCalendarCardHeight(game, tzPref);
+      const cardX = x + cellPad;
+      const cardW = cellWidth - cellPad * 2;
+      const leaguePrimary = game.league_primary_color ?? '#334155';
+      const leagueText = game.league_text_color ?? '#ffffff';
+      const watched = !!game.watched_by_user;
+      const cardBg = watched
+        ? mixColors(leaguePrimary, '#0f172a', 0.9)
+        : mixColors(leaguePrimary, '#475569', 0.14);
+      const cardBorder = watched
+        ? mixColors(leaguePrimary, '#ffffff', 0.65)
+        : mixColors(leaguePrimary, '#64748b', 0.22);
+      const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
+      const playoffMetaLabel = getPlayoffGameMetaLabel(game);
+      const showScore = shouldShowWatchedScore(game);
+      const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
+      const homeSeriesWins = getSeriesWinsForTeam(game, game.home_team.id);
+
+      ctx.fillStyle = cardBg;
+      ctx.fillRect(cardX, cardY, cardW, cardH);
+      ctx.strokeStyle = cardBorder;
+      ctx.lineWidth = 1;
+      ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+      let contentTop = cardY + 10;
+      if (originalDateLabel) {
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = leagueText;
+        ctx.font = '700 10px system-ui, sans-serif';
+        ctx.fillText(originalDateLabel, cardX + cardW / 2, cardY + 7);
+        ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(cardX + 10, cardY + 21);
+        ctx.lineTo(cardX + cardW - 10, cardY + 21);
+        ctx.stroke();
+        contentTop = cardY + 29;
+      }
+
+      const scoreY = contentTop + 12;
+      const leftScoreX = cardX + 16;
+      const awayLogoX = cardX + 40;
+      const centerX = cardX + cardW / 2;
+      const rightScoreX = cardX + cardW - 40;
+      const homeLogoX = cardX + cardW - 16;
+
+      ctx.fillStyle = leagueText;
+      ctx.font = '700 16px system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(showScore ? String(game.away_score) : '–', leftScoreX, scoreY + 2);
+      ctx.fillText(showScore ? String(game.home_score) : '–', rightScoreX, scoreY + 2);
+
+      drawCircleLogo(
+        ctx,
+        logoMap.get(game.away_team.id) ?? null,
+        awayLogoX,
+        scoreY + 2,
+        24,
+        game.away_team.code,
+        game.away_team.primary_color,
+        game.away_team.text_color,
+      );
+      drawCircleLogo(
+        ctx,
+        logoMap.get(game.home_team.id) ?? null,
+        homeLogoX,
+        scoreY + 2,
+        24,
+        game.home_team.code,
+        game.home_team.primary_color,
+        game.home_team.text_color,
+      );
+
+      if (playoffMetaLabel) {
+        ctx.fillStyle = 'rgba(255,255,255,0.84)';
+        ctx.font = '700 9px system-ui, sans-serif';
+        ctx.fillText(playoffMetaLabel, centerX, scoreY - 9);
+      }
+      ctx.fillStyle = leagueText;
+      ctx.font = '700 16px system-ui, sans-serif';
+      ctx.fillText('@', centerX, scoreY + 5);
+
+      if (
+        watched &&
+        game.series_games_to_win != null &&
+        awaySeriesWins != null &&
+        homeSeriesWins != null
+      ) {
+        drawSeriesDotsOnCanvas(
+          ctx,
+          awayLogoX,
+          cardY + cardH - 10,
+          awaySeriesWins,
+          game.series_games_to_win,
+        );
+        drawSeriesDotsOnCanvas(
+          ctx,
+          homeLogoX,
+          cardY + cardH - 10,
+          homeSeriesWins,
+          game.series_games_to_win,
+        );
+      }
+
+      cardY += cardH + cardGap;
+    });
+  });
+
+  const url = canvas.toDataURL('image/png');
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `user-games-${MONTH_LABEL_FMT.format(calendarMonth)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')}.png`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
 const ScheduleWatchModal = ({
   open,
   game,
@@ -520,6 +946,7 @@ const GameCard = ({
   game,
   tzPref,
   onOpen,
+  onDownloadScoreCard,
   onMarkWatched,
   onUnwatch,
   onSchedule,
@@ -529,6 +956,7 @@ const GameCard = ({
   game: GameRecord;
   tzPref: TzPref;
   onOpen: () => void;
+  onDownloadScoreCard: () => void;
   onMarkWatched: () => Promise<void>;
   onUnwatch: () => Promise<void>;
   onSchedule: () => void;
@@ -568,6 +996,7 @@ const GameCard = ({
         scheduled={!!game.scheduled_for}
         busy={busy}
         onView={onOpen}
+        onDownloadScoreCard={onDownloadScoreCard}
         onMarkWatched={onMarkWatched}
         onUnwatch={onUnwatch}
         onSchedule={onSchedule}
@@ -626,6 +1055,7 @@ const CalendarGameCard = ({
   game,
   tzPref,
   onOpen,
+  onDownloadScoreCard,
   onMarkWatched,
   onUnwatch,
   onSchedule,
@@ -639,6 +1069,7 @@ const CalendarGameCard = ({
   game: GameRecord;
   tzPref: TzPref;
   onOpen: () => void;
+  onDownloadScoreCard: () => void;
   onMarkWatched: () => Promise<void>;
   onUnwatch: () => Promise<void>;
   onSchedule: () => void;
@@ -682,6 +1113,7 @@ const CalendarGameCard = ({
         scheduled={!!game.scheduled_for}
         busy={busy}
         onView={onOpen}
+        onDownloadScoreCard={onDownloadScoreCard}
         onMarkWatched={onMarkWatched}
         onUnwatch={onUnwatch}
         onSchedule={onSchedule}
@@ -736,7 +1168,8 @@ const CalendarGameCard = ({
 const UserGames = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const [weekStart, setWeekStart] = useState<Date>(() => toDay(new Date()));
+  const initialStoredCalendarMonth = getStoredCalendarMonth();
+  const [weekStart, setWeekStart] = useState<Date>(() => getStoredWeekStart());
   const [view, setView] = useState<'list' | 'calendar'>('calendar');
   const [leagueId, setLeagueId] = useState<string>('all');
   const [teamFilter, setTeamFilter] = useState<string[]>([]);
@@ -747,16 +1180,23 @@ const UserGames = () => {
   const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
   const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
+  const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
+  const [exportingMonthImage, setExportingMonthImage] = useState(false);
   const prevTzPrefRef = useRef<TzPref>(tzPref);
   const preserveCalendarMonthRef = useRef(false);
+  const hasPinnedCalendarMonthRef = useRef(initialStoredCalendarMonth !== null);
 
   const weekEnd = addDays(weekStart, 6);
 
   useEffect(() => {
     localStorage.setItem(TZ_STORAGE_KEY, tzPref);
   }, [tzPref]);
+
+  useEffect(() => {
+    sessionStorage.setItem(WEEK_STORAGE_KEY, dateToISO(weekStart));
+  }, [weekStart]);
 
   const { data: leagues = [] } = useQuery<
     { id: string; name: string; code: string; logo: string | null }[]
@@ -850,7 +1290,13 @@ const UserGames = () => {
     return firstKey ? monthStart(dateKeyToDate(firstKey)) : now;
   }, [scheduledGames, tzPref]);
 
-  const [calendarMonth, setCalendarMonth] = useState<Date>(preferredMonth);
+  const [calendarMonth, setCalendarMonth] = useState<Date>(
+    () => initialStoredCalendarMonth ?? preferredMonth,
+  );
+
+  useEffect(() => {
+    sessionStorage.setItem(CALENDAR_MONTH_STORAGE_KEY, toMonthPickerValue(calendarMonth));
+  }, [calendarMonth]);
 
   useEffect(() => {
     const tzChanged = prevTzPrefRef.current !== tzPref;
@@ -860,6 +1306,7 @@ const UserGames = () => {
       preserveCalendarMonthRef.current = false;
       return;
     }
+    if (hasPinnedCalendarMonthRef.current) return;
     setCalendarMonth((current) =>
       monthKey(monthStart(current)) === monthKey(preferredMonth) ? current : preferredMonth,
     );
@@ -909,6 +1356,11 @@ const UserGames = () => {
     return cells;
   }, [calendarMonth]);
 
+  const calendarExportCells = useMemo(
+    () => buildCalendarExportCells(calendarCells, calendarMonth, gamesByCalendarDate),
+    [calendarCells, calendarMonth, gamesByCalendarDate],
+  );
+
   const leagueOptions: SelectOption[] = [
     { value: 'all', label: 'All Leagues' },
     ...leagues.map((l) => ({ value: l.id, label: l.code, logo: l.logo })),
@@ -916,6 +1368,7 @@ const UserGames = () => {
 
   const openGame = (gameId: string) => navigate(`/games/${gameId}`);
   const openSkipConfirm = (game: GameRecord) => setConfirmSkipGame(game);
+  const openScoreCardModal = (game: GameRecord) => setScoreCardTarget(getScoreCardGame(game));
   const openScheduleModal = (game: GameRecord) => {
     setScheduleTarget(game);
     setScheduleDate(getScheduledWatchDateKey(game.scheduled_for) ?? '');
@@ -1075,6 +1528,38 @@ const UserGames = () => {
     await saveScheduleForGame(draggedId, normalizedScheduleDate);
   };
 
+  const handleWeekNavigate = (offsetDays: number) => {
+    setWeekStart((current) => toDay(addDays(current, offsetDays)));
+  };
+
+  const handleWeekPickerChange = (value: string | null) => {
+    setWeekStart(value ? fromISODate(value) : toDay(new Date()));
+  };
+
+  const handleCalendarMonthChange = (next: Date | ((current: Date) => Date)) => {
+    hasPinnedCalendarMonthRef.current = true;
+    setCalendarMonth((current) => {
+      const resolved = typeof next === 'function' ? next(current) : next;
+      return monthStart(resolved);
+    });
+  };
+
+  const handleDownloadMonthImage = async () => {
+    if (exportingMonthImage || view !== 'calendar' || scheduledGames.length === 0) return;
+    setExportingMonthImage(true);
+    try {
+      await downloadMonthScheduleImage({
+        cells: calendarExportCells,
+        calendarMonth,
+        tzPref,
+      });
+    } catch {
+      toast.error('Failed to generate schedule image');
+    } finally {
+      setExportingMonthImage(false);
+    }
+  };
+
   return (
     <div className={styles.page}>
       <div className={styles.toolbar}>
@@ -1084,20 +1569,20 @@ const UserGames = () => {
               <button
                 className={styles.navBtn}
                 aria-label="Previous week"
-                onClick={() => setWeekStart((d) => addDays(d, -7))}
+                onClick={() => handleWeekNavigate(-7)}
               >
                 <Icon name="chevron_left" />
               </button>
               <DatePicker
                 value={dateToISO(weekStart)}
-                onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
+                onChange={handleWeekPickerChange}
                 triggerLabel={fmtWeekRange(weekStart, weekEnd)}
                 triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
               />
               <button
                 className={styles.navBtn}
                 aria-label="Next week"
-                onClick={() => setWeekStart((d) => addDays(d, 7))}
+                onClick={() => handleWeekNavigate(7)}
               >
                 <Icon name="chevron_right" />
               </button>
@@ -1107,13 +1592,15 @@ const UserGames = () => {
               <button
                 className={styles.navBtn}
                 aria-label="Previous month"
-                onClick={() => setCalendarMonth((current) => addMonths(current, -1))}
+                onClick={() => handleCalendarMonthChange((current) => addMonths(current, -1))}
               >
                 <Icon name="chevron_left" />
               </button>
               <DatePicker
                 value={toMonthPickerValue(calendarMonth)}
-                onChange={(value) => value && setCalendarMonth(fromMonthPickerValue(value))}
+                onChange={(value) =>
+                  value && handleCalendarMonthChange(fromMonthPickerValue(value))
+                }
                 granularity="month"
                 triggerLabel={MONTH_LABEL_FMT.format(calendarMonth)}
                 triggerAriaLabel={`Select month: ${MONTH_LABEL_FMT.format(calendarMonth)}`}
@@ -1121,7 +1608,7 @@ const UserGames = () => {
               <button
                 className={styles.navBtn}
                 aria-label="Next month"
-                onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
+                onClick={() => handleCalendarMonthChange((current) => addMonths(current, 1))}
               >
                 <Icon name="chevron_right" />
               </button>
@@ -1180,6 +1667,23 @@ const UserGames = () => {
               onChange={(v) => setTzPref(v as TzPref)}
             />
           </div>
+          {view === 'calendar' && scheduledGames.length > 0 && (
+            <div className={`${styles.filterSelect} ${styles.filterAction}`}>
+              <Button
+                type="button"
+                variant="outlined"
+                intent="neutral"
+                size="sm"
+                icon="download"
+                iconHeight="field"
+                aria-label="Download month image"
+                tooltip="Download month image"
+                className={styles.calendarExportButton}
+                onClick={() => void handleDownloadMonthImage()}
+                disabled={exportingMonthImage}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -1202,6 +1706,7 @@ const UserGames = () => {
                       game={g}
                       tzPref={tzPref}
                       onOpen={() => openGame(g.id)}
+                      onDownloadScoreCard={() => openScoreCardModal(g)}
                       onMarkWatched={() => markGameWatched(g.id)}
                       onUnwatch={() => unwatchGame(g.id)}
                       onSchedule={() => openScheduleModal(g)}
@@ -1266,6 +1771,7 @@ const UserGames = () => {
                           game={game}
                           tzPref={tzPref}
                           onOpen={() => openGame(game.id)}
+                          onDownloadScoreCard={() => openScoreCardModal(game)}
                           onMarkWatched={() => markGameWatched(game.id)}
                           onUnwatch={() => unwatchGame(game.id)}
                           onSchedule={() => openScheduleModal(game)}
@@ -1321,6 +1827,15 @@ const UserGames = () => {
           await skipGame(confirmSkipGame.id);
           setConfirmSkipGame(null);
         }}
+      />
+
+      <ScoreImageModal
+        open={!!scoreCardTarget}
+        game={scoreCardTarget ?? undefined}
+        liveAwayScore={scoreCardTarget?.away_score}
+        liveHomeScore={scoreCardTarget?.home_score}
+        overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
+        onClose={() => setScoreCardTarget(null)}
       />
     </div>
   );

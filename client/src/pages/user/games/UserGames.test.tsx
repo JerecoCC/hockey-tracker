@@ -65,6 +65,19 @@ jest.mock(
     ),
 );
 jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code || 'LOGO'}</span>);
+jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
+  __esModule: true,
+  default: ({ open, game, liveAwayScore, liveHomeScore, overtimeSuffix, onClose }: any) =>
+    open ? (
+      <div>
+        <div>Generate Score Card</div>
+        <div>{`${game?.away_team?.code} @ ${game?.home_team?.code}`}</div>
+        <div>{`Score ${liveAwayScore}-${liveHomeScore}`}</div>
+        <div>{`Suffix ${overtimeSuffix ?? ''}`}</div>
+        <button onClick={onClose}>Close score card</button>
+      </div>
+    ) : null,
+}));
 jest.mock('@/components/Select/Select', () => ({
   __esModule: true,
   default: ({ value, options, onChange, disabled }: any) => (
@@ -336,6 +349,7 @@ const games = [
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
+  window.sessionStorage.clear();
   mockUseQueryClient.mockReturnValue({
     invalidateQueries: mockInvalidateQueries,
     setQueriesData: mockSetQueriesData,
@@ -415,6 +429,77 @@ describe('UserGames calendar view', () => {
     expect(screen.getByText('R2 - G3')).toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 1 of 4')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
+  });
+
+  it('opens the score card modal from a watched game hover action', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Download score card' }));
+
+    expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
+    expect(screen.getByText('OPP @ HOM')).toBeInTheDocument();
+    expect(screen.getByText('Score 1-2')).toBeInTheDocument();
+    expect(screen.getByText((content) => content.startsWith('Suffix'))).toBeInTheDocument();
+  });
+
+  it('downloads the current calendar month as an image from calendar view', async () => {
+    const user = userEvent.setup();
+    const mockContext = {
+      fillStyle: '',
+      strokeStyle: '',
+      lineWidth: 1,
+      font: '',
+      textAlign: 'left',
+      textBaseline: 'alphabetic',
+      beginPath: jest.fn(),
+      closePath: jest.fn(),
+      clip: jest.fn(),
+      drawImage: jest.fn(),
+      fill: jest.fn(),
+      stroke: jest.fn(),
+      fillRect: jest.fn(),
+      strokeRect: jest.fn(),
+      fillText: jest.fn(),
+      save: jest.fn(),
+      restore: jest.fn(),
+      arc: jest.fn(),
+      moveTo: jest.fn(),
+      lineTo: jest.fn(),
+    } as unknown as CanvasRenderingContext2D;
+    const getContextSpy = jest
+      .spyOn(HTMLCanvasElement.prototype, 'getContext')
+      .mockReturnValue(mockContext);
+    const toDataUrlSpy = jest
+      .spyOn(HTMLCanvasElement.prototype, 'toDataURL')
+      .mockReturnValue('data:image/png;base64,test');
+    const originalCreateElement = document.createElement.bind(document);
+    const clickMock = jest.fn();
+    let createdAnchor: HTMLAnchorElement | null = null;
+    const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
+      const element = originalCreateElement(tagName);
+      if (String(tagName).toLowerCase() === 'a') {
+        createdAnchor = element as HTMLAnchorElement;
+        Object.defineProperty(element, 'click', { value: clickMock });
+      }
+      return element;
+    });
+
+    render(<UserGames />);
+
+    expect(screen.getByRole('button', { name: 'Download month image' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Download month image' }));
+
+    await waitFor(() => expect(clickMock).toHaveBeenCalled());
+    expect(getContextSpy).toHaveBeenCalled();
+    expect(toDataUrlSpy).toHaveBeenCalledWith('image/png');
+    expect(createdAnchor?.download).toContain('user-games-');
+    expect(createdAnchor?.href).toBe('data:image/png;base64,test');
+
+    createElementSpy.mockRestore();
+    getContextSpy.mockRestore();
+    toDataUrlSpy.mockRestore();
   });
 
   it('shows playoff series dots once a playoff game has been watched', () => {
@@ -809,6 +894,50 @@ describe('UserGames calendar view', () => {
     await user.selectOptions(screen.getAllByRole('combobox')[3], 'local');
 
     expect(window.localStorage.getItem('user-games-tz-pref')).toBe('local');
+  });
+
+  it('stores and restores the selected week in session storage', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+    await user.click(screen.getByRole('button', { name: 'Next week' }));
+
+    const expectedWeekStart = localDateString(7);
+    const expectedWeekLabel = formatWeekRange(dateOffset(7), dateOffset(13));
+
+    expect(window.sessionStorage.getItem('user-games-week-start')).toBe(expectedWeekStart);
+
+    unmount();
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+
+    expect(
+      screen.getByRole('button', { name: `Select week: ${expectedWeekLabel}` }),
+    ).toBeInTheDocument();
+  });
+
+  it('stores and restores the selected month in session storage', async () => {
+    const user = userEvent.setup();
+    const { unmount } = render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Next month' }));
+
+    const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+    const expectedMonthValue = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}`;
+    const expectedMonthLabel = new Intl.DateTimeFormat('en-US', {
+      month: 'short',
+      year: 'numeric',
+    }).format(nextMonth);
+
+    expect(window.sessionStorage.getItem('user-games-calendar-month')).toBe(expectedMonthValue);
+
+    unmount();
+    render(<UserGames />);
+
+    expect(
+      screen.getByRole('button', { name: `Select month: ${expectedMonthLabel}` }),
+    ).toBeInTheDocument();
   });
 
   it('renders compact calendar game cards and navigates when clicked', async () => {
