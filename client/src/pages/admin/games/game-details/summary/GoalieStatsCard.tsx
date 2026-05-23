@@ -69,16 +69,16 @@ interface Props {
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
   lineup: LineupEntry[];
-  leagueId: string;
+  getPlayerHref?: (teamId: string, playerId: string) => string;
   isFinal: boolean;
   isInProgress?: boolean;
   onSwitchGoalie?: () => void;
-  updateGoalieStint: (
+  updateGoalieStint?: (
     stintId: string,
     data: UpdateGoalieStintData,
   ) => Promise<GoalieStatRecord[] | null>;
-  removeGoalieStint: (stintId: string) => Promise<boolean>;
-  removeGoalieStat: (goalieId: string) => Promise<boolean>;
+  removeGoalieStint?: (stintId: string) => Promise<boolean>;
+  removeGoalieStat?: (goalieId: string) => Promise<boolean>;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -89,7 +89,7 @@ const GoalieStatsCard = ({
   homeRoster,
   goalieStats,
   lineup,
-  leagueId,
+  getPlayerHref,
   isFinal,
   isInProgress,
   onSwitchGoalie,
@@ -99,6 +99,7 @@ const GoalieStatsCard = ({
 }: Props) => {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
+  const canEdit = !!updateGoalieStint && !!removeGoalieStint && !!removeGoalieStat;
 
   const goalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
   const goaliesWithStats = goalies.filter((g) =>
@@ -121,7 +122,7 @@ const GoalieStatsCard = ({
                 onClick={onSwitchGoalie}
               />
             )}
-            {isFinal && (
+            {isFinal && canEdit && (
               <Button
                 variant="outlined"
                 intent="neutral"
@@ -171,12 +172,12 @@ const GoalieStatsCard = ({
                     ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                     : '1.000';
                 const windows = stintLabels(stat);
-                const playerHref = `/admin/leagues/${leagueId}/teams/${goalie.team_id}/players/${goalie.player_id}`;
+                const playerHref = getPlayerHref?.(goalie.team_id, goalie.player_id);
                 return (
                   <tr
                     key={goalie.player_id}
                     className={styles.goalieRow}
-                    onClick={() => navigate(playerHref)}
+                    onClick={playerHref ? () => navigate(playerHref) : undefined}
                   >
                     <td className={styles.goalieTdName}>
                       <span className={styles.goalieNameCell}>
@@ -228,17 +229,19 @@ const GoalieStatsCard = ({
         )}
       </Card>
 
-      <GoalieStatsEditModal
-        open={editOpen}
-        game={game}
-        awayRoster={awayRoster}
-        homeRoster={homeRoster}
-        goalieStats={goalieStats}
-        onClose={() => setEditOpen(false)}
-        updateGoalieStint={updateGoalieStint}
-        removeGoalieStint={removeGoalieStint}
-        removeGoalieStat={removeGoalieStat}
-      />
+      {canEdit && (
+        <GoalieStatsEditModal
+          open={editOpen}
+          game={game}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          goalieStats={goalieStats}
+          onClose={() => setEditOpen(false)}
+          updateGoalieStint={updateGoalieStint}
+          removeGoalieStint={removeGoalieStint}
+          removeGoalieStat={removeGoalieStat}
+        />
+      )}
     </>
   );
 };

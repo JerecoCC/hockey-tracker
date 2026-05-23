@@ -8,8 +8,7 @@ import styles from './SeasonSeriesCard.module.scss';
 
 interface Props {
   game: GameRecord;
-  leagueId: string;
-  seasonId: string;
+  gameHrefBuilder: (gameId: string) => string;
   liveAwayScore: number;
   liveHomeScore: number;
 }
@@ -42,7 +41,7 @@ const compareMeetings = (a: PreviousMeeting, b: PreviousMeeting) => {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-const SeasonSeriesCard = ({ game, leagueId, seasonId, liveAwayScore, liveHomeScore }: Props) => {
+const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore }: Props) => {
   const navigate = useNavigate();
   const meetings = game.previous_meetings ?? [];
 
@@ -128,20 +127,12 @@ const SeasonSeriesCard = ({ game, leagueId, seasonId, liveAwayScore, liveHomeSco
                 .join(' ')}
               role={isCurrentGame ? undefined : 'button'}
               tabIndex={isCurrentGame ? undefined : 0}
-              onClick={
-                isCurrentGame
-                  ? undefined
-                  : () =>
-                      navigate(`/admin/leagues/${leagueId}/seasons/${seasonId}/games/${pm.game_id}`)
-              }
+              onClick={isCurrentGame ? undefined : () => navigate(gameHrefBuilder(pm.game_id))}
               onKeyDown={
                 isCurrentGame
                   ? undefined
                   : (e) => {
-                      if (e.key === 'Enter' || e.key === ' ')
-                        navigate(
-                          `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${pm.game_id}`,
-                        );
+                      if (e.key === 'Enter' || e.key === ' ') navigate(gameHrefBuilder(pm.game_id));
                     }
               }
             >

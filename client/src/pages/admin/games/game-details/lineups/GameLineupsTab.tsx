@@ -20,9 +20,11 @@ import styles from '../GameDetailsPage.module.scss';
 interface Props {
   game: GameRecord;
   isEditMode: boolean;
+  readOnly?: boolean;
   isFinal: boolean;
   leagueId: string;
   seasonId: string | undefined;
+  playerHrefBuilder?: (teamId: string, playerId: string) => string;
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   awayRosterInherited: GameRosterEntry[];
@@ -38,9 +40,11 @@ interface Props {
 const GameLineupsTab = ({
   game,
   isEditMode,
+  readOnly = false,
   isFinal,
   leagueId,
   seasonId,
+  playerHrefBuilder,
   awayRoster,
   homeRoster,
   awayRosterInherited,
@@ -132,7 +136,7 @@ const GameLineupsTab = ({
         </span>
       }
       hoverActions={
-        isFinal && !isEditMode
+        readOnly || (isFinal && !isEditMode)
           ? []
           : [
               ...(inheritedEntries.length > 0 && rosterEntries.length === 0
@@ -197,6 +201,7 @@ const GameLineupsTab = ({
           const renderPlayer = (e: GameRosterEntry) => {
             const isStarter = lineupMap.has(e.player_id);
             const isInheritedStarter = !isStarter && inheritedLineupMap.has(e.player_id);
+            const showStarterTag = isStarter || (isFinal && !isEditMode && isInheritedStarter);
             const lineupEntry = lineupMap.get(e.player_id) ?? inheritedLineupMap.get(e.player_id);
             const slot = lineupEntry?.position_slot;
             const positionPart = slot
@@ -217,16 +222,16 @@ const GameLineupsTab = ({
                     ? String(e.jersey_number)
                     : `${e.first_name[0]}${e.last_name[0]}`
                 }
-                href={`/admin/leagues/${leagueId}/teams/${e.team_id}/players/${e.player_id}`}
+                href={playerHrefBuilder?.(e.team_id, e.player_id)}
                 rightContent={
-                  isStarter
+                  showStarterTag
                     ? { type: 'tag', label: 'Starter', intent: 'accent' }
                     : isInheritedStarter
                       ? { type: 'tag', label: 'Last Starter', intent: 'neutral' }
                       : undefined
                 }
                 actions={
-                  isFinal
+                  readOnly || isFinal
                     ? []
                     : [
                         {
@@ -334,7 +339,7 @@ const GameLineupsTab = ({
       </div>
 
       {/* ── Add from Roster ── */}
-      {lineupAddTeam !== null && (
+      {!readOnly && lineupAddTeam !== null && (
         <LineupRosterModal
           open={lineupAddTeam !== null}
           onClose={() => setLineupAddTeam(null)}
@@ -358,7 +363,7 @@ const GameLineupsTab = ({
       )}
 
       {/* ── Create Player ── */}
-      {lineupCreateTeam !== null && (
+      {!readOnly && lineupCreateTeam !== null && (
         <LineupCreatePlayersModal
           open={lineupCreateTeam !== null}
           onClose={() => {
@@ -396,7 +401,8 @@ const GameLineupsTab = ({
       )}
 
       {/* ── Set Starting Lineup ── */}
-      {lineupSetTeam !== null &&
+      {!readOnly &&
+        lineupSetTeam !== null &&
         (() => {
           const rosterForSide = (lineupSetTeam === 'away' ? awayRoster : homeRoster).map((e) => ({
             ...e,
@@ -416,12 +422,14 @@ const GameLineupsTab = ({
         })()}
 
       {/* ── Remove from Lineup ── */}
-      <RemoveFromLineupModal
-        entry={confirmRemove?.entry ?? null}
-        busy={removingFromRoster}
-        onConfirm={handleConfirmRemove}
-        onCancel={() => setConfirmRemove(null)}
-      />
+      {!readOnly && (
+        <RemoveFromLineupModal
+          entry={confirmRemove?.entry ?? null}
+          busy={removingFromRoster}
+          onConfirm={handleConfirmRemove}
+          onCancel={() => setConfirmRemove(null)}
+        />
+      )}
     </>
   );
 };

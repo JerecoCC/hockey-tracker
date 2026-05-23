@@ -19,7 +19,11 @@ import { DATE_FMT_SHORT } from './formatUtils';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-const GameDetailsPage = () => {
+interface Props {
+  mode?: 'admin' | 'user';
+}
+
+const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const {
     leagueId = '',
     seasonId,
@@ -57,8 +61,11 @@ const GameDetailsPage = () => {
   // attempts is needed here only for soWinnerSide → liveScore calculation for ScoreboardCard.
   // React Query deduplicates the request; GameSummaryTab also calls this hook.
   const { attempts } = useShootoutAttempts(id);
-  const [activeTab, handleTabChange] = useTabState('tab:game-details');
+  const [activeTab, handleTabChange] = useTabState(
+    mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
+  );
   const [isEditMode, setIsEditMode] = useState(false);
+  const isAdminView = mode === 'admin';
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -170,6 +177,14 @@ const GameDetailsPage = () => {
   const leagueName = game.league_name ?? 'League';
   const seasonName = game.season_name ?? 'Season';
   const leagueHref = `/admin/leagues/${leagueId}`;
+  const gameHrefBuilder = (gameId: string) =>
+    isAdminView
+      ? `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`
+      : `/games/${gameId}`;
+  const playerHrefBuilder = isAdminView
+    ? (teamId: string, playerId: string) =>
+        `/admin/leagues/${leagueId}/teams/${teamId}/players/${playerId}`
+    : undefined;
 
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
@@ -236,26 +251,28 @@ const GameDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
-            tooltip={`Back to ${seasonName}`}
-            onClick={() => navigate(seasonHref)}
+            tooltip={isAdminView ? `Back to ${seasonName}` : 'Back to Games'}
+            onClick={() => navigate(isAdminView ? seasonHref : '/games')}
           />
         }
         right={
-          <Breadcrumbs
-            items={[
-              { label: 'Leagues', path: '/admin/leagues' },
-              { label: leagueName, path: leagueHref },
-              { label: seasonName, path: seasonHref },
-              {
-                label: [
-                  `${game.away_team.code} @ ${game.home_team.code}`,
-                  game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · '),
-              },
-            ]}
-          />
+          isAdminView ? (
+            <Breadcrumbs
+              items={[
+                { label: 'Leagues', path: '/admin/leagues' },
+                { label: leagueName, path: leagueHref },
+                { label: seasonName, path: seasonHref },
+                {
+                  label: [
+                    `${game.away_team.code} @ ${game.home_team.code}`,
+                    game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+                },
+              ]}
+            />
+          ) : undefined
         }
       />
 
@@ -268,7 +285,7 @@ const GameDetailsPage = () => {
         liveAwayScore={liveAwayScore}
         liveHomeScore={liveHomeScore}
         overtimeSuffix={overtimeSuffix}
-        leagueId={leagueId}
+        leagueId={isAdminView ? leagueId : undefined}
       />
 
       {/* ── Tabs ── */}
@@ -286,12 +303,15 @@ const GameDetailsPage = () => {
                 isInProgress={isInProgress}
                 isEditMode={isEditMode}
                 setIsEditMode={setIsEditMode}
+                editable={isAdminView}
                 busy={busy}
                 leagueId={leagueId}
                 seasonId={seasonId ?? ''}
                 liveAwayScore={liveAwayScore}
                 liveHomeScore={liveHomeScore}
                 overtimeSuffix={overtimeSuffix}
+                gameHrefBuilder={gameHrefBuilder}
+                playerHrefBuilder={playerHrefBuilder}
                 linescorePeriods={linescorePeriods}
                 goalieStats={goalieStats}
                 awayRoster={awayRoster}
@@ -326,9 +346,11 @@ const GameDetailsPage = () => {
               <GameLineupsTab
                 game={game}
                 isEditMode={isEditMode}
+                readOnly={!isAdminView}
                 isFinal={isFinal}
                 leagueId={leagueId}
                 seasonId={seasonId}
+                playerHrefBuilder={playerHrefBuilder}
                 awayRoster={awayRoster}
                 homeRoster={homeRoster}
                 awayRosterInherited={awayRosterInherited}

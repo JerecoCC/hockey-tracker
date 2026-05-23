@@ -27,15 +27,15 @@ interface Props {
   /** True when the End Game button should be shown (in-progress + period/score conditions met). */
   canEndGame: boolean;
   // ── Action callbacks ──
-  onStartGame: () => void;
-  onReschedule: () => void;
-  onCancel: () => void;
-  onDelete: () => void;
-  onEndGame: () => void;
-  onFinishEditing: () => void;
+  onStartGame?: () => void;
+  onReschedule?: () => void;
+  onCancel?: () => void;
+  onDelete?: () => void;
+  onEndGame?: () => void;
+  onFinishEditing?: () => void;
   onDownloadScoreCard: () => void;
-  onEnterEditMode: () => void;
-  onExitEditMode: () => void;
+  onEnterEditMode?: () => void;
+  onExitEditMode?: () => void;
 }
 
 const LinescoreCard = ({
@@ -90,7 +90,7 @@ const LinescoreCard = ({
       title="Linescore"
       action={
         <div className={styles.linescoreActions}>
-          {game.status === 'scheduled' && (
+          {game.status === 'scheduled' && onStartGame && onReschedule && onCancel && onDelete && (
             <>
               <Button
                 variant="filled"
@@ -118,7 +118,7 @@ const LinescoreCard = ({
               />
             </>
           )}
-          {canEndGame && (
+          {canEndGame && onEndGame && (
             <Button
               variant="filled"
               intent="danger"
@@ -129,7 +129,7 @@ const LinescoreCard = ({
               onClick={onEndGame}
             />
           )}
-          {isFinal && isEditMode && (
+          {isFinal && isEditMode && onFinishEditing && (
             <Button
               variant="filled"
               intent="accent"
@@ -149,22 +149,26 @@ const LinescoreCard = ({
               onClick={onDownloadScoreCard}
             />
           )}
-          {game.status !== 'scheduled' && (
+          {game.status !== 'scheduled' && (onEnterEditMode || onExitEditMode || onDelete) && (
             <MoreActionsMenu
               disabled={!!busy}
               items={[
-                ...(isFinal && !isEditMode
+                ...(isFinal && !isEditMode && onEnterEditMode
                   ? [{ label: 'Edit Mode', icon: 'edit', onClick: onEnterEditMode }]
                   : []),
-                ...(isEditMode
+                ...(isEditMode && onExitEditMode
                   ? [{ label: 'Exit Edit Mode', icon: 'close', onClick: onExitEditMode }]
                   : []),
-                {
-                  label: 'Delete Game',
-                  icon: 'delete',
-                  intent: 'danger' as const,
-                  onClick: onDelete,
-                },
+                ...(onDelete
+                  ? [
+                      {
+                        label: 'Delete Game',
+                        icon: 'delete',
+                        intent: 'danger' as const,
+                        onClick: onDelete,
+                      },
+                    ]
+                  : []),
               ]}
             />
           )}

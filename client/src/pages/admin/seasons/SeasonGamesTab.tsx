@@ -286,6 +286,8 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 <DatePicker
                   value={dateToISO(weekStart)}
                   onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
+                  triggerLabel={fmtWeekRange(weekStart, weekEnd)}
+                  triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
                 />
               </div>
               <Button
@@ -296,7 +298,6 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 onClick={() => setWeekStart((d) => addDays(d, 7))}
               />
             </span>
-            <span className={styles.weekRange}>{fmtWeekRange(weekStart, weekEnd)}</span>
           </>
         }
         action={

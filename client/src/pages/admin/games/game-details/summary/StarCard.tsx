@@ -11,7 +11,7 @@ import styles from './ThreeStarsCard.module.scss';
 interface Props {
   starCount: number;
   player: GameRosterEntry;
-  leagueId: string;
+  playerHref?: string;
   primaryColor: string;
   textColor: string;
   teamCode: string;
@@ -26,7 +26,7 @@ interface Props {
 const StarCard = ({
   starCount,
   player,
-  leagueId,
+  playerHref,
   primaryColor,
   textColor,
   teamCode,
@@ -62,12 +62,16 @@ const StarCard = ({
         ))}
       </span>
 
-      <Link
-        to={`/admin/leagues/${leagueId}/teams/${player.team_id}/players/${player.player_id}`}
-        className={`${styles.starName} ${styles.playerLink}`}
-      >
-        {nameLabel}
-      </Link>
+      {playerHref ? (
+        <Link
+          to={playerHref}
+          className={`${styles.starName} ${styles.playerLink}`}
+        >
+          {nameLabel}
+        </Link>
+      ) : (
+        <span className={styles.starName}>{nameLabel}</span>
+      )}
 
       <span className={styles.starTeam}>
         <Tooltip text={teamName ?? teamCode}>

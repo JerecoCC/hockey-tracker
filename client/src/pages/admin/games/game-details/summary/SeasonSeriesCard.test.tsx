@@ -90,8 +90,7 @@ describe('SeasonSeriesCard', () => {
     const { container } = render(
       <SeasonSeriesCard
         game={game}
-        leagueId="league-1"
-        seasonId="season-1"
+        gameHrefBuilder={(gameId) => `/admin/leagues/league-1/seasons/season-1/games/${gameId}`}
         liveAwayScore={1}
         liveHomeScore={2}
       />,
@@ -105,5 +104,22 @@ describe('SeasonSeriesCard', () => {
     expect(mockNavigate).toHaveBeenCalledWith(
       '/admin/leagues/league-1/seasons/season-1/games/game-future',
     );
+  });
+
+  it('supports a custom user-view game route builder', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <SeasonSeriesCard
+        game={game}
+        gameHrefBuilder={(gameId) => `/games/${gameId}`}
+        liveAwayScore={1}
+        liveHomeScore={2}
+      />,
+    );
+
+    await user.click(screen.getAllByRole('button')[1]);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/games/game-future');
   });
 });

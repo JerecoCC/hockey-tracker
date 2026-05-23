@@ -63,6 +63,20 @@ const fromISODate = (iso: string): Date => {
   return new Date(y, m - 1, d);
 };
 
+const SHORT_FMT = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' });
+const SHORT_FMT_YEAR = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const fmtWeekRange = (start: Date, end: Date) => {
+  if (start.getFullYear() === end.getFullYear()) {
+    return `${SHORT_FMT.format(start)} – ${SHORT_FMT_YEAR.format(end)}`;
+  }
+  return `${SHORT_FMT_YEAR.format(start)} – ${SHORT_FMT_YEAR.format(end)}`;
+};
+
 type TzPref = 'ET' | 'local';
 
 /** Returns 'EST' or 'EDT' for the America/New_York timezone on the given game date. */
@@ -308,6 +322,8 @@ const UserGames = () => {
           <DatePicker
             value={dateToISO(weekStart)}
             onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
+            triggerLabel={fmtWeekRange(weekStart, weekEnd)}
+            triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
           />
           <button
             className={styles.navBtn}
