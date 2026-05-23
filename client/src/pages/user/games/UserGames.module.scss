@@ -17,6 +17,13 @@
   flex-wrap: wrap;
 }
 
+.primaryControls {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex-wrap: wrap;
+}
+
 // ── Week navigation (prev btn + date picker + next btn) ───────────────
 .weekNav {
   display: flex;
@@ -46,7 +53,36 @@
   }
 }
 
-// ── Filter selects row (league · season · status) ─────────────────────
+.viewToggle {
+  display: flex;
+  gap: $space-xs;
+}
+
+.viewBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $text-body;
+  cursor: pointer;
+
+  &:hover {
+    background: $bg-card;
+    border-color: #475569;
+  }
+}
+
+.viewBtnActive {
+  border-color: $accent;
+  color: $accent;
+  background: color-mix(in srgb, #{$accent} 12%, #{$bg-card});
+}
+
+// ── Filter row (league · favorite teams · status · timezone) ──────────
 .filters {
   display: flex;
   align-items: center;
@@ -56,6 +92,20 @@
 
 .filterSelect {
   min-width: 150px;
+}
+
+.filterAction {
+  min-width: auto;
+  flex: 0 0 auto;
+}
+
+.calendarExportButton {
+  white-space: nowrap;
+}
+
+.teamFilter {
+  min-width: 260px;
+  flex: 1 1 260px;
 }
 
 // ── Empty / loading ────────────────────────────────────────────────────
@@ -73,6 +123,197 @@
   gap: $space-md;
 }
 
+.calendarWrap {
+  overflow-x: auto;
+}
+
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: $space-sm;
+  min-width: 980px;
+}
+
+.calendarDayName {
+  text-align: center;
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+.calendarEmptyCell,
+.calendarDayCell {
+  min-height: 180px;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
+}
+
+.calendarEmptyCell {
+  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.calendarDayCell {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding: $space-sm;
+  min-height: 240px;
+  height: 240px;
+  min-width: 0;
+}
+
+.calendarDayCellDropTarget {
+  border-color: $accent;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, #{$accent} 55%, transparent);
+}
+
+.calendarDayHeader {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.calendarDayNumber {
+  font-size: $font-sm;
+  font-weight: 700;
+  color: $text-bright;
+  line-height: 1;
+}
+
+.calendarGameList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.calendarGameCard {
+  position: relative;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 20px 32px 1fr 20px 32px;
+  grid-template-rows: auto auto auto;
+  align-items: center;
+  justify-items: center;
+  gap: 0;
+  border: 1px solid color-mix(in srgb, var(--game-league-primary) 65%, white);
+  border-radius: $radius-md;
+  padding: $space-sm $space-md;
+  background: color-mix(in srgb, var(--game-league-primary) 90%, #0f172a 10%);
+  color: var(--game-league-text);
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &:hover {
+    background: color-mix(in srgb, var(--game-league-primary) 94%, #0f172a 6%);
+    border-color: color-mix(in srgb, var(--game-league-primary) 82%, white);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+
+  &:hover,
+  &:focus-within {
+    .gameActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.calendarGameCardDraggable {
+  cursor: grab;
+}
+
+.calendarGameCardDragging {
+  opacity: 0.55;
+  cursor: grabbing;
+}
+
+.calendarGameOriginalDate {
+  grid-column: 1 / -1;
+  width: 100%;
+  margin-bottom: $space-xs;
+  padding-bottom: $space-xs;
+  border-bottom: 1px solid color-mix(in srgb, var(--game-league-text) 18%, transparent);
+  font-size: $font-sm;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: inherit;
+}
+
+.calendarGameLive {
+  border-color: rgba($success, 0.65);
+}
+
+.calendarGameCardUnwatched {
+  background: color-mix(in srgb, var(--game-league-primary) 12%, #{$border});
+  border-color: color-mix(in srgb, var(--game-league-primary) 22%, #{$border});
+}
+
+.calendarGameScore,
+.calendarGameAtSymbol {
+  font-size: $font-lg;
+  font-weight: 700;
+  color: inherit;
+}
+
+.calendarGameAt {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  line-height: 1;
+}
+
+.calendarGamePlayoffMeta {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--game-league-text) 84%, transparent);
+  white-space: nowrap;
+}
+
+.calendarGameDotsAway {
+  grid-column: 1 / span 2;
+  margin-top: $space-xs;
+}
+
+.calendarGameDotsHome {
+  grid-column: 4 / span 2;
+  margin-top: $space-xs;
+}
+
+.playoffDots {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.playoffDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1.5px solid color-mix(in srgb, var(--game-league-text) 28%, transparent);
+  background: transparent;
+}
+
+.playoffDotFilled {
+  border-color: $success;
+  background: $success;
+}
+
 // ── Game card ──────────────────────────────────────────────────────────
 .gameCardClickable {
   cursor: pointer;
@@ -88,8 +329,9 @@
 }
 
 .gameCard {
-  background: $bg-page;
-  border: 1px solid $border;
+  position: relative;
+  background: color-mix(in srgb, var(--game-league-primary) 18%, #{$bg-card});
+  border: 1px solid color-mix(in srgb, var(--game-league-primary) 44%, #{$border});
   border-radius: $radius-lg;
   padding: $space-lg $space-2xl;
   display: flex;
@@ -98,12 +340,41 @@
   transition: border-color $transition-fast;
 
   &:hover {
-    border-color: #475569;
+    border-color: color-mix(in srgb, var(--game-league-primary) 66%, #475569);
+  }
+
+  &:hover,
+  &:focus-within {
+    .gameActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 
   &.live {
     border-color: $success;
   }
+}
+
+.gameCardUnwatched {
+  background: color-mix(in srgb, var(--game-league-primary) 10%, #{$border});
+  border-color: color-mix(in srgb, var(--game-league-primary) 22%, #{$border});
+}
+
+.gameActions {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: $space-xs;
+  border-radius: inherit;
+  background: rgba(15, 23, 42, 0.88);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
 }
 
 .dayEmpty {
@@ -129,17 +400,40 @@
 
 .metaTime {
   font-size: $font-sm;
-  color: $text-dim;
+  color: color-mix(in srgb, var(--game-league-primary) 44%, #{$text-dim});
 }
 
 .metaSeason {
   font-size: $font-sm;
-  color: $text-dim;
+  color: color-mix(in srgb, var(--game-league-primary) 44%, #{$text-dim});
 
   &::before {
     content: "·";
     margin-right: $space-sm;
   }
+}
+
+.originalGameDate {
+  align-self: stretch;
+  padding-bottom: $space-sm;
+  border-bottom: 1px solid color-mix(in srgb, var(--game-league-primary) 18%, #{$border});
+  font-size: $font-xl;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: color-mix(in srgb, var(--game-league-primary) 76%, #{$text-body});
+}
+
+.scheduleModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.scheduleModalCopy {
+  margin: 0;
+  color: $text-dim;
+  font-size: $font-sm;
 }
 
 // ── Matchup row ────────────────────────────────────────────────────────
@@ -202,7 +496,7 @@
 .scoreVal {
   font-size: $font-2xl;
   font-weight: 700;
-  color: $text-body;
+  color: color-mix(in srgb, var(--game-league-primary) 58%, #{$text-body});
   min-width: 20px;
   text-align: center;
 }
@@ -210,18 +504,18 @@
 .scoreWin {
   font-size: $font-2xl;
   font-weight: 700;
-  color: $text-bright;
+  color: color-mix(in srgb, var(--game-league-primary) 78%, #{$text-bright});
   min-width: 20px;
   text-align: center;
 }
 
 .scoreSep {
   font-size: $font-xl;
-  color: $text-dim;
+  color: color-mix(in srgb, var(--game-league-primary) 40%, #{$text-dim});
 }
 
 .scoreVs {
   font-size: $font-base;
-  color: $text-dim;
+  color: color-mix(in srgb, var(--game-league-primary) 40%, #{$text-dim});
   font-weight: 500;
 }

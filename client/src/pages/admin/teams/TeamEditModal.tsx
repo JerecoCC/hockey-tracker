@@ -5,6 +5,7 @@ import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import { type CreateTeamData } from '@/hooks/useTeams';
+import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
 import styles from './TeamEditModal.module.scss';
 
 interface FormValues {
@@ -18,11 +19,6 @@ interface FormValues {
   home_arena: string;
   description: string | null;
 }
-
-const normalizeDescription = (html: string | null | undefined): string | null => {
-  if (!html || html === '<p></p>') return null;
-  return html;
-};
 
 interface Props {
   open: boolean;
@@ -63,7 +59,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       text_color: team.text_color,
       city: team.city ?? '',
       home_arena: team.home_arena ?? '',
-      description: team.description ?? null,
+      description: descriptionHtmlToTextarea(team.description),
     });
   }, [open, team, reset]);
 
@@ -83,7 +79,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       text_color: data.text_color,
       city: data.city || undefined,
       home_arena: data.home_arena || undefined,
-      description: normalizeDescription(data.description),
+      description: textareaToDescriptionHtml(data.description),
     };
     const ok = await updateTeam(team.id, payload);
     if (ok) onClose();
@@ -172,9 +168,11 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
         </div>
         <Field
           label="Description"
-          type="richtext"
+          type="textarea"
           control={control}
           name="description"
+          rows={6}
+          placeholder="Add a description..."
           disabled={isSubmitting}
         />
       </form>

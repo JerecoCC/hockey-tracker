@@ -4,6 +4,7 @@ import styles from './StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
   player_id: string;
+  team_id?: string | null;
   first_name: string;
   last_name: string;
   photo: string | null;
@@ -23,6 +24,7 @@ interface Props<T extends StatsLeaderItem> {
   statLabel: string;
   getFeaturedStat: (item: T) => React.ReactNode;
   getRowStat: (item: T) => React.ReactNode;
+  onSelectItem?: (item: T) => void;
   onAllLeaders?: () => void;
 }
 
@@ -34,66 +36,103 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
   statLabel,
   getFeaturedStat,
   getRowStat,
+  onSelectItem,
   onAllLeaders,
 }: Props<T>) {
   if (items.length === 0) return null;
 
   const featured = items[featuredIdx];
+  const featuredContent = (
+    <>
+      <PlayerAvatar
+        photo={featured.photo}
+        initials={`${featured.first_name.charAt(0)}${featured.last_name.charAt(0)}`}
+        primaryColor={featured.team_primary_color}
+        textColor={featured.team_text_color}
+        size={110}
+        className={styles.featuredAvatar}
+      />
+
+      <span className={styles.name}>
+        {featured.first_name}
+        <br />
+        {featured.last_name}
+      </span>
+
+      <div className={styles.meta}>
+        {featured.team_code && (
+          <TeamLogo
+            logo={featured.team_logo}
+            code={featured.team_code}
+            size={16}
+            shape="square"
+          />
+        )}
+        {featured.team_code && <span>{featured.team_code}</span>}
+        {featured.jersey_number != null && <span>• #{featured.jersey_number}</span>}
+        {featured.position && <span>• {featured.position}</span>}
+      </div>
+
+      <span className={styles.statLabel}>{statLabel}</span>
+      <span className={styles.statValue}>{getFeaturedStat(featured)}</span>
+    </>
+  );
 
   return (
     <div className={styles.layout}>
       {/* ── Featured player ── */}
-      <div className={styles.featured}>
-        <PlayerAvatar
-          photo={featured.photo}
-          initials={`${featured.first_name.charAt(0)}${featured.last_name.charAt(0)}`}
-          primaryColor={featured.team_primary_color}
-          textColor={featured.team_text_color}
-          size={110}
-          className={styles.featuredAvatar}
-        />
-
-        <span className={styles.name}>
-          {featured.first_name}
-          <br />
-          {featured.last_name}
-        </span>
-
-        <div className={styles.meta}>
-          {featured.team_code && (
-            <TeamLogo
-              logo={featured.team_logo}
-              code={featured.team_code}
-              size={16}
-              shape="square"
-            />
-          )}
-          {featured.team_code && <span>{featured.team_code}</span>}
-          {featured.jersey_number != null && <span>• #{featured.jersey_number}</span>}
-          {featured.position && <span>• {featured.position}</span>}
-        </div>
-
-        <span className={styles.statLabel}>{statLabel}</span>
-        <span className={styles.statValue}>{getFeaturedStat(featured)}</span>
-      </div>
+      {onSelectItem ? (
+        <button
+          type="button"
+          className={[styles.featured, styles.clickableCard].join(' ')}
+          onClick={() => onSelectItem(featured)}
+        >
+          {featuredContent}
+        </button>
+      ) : (
+        <div className={styles.featured}>{featuredContent}</div>
+      )}
 
       {/* ── Ranked list ── */}
       <div>
-        {items.map((item, i) => (
-          <div
-            key={item.player_id}
-            className={[styles.entry, i === featuredIdx ? styles.entryActive : '']
-              .filter(Boolean)
-              .join(' ')}
-            onMouseEnter={() => onHover(i)}
-          >
-            <span className={styles.rank}>{tieRanks[i]}.</span>
-            <span className={styles.entryName}>
-              {item.first_name} {item.last_name}
-            </span>
-            <span className={styles.entryStat}>{getRowStat(item)}</span>
-          </div>
-        ))}
+        {items.map((item, i) => {
+          const className = [
+            styles.entry,
+            i === featuredIdx ? styles.entryActive : '',
+            onSelectItem ? styles.entryButton : '',
+          ]
+            .filter(Boolean)
+            .join(' ');
+
+          return onSelectItem ? (
+            <button
+              key={item.player_id}
+              type="button"
+              className={className}
+              onMouseEnter={() => onHover(i)}
+              onFocus={() => onHover(i)}
+              onClick={() => onSelectItem(item)}
+            >
+              <span className={styles.rank}>{tieRanks[i]}.</span>
+              <span className={styles.entryName}>
+                {item.first_name} {item.last_name}
+              </span>
+              <span className={styles.entryStat}>{getRowStat(item)}</span>
+            </button>
+          ) : (
+            <div
+              key={item.player_id}
+              className={className}
+              onMouseEnter={() => onHover(i)}
+            >
+              <span className={styles.rank}>{tieRanks[i]}.</span>
+              <span className={styles.entryName}>
+                {item.first_name} {item.last_name}
+              </span>
+              <span className={styles.entryStat}>{getRowStat(item)}</span>
+            </div>
+          );
+        })}
 
         {onAllLeaders && (
           <div className={styles.allLeadersRow}>

@@ -17,6 +17,8 @@ interface Props {
   disabled?: boolean;
   autoFocus?: boolean;
   granularity?: 'day' | 'month';
+  triggerLabel?: string;
+  triggerAriaLabel?: string;
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -136,7 +138,15 @@ const buildDisplay = (
 };
 
 const DatePicker = (props: Props) => {
-  const { value, onChange, disabled, autoFocus, granularity = 'day' } = props;
+  const {
+    value,
+    onChange,
+    disabled,
+    autoFocus,
+    granularity = 'day',
+    triggerLabel,
+    triggerAriaLabel,
+  } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
   const parsed = parseISO(value);
@@ -450,57 +460,84 @@ const DatePicker = (props: Props) => {
   for (let i = 1; i <= total; i++) cells.push(i);
   while (cells.length % 7 !== 0) cells.push(null);
   const years = Array.from({ length: 12 }, (_, i) => yearBase + i);
+  const usesButtonTrigger = !!triggerLabel;
 
   return (
     <div
       ref={wrapperRef}
-      className={styles.wrapper}
+      className={[styles.wrapper, usesButtonTrigger && styles.wrapperInline]
+        .filter(Boolean)
+        .join(' ')}
     >
       {/* ── Trigger ── */}
       <div
         ref={triggerRef}
-        className={[styles.trigger, disabled && styles.triggerDisabled].filter(Boolean).join(' ')}
+        className={[
+          usesButtonTrigger ? styles.buttonTriggerWrap : styles.trigger,
+          disabled && styles.triggerDisabled,
+        ]
+          .filter(Boolean)
+          .join(' ')}
       >
-        <button
-          type="button"
-          className={styles.calIconBtn}
-          onClick={openPicker}
-          tabIndex={-1}
-          aria-label="Open calendar"
-          disabled={disabled}
-        >
-          <Icon
-            name="calendar_today"
-            size="0.875rem"
-            className={styles.calIcon}
-          />
-        </button>
-        <input
-          ref={inputRef}
-          type="text"
-          className={styles.textInput}
-          value={displayValue}
-          data-empty={!cYear && !cMonth && !cDay}
-          onChange={() => {}}
-          tabIndex={disabled ? -1 : undefined}
-          onClick={!disabled ? handleInputClick : undefined}
-          onKeyDown={!disabled ? handleKeyDown : undefined}
-          onFocus={!disabled ? handleFocus : undefined}
-          onBlur={!disabled ? handleBlur : undefined}
-          readOnly={disabled}
-        />
-        {value && !disabled && (
-          <span
-            className={styles.clear}
-            onClick={clearDate}
-            role="button"
-            aria-label="Clear"
+        {usesButtonTrigger ? (
+          <button
+            type="button"
+            className={styles.triggerButton}
+            onClick={openPicker}
+            aria-label={triggerAriaLabel ?? triggerLabel}
+            disabled={disabled}
           >
             <Icon
-              name="close"
-              size="0.75rem"
+              name="calendar_today"
+              size="0.875rem"
+              className={styles.calIcon}
             />
-          </span>
+            <span className={styles.triggerButtonLabel}>{triggerLabel}</span>
+          </button>
+        ) : (
+          <>
+            <button
+              type="button"
+              className={styles.calIconBtn}
+              onClick={openPicker}
+              tabIndex={-1}
+              aria-label="Open calendar"
+              disabled={disabled}
+            >
+              <Icon
+                name="calendar_today"
+                size="0.875rem"
+                className={styles.calIcon}
+              />
+            </button>
+            <input
+              ref={inputRef}
+              type="text"
+              className={styles.textInput}
+              value={displayValue}
+              data-empty={!cYear && !cMonth && !cDay}
+              onChange={() => {}}
+              tabIndex={disabled ? -1 : undefined}
+              onClick={!disabled ? handleInputClick : undefined}
+              onKeyDown={!disabled ? handleKeyDown : undefined}
+              onFocus={!disabled ? handleFocus : undefined}
+              onBlur={!disabled ? handleBlur : undefined}
+              readOnly={disabled}
+            />
+            {value && !disabled && (
+              <span
+                className={styles.clear}
+                onClick={clearDate}
+                role="button"
+                aria-label="Clear"
+              >
+                <Icon
+                  name="close"
+                  size="0.75rem"
+                />
+              </span>
+            )}
+          </>
         )}
       </div>
 

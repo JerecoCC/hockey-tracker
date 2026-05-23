@@ -13,7 +13,7 @@ interface Props {
   roster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
   playerGameStats: Map<string, { goals: number; assists: number }>;
-  leagueId: string;
+  getPlayerHref?: (teamId: string, playerId: string) => string;
   onEdit?: () => void;
 }
 
@@ -24,7 +24,7 @@ const ThreeStarsCard = ({
   roster,
   goalieStats,
   playerGameStats,
-  leagueId,
+  getPlayerHref,
   onEdit,
 }: Props) => {
   const starDefs = [
@@ -64,7 +64,7 @@ const ThreeStarsCard = ({
               key={starCount}
               starCount={starCount}
               player={player}
-              leagueId={leagueId}
+              playerHref={getPlayerHref?.(player.team_id, player.player_id)}
               primaryColor={team.primary_color}
               textColor={team.text_color}
               teamCode={team.code}

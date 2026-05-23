@@ -42,12 +42,15 @@ interface Props {
   isInProgress: boolean;
   isEditMode: boolean;
   setIsEditMode: (value: boolean) => void;
+  editable?: boolean;
   busy: string | null;
   leagueId: string;
   seasonId: string;
   liveAwayScore: number;
   liveHomeScore: number;
   overtimeSuffix: string;
+  gameHrefBuilder: (gameId: string) => string;
+  playerHrefBuilder?: (teamId: string, playerId: string) => string;
   linescorePeriods: { id: string; label: string; shortLabel: string }[];
   goalieStats: GoalieStatRecord[];
   awayRoster: GameRosterEntry[];
@@ -86,12 +89,15 @@ const GameSummaryTab = ({
   isInProgress,
   isEditMode,
   setIsEditMode,
+  editable = true,
   busy,
   leagueId,
   seasonId,
   liveAwayScore,
   liveHomeScore,
   overtimeSuffix,
+  gameHrefBuilder,
+  playerHrefBuilder,
   linescorePeriods,
   goalieStats,
   awayRoster,
@@ -144,7 +150,7 @@ const GameSummaryTab = ({
       ? isPlayoff
         ? Array.from({ length: game.overtime_periods ?? 1 }, (_, i) => ({
             id: `OT${i + 1}`,
-            label: `Overtime ${i + 1}`,
+            label: `OT ${i + 1}`,
             shortLabel: `OT${i + 1}`,
           }))
         : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
@@ -286,7 +292,7 @@ const GameSummaryTab = ({
   const [switchGoalieOpen, setSwitchGoalieOpen] = useState(false);
 
   // Treat the game as in-progress for all edit controls when edit mode is on.
-  const isEditInProgress = isInProgress || isEditMode;
+  const isEditInProgress = editable && (isInProgress || isEditMode);
 
   // ── End Game / 3-stars modal ─────────────────────────────────────────────
   const [starsModalOpen, setStarsModalOpen] = useState(false);
@@ -411,9 +417,13 @@ const GameSummaryTab = ({
                 roster={roster}
                 goalieStats={goalieStats}
                 playerGameStats={playerGameStats}
-                leagueId={leagueId}
+                getPlayerHref={
+                  playerHrefBuilder
+                    ? (teamId, playerId) => playerHrefBuilder(teamId, playerId)
+                    : undefined
+                }
                 onEdit={
-                  isEditMode
+                  editable && isEditMode
                     ? () => {
                         setStarsEditMode(true);
                         setStarsModalOpen(true);
@@ -437,24 +447,26 @@ const GameSummaryTab = ({
               attempts={attempts}
               soComplete={soComplete}
               deletingAttemptId={deletingAttemptId}
-              setAccordionRef={setAccordionRef}
-              onScoreGoal={openGoalModal}
-              onEditGoal={openEditGoalModal}
-              onDeleteGoal={deleteGoal}
-              onOpenShotsModal={openShotsModal}
-              onAddAttempt={openAttemptModal}
-              onEditAttempt={openEditAttemptModal}
-              onDeleteAttempt={handleDeleteAttempt}
+              setAccordionRef={editable ? setAccordionRef : undefined}
+              onScoreGoal={editable ? openGoalModal : undefined}
+              onEditGoal={editable ? openEditGoalModal : undefined}
+              onDeleteGoal={editable ? deleteGoal : undefined}
+              onOpenShotsModal={editable ? openShotsModal : undefined}
+              onAddAttempt={editable ? openAttemptModal : undefined}
+              onEditAttempt={editable ? openEditAttemptModal : undefined}
+              onDeleteAttempt={editable ? handleDeleteAttempt : undefined}
               onGoBackPeriod={isEditInProgress ? (prev) => advancePeriod(prev) : undefined}
               onGoBackOTPeriod={
                 isEditInProgress ? (targetNum) => revertOTPeriod(targetNum) : undefined
               }
-              getPlayerHref={(playerId) => {
-                const teamId = playerTeamMap.get(playerId);
-                return teamId
-                  ? `/admin/leagues/${leagueId}/teams/${teamId}/players/${playerId}`
-                  : '#';
-              }}
+              getPlayerHref={
+                playerHrefBuilder
+                  ? (playerId) => {
+                      const teamId = playerTeamMap.get(playerId);
+                      return teamId ? playerHrefBuilder(teamId, playerId) : '#';
+                    }
+                  : undefined
+              }
             />
 
             {/* ── Goalie Stats card ── */}
@@ -465,28 +477,30 @@ const GameSummaryTab = ({
                 homeRoster={homeRoster}
                 goalieStats={goalieStats}
                 lineup={lineup}
-                leagueId={leagueId}
-                isFinal={isFinal && isEditMode}
+                getPlayerHref={
+                  playerHrefBuilder
+                    ? (teamId, playerId) => playerHrefBuilder(teamId, playerId)
+                    : undefined
+                }
+                isFinal={editable && isFinal && isEditMode}
                 isInProgress={isEditInProgress}
                 onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
-                updateGoalieStint={updateGoalieStint}
-                removeGoalieStint={removeGoalieStint}
-                removeGoalieStat={removeGoalieStat}
+                updateGoalieStint={editable ? updateGoalieStint : undefined}
+                removeGoalieStint={editable ? removeGoalieStint : undefined}
+                removeGoalieStat={editable ? removeGoalieStat : undefined}
               />
             )}
 
             {/* ── Last 5 Games card ── */}
             <LastFiveCard
               game={game}
-              leagueId={leagueId}
-              seasonId={seasonId}
+              gameHrefBuilder={gameHrefBuilder}
             />
 
             {/* ── Season / Playoff Series card ── */}
             <SeasonSeriesCard
               game={game}
-              leagueId={leagueId}
-              seasonId={seasonId}
+              gameHrefBuilder={gameHrefBuilder}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}
             />
@@ -498,7 +512,6 @@ const GameSummaryTab = ({
             <LinescoreCard
               game={game}
               isFinal={isFinal}
-              isInProgress={isInProgress}
               isEditMode={isEditMode}
               busy={busy}
               liveAwayScore={liveAwayScore}
@@ -508,37 +521,45 @@ const GameSummaryTab = ({
               rosterReady={rosterReady}
               lineupsReady={lineupsReady}
               canEndGame={
+                editable &&
                 isInProgress &&
                 ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
                 (game.current_period !== 'SO' || soComplete) &&
                 (game.current_period !== 'OT' || goals.some((g) => g.period === 'OT')) &&
                 (game.current_period !== '3' || liveAwayScore !== liveHomeScore)
               }
-              onStartGame={openStartGameModal}
-              onReschedule={() => updateStatus('postponed')}
-              onCancel={() => updateStatus('cancelled')}
-              onDelete={() => setConfirmDeleteOpen(true)}
-              onEndGame={() => {
-                if (endGameReadyForStars) {
-                  setStarsEditMode(false);
-                  setStarsModalOpen(true);
-                } else {
-                  openShotsModal(
-                    game.current_period ?? lastPlayedPeriod,
-                    { type: 'end-game' },
-                    true,
-                  );
-                }
-              }}
-              onFinishEditing={() => setIsEditMode(false)}
+              onStartGame={editable ? openStartGameModal : undefined}
+              onReschedule={editable ? () => updateStatus('postponed') : undefined}
+              onCancel={editable ? () => updateStatus('cancelled') : undefined}
+              onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
+              onEndGame={
+                editable
+                  ? () => {
+                      if (endGameReadyForStars) {
+                        setStarsEditMode(false);
+                        setStarsModalOpen(true);
+                      } else {
+                        openShotsModal(
+                          game.current_period ?? lastPlayedPeriod,
+                          { type: 'end-game' },
+                          true,
+                        );
+                      }
+                    }
+                  : undefined
+              }
+              onFinishEditing={editable ? () => setIsEditMode(false) : undefined}
               onDownloadScoreCard={() => setScoreImageOpen(true)}
-              onEnterEditMode={() => {
-                setIsEditMode(true);
-                setEndGameReadyForStars(false);
-                // For old games where current_period was never persisted
-                if (!game.current_period) revertToEditMode(lastPlayedPeriod);
-              }}
-              onExitEditMode={() => setIsEditMode(false)}
+              onEnterEditMode={
+                editable
+                  ? () => {
+                      setIsEditMode(true);
+                      setEndGameReadyForStars(false);
+                      if (!game.current_period) revertToEditMode(lastPlayedPeriod);
+                    }
+                  : undefined
+              }
+              onExitEditMode={editable ? () => setIsEditMode(false) : undefined}
             />
 
             {/* ── Shots breakdown card ── */}
@@ -636,7 +657,7 @@ const GameSummaryTab = ({
               game={game}
               busy={busy}
               updateGameInfo={
-                isEditMode || game.status === 'scheduled' ? updateGameInfo : undefined
+                editable && (isEditMode || game.status === 'scheduled') ? updateGameInfo : undefined
               }
             />
           </div>
@@ -644,7 +665,7 @@ const GameSummaryTab = ({
       </div>
 
       {/* ── Score Goal Form ── */}
-      {goalPeriod !== null && (
+      {editable && goalPeriod !== null && (
         <ScoreGoalModal
           open={goalPeriod !== null}
           period={goalPeriod}
@@ -661,72 +682,78 @@ const GameSummaryTab = ({
       )}
 
       {/* ── Add / Edit Shootout Attempt ── */}
-      <ShootoutAttemptModal
-        mode={attemptModalMode}
-        initialTeam={attemptInitialTeam}
-        initialShooterId={attemptInitialShooterId}
-        initialScored={attemptInitialScored}
-        game={game}
-        awayRoster={awayRoster}
-        homeRoster={homeRoster}
-        busy={!!busy}
-        onClose={closeAttemptModal}
-        onAdd={addAttempt}
-        onUpdate={updateAttempt}
-      />
+      {editable && (
+        <ShootoutAttemptModal
+          mode={attemptModalMode}
+          initialTeam={attemptInitialTeam}
+          initialShooterId={attemptInitialShooterId}
+          initialScored={attemptInitialScored}
+          game={game}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          busy={!!busy}
+          onClose={closeAttemptModal}
+          onAdd={addAttempt}
+          onUpdate={updateAttempt}
+        />
+      )}
 
       {/* ── Start Game modal ── */}
-      <StartGameModal
-        open={startGameModalOpen}
-        isStarting={busy === 'in_progress'}
-        disabled={!!busy}
-        onClose={() => setStartGameModalOpen(false)}
-        onStart={startGame}
-      />
+      {editable && (
+        <StartGameModal
+          open={startGameModalOpen}
+          isStarting={busy === 'in_progress'}
+          disabled={!!busy}
+          onClose={() => setStartGameModalOpen(false)}
+          onStart={startGame}
+        />
+      )}
 
       {/* ── 3 Stars modal ── */}
-      <ThreeStarsModal
-        open={starsModalOpen}
-        editMode={starsEditMode}
-        roster={roster}
-        busy={!!busy}
-        awayTeam={{
-          id: game.away_team.id,
-          code: game.away_team.code,
-          logo: game.away_team.logo,
-          primaryColor: game.away_team.primary_color,
-          textColor: game.away_team.text_color,
-        }}
-        homeTeam={{
-          id: game.home_team.id,
-          code: game.home_team.code,
-          logo: game.home_team.logo,
-          primaryColor: game.home_team.primary_color,
-          textColor: game.home_team.text_color,
-        }}
-        initialStars={
-          starsEditMode && game
-            ? {
-                star1: game.star_1_id ?? '',
-                star2: game.star_2_id ?? '',
-                star3: game.star_3_id ?? '',
-              }
-            : undefined
-        }
-        onClose={() => setStarsModalOpen(false)}
-        onSave={updateStars}
-        onEndGame={async (payload) => {
-          const ok = await endGame(payload);
-          if (ok) {
-            setEndGameReadyForStars(false);
-            setIsEditMode(false);
+      {editable && (
+        <ThreeStarsModal
+          open={starsModalOpen}
+          editMode={starsEditMode}
+          roster={roster}
+          busy={!!busy}
+          awayTeam={{
+            id: game.away_team.id,
+            code: game.away_team.code,
+            logo: game.away_team.logo,
+            primaryColor: game.away_team.primary_color,
+            textColor: game.away_team.text_color,
+          }}
+          homeTeam={{
+            id: game.home_team.id,
+            code: game.home_team.code,
+            logo: game.home_team.logo,
+            primaryColor: game.home_team.primary_color,
+            textColor: game.home_team.text_color,
+          }}
+          initialStars={
+            starsEditMode && game
+              ? {
+                  star1: game.star_1_id ?? '',
+                  star2: game.star_2_id ?? '',
+                  star3: game.star_3_id ?? '',
+                }
+              : undefined
           }
-          return ok;
-        }}
-      />
+          onClose={() => setStarsModalOpen(false)}
+          onSave={updateStars}
+          onEndGame={async (payload) => {
+            const ok = await endGame(payload);
+            if (ok) {
+              setEndGameReadyForStars(false);
+              setIsEditMode(false);
+            }
+            return ok;
+          }}
+        />
+      )}
 
       {/* ── Record Shots modal ── */}
-      {shotsPeriod !== null && shotsNextAction && (
+      {editable && shotsPeriod !== null && shotsNextAction && (
         <RecordShotsModal
           open={shotsPeriod !== null}
           period={shotsPeriod}
@@ -756,7 +783,7 @@ const GameSummaryTab = ({
       )}
 
       {/* ── Shots edit modal (all periods) ── */}
-      {shotsEditModalOpen && (
+      {editable && shotsEditModalOpen && (
         <ShotsEditModal
           open={shotsEditModalOpen}
           game={game}
@@ -787,35 +814,39 @@ const GameSummaryTab = ({
       )}
 
       {/* ── Goalie Switch modal ── */}
-      <GoalieSwitchModal
-        open={switchGoalieOpen}
-        game={game}
-        awayRoster={awayRoster}
-        homeRoster={homeRoster}
-        existingStats={goalieStats}
-        onClose={() => setSwitchGoalieOpen(false)}
-        switchGoalie={switchGoalie}
-      />
+      {editable && (
+        <GoalieSwitchModal
+          open={switchGoalieOpen}
+          game={game}
+          awayRoster={awayRoster}
+          homeRoster={homeRoster}
+          existingStats={goalieStats}
+          onClose={() => setSwitchGoalieOpen(false)}
+          switchGoalie={switchGoalie}
+        />
+      )}
 
       {/* ── Delete Game confirm ── */}
-      <ConfirmModal
-        open={confirmDeleteOpen}
-        title="Delete Game"
-        body={`Delete ${game.away_team.code} @ ${game.home_team.code}? This will remove all goals, lineups, and related data. This cannot be undone.`}
-        confirmLabel="Delete"
-        confirmIcon="delete"
-        variant="danger"
-        busy={busy === 'deleting'}
-        onCancel={() => setConfirmDeleteOpen(false)}
-        onConfirm={async () => {
-          const ok = await deleteGame();
-          if (ok) {
-            navigate(`/admin/leagues/${leagueId}/seasons/${seasonId}`);
-          } else {
-            setConfirmDeleteOpen(false);
-          }
-        }}
-      />
+      {editable && (
+        <ConfirmModal
+          open={confirmDeleteOpen}
+          title="Delete Game"
+          body={`Delete ${game.away_team.code} @ ${game.home_team.code}? This will remove all goals, lineups, and related data. This cannot be undone.`}
+          confirmLabel="Delete"
+          confirmIcon="delete"
+          variant="danger"
+          busy={busy === 'deleting'}
+          onCancel={() => setConfirmDeleteOpen(false)}
+          onConfirm={async () => {
+            const ok = await deleteGame();
+            if (ok) {
+              navigate(`/admin/leagues/${leagueId}/seasons/${seasonId}`);
+            } else {
+              setConfirmDeleteOpen(false);
+            }
+          }}
+        />
+      )}
     </>
   );
 };

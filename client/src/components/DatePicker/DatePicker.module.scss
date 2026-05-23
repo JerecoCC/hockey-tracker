@@ -8,6 +8,10 @@
   width: 100%;
 }
 
+.wrapperInline {
+  width: auto;
+}
+
 // ── Trigger container (div wrapping icon button + text input + clear) ────
 .trigger {
   display: flex;
@@ -28,6 +32,44 @@
   &:hover {
     border-color: color.adjust($border, $lightness: 10%);
   }
+}
+
+.buttonTriggerWrap {
+  width: auto;
+}
+
+.triggerButton {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  min-height: 42px;
+  width: auto;
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  padding: 0 $space-lg;
+  color: $text-body;
+  font: inherit;
+  cursor: pointer;
+  transition: border-color $transition-base;
+
+  &:hover {
+    border-color: color.adjust($border, $lightness: 10%);
+  }
+
+  &:focus-visible {
+    outline: none;
+    border-color: $accent;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.triggerButtonLabel {
+  white-space: nowrap;
 }
 
 .triggerDisabled {

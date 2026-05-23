@@ -19,7 +19,11 @@ import { DATE_FMT_SHORT } from './formatUtils';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-const GameDetailsPage = () => {
+interface Props {
+  mode?: 'admin' | 'user';
+}
+
+const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const {
     leagueId = '',
     seasonId,
@@ -57,8 +61,11 @@ const GameDetailsPage = () => {
   // attempts is needed here only for soWinnerSide → liveScore calculation for ScoreboardCard.
   // React Query deduplicates the request; GameSummaryTab also calls this hook.
   const { attempts } = useShootoutAttempts(id);
-  const [activeTab, handleTabChange] = useTabState('tab:game-details');
+  const [activeTab, handleTabChange] = useTabState(
+    mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
+  );
   const [isEditMode, setIsEditMode] = useState(false);
+  const isAdminView = mode === 'admin';
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -170,21 +177,24 @@ const GameDetailsPage = () => {
   const leagueName = game.league_name ?? 'League';
   const seasonName = game.season_name ?? 'Season';
   const leagueHref = `/admin/leagues/${leagueId}`;
+  const gameHrefBuilder = (gameId: string) =>
+    isAdminView
+      ? `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`
+      : `/games/${gameId}`;
+  const playerHrefBuilder = isAdminView
+    ? (teamId: string, playerId: string) =>
+        `/admin/leagues/${leagueId}/teams/${teamId}/players/${playerId}`
+    : undefined;
 
   const isFinal = game.status === 'final';
   const isInProgress = game.status === 'in_progress';
-  // Scores are always derived from the goals table (period_scores); the DB columns were removed.
-  // The SO winner's +1 is never written as a goal row, so period_scores has no SO entry.
-  // Apply a client-side adjustment whenever the winner is known from attempts and no SO goal
-  // exists in the goals table — this covers both in-progress and final states.
+  // Use the backend-computed score as the canonical base.
+  // For an in-progress shootout, the backend intentionally stays on the goal-based tied score,
+  // so we still apply a temporary +1 client-side when the current attempts already reveal a winner.
   const hasSoPeriodScore = game.period_scores.some((ps) => ps.period === 'SO');
-  const soScoreAdj = soWinnerSide && !hasSoPeriodScore ? 1 : 0;
-  const liveAwayScore =
-    game.period_scores.reduce((sum, ps) => sum + ps.away_goals, 0) +
-    (soWinnerSide === 'away' ? soScoreAdj : 0);
-  const liveHomeScore =
-    game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0) +
-    (soWinnerSide === 'home' ? soScoreAdj : 0);
+  const soScoreAdj = !isFinal && soWinnerSide && !hasSoPeriodScore ? 1 : 0;
+  const liveAwayScore = game.away_score + (soWinnerSide === 'away' ? soScoreAdj : 0);
+  const liveHomeScore = game.home_score + (soWinnerSide === 'home' ? soScoreAdj : 0);
 
   // Derive OT/SO from period_scores (source of truth); stored columns are a fallback
   // for legacy games created before goal tracking was introduced.
@@ -236,26 +246,28 @@ const GameDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
-            tooltip={`Back to ${seasonName}`}
-            onClick={() => navigate(seasonHref)}
+            tooltip={isAdminView ? `Back to ${seasonName}` : 'Back to Games'}
+            onClick={() => navigate(isAdminView ? seasonHref : '/games')}
           />
         }
         right={
-          <Breadcrumbs
-            items={[
-              { label: 'Leagues', path: '/admin/leagues' },
-              { label: leagueName, path: leagueHref },
-              { label: seasonName, path: seasonHref },
-              {
-                label: [
-                  `${game.away_team.code} @ ${game.home_team.code}`,
-                  game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · '),
-              },
-            ]}
-          />
+          isAdminView ? (
+            <Breadcrumbs
+              items={[
+                { label: 'Leagues', path: '/admin/leagues' },
+                { label: leagueName, path: leagueHref },
+                { label: seasonName, path: seasonHref },
+                {
+                  label: [
+                    `${game.away_team.code} @ ${game.home_team.code}`,
+                    game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' · '),
+                },
+              ]}
+            />
+          ) : undefined
         }
       />
 
@@ -268,7 +280,7 @@ const GameDetailsPage = () => {
         liveAwayScore={liveAwayScore}
         liveHomeScore={liveHomeScore}
         overtimeSuffix={overtimeSuffix}
-        leagueId={leagueId}
+        leagueId={isAdminView ? leagueId : undefined}
       />
 
       {/* ── Tabs ── */}
@@ -286,12 +298,15 @@ const GameDetailsPage = () => {
                 isInProgress={isInProgress}
                 isEditMode={isEditMode}
                 setIsEditMode={setIsEditMode}
+                editable={isAdminView}
                 busy={busy}
                 leagueId={leagueId}
                 seasonId={seasonId ?? ''}
                 liveAwayScore={liveAwayScore}
                 liveHomeScore={liveHomeScore}
                 overtimeSuffix={overtimeSuffix}
+                gameHrefBuilder={gameHrefBuilder}
+                playerHrefBuilder={playerHrefBuilder}
                 linescorePeriods={linescorePeriods}
                 goalieStats={goalieStats}
                 awayRoster={awayRoster}
@@ -325,9 +340,12 @@ const GameDetailsPage = () => {
             content: (
               <GameLineupsTab
                 game={game}
+                isEditMode={isEditMode}
+                readOnly={!isAdminView}
                 isFinal={isFinal}
                 leagueId={leagueId}
                 seasonId={seasonId}
+                playerHrefBuilder={playerHrefBuilder}
                 awayRoster={awayRoster}
                 homeRoster={homeRoster}
                 awayRosterInherited={awayRosterInherited}

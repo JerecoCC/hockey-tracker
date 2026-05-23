@@ -10,13 +10,12 @@ import styles from './LastFiveCard.module.scss';
 
 interface Props {
   game: GameRecord;
-  leagueId: string;
-  seasonId: string;
+  gameHrefBuilder: (gameId: string) => string;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
-export default function LastFiveCard({ game, leagueId, seasonId }: Props) {
+export default function LastFiveCard({ game, gameHrefBuilder }: Props) {
   const navigate = useNavigate();
   const [view, setView] = useState<'list' | 'square'>('list');
 
@@ -25,8 +24,7 @@ export default function LastFiveCard({ game, leagueId, seasonId }: Props) {
   const awayGames = game.away_last_five ?? [];
   const homeGames = game.home_last_five ?? [];
 
-  const goToGame = (gameId: string) =>
-    navigate(`/admin/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`);
+  const goToGame = (gameId: string) => navigate(gameHrefBuilder(gameId));
 
   return (
     <Card

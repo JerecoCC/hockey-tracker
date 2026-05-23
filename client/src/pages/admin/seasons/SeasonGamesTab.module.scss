@@ -20,18 +20,9 @@
   font-weight: initial;
 }
 
-// DatePicker sizes to its content but won't go narrower than min-width
+// Shared week picker button wrapper
 .datePicker {
-  width: 180px;
   flex-shrink: 0;
-}
-
-// Week range label (e.g. "May 5 – May 11, 2026")
-.weekRange {
-  font-size: $font-sm;
-  font-weight: 400;
-  color: $text-dim;
-  white-space: nowrap;
 }
 
 // ── Filters row ───────────────────────────────────────────────────────

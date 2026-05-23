@@ -286,6 +286,8 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 <DatePicker
                   value={dateToISO(weekStart)}
                   onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
+                  triggerLabel={fmtWeekRange(weekStart, weekEnd)}
+                  triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
                 />
               </div>
               <Button
@@ -296,7 +298,6 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                 onClick={() => setWeekStart((d) => addDays(d, 7))}
               />
             </span>
-            <span className={styles.weekRange}>{fmtWeekRange(weekStart, weekEnd)}</span>
           </>
         }
         action={
@@ -406,8 +407,8 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                         primaryColor: game.home_team.primary_color,
                         textColor: game.home_team.text_color,
                       }}
-                      awayScore={game.period_scores.reduce((s, ps) => s + ps.away_goals, 0)}
-                      homeScore={game.period_scores.reduce((s, ps) => s + ps.home_goals, 0)}
+                      awayScore={game.away_score}
+                      homeScore={game.home_score}
                       showScore={game.status === 'final' || game.status === 'in_progress'}
                       isFinal={game.status === 'final'}
                       statusLabel={formatStatusLabel(game)}

@@ -56,4 +56,25 @@ describe('DatePicker', () => {
 
     expect(onChange).toHaveBeenCalledWith(currentEtMonth());
   });
+
+  it('supports a button-style trigger label while still opening the calendar', async () => {
+    const user = userEvent.setup();
+    const onChange = jest.fn();
+
+    render(
+      <DatePicker
+        value="2026-05-05"
+        onChange={onChange}
+        triggerLabel="May 5 – May 11, 2026"
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'May 5 – May 11, 2026' }));
+
+    expect(screen.getByRole('button', { name: 'Today' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '10' }));
+
+    expect(onChange).toHaveBeenCalledWith('2026-05-10');
+  });
 });

@@ -70,10 +70,13 @@ const fromMonthPickerValue = (value: string) => {
   return new Date(year, month - 1, 1);
 };
 
-const totalScore = (game: GameRecord) => ({
-  away: game.period_scores.reduce((sum, ps) => sum + ps.away_goals, 0),
-  home: game.period_scores.reduce((sum, ps) => sum + ps.home_goals, 0),
-});
+const displayScore = (game: GameRecord) => {
+  return {
+    away: game.away_score,
+    home: game.home_score,
+    winnerTeamId: game.winner_team_id ?? null,
+  };
+};
 
 const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
   scheduled: 'info',
@@ -107,14 +110,23 @@ const TeamCalendarGame = ({
   const isHomeGame = game.home_team.id === teamId;
   const team = isHomeGame ? game.home_team : game.away_team;
   const opponent = isHomeGame ? game.away_team : game.home_team;
-  const { home, away } = totalScore(game);
+  const { home, away, winnerTeamId } = displayScore(game);
   const teamGoals = isHomeGame ? home : away;
   const opponentGoals = isHomeGame ? away : home;
   const isOT =
     (game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT');
   const isSO = game.shootout || game.period_scores.some((ps) => ps.period === 'SO');
   const extraTimeLabel = isSO ? ' (SO)' : isOT ? ' (OT)' : '';
-  const resultLabel = teamGoals > opponentGoals ? 'W' : teamGoals < opponentGoals ? 'L' : 'T';
+  const resultLabel =
+    game.status === 'final' && winnerTeamId
+      ? winnerTeamId === teamId
+        ? 'W'
+        : 'L'
+      : teamGoals > opponentGoals
+        ? 'W'
+        : teamGoals < opponentGoals
+          ? 'L'
+          : 'T';
 
   const detail =
     game.status === 'final'
@@ -322,8 +334,8 @@ const TeamGamesTab = ({ teamId, leagueId }: Props) => {
                 primaryColor: game.home_team.primary_color,
                 textColor: game.home_team.text_color,
               }}
-              awayScore={game.period_scores.reduce((s, ps) => s + ps.away_goals, 0)}
-              homeScore={game.period_scores.reduce((s, ps) => s + ps.home_goals, 0)}
+              awayScore={displayScore(game).away}
+              homeScore={displayScore(game).home}
               showScore={game.status === 'final' || game.status === 'in_progress'}
               isFinal={game.status === 'final'}
               statusLabel={formatStatusLabel(game)}

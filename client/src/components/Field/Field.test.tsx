@@ -2,7 +2,13 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { useForm } from 'react-hook-form';
 import Field from './Field';
 
-const ColorField = ({ defaultValue = '#ff0000' }: { defaultValue?: string }) => {
+const ColorField = ({
+  defaultValue = '#ff0000',
+  disabled = false,
+}: {
+  defaultValue?: string;
+  disabled?: boolean;
+}) => {
   const { control } = useForm({ defaultValues: { color: defaultValue } });
   return (
     <Field
@@ -10,6 +16,7 @@ const ColorField = ({ defaultValue = '#ff0000' }: { defaultValue?: string }) => 
       name="color"
       type="color"
       control={control}
+      disabled={disabled}
     />
   );
 };
@@ -108,6 +115,13 @@ describe('Field – color type', () => {
   it('renders the field label', () => {
     render(<ColorField />);
     expect(screen.getByText('Color')).toBeInTheDocument();
+  });
+
+  it('disables the swatch and both inputs when disabled is true', () => {
+    const { container } = render(<ColorField disabled />);
+    expect(container.querySelector('button[type="button"]')).toBeDisabled();
+    expect(container.querySelector('input[type="color"]')).toBeDisabled();
+    expect(container.querySelector('input[type="text"]')).toBeDisabled();
   });
 });
 

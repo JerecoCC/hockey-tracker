@@ -998,6 +998,30 @@ async function initSchema() {
     )
   `;
 
+  // ── User watched games ─────────────────────────────────────────────────────
+  // Connects a user to games they plan to watch and/or have already watched.
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_watched_games (
+      user_id    UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      game_id    UUID NOT NULL REFERENCES games(id) ON DELETE CASCADE,
+      watched_at TIMESTAMPTZ,
+      watched_on DATE,
+      skipped_at TIMESTAMPTZ,
+      scheduled_for DATE,
+      PRIMARY KEY (user_id, game_id)
+    )
+  `;
+  await sql`ALTER TABLE user_watched_games ALTER COLUMN watched_at DROP NOT NULL`;
+  await sql`ALTER TABLE user_watched_games ALTER COLUMN watched_at DROP DEFAULT`;
+  await sql`ALTER TABLE user_watched_games ADD COLUMN IF NOT EXISTS watched_on DATE`;
+  await sql`ALTER TABLE user_watched_games ADD COLUMN IF NOT EXISTS skipped_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE user_watched_games ADD COLUMN IF NOT EXISTS scheduled_for DATE`;
+  await sql`
+    UPDATE user_watched_games
+    SET watched_on = watched_at::date
+    WHERE watched_on IS NULL AND watched_at IS NOT NULL
+  `;
+
   // ── Helper function: best available photo for a player ───────────────────
   // Returns the photo from the most recent player_teams stint that has a
   // non-null photo (active stint first, then most-recently-started historical

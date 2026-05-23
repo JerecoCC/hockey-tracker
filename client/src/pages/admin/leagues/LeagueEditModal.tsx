@@ -5,6 +5,7 @@ import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import { type LeagueFullRecord } from '@/hooks/useLeagueDetails';
 import { type CreateLeagueData } from '@/hooks/useLeagues';
+import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
 import styles from './LeagueEditModal.module.scss';
 
 interface FormValues {
@@ -15,11 +16,6 @@ interface FormValues {
   text_color: string;
   description: string | null;
 }
-
-const normalizeDescription = (html: string | null | undefined): string | null => {
-  if (!html || html === '<p></p>') return null;
-  return html;
-};
 
 interface Props {
   open: boolean;
@@ -54,7 +50,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       code: league.code,
       primary_color: league.primary_color,
       text_color: league.text_color,
-      description: league.description ?? null,
+      description: descriptionHtmlToTextarea(league.description),
     });
   }, [open, league, reset]);
 
@@ -71,7 +67,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       code: data.code,
       primary_color: data.primary_color,
       text_color: data.text_color,
-      description: normalizeDescription(data.description) ?? undefined,
+      description: textareaToDescriptionHtml(data.description) ?? undefined,
     };
     const ok = await updateLeague(league.id, payload);
     if (ok) onClose();
@@ -136,9 +132,11 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
         </div>
         <Field
           label="Description"
-          type="richtext"
+          type="textarea"
           control={control}
           name="description"
+          rows={6}
+          placeholder="Add a description..."
           disabled={isSubmitting}
         />
       </form>

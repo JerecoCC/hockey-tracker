@@ -98,6 +98,60 @@ describe('GET /api/admin/players', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/latest-season-stats
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/players/:id/latest-season-stats', () => {
+  it('returns the latest played season stats split by regular season and playoffs', async () => {
+    sql
+      .mockResolvedValueOnce([{ season_id: 'season-2', season_name: '2023-24' }])
+      .mockResolvedValueOnce([
+        { game_type: 'regular', gp: 10, goals: 5, assists: 6, points: 11 },
+        { game_type: 'playoff', gp: 2, goals: 1, assists: 0, points: 1 },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/admin/players/player-1/latest-season-stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({
+      season_id: 'season-2',
+      season_name: '2023-24',
+      regular: {
+        gp: 10,
+        goals: 5,
+        assists: 6,
+        points: 11,
+        wins: 0,
+        shootout_wins: 0,
+        goals_against: 0,
+        shots_against: 0,
+        save_pct: null,
+      },
+      playoffs: {
+        gp: 2,
+        goals: 1,
+        assists: 0,
+        points: 1,
+        wins: 0,
+        shootout_wins: 0,
+        goals_against: 0,
+        shots_against: 0,
+        save_pct: null,
+      },
+    });
+  });
+
+  it('returns null when the player has never played a final game', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/admin/players/player-1/latest-season-stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/players/:id
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id', () => {

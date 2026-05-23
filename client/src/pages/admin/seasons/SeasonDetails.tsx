@@ -488,6 +488,14 @@ const SeasonDetailsPage = () => {
   ];
 
   const leagueHref = `/admin/leagues/${leagueId}`;
+  const navigateToPlayer = (row: SkaterStatRecord | GoalieStatRecord) =>
+    navigate(
+      row.team_id
+        ? `/admin/leagues/${leagueId}/teams/${row.team_id}/players/${row.player_id}`
+        : leagueHref,
+    );
+  const navigateToTeam = (row: TeamStandingRecord) =>
+    navigate(`/admin/leagues/${leagueId}/teams/${row.team_id}`);
 
   if (loading && !season) {
     return (
@@ -724,6 +732,7 @@ const SeasonDetailsPage = () => {
                           }
                           getFeaturedStat={(s) => s[summarySkaterStat] ?? 0}
                           getRowStat={(s) => s[summarySkaterStat] ?? 0}
+                          onSelectItem={navigateToPlayer}
                           onAllLeaders={() => setStatsSubTab('Forwards')}
                         />
                       ) : (
@@ -760,6 +769,7 @@ const SeasonDetailsPage = () => {
                           }
                           getFeaturedStat={(s) => s[summaryDefStat] ?? 0}
                           getRowStat={(s) => s[summaryDefStat] ?? 0}
+                          onSelectItem={navigateToPlayer}
                           onAllLeaders={() => setStatsSubTab('Defense')}
                         />
                       ) : (
@@ -796,6 +806,7 @@ const SeasonDetailsPage = () => {
                           }
                           getFeaturedStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
                           getRowStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
+                          onSelectItem={navigateToPlayer}
                           onAllLeaders={() => setStatsSubTab('Goalies')}
                         />
                       ) : (
@@ -818,6 +829,7 @@ const SeasonDetailsPage = () => {
                       activeSortKey={fwdSort.key}
                       sortDir={fwdSort.dir}
                       onSort={handleFwdSort}
+                      onRowClick={navigateToPlayer}
                     />
                     {fwdPageCount > 1 && (
                       <div className={styles.statsPagination}>
@@ -854,6 +866,7 @@ const SeasonDetailsPage = () => {
                       activeSortKey={defSort.key}
                       sortDir={defSort.dir}
                       onSort={handleDefSort}
+                      onRowClick={navigateToPlayer}
                     />
                     {defPageCount > 1 && (
                       <div className={styles.statsPagination}>
@@ -890,6 +903,7 @@ const SeasonDetailsPage = () => {
                       activeSortKey={goalieSort.key}
                       sortDir={goalieSort.dir}
                       onSort={handleGoalieSort}
+                      onRowClick={navigateToPlayer}
                     />
                     {goaliePageCount > 1 && (
                       <div className={styles.statsPagination}>
@@ -952,6 +966,7 @@ const SeasonDetailsPage = () => {
                         activeSortKey={standingsSort.key}
                         sortDir={standingsSort.dir}
                         onSort={(key, dir) => setStandingsSort({ key, dir })}
+                        onRowClick={navigateToTeam}
                       />
                     );
 
