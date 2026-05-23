@@ -50,6 +50,34 @@
   gap: $space-md;
 }
 
+.textarea {
+  min-height: 120px;
+  width: 100%;
+  resize: vertical;
+  background: $bg-input;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  color: $text-body;
+  font-size: $font-base;
+  font-family: inherit;
+  line-height: 1.6;
+  padding: $space-md $space-lg;
+  outline: none;
+
+  &:focus {
+    border-color: $accent;
+  }
+
+  &::placeholder {
+    color: $text-dim;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
 .actions {
   display: flex;
   gap: $space-sm;

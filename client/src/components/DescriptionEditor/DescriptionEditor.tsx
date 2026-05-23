@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
-import RichTextEditor from '../RichTextEditor/RichTextEditor';
+import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
 import styles from './DescriptionEditor.module.scss';
 
 interface Props {
@@ -9,34 +9,37 @@ interface Props {
   onSave: (html: string) => Promise<boolean>;
 }
 
-const normalize = (html: string) => (html.trim() === '<p></p>' ? '' : html);
+const normalize = (value: string) => textareaToDescriptionHtml(value) ?? '';
 
 const DescriptionEditor = (props: Props) => {
   const { description, onSave } = props;
   const [editing, setEditing] = useState(false);
-  const [html, setHtml] = useState('');
+  const [value, setValue] = useState('');
   const [saving, setSaving] = useState(false);
 
   const openEditor = () => {
-    setHtml(description ?? '');
+    setValue(descriptionHtmlToTextarea(description));
     setEditing(true);
   };
 
   return editing ? (
     <div className={styles.editor}>
-      <RichTextEditor
-        content={html}
-        onChange={setHtml}
-        editable={!saving}
+      <textarea
+        className={styles.textarea}
+        value={value}
+        onChange={(e) => setValue(e.target.value)}
+        placeholder="Add a description..."
+        rows={6}
+        disabled={saving}
       />
       <div className={styles.actions}>
         <Button
           size="sm"
           intent="accent"
-          disabled={saving || normalize(html) === (description ?? '')}
+          disabled={saving || normalize(value) === (description ?? '')}
           onClick={async () => {
             setSaving(true);
-            const ok = await onSave(normalize(html));
+            const ok = await onSave(normalize(value));
             setSaving(false);
             if (ok) setEditing(false);
           }}

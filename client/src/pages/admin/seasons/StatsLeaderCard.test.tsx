@@ -73,7 +73,7 @@ describe('StatsLeaderCard – featured player', () => {
       />,
     );
     // alt="" gives the img role "presentation"; use DOM query instead
-    expect(container.querySelector('img.photo')).toBeInTheDocument();
+    expect(container.querySelector('img.img')).toBeInTheDocument();
   });
 
   it('renders initials placeholder when photo is null', () => {
@@ -151,6 +151,36 @@ describe('StatsLeaderCard – ranked list', () => {
     // entryDivs[0]=John Smith row, entryDivs[1]=Jane Doe row
     fireEvent.mouseEnter(entryDivs[1]);
     expect(onHover).toHaveBeenCalledWith(1);
+  });
+});
+
+describe('StatsLeaderCard – selectable items', () => {
+  it('calls onSelectItem when the featured player is clicked', () => {
+    const onSelectItem = jest.fn();
+    render(
+      <StatsLeaderCard
+        {...defaultProps}
+        onSelectItem={onSelectItem}
+      />,
+    );
+
+    fireEvent.click(screen.getAllByRole('button')[0]);
+
+    expect(onSelectItem).toHaveBeenCalledWith(items[0]);
+  });
+
+  it('calls onSelectItem when a ranked player is clicked', () => {
+    const onSelectItem = jest.fn();
+    render(
+      <StatsLeaderCard
+        {...defaultProps}
+        onSelectItem={onSelectItem}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /jane doe/i }));
+
+    expect(onSelectItem).toHaveBeenCalledWith(items[1]);
   });
 });
 

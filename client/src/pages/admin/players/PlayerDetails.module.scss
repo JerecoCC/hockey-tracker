@@ -122,6 +122,25 @@
 }
 
 // ── Info grid ─────────────────────────────────────────────────────────────
+.infoSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-xl;
+  align-items: start;
+
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.playerInfoCard {
+  grid-column: span 2;
+
+  @media (max-width: 960px) {
+    grid-column: auto;
+  }
+}
+
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -226,14 +245,9 @@
 
 // ── Current-season stats cards ────────────────────────────────────────────
 .currentSeasonCards {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
+  flex-direction: column;
   gap: $space-lg;
-  margin-top: $space-lg;
-
-  @media (max-width: 520px) {
-    grid-template-columns: 1fr;
-  }
 }
 
 .statGrid {

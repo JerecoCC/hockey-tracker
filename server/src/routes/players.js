@@ -290,30 +290,46 @@ router.get('/:id/stats', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/players/:id/current-season-stats
-// Returns the player's stats for the current season, split by game_type
-// (regular / playoff). Skater fields: gp, goals, assists, points.
+// GET /api/admin/players/:id/latest-season-stats
+// (Also accepts the legacy /current-season-stats path.)
+// Returns the player's stats for the latest season in which they actually
+// appeared in a final game, split by game_type (regular / playoff).
+// Skater fields: gp, goals, assists, points.
 // Goalie fields additionally: wins, shootout_wins, goals_against,
-// shots_against, save_pct.  Returns null when the player has no active team
-// or the league has no current season set.
+// shots_against, save_pct. Returns null when the player has never played.
 // ---------------------------------------------------------------------------
-router.get('/:id/current-season-stats', async (req, res) => {
+router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req, res) => {
   const { id } = req.params;
   try {
-    // 1. Resolve the current season via the player's active team → league
-    const csRows = await sql`
-      SELECT l.current_season_id AS season_id, s.name AS season_name
-      FROM player_teams pt
-      JOIN teams   t ON t.id = pt.team_id
-      JOIN leagues l ON l.id = t.league_id
-      JOIN seasons s ON s.id = l.current_season_id
-      WHERE pt.player_id = ${id}
-        AND pt.end_date IS NULL
-      ORDER BY pt.created_at DESC
+    // 1. Resolve the latest season where the player actually appeared in a final game.
+    const playedSeasonRows = await sql`
+      WITH skater_seasons AS (
+        SELECT DISTINCT g.season_id
+        FROM game_rosters gr
+        JOIN games g ON g.id = gr.game_id
+          AND g.status = 'final'
+        WHERE gr.player_id = ${id}
+      ),
+      goalie_seasons AS (
+        SELECT DISTINCT g.season_id
+        FROM game_goalie_stints st
+        JOIN games g ON g.id = st.game_id
+          AND g.status = 'final'
+        WHERE st.goalie_id = ${id}
+      ),
+      played_seasons AS (
+        SELECT season_id FROM skater_seasons
+        UNION
+        SELECT season_id FROM goalie_seasons
+      )
+      SELECT s.id AS season_id, s.name AS season_name
+      FROM played_seasons ps
+      JOIN seasons s ON s.id = ps.season_id
+      ORDER BY s.start_date DESC NULLS LAST, s.created_at DESC, s.name DESC
       LIMIT 1
     `;
-    if (csRows.length === 0) return res.json(null);
-    const { season_id, season_name } = csRows[0];
+    if (playedSeasonRows.length === 0) return res.json(null);
+    const { season_id, season_name } = playedSeasonRows[0];
 
     // 2. Skater stats (GP / goals / assists) per game_type
     const skaterRows = await sql`
@@ -526,7 +542,7 @@ router.get('/:id/current-season-stats', async (req, res) => {
       playoffs: makeStats('playoff'),
     });
   } catch (err) {
-    console.error('players current-season-stats error:', err);
+    console.error('players latest-season-stats error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });

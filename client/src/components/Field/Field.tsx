@@ -11,7 +11,6 @@ import Icon from '../Icon/Icon';
 import cn from 'classnames';
 import DatePicker from '../DatePicker/DatePicker';
 import TimePicker from '../TimePicker/TimePicker';
-import RichTextEditor from '../RichTextEditor/RichTextEditor';
 import Select, { SelectOption } from '../Select/Select';
 import styles from './Field.module.scss';
 
@@ -70,10 +69,6 @@ type TimePickerProps = BaseProps & {
 
 type ColorProps = BaseProps & {
   type: 'color';
-};
-
-type RichTextProps = BaseProps & {
-  type: 'richtext';
   disabled?: boolean;
 };
 
@@ -84,8 +79,7 @@ export type FieldProps =
   | CustomProps
   | DatePickerProps
   | TimePickerProps
-  | ColorProps
-  | RichTextProps;
+  | ColorProps;
 
 const Field = (props: FieldProps) => {
   const { label, required, control, name, rules } = props;
@@ -167,15 +161,6 @@ const Field = (props: FieldProps) => {
                 autoFocus={props.autoFocus}
               />
             );
-          } else if (props.type === 'richtext') {
-            return (
-              <RichTextEditor
-                content={(field.value as string) ?? ''}
-                onChange={field.onChange}
-                autoFocus={false}
-                editable={!props.disabled}
-              />
-            );
           } else if (props.type === 'color') {
             const color = (field.value as string) ?? '#000000';
             return (
@@ -185,6 +170,7 @@ const Field = (props: FieldProps) => {
                   className={styles.colorSwatch}
                   style={{ background: color }}
                   onClick={() => colorPickerRef.current?.click()}
+                  disabled={props.disabled}
                 />
                 <input
                   ref={colorPickerRef}
@@ -193,6 +179,7 @@ const Field = (props: FieldProps) => {
                   onChange={(e) => field.onChange(e.target.value)}
                   className={styles.colorHiddenInput}
                   tabIndex={-1}
+                  disabled={props.disabled}
                 />
                 <input
                   type="text"
@@ -202,6 +189,7 @@ const Field = (props: FieldProps) => {
                   className={styles.colorHexInput}
                   spellCheck={false}
                   maxLength={7}
+                  disabled={props.disabled}
                 />
               </div>
             );

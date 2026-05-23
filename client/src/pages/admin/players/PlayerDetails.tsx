@@ -34,6 +34,7 @@ import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import TradePlayerModal from '../teams/TradePlayerModal';
 import StintEditModal from './StintEditModal';
 import ChangeJerseyModal from './ChangeJerseyModal';
+import PlayerInfoEditModal from './PlayerInfoEditModal';
 import styles from './PlayerDetails.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -98,7 +99,7 @@ const PlayerDetailsPage = () => {
   const navigate = useNavigate();
   const { id, leagueId, teamId } = useParams<{ id: string; leagueId: string; teamId: string }>();
   const { player, stats, loading } = usePlayerDetails(id);
-  const { currentSeasonStats } = usePlayerCurrentSeasonStats(id);
+  const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
   const { team: teamDetails } = useTeamDetails(teamId);
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
@@ -110,6 +111,7 @@ const PlayerDetailsPage = () => {
   const queryClient = useQueryClient();
   const [activeTab, handleTabChange] = useTabState('tab:player-details');
   const [editPlayerOpen, setEditPlayerOpen] = useState(false);
+  const [editPlayerInfoOpen, setEditPlayerInfoOpen] = useState(false);
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
@@ -234,6 +236,55 @@ const PlayerDetailsPage = () => {
     text_color: latestStint?.text_color ?? null,
   };
 
+  const playerInfoCard = (
+    <Card
+      title="Player Info"
+      className={latestSeasonStats ? styles.playerInfoCard : undefined}
+      action={
+        <Button
+          variant="outlined"
+          intent="neutral"
+          icon="edit"
+          size="sm"
+          onClick={() => setEditPlayerInfoOpen(true)}
+        >
+          Edit
+        </Button>
+      }
+    >
+      <div className={styles.infoGrid}>
+        <InfoCell
+          label="Date of Birth"
+          value={formatDate(player.date_of_birth)}
+        />
+        <InfoCell
+          label="Birth City"
+          value={player.birth_city}
+        />
+        <InfoCell
+          label="Birth Country"
+          value={player.birth_country}
+        />
+        <InfoCell
+          label="Nationality"
+          value={player.nationality}
+        />
+        <InfoCell
+          label="Height"
+          value={formatHeight(player.height_cm)}
+        />
+        <InfoCell
+          label="Weight"
+          value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
+        />
+        <InfoCell
+          label="Shoots"
+          value={player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null}
+        />
+      </div>
+    </Card>
+  );
+
   return (
     <>
       <TitleRow
@@ -330,57 +381,24 @@ const PlayerDetailsPage = () => {
           tabs={[
             {
               label: 'Info',
-              content: (
-                <>
-                  <Card>
-                    <div className={styles.infoGrid}>
-                      <InfoCell
-                        label="Date of Birth"
-                        value={formatDate(player.date_of_birth)}
-                      />
-                      <InfoCell
-                        label="Birth City"
-                        value={player.birth_city}
-                      />
-                      <InfoCell
-                        label="Birth Country"
-                        value={player.birth_country}
-                      />
-                      <InfoCell
-                        label="Nationality"
-                        value={player.nationality}
-                      />
-                      <InfoCell
-                        label="Height"
-                        value={formatHeight(player.height_cm)}
-                      />
-                      <InfoCell
-                        label="Weight"
-                        value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
-                      />
-                      <InfoCell
-                        label="Shoots"
-                        value={
-                          player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null
-                        }
-                      />
-                    </div>
-                  </Card>
-                  {currentSeasonStats && (
-                    <div className={styles.currentSeasonCards}>
-                      <SeasonStatCard
-                        title={`${currentSeasonStats.season_name} – Regular Season`}
-                        stats={currentSeasonStats.regular}
-                        isGoalie={effectivePosition === 'G'}
-                      />
-                      <SeasonStatCard
-                        title={`${currentSeasonStats.season_name} – Playoffs`}
-                        stats={currentSeasonStats.playoffs}
-                        isGoalie={effectivePosition === 'G'}
-                      />
-                    </div>
-                  )}
-                </>
+              content: latestSeasonStats ? (
+                <div className={styles.infoSummaryGrid}>
+                  {playerInfoCard}
+                  <div className={styles.currentSeasonCards}>
+                    <SeasonStatCard
+                      title={`${latestSeasonStats.season_name} Regular Season`}
+                      stats={latestSeasonStats.regular}
+                      isGoalie={effectivePosition === 'G'}
+                    />
+                    <SeasonStatCard
+                      title={`${latestSeasonStats.season_name} Playoffs`}
+                      stats={latestSeasonStats.playoffs}
+                      isGoalie={effectivePosition === 'G'}
+                    />
+                  </div>
+                </div>
+              ) : (
+                playerInfoCard
               ),
             },
             {
@@ -486,6 +504,13 @@ const PlayerDetailsPage = () => {
         leagueId={leagueId ?? ''}
         onClose={() => setTradePlayerOpen(false)}
         tradePlayer={tradePlayer}
+      />
+
+      <PlayerInfoEditModal
+        open={editPlayerInfoOpen}
+        player={player}
+        onClose={() => setEditPlayerInfoOpen(false)}
+        updatePlayer={updatePlayer}
       />
 
       <ChangeJerseyModal
