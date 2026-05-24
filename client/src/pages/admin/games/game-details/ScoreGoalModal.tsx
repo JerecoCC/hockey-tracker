@@ -101,7 +101,10 @@ const ScoreGoalModal = ({
     }, null);
 
   const periodTimeError =
-    goalPeriodTime && latestPeriodTime && toSecs(goalPeriodTime) < toSecs(latestPeriodTime)
+    !editGoal &&
+    goalPeriodTime &&
+    latestPeriodTime &&
+    toSecs(goalPeriodTime) < toSecs(latestPeriodTime)
       ? `Must be ${latestPeriodTime} or later`
       : null;
 

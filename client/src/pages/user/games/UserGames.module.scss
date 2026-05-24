@@ -197,7 +197,7 @@
   width: 100%;
   border: 2px solid var(--game-league-primary);
   border-radius: $radius-md;
-  padding: $space-sm;
+  padding: $space-sm $space-xs;
   background: color-mix(in srgb, var(--game-league-primary) 50%, #2d3820 50%);
   color: var(--game-league-text);
   transition:

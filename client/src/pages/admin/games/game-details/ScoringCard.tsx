@@ -54,7 +54,7 @@ interface Props {
   ) => void;
   onAddAttempt?: () => void;
   onEditAttempt?: (attempt: ShootoutAttempt) => void;
-  onDeleteAttempt?: (attemptId: string) => void;
+  onDeleteAttempt?: (attemptId: string) => Promise<void>;
   onGoBackPeriod?: (prev: CurrentPeriod) => void;
   onGoBackOTPeriod?: (targetNum: number) => void;
   /** When provided, player names in goal rows become navigation links. */
@@ -200,7 +200,7 @@ const ScoringCard = ({
                 />
               </Tooltip>
             )}
-            {isInProgress && goal.id === lastCurrentPeriodGoalId && onEditGoal && onDeleteGoal && (
+            {isInProgress && onEditGoal && onDeleteGoal && (
               <ActionOverlay className={styles.goalActions}>
                 <Button
                   variant="ghost"
@@ -210,14 +210,16 @@ const ScoringCard = ({
                   tooltip="Edit goal"
                   onClick={() => onEditGoal(goal)}
                 />
-                <Button
-                  variant="ghost"
-                  intent="danger"
-                  icon="delete"
-                  size="sm"
-                  tooltip="Delete goal"
-                  onClick={() => onDeleteGoal(goal.id)}
-                />
+                {goal.id === lastCurrentPeriodGoalId && (
+                  <Button
+                    variant="ghost"
+                    intent="danger"
+                    icon="delete"
+                    size="sm"
+                    tooltip="Delete goal"
+                    onClick={() => onDeleteGoal(goal.id)}
+                  />
+                )}
               </ActionOverlay>
             )}
           </li>
