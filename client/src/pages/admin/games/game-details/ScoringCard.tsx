@@ -41,6 +41,8 @@ interface Props {
   attempts: ShootoutAttempt[];
   soComplete: boolean;
   deletingAttemptId: string | null;
+  awayTeamId: string;
+  homeTeamId: string;
   /** When omitted, no admin action overlays are rendered (used in read-only user view). */
   setAccordionRef?: (periodId: string) => (el: HTMLDivElement | null) => void;
   onScoreGoal?: (period: 1 | 2 | 3 | 'OT') => void;
@@ -77,6 +79,8 @@ const ScoringCard = ({
   attempts,
   soComplete,
   deletingAttemptId,
+  awayTeamId,
+  homeTeamId,
   setAccordionRef,
   onScoreGoal,
   onEditGoal,
@@ -99,10 +103,18 @@ const ScoringCard = ({
   const sortedByTime = (gs: GoalRecord[]) =>
     [...gs].sort((a, b) => periodTimeToSecs(a.period_time) - periodTimeToSecs(b.period_time));
 
+  let awayScore: number = 0;
+  let homeScore: number = 0;
   // ── Shared goal-list renderer ──────────────────────────────────────────────
-  const renderGoalList = (periodGoals: GoalRecord[]) => (
+  const renderGoalList = (periodGoals: GoalRecord[]) => {
+    return (
     <ul className={styles.goalList}>
       {periodGoals.map((goal) => {
+          if (awayTeamId === goal.team_id) {
+            awayScore += 1;
+          } else if (homeTeamId === goal.team_id) {
+            homeScore += 1;
+          }
         const tally = tallyByGoalId.get(goal.id);
         const scorerBaseName = formatPlayerName(goal.scorer_first_name, goal.scorer_last_name);
         const scorerTally = tally ? ` (${tally.scorerGoals})` : '';
@@ -200,6 +212,9 @@ const ScoringCard = ({
                 />
               </Tooltip>
             )}
+              <span className={styles.goalScore}>
+                {awayScore} - {homeScore}
+              </span>
             {isInProgress && onEditGoal && onDeleteGoal && (
               <ActionOverlay className={styles.goalActions}>
                 <Button
@@ -227,6 +242,7 @@ const ScoringCard = ({
       })}
     </ul>
   );
+  };
 
   return (
     <Card title="Scoring">
@@ -311,7 +327,7 @@ const ScoringCard = ({
             >
               {periodGoals.length === 0 ? (
                 isActive || isDone ? (
-                  <p className={styles.noGoalsText}>No goals scored</p>
+                  <p className={styles.noGoalsText}>No goals scored.</p>
                 ) : null
               ) : (
                 renderGoalList(periodGoals)
@@ -400,7 +416,7 @@ const ScoringCard = ({
                   >
                     {periodGoals.length === 0 ? (
                       isThisActive || isThisDone ? (
-                        <p className={styles.noGoalsText}>No goals scored</p>
+                        <p className={styles.noGoalsText}>No goals scored.</p>
                       ) : null
                     ) : (
                       renderGoalList(periodGoals)
@@ -468,7 +484,7 @@ const ScoringCard = ({
               >
                 {otGoals.length === 0 ? (
                   isOTActive || isOTDone ? (
-                    <p className={styles.noGoalsText}>No goals scored</p>
+                    <p className={styles.noGoalsText}>No goals scored.</p>
                   ) : null
                 ) : (
                   renderGoalList(otGoals)

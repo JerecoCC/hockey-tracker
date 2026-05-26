@@ -57,7 +57,7 @@ const GameFormModal = ({
     handleSubmit,
     reset,
     setValue,
-    formState: { isSubmitting },
+    formState: { isDirty, isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
       home_team_id: null,
@@ -154,7 +154,7 @@ const GameFormModal = ({
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Game'}
       confirmForm="game-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty}
       busy={isSubmitting}
     >
       <form
@@ -178,6 +178,7 @@ const GameFormModal = ({
             type="timepicker"
             control={control}
             name="scheduled_time"
+            disabled={isStarted || isSubmitting || (!editTarget && !!defaultDate)}
             autoFocus={!editTarget && !!defaultDate}
           />
         </div>

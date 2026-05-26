@@ -67,7 +67,8 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
 }
 
 // Period time (e.g. "12:34")
-.goalTime {
+.goalTime,
+.goalScore {
   font-size: $font-sm;
   color: $text-dim;
   font-variant-numeric: tabular-nums;
