@@ -67,7 +67,9 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
   useEffect(() => {
     if (!open) return;
     const { ft, inches } =
-      player?.height_cm != null ? cmToFtIn(player.height_cm) : { ft: null as null, inches: null as null };
+      player?.height_cm != null
+        ? cmToFtIn(player.height_cm)
+        : { ft: null as null, inches: null as null };
     reset({
       shoots: player?.shoots ?? null,
       date_of_birth: player?.date_of_birth ?? '',
@@ -91,7 +93,9 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
       birth_country: data.birth_country || null,
       nationality: data.nationality || null,
       height_cm:
-        hasFt || hasIn ? ftInToCm(hasFt ? Number(data.height_ft) : 0, hasIn ? Number(data.height_in) : 0) : null,
+        hasFt || hasIn
+          ? ftInToCm(hasFt ? Number(data.height_ft) : 0, hasIn ? Number(data.height_in) : 0)
+          : null,
       weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
     });
     if (ok) onClose();
@@ -113,22 +117,88 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
         onSubmit={onSubmit}
       >
         <div className={styles.row}>
-          <Field type="datepicker" label="Date of Birth" control={control} name="date_of_birth" placeholder="YYYY-MM-DD" disabled={isSubmitting} />
-          <Field label="Birth City" control={control} name="birth_city" placeholder="e.g. Edmonton" autoFocus disabled={isSubmitting} />
+          <Field
+            type="datepicker"
+            label="Date of Birth"
+            control={control}
+            name="date_of_birth"
+            placeholder="YYYY-MM-DD"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Birth City"
+            control={control}
+            name="birth_city"
+            placeholder="e.g. Edmonton"
+            autoFocus
+            disabled={isSubmitting}
+          />
         </div>
         <div className={styles.row}>
-          <Field label="Birth Country" control={control} name="birth_country" placeholder="e.g. CAN" disabled={isSubmitting} />
-          <Field label="Nationality" control={control} name="nationality" placeholder="e.g. CAN" disabled={isSubmitting} />
+          <Field
+            label="Birth Country"
+            control={control}
+            name="birth_country"
+            placeholder="e.g. CAN"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Nationality"
+            control={control}
+            name="nationality"
+            placeholder="e.g. CAN"
+            disabled={isSubmitting}
+          />
         </div>
         <div className={styles.row}>
-          <Field type="select" label="Shoots" control={control} name="shoots" options={SHOOTS_OPTIONS} placeholder="Select side" disabled={isSubmitting} />
-          <Field type="number" label="Weight" suffix="lbs" control={control} name="weight_lbs" placeholder="e.g. 193" min={0} disabled={isSubmitting} rules={{ validate: (v) => !v || Number(v) >= 0 }} />
+          <Field
+            type="select"
+            label={player?.position === 'G' ? 'Catches' : 'Shoots'}
+            control={control}
+            name="shoots"
+            options={SHOOTS_OPTIONS}
+            placeholder="Select side"
+            disabled={isSubmitting}
+          />
+          <Field
+            type="number"
+            label="Weight"
+            suffix="lbs"
+            control={control}
+            name="weight_lbs"
+            placeholder="e.g. 193"
+            min={0}
+            disabled={isSubmitting}
+            rules={{ validate: (v) => !v || Number(v) >= 0 }}
+          />
         </div>
         <div className={styles.heightGroup}>
           <span className={styles.heightGroupLabel}>Height</span>
           <div className={styles.heightInputs}>
-            <Field type="number" suffix="ft" control={control} name="height_ft" placeholder="6" min={0} disabled={isSubmitting} rules={{ validate: (v) => !v || (Number(v) >= 0 && Number.isInteger(Number(v))) }} />
-            <Field type="number" suffix="in" control={control} name="height_in" placeholder="0" min={0} max={11} disabled={isSubmitting} rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= 11 && Number.isInteger(Number(v))) }} />
+            <Field
+              type="number"
+              suffix="ft"
+              control={control}
+              name="height_ft"
+              placeholder="6"
+              min={0}
+              disabled={isSubmitting}
+              rules={{ validate: (v) => !v || (Number(v) >= 0 && Number.isInteger(Number(v))) }}
+            />
+            <Field
+              type="number"
+              suffix="in"
+              control={control}
+              name="height_in"
+              placeholder="0"
+              min={0}
+              max={11}
+              disabled={isSubmitting}
+              rules={{
+                validate: (v) =>
+                  !v || (Number(v) >= 0 && Number(v) <= 11 && Number.isInteger(Number(v))),
+              }}
+            />
           </div>
         </div>
       </form>

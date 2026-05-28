@@ -94,6 +94,12 @@ const STAT_LABELS = {
   'SV%': 'Save Percentage',
 } as const;
 
+const DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
@@ -247,9 +253,7 @@ const PlayerDetailsPage = () => {
           icon="edit"
           size="sm"
           onClick={() => setEditPlayerInfoOpen(true)}
-        >
-          Edit
-        </Button>
+        />
       }
     >
       <div className={styles.infoGrid}>
@@ -278,7 +282,7 @@ const PlayerDetailsPage = () => {
           value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
         />
         <InfoCell
-          label="Shoots"
+          label={player.position === 'G' ? 'Catches' : 'Shoots'}
           value={player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null}
         />
       </div>
@@ -293,6 +297,7 @@ const PlayerDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
+            size="sm"
             tooltip={`Back to ${teamDetails?.name ?? 'Team'}`}
             onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${teamId}`)}
           />
@@ -452,8 +457,8 @@ const PlayerDetailsPage = () => {
                             <span className={styles.stintTeam}>{s.team_name ?? '—'}</span>
                             <span className={styles.stintMeta}>
                               {s.jersey_number != null ? `#${s.jersey_number} · ` : ''}
-                              {s.start_date ? s.start_date.slice(0, 10) : '?'} –{' '}
-                              {s.end_date ? s.end_date.slice(0, 10) : 'Present'}
+                              {s.start_date ? DATE_FMT.format(new Date(s.start_date)) : '?'} –{' '}
+                              {s.end_date ? DATE_FMT.format(new Date(s.end_date)) : 'Present'}
                             </span>
                           </div>
                           {!s.end_date && (
