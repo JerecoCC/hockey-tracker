@@ -104,6 +104,7 @@ const LeagueDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
+            size="sm"
             tooltip="Back to Leagues"
             onClick={() => navigate('/admin/leagues')}
           />

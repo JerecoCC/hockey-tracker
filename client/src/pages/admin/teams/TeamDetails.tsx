@@ -53,6 +53,7 @@ const TeamDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
+            size="sm"
             tooltip={backTooltip}
             onClick={() => navigate(backPath)}
           />

@@ -246,6 +246,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
+            size="sm"
             tooltip={isAdminView ? `Back to ${seasonName}` : 'Back to Games'}
             onClick={() => navigate(isAdminView ? seasonHref : '/games')}
           />

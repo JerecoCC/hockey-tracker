@@ -529,6 +529,7 @@ const SeasonDetailsPage = () => {
             variant="outlined"
             intent="neutral"
             icon="arrow_back"
+            size="sm"
             tooltip={`Back to ${season.league_name}`}
             onClick={() => navigate(leagueHref)}
           />
