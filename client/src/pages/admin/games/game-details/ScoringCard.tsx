@@ -16,6 +16,7 @@ import ShootoutAccordion from './ShootoutAccordion';
 import { formatPlayerName } from './formatUtils';
 import { PERIOD_IDS, PERIODS, GOAL_TYPE_BADGE } from './constants';
 import styles from './ScoringCard.module.scss';
+import { playerDataComplete } from './gameUtils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -108,140 +109,141 @@ const ScoringCard = ({
   // ── Shared goal-list renderer ──────────────────────────────────────────────
   const renderGoalList = (periodGoals: GoalRecord[]) => {
     return (
-    <ul className={styles.goalList}>
-      {periodGoals.map((goal) => {
+      <ul className={styles.goalList}>
+        {periodGoals.map((goal) => {
           if (awayTeamId === goal.team_id) {
             awayScore += 1;
           } else if (homeTeamId === goal.team_id) {
             homeScore += 1;
           }
-        const tally = tallyByGoalId.get(goal.id);
-        const scorerBaseName = formatPlayerName(goal.scorer_first_name, goal.scorer_last_name);
-        const scorerTally = tally ? ` (${tally.scorerGoals})` : '';
-        const assistList = [
-          goal.assist_1_id
-            ? {
-                id: goal.assist_1_id,
-                name: formatPlayerName(goal.assist_1_first_name, goal.assist_1_last_name),
-                tally: tally?.assist1Assists != null ? ` (${tally.assist1Assists})` : '',
-              }
-            : null,
-          goal.assist_2_id
-            ? {
-                id: goal.assist_2_id,
-                name: formatPlayerName(goal.assist_2_first_name, goal.assist_2_last_name),
-                tally: tally?.assist2Assists != null ? ` (${tally.assist2Assists})` : '',
-              }
-            : null,
-        ].filter(Boolean) as { id: string; name: string; tally: string }[];
-        const primaryBadge =
-          goal.goal_type === 'empty-net' ? null : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
-        const showEN = goal.empty_net || goal.goal_type === 'empty-net';
-        return (
-          <li
-            key={goal.id}
-            className={styles.goalItem}
-          >
-            <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
-            <TeamLogo
-              logo={goal.team_logo}
-              code={goal.team_code ?? '?'}
-              primaryColor={goal.team_primary_color}
-              textColor={goal.team_text_color}
-              size={36}
-              shape="square"
-            />
-            <PlayerAvatar
-              photo={goal.scorer_photo}
-              initials={
-                `${goal.scorer_first_name?.charAt(0) ?? ''}${goal.scorer_last_name?.charAt(0) ?? ''}`.trim() ||
-                '?'
-              }
-              primaryColor={goal.team_primary_color}
-              textColor={goal.team_text_color}
-              size={48}
-            />
-            <div className={styles.goalInfo}>
-              <span className={styles.goalScorer}>
-                {getPlayerHref ? (
-                  <Link
-                    to={getPlayerHref(goal.scorer_id)}
-                    className={styles.playerLink}
-                  >
-                    {scorerBaseName}
-                  </Link>
-                ) : (
-                  scorerBaseName
-                )}
-                {scorerTally}
-              </span>
-              <span className={styles.goalAssists}>
-                {assistList.length > 0
-                  ? assistList.map((a, i) => (
-                      <React.Fragment key={a.id}>
-                        {i > 0 && ', '}
-                        {getPlayerHref ? (
-                          <Link
-                            to={getPlayerHref(a.id)}
-                            className={styles.playerLink}
-                          >
-                            {a.name}
-                          </Link>
-                        ) : (
-                          a.name
-                        )}
-                        {a.tally}
-                      </React.Fragment>
-                    ))
-                  : 'Unassisted'}
-              </span>
-            </div>
-            {primaryBadge && (
-              <Tooltip text={primaryBadge.tooltip}>
-                <Badge
-                  label={primaryBadge.label}
-                  intent={primaryBadge.intent}
-                />
-              </Tooltip>
-            )}
-            {showEN && (
-              <Tooltip text="Empty Net">
-                <Badge
-                  label="EN"
-                  intent="neutral"
-                />
-              </Tooltip>
-            )}
+          const tally = tallyByGoalId.get(goal.id);
+          const scorerBaseName = formatPlayerName(goal.scorer_first_name, goal.scorer_last_name);
+          const scorerTally = tally ? ` (${tally.scorerGoals})` : '';
+          const assistList = [
+            goal.assist_1_id
+              ? {
+                  id: goal.assist_1_id,
+                  name: formatPlayerName(goal.assist_1_first_name, goal.assist_1_last_name),
+                  tally: tally?.assist1Assists != null ? ` (${tally.assist1Assists})` : '',
+                }
+              : null,
+            goal.assist_2_id
+              ? {
+                  id: goal.assist_2_id,
+                  name: formatPlayerName(goal.assist_2_first_name, goal.assist_2_last_name),
+                  tally: tally?.assist2Assists != null ? ` (${tally.assist2Assists})` : '',
+                }
+              : null,
+          ].filter(Boolean) as { id: string; name: string; tally: string }[];
+          const primaryBadge =
+            goal.goal_type === 'empty-net' ? null : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
+          const showEN = goal.empty_net || goal.goal_type === 'empty-net';
+          return (
+            <li
+              key={goal.id}
+              className={styles.goalItem}
+            >
+              <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
+              <TeamLogo
+                logo={goal.team_logo}
+                code={goal.team_code ?? '?'}
+                primaryColor={goal.team_primary_color}
+                textColor={goal.team_text_color}
+                size={36}
+                shape="square"
+              />
+              <PlayerAvatar
+                photo={goal.scorer_photo}
+                initials={
+                  `${goal.scorer_first_name?.charAt(0) ?? ''}${goal.scorer_last_name?.charAt(0) ?? ''}`.trim() ||
+                  '?'
+                }
+                primaryColor={goal.team_primary_color}
+                textColor={goal.team_text_color}
+                size={48}
+              />
+              <div className={styles.goalInfo}>
+                <span className={styles.goalScorer}>
+                  {getPlayerHref ? (
+                    <Link
+                      to={getPlayerHref(goal.scorer_id)}
+                      className={styles.playerLink}
+                    >
+                      {scorerBaseName}
+                      {playerDataComplete(goal.scorer_date_of_birth, goal.scorer_start_date)}
+                    </Link>
+                  ) : (
+                    scorerBaseName
+                  )}
+                  {scorerTally}
+                </span>
+                <span className={styles.goalAssists}>
+                  {assistList.length > 0
+                    ? assistList.map((a, i) => (
+                        <React.Fragment key={a.id}>
+                          {i > 0 && ', '}
+                          {getPlayerHref ? (
+                            <Link
+                              to={getPlayerHref(a.id)}
+                              className={styles.playerLink}
+                            >
+                              {a.name}
+                            </Link>
+                          ) : (
+                            a.name
+                          )}
+                          {a.tally}
+                        </React.Fragment>
+                      ))
+                    : 'Unassisted'}
+                </span>
+              </div>
+              {primaryBadge && (
+                <Tooltip text={primaryBadge.tooltip}>
+                  <Badge
+                    label={primaryBadge.label}
+                    intent={primaryBadge.intent}
+                  />
+                </Tooltip>
+              )}
+              {showEN && (
+                <Tooltip text="Empty Net">
+                  <Badge
+                    label="EN"
+                    intent="neutral"
+                  />
+                </Tooltip>
+              )}
               <span className={styles.goalScore}>
                 {awayScore} - {homeScore}
               </span>
-            {isInProgress && onEditGoal && onDeleteGoal && (
-              <ActionOverlay className={styles.goalActions}>
-                <Button
-                  variant="ghost"
-                  intent="neutral"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit goal"
-                  onClick={() => onEditGoal(goal)}
-                />
-                {goal.id === lastCurrentPeriodGoalId && (
+              {isInProgress && onEditGoal && onDeleteGoal && (
+                <ActionOverlay className={styles.goalActions}>
                   <Button
                     variant="ghost"
-                    intent="danger"
-                    icon="delete"
+                    intent="neutral"
+                    icon="edit"
                     size="sm"
-                    tooltip="Delete goal"
-                    onClick={() => onDeleteGoal(goal.id)}
+                    tooltip="Edit goal"
+                    onClick={() => onEditGoal(goal)}
                   />
-                )}
-              </ActionOverlay>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
+                  {goal.id === lastCurrentPeriodGoalId && (
+                    <Button
+                      variant="ghost"
+                      intent="danger"
+                      icon="delete"
+                      size="sm"
+                      tooltip="Delete goal"
+                      onClick={() => onDeleteGoal(goal.id)}
+                    />
+                  )}
+                </ActionOverlay>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    );
   };
 
   return (

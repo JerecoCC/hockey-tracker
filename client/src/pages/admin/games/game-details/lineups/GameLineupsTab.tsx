@@ -14,6 +14,7 @@ import LineupCreatePlayersModal from './LineupCreatePlayersModal';
 import SetLineupModal from './SetLineupModal';
 import RemoveFromLineupModal from './RemoveFromLineupModal';
 import styles from '../GameDetailsPage.module.scss';
+import { playerDataComplete } from '../gameUtils';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -216,7 +217,7 @@ const GameLineupsTab = ({
                 primaryColor={primaryColor}
                 textColor={textColor}
                 eyebrow={positionPart}
-                name={`${e.last_name}, ${e.first_name}`}
+                name={`${e.last_name}, ${e.first_name} ${playerDataComplete(e.date_of_birth, e.start_date)}`}
                 placeholder={
                   e.jersey_number != null
                     ? String(e.jersey_number)

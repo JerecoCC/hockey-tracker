@@ -5,6 +5,7 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import styles from './ThreeStarsCard.module.scss';
+import { playerDataComplete } from '../gameUtils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -68,6 +69,7 @@ const StarCard = ({
           className={`${styles.starName} ${styles.playerLink}`}
         >
           {nameLabel}
+          {playerDataComplete(player.date_of_birth, player.start_date)}
         </Link>
       ) : (
         <span className={styles.starName}>{nameLabel}</span>

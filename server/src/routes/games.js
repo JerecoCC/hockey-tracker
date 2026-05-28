@@ -1655,7 +1655,7 @@ router.get('/:id/roster', async (req, res) => {
     const current = await sql`
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.player_id,
-        p.first_name, p.last_name,
+        p.first_name, p.last_name, p.date_of_birth, pt.start_date,
         COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
         COALESCE(pt.position, p.position) AS position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
@@ -1826,6 +1826,8 @@ router.get('/:id/goals', async (req, res) => {
         -- scorer
         sp.first_name                       AS scorer_first_name,
         sp.last_name                        AS scorer_last_name,
+        sp.date_of_birth                    AS scorer_date_of_birth,
+        spt.start_date                      AS scorer_start_date,
         COALESCE(spt.photo, best_player_photo(sp.id), sp.photo)                         AS scorer_photo,
         COALESCE(spt_jnh.jersey_number, spt.jersey_number)   AS scorer_jersey_number,
         -- assist 1
@@ -1964,7 +1966,8 @@ router.post('/:id/goals', async (req, res) => {
         go.scorer_id, go.assist_1_id, go.assist_2_id, go.created_at,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color,
-        sp.first_name AS scorer_first_name, sp.last_name AS scorer_last_name, COALESCE(spt.photo, best_player_photo(sp.id), sp.photo) AS scorer_photo,
+        sp.first_name AS scorer_first_name, sp.last_name AS scorer_last_name,sp.date_of_birth AS scorer_date_of_birth, spt.start_date as scorer_start_date, 
+        COALESCE(spt.photo, best_player_photo(sp.id), sp.photo) AS scorer_photo,
         COALESCE(spt_jnh.jersey_number, spt.jersey_number) AS scorer_jersey_number,
         a1p.first_name AS assist_1_first_name, a1p.last_name AS assist_1_last_name, COALESCE(a1pt.photo, best_player_photo(a1p.id), a1p.photo) AS assist_1_photo,
         COALESCE(a1pt_jnh.jersey_number, a1pt.jersey_number) AS assist_1_jersey_number,
@@ -2891,6 +2894,8 @@ const fetchAttempts = (gameId) => sql`
     p.last_name    AS shooter_last_name,
     COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS shooter_photo,
     COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS shooter_jersey_number,
+    p.date_of_birth AS shooter_date_of_birth,
+    pt.start_date as shooter_start_date,
     ti.name  AS team_name,
     ti.code  AS team_code,
     ti.logo  AS team_logo,

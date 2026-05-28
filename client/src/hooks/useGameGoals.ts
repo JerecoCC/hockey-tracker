@@ -36,6 +36,8 @@ export interface GoalRecord {
   scorer_last_name: string;
   scorer_photo: string | null;
   scorer_jersey_number: number | null;
+  scorer_date_of_birth: string | null;
+  scorer_start_date: string | null;
   // Assist 1
   assist_1_first_name: string | null;
   assist_1_last_name: string | null;

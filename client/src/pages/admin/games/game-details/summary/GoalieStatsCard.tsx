@@ -16,6 +16,7 @@ import type {
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
+import { playerDataComplete } from '../gameUtils';
 
 const PERIOD_LABEL: Record<string, string> = {
   '1': 'P1',
@@ -88,7 +89,6 @@ const GoalieStatsCard = ({
   awayRoster,
   homeRoster,
   goalieStats,
-  lineup,
   getPlayerHref,
   isFinal,
   isInProgress,
@@ -205,6 +205,7 @@ const GoalieStatsCard = ({
                           )}
                           <span className={styles.goalScorer}>
                             {formatPlayerName(goalie.first_name, goalie.last_name)}
+                            {playerDataComplete(goalie.date_of_birth, goalie.start_date)}
                           </span>
                           {windows.map((w, i) => (
                             <span

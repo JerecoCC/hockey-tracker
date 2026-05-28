@@ -8,6 +8,7 @@ import { type GameRecord } from '@/hooks/useGames';
 import { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import { formatPlayerName } from './formatUtils';
 import styles from './ShootoutAccordion.module.scss';
+import { playerDataComplete } from './gameUtils';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -170,7 +171,6 @@ const ShootoutAccordion = ({
     const shooterName = formatPlayerName(attempt.shooter_first_name, attempt.shooter_last_name);
     const jerseyLabel =
       attempt.shooter_jersey_number != null ? `#${attempt.shooter_jersey_number}` : null;
-
     const resultBadge = (
       <span
         className={[
@@ -199,6 +199,7 @@ const ShootoutAccordion = ({
         className={styles.soAttemptName}
       >
         {shooterName}
+        {playerDataComplete(attempt.shooter_date_of_birth, attempt.shooter_start_date)}
       </Link>
     ) : (
       <span className={styles.soAttemptName}>{shooterName}</span>
