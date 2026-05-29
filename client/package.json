@@ -20,6 +20,7 @@
     "@tiptap/starter-kit": "^3.22.2",
     "axios": "^1.13.6",
     "classnames": "^2.5.1",
+    "html-to-image": "^1.11.13",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-hook-form": "^7.72.0",

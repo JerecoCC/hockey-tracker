@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toPng } from 'html-to-image';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -12,6 +13,7 @@ const mockSetQueriesData = jest.fn();
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
+jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
 jest.mock(
   '@/components/Modal/Modal',
   () =>
@@ -128,6 +130,7 @@ jest.mock('@/components/MultiSelect/MultiSelect', () => ({
 const mockUseQuery = useQuery as jest.Mock;
 const mockUseQueryClient = useQueryClient as jest.Mock;
 const mockAxios = axios as jest.Mocked<typeof axios>;
+const mockToPng = toPng as jest.Mock;
 
 const currentDate = new Date();
 const dateOffset = (days: number) => new Date(currentDate.getTime() + days * 86_400_000);
@@ -358,6 +361,7 @@ beforeEach(() => {
   mockAxios.post.mockResolvedValue({ data: {} } as any);
   mockAxios.delete.mockResolvedValue({ data: {} } as any);
   mockAxios.put.mockResolvedValue({ data: {} } as any);
+  mockToPng.mockResolvedValue('data:image/png;base64,test');
   mockUseQuery.mockImplementation(({ queryKey }: any) => {
     if (queryKey[0] === 'user-leagues')
       return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
@@ -466,34 +470,6 @@ describe('UserGames calendar view', () => {
 
   it('downloads the current calendar month as an image from calendar view', async () => {
     const user = userEvent.setup();
-    const mockContext = {
-      fillStyle: '',
-      strokeStyle: '',
-      lineWidth: 1,
-      font: '',
-      textAlign: 'left',
-      textBaseline: 'alphabetic',
-      beginPath: jest.fn(),
-      closePath: jest.fn(),
-      clip: jest.fn(),
-      drawImage: jest.fn(),
-      fill: jest.fn(),
-      stroke: jest.fn(),
-      fillRect: jest.fn(),
-      strokeRect: jest.fn(),
-      fillText: jest.fn(),
-      save: jest.fn(),
-      restore: jest.fn(),
-      arc: jest.fn(),
-      moveTo: jest.fn(),
-      lineTo: jest.fn(),
-    } as unknown as CanvasRenderingContext2D;
-    const getContextSpy = jest
-      .spyOn(HTMLCanvasElement.prototype, 'getContext')
-      .mockReturnValue(mockContext);
-    const toDataUrlSpy = jest
-      .spyOn(HTMLCanvasElement.prototype, 'toDataURL')
-      .mockReturnValue('data:image/png;base64,test');
     const originalCreateElement = document.createElement.bind(document);
     const clickMock = jest.fn();
     let createdAnchor: HTMLAnchorElement | null = null;
@@ -513,14 +489,23 @@ describe('UserGames calendar view', () => {
     await user.click(screen.getByRole('button', { name: 'Download month image' }));
 
     await waitFor(() => expect(clickMock).toHaveBeenCalled());
-    expect(getContextSpy).toHaveBeenCalled();
-    expect(toDataUrlSpy).toHaveBeenCalledWith('image/png');
+    const capturedNode = mockToPng.mock.calls[0][0] as HTMLElement;
+    expect(mockToPng).toHaveBeenCalledWith(
+      expect.objectContaining({ dataset: expect.objectContaining({ calendarExport: 'true' }) }),
+      expect.objectContaining({
+        backgroundColor: expect.any(String),
+        cacheBust: true,
+        pixelRatio: 2,
+      }),
+    );
+    expect(capturedNode.textContent).toContain(
+      new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(currentDate),
+    );
+    expect(capturedNode.querySelector(`.${styles.calendarGrid}`)).not.toBeNull();
     expect(createdAnchor?.download).toContain('user-games-');
     expect(createdAnchor?.href).toBe('data:image/png;base64,test');
 
     createElementSpy.mockRestore();
-    getContextSpy.mockRestore();
-    toDataUrlSpy.mockRestore();
   });
 
   it('shows playoff series dots once a playoff game has been watched', () => {
