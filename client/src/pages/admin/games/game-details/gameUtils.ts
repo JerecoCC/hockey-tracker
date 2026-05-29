@@ -26,14 +26,19 @@ export const playerDataComplete = (
   startDate: string | null,
   acquisitionType: string | null,
 ) => {
+  let emoji: string = '';
   if (dateOfBirth && startDate && acquisitionType) {
-    return ' ✅';
-  } else if (dateOfBirth && startDate) {
-    return ' 🔁';
-  } else if (dateOfBirth) {
-    return ' 📝';
-  } else if (startDate || acquisitionType) {
-    return ' 🕰️';
+    emoji = ' ✅';
+  } else {
+    if (dateOfBirth) {
+      emoji += ' 📝';
+    }
+    if (startDate) {
+      emoji += ' 🕰️';
+    }
+    if (acquisitionType) {
+      emoji += ' 🤝🏼';
+    }
   }
-  return '';
+  return emoji;
 };
