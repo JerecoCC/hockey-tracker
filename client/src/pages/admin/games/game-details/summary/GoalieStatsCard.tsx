@@ -205,7 +205,11 @@ const GoalieStatsCard = ({
                           )}
                           <span className={styles.goalScorer}>
                             {formatPlayerName(goalie.first_name, goalie.last_name)}
-                            {playerDataComplete(goalie.date_of_birth, goalie.start_date)}
+                            {playerDataComplete(
+                              goalie.date_of_birth,
+                              goalie.start_date,
+                              goalie.acquisition_type,
+                            )}
                           </span>
                           {windows.map((w, i) => (
                             <span

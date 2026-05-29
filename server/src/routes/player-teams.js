@@ -4,6 +4,21 @@ const { sql } = require('../db');
 
 router.use(requireAdmin);
 
+const ACQUISITION_TYPES = new Set(['draft', 'trade', 'free_agency', 'waivers', 'signing', 'call_up', 'loan', 'other']);
+const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
+const isValidAcquisitionType = (value) => value == null || ACQUISITION_TYPES.has(value);
+const hasPlayerTeamsAcquisitionType = async () => {
+  const [row] = await sql`
+    SELECT EXISTS (
+      SELECT 1
+      FROM information_schema.columns
+      WHERE table_name = 'player_teams'
+        AND column_name = 'acquisition_type'
+    ) AS exists
+  `;
+  return !!row?.exists;
+};
+
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/bulk
 // Body: { team_id, season_id, players: [{ player_id, jersey_number? }] }
@@ -43,28 +58,31 @@ router.post('/bulk', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams
-// Body: { player_id, team_id, season_id, jersey_number?, photo?, position?, start_date?, end_date? }
+// Body: { player_id, team_id, season_id, jersey_number?, photo?, position?, acquisition_type?, start_date?, end_date? }
 // Creates a new stint row directly. Returns 409 if the unique active-stint index fires
 // (i.e. the player already has an open stint in this season and end_date is omitted).
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
   const { player_id, team_id, season_id, jersey_number, photo, position, start_date, end_date } = req.body;
+  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type);
   if (!player_id) return res.status(400).json({ error: 'player_id is required' });
   if (!team_id)   return res.status(400).json({ error: 'team_id is required' });
   if (!season_id) return res.status(400).json({ error: 'season_id is required' });
+  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
     const rows = await sql`
       INSERT INTO player_teams
-        (player_id, team_id, season_id, jersey_number, position, start_date, end_date)
+        (player_id, team_id, season_id, jersey_number, position, acquisition_type, start_date, end_date)
       VALUES (
         ${player_id}, ${team_id}, ${season_id},
         ${jersey_number ?? null},
         ${position ?? null},
+        ${acquisition_type},
         ${start_date ?? null}::date,
         ${end_date   ?? null}::date
       )
-      RETURNING id, player_id, team_id, season_id, jersey_number, position,
+      RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                 start_date::text AS start_date, end_date::text AS end_date
     `;
     if (photo) {
@@ -193,12 +211,14 @@ router.get('/history/:playerId', async (req, res) => {
   const { season_id } = req.query;
 
   try {
+    const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
     const rows = await sql`
       SELECT
         pt.id, pt.player_id, pt.team_id, pt.season_id,
         pt.jersey_number,
         best_player_photo(pt.player_id, pt.season_id, pt.team_id) AS photo,
         pt.position,
+        ${hasAcquisitionType ? sql`pt.acquisition_type` : sql`NULL::text`} AS acquisition_type,
         pt.start_date::text AS start_date,
         pt.end_date::text   AS end_date,
         pt.created_at,
@@ -337,20 +357,23 @@ router.post('/history/:playerId/photos', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/player-teams/:id
-// Body: { team_id?, season_id?, jersey_number?, photo?, position?, start_date?, end_date? }
+// Body: { team_id?, season_id?, jersey_number?, photo?, position?, acquisition_type?, start_date?, end_date? }
 // Updates editable fields on a specific stint row by its UUID.
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const { team_id, season_id, jersey_number, photo, position, start_date, end_date } = req.body;
+  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type);
 
   const teamInBody      = 'team_id'       in req.body;
   const seasonInBody    = 'season_id'     in req.body;
   const jerseyInBody    = 'jersey_number' in req.body;
   const photoInBody     = 'photo'         in req.body;
   const positionInBody  = 'position'      in req.body;
+  const acquisitionInBody = 'acquisition_type' in req.body;
   const startDateInBody = 'start_date'    in req.body;
   const endDateInBody   = 'end_date'      in req.body;
+  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
     const rows = await sql`
@@ -360,12 +383,13 @@ router.patch('/:id', async (req, res) => {
         season_id     = CASE WHEN ${seasonInBody}    THEN ${season_id}::uuid                 ELSE season_id     END,
         jersey_number = CASE WHEN ${jerseyInBody}    THEN ${jersey_number ?? null}            ELSE jersey_number END,
         position      = CASE WHEN ${positionInBody}  THEN ${position ?? null}                 ELSE position      END,
+        acquisition_type = CASE WHEN ${acquisitionInBody} THEN ${acquisition_type}             ELSE acquisition_type END,
         start_date    = CASE WHEN ${startDateInBody} THEN ${start_date ?? null}::date         ELSE start_date    END,
         end_date      = CASE WHEN ${endDateInBody}   THEN ${end_date ?? null}::date           ELSE end_date      END
       WHERE id = ${id}
       RETURNING
         id, player_id, team_id, season_id,
-        jersey_number, position,
+        jersey_number, position, acquisition_type,
         start_date::text AS start_date,
         end_date::text   AS end_date
     `;
@@ -397,18 +421,20 @@ router.patch('/:id', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/bulk-trade
-// Body: { players: [{ player_id, jersey_number?, position? }], season_id, to_team_id, trade_date }
+// Body: { players: [{ player_id, jersey_number?, position? }], season_id, to_team_id, trade_date, acquisition_type? }
 // Closes each player's current active stint and opens a new one on to_team_id.
 // Returns { traded: [...], failed: [player_ids that had no active stint] }
 // ---------------------------------------------------------------------------
 router.post('/bulk-trade', async (req, res) => {
   const { players, season_id, to_team_id, trade_date } = req.body;
+  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type) ?? 'trade';
 
   if (!Array.isArray(players) || players.length === 0)
     return res.status(400).json({ error: 'players must be a non-empty array' });
   if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
   if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
   if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
+  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
     const traded = [];
@@ -432,9 +458,9 @@ router.post('/bulk-trade', async (req, res) => {
 
       // Open new stint on the destination team
       const created = await sql`
-        INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position)
-        VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position})
-        RETURNING id, player_id, team_id, season_id, jersey_number, position,
+        INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
+        VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
+        RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                   start_date::text AS start_date, end_date::text AS end_date
       `;
       traded.push(created[0]);
@@ -449,16 +475,18 @@ router.post('/bulk-trade', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/trade
-// Body: { player_id, season_id, to_team_id, trade_date, jersey_number?, position? }
+// Body: { player_id, season_id, to_team_id, trade_date, jersey_number?, position?, acquisition_type? }
 // Closes the player's current stint (sets end_date) and opens a new one on
 // to_team_id starting on trade_date.
 // ---------------------------------------------------------------------------
 router.post('/trade', async (req, res) => {
   const { player_id, season_id, to_team_id, trade_date, jersey_number = null, position = null } = req.body;
+  const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type) ?? 'trade';
   if (!player_id)  return res.status(400).json({ error: 'player_id is required' });
   if (!season_id)  return res.status(400).json({ error: 'season_id is required' });
   if (!to_team_id) return res.status(400).json({ error: 'to_team_id is required' });
   if (!trade_date) return res.status(400).json({ error: 'trade_date is required' });
+  if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
     // 1. Find and close the current active stint
@@ -476,9 +504,9 @@ router.post('/trade', async (req, res) => {
 
     // 2. Open new stint on the destination team
     const created = await sql`
-      INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position)
-      VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position})
-      RETURNING id, player_id, team_id, season_id, jersey_number, position,
+      INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
+      VALUES (${player_id}, ${to_team_id}, ${season_id}, ${trade_date}, ${jersey_number}, ${position}, ${acquisition_type})
+      RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                 start_date::text AS start_date, end_date::text AS end_date
     `;
     return res.status(201).json({

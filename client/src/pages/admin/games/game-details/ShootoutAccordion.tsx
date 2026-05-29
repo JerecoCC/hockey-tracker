@@ -199,7 +199,11 @@ const ShootoutAccordion = ({
         className={styles.soAttemptName}
       >
         {shooterName}
-        {playerDataComplete(attempt.shooter_date_of_birth, attempt.shooter_start_date)}
+        {playerDataComplete(
+          attempt.shooter_date_of_birth,
+          attempt.shooter_start_date,
+          attempt.shooter_acquisition_type,
+        )}
       </Link>
     ) : (
       <span className={styles.soAttemptName}>{shooterName}</span>

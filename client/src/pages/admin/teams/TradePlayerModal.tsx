@@ -8,6 +8,7 @@ import {
   type PlayerStintRecord,
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
+import { ACQUISITION_TYPE_LABELS, ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
 import styles from './TradePlayerModal.module.scss';
 
 const POSITION_OPTIONS = [
@@ -26,6 +27,7 @@ interface FormValues {
   trade_date: string;
   jersey_number: string;
   position: string;
+  acquisition_type: string;
 }
 
 interface Props {
@@ -42,6 +44,7 @@ interface Props {
     tradeDate: string,
     jerseyNumber?: number | null,
     position?: string | null,
+    acquisitionType?: string | null,
   ) => Promise<boolean>;
 }
 
@@ -80,11 +83,11 @@ const TradePlayerModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { to_team_id: null, trade_date: '', jersey_number: '', position: '' },
+    defaultValues: { to_team_id: null, trade_date: '', jersey_number: '', position: '', acquisition_type: 'trade' },
   });
 
   useEffect(() => {
-    if (open) reset({ to_team_id: null, trade_date: '', jersey_number: '', position: '' });
+    if (open) reset({ to_team_id: null, trade_date: '', jersey_number: '', position: '', acquisition_type: 'trade' });
   }, [open, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
@@ -98,6 +101,7 @@ const TradePlayerModal = ({
       data.trade_date,
       jerseyNumber,
       position,
+      data.acquisition_type || 'trade',
     );
     if (ok) onClose();
   });
@@ -159,6 +163,14 @@ const TradePlayerModal = ({
             placeholder="Inherit from player…"
             disabled={isSubmitting}
           />
+          <Field
+            type="select"
+            label="Move Type"
+            control={control}
+            name="acquisition_type"
+            options={ACQUISITION_TYPE_OPTIONS}
+            disabled={isSubmitting}
+          />
         </form>
 
         {stints.length > 0 && (
@@ -183,6 +195,11 @@ const TradePlayerModal = ({
                       <span className={styles.stintJersey}>#{s.jersey_number}</span>
                     )}
                     {s.position && <span className={styles.stintJersey}>{s.position}</span>}
+                    {s.acquisition_type && (
+                      <span className={styles.stintJersey}>
+                        {ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type}
+                      </span>
+                    )}
                   </div>
                   <span className={styles.stintDates}>
                     {formatDate(s.start_date)} → {s.end_date ? formatDate(s.end_date) : 'Present'}

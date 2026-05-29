@@ -33,7 +33,7 @@ import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import TradePlayerModal from '../teams/TradePlayerModal';
-import StintEditModal from './StintEditModal';
+import StintEditModal, { ACQUISITION_TYPE_LABELS } from './StintEditModal';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import ChangePhotoModal from './ChangePhotoModal';
 import PlayerInfoEditModal from './PlayerInfoEditModal';
@@ -168,6 +168,7 @@ const PlayerDetailsPage = () => {
     tradeDate: string,
     jerseyNumber?: number | null,
     position?: string | null,
+    acquisitionType?: string | null,
   ): Promise<boolean> => {
     try {
       await axios.post(
@@ -179,6 +180,7 @@ const PlayerDetailsPage = () => {
           trade_date: tradeDate,
           jersey_number: jerseyNumber ?? null,
           position: position ?? null,
+          acquisition_type: acquisitionType ?? 'trade',
         },
         { headers: authHeaders() },
       );
@@ -465,6 +467,7 @@ const PlayerDetailsPage = () => {
                             <span className={styles.stintTeam}>{s.team_name ?? 'Unknown team'}</span>
                             <span className={styles.stintMeta}>
                               {s.jersey_number != null ? `#${s.jersey_number} - ` : ''}
+                              {s.acquisition_type ? `${ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type} - ` : ''}
                               {s.start_date ? DATE_FMT.format(new Date(s.start_date)) : s.end_date ? 'Until' : 'Dates not set'}{' '}
                               {s.start_date ? (s.end_date ? `- ${DATE_FMT.format(new Date(s.end_date))}` : '- Present') : s.end_date ? DATE_FMT.format(new Date(s.end_date)) : ''}
                             </span>

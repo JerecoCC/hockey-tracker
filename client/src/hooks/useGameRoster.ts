@@ -25,6 +25,7 @@ export interface GameRosterEntry {
   jersey_number: number | null;
   date_of_birth: string | null;
   start_date: string | null;
+  acquisition_type: string | null;
   /** True when pre-populated from the last finished game; not yet saved to this game. */
   inherited?: boolean;
 }

@@ -21,13 +21,19 @@ export const buildFormRecord = (games: LastFiveGame[]) => {
   return { w, otw, otl, l };
 };
 
-export const playerDataComplete = (dateOfBirth: string | null, startDate: string | null) => {
-  if (dateOfBirth && startDate) {
+export const playerDataComplete = (
+  dateOfBirth: string | null,
+  startDate: string | null,
+  acquisitionType: string | null,
+) => {
+  if (dateOfBirth && startDate && acquisitionType) {
     return ' ✅';
+  } else if (dateOfBirth && startDate) {
+    return ' 🔁';
   } else if (dateOfBirth) {
     return ' 📝';
-  } else if (startDate) {
+  } else if (startDate || acquisitionType) {
     return ' 🕰️';
   }
   return '';
-}
+};

@@ -356,6 +356,7 @@ async function initSchema() {
       season_id      UUID NOT NULL REFERENCES seasons(id)  ON DELETE CASCADE,
       jersey_number  SMALLINT,
       photo          TEXT,
+      acquisition_type TEXT,
       start_date     DATE,
       -- NULL means the player is currently on this team
       end_date       DATE,
@@ -369,6 +370,12 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS position TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS acquisition_type TEXT`;
+  await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_acquisition_type_check`;
+  await sql`
+    ALTER TABLE player_teams ADD CONSTRAINT player_teams_acquisition_type_check
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'call_up', 'loan', 'other'))
+  `;
 
   // Player photos are one per player/team/season. They are intentionally
   // separate from stints so an in-season trade can inherit the latest season

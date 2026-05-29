@@ -22,9 +22,25 @@ const POSITION_OPTIONS = [
   { value: 'G', label: 'Goalie' },
 ];
 
+export const ACQUISITION_TYPE_OPTIONS = [
+  { value: 'draft', label: 'Draft' },
+  { value: 'trade', label: 'Trade' },
+  { value: 'free_agency', label: 'Free Agency' },
+  { value: 'waivers', label: 'Waivers' },
+  { value: 'signing', label: 'Signing' },
+  { value: 'call_up', label: 'Call-Up' },
+  { value: 'loan', label: 'Loan' },
+  { value: 'other', label: 'Other' },
+];
+
+export const ACQUISITION_TYPE_LABELS = Object.fromEntries(
+  ACQUISITION_TYPE_OPTIONS.map((option) => [option.value, option.label]),
+) as Record<string, string>;
+
 interface FormValues {
   team_id: string;
   position: string;
+  acquisition_type: string;
   start_date: string;
   end_date: string;
 }
@@ -60,6 +76,7 @@ const StintEditModal = ({
     defaultValues: {
       team_id: '',
       position: '',
+      acquisition_type: '',
       start_date: '',
       end_date: '',
     },
@@ -88,6 +105,7 @@ const StintEditModal = ({
       reset({
         team_id: stint.team_id,
         position: stint.position ?? '',
+        acquisition_type: stint.acquisition_type ?? '',
         start_date: stint.start_date?.slice(0, 10) ?? '',
         end_date: stint.end_date?.slice(0, 10) ?? '',
       });
@@ -95,6 +113,7 @@ const StintEditModal = ({
       reset({
         team_id: '',
         position: '',
+        acquisition_type: '',
         start_date: '',
         end_date: '',
       });
@@ -109,6 +128,7 @@ const StintEditModal = ({
         team_id: data.team_id,
         season_id: seasonId,
         position: data.position || null,
+        acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       });
@@ -120,6 +140,7 @@ const StintEditModal = ({
         team_id: data.team_id,
         ...(seasonId ? { season_id: seasonId } : {}),
         position: data.position || null,
+        acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       });
@@ -168,6 +189,15 @@ const StintEditModal = ({
           name="position"
           options={POSITION_OPTIONS}
           placeholder="Inherit from player..."
+          disabled={isSubmitting}
+        />
+        <Field
+          type="select"
+          label="Acquisition Type"
+          control={control}
+          name="acquisition_type"
+          options={ACQUISITION_TYPE_OPTIONS}
+          placeholder="Unknown..."
           disabled={isSubmitting}
         />
         <div className={styles.row}>

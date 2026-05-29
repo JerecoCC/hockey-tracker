@@ -4,6 +4,7 @@ import BulkCreateModal from '@/components/BulkCreateModal/BulkCreateModal';
 import Field from '@/components/Field/Field';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
 import tradeStyles from './TradePlayerModal.module.scss';
 
 const EMPTY_ROW = { player_id: '', jersey_number: '' };
@@ -16,6 +17,7 @@ interface RowValues {
 interface FormValues {
   to_team_id: string | null;
   trade_date: string;
+  acquisition_type: string;
   players: RowValues[];
 }
 
@@ -84,6 +86,7 @@ interface Props {
     seasonId: string,
     toTeamId: string,
     tradeDate: string,
+    acquisitionType?: string,
   ) => Promise<boolean>;
 }
 
@@ -119,6 +122,7 @@ const BulkTradeModal = ({
       createDefaultValues={() => ({
         to_team_id: null,
         trade_date: '',
+        acquisition_type: 'trade',
         players: [{ ...EMPTY_ROW }],
       })}
       rowArrayName="players"
@@ -158,6 +162,14 @@ const BulkTradeModal = ({
               disabled={isSubmitting}
             />
           </div>
+          <Field
+            type="select"
+            label="Move Type"
+            control={control}
+            name="acquisition_type"
+            options={ACQUISITION_TYPE_OPTIONS}
+            disabled={isSubmitting}
+          />
         </div>
       )}
       onSubmitForm={async (data) => {
@@ -169,7 +181,7 @@ const BulkTradeModal = ({
             jerseyNumber: r.jersey_number ? parseInt(r.jersey_number, 10) : null,
           }));
         if (payload.length === 0) return false;
-        return bulkTradePlayers(payload, seasonId, data.to_team_id, data.trade_date);
+        return bulkTradePlayers(payload, seasonId, data.to_team_id, data.trade_date, data.acquisition_type || 'trade');
       }}
       renderRow={({ index, control, setValue, rows, isSubmitting, deleteButton }) => {
         const pickedIds = new Set(

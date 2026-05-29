@@ -217,7 +217,7 @@ const GameLineupsTab = ({
                 primaryColor={primaryColor}
                 textColor={textColor}
                 eyebrow={positionPart}
-                name={`${e.last_name}, ${e.first_name} ${playerDataComplete(e.date_of_birth, e.start_date)}`}
+                name={`${e.last_name}, ${e.first_name} ${playerDataComplete(e.date_of_birth, e.start_date, e.acquisition_type)}`}
                 placeholder={
                   e.jersey_number != null
                     ? String(e.jersey_number)

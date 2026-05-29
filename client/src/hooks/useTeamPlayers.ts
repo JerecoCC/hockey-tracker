@@ -15,6 +15,7 @@ export interface PlayerStintRecord {
   jersey_number: number | null;
   photo: string | null;
   position: string | null;
+  acquisition_type: string | null;
   start_date: string | null;
   end_date: string | null;
   created_at: string;
@@ -31,6 +32,7 @@ export interface UpdateStintData {
   jersey_number?: number | null;
   photo?: string | null;
   position?: string | null;
+  acquisition_type?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -41,6 +43,7 @@ export interface CreateStintData {
   jersey_number?: number | null;
   photo?: string | null;
   position?: string | null;
+  acquisition_type?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -518,6 +521,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     sId: string,
     toTeamId: string,
     tradeDate: string,
+    acquisitionType = 'trade',
   ): Promise<boolean> => {
     try {
       const { data } = await axios.post(
@@ -527,6 +531,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
           season_id: sId,
           to_team_id: toTeamId,
           trade_date: tradeDate,
+          acquisition_type: acquisitionType,
         },
         { headers: authHeaders() },
       );

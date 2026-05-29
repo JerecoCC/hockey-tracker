@@ -152,6 +152,7 @@ const playerTeams = pgTable('player_teams', {
   jerseyNumber: smallint('jersey_number'),
   position: text('position'),
   photo: text('photo'),
+  acquisitionType: text('acquisition_type'),
   startDate: date('start_date'),
   endDate: date('end_date'),
   createdAt: createdAt(),

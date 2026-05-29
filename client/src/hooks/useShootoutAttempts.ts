@@ -28,6 +28,7 @@ export interface ShootoutAttempt {
   shooter_jersey_number: number | null;
   shooter_date_of_birth: string | null;
   shooter_start_date : string | null;
+  shooter_acquisition_type: string | null;
   // Team info
   team_name: string;
   team_code: string;

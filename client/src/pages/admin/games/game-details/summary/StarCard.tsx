@@ -69,7 +69,7 @@ const StarCard = ({
           className={`${styles.starName} ${styles.playerLink}`}
         >
           {nameLabel}
-          {playerDataComplete(player.date_of_birth, player.start_date)}
+          {playerDataComplete(player.date_of_birth, player.start_date, player.acquisition_type)}
         </Link>
       ) : (
         <span className={styles.starName}>{nameLabel}</span>

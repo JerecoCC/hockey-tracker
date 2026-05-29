@@ -5,7 +5,12 @@ import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import useTabState from '@/hooks/useTabState';
-import { useJerseyHistory, usePlayerTradeHistory, useStintActions } from '@/hooks/useTeamPlayers';
+import {
+  useJerseyHistory,
+  usePlayerPhotoHistory,
+  usePlayerTradeHistory,
+  useStintActions,
+} from '@/hooks/useTeamPlayers';
 import PlayerDetails from './PlayerDetails';
 
 const mockNavigate = jest.fn();
@@ -29,17 +34,19 @@ jest.mock('@/hooks/useTabState', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => ({
   usePlayerTradeHistory: jest.fn(),
   useJerseyHistory: jest.fn(),
+  usePlayerPhotoHistory: jest.fn(),
   useStintActions: jest.fn(),
 }));
 jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
 jest.mock(
   '@/components/Button/Button',
   () =>
-    ({ children, onClick, type = 'button', disabled }: any) => (
+    ({ children, onClick, type = 'button', disabled, icon, tooltip }: any) => (
       <button
         type={type}
         onClick={onClick}
         disabled={disabled}
+        aria-label={tooltip ?? (icon === 'edit' ? 'Edit' : icon)}
       >
         {children}
       </button>
@@ -67,7 +74,11 @@ jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
 jest.mock('@/components/Tooltip/Tooltip', () => ({ children }: any) => <>{children}</>);
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
 jest.mock('../teams/TradePlayerModal', () => () => null);
-jest.mock('./StintEditModal', () => () => null);
+jest.mock('./StintEditModal', () => ({
+  __esModule: true,
+  default: () => null,
+  ACQUISITION_TYPE_LABELS: { trade: 'Trade' },
+}));
 jest.mock('./ChangeJerseyModal', () => () => null);
 jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => () => null);
 
@@ -79,6 +90,7 @@ const mockUseTeams = useTeams as jest.Mock;
 const mockUseTabState = useTabState as jest.Mock;
 const mockUsePlayerTradeHistory = usePlayerTradeHistory as jest.Mock;
 const mockUseJerseyHistory = useJerseyHistory as jest.Mock;
+const mockUsePlayerPhotoHistory = usePlayerPhotoHistory as jest.Mock;
 const mockUseStintActions = useStintActions as jest.Mock;
 
 beforeAll(() => {
@@ -164,6 +176,7 @@ beforeEach(() => {
         text_color: '#ffffff',
         jersey_number: 19,
         position: 'C',
+        acquisition_type: 'trade',
         start_date: '2024-10-01',
         end_date: null,
         photo: null,
@@ -171,6 +184,7 @@ beforeEach(() => {
     ],
   });
   mockUseJerseyHistory.mockReturnValue({ byStint: {} });
+  mockUsePlayerPhotoHistory.mockReturnValue({ byTeam: {} });
   mockUseStintActions.mockReturnValue({
     createStint: jest.fn(),
     updateStint: jest.fn(),

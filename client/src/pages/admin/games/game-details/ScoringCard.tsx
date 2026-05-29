@@ -170,7 +170,11 @@ const ScoringCard = ({
                       className={styles.playerLink}
                     >
                       {scorerBaseName}
-                      {playerDataComplete(goal.scorer_date_of_birth, goal.scorer_start_date)}
+                      {playerDataComplete(
+                        goal.scorer_date_of_birth,
+                        goal.scorer_start_date,
+                        goal.scorer_acquisition_type,
+                      )}
                     </Link>
                   ) : (
                     scorerBaseName
