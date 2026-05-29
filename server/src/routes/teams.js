@@ -58,7 +58,7 @@ router.get('/', async (_req, res) => {
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = t.id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
       ) ti ON true
       ORDER BY ti.name ASC
@@ -91,7 +91,7 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = t.id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
       ) ti ON true
       LEFT JOIN leagues l ON l.id = t.league_id
@@ -139,8 +139,8 @@ router.post('/', async (req, res) => {
 
     // Auto-create the base iteration (season_id = NULL = current identity)
     await sql`
-      INSERT INTO team_iterations (team_id, season_id, name, code, logo)
-      VALUES (${teamId}, NULL, ${name.trim()}, ${code.trim().toUpperCase()}, ${logo ?? null})
+      INSERT INTO team_iterations (team_id, name, code, logo)
+      VALUES (${teamId}, ${name.trim()}, ${code.trim().toUpperCase()}, ${logo ?? null})
     `;
 
     // Return the full team with resolved identity
@@ -153,7 +153,7 @@ router.post('/', async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = t.id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
       ) ti ON true
       WHERE t.id = ${teamId}
@@ -201,8 +201,8 @@ router.patch('/:id', async (req, res) => {
     if (hasIdentity) {
       const baseIter = await sql`
         SELECT id FROM team_iterations
-        WHERE team_id = ${id} AND season_id IS NULL
-        ORDER BY recorded_at DESC
+        WHERE team_id = ${id} AND end_date IS NULL
+        ORDER BY start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
       `;
       if (baseIter.length > 0) {
@@ -215,9 +215,9 @@ router.patch('/:id', async (req, res) => {
         `;
       } else {
         await sql`
-          INSERT INTO team_iterations (team_id, season_id, name, code, logo)
+          INSERT INTO team_iterations (team_id, name, code, logo)
           VALUES (
-            ${id}, NULL,
+            ${id},
             ${name?.trim() ?? ''},
             ${code ? code.trim().toUpperCase() : ''},
             ${logoInBody ? (logo ?? null) : null}
@@ -252,7 +252,7 @@ router.patch('/:id', async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = t.id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
       ) ti ON true
       WHERE t.id = ${id}
@@ -276,13 +276,11 @@ router.get('/:id/iterations', async (req, res) => {
     const rows = await sql`
       SELECT
         ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
-        ti.start_season_id, ss.name AS start_season_name,
-        ti.latest_season_id, ls.name AS latest_season_name
+        ti.start_date::text AS start_date,
+        ti.end_date::text AS end_date
       FROM team_iterations ti
-      LEFT JOIN seasons ss ON ss.id = ti.start_season_id
-      LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
       WHERE ti.team_id = ${id}
-      ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
+      ORDER BY ti.start_date DESC NULLS LAST, ti.recorded_at DESC
     `;
     return res.json(rows);
   } catch (err) {
@@ -297,7 +295,7 @@ router.get('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/:id/iterations', async (req, res) => {
   const { id } = req.params;
-  const { name, code, logo, note, start_season_id, latest_season_id } = req.body;
+  const { name, code, logo, note, start_date, end_date } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -308,15 +306,15 @@ router.post('/:id/iterations', async (req, res) => {
     if (teamRows.length === 0) return res.status(404).json({ error: 'Team not found' });
 
     const rows = await sql`
-      INSERT INTO team_iterations (team_id, name, code, logo, note, start_season_id, latest_season_id)
+      INSERT INTO team_iterations (team_id, name, code, logo, note, start_date, end_date)
       VALUES (
         ${id},
         ${name.trim()},
         ${code ? code.trim().toUpperCase() : null},
         ${logo ?? null},
         ${note?.trim() ?? null},
-        ${start_season_id ?? null},
-        ${latest_season_id ?? null}
+        ${start_date ?? null}::date,
+        ${end_date ?? null}::date
       )
       RETURNING id
     `;
@@ -324,11 +322,9 @@ router.post('/:id/iterations', async (req, res) => {
     const full = await sql`
       SELECT
         ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
-        ti.start_season_id, ss.name AS start_season_name,
-        ti.latest_season_id, ls.name AS latest_season_name
+        ti.start_date::text AS start_date,
+        ti.end_date::text AS end_date
       FROM team_iterations ti
-      LEFT JOIN seasons ss ON ss.id = ti.start_season_id
-      LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
       WHERE ti.id = ${rows[0].id}
     `;
     return res.status(201).json(full[0]);
@@ -344,11 +340,11 @@ router.post('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id/iterations/:iterationId', async (req, res) => {
   const { id, iterationId } = req.params;
-  const { name, code, logo, note, start_season_id, latest_season_id } = req.body;
+  const { name, code, logo, note, start_date, end_date } = req.body;
   const logoInBody           = 'logo'             in req.body;
   const noteInBody           = 'note'             in req.body;
-  const startSeasonInBody    = 'start_season_id'  in req.body;
-  const latestSeasonInBody = 'latest_season_id' in req.body;
+  const startDateInBody      = 'start_date'        in req.body;
+  const endDateInBody        = 'end_date'          in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
@@ -361,8 +357,8 @@ router.patch('/:id/iterations/:iterationId', async (req, res) => {
         code             = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
         logo             = CASE WHEN ${logoInBody}          THEN ${logo ?? null}             ELSE logo             END,
         note             = CASE WHEN ${noteInBody}          THEN ${note?.trim() ?? null}     ELSE note             END,
-        start_season_id  = CASE WHEN ${startSeasonInBody}  THEN ${start_season_id ?? null}  ELSE start_season_id  END,
-        latest_season_id = CASE WHEN ${latestSeasonInBody} THEN ${latest_season_id ?? null} ELSE latest_season_id END
+        start_date       = CASE WHEN ${startDateInBody}    THEN ${start_date ?? null}::date ELSE start_date END,
+        end_date         = CASE WHEN ${endDateInBody}      THEN ${end_date ?? null}::date   ELSE end_date   END
       WHERE id = ${iterationId} AND team_id = ${id}
       RETURNING id
     `;
@@ -371,11 +367,9 @@ router.patch('/:id/iterations/:iterationId', async (req, res) => {
     const full = await sql`
       SELECT
         ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.note, ti.recorded_at,
-        ti.start_season_id, ss.name AS start_season_name,
-        ti.latest_season_id, ls.name AS latest_season_name
+        ti.start_date::text AS start_date,
+        ti.end_date::text AS end_date
       FROM team_iterations ti
-      LEFT JOIN seasons ss ON ss.id = ti.start_season_id
-      LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
       WHERE ti.id = ${iterationId}
     `;
     return res.json(full[0]);

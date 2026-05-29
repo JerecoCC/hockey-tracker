@@ -54,6 +54,17 @@ export interface JerseyHistoryEntry {
   effective_from: string;
 }
 
+export interface PlayerPhotoEntry {
+  id: string;
+  player_id: string;
+  team_id: string;
+  season_id: string;
+  photo: string;
+  created_at: string;
+  season_name: string | null;
+  team_name: string | null;
+}
+
 /**
  * Fetches all jersey number history entries across every stint for a player.
  * Returns `byStint`: a map of player_teams_id → sorted entries (oldest first).
@@ -81,6 +92,31 @@ export const useJerseyHistory = (playerId: string | null) => {
   }, [data]);
 
   return { byStint };
+};
+
+export const usePlayerPhotoHistory = (playerId: string | null) => {
+  const { data: photos = [] } = useQuery<PlayerPhotoEntry[]>({
+    queryKey: ['player-photo-history', playerId],
+    queryFn: async () => {
+      const { data } = await axios.get<PlayerPhotoEntry[]>(
+        `${API}/admin/player-teams/history/${playerId}/photos`,
+        { headers: authHeaders() },
+      );
+      return data;
+    },
+    enabled: !!playerId,
+  });
+
+  const byTeam = useMemo(() => {
+    const map: Record<string, PlayerPhotoEntry[]> = {};
+    for (const entry of photos) {
+      if (!map[entry.team_id]) map[entry.team_id] = [];
+      map[entry.team_id].push(entry);
+    }
+    return map;
+  }, [photos]);
+
+  return { photos, byTeam };
 };
 
 /** Fetch all stints for a player, optionally scoped to a season. */
@@ -201,7 +237,41 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
-  return { createStint, updateStint, changeJerseyNumber, uploadStintPhoto, saving };
+  const changePlayerPhoto = async (
+    stint: PlayerStintRecord,
+    seasonId: string,
+    photo: string,
+  ): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.post(
+        `${API}/admin/player-teams/history/${playerId}/photos`,
+        {
+          team_id: stint.team_id,
+          season_id: seasonId,
+          photo,
+        },
+        { headers: authHeaders() },
+      );
+      toast.success('Season photo updated!');
+      await queryClient.invalidateQueries({ queryKey: ['player-photo-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update season photo'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto, saving };
 };
 
 export interface PlayerRosterInput {

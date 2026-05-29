@@ -13,12 +13,10 @@ export interface TeamIteration {
   logo: string | null;
   note: string | null;
   recorded_at: string;
-  /** Season this version first applied to. */
-  start_season_id: string | null;
-  start_season_name: string | null;
-  /** Last season this version applied to. Null means still active/current. */
-  latest_season_id: string | null;
-  latest_season_name: string | null;
+  /** Date this version first applied. */
+  start_date: string | null;
+  /** Date this version stopped applying. Null means still active/current. */
+  end_date: string | null;
 }
 
 export interface AddIterationPayload {
@@ -26,8 +24,8 @@ export interface AddIterationPayload {
   code?: string | null;
   logo?: string | null;
   note?: string | null;
-  start_season_id?: string | null;
-  latest_season_id?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 export interface UpdateIterationPayload {
@@ -35,8 +33,8 @@ export interface UpdateIterationPayload {
   code?: string | null;
   logo?: string | null;
   note?: string | null;
-  start_season_id?: string | null;
-  latest_season_id?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
 }
 
 const authHeaders = () => {

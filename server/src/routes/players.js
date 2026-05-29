@@ -58,7 +58,7 @@ router.get('/', async (req, res) => {
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
@@ -75,11 +75,13 @@ router.get('/', async (req, res) => {
                                 AND pt.season_id  = ${season_id}
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
+            JOIN seasons      s  ON s.id          = pt.season_id
             LEFT JOIN LATERAL (
               SELECT name, code, logo FROM team_iterations
               WHERE team_id = t.id
-                AND (season_id = ${season_id} OR season_id IS NULL)
-              ORDER BY CASE WHEN season_id = ${season_id} THEN 0 ELSE 1 END, recorded_at DESC
+                AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
+                AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
+              ORDER BY start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
@@ -98,7 +100,7 @@ router.get('/', async (req, res) => {
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
@@ -117,7 +119,7 @@ router.get('/', async (req, res) => {
             LEFT JOIN LATERAL (
               SELECT name, code, logo FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY season_id DESC NULLS LAST
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
@@ -136,7 +138,7 @@ router.get('/', async (req, res) => {
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
@@ -155,7 +157,7 @@ router.get('/', async (req, res) => {
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY season_id DESC NULLS LAST
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id
@@ -173,7 +175,7 @@ router.get('/', async (req, res) => {
             jersey_number, team_name, primary_color, text_color
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name, p.photo,
+              p.id, p.first_name, p.last_name, COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
@@ -189,7 +191,7 @@ router.get('/', async (req, res) => {
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY season_id DESC NULLS LAST
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id, pt.season_id DESC
@@ -276,8 +278,9 @@ router.get('/:id/stats', async (req, res) => {
       LEFT JOIN LATERAL (
         SELECT name, logo FROM team_iterations
         WHERE team_id = lt.team_id
-        ORDER BY CASE WHEN season_id = ps.season_id THEN 0 ELSE 1 END,
-                 recorded_at DESC
+          AND (start_date IS NULL OR start_date <= s.start_date)
+          AND (end_date IS NULL OR end_date >= s.start_date)
+        ORDER BY start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
       ) ti ON lt.team_id IS NOT NULL
       ORDER BY s.created_at DESC

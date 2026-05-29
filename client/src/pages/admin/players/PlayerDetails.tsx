@@ -25,6 +25,7 @@ import {
   usePlayerTradeHistory,
   useStintActions,
   useJerseyHistory,
+  usePlayerPhotoHistory,
   type PlayerStintRecord,
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
@@ -34,6 +35,7 @@ import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import TradePlayerModal from '../teams/TradePlayerModal';
 import StintEditModal from './StintEditModal';
 import ChangeJerseyModal from './ChangeJerseyModal';
+import ChangePhotoModal from './ChangePhotoModal';
 import PlayerInfoEditModal from './PlayerInfoEditModal';
 import styles from './PlayerDetails.module.scss';
 
@@ -109,9 +111,14 @@ const PlayerDetailsPage = () => {
   const { team: teamDetails } = useTeamDetails(teamId);
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
-  const { createStint, updateStint, changeJerseyNumber, uploadStintPhoto } = useStintActions(
-    id ?? null,
-  );
+  const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(id ?? null);
+  const {
+    createStint,
+    updateStint,
+    changeJerseyNumber,
+    changePlayerPhoto,
+    uploadStintPhoto,
+  } = useStintActions(id ?? null);
   const { teams } = useTeams();
   const { seasons } = useSeasons();
   const queryClient = useQueryClient();
@@ -121,6 +128,7 @@ const PlayerDetailsPage = () => {
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
+  const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
   const [tradePlayerOpen, setTradePlayerOpen] = useState(false);
 
@@ -447,18 +455,18 @@ const PlayerDetailsPage = () => {
                         >
                           <TeamLogo
                             logo={s.team_logo}
-                            code={s.team_code ?? s.team_name ?? '?'}
+                            code={s.team_code ?? (s.team_name ? s.team_name.slice(0, 3).toUpperCase() : 'TEAM')}
                             primaryColor={s.primary_color}
                             textColor={s.text_color}
                             size={32}
                             shape="square"
                           />
                           <div className={styles.stintInfo}>
-                            <span className={styles.stintTeam}>{s.team_name ?? '—'}</span>
+                            <span className={styles.stintTeam}>{s.team_name ?? 'Unknown team'}</span>
                             <span className={styles.stintMeta}>
-                              {s.jersey_number != null ? `#${s.jersey_number} · ` : ''}
-                              {s.start_date ? DATE_FMT.format(new Date(s.start_date)) : '?'} –{' '}
-                              {s.end_date ? DATE_FMT.format(new Date(s.end_date)) : 'Present'}
+                              {s.jersey_number != null ? `#${s.jersey_number} - ` : ''}
+                              {s.start_date ? DATE_FMT.format(new Date(s.start_date)) : s.end_date ? 'Until' : 'Dates not set'}{' '}
+                              {s.start_date ? (s.end_date ? `- ${DATE_FMT.format(new Date(s.end_date))}` : '- Present') : s.end_date ? DATE_FMT.format(new Date(s.end_date)) : ''}
                             </span>
                           </div>
                           {!s.end_date && (
@@ -471,6 +479,14 @@ const PlayerDetailsPage = () => {
                               onClick={() => setChangingJerseyStint(s)}
                             />
                           )}
+                          <Button
+                            variant="outlined"
+                            intent="neutral"
+                            icon="image"
+                            size="sm"
+                            tooltip="Change season photo"
+                            onClick={() => setChangingPhotoStint(s)}
+                          />
                           <Button
                             variant="outlined"
                             intent="neutral"
@@ -537,7 +553,16 @@ const PlayerDetailsPage = () => {
         }}
         createStint={createStint}
         updateStint={updateStint}
-        uploadStintPhoto={uploadStintPhoto}
+      />
+
+      <ChangePhotoModal
+        open={!!changingPhotoStint}
+        stint={changingPhotoStint}
+        seasons={seasons.filter((s) => s.league_id === teams.find((t) => t.id === changingPhotoStint?.team_id)?.league_id)}
+        history={photoHistoryByTeam[changingPhotoStint?.team_id ?? ''] ?? []}
+        onClose={() => setChangingPhotoStint(null)}
+        uploadPhoto={uploadStintPhoto}
+        changePlayerPhoto={changePlayerPhoto}
       />
 
       <ImagePreviewModal
@@ -656,3 +681,4 @@ const StatCell = ({
     <span className={value === '—' ? styles.statCellMuted : styles.statCellValue}>{value}</span>
   </div>
 );
+

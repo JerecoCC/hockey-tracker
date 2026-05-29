@@ -56,18 +56,26 @@ router.post('/', async (req, res) => {
   try {
     const rows = await sql`
       INSERT INTO player_teams
-        (player_id, team_id, season_id, jersey_number, photo, position, start_date, end_date)
+        (player_id, team_id, season_id, jersey_number, position, start_date, end_date)
       VALUES (
         ${player_id}, ${team_id}, ${season_id},
         ${jersey_number ?? null},
-        ${photo ?? null},
         ${position ?? null},
         ${start_date ?? null}::date,
         ${end_date   ?? null}::date
       )
-      RETURNING id, player_id, team_id, season_id, jersey_number, photo, position,
+      RETURNING id, player_id, team_id, season_id, jersey_number, position,
                 start_date::text AS start_date, end_date::text AS end_date
     `;
+    if (photo) {
+      await sql`
+        INSERT INTO player_photos (player_id, team_id, season_id, photo)
+        VALUES (${player_id}, ${team_id}, ${season_id}, ${photo})
+        ON CONFLICT (player_id, team_id, season_id)
+        DO UPDATE SET photo = EXCLUDED.photo, created_at = NOW()
+      `;
+    }
+    rows[0].photo = photo ?? null;
     return res.status(201).json(rows[0]);
   } catch (err) {
     if (err.code === '23505') {
@@ -83,7 +91,7 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/player-teams
 // Body: { player_id, team_id, season_id, jersey_number?, photo?, position?, effective_date? }
-// Updates jersey_number, photo, and/or position on the active stint for this player/team/season.
+// Updates jersey_number and/or position on the active stint; photo is stored per player/team/season.
 // When jersey_number changes, the old value is preserved in jersey_number_history
 // so that game queries can resolve the correct number by date.
 // ---------------------------------------------------------------------------
@@ -144,15 +152,30 @@ router.patch('/', async (req, res) => {
       UPDATE player_teams
       SET
         jersey_number = CASE WHEN ${jerseyInBody}   THEN ${jersey_number ?? null} ELSE jersey_number END,
-        photo         = CASE WHEN ${photoInBody}     THEN ${photo ?? null}         ELSE photo         END,
         position      = CASE WHEN ${positionInBody}  THEN ${position ?? null}      ELSE position      END
       WHERE player_id = ${player_id}
         AND team_id   = ${team_id}
         AND season_id = ${season_id}
         AND end_date IS NULL
-      RETURNING id, player_id, team_id, season_id, jersey_number, photo, position
+      RETURNING id, player_id, team_id, season_id, jersey_number, position
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Player team record not found' });
+    if (photoInBody) {
+      if (photo) {
+        await sql`
+          INSERT INTO player_photos (player_id, team_id, season_id, photo)
+          VALUES (${player_id}, ${team_id}, ${season_id}, ${photo})
+          ON CONFLICT (player_id, team_id, season_id)
+          DO UPDATE SET photo = EXCLUDED.photo, created_at = NOW()
+        `;
+      } else {
+        await sql`
+          DELETE FROM player_photos
+          WHERE player_id = ${player_id} AND team_id = ${team_id} AND season_id = ${season_id}
+        `;
+      }
+    }
+    rows[0].photo = photoInBody ? (photo ?? null) : null;
     return res.json(rows[0]);
   } catch (err) {
     console.error('player-teams update error:', err);
@@ -173,7 +196,9 @@ router.get('/history/:playerId', async (req, res) => {
     const rows = await sql`
       SELECT
         pt.id, pt.player_id, pt.team_id, pt.season_id,
-        pt.jersey_number, pt.photo, pt.position,
+        pt.jersey_number,
+        best_player_photo(pt.player_id, pt.season_id, pt.team_id) AS photo,
+        pt.position,
         pt.start_date::text AS start_date,
         pt.end_date::text   AS end_date,
         pt.created_at,
@@ -184,11 +209,20 @@ router.get('/history/:playerId', async (req, res) => {
         t.text_color
       FROM player_teams pt
       JOIN teams t ON t.id = pt.team_id
+      JOIN seasons s ON s.id = pt.season_id
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = pt.team_id
-          AND (season_id = pt.season_id OR season_id IS NULL)
-        ORDER BY CASE WHEN season_id = pt.season_id THEN 0 ELSE 1 END, recorded_at DESC
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pt.end_date, s.end_date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
         LIMIT 1
       ) ti ON true
       WHERE pt.player_id = ${playerId}
@@ -230,6 +264,78 @@ router.get('/history/:playerId/jerseys', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/player-teams/history/:playerId/photos
+// Returns player photo rows, independent from player_teams stints.
+// ---------------------------------------------------------------------------
+router.get('/history/:playerId/photos', async (req, res) => {
+  const { playerId } = req.params;
+  try {
+    const rows = await sql`
+      SELECT
+        pp.id,
+        pp.player_id,
+        pp.team_id,
+        pp.season_id,
+        pp.photo,
+        pp.created_at,
+        s.name AS season_name,
+        ti.name AS team_name
+      FROM player_photos pp
+      JOIN seasons s ON s.id = pp.season_id
+      LEFT JOIN LATERAL (
+        SELECT name FROM team_iterations
+        WHERE team_id = pp.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(s.end_date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(s.start_date, s.created_at::date))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      WHERE pp.player_id = ${playerId}
+      ORDER BY s.start_date DESC NULLS LAST, pp.created_at DESC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('player photo history error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/player-teams/history/:playerId/photos
+// Body: { team_id, season_id, photo }
+// Upserts one player photo for that player/team/season.
+// ---------------------------------------------------------------------------
+router.post('/history/:playerId/photos', async (req, res) => {
+  const { playerId } = req.params;
+  const { team_id, season_id, photo } = req.body;
+
+  if (!team_id) return res.status(400).json({ error: 'team_id is required' });
+  if (!season_id) return res.status(400).json({ error: 'season_id is required' });
+  if (!photo) return res.status(400).json({ error: 'photo is required' });
+
+  try {
+    const rows = await sql`
+      INSERT INTO player_photos (player_id, team_id, season_id, photo)
+      VALUES (${playerId}, ${team_id}, ${season_id}, ${photo})
+      ON CONFLICT (player_id, team_id, season_id)
+      DO UPDATE SET photo = EXCLUDED.photo, created_at = NOW()
+      RETURNING id, player_id, team_id, season_id, photo, created_at
+    `;
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('player photo upsert error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/admin/player-teams/:id
 // Body: { team_id?, season_id?, jersey_number?, photo?, position?, start_date?, end_date? }
 // Updates editable fields on a specific stint row by its UUID.
@@ -253,18 +359,35 @@ router.patch('/:id', async (req, res) => {
         team_id       = CASE WHEN ${teamInBody}      THEN ${team_id}::uuid                   ELSE team_id       END,
         season_id     = CASE WHEN ${seasonInBody}    THEN ${season_id}::uuid                 ELSE season_id     END,
         jersey_number = CASE WHEN ${jerseyInBody}    THEN ${jersey_number ?? null}            ELSE jersey_number END,
-        photo         = CASE WHEN ${photoInBody}     THEN ${photo ?? null}                    ELSE photo         END,
         position      = CASE WHEN ${positionInBody}  THEN ${position ?? null}                 ELSE position      END,
         start_date    = CASE WHEN ${startDateInBody} THEN ${start_date ?? null}::date         ELSE start_date    END,
         end_date      = CASE WHEN ${endDateInBody}   THEN ${end_date ?? null}::date           ELSE end_date      END
       WHERE id = ${id}
       RETURNING
         id, player_id, team_id, season_id,
-        jersey_number, photo, position,
+        jersey_number, position,
         start_date::text AS start_date,
         end_date::text   AS end_date
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Stint not found' });
+    if (photoInBody) {
+      const photoTeamId = teamInBody ? team_id : rows[0].team_id;
+      const photoSeasonId = seasonInBody ? season_id : rows[0].season_id;
+      if (photo) {
+        await sql`
+          INSERT INTO player_photos (player_id, team_id, season_id, photo)
+          VALUES (${rows[0].player_id}, ${photoTeamId}, ${photoSeasonId}, ${photo})
+          ON CONFLICT (player_id, team_id, season_id)
+          DO UPDATE SET photo = EXCLUDED.photo, created_at = NOW()
+        `;
+      } else {
+        await sql`
+          DELETE FROM player_photos
+          WHERE player_id = ${rows[0].player_id} AND team_id = ${photoTeamId} AND season_id = ${photoSeasonId}
+        `;
+      }
+    }
+    rows[0].photo = photoInBody ? (photo ?? null) : null;
     return res.json(rows[0]);
   } catch (err) {
     console.error('player-teams patch/:id error:', err);
