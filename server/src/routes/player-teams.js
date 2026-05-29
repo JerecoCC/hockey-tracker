@@ -1,8 +1,11 @@
 const router = require('express').Router();
+const { and, desc, eq, sql: ormSql } = require('drizzle-orm');
 const { requireAdmin } = require('../middleware/auth');
-const { sql } = require('../db');
+const { sql, db, schema } = require('../db');
 
 router.use(requireAdmin);
+
+const { playerTeams, teams } = schema;
 
 const ACQUISITION_TYPES = new Set(['draft', 'trade', 'free_agency', 'waivers', 'signing', 'call_up', 'loan', 'other']);
 const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
@@ -212,44 +215,88 @@ router.get('/history/:playerId', async (req, res) => {
 
   try {
     const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
-    const rows = await sql`
-      SELECT
-        pt.id, pt.player_id, pt.team_id, pt.season_id,
-        pt.jersey_number,
-        best_player_photo(pt.player_id, pt.season_id, pt.team_id) AS photo,
-        pt.position,
-        ${hasAcquisitionType ? sql`pt.acquisition_type` : sql`NULL::text`} AS acquisition_type,
-        pt.start_date::text AS start_date,
-        pt.end_date::text   AS end_date,
-        pt.created_at,
-        ti.name  AS team_name,
-        ti.code  AS team_code,
-        ti.logo  AS team_logo,
-        t.primary_color,
-        t.text_color
-      FROM player_teams pt
-      JOIN teams t ON t.id = pt.team_id
-      JOIN seasons s ON s.id = pt.season_id
-      LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
-        WHERE team_id = pt.team_id
-        ORDER BY
-          CASE
-            WHEN (start_date IS NULL OR start_date <= COALESCE(pt.end_date, s.end_date, CURRENT_DATE))
-             AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-            THEN 0
-            WHEN end_date IS NULL THEN 1
-            ELSE 2
-          END,
-          start_date DESC NULLS LAST,
-          recorded_at DESC
-        LIMIT 1
-      ) ti ON true
-      WHERE pt.player_id = ${playerId}
-        ${season_id ? sql`AND pt.season_id = ${season_id}` : sql``}
-      ORDER BY pt.end_date DESC NULLS FIRST, COALESCE(pt.start_date, pt.created_at::date) DESC, pt.created_at DESC
+    const teamIterationOrder = ormSql`
+      ORDER BY
+        CASE
+          WHEN (ti.start_date IS NULL OR ti.start_date <= COALESCE(${playerTeams.endDate}, s.end_date, CURRENT_DATE))
+           AND (ti.end_date IS NULL OR ti.end_date >= COALESCE(${playerTeams.startDate}, s.start_date, ${playerTeams.createdAt}::date))
+          THEN 0
+          WHEN ti.end_date IS NULL THEN 1
+          ELSE 2
+        END,
+        ti.start_date DESC NULLS LAST,
+        ti.recorded_at DESC
+      LIMIT 1
     `;
-    return res.json(rows);
+    const rows = await db
+      .select({
+        id: playerTeams.id,
+        player_id: playerTeams.playerId,
+        team_id: playerTeams.teamId,
+        season_id: playerTeams.seasonId,
+        jersey_number: playerTeams.jerseyNumber,
+        photo: ormSql`best_player_photo(${playerTeams.playerId}, ${playerTeams.seasonId}, ${playerTeams.teamId})`,
+        position: playerTeams.position,
+        acquisition_type: hasAcquisitionType ? playerTeams.acquisitionType : ormSql`NULL::text`,
+        start_date: ormSql`${playerTeams.startDate}::text`,
+        end_date: ormSql`${playerTeams.endDate}::text`,
+        created_at: playerTeams.createdAt,
+        team_name: ormSql`(
+          SELECT ti.name
+          FROM team_iterations ti
+          JOIN seasons s ON s.id = ${playerTeams.seasonId}
+          WHERE ti.team_id = ${playerTeams.teamId}
+          ${teamIterationOrder}
+        )`,
+        team_code: ormSql`(
+          SELECT ti.code
+          FROM team_iterations ti
+          JOIN seasons s ON s.id = ${playerTeams.seasonId}
+          WHERE ti.team_id = ${playerTeams.teamId}
+          ${teamIterationOrder}
+        )`,
+        team_logo: ormSql`(
+          SELECT ti.logo
+          FROM team_iterations ti
+          JOIN seasons s ON s.id = ${playerTeams.seasonId}
+          WHERE ti.team_id = ${playerTeams.teamId}
+          ${teamIterationOrder}
+        )`,
+        primary_color: teams.primaryColor,
+        text_color: teams.textColor,
+      })
+      .from(playerTeams)
+      .innerJoin(teams, eq(teams.id, playerTeams.teamId))
+      .where(and(
+        eq(playerTeams.playerId, playerId),
+        season_id ? eq(playerTeams.seasonId, season_id) : undefined,
+      ))
+      .orderBy(
+        desc(playerTeams.endDate),
+        ormSql`COALESCE(${playerTeams.startDate}, ${playerTeams.createdAt}::date) DESC`,
+        desc(playerTeams.createdAt),
+      );
+    return res.json(rows.map((row) => ({
+      id: row.id,
+      player_id: row.player_id,
+      team_id: row.team_id,
+      season_id: row.season_id,
+      jersey_number: row.jersey_number,
+      photo: row.photo,
+      position: row.position,
+      acquisition_type: row.acquisition_type,
+      start_date: row.start_date,
+      end_date: row.end_date,
+      created_at: row.created_at,
+      team: {
+        id: row.team_id,
+        name: row.team_name,
+        code: row.team_code,
+        logo: row.team_logo,
+        primary_color: row.primary_color,
+        text_color: row.text_color,
+      },
+    })));
   } catch (err) {
     console.error('player-teams history error:', err);
     return res.status(500).json({ error: 'Internal server error' });

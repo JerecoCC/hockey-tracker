@@ -50,8 +50,8 @@
 
 // ── Image ─────────────────────────────────────────────────────────────────────
 .logo {
-  width: 32px;
-  height: 32px;
+  width: var(--list-item-logo-size, 32px);
+  height: var(--list-item-logo-size, 32px);
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
@@ -67,8 +67,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: var(--list-item-logo-size, 32px);
+  height: var(--list-item-logo-size, 32px);
   border-radius: $radius-sm;
   background: $border;
   font-weight: 500;
@@ -84,8 +84,8 @@
 // ── Jersey number chip ────────────────────────────────────────────────────────
 .jerseyChip {
   flex-shrink: 0;
-  min-width: 22px;
-  height: 22px;
+  height: var(--list-item-jersey-size, 22px);
+  aspect-ratio: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -95,7 +95,7 @@
   font-weight: 700;
   color: $text-body;
   font-variant-numeric: tabular-nums;
-  padding: 0 $space-xs;
+  padding: 0 var(--list-item-jersey-padding-x, #{$space-xs});
   letter-spacing: 0.02em;
 }
 

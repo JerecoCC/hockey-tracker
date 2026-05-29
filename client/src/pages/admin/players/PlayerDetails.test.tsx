@@ -73,7 +73,7 @@ jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
 ));
 jest.mock('@/components/Tooltip/Tooltip', () => ({ children }: any) => <>{children}</>);
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
-jest.mock('../teams/TradePlayerModal', () => () => null);
+jest.mock('../teams/MovePlayerModal', () => () => null);
 jest.mock('./StintEditModal', () => ({
   __esModule: true,
   default: () => null,
@@ -169,11 +169,14 @@ beforeEach(() => {
         id: 'stint-1',
         team_id: 'team-1',
         season_id: 'season-1',
-        team_name: 'Toronto Maple Leafs',
-        team_code: 'TOR',
-        team_logo: null,
-        primary_color: '#003e7e',
-        text_color: '#ffffff',
+        team: {
+          id: 'team-1',
+          name: 'Toronto Maple Leafs',
+          code: 'TOR',
+          logo: null,
+          primary_color: '#003e7e',
+          text_color: '#ffffff',
+        },
         jersey_number: 19,
         position: 'C',
         acquisition_type: 'trade',

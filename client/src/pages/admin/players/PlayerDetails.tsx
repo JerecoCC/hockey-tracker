@@ -32,7 +32,7 @@ import {
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
-import TradePlayerModal from '../teams/TradePlayerModal';
+import MovePlayerModal from '../teams/MovePlayerModal';
 import StintEditModal, { ACQUISITION_TYPE_LABELS } from './StintEditModal';
 import ChangeJerseyModal from './ChangeJerseyModal';
 import ChangePhotoModal from './ChangePhotoModal';
@@ -103,7 +103,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
 });
 
 const teamCodePlaceholder = (stint: PlayerStintRecord) =>
-  stint.team_code ?? (stint.team_name ? stint.team_name.slice(0, 3).toUpperCase() : 'TEAM');
+  stint.team.code ?? (stint.team.name ? stint.team.name.slice(0, 3).toUpperCase() : 'TEAM');
 
 const formatStintDates = (stint: PlayerStintRecord) => {
   const start = stint.start_date ? DATE_FMT.format(new Date(stint.start_date)) : null;
@@ -137,7 +137,7 @@ const PlayerDetailsPage = () => {
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
   const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
-  const [tradePlayerOpen, setTradePlayerOpen] = useState(false);
+  const [movePlayerOpen, setMovePlayerOpen] = useState(false);
 
   const updatePlayer = async (
     playerId: string,
@@ -168,11 +168,11 @@ const PlayerDetailsPage = () => {
     return updateStint(stint.id, payload);
   };
 
-  const tradePlayer = async (
+  const movePlayer = async (
     playerId: string,
     seasonId: string,
     toTeamId: string,
-    tradeDate: string,
+    moveDate: string,
     jerseyNumber?: number | null,
     position?: string | null,
     acquisitionType?: string | null,
@@ -184,7 +184,7 @@ const PlayerDetailsPage = () => {
           player_id: playerId,
           season_id: seasonId,
           to_team_id: toTeamId,
-          trade_date: tradeDate,
+          trade_date: moveDate,
           jersey_number: jerseyNumber ?? null,
           position: position ?? null,
           acquisition_type: acquisitionType ?? 'trade',
@@ -192,7 +192,7 @@ const PlayerDetailsPage = () => {
         { headers: authHeaders() },
       );
 
-      toast.success('Player traded successfully!');
+      toast.success('Player moved successfully!');
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['player', playerId] }),
@@ -214,7 +214,7 @@ const PlayerDetailsPage = () => {
       const message =
         axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
           ? err.response.data.error
-          : 'Failed to trade player';
+          : 'Failed to move player';
       toast.error(message);
       return false;
     }
@@ -238,10 +238,10 @@ const PlayerDetailsPage = () => {
   // Use the first stint (active) photo; if that's missing, fall back to the most-recent
   // historical stint that does have a photo; then fall back to the global player photo.
   const photo = stints.find((s) => s.photo)?.photo ?? player.photo;
-  const avatarBg = latestStint?.primary_color ?? undefined;
-  const avatarColor = latestStint?.text_color ?? undefined;
+  const avatarBg = latestStint?.team.primary_color ?? undefined;
+  const avatarColor = latestStint?.team.text_color ?? undefined;
   const effectivePosition = latestStint?.position ?? player.position;
-  const canTradePlayer = !!(
+  const canMovePlayer = !!(
     latestStint?.team_id &&
     latestStint?.season_id &&
     !latestStint?.end_date
@@ -254,9 +254,9 @@ const PlayerDetailsPage = () => {
     ...player,
     photo,
     jersey_number: latestStint?.jersey_number ?? null,
-    team_name: latestStint?.team_name ?? null,
-    primary_color: latestStint?.primary_color ?? null,
-    text_color: latestStint?.text_color ?? null,
+    team_name: latestStint?.team.name ?? null,
+    primary_color: latestStint?.team.primary_color ?? null,
+    text_color: latestStint?.team.text_color ?? null,
   };
 
   const playerInfoCard = (
@@ -324,7 +324,7 @@ const PlayerDetailsPage = () => {
             items={[
               { label: teamDetails?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
               {
-                label: latestStint?.team_name ?? teamDetails?.name ?? '…',
+                label: latestStint?.team.name ?? teamDetails?.name ?? '…',
                 path: `/admin/leagues/${leagueId}/teams/${teamId}`,
               },
               { label: fullName },
@@ -365,7 +365,7 @@ const PlayerDetailsPage = () => {
             <div className={styles.heroMeta}>
               {positionLabel && <span>{positionLabel}</span>}
               {jerseyNumber != null && <span>#{jerseyNumber}</span>}
-              {latestStint?.team_name && <span>{latestStint.team_name}</span>}
+              {latestStint?.team.name && <span>{latestStint.team.name}</span>}
             </div>
           </div>
           <span
@@ -374,14 +374,14 @@ const PlayerDetailsPage = () => {
             {player.is_active ? 'Active' : 'Inactive'}
           </span>
           <div className={styles.heroActions}>
-            {canTradePlayer && (
+            {canMovePlayer && (
               <Button
                 variant="outlined"
                 intent="neutral"
                 icon="swap_horiz"
                 size="sm"
-                tooltip="Trade player"
-                onClick={() => setTradePlayerOpen(true)}
+                tooltip="Move player"
+                onClick={() => setMovePlayerOpen(true)}
               />
             )}
             <Button
@@ -460,12 +460,13 @@ const PlayerDetailsPage = () => {
                       {stints.map((s) => (
                         <ListItem
                           key={s.id}
-                          image={s.team_logo}
+                          className={styles.stintItem}
+                          image={s.team.logo}
                           image_shape="square"
-                          name={s.team_name ?? 'Unknown team'}
+                          name={s.team.name ?? 'Unknown team'}
                           placeholder={teamCodePlaceholder(s)}
-                          primaryColor={s.primary_color}
-                          textColor={s.text_color}
+                          primaryColor={s.team.primary_color}
+                          textColor={s.team.text_color}
                           jerseyNumber={s.jersey_number}
                           subtitle={formatStintDates(s)}
                           rightContent={
@@ -518,14 +519,14 @@ const PlayerDetailsPage = () => {
         uploadPlayerPhoto={uploadStintPhoto}
       />
 
-      <TradePlayerModal
-        open={tradePlayerOpen}
+      <MovePlayerModal
+        open={movePlayerOpen}
         player={playerEditTarget}
         currentTeamId={latestStint?.team_id ?? teamId ?? ''}
         seasonId={latestStint?.season_id ?? ''}
         leagueId={leagueId ?? ''}
-        onClose={() => setTradePlayerOpen(false)}
-        tradePlayer={tradePlayer}
+        onClose={() => setMovePlayerOpen(false)}
+        movePlayer={movePlayer}
       />
 
       <PlayerInfoEditModal

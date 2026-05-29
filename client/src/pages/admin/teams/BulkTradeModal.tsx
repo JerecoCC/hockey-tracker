@@ -5,7 +5,7 @@ import Field from '@/components/Field/Field';
 import useTeams from '@/hooks/useTeams';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
-import tradeStyles from './TradePlayerModal.module.scss';
+import tradeStyles from './MovePlayerModal.module.scss';
 
 const EMPTY_ROW = { player_id: '', jersey_number: '' };
 

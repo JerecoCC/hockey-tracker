@@ -149,7 +149,7 @@ const StintEditModal = ({
   });
 
   const title =
-    mode === 'create' ? 'Record New Stint' : `Edit Stint - ${stint?.team_name ?? 'Stint'}`;
+    mode === 'create' ? 'Record New Stint' : `Edit Stint - ${stint?.team.name ?? 'Stint'}`;
   const confirmLabel = isSubmitting
     ? 'Saving...'
     : mode === 'create'

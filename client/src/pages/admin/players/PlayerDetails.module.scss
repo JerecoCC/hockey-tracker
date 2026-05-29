@@ -192,13 +192,12 @@
 }
 
 .stintItem {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-md $space-lg;
+  --list-item-logo-size: 48px;
+  --list-item-jersey-size: 40px;
+
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid $border;
-  border-radius: $radius-lg;
+  border-radius: $radius-md;
 }
 
 .stintLogo {

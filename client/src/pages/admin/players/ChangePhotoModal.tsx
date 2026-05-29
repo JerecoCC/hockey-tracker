@@ -123,7 +123,7 @@ const ChangePhotoModal = ({
           <div className={styles.photoInheritanceNotice}>
             <span className={styles.photoInheritanceLabel}>Inherited photo</span>
             <span>
-              No photo is saved for {stint?.team_name ?? 'this team'} in this season.
+              No photo is saved for {stint?.team.name ?? 'this team'} in this season.
               Until you upload one, the player uses the latest season photo
               {inheritedSeasonPhoto ? ` from ${inheritedTeamName}` : ''}.
             </span>
@@ -145,7 +145,7 @@ const ChangePhotoModal = ({
                       {entry.season_name ?? 'Season'}
                     </span>
                     <span className={styles.historyEntryDates}>
-                      {entry.team_name ?? stint?.team_name ?? 'Team'}
+                      {entry.team_name ?? stint?.team.name ?? 'Team'}
                     </span>
                   </div>
                 ))}

@@ -9,7 +9,7 @@ import {
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
 import { ACQUISITION_TYPE_LABELS, ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
-import styles from './TradePlayerModal.module.scss';
+import styles from './MovePlayerModal.module.scss';
 
 const POSITION_OPTIONS = [
   { value: 'C', label: 'Center' },
@@ -37,21 +37,19 @@ interface Props {
   seasonId: string;
   leagueId: string;
   onClose: () => void;
-  tradePlayer: (
+  movePlayer: (
     playerId: string,
     seasonId: string,
     toTeamId: string,
-    tradeDate: string,
+    moveDate: string,
     jerseyNumber?: number | null,
     position?: string | null,
     acquisitionType?: string | null,
   ) => Promise<boolean>;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 const formatDate = (d: string | null) => {
-  if (!d) return '—';
+  if (!d) return '-';
   return new Date(d + 'T00:00:00').toLocaleDateString(undefined, {
     month: 'short',
     day: 'numeric',
@@ -59,18 +57,17 @@ const formatDate = (d: string | null) => {
   });
 };
 
-const TradePlayerModal = ({
+const MovePlayerModal = ({
   open,
   player,
   currentTeamId,
   seasonId,
   leagueId,
   onClose,
-  tradePlayer,
+  movePlayer,
 }: Props) => {
   const { teams } = useTeams();
 
-  // Teams in same league excluding the current team
   const teamOptions = teams
     .filter((t) => t.league_id === leagueId && t.id !== currentTeamId)
     .map((t) => ({ value: t.id, label: t.name, logo: t.logo ?? undefined, code: t.code }));
@@ -83,18 +80,31 @@ const TradePlayerModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { to_team_id: null, trade_date: '', jersey_number: '', position: '', acquisition_type: 'trade' },
+    defaultValues: {
+      to_team_id: null,
+      trade_date: '',
+      jersey_number: '',
+      position: '',
+      acquisition_type: 'trade',
+    },
   });
 
   useEffect(() => {
-    if (open) reset({ to_team_id: null, trade_date: '', jersey_number: '', position: '', acquisition_type: 'trade' });
+    if (!open) return;
+    reset({
+      to_team_id: null,
+      trade_date: '',
+      jersey_number: '',
+      position: '',
+      acquisition_type: 'trade',
+    });
   }, [open, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!player || !data.to_team_id) return;
     const jerseyNumber = data.jersey_number ? Number(data.jersey_number) : null;
     const position = data.position || null;
-    const ok = await tradePlayer(
+    const ok = await movePlayer(
       player.id,
       seasonId,
       data.to_team_id,
@@ -109,28 +119,28 @@ const TradePlayerModal = ({
   return (
     <Modal
       open={open}
-      title={player ? `Trade ${player.first_name} ${player.last_name}` : 'Trade Player'}
+      title={player ? `Move ${player.first_name} ${player.last_name}` : 'Move Player'}
       onClose={onClose}
-      confirmLabel={isSubmitting ? 'Trading…' : 'Execute Trade'}
+      confirmLabel={isSubmitting ? 'Moving...' : 'Move Player'}
       confirmIcon="swap_horiz"
-      confirmForm="trade-player-form"
+      confirmForm="move-player-form"
       confirmDisabled={isSubmitting}
       busy={isSubmitting}
     >
       <div className={styles.layout}>
         <form
-          id="trade-player-form"
+          id="move-player-form"
           className={styles.form}
           onSubmit={onSubmit}
         >
           <Field
             type="select"
-            label="Trade To"
+            label="Move To"
             required
             control={control}
             name="to_team_id"
             options={teamOptions}
-            placeholder="Select destination team…"
+            placeholder="Select destination team..."
             searchable
             rules={{ required: true }}
             disabled={isSubmitting}
@@ -138,7 +148,7 @@ const TradePlayerModal = ({
           <div className={styles.row}>
             <Field
               type="datepicker"
-              label="Trade Date"
+              label="Move Date"
               control={control}
               name="trade_date"
               disabled={isSubmitting}
@@ -160,7 +170,7 @@ const TradePlayerModal = ({
             control={control}
             name="position"
             options={POSITION_OPTIONS}
-            placeholder="Inherit from player…"
+            placeholder="Inherit from player..."
             disabled={isSubmitting}
           />
           <Field
@@ -175,22 +185,22 @@ const TradePlayerModal = ({
 
         {stints.length > 0 && (
           <div className={styles.history}>
-            <h4 className={styles.historyTitle}>Trade History This Season</h4>
+            <h4 className={styles.historyTitle}>Team Moves This Season</h4>
             <ul className={styles.stintList}>
               {stints.map((s: PlayerStintRecord) => (
                 <li
                   key={s.id}
                   className={styles.stintItem}
                 >
-                  {s.team_logo && (
+                  {s.team.logo && (
                     <img
-                      src={s.team_logo}
-                      alt={s.team_name ?? ''}
+                      src={s.team.logo}
+                      alt={s.team.name ?? ''}
                       className={styles.stintLogo}
                     />
                   )}
                   <div className={styles.stintInfo}>
-                    <span className={styles.stintTeam}>{s.team_name ?? 'Unknown Team'}</span>
+                    <span className={styles.stintTeam}>{s.team.name ?? 'Unknown Team'}</span>
                     {s.jersey_number != null && (
                       <span className={styles.stintJersey}>#{s.jersey_number}</span>
                     )}
@@ -202,7 +212,7 @@ const TradePlayerModal = ({
                     )}
                   </div>
                   <span className={styles.stintDates}>
-                    {formatDate(s.start_date)} → {s.end_date ? formatDate(s.end_date) : 'Present'}
+                    {formatDate(s.start_date)} - {s.end_date ? formatDate(s.end_date) : 'Present'}
                   </span>
                 </li>
               ))}
@@ -214,4 +224,4 @@ const TradePlayerModal = ({
   );
 };
 
-export default TradePlayerModal;
+export default MovePlayerModal;

@@ -19,11 +19,14 @@ export interface PlayerStintRecord {
   start_date: string | null;
   end_date: string | null;
   created_at: string;
-  team_name: string | null;
-  team_code: string | null;
-  team_logo: string | null;
-  primary_color: string | null;
-  text_color: string | null;
+  team: {
+    id: string;
+    name: string | null;
+    code: string | null;
+    logo: string | null;
+    primary_color: string | null;
+    text_color: string | null;
+  };
 }
 
 export interface UpdateStintData {
