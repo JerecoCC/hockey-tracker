@@ -774,6 +774,20 @@ router.get('/:id', async (req, res) => {
               'created_at',            lg.created_at,
               'status',                lg.status,
               'current_home_was_home', (lg.home_team_id = g.home_team_id),
+              'home_team', json_build_object(
+                'id', lg.home_team_id,
+                'name', lg_home_ti.name, 'code', lg_home_ti.code, 'logo', lg_home_ti.logo,
+                'primary_color', lg_home_team.primary_color,
+                'secondary_color', lg_home_team.secondary_color,
+                'text_color', lg_home_team.text_color
+              ),
+              'away_team', json_build_object(
+                'id', lg.away_team_id,
+                'name', lg_away_ti.name, 'code', lg_away_ti.code, 'logo', lg_away_ti.logo,
+                'primary_color', lg_away_team.primary_color,
+                'secondary_color', lg_away_team.secondary_color,
+                'text_color', lg_away_team.text_color
+              ),
               'home_score',            lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
               'away_score',            lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
               'overtime_periods',      lg.overtime_periods,
@@ -811,6 +825,20 @@ router.get('/:id', async (req, res) => {
             )
           ORDER BY g2.scheduled_at ASC NULLS LAST, g2.created_at ASC
         ) lg
+        JOIN teams lg_home_team ON lg_home_team.id = lg.home_team_id
+        JOIN teams lg_away_team ON lg_away_team.id = lg.away_team_id
+        LEFT JOIN LATERAL (
+          SELECT name, code, logo FROM team_iterations
+          WHERE team_id = lg.home_team_id
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) lg_home_ti ON true
+        LEFT JOIN LATERAL (
+          SELECT name, code, logo FROM team_iterations
+          WHERE team_id = lg.away_team_id
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) lg_away_ti ON true
       ) prev ON true
       WHERE g.id = ${id}
     `;

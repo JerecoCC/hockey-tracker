@@ -234,7 +234,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
               !value || !!formValues.scheduled_date || 'A date is required when time is set',
           }}
         />
-        {game.status !== 'scheduled' && game.status !== 'final' && (
+        {game.status !== 'scheduled' && (
           <>
             <Field
               label="Start Time"
