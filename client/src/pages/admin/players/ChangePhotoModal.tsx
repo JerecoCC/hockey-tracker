@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
@@ -42,19 +42,36 @@ const ChangePhotoModal = ({
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: { season_id: '', photo: null },
   });
 
+  const selectedSeasonId = useWatch({ control, name: 'season_id' });
+  const explicitPhoto = history.find(
+    (entry) => entry.team_id === stint?.team_id && entry.season_id === selectedSeasonId,
+  );
+  const inheritedSeasonPhoto = history.find(
+    (entry) => entry.season_id === selectedSeasonId && entry.team_id !== stint?.team_id,
+  );
+  const inheritedPhoto = !explicitPhoto ? (inheritedSeasonPhoto?.photo ?? stint?.photo ?? null) : null;
+  const inheritedTeamName = inheritedSeasonPhoto?.team_name ?? 'another team';
+
   useEffect(() => {
     if (!open) return;
-    const latestPhoto = history.find((entry) => entry.season_id === stint?.season_id)?.photo;
     reset({
       season_id: stint?.season_id ?? '',
-      photo: latestPhoto ?? stint?.photo ?? null,
+      photo: history.find(
+        (entry) => entry.team_id === stint?.team_id && entry.season_id === stint?.season_id,
+      )?.photo ?? null,
     });
   }, [open, stint, history, reset]);
+
+  useEffect(() => {
+    if (!open || !selectedSeasonId) return;
+    setValue('photo', explicitPhoto?.photo ?? null);
+  }, [open, selectedSeasonId, explicitPhoto, setValue]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!stint || !data.season_id) return;
@@ -102,6 +119,16 @@ const ChangePhotoModal = ({
           shape="circle"
           disabled={isSubmitting}
         />
+        {inheritedPhoto && (
+          <div className={styles.photoInheritanceNotice}>
+            <span className={styles.photoInheritanceLabel}>Inherited photo</span>
+            <span>
+              No photo is saved for {stint?.team_name ?? 'this team'} in this season.
+              Until you upload one, the player uses the latest season photo
+              {inheritedSeasonPhoto ? ` from ${inheritedTeamName}` : ''}.
+            </span>
+          </div>
+        )}
 
         {history.length > 0 && (
           <>

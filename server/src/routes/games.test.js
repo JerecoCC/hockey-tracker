@@ -530,14 +530,17 @@ describe('PUT /api/admin/games/:id/goals/:goalId', () => {
     expect(res.body.error).toMatch(/required/i);
   });
 
-  it('updates a goal and returns the goal id', async () => {
-    sql.mockResolvedValueOnce([{ id: 'goal-1' }]);
+  it('updates a goal and returns the full goal record', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'goal-1' }])
+      .mockResolvedValueOnce([GOAL]);
     const res = await request(app).put('/api/admin/games/game-1/goals/goal-1').send({
       team_id: 'team-1', period: '1', scorer_id: 'player-1',
       goal_type: 'shorthanded', empty_net: false, period_time: '05:00',
     });
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('goal-1');
+    expect(res.body.scorer_prior_goals).toBe(2);
   });
 
   it('returns 404 when goal not found', async () => {

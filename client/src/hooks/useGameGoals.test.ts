@@ -32,6 +32,13 @@ const GOAL = {
   scorer_prior_goals: 2, assist_1_prior_assists: 5, assist_2_prior_assists: 0,
 };
 
+const GOAL_2 = {
+  ...GOAL,
+  id: 'goal-2',
+  period: '2',
+  created_at: '2024-10-15T00:05:00Z',
+};
+
 const POST_DATA = {
   team_id: 'team-1', period: '1', scorer_id: 'player-1',
   goal_type: 'even-strength' as const, empty_net: false, period_time: '10:23',
@@ -83,11 +90,14 @@ describe('useGameGoals – addGoal', () => {
     mockedAxios.post.mockResolvedValueOnce({ data: GOAL });
     const { result } = renderHook(() => useGameGoals('game-1'), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
+    mockedAxios.get.mockClear();
 
     let ok: boolean;
     await act(async () => { ok = await result.current.addGoal(POST_DATA); });
 
     expect(ok!).toBe(true);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.goals).toEqual([GOAL]));
     expect(mockedAxios.post).toHaveBeenCalledWith(
       expect.stringContaining('/admin/games/game-1/goals'),
       POST_DATA,
@@ -122,14 +132,18 @@ describe('useGameGoals – addGoal', () => {
 // ---------------------------------------------------------------------------
 describe('useGameGoals – updateGoal', () => {
   it('puts to /admin/games/:id/goals/:goalId and returns true', async () => {
-    mockedAxios.put.mockResolvedValueOnce({ data: GOAL });
+    const updatedGoal = { ...GOAL, period: '2' };
+    mockedAxios.put.mockResolvedValueOnce({ data: updatedGoal });
     const { result } = renderHook(() => useGameGoals('game-1'), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
+    mockedAxios.get.mockClear();
 
     let ok: boolean;
     await act(async () => { ok = await result.current.updateGoal('goal-1', POST_DATA); });
 
     expect(ok!).toBe(true);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.goals).toEqual([updatedGoal]));
     expect(mockedAxios.put).toHaveBeenCalledWith(
       expect.stringContaining('/admin/games/game-1/goals/goal-1'),
       POST_DATA,
@@ -164,13 +178,17 @@ describe('useGameGoals – updateGoal', () => {
 describe('useGameGoals – deleteGoal', () => {
   it('deletes /admin/games/:id/goals/:goalId and returns true', async () => {
     mockedAxios.delete.mockResolvedValueOnce({});
+    mockedAxios.get.mockResolvedValueOnce({ data: [GOAL, GOAL_2] });
     const { result } = renderHook(() => useGameGoals('game-1'), { wrapper: createWrapper() });
     await waitFor(() => expect(result.current.loading).toBe(false));
+    mockedAxios.get.mockClear();
 
     let ok: boolean;
     await act(async () => { ok = await result.current.deleteGoal('goal-1'); });
 
     expect(ok!).toBe(true);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
+    await waitFor(() => expect(result.current.goals).toEqual([GOAL_2]));
     expect(mockedAxios.delete).toHaveBeenCalledWith(
       expect.stringContaining('/admin/games/game-1/goals/goal-1'),
       expect.objectContaining({ headers: expect.any(Object) }),

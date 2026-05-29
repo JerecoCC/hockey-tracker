@@ -11,6 +11,24 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
+const goalPeriodOrder = (period: string) => {
+  switch (period) {
+    case '1': return 1;
+    case '2': return 2;
+    case '3': return 3;
+    case 'OT': return 4;
+    case 'SO': return 5;
+    default: return 6;
+  }
+};
+
+const sortGoals = (goals: GoalRecord[]) =>
+  [...goals].sort((a, b) => {
+    const periodDiff = goalPeriodOrder(a.period) - goalPeriodOrder(b.period);
+    if (periodDiff !== 0) return periodDiff;
+    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface GoalRecord {
@@ -90,12 +108,14 @@ const useGameGoals = (gameId: string | undefined) => {
   const addGoal = async (data: PostGoalData): Promise<boolean> => {
     if (!gameId) return false;
     try {
-      await axios.post<GoalRecord>(
+      const response = await axios.post<GoalRecord>(
         `${API}/admin/games/${gameId}/goals`,
         data,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['game-goals', gameId] });
+      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) =>
+        sortGoals([...current.filter((goal) => goal.id !== response.data.id), response.data]),
+      );
       // Also refresh the game record so period scores update in the scoreboard.
       await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
       await queryClient.invalidateQueries({ queryKey: ['games'] });
@@ -109,12 +129,14 @@ const useGameGoals = (gameId: string | undefined) => {
   const updateGoal = async (goalId: string, data: PostGoalData): Promise<boolean> => {
     if (!gameId) return false;
     try {
-      await axios.put<GoalRecord>(
+      const response = await axios.put<GoalRecord>(
         `${API}/admin/games/${gameId}/goals/${goalId}`,
         data,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['game-goals', gameId] });
+      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) =>
+        sortGoals(current.map((goal) => (goal.id === goalId ? response.data : goal))),
+      );
       await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
       await queryClient.invalidateQueries({ queryKey: ['games'] });
       return true;
@@ -131,7 +153,9 @@ const useGameGoals = (gameId: string | undefined) => {
         `${API}/admin/games/${gameId}/goals/${goalId}`,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['game-goals', gameId] });
+      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) =>
+        current.filter((goal) => goal.id !== goalId),
+      );
       // Refresh game so period scores and totals recalculate.
       await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
       await queryClient.invalidateQueries({ queryKey: ['games'] });

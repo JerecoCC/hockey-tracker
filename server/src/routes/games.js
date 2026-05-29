@@ -1990,7 +1990,7 @@ router.post('/:id/goals', async (req, res) => {
     // Return the full goal record with player/team details.
     const [full] = await sql`
       SELECT
-        go.id, go.game_id, go.team_id, go.period, go.goal_type, go.period_time,
+        go.id, go.game_id, go.team_id, go.period, go.goal_type, go.empty_net, go.period_time,
         go.scorer_id, go.assist_1_id, go.assist_2_id, go.created_at,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color,
@@ -2000,7 +2000,36 @@ router.post('/:id/goals', async (req, res) => {
         a1p.first_name AS assist_1_first_name, a1p.last_name AS assist_1_last_name, COALESCE(a1pt.photo, best_player_photo(a1p.id), a1p.photo) AS assist_1_photo,
         COALESCE(a1pt_jnh.jersey_number, a1pt.jersey_number) AS assist_1_jersey_number,
         a2p.first_name AS assist_2_first_name, a2p.last_name AS assist_2_last_name, COALESCE(a2pt.photo, best_player_photo(a2p.id), a2p.photo) AS assist_2_photo,
-        COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number) AS assist_2_jersey_number
+        COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number) AS assist_2_jersey_number,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE g2.scorer_id = go.scorer_id
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS scorer_prior_goals,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE go.assist_1_id IS NOT NULL
+            AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS assist_1_prior_assists,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE go.assist_2_id IS NOT NULL
+            AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS assist_2_prior_assists
       FROM goals go
       JOIN games g ON g.id = go.game_id
       JOIN players sp ON sp.id = go.scorer_id
@@ -2088,7 +2117,113 @@ router.put('/:id/goals/:goalId', async (req, res) => {
       RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Goal not found' });
-    return res.json({ id: rows[0].id });
+
+    const [full] = await sql`
+      SELECT
+        go.id,
+        go.game_id,
+        go.team_id,
+        go.period,
+        go.goal_type,
+        go.empty_net,
+        go.period_time,
+        go.scorer_id,
+        go.assist_1_id,
+        go.assist_2_id,
+        go.created_at,
+        ti.name             AS team_name,
+        ti.code             AS team_code,
+        ti.logo             AS team_logo,
+        t.primary_color     AS team_primary_color,
+        t.text_color        AS team_text_color,
+        sp.first_name       AS scorer_first_name,
+        sp.last_name        AS scorer_last_name,
+        sp.date_of_birth    AS scorer_date_of_birth,
+        spt.start_date      AS scorer_start_date,
+        COALESCE(spt.photo, best_player_photo(sp.id), sp.photo) AS scorer_photo,
+        COALESCE(spt_jnh.jersey_number, spt.jersey_number)      AS scorer_jersey_number,
+        a1p.first_name AS assist_1_first_name,
+        a1p.last_name  AS assist_1_last_name,
+        COALESCE(a1pt.photo, best_player_photo(a1p.id), a1p.photo) AS assist_1_photo,
+        COALESCE(a1pt_jnh.jersey_number, a1pt.jersey_number)       AS assist_1_jersey_number,
+        a2p.first_name AS assist_2_first_name,
+        a2p.last_name  AS assist_2_last_name,
+        COALESCE(a2pt.photo, best_player_photo(a2p.id), a2p.photo) AS assist_2_photo,
+        COALESCE(a2pt_jnh.jersey_number, a2pt.jersey_number)       AS assist_2_jersey_number,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE g2.scorer_id = go.scorer_id
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS scorer_prior_goals,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE go.assist_1_id IS NOT NULL
+            AND (g2.assist_1_id = go.assist_1_id OR g2.assist_2_id = go.assist_1_id)
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS assist_1_prior_assists,
+        (SELECT COUNT(*)::int
+          FROM goals g2
+          JOIN games gm2 ON gm2.id = g2.game_id
+          WHERE go.assist_2_id IS NOT NULL
+            AND (g2.assist_1_id = go.assist_2_id OR g2.assist_2_id = go.assist_2_id)
+            AND gm2.season_id = g.season_id
+            AND gm2.status = 'final'
+            AND (g.game_type != 'playoff' OR gm2.game_type = 'playoff')
+            AND gm2.scheduled_at < g.scheduled_at
+        ) AS assist_2_prior_assists
+      FROM goals go
+      JOIN games g ON g.id = go.game_id
+      JOIN players sp ON sp.id = go.scorer_id
+      LEFT JOIN player_teams spt
+        ON spt.player_id = go.scorer_id AND spt.team_id = go.team_id
+        AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = spt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) spt_jnh ON true
+      LEFT JOIN players a1p ON a1p.id = go.assist_1_id
+      LEFT JOIN player_teams a1pt
+        ON a1pt.player_id = go.assist_1_id AND a1pt.team_id = go.team_id
+        AND (a1pt.start_date IS NULL OR a1pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        AND (a1pt.end_date   IS NULL OR a1pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = a1pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) a1pt_jnh ON true
+      LEFT JOIN players a2p ON a2p.id = go.assist_2_id
+      LEFT JOIN player_teams a2pt
+        ON a2pt.player_id = go.assist_2_id AND a2pt.team_id = go.team_id
+        AND (a2pt.start_date IS NULL OR a2pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        AND (a2pt.end_date   IS NULL OR a2pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT jersey_number FROM jersey_number_history
+        WHERE player_teams_id = a2pt.id
+          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
+        ORDER BY effective_from DESC LIMIT 1
+      ) a2pt_jnh ON true
+      JOIN teams t ON t.id = go.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = go.team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      WHERE go.id = ${rows[0].id}
+    `;
+    return res.json(full);
   } catch (err) {
     console.error('goals update error:', err);
     return res.status(500).json({ error: 'Internal server error' });

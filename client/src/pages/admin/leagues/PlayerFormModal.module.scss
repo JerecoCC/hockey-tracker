@@ -115,3 +115,21 @@
 .historyEntryDates {
   flex: 1;
 }
+
+.photoInheritanceNotice {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  padding: $space-sm $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.02);
+  color: $text-dim;
+  font-size: $font-sm;
+  line-height: 1.4;
+}
+
+.photoInheritanceLabel {
+  color: $text-body;
+  font-weight: 700;
+}
