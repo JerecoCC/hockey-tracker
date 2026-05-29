@@ -1,6 +1,9 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
-const { sql } = require('../db');
+const { desc, eq, sql } = require('drizzle-orm');
+const { db, schema } = require('../db');
+
+const { users } = schema;
 
 // All admin routes require the admin role
 router.use(requireAdmin);
@@ -10,12 +13,18 @@ router.use(requireAdmin);
 // ---------------------------------------------------------------------------
 router.get('/users', async (_req, res) => {
   try {
-    const users = await sql`
-      SELECT id, display_name, email, role, google_id IS NOT NULL AS is_google, created_at
-      FROM users
-      ORDER BY created_at DESC
-    `;
-    return res.json(users);
+    const rows = await db
+      .select({
+        id: users.id,
+        display_name: users.displayName,
+        email: users.email,
+        role: users.role,
+        is_google: sql`${users.googleId} IS NOT NULL`,
+        created_at: users.createdAt,
+      })
+      .from(users)
+      .orderBy(desc(users.createdAt));
+    return res.json(rows);
   } catch (err) {
     console.error('admin list users error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -39,11 +48,16 @@ router.patch('/users/:id/role', async (req, res) => {
   }
 
   try {
-    const rows = await sql`
-      UPDATE users SET role = ${role}
-      WHERE id = ${id}
-      RETURNING id, display_name, email, role
-    `;
+    const rows = await db
+      .update(users)
+      .set({ role })
+      .where(eq(users.id, id))
+      .returning({
+        id: users.id,
+        display_name: users.displayName,
+        email: users.email,
+        role: users.role,
+      });
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
     return res.json(rows[0]);
   } catch (err) {
@@ -63,9 +77,10 @@ router.delete('/users/:id', async (req, res) => {
   }
 
   try {
-    const rows = await sql`
-      DELETE FROM users WHERE id = ${id} RETURNING id
-    `;
+    const rows = await db
+      .delete(users)
+      .where(eq(users.id, id))
+      .returning({ id: users.id });
     if (rows.length === 0) return res.status(404).json({ error: 'User not found' });
     return res.json({ message: 'User deleted' });
   } catch (err) {
@@ -75,4 +90,3 @@ router.delete('/users/:id', async (req, res) => {
 });
 
 module.exports = router;
-

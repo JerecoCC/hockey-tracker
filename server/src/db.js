@@ -1,4 +1,6 @@
 const { neon } = require('@neondatabase/serverless');
+const { drizzle } = require('drizzle-orm/neon-http');
+const schema = require('./schema');
 
 const rawUrl = process.env.POSTGRES_URL;
 
@@ -14,6 +16,7 @@ const connectionString = `${rawUrl}${sep}options=-c%20TimeZone%3DAmerica/New_Yor
 
 // `sql` is a tagged-template function – every call opens a pooled HTTP connection
 const sql = neon(connectionString);
+const db = drizzle(sql, { schema });
 
 /**
  * Run once at startup: create the users table if it doesn't exist.
@@ -1372,5 +1375,5 @@ async function initSchema() {
   console.log('Database schema ready');
 }
 
-module.exports = { sql, initSchema };
+module.exports = { sql, db, schema, initSchema };
 
