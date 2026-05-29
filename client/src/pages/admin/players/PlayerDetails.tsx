@@ -7,12 +7,12 @@ import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
+import ListItem from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import TitleRow from '@/components/TitleRow/TitleRow';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
   type PlayerCareerStatRecord,
@@ -101,6 +101,18 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   day: 'numeric',
   year: 'numeric',
 });
+
+const teamCodePlaceholder = (stint: PlayerStintRecord) =>
+  stint.team_code ?? (stint.team_name ? stint.team_name.slice(0, 3).toUpperCase() : 'TEAM');
+
+const formatStintDates = (stint: PlayerStintRecord) => {
+  const start = stint.start_date ? DATE_FMT.format(new Date(stint.start_date)) : null;
+  const end = stint.end_date ? DATE_FMT.format(new Date(stint.end_date)) : null;
+  if (start && end) return `${start} - ${end}`;
+  if (start) return `${start} - Present`;
+  if (end) return `Until ${end}`;
+  return 'Dates not set';
+};
 
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
@@ -446,71 +458,45 @@ const PlayerDetailsPage = () => {
                   ) : (
                     <ul className={styles.stintList}>
                       {stints.map((s) => (
-                        <li
+                        <ListItem
                           key={s.id}
-                          className={styles.stintItem}
-                        >
-                          <TeamLogo
-                            logo={s.team_logo}
-                            code={
-                              s.team_code ??
-                              (s.team_name ? s.team_name.slice(0, 3).toUpperCase() : 'TEAM')
-                            }
-                            primaryColor={s.primary_color}
-                            textColor={s.text_color}
-                            size={40}
-                            shape="square"
-                          />
-                          <div className={styles.stintInfo}>
-                            <span className={styles.stintTeam}>
-                              {s.team_name ?? 'Unknown team'}
-                            </span>
-                            <span className={styles.stintMeta}>
-                              {s.jersey_number != null ? `#${s.jersey_number} • ` : ''}
-                              {s.acquisition_type
-                                ? `${ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type} • `
-                                : ''}
-                              {s.start_date
-                                ? DATE_FMT.format(new Date(s.start_date))
-                                : s.end_date
-                                  ? 'Until'
-                                  : 'Dates not set'}{' '}
-                              {s.start_date
-                                ? s.end_date
-                                  ? `• ${DATE_FMT.format(new Date(s.end_date))}`
-                                  : ' – Present'
-                                : s.end_date
-                                  ? DATE_FMT.format(new Date(s.end_date))
-                                  : ''}
-                            </span>
-                          </div>
-                          {!s.end_date && (
-                            <Button
-                              variant="outlined"
-                              intent="neutral"
-                              icon="jersey"
-                              size="sm"
-                              tooltip="Change jersey number"
-                              onClick={() => setChangingJerseyStint(s)}
-                            />
-                          )}
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            icon="image"
-                            size="sm"
-                            tooltip="Change season photo"
-                            onClick={() => setChangingPhotoStint(s)}
-                          />
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            icon="edit"
-                            size="sm"
-                            tooltip="Edit stint"
-                            onClick={() => setEditingStint(s)}
-                          />
-                        </li>
+                          image={s.team_logo}
+                          image_shape="square"
+                          name={s.team_name ?? 'Unknown team'}
+                          placeholder={teamCodePlaceholder(s)}
+                          primaryColor={s.primary_color}
+                          textColor={s.text_color}
+                          jerseyNumber={s.jersey_number}
+                          subtitle={formatStintDates(s)}
+                          rightContent={
+                            s.acquisition_type
+                              ? {
+                                  type: 'tag',
+                                  label:
+                                    ACQUISITION_TYPE_LABELS[s.acquisition_type] ??
+                                    s.acquisition_type,
+                                  intent: 'info',
+                                }
+                              : undefined
+                          }
+                          actions={[
+                            !s.end_date && {
+                              icon: 'jersey',
+                              tooltip: 'Change jersey number',
+                              onClick: () => setChangingJerseyStint(s),
+                            },
+                            {
+                              icon: 'image',
+                              tooltip: 'Change season photo',
+                              onClick: () => setChangingPhotoStint(s),
+                            },
+                            {
+                              icon: 'edit',
+                              tooltip: 'Edit stint',
+                              onClick: () => setEditingStint(s),
+                            },
+                          ]}
+                        />
                       ))}
                     </ul>
                   )}
