@@ -253,10 +253,13 @@ const PlayerDetailsPage = () => {
   const playerEditTarget: TeamPlayerRecord = {
     ...player,
     photo,
+    player_team_id: latestStint?.id ?? null,
     jersey_number: latestStint?.jersey_number ?? null,
+    team_id: latestStint?.team_id ?? null,
     team_name: latestStint?.team.name ?? null,
     primary_color: latestStint?.team.primary_color ?? null,
     text_color: latestStint?.team.text_color ?? null,
+    is_prospect: latestStint?.is_prospect ?? false,
   };
 
   const playerInfoCard = (

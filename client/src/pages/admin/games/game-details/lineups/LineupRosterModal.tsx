@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
+import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import styles from './LineupRosterModal.module.scss';
 
@@ -54,13 +56,19 @@ const LineupRosterModal = ({
   const [jerseyInput, setJerseyInput] = useState('');
   const [pendingMissing, setPendingMissing] = useState<number[]>([]);
   const [alreadyAdded, setAlreadyAdded] = useState<number[]>([]);
+  const [showProspects, setShowProspects] = useState(false);
 
   const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId, game_date: gameDate }],
+    queryKey: ['players', { team_id: teamId, season_id: seasonId, game_date: gameDate, showProspects }],
     queryFn: async () => {
       const { data } = await axios.get<TeamPlayerRecord[]>(`${API}/admin/players`, {
         headers: authHeaders(),
-        params: { team_id: teamId, season_id: seasonId, game_date: gameDate },
+        params: {
+          team_id: teamId,
+          season_id: seasonId,
+          game_date: gameDate,
+          ...(showProspects ? { include_prospects: 'true' } : {}),
+        },
       });
       return data;
     },
@@ -161,6 +169,7 @@ const LineupRosterModal = ({
     setJerseyInput('');
     setPendingMissing([]);
     setAlreadyAdded([]);
+    setShowProspects(false);
     onClose();
   };
 
@@ -254,6 +263,16 @@ const LineupRosterModal = ({
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
+          <ToggleButton
+            active={showProspects}
+            onClick={() => setShowProspects((v) => !v)}
+            icon="visibility"
+            size="sm"
+            activeTooltip="Hide prospects"
+            inactiveTooltip="Show prospects"
+          >
+            Prospects
+          </ToggleButton>
         </div>
 
         {filtered.length === 0 ? (
@@ -289,6 +308,7 @@ const LineupRosterModal = ({
                   imageTextColor={p.text_color}
                   eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                   name={`${p.last_name}, ${p.first_name}`}
+                  rightContent={p.is_prospect ? <Badge label="Prospect" /> : undefined}
                 />
               ))}
             </ul>

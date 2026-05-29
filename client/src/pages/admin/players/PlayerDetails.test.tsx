@@ -178,6 +178,7 @@ beforeEach(() => {
           text_color: '#ffffff',
         },
         jersey_number: 19,
+        is_prospect: false,
         position: 'C',
         acquisition_type: 'trade',
         start_date: '2024-10-01',

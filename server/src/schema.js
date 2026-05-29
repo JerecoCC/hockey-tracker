@@ -150,6 +150,7 @@ const playerTeams = pgTable('player_teams', {
   teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
   jerseyNumber: smallint('jersey_number'),
+  isProspect: boolean('is_prospect').notNull().default(false),
   position: text('position'),
   photo: text('photo'),
   acquisitionType: text('acquisition_type'),

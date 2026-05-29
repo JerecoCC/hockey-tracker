@@ -45,6 +45,8 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 // ---------------------------------------------------------------------------
 router.get('/', async (req, res) => {
   const { league_id, team_id, season_id, game_date } = req.query;
+  const prospectsOnly = req.query.prospects_only === 'true';
+  const includeProspects = prospectsOnly || req.query.include_prospects === 'true';
   try {
     const players = league_id && season_id
       ? await sql`
@@ -54,7 +56,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -64,6 +66,8 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.is_prospect,
               t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
@@ -73,6 +77,8 @@ router.get('/', async (req, res) => {
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.season_id  = ${season_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             JOIN seasons      s  ON s.id          = pt.season_id
@@ -96,7 +102,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -106,6 +112,8 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.is_prospect,
               t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
@@ -114,6 +122,8 @@ router.get('/', async (req, res) => {
               t.text_color
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             LEFT JOIN LATERAL (
@@ -134,7 +144,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -144,6 +154,9 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.team_id,
+              pt.is_prospect,
               ti.name       AS team_name,
               t.primary_color,
               t.text_color
@@ -151,6 +164,8 @@ router.get('/', async (req, res) => {
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.team_id   = ${team_id}
                                 AND pt.season_id = ${season_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                                 AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
                                 AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
             JOIN teams        t  ON t.id          = pt.team_id
@@ -172,7 +187,7 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name, COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
@@ -181,12 +196,17 @@ router.get('/', async (req, res) => {
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.team_id,
+              pt.is_prospect,
               ti.name       AS team_name,
               t.primary_color,
               t.text_color
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.team_id   = ${team_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations

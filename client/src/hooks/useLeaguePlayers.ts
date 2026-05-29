@@ -31,6 +31,7 @@ export interface PlayerRecord {
   is_active: boolean;
   created_at: string;
   // Roster fields — populated when fetching by league_id or team_id
+  player_team_id?: string | null;
   jersey_number?: number | null;
   team_id?: string | null;
   team_name?: string | null;
@@ -38,6 +39,7 @@ export interface PlayerRecord {
   team_logo?: string | null;
   primary_color?: string | null;
   text_color?: string | null;
+  is_prospect?: boolean;
 }
 
 export interface CreatePlayerData {

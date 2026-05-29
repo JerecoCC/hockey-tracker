@@ -13,6 +13,7 @@ export interface PlayerStintRecord {
   team_id: string;
   season_id: string;
   jersey_number: number | null;
+  is_prospect: boolean;
   photo: string | null;
   position: string | null;
   acquisition_type: string | null;
@@ -283,14 +284,18 @@ export const useStintActions = (playerId: string | null) => {
 export interface PlayerRosterInput {
   player_id: string;
   jersey_number?: number | null;
+  is_prospect?: boolean;
 }
 
 /** Extends PlayerRecord with team-assignment fields returned when fetching by team_id. */
 export interface TeamPlayerRecord extends PlayerRecord {
+  player_team_id: string | null;
   jersey_number: number | null;
+  team_id: string | null;
   team_name: string | null;
   primary_color: string | null;
   text_color: string | null;
+  is_prospect: boolean;
 }
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -302,17 +307,28 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
+interface UseTeamPlayersOptions {
+  includeProspects?: boolean;
+  prospectsOnly?: boolean;
+}
+
+const useTeamPlayers = (
+  teamId: string | undefined,
+  seasonId?: string,
+  options: UseTeamPlayersOptions = {},
+) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
   const { data: players = [], isLoading: loading } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId }],
+    queryKey: ['players', { team_id: teamId, season_id: seasonId, ...options }],
     queryFn: async () => {
       try {
         const params: Record<string, string> = {};
         if (teamId) params.team_id = teamId;
         if (seasonId) params.season_id = seasonId;
+        if (options.includeProspects) params.include_prospects = 'true';
+        if (options.prospectsOnly) params.prospects_only = 'true';
         const { data } = await axios.get<TeamPlayerRecord[]>(
           `${API}/admin/players`,
           { headers: authHeaders(), params },
@@ -421,6 +437,36 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
+  const updatePlayerRosterRole = async (
+    player: TeamPlayerRecord,
+    isProspect: boolean,
+  ): Promise<boolean> => {
+    if (!player.team_id || !seasonId) return false;
+    setBusy(player.id);
+    try {
+      await axios.patch(
+        `${API}/admin/player-teams`,
+        {
+          player_id: player.id,
+          team_id: player.team_id,
+          season_id: seasonId,
+          is_prospect: isProspect,
+        },
+        { headers: authHeaders() },
+      );
+      toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update roster status'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deletePlayer = async (playerId: string): Promise<void> => {
     setBusy(playerId);
     try {
@@ -452,7 +498,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
           ? `${count} player${count !== 1 ? 's' : ''} added (${skipped} already rostered)`
           : `${count} player${count !== 1 ? 's' : ''} added to roster!`,
       );
-      await queryClient.invalidateQueries({ queryKey: ['players', { team_id: teamId }] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to add players to roster'));
@@ -554,7 +600,20 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer, bulkTradePlayers };
+  return {
+    players,
+    loading,
+    busy,
+    addPlayersToRoster,
+    createAndRosterPlayers,
+    updatePlayer,
+    updateJerseyNumber,
+    updatePlayerTeam,
+    updatePlayerRosterRole,
+    uploadPlayerPhoto,
+    deletePlayer,
+    bulkTradePlayers,
+  };
 };
 
 export default useTeamPlayers;

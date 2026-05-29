@@ -43,12 +43,12 @@ router.post('/bulk', async (req, res) => {
 
   try {
     const created = [];
-    for (const { player_id, jersey_number = null } of players) {
+    for (const { player_id, jersey_number = null, is_prospect = false } of players) {
       const rows = await sql`
-        INSERT INTO player_teams (player_id, team_id, season_id, jersey_number)
-        VALUES (${player_id}, ${team_id}, ${season_id}, ${jersey_number})
+        INSERT INTO player_teams (player_id, team_id, season_id, jersey_number, is_prospect)
+        VALUES (${player_id}, ${team_id}, ${season_id}, ${jersey_number}, ${!!is_prospect})
         ON CONFLICT (player_id, season_id) WHERE end_date IS NULL DO NOTHING
-        RETURNING id, player_id, team_id, season_id, jersey_number
+        RETURNING id, player_id, team_id, season_id, jersey_number, is_prospect
       `;
       if (rows.length > 0) created.push(rows[0]);
     }
@@ -67,6 +67,7 @@ router.post('/bulk', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
   const { player_id, team_id, season_id, jersey_number, photo, position, start_date, end_date } = req.body;
+  const is_prospect = !!req.body.is_prospect;
   const acquisition_type = normalizeAcquisitionType(req.body.acquisition_type);
   if (!player_id) return res.status(400).json({ error: 'player_id is required' });
   if (!team_id)   return res.status(400).json({ error: 'team_id is required' });
@@ -76,16 +77,17 @@ router.post('/', async (req, res) => {
   try {
     const rows = await sql`
       INSERT INTO player_teams
-        (player_id, team_id, season_id, jersey_number, position, acquisition_type, start_date, end_date)
+        (player_id, team_id, season_id, jersey_number, is_prospect, position, acquisition_type, start_date, end_date)
       VALUES (
         ${player_id}, ${team_id}, ${season_id},
         ${jersey_number ?? null},
+        ${is_prospect},
         ${position ?? null},
         ${acquisition_type},
         ${start_date ?? null}::date,
         ${end_date   ?? null}::date
       )
-      RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
+      RETURNING id, player_id, team_id, season_id, jersey_number, is_prospect, position, acquisition_type,
                 start_date::text AS start_date, end_date::text AS end_date
     `;
     if (photo) {
@@ -125,6 +127,7 @@ router.patch('/', async (req, res) => {
   const jerseyInBody   = 'jersey_number' in req.body;
   const photoInBody    = 'photo' in req.body;
   const positionInBody = 'position' in req.body;
+  const prospectInBody = 'is_prospect' in req.body;
 
   try {
     // If jersey_number is changing, record history before the update.
@@ -173,12 +176,13 @@ router.patch('/', async (req, res) => {
       UPDATE player_teams
       SET
         jersey_number = CASE WHEN ${jerseyInBody}   THEN ${jersey_number ?? null} ELSE jersey_number END,
-        position      = CASE WHEN ${positionInBody}  THEN ${position ?? null}      ELSE position      END
+        position      = CASE WHEN ${positionInBody}  THEN ${position ?? null}      ELSE position      END,
+        is_prospect   = CASE WHEN ${prospectInBody}  THEN ${!!req.body.is_prospect} ELSE is_prospect END
       WHERE player_id = ${player_id}
         AND team_id   = ${team_id}
         AND season_id = ${season_id}
         AND end_date IS NULL
-      RETURNING id, player_id, team_id, season_id, jersey_number, position
+      RETURNING id, player_id, team_id, season_id, jersey_number, is_prospect, position
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Player team record not found' });
     if (photoInBody) {
@@ -235,6 +239,7 @@ router.get('/history/:playerId', async (req, res) => {
         team_id: playerTeams.teamId,
         season_id: playerTeams.seasonId,
         jersey_number: playerTeams.jerseyNumber,
+        is_prospect: playerTeams.isProspect,
         photo: ormSql`best_player_photo(${playerTeams.playerId}, ${playerTeams.seasonId}, ${playerTeams.teamId})`,
         position: playerTeams.position,
         acquisition_type: hasAcquisitionType ? playerTeams.acquisitionType : ormSql`NULL::text`,
@@ -282,6 +287,7 @@ router.get('/history/:playerId', async (req, res) => {
       team_id: row.team_id,
       season_id: row.season_id,
       jersey_number: row.jersey_number,
+      is_prospect: row.is_prospect,
       photo: row.photo,
       position: row.position,
       acquisition_type: row.acquisition_type,
@@ -415,6 +421,7 @@ router.patch('/:id', async (req, res) => {
   const teamInBody      = 'team_id'       in req.body;
   const seasonInBody    = 'season_id'     in req.body;
   const jerseyInBody    = 'jersey_number' in req.body;
+  const prospectInBody  = 'is_prospect'   in req.body;
   const photoInBody     = 'photo'         in req.body;
   const positionInBody  = 'position'      in req.body;
   const acquisitionInBody = 'acquisition_type' in req.body;
@@ -429,6 +436,7 @@ router.patch('/:id', async (req, res) => {
         team_id       = CASE WHEN ${teamInBody}      THEN ${team_id}::uuid                   ELSE team_id       END,
         season_id     = CASE WHEN ${seasonInBody}    THEN ${season_id}::uuid                 ELSE season_id     END,
         jersey_number = CASE WHEN ${jerseyInBody}    THEN ${jersey_number ?? null}            ELSE jersey_number END,
+        is_prospect   = CASE WHEN ${prospectInBody}  THEN ${!!req.body.is_prospect}           ELSE is_prospect   END,
         position      = CASE WHEN ${positionInBody}  THEN ${position ?? null}                 ELSE position      END,
         acquisition_type = CASE WHEN ${acquisitionInBody} THEN ${acquisition_type}             ELSE acquisition_type END,
         start_date    = CASE WHEN ${startDateInBody} THEN ${start_date ?? null}::date         ELSE start_date    END,
@@ -436,7 +444,7 @@ router.patch('/:id', async (req, res) => {
       WHERE id = ${id}
       RETURNING
         id, player_id, team_id, season_id,
-        jersey_number, position, acquisition_type,
+        jersey_number, is_prospect, position, acquisition_type,
         start_date::text AS start_date,
         end_date::text   AS end_date
     `;

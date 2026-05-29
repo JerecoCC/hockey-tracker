@@ -98,7 +98,17 @@ const TeamDetailsPage = () => {
               />
             ),
           },
-          { label: 'Prospects', icon: 'search', content: <TeamProspectsTab /> },
+          {
+            label: 'Prospects',
+            icon: 'search',
+            content: (
+              <TeamProspectsTab
+                teamId={team.id}
+                leagueId={team.league_id ?? ''}
+                latestSeasonId={team.latest_season_id ?? null}
+              />
+            ),
+          },
           {
             label: 'History',
             icon: 'history',

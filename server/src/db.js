@@ -355,6 +355,7 @@ async function initSchema() {
       team_id        UUID NOT NULL REFERENCES teams(id)    ON DELETE CASCADE,
       season_id      UUID NOT NULL REFERENCES seasons(id)  ON DELETE CASCADE,
       jersey_number  SMALLINT,
+      is_prospect    BOOLEAN NOT NULL DEFAULT FALSE,
       photo          TEXT,
       acquisition_type TEXT,
       start_date     DATE,
@@ -371,6 +372,7 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS position TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS acquisition_type TEXT`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS is_prospect BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_acquisition_type_check`;
   await sql`
     ALTER TABLE player_teams ADD CONSTRAINT player_teams_acquisition_type_check

@@ -52,17 +52,21 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     addPlayersToRoster,
     updatePlayer,
     updatePlayerTeam,
+    updatePlayerRosterRole,
     uploadPlayerPhoto,
     deletePlayer,
     bulkTradePlayers,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
+  const { players: allTeamPlayers } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
+    includeProspects: true,
+  });
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const existingPlayerIds = new Set(players.map((p) => p.id));
+  const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -147,6 +151,13 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                           tooltip: 'Edit player',
                           disabled: busy === p.id,
                           onClick: () => setEditTarget(p),
+                        },
+                        {
+                          icon: 'south',
+                          intent: 'neutral',
+                          tooltip: 'Move to prospects',
+                          disabled: busy === p.id,
+                          onClick: () => updatePlayerRosterRole(p, true),
                         },
                         {
                           icon: 'delete',

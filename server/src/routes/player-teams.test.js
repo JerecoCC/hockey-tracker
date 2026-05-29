@@ -20,6 +20,7 @@ jest.mock('../db', () => {
     teamId: 'pt.team_id',
     seasonId: 'pt.season_id',
     jerseyNumber: 'pt.jersey_number',
+    isProspect: 'pt.is_prospect',
     position: 'pt.position',
     acquisitionType: 'pt.acquisition_type',
     startDate: 'pt.start_date',
@@ -63,6 +64,7 @@ const STINT_ROW = {
   team_id: 'team-1',
   season_id: 'season-1',
   jersey_number: 16,
+  is_prospect: false,
   photo: 'https://example.com/player.png',
   position: 'C',
   acquisition_type: 'trade',
@@ -199,6 +201,7 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
         team_id: 'team-1',
         season_id: 'season-1',
         jersey_number: 16,
+        is_prospect: false,
         photo: 'https://example.com/player.png',
         position: 'C',
         acquisition_type: 'trade',
@@ -234,6 +237,36 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
     const res = await request(app).get('/api/admin/player-teams/history/player-1');
 
     expect(res.status).toBe(500);
+  });
+});
+
+describe('PATCH /api/admin/player-teams', () => {
+  it('updates prospect status without creating a new stint', async () => {
+    sql.mockResolvedValueOnce([{
+      id: 'stint-1',
+      player_id: 'player-1',
+      team_id: 'team-1',
+      season_id: 'season-1',
+      jersey_number: 16,
+      is_prospect: true,
+      position: 'C',
+    }]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams')
+      .send({
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        is_prospect: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'stint-1',
+      is_prospect: true,
+    });
+    expect(sql).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -304,4 +337,3 @@ describe('POST /api/admin/player-teams/history/:playerId/photos', () => {
     expect(res.body.id).toBe('photo-1');
   });
 });
-
