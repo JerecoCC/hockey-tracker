@@ -112,13 +112,8 @@ const PlayerDetailsPage = () => {
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
   const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(id ?? null);
-  const {
-    createStint,
-    updateStint,
-    changeJerseyNumber,
-    changePlayerPhoto,
-    uploadStintPhoto,
-  } = useStintActions(id ?? null);
+  const { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto } =
+    useStintActions(id ?? null);
   const { teams } = useTeams();
   const { seasons } = useSeasons();
   const queryClient = useQueryClient();
@@ -457,19 +452,36 @@ const PlayerDetailsPage = () => {
                         >
                           <TeamLogo
                             logo={s.team_logo}
-                            code={s.team_code ?? (s.team_name ? s.team_name.slice(0, 3).toUpperCase() : 'TEAM')}
+                            code={
+                              s.team_code ??
+                              (s.team_name ? s.team_name.slice(0, 3).toUpperCase() : 'TEAM')
+                            }
                             primaryColor={s.primary_color}
                             textColor={s.text_color}
-                            size={32}
+                            size={40}
                             shape="square"
                           />
                           <div className={styles.stintInfo}>
-                            <span className={styles.stintTeam}>{s.team_name ?? 'Unknown team'}</span>
+                            <span className={styles.stintTeam}>
+                              {s.team_name ?? 'Unknown team'}
+                            </span>
                             <span className={styles.stintMeta}>
-                              {s.jersey_number != null ? `#${s.jersey_number} - ` : ''}
-                              {s.acquisition_type ? `${ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type} - ` : ''}
-                              {s.start_date ? DATE_FMT.format(new Date(s.start_date)) : s.end_date ? 'Until' : 'Dates not set'}{' '}
-                              {s.start_date ? (s.end_date ? `- ${DATE_FMT.format(new Date(s.end_date))}` : '- Present') : s.end_date ? DATE_FMT.format(new Date(s.end_date)) : ''}
+                              {s.jersey_number != null ? `#${s.jersey_number} • ` : ''}
+                              {s.acquisition_type
+                                ? `${ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type} • `
+                                : ''}
+                              {s.start_date
+                                ? DATE_FMT.format(new Date(s.start_date))
+                                : s.end_date
+                                  ? 'Until'
+                                  : 'Dates not set'}{' '}
+                              {s.start_date
+                                ? s.end_date
+                                  ? `• ${DATE_FMT.format(new Date(s.end_date))}`
+                                  : ' – Present'
+                                : s.end_date
+                                  ? DATE_FMT.format(new Date(s.end_date))
+                                  : ''}
                             </span>
                           </div>
                           {!s.end_date && (
@@ -561,7 +573,9 @@ const PlayerDetailsPage = () => {
       <ChangePhotoModal
         open={!!changingPhotoStint}
         stint={changingPhotoStint}
-        seasons={seasons.filter((s) => s.league_id === teams.find((t) => t.id === changingPhotoStint?.team_id)?.league_id)}
+        seasons={seasons.filter(
+          (s) => s.league_id === teams.find((t) => t.id === changingPhotoStint?.team_id)?.league_id,
+        )}
         history={photoHistoryByTeam[changingPhotoStint?.team_id ?? ''] ?? []}
         onClose={() => setChangingPhotoStint(null)}
         uploadPhoto={uploadStintPhoto}
@@ -684,4 +698,3 @@ const StatCell = ({
     <span className={value === '—' ? styles.statCellMuted : styles.statCellValue}>{value}</span>
   </div>
 );
-

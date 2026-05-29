@@ -1101,15 +1101,18 @@ async function initSchema() {
   // inherit the latest photo from the same season, then the latest overall.
   // across roster, lineup, goalie, and shootout queries so the logic lives
   // in one place rather than being repeated as a LEFT JOIN LATERAL everywhere.
+  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid)`;
+  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid, uuid, uuid)`;
   await sql`
     CREATE OR REPLACE FUNCTION best_player_photo(pid uuid, sid uuid DEFAULT NULL, tid uuid DEFAULT NULL)
     RETURNS text
     LANGUAGE sql
     STABLE
     AS $$
-      SELECT photo
+      SELECT NULLIF(photo, '')
       FROM   player_photos
       WHERE  player_id = pid
+        AND  NULLIF(photo, '') IS NOT NULL
         AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
           SELECT 1 FROM player_photos pp_same
           WHERE pp_same.player_id = pid AND pp_same.season_id = sid
