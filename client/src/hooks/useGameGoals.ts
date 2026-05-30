@@ -38,6 +38,7 @@ export interface GoalRecord {
   period: string;
   goal_type: string;
   empty_net: boolean;
+  penalty_shot: boolean;
   period_time: string | null;
   scorer_id: string;
   assist_1_id: string | null;
@@ -78,6 +79,7 @@ export interface PostGoalData {
   period: string;
   goal_type?: string;
   empty_net?: boolean;
+  penalty_shot?: boolean;
   period_time?: string | null;
   scorer_id: string;
   assist_1_id?: string | null;

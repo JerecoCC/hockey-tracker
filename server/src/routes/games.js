@@ -1867,6 +1867,7 @@ router.get('/:id/goals', async (req, res) => {
         go.period,
         go.goal_type,
         go.empty_net,
+        go.penalty_shot,
         go.period_time,
         go.scorer_id,
         go.assist_1_id,
@@ -1981,7 +1982,7 @@ router.get('/:id/goals', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/games/:id/goals  – record a goal and increment period counter
-// Body: { team_id, period, goal_type, period_time, scorer_id, assist_1_id?, assist_2_id? }
+// Body: { team_id, period, goal_type, empty_net?, penalty_shot?, period_time, scorer_id, assist_1_id?, assist_2_id? }
 // ---------------------------------------------------------------------------
 router.post('/:id/goals', async (req, res) => {
   const { id } = req.params;
@@ -1990,6 +1991,7 @@ router.post('/:id/goals', async (req, res) => {
     period,
     goal_type = 'even-strength',
     empty_net = false,
+    penalty_shot = false,
     period_time = null,
     scorer_id,
     assist_1_id = null,
@@ -1999,6 +2001,11 @@ router.post('/:id/goals', async (req, res) => {
   if (!team_id || !period || !scorer_id) {
     return res.status(400).json({ error: 'team_id, period, and scorer_id are required' });
   }
+
+  const storedGoalType =
+    goal_type === 'empty-net' || goal_type === 'penalty-shot' ? 'even-strength' : goal_type;
+  const storedEmptyNet = !!empty_net || goal_type === 'empty-net';
+  const storedPenaltyShot = !!penalty_shot || goal_type === 'penalty-shot';
 
   try {
     // Determine if this team is the home or away team.
@@ -2010,8 +2017,8 @@ router.post('/:id/goals', async (req, res) => {
 
     // Insert the goal record.
     const [goal] = await sql`
-      INSERT INTO goals (game_id, team_id, period, goal_type, empty_net, period_time, scorer_id, assist_1_id, assist_2_id)
-      VALUES (${id}, ${team_id}, ${period}, ${goal_type}, ${!!empty_net}, ${period_time}, ${scorer_id}, ${assist_1_id}, ${assist_2_id})
+      INSERT INTO goals (game_id, team_id, period, goal_type, empty_net, penalty_shot, period_time, scorer_id, assist_1_id, assist_2_id)
+      VALUES (${id}, ${team_id}, ${period}, ${storedGoalType}, ${storedEmptyNet}, ${storedPenaltyShot}, ${period_time}, ${scorer_id}, ${assist_1_id}, ${assist_2_id})
       RETURNING id
     `;
 
@@ -2019,7 +2026,7 @@ router.post('/:id/goals', async (req, res) => {
     const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
     const [full] = await sql`
       SELECT
-        go.id, go.game_id, go.team_id, go.period, go.goal_type, go.empty_net, go.period_time,
+        go.id, go.game_id, go.team_id, go.period, go.goal_type, go.empty_net, go.penalty_shot, go.period_time,
         go.scorer_id, go.assist_1_id, go.assist_2_id, go.created_at,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color,
@@ -2122,6 +2129,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
     period,
     goal_type = 'even-strength',
     empty_net = false,
+    penalty_shot = false,
     period_time = null,
     scorer_id,
     assist_1_id = null,
@@ -2132,13 +2140,19 @@ router.put('/:id/goals/:goalId', async (req, res) => {
     return res.status(400).json({ error: 'team_id, period, and scorer_id are required' });
   }
 
+  const storedGoalType =
+    goal_type === 'empty-net' || goal_type === 'penalty-shot' ? 'even-strength' : goal_type;
+  const storedEmptyNet = !!empty_net || goal_type === 'empty-net';
+  const storedPenaltyShot = !!penalty_shot || goal_type === 'penalty-shot';
+
   try {
     const rows = await sql`
       UPDATE goals
       SET team_id     = ${team_id},
           period      = ${period},
-          goal_type   = ${goal_type},
-          empty_net   = ${!!empty_net},
+          goal_type   = ${storedGoalType},
+          empty_net   = ${storedEmptyNet},
+          penalty_shot = ${storedPenaltyShot},
           period_time = ${period_time},
           scorer_id   = ${scorer_id},
           assist_1_id = ${assist_1_id},
@@ -2157,6 +2171,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
         go.period,
         go.goal_type,
         go.empty_net,
+        go.penalty_shot,
         go.period_time,
         go.scorer_id,
         go.assist_1_id,

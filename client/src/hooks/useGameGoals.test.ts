@@ -18,7 +18,7 @@ const createWrapper = () => {
 
 const GOAL = {
   id: 'goal-1', game_id: 'game-1', team_id: 'team-1',
-  period: '1', goal_type: 'even-strength', empty_net: false,
+  period: '1', goal_type: 'even-strength', empty_net: false, penalty_shot: false,
   period_time: '10:23', scorer_id: 'player-1',
   assist_1_id: 'player-2', assist_2_id: null, created_at: '2024-10-15T00:00:00Z',
   team_name: 'Sharks', team_code: 'SJS', team_logo: null,
@@ -41,7 +41,7 @@ const GOAL_2 = {
 
 const POST_DATA = {
   team_id: 'team-1', period: '1', scorer_id: 'player-1',
-  goal_type: 'even-strength' as const, empty_net: false, period_time: '10:23',
+  goal_type: 'even-strength' as const, empty_net: false, penalty_shot: false, period_time: '10:23',
 };
 
 beforeEach(() => {

@@ -234,7 +234,7 @@ const LineupCreatePlayersModal = ({
         }
         setDuplicateErrors([]);
 
-        // ── Cross-team duplicate check (soft warning, bypass-able) ───────────────
+        // Cross-team duplicate check (soft warning, bypass-able).
         if (!crossTeamConfirmedRef.current) {
           try {
             const { data: allPlayers } = await axios.get<
@@ -243,36 +243,54 @@ const LineupCreatePlayersModal = ({
                 last_name: string;
                 team_id?: string | null;
                 team_name?: string | null;
+                is_prospect?: boolean;
               }>
             >(`${API}/admin/players`, {
               headers: authHeaders(),
-              params: { league_id: leagueId, season_id: seasonId },
+              params: { league_id: leagueId, season_id: seasonId, include_prospects: 'true' },
             });
 
-            // Only check names against other teams — jersey numbers can change on trade,
-            // and players on this team are already covered by the inline roster warnings.
-            const otherTeamPlayers = allPlayers.filter((p) => p.team_id !== teamId);
-
-            const formNameKeys = new Set(
-              data.players.map(
-                (r) => `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
-              ),
+            const formRowsByName = new Map(
+              data.players.map((r) => [
+                `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}`,
+                r,
+              ]),
             );
+            const sameTeamErrors: string[] = [];
             const warnings: string[] = [];
-            for (const p of otherTeamPlayers) {
+            const sameTeamMatchedNames = new Set<string>();
+            const warningMatchedNames = new Set<string>();
+
+            for (const p of allPlayers) {
               const key = `${p.first_name.trim().toLowerCase()} ${p.last_name.trim().toLowerCase()}`;
-              if (formNameKeys.has(key)) {
-                const formRow = data.players.find(
-                  (r) =>
-                    `${r.first_name.trim().toLowerCase()} ${r.last_name.trim().toLowerCase()}` ===
-                    key,
-                )!;
+              const formRow = formRowsByName.get(key);
+
+              if (!formRow) {
+                continue;
+              }
+
+              const fullName = `${formRow.first_name.trim()} ${formRow.last_name.trim()}`;
+              if (p.team_id === teamId) {
+                if (!sameTeamMatchedNames.has(key)) {
+                  const rosterLabel = p.is_prospect ? 'prospects' : 'roster';
+                  sameTeamErrors.push(`"${fullName}" already exists on this team's ${rosterLabel}.`);
+                  sameTeamMatchedNames.add(key);
+                }
+                continue;
+              }
+
+              if (!warningMatchedNames.has(key)) {
+                const rosterLabel = p.is_prospect ? 'prospects' : 'roster';
                 const teamLabel = p.team_name ?? 'another team';
                 warnings.push(
-                  `"${formRow.first_name.trim()} ${formRow.last_name.trim()}" already exists on ${teamLabel}.`,
+                  `"${fullName}" already exists on ${teamLabel}'s ${rosterLabel}.`,
                 );
-                formNameKeys.delete(key);
+                warningMatchedNames.add(key);
               }
+            }
+            if (sameTeamErrors.length > 0) {
+              setDuplicateErrors(sameTeamErrors);
+              return false;
             }
             if (warnings.length > 0) {
               setCrossTeamWarnings(warnings);

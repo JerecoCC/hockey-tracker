@@ -403,7 +403,7 @@ describe('PATCH /api/admin/games/playoff-series/:seriesId', () => {
 
 const GOAL = {
   id: 'goal-1', game_id: 'game-1', team_id: 'team-1',
-  period: '1', goal_type: 'even-strength', empty_net: false,
+  period: '1', goal_type: 'even-strength', empty_net: false, penalty_shot: false,
   period_time: '10:23', scorer_id: 'player-1',
   assist_1_id: 'player-2', assist_2_id: null, created_at: new Date().toISOString(),
   team_name: 'Sharks', team_code: 'SJS', team_logo: null,
@@ -494,7 +494,7 @@ describe('POST /api/admin/games/:id/goals', () => {
       .mockResolvedValueOnce([GOAL]);               // SELECT full record
     const res = await request(app).post('/api/admin/games/game-1/goals').send({
       team_id: 'team-1', period: '1', scorer_id: 'player-1',
-      goal_type: 'power-play', empty_net: false, period_time: '10:23',
+      goal_type: 'power-play', empty_net: false, penalty_shot: false, period_time: '10:23',
     });
     expect(res.status).toBe(201);
     expect(res.body.id).toBe('goal-1');
@@ -536,7 +536,7 @@ describe('PUT /api/admin/games/:id/goals/:goalId', () => {
       .mockResolvedValueOnce([GOAL]);
     const res = await request(app).put('/api/admin/games/game-1/goals/goal-1').send({
       team_id: 'team-1', period: '1', scorer_id: 'player-1',
-      goal_type: 'shorthanded', empty_net: false, period_time: '05:00',
+      goal_type: 'shorthanded', empty_net: false, penalty_shot: true, period_time: '05:00',
     });
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('goal-1');

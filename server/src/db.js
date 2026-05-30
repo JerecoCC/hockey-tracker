@@ -633,7 +633,8 @@ async function initSchema() {
   // One row per goal scored. scorer_id / assist_1_id / assist_2_id FK to
   // players so credit can be attributed even if roster data changes later.
   // period: '1' | '2' | '3' | 'OT' | 'SO' — mirrors games.current_period.
-  // goal_type defaults to even-strength; own-goals have no assist columns.
+  // goal_type defaults to even-strength; modifiers like empty-net and penalty-shot
+  // are tracked independently so strengths can be combined with them.
   await sql`
     CREATE TABLE IF NOT EXISTS goals (
       id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -650,6 +651,7 @@ async function initSchema() {
                        'own'
                      )),
       period_time  TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$'),
+      penalty_shot BOOLEAN NOT NULL DEFAULT FALSE,
       scorer_id    UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       assist_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       assist_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
@@ -672,12 +674,20 @@ async function initSchema() {
   await sql`
     ALTER TABLE goals ADD COLUMN IF NOT EXISTS empty_net BOOLEAN NOT NULL DEFAULT FALSE
   `;
+  await sql`
+    ALTER TABLE goals ADD COLUMN IF NOT EXISTS penalty_shot BOOLEAN NOT NULL DEFAULT FALSE
+  `;
   // Migrate legacy 'empty-net' goal_type rows: mark empty_net = true and reclassify as
   // 'even-strength' (the most common scenario — adjust if other strengths existed).
   await sql`
     UPDATE goals
     SET empty_net = TRUE, goal_type = 'even-strength'
     WHERE goal_type = 'empty-net'
+  `;
+  await sql`
+    UPDATE goals
+    SET penalty_shot = TRUE, goal_type = 'even-strength'
+    WHERE goal_type = 'penalty-shot'
   `;
 
   // ── Game starting lineup ───────────────────────────────────────────────────

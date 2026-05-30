@@ -136,8 +136,11 @@ const ScoringCard = ({
               : null,
           ].filter(Boolean) as { id: string; name: string; tally: string }[];
           const primaryBadge =
-            goal.goal_type === 'empty-net' ? null : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
+            goal.goal_type === 'empty-net' || goal.goal_type === 'penalty-shot'
+              ? null
+              : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
           const showEN = goal.empty_net || goal.goal_type === 'empty-net';
+          const showPS = goal.penalty_shot || goal.goal_type === 'penalty-shot';
           return (
             <li
               key={goal.id}
@@ -215,6 +218,14 @@ const ScoringCard = ({
                   <Badge
                     label="EN"
                     intent="neutral"
+                  />
+                </Tooltip>
+              )}
+              {showPS && (
+                <Tooltip text="Penalty Shot">
+                  <Badge
+                    label="PS"
+                    intent="success"
                   />
                 </Tooltip>
               )}

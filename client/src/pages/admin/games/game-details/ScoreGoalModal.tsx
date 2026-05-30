@@ -14,7 +14,6 @@ const GOAL_TYPES = [
   { value: 'even-strength', label: 'Even Strength' },
   { value: 'power-play', label: 'Power Play' },
   { value: 'shorthanded', label: 'Shorthanded' },
-  { value: 'penalty-shot', label: 'Penalty Shot' },
   { value: 'own', label: 'Own Goal' },
 ];
 
@@ -49,6 +48,7 @@ const ScoreGoalModal = ({
   const [goalPeriodTime, setGoalPeriodTime] = useState('');
   const [goalType, setGoalType] = useState('even-strength');
   const [goalEmptyNet, setGoalEmptyNet] = useState(false);
+  const [goalPenaltyShot, setGoalPenaltyShot] = useState(false);
   const [goalScorerId, setGoalScorerId] = useState('');
   const [goalAssist1Id, setGoalAssist1Id] = useState('');
   const [goalAssist2Id, setGoalAssist2Id] = useState('');
@@ -59,8 +59,13 @@ const ScoreGoalModal = ({
       if (editGoal) {
         setGoalTeam(editGoal.team_id === game.away_team.id ? 'away' : 'home');
         setGoalPeriodTime(editGoal.period_time ?? '');
-        setGoalType(editGoal.goal_type === 'empty-net' ? 'even-strength' : editGoal.goal_type);
+        setGoalType(
+          editGoal.goal_type === 'empty-net' || editGoal.goal_type === 'penalty-shot'
+            ? 'even-strength'
+            : editGoal.goal_type,
+        );
         setGoalEmptyNet(editGoal.empty_net || editGoal.goal_type === 'empty-net');
+        setGoalPenaltyShot(editGoal.penalty_shot || editGoal.goal_type === 'penalty-shot');
         setGoalScorerId(editGoal.scorer_id);
         setGoalAssist1Id(editGoal.assist_1_id ?? '');
         setGoalAssist2Id(editGoal.assist_2_id ?? '');
@@ -69,6 +74,7 @@ const ScoreGoalModal = ({
         setGoalPeriodTime('');
         setGoalType('even-strength');
         setGoalEmptyNet(false);
+        setGoalPenaltyShot(false);
         setGoalScorerId('');
         setGoalAssist1Id('');
         setGoalAssist2Id('');
@@ -148,6 +154,7 @@ const ScoreGoalModal = ({
       period,
       goal_type: goalType,
       empty_net: goalEmptyNet,
+      penalty_shot: goalPenaltyShot,
       period_time: goalPeriodTime || '00:00',
       scorer_id: goalScorerId,
       assist_1_id: goalAssist1Id || null,
@@ -209,11 +216,17 @@ const ScoreGoalModal = ({
             <Select
               value={goalType}
               options={GOAL_TYPES}
-              onChange={setGoalType}
+              onChange={(next) => {
+                setGoalType(next);
+                if (next === 'own') {
+                  setGoalEmptyNet(false);
+                  setGoalPenaltyShot(false);
+                }
+              }}
               disabled={submitting}
             />
           </div>
-          {goalType !== 'penalty-shot' && goalType !== 'own' && (
+          {goalType !== 'own' && !goalPenaltyShot && (
             <div className={styles.goalFormField}>
               <label className={styles.goalFormLabel}>EN</label>
               <button
@@ -227,6 +240,31 @@ const ScoreGoalModal = ({
               >
                 <Icon
                   name={goalEmptyNet ? 'check_box' : 'check_box_outline_blank'}
+                  size="1.25rem"
+                />
+              </button>
+            </div>
+          )}
+          {goalType !== 'own' && (
+            <div className={styles.goalFormField}>
+              <label className={styles.goalFormLabel}>PS</label>
+              <button
+                type="button"
+                className={[
+                  styles.emptyNetToggle,
+                  goalPenaltyShot ? styles.emptyNetToggleOn : '',
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+                onClick={() => {
+                  setGoalPenaltyShot((v) => !v);
+                  setGoalEmptyNet(false);
+                }}
+                disabled={submitting}
+                title="Penalty Shot"
+              >
+                <Icon
+                  name={goalPenaltyShot ? 'check_box' : 'check_box_outline_blank'}
                   size="1.25rem"
                 />
               </button>
