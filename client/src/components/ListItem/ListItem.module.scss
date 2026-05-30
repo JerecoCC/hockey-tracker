@@ -94,6 +94,7 @@
   font-size: $font-xs;
   font-weight: 700;
   color: $text-body;
+  background: rgba(255, 255, 255, 0.04);
   font-variant-numeric: tabular-nums;
   padding: 0 var(--list-item-jersey-padding-x, #{$space-xs});
   letter-spacing: 0.02em;
