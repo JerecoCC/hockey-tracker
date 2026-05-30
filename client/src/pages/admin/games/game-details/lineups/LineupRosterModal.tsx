@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import axios, { AxiosError } from 'axios';
+import { toast } from 'react-toastify';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
@@ -12,6 +13,8 @@ import styles from './LineupRosterModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+const apiError = (err: unknown, fallback: string): string =>
+  (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
@@ -50,6 +53,7 @@ const LineupRosterModal = ({
   addToGameRoster,
   onMissingJerseys,
 }: Props) => {
+  const queryClient = useQueryClient();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
@@ -57,9 +61,13 @@ const LineupRosterModal = ({
   const [pendingMissing, setPendingMissing] = useState<number[]>([]);
   const [alreadyAdded, setAlreadyAdded] = useState<number[]>([]);
   const [showProspects, setShowProspects] = useState(false);
+  const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
 
   const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId, game_date: gameDate, showProspects }],
+    queryKey: [
+      'players',
+      { team_id: teamId, season_id: seasonId, game_date: gameDate, includeProspects: true },
+    ],
     queryFn: async () => {
       const { data } = await axios.get<TeamPlayerRecord[]>(`${API}/admin/players`, {
         headers: authHeaders(),
@@ -67,7 +75,7 @@ const LineupRosterModal = ({
           team_id: teamId,
           season_id: seasonId,
           game_date: gameDate,
-          ...(showProspects ? { include_prospects: 'true' } : {}),
+          include_prospects: 'true',
         },
       });
       return data;
@@ -75,8 +83,11 @@ const LineupRosterModal = ({
     enabled: open,
   });
 
+  const hasProspects = allPlayers.some((p) => p.is_prospect);
+
   const available = allPlayers
     .filter((p) => !existingPlayerIds.has(p.id))
+    .filter((p) => showProspects || !p.is_prospect)
     .sort((a, b) => {
       // Jersey numbers first (null last), then alphabetically
       if (a.jersey_number != null && b.jersey_number != null)
@@ -100,24 +111,6 @@ const LineupRosterModal = ({
     : available;
 
   const selectedCount = selected.size;
-
-  const allFilteredSelected = filtered.length > 0 && filtered.every((p) => selected.has(p.id));
-
-  const toggleAll = () => {
-    if (allFilteredSelected) {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        filtered.forEach((p) => next.delete(p.id));
-        return next;
-      });
-    } else {
-      setSelected((prev) => {
-        const next = new Set(prev);
-        filtered.forEach((p) => next.add(p.id));
-        return next;
-      });
-    }
-  };
 
   const toggle = (playerId: string) => {
     setSelected((prev) => {
@@ -163,6 +156,35 @@ const LineupRosterModal = ({
     setJerseyInput('');
   };
 
+  const updateProspectStatus = async (player: TeamPlayerRecord, isProspect: boolean) => {
+    setMovingPlayerId(player.id);
+    try {
+      await axios.patch(
+        `${API}/admin/player-teams`,
+        {
+          player_id: player.id,
+          team_id: player.team_id ?? teamId,
+          season_id: seasonId,
+          is_prospect: isProspect,
+        },
+        { headers: authHeaders() },
+      );
+      if (isProspect) {
+        setSelected((prev) => {
+          const next = new Set(prev);
+          next.delete(player.id);
+          return next;
+        });
+      }
+      toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update roster status'));
+    } finally {
+      setMovingPlayerId(null);
+    }
+  };
+
   const handleClose = () => {
     setQuery('');
     setSelected(new Set());
@@ -170,6 +192,7 @@ const LineupRosterModal = ({
     setPendingMissing([]);
     setAlreadyAdded([]);
     setShowProspects(false);
+    setMovingPlayerId(null);
     onClose();
   };
 
@@ -223,13 +246,14 @@ const LineupRosterModal = ({
             <Button
               size="sm"
               variant="outlined"
-              intent="neutral"
+              intent="info"
               onClick={handleApplyJerseys}
               disabled={!jerseyInput.trim()}
             >
               Apply
             </Button>
           </div>
+          <div className={styles.controlsDivider} />
           {alreadyAdded.length > 0 && (
             <p className={styles.alreadyAddedNote}>
               <Icon
@@ -249,30 +273,32 @@ const LineupRosterModal = ({
               {pendingMissing.map((n) => `#${n}`).join(', ')} — will open Create Players on confirm.
             </p>
           )}
-          <div className={styles.searchWrap}>
-            <Icon
-              name="search"
-              size="1em"
-              className={styles.searchIcon}
-            />
-            <input
-              className={styles.searchInput}
-              type="text"
-              placeholder="Search players…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+          <div className={styles.searchRow}>
+            <div className={styles.searchWrap}>
+              <Icon
+                name="search"
+                size="1em"
+                className={styles.searchIcon}
+              />
+              <input
+                className={styles.searchInput}
+                type="text"
+                placeholder="Search players…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <ToggleButton
+              active={showProspects}
+              onClick={() => setShowProspects((v) => !v)}
+              icon={showProspects ? 'visibility_off' : 'visibility'}
+              size="sm"
+              iconHeight="field"
+              activeTooltip="Hide prospects"
+              inactiveTooltip="Show prospects"
+              disabled={!hasProspects}
             />
           </div>
-          <ToggleButton
-            active={showProspects}
-            onClick={() => setShowProspects((v) => !v)}
-            icon="visibility"
-            size="sm"
-            activeTooltip="Hide prospects"
-            inactiveTooltip="Show prospects"
-          >
-            Prospects
-          </ToggleButton>
         </div>
 
         {filtered.length === 0 ? (
@@ -282,37 +308,41 @@ const LineupRosterModal = ({
               : `No players match "${query}".`}
           </p>
         ) : (
-          <>
-            <ul className={styles.selectAllRow}>
+          <ul className={styles.list}>
+            {filtered.map((p) => (
               <SelectableListItem
-                checked={allFilteredSelected}
-                onToggle={toggleAll}
-                name="Select All"
-                hideImage
+                key={p.id}
+                checked={selected.has(p.id)}
+                onToggle={() => toggle(p.id)}
+                imagePlaceholder={
+                  p.jersey_number != null
+                    ? String(p.jersey_number)
+                    : `${p.first_name[0]}${p.last_name[0]}`
+                }
+                imageShape="square"
+                imagePrimaryColor={p.primary_color}
+                imageTextColor={p.text_color}
+                eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+                name={`${p.last_name}, ${p.first_name}`}
+                rightContent={p.is_prospect ? <Badge label="Prospect" /> : undefined}
+                actions={[
+                  p.is_prospect
+                    ? {
+                        icon: 'north',
+                        tooltip: 'Move to roster',
+                        disabled: movingPlayerId === p.id,
+                        onClick: () => updateProspectStatus(p, false),
+                      }
+                    : {
+                        icon: 'south',
+                        tooltip: 'Move to prospects',
+                        disabled: movingPlayerId === p.id,
+                        onClick: () => updateProspectStatus(p, true),
+                      },
+                ]}
               />
-            </ul>
-            <div className={styles.listDivider} />
-            <ul className={styles.list}>
-              {filtered.map((p) => (
-                <SelectableListItem
-                  key={p.id}
-                  checked={selected.has(p.id)}
-                  onToggle={() => toggle(p.id)}
-                  imagePlaceholder={
-                    p.jersey_number != null
-                      ? String(p.jersey_number)
-                      : `${p.first_name[0]}${p.last_name[0]}`
-                  }
-                  imageShape="square"
-                  imagePrimaryColor={p.primary_color}
-                  imageTextColor={p.text_color}
-                  eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
-                  name={`${p.last_name}, ${p.first_name}`}
-                  rightContent={p.is_prospect ? <Badge label="Prospect" /> : undefined}
-                />
-              ))}
-            </ul>
-          </>
+            ))}
+          </ul>
         )}
       </div>
     </Modal>

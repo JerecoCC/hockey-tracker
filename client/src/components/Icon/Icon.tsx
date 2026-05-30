@@ -3,9 +3,11 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { type IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import {
   faArrowLeft,
+  faArrowDown,
   faArrowRight,
   faArrowRotateLeft,
   faArrowRotateRight,
+  faArrowUp,
   faChartLine,
   faArrowUpRightFromSquare,
   faBars,
@@ -81,10 +83,14 @@ import {
 const ICON_MAP: Record<string, IconDefinition> = {
   // navigation / admin
   arrow_back: faArrowLeft,
+  arrow_downward: faArrowDown,
   arrow_forward: faArrowRight,
+  arrow_upward: faArrowUp,
   chevron_left: faChevronLeft,
   chevron_right: faChevronRight,
   expand_more: faChevronDown,
+  north: faArrowUp,
+  south: faArrowDown,
   menu: faBars,
   shield: faShield,
 

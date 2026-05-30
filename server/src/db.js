@@ -255,15 +255,15 @@ async function initSchema() {
     ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
       latest_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
   `;
-  await sql`
-    UPDATE team_iterations ti
-    SET start_date = COALESCE(ti.start_date, ss.start_date),
-        end_date   = COALESCE(ti.end_date, ls.end_date)
-    FROM seasons ss
-    LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
-    WHERE ti.start_season_id = ss.id
-      AND (ti.start_date IS NULL OR ti.end_date IS NULL)
-  `;
+  // await sql`
+  //   UPDATE team_iterations ti
+  //   SET start_date = COALESCE(ti.start_date, ss.start_date),
+  //       end_date   = COALESCE(ti.end_date, ls.end_date)
+  //   FROM seasons ss
+  //   LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
+  //   WHERE ti.start_season_id = ss.id
+  //     AND (ti.start_date IS NULL OR ti.end_date IS NULL)
+  // `;
   await sql`
     DO $$
     BEGIN
