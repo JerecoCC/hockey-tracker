@@ -648,6 +648,7 @@ async function initSchema() {
                        'shorthanded',
                        'empty-net',
                        'penalty-shot',
+                       'awarded',
                        'own'
                      )),
       period_time  TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$'),

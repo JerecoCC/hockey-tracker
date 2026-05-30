@@ -14,6 +14,7 @@ const GOAL_TYPES = [
   { value: 'even-strength', label: 'Even Strength' },
   { value: 'power-play', label: 'Power Play' },
   { value: 'shorthanded', label: 'Shorthanded' },
+  { value: 'awarded', label: 'Awarded' },
   { value: 'own', label: 'Own Goal' },
 ];
 
@@ -250,10 +251,7 @@ const ScoreGoalModal = ({
               <label className={styles.goalFormLabel}>PS</label>
               <button
                 type="button"
-                className={[
-                  styles.emptyNetToggle,
-                  goalPenaltyShot ? styles.emptyNetToggleOn : '',
-                ]
+                className={[styles.emptyNetToggle, goalPenaltyShot ? styles.emptyNetToggleOn : '']
                   .filter(Boolean)
                   .join(' ')}
                 onClick={() => {

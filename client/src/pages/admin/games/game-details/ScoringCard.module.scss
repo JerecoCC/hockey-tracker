@@ -77,6 +77,10 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   flex-shrink: 0;
 }
 
+.goalScore {
+  padding-left: $space-xs;
+}
+
 // Small square team logo / placeholder
 .goalTeamLogo {
   width: 36px;

@@ -45,5 +45,6 @@ export const GOAL_TYPE_BADGE: Record<
   shorthanded: { label: 'SH', tooltip: 'Shorthanded', intent: 'warning' },
   'empty-net': { label: 'EN', tooltip: 'Empty Net', intent: 'neutral' },
   'penalty-shot': { label: 'PS', tooltip: 'Penalty Shot', intent: 'success' },
+  'awarded': { label: 'AWD', tooltip: 'Awarded Goal', intent: 'success' },
   own: { label: 'OG', tooltip: 'Own Goal', intent: 'danger' },
 };
