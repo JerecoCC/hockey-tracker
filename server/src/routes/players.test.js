@@ -243,6 +243,64 @@ describe('GET /api/admin/players/:id/last-five-games', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/game-logs
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/players/:id/game-logs', () => {
+  it('returns paginated game logs with total count', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        total_count: 24,
+        game_id: 'game-24',
+        season_id: 'season-1',
+        season_name: '2025-26',
+        scheduled_at: '2026-02-01T00:00:00.000Z',
+        game_type: 'regular',
+        team_id: 'team-1',
+        team_name: 'Oilers',
+        team_code: 'EDM',
+        team_logo: 'oilers.png',
+        team_primary_color: '#ff4500',
+        team_text_color: '#ffffff',
+        opponent_team_id: 'team-2',
+        opponent_name: 'Canucks',
+        opponent_code: 'VAN',
+        opponent_logo: 'canucks.png',
+        opponent_primary_color: '#00205b',
+        opponent_text_color: '#ffffff',
+        is_home: false,
+        goals: 0,
+        assists: 1,
+        points: 1,
+        goalie_started: null,
+        shots_against: null,
+        goals_against: null,
+        save_pct: null,
+      },
+    ]);
+
+    const res = await request(app)
+      .get('/api/admin/players/player-1/game-logs?season_id=season-1&game_type=regular&limit=20&offset=20');
+
+    expect(res.status).toBe(200);
+    expect(res.body.total).toBe(24);
+    expect(res.body.games).toHaveLength(1);
+    expect(res.body.games[0]).toMatchObject({
+      game_id: 'game-24',
+      season_name: '2025-26',
+      opponent_code: 'VAN',
+      assists: 1,
+    });
+    expect(res.body.games[0].total_count).toBeUndefined();
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/players/player-1/game-logs');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/players/:id
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id', () => {

@@ -821,6 +821,237 @@ router.get('/:id/last-five-games', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/game-logs
+// Paginated game log with the same per-game stats as the last-five endpoint.
+// Supports optional season_id and game_type filters.
+// ---------------------------------------------------------------------------
+router.get('/:id/game-logs', async (req, res) => {
+  const { id } = req.params;
+  const seasonId = typeof req.query.season_id === 'string' ? req.query.season_id : null;
+  const gameType = typeof req.query.game_type === 'string' ? req.query.game_type : null;
+  const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit ?? '20'), 10) || 20, 1), 100);
+  const offset = Math.max(Number.parseInt(String(req.query.offset ?? '0'), 10) || 0, 0);
+
+  try {
+    const rows = await sql`
+      WITH player_info AS (
+        SELECT position FROM players WHERE id = ${id}
+      ),
+      period_vals (p, v) AS (
+        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+      ),
+      skater_games AS (
+        SELECT
+          g.id AS game_id,
+          g.season_id,
+          s.name AS season_name,
+          g.scheduled_at,
+          g.game_type,
+          gr.team_id,
+          CASE WHEN g.home_team_id = gr.team_id THEN g.away_team_id ELSE g.home_team_id END AS opponent_team_id,
+          g.home_team_id = gr.team_id AS is_home,
+          COUNT(gl.id) FILTER (WHERE gl.scorer_id = ${id})::int AS goals,
+          COUNT(gl.id) FILTER (WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id})::int AS assists,
+          NULL::boolean AS goalie_started,
+          NULL::int AS shots_against,
+          NULL::int AS goals_against,
+          NULL::float AS save_pct
+        FROM game_rosters gr
+        JOIN games g ON g.id = gr.game_id
+          AND g.status = 'final'
+          AND (${seasonId}::uuid IS NULL OR g.season_id = ${seasonId}::uuid)
+          AND (${gameType}::text IS NULL OR g.game_type = ${gameType}::text)
+        JOIN seasons s ON s.id = g.season_id
+        LEFT JOIN goals gl ON gl.game_id = g.id
+          AND gl.team_id = gr.team_id
+        WHERE gr.player_id = ${id}
+          AND COALESCE((SELECT position FROM player_info), '') <> 'G'
+        GROUP BY g.id, g.season_id, s.name, g.scheduled_at, g.game_type, gr.team_id, g.home_team_id, g.away_team_id
+      ),
+      goalie_stint_ranges AS (
+        SELECT
+          st.id,
+          st.game_id,
+          g.season_id,
+          s.name AS season_name,
+          st.team_id,
+          st.stint_ord,
+          g.scheduled_at,
+          g.game_type,
+          CASE WHEN g.home_team_id = st.team_id THEN g.away_team_id ELSE g.home_team_id END AS opponent_team_id,
+          g.home_team_id = st.team_id AS is_home,
+          st.shots_against,
+          st.goals_against AS goals_against_override,
+          pv_in.v * 100000
+            + COALESCE(
+                SPLIT_PART(st.entered_time, ':', 1)::int * 60
+                + SPLIT_PART(st.entered_time, ':', 2)::int,
+                0
+              ) AS from_pos,
+          CASE
+            WHEN st.exited_period IS NULL THEN NULL
+            ELSE pv_out.v * 100000
+                 + COALESCE(
+                     SPLIT_PART(st.exited_time, ':', 1)::int * 60
+                     + SPLIT_PART(st.exited_time, ':', 2)::int,
+                     0
+                   )
+          END AS until_pos
+        FROM game_goalie_stints st
+        JOIN games g ON g.id = st.game_id
+          AND g.status = 'final'
+          AND (${seasonId}::uuid IS NULL OR g.season_id = ${seasonId}::uuid)
+          AND (${gameType}::text IS NULL OR g.game_type = ${gameType}::text)
+        JOIN seasons s ON s.id = g.season_id
+        JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
+        LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
+        WHERE st.goalie_id = ${id}
+          AND (SELECT position FROM player_info) = 'G'
+      ),
+      goalie_stint_ga AS (
+        SELECT sr.id AS stint_id, COUNT(gl.id)::int AS goals_against
+        FROM goalie_stint_ranges sr
+        JOIN goals gl
+          ON gl.game_id = sr.game_id
+         AND gl.team_id != sr.team_id
+         AND gl.empty_net = false
+        JOIN period_vals pv ON pv.p = gl.period
+        WHERE (pv.v * 100000
+               + COALESCE(
+                   SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                   + SPLIT_PART(gl.period_time, ':', 2)::int,
+                   0
+                 )) >= sr.from_pos
+          AND (sr.until_pos IS NULL
+               OR (pv.v * 100000
+                   + COALESCE(
+                       SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                       + SPLIT_PART(gl.period_time, ':', 2)::int,
+                       0
+                     )) < sr.until_pos)
+        GROUP BY sr.id
+      ),
+      goalie_games AS (
+        SELECT
+          sr.game_id,
+          sr.season_id,
+          sr.season_name,
+          sr.scheduled_at,
+          sr.game_type,
+          sr.team_id,
+          sr.opponent_team_id,
+          sr.is_home,
+          0::int AS goals,
+          0::int AS assists,
+          MIN(sr.stint_ord) = 1 AS goalie_started,
+          SUM(sr.shots_against)::int AS shots_against,
+          SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0))::int AS goals_against,
+          CASE
+            WHEN SUM(sr.shots_against) > 0
+              THEN ROUND(
+                ((SUM(sr.shots_against) - SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0)))::numeric
+                  / SUM(sr.shots_against)),
+                3
+              )::float
+            ELSE NULL::float
+          END AS save_pct
+        FROM goalie_stint_ranges sr
+        LEFT JOIN goalie_stint_ga sga ON sga.stint_id = sr.id
+        GROUP BY sr.game_id, sr.season_id, sr.season_name, sr.scheduled_at, sr.game_type, sr.team_id, sr.opponent_team_id, sr.is_home
+      ),
+      combined_games AS (
+        SELECT * FROM skater_games
+        UNION ALL
+        SELECT * FROM goalie_games
+      ),
+      counted_games AS (
+        SELECT *, COUNT(*) OVER ()::int AS total_count
+        FROM combined_games
+      ),
+      page_games AS (
+        SELECT *
+        FROM counted_games
+        ORDER BY scheduled_at DESC NULLS LAST, game_id DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+      )
+      SELECT
+        pg.total_count,
+        pg.game_id,
+        pg.season_id,
+        pg.season_name,
+        pg.scheduled_at,
+        pg.game_type,
+        pg.team_id,
+        ti.name AS team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo,
+        t.primary_color AS team_primary_color,
+        t.text_color AS team_text_color,
+        pg.opponent_team_id,
+        oti.name AS opponent_name,
+        oti.code AS opponent_code,
+        oti.logo AS opponent_logo,
+        ot.primary_color AS opponent_primary_color,
+        ot.text_color AS opponent_text_color,
+        pg.is_home,
+        pg.goals,
+        pg.assists,
+        pg.goals + pg.assists AS points,
+        pg.goalie_started,
+        pg.shots_against,
+        pg.goals_against,
+        pg.save_pct
+      FROM page_games pg
+      LEFT JOIN teams t ON t.id = pg.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo
+        FROM team_iterations
+        WHERE team_id = pg.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON TRUE
+      LEFT JOIN teams ot ON ot.id = pg.opponent_team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo
+        FROM team_iterations
+        WHERE team_id = pg.opponent_team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) oti ON TRUE
+      ORDER BY pg.scheduled_at DESC NULLS LAST, pg.game_id DESC
+    `;
+
+    const total = Number(rows[0]?.total_count ?? 0);
+    return res.json({
+      total,
+      games: rows.map(({ total_count, ...row }) => row),
+    });
+  } catch (err) {
+    console.error('players game-logs error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {

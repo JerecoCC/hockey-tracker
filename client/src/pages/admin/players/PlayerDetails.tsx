@@ -9,12 +9,15 @@ import Card from '@/components/Card/Card';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import ListItem from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Select from '@/components/Select/Select';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
+  usePlayerGameLogs,
   usePlayerLastFiveGames,
   type PlayerCareerStatRecord,
   type PlayerCurrentSeasonStatBlock,
@@ -43,6 +46,7 @@ import styles from './PlayerDetails.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+const GAME_LOG_PAGE_SIZE = 20;
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
@@ -129,6 +133,128 @@ const formatSavePct = (value: number | null) => {
   return value.toFixed(3).replace(/^0/, '');
 };
 
+const StatHeader = ({ label, tooltip }: { label: string; tooltip: string }) => (
+  <Tooltip text={tooltip}>
+    <span>{label}</span>
+  </Tooltip>
+);
+
+const TeamCodeCell = ({ code, name }: { code: string | null; name: string | null }) => (
+  <Tooltip text={name ?? teamCode(code, name)}>
+    <span className={styles.teamCodeCell}>{teamCode(code, name)}</span>
+  </Tooltip>
+);
+
+const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord>[] => [
+  {
+    type: 'custom',
+    header: 'Date',
+    render: (row) => formatShortDate(row.scheduled_at),
+  },
+  {
+    type: 'custom',
+    header: 'Team',
+    render: (row) => (
+      <TeamCodeCell
+        code={row.team_code}
+        name={row.team_name}
+      />
+    ),
+  },
+  {
+    type: 'custom',
+    header: 'Opponent',
+    render: (row) => (
+      <span className={styles.opponentCell}>
+        <span className={styles.opponentPrefix}>{row.is_home ? 'vs' : '@'}</span>
+        <TeamCodeCell
+          code={row.opponent_code}
+          name={row.opponent_name}
+        />
+      </span>
+    ),
+  },
+  ...(isGoalie
+    ? [
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="GS"
+              tooltip="Games Started"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => (row.goalie_started ? 'Yes' : 'No'),
+          align: 'center' as const,
+        },
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="SA"
+              tooltip="Shots Against"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => row.shots_against ?? '—',
+          align: 'center' as const,
+        },
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="GA"
+              tooltip="Goals Against"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
+          align: 'center' as const,
+        },
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="SV%"
+              tooltip="Save Percentage"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => formatSavePct(row.save_pct),
+          align: 'center' as const,
+        },
+      ]
+    : [
+        {
+          header: (
+            <StatHeader
+              label="G"
+              tooltip="Goals"
+            />
+          ),
+          key: 'goals' as const,
+          align: 'center' as const,
+        },
+        {
+          header: (
+            <StatHeader
+              label="A"
+              tooltip="Assist"
+            />
+          ),
+          key: 'assists' as const,
+          align: 'center' as const,
+        },
+        {
+          header: (
+            <StatHeader
+              label="PTS"
+              tooltip="Points"
+            />
+          ),
+          key: 'points' as const,
+          align: 'center' as const,
+        },
+      ]),
+];
+
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
@@ -154,6 +280,19 @@ const PlayerDetailsPage = () => {
   const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
   const [movePlayerOpen, setMovePlayerOpen] = useState(false);
+  const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
+  const [gameLogType, setGameLogType] = useState('all');
+  const [gameLogPage, setGameLogPage] = useState(1);
+  const {
+    gameLogs,
+    total: gameLogsTotal,
+    loading: gameLogsLoading,
+  } = usePlayerGameLogs(id, {
+    seasonId: gameLogSeasonId === 'all' ? null : gameLogSeasonId,
+    gameType: gameLogType === 'all' ? null : gameLogType,
+    page: gameLogPage,
+    pageSize: GAME_LOG_PAGE_SIZE,
+  });
 
   const updatePlayer = async (
     playerId: string,
@@ -273,11 +412,14 @@ const PlayerDetailsPage = () => {
       render: (row) => formatShortDate(row.scheduled_at),
     },
     {
-      type: 'logo',
+      type: 'custom',
       header: 'Team',
-      getLogo: (row) => row.team_logo,
-      getName: (row) => row.team_name ?? teamCode(row.team_code, row.team_name),
-      getCode: (row) => teamCode(row.team_code, row.team_name),
+      render: (row) => (
+        <TeamCodeCell
+          code={row.team_code}
+          name={row.team_name}
+        />
+      ),
     },
     {
       type: 'custom',
@@ -285,7 +427,10 @@ const PlayerDetailsPage = () => {
       render: (row) => (
         <span className={styles.opponentCell}>
           <span className={styles.opponentPrefix}>{row.is_home ? 'vs' : '@'}</span>
-          <span>{teamCode(row.opponent_code, row.opponent_name)}</span>
+          <TeamCodeCell
+            code={row.opponent_code}
+            name={row.opponent_name}
+          />
         </span>
       ),
     },
@@ -293,34 +438,89 @@ const PlayerDetailsPage = () => {
       ? [
           {
             type: 'custom' as const,
-            header: 'Games Started',
+            header: (
+              <StatHeader
+                label="GS"
+                tooltip="Games Started"
+              />
+            ),
             render: (row: PlayerLastFiveGameRecord) => (row.goalie_started ? 'Yes' : 'No'),
             align: 'center' as const,
           },
           {
             type: 'custom' as const,
-            header: 'Shots Against',
+            header: (
+              <StatHeader
+                label="SA"
+                tooltip="Shots Against"
+              />
+            ),
             render: (row: PlayerLastFiveGameRecord) => row.shots_against ?? '—',
             align: 'center' as const,
           },
           {
             type: 'custom' as const,
-            header: 'Goals Against',
+            header: (
+              <StatHeader
+                label="GA"
+                tooltip="Goals Against"
+              />
+            ),
             render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
             align: 'center' as const,
           },
           {
             type: 'custom' as const,
-            header: 'Save %',
+            header: (
+              <StatHeader
+                label="SV%"
+                tooltip="Save Percentage"
+              />
+            ),
             render: (row: PlayerLastFiveGameRecord) => formatSavePct(row.save_pct),
             align: 'center' as const,
           },
         ]
       : [
-          { header: 'Goals', key: 'goals' as const, align: 'center' as const },
-          { header: 'Assist', key: 'assists' as const, align: 'center' as const },
-          { header: 'Points', key: 'points' as const, align: 'center' as const },
+          {
+            header: (
+              <StatHeader
+                label="G"
+                tooltip="Goals"
+              />
+            ),
+            key: 'goals' as const,
+            align: 'center' as const,
+          },
+          {
+            header: (
+              <StatHeader
+                label="A"
+                tooltip="Assist"
+              />
+            ),
+            key: 'assists' as const,
+            align: 'center' as const,
+          },
+          {
+            header: (
+              <StatHeader
+                label="PTS"
+                tooltip="Points"
+              />
+            ),
+            key: 'points' as const,
+            align: 'center' as const,
+          },
         ]),
+  ];
+  const gameLogColumns = buildGameLogColumns(isGoalie);
+  const gameLogPageCount = Math.max(1, Math.ceil(gameLogsTotal / GAME_LOG_PAGE_SIZE));
+  const filteredSeasonOptions = [
+    { value: 'all', label: 'All seasons' },
+    ...seasons
+      .filter((season) => !leagueId || season.league_id === leagueId)
+      .map((season) => ({ value: season.id, label: season.name })),
   ];
 
   const playerEditTarget: TeamPlayerRecord = {
@@ -397,6 +597,84 @@ const PlayerDetailsPage = () => {
           navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
         }
       />
+    </Card>
+  );
+
+  const gameLogsCard = (
+    <Card
+      title="Game Logs"
+      action={
+        <div className={styles.gameLogFilters}>
+          <div className={styles.gameLogSeasonSelect}>
+            <Select
+              value={gameLogSeasonId}
+              options={filteredSeasonOptions}
+              onChange={(value) => {
+                setGameLogSeasonId(value);
+                setGameLogPage(1);
+              }}
+              placeholder="All seasons"
+            />
+          </div>
+          <SegmentedControl
+            value={gameLogType}
+            onChange={(value) => {
+              setGameLogType(value);
+              setGameLogPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'regular', label: 'Regular' },
+              { value: 'playoff', label: 'Playoffs' },
+            ]}
+            className={styles.gameLogTypeControl}
+          />
+        </div>
+      }
+    >
+      <Table
+        columns={gameLogColumns}
+        data={gameLogs}
+        rowKey={(row) => row.game_id}
+        loading={gameLogsLoading}
+        emptyMessage="No game logs found."
+        onRowClick={(row) =>
+          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+        }
+      />
+      <div className={styles.paginationBar}>
+        <span className={styles.paginationSummary}>
+          {gameLogsTotal === 0
+            ? 'No games'
+            : `${(gameLogPage - 1) * GAME_LOG_PAGE_SIZE + 1}-${Math.min(
+                gameLogPage * GAME_LOG_PAGE_SIZE,
+                gameLogsTotal,
+              )} of ${gameLogsTotal}`}
+        </span>
+        <div className={styles.paginationActions}>
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="chevron_left"
+            size="sm"
+            tooltip="Previous page"
+            disabled={gameLogPage <= 1}
+            onClick={() => setGameLogPage((page) => Math.max(1, page - 1))}
+          />
+          <span className={styles.paginationPage}>
+            Page {gameLogPage} of {gameLogPageCount}
+          </span>
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="chevron_right"
+            size="sm"
+            tooltip="Next page"
+            disabled={gameLogPage >= gameLogPageCount}
+            onClick={() => setGameLogPage((page) => Math.min(gameLogPageCount, page + 1))}
+          />
+        </div>
+      </div>
     </Card>
   );
 
@@ -517,6 +795,10 @@ const PlayerDetailsPage = () => {
                   )}
                 </div>
               ),
+            },
+            {
+              label: 'Game Logs',
+              content: gameLogsCard,
             },
             {
               label: 'Career Stats',

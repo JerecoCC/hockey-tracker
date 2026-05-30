@@ -90,6 +90,7 @@ export interface PlayerCurrentSeasonStats {
 export interface PlayerLastFiveGameRecord {
   game_id: string;
   season_id: string;
+  season_name?: string;
   scheduled_at: string | null;
   game_type: string;
   team_id: string | null;
@@ -112,6 +113,11 @@ export interface PlayerLastFiveGameRecord {
   shots_against: number | null;
   goals_against: number | null;
   save_pct: number | null;
+}
+
+export interface PlayerGameLogsResponse {
+  games: PlayerLastFiveGameRecord[];
+  total: number;
 }
 
 export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined) => {
@@ -154,6 +160,43 @@ export const usePlayerLastFiveGames = (playerId: string | null | undefined) => {
     enabled: !!playerId,
   });
   return { lastFiveGames, loading };
+};
+
+export const usePlayerGameLogs = (
+  playerId: string | null | undefined,
+  params: {
+    seasonId?: string | null;
+    gameType?: string | null;
+    page?: number;
+    pageSize?: number;
+  },
+) => {
+  const { seasonId = null, gameType = null, page = 1, pageSize = 20 } = params;
+  const { data, isLoading: loading } = useQuery<PlayerGameLogsResponse>({
+    queryKey: ['player-game-logs', playerId, seasonId, gameType, page, pageSize],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayerGameLogsResponse>(
+          `${API}/admin/players/${playerId}/game-logs`,
+          {
+            headers: authHeaders(),
+            params: {
+              season_id: seasonId || undefined,
+              game_type: gameType || undefined,
+              limit: pageSize,
+              offset: (page - 1) * pageSize,
+            },
+          },
+        );
+        return data;
+      } catch {
+        toast.error('Failed to load game logs');
+        return { games: [], total: 0 };
+      }
+    },
+    enabled: !!playerId,
+  });
+  return { gameLogs: data?.games ?? [], total: data?.total ?? 0, loading };
 };
 
 const usePlayerDetails = (playerId: string | null | undefined) => {
