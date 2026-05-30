@@ -87,6 +87,33 @@ export interface PlayerCurrentSeasonStats {
   playoffs: PlayerCurrentSeasonStatBlock | null;
 }
 
+export interface PlayerLastFiveGameRecord {
+  game_id: string;
+  season_id: string;
+  scheduled_at: string | null;
+  game_type: string;
+  team_id: string | null;
+  team_name: string | null;
+  team_code: string | null;
+  team_logo: string | null;
+  team_primary_color: string | null;
+  team_text_color: string | null;
+  opponent_team_id: string | null;
+  opponent_name: string | null;
+  opponent_code: string | null;
+  opponent_logo: string | null;
+  opponent_primary_color: string | null;
+  opponent_text_color: string | null;
+  is_home: boolean;
+  goals: number;
+  assists: number;
+  points: number;
+  goalie_started: boolean | null;
+  shots_against: number | null;
+  goals_against: number | null;
+  save_pct: number | null;
+}
+
 export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined) => {
   const { data: currentSeasonStats = null, isLoading: loading } =
     useQuery<PlayerCurrentSeasonStats | null>({
@@ -109,6 +136,26 @@ export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined)
 };
 
 // ── Combined hook ───────────────────────────────────────────────────────────
+export const usePlayerLastFiveGames = (playerId: string | null | undefined) => {
+  const { data: lastFiveGames = [], isLoading: loading } = useQuery<PlayerLastFiveGameRecord[]>({
+    queryKey: ['player-last-five-games', playerId],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayerLastFiveGameRecord[]>(
+          `${API}/admin/players/${playerId}/last-five-games`,
+          { headers: authHeaders() },
+        );
+        return data;
+      } catch {
+        toast.error('Failed to load recent games');
+        return [];
+      }
+    },
+    enabled: !!playerId,
+  });
+  return { lastFiveGames, loading };
+};
+
 const usePlayerDetails = (playerId: string | null | undefined) => {
   const { player, loading: playerLoading } = usePlayer(playerId);
   const { stats, loading: statsLoading } = usePlayerCareerStats(playerId);

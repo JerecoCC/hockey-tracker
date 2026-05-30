@@ -103,7 +103,7 @@ describe('GET /api/admin/players', () => {
 describe('GET /api/admin/players/:id/latest-season-stats', () => {
   it('returns the latest played season stats split by regular season and playoffs', async () => {
     sql
-      .mockResolvedValueOnce([{ season_id: 'season-2', season_name: '2023-24' }])
+      .mockResolvedValueOnce([{ season_id: 'season-2', season_name: '2023-24', player_position: 'C' }])
       .mockResolvedValueOnce([
         { game_type: 'regular', gp: 10, goals: 5, assists: 6, points: 11 },
         { game_type: 'playoff', gp: 2, goals: 1, assists: 0, points: 1 },
@@ -148,6 +148,97 @@ describe('GET /api/admin/players/:id/latest-season-stats', () => {
 
     expect(res.status).toBe(200);
     expect(res.body).toBeNull();
+  });
+
+  it('uses goalie stints, not roster presence, for goalie games played', async () => {
+    sql
+      .mockResolvedValueOnce([{ season_id: 'season-2', season_name: '2023-24', player_position: 'G' }])
+      .mockResolvedValueOnce([
+        { game_type: 'regular', gp: 12, goals: 0, assists: 1, points: 1 },
+        { game_type: 'playoff', gp: 4, goals: 0, assists: 0, points: 0 },
+      ])
+      .mockResolvedValueOnce([
+        {
+          game_type: 'regular',
+          gp: 7,
+          shots_against: 210,
+          goals_against: 18,
+          wins: 5,
+          shootout_wins: 1,
+        },
+      ]);
+
+    const res = await request(app).get('/api/admin/players/player-1/latest-season-stats');
+
+    expect(res.status).toBe(200);
+    expect(res.body.regular).toMatchObject({
+      gp: 7,
+      goals: 0,
+      assists: 0,
+      points: 0,
+      wins: 5,
+      shootout_wins: 1,
+      goals_against: 18,
+      shots_against: 210,
+      save_pct: 0.914,
+    });
+    expect(res.body.playoffs).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/last-five-games
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/players/:id/last-five-games', () => {
+  it('returns recent game rows with team and opponent data', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        game_id: 'game-5',
+        season_id: 'season-1',
+        scheduled_at: '2026-01-15T00:00:00.000Z',
+        game_type: 'regular',
+        team_id: 'team-1',
+        team_name: 'Oilers',
+        team_code: 'EDM',
+        team_logo: 'oilers.png',
+        team_primary_color: '#ff4500',
+        team_text_color: '#ffffff',
+        opponent_team_id: 'team-2',
+        opponent_name: 'Canucks',
+        opponent_code: 'VAN',
+        opponent_logo: 'canucks.png',
+        opponent_primary_color: '#00205b',
+        opponent_text_color: '#ffffff',
+        is_home: true,
+        goals: 1,
+        assists: 2,
+        points: 3,
+        goalie_started: null,
+        shots_against: null,
+        goals_against: null,
+        save_pct: null,
+      },
+    ]);
+
+    const res = await request(app).get('/api/admin/players/player-1/last-five-games');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0]).toMatchObject({
+      game_id: 'game-5',
+      season_id: 'season-1',
+      team_name: 'Oilers',
+      opponent_code: 'VAN',
+      goals: 1,
+      assists: 2,
+      points: 3,
+    });
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/players/player-1/last-five-games');
+    expect(res.status).toBe(500);
   });
 });
 

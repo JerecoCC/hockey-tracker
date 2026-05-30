@@ -141,6 +141,14 @@
   }
 }
 
+.recentGamesCard {
+  grid-column: 1 / span 2;
+
+  @media (max-width: 960px) {
+    grid-column: auto;
+  }
+}
+
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -247,6 +255,26 @@
   display: flex;
   flex-direction: column;
   gap: $space-lg;
+  grid-column: 3;
+  grid-row: 1;
+
+  @media (max-width: 960px) {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+.opponentCell {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  font-weight: 600;
+  color: $text-body;
+}
+
+.opponentPrefix {
+  color: $text-dim;
+  font-weight: 500;
 }
 
 .statGrid {

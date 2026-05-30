@@ -15,8 +15,10 @@ import Tooltip from '@/components/Tooltip/Tooltip';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
+  usePlayerLastFiveGames,
   type PlayerCareerStatRecord,
   type PlayerCurrentSeasonStatBlock,
+  type PlayerLastFiveGameRecord,
 } from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
@@ -114,12 +116,26 @@ const formatStintDates = (stint: PlayerStintRecord) => {
   return 'Dates not set';
 };
 
+const teamCode = (code: string | null, name: string | null) =>
+  code ?? (name ? name.slice(0, 3).toUpperCase() : 'TEAM');
+
+const formatShortDate = (iso: string | null) => {
+  if (!iso) return '—';
+  return DATE_FMT.format(new Date(iso));
+};
+
+const formatSavePct = (value: number | null) => {
+  if (value == null) return '—';
+  return value.toFixed(3).replace(/^0/, '');
+};
+
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
   const { id, leagueId, teamId } = useParams<{ id: string; leagueId: string; teamId: string }>();
   const { player, stats, loading } = usePlayerDetails(id);
   const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
+  const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id);
   const { team: teamDetails } = useTeamDetails(teamId);
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
@@ -249,6 +265,63 @@ const PlayerDetailsPage = () => {
   const positionLabel = effectivePosition
     ? (POSITION_LABELS[effectivePosition] ?? effectivePosition)
     : null;
+  const isGoalie = effectivePosition === 'G';
+  const recentGameColumns: Column<PlayerLastFiveGameRecord>[] = [
+    {
+      type: 'custom',
+      header: 'Date',
+      render: (row) => formatShortDate(row.scheduled_at),
+    },
+    {
+      type: 'logo',
+      header: 'Team',
+      getLogo: (row) => row.team_logo,
+      getName: (row) => row.team_name ?? teamCode(row.team_code, row.team_name),
+      getCode: (row) => teamCode(row.team_code, row.team_name),
+    },
+    {
+      type: 'custom',
+      header: 'Opponent',
+      render: (row) => (
+        <span className={styles.opponentCell}>
+          <span className={styles.opponentPrefix}>{row.is_home ? 'vs' : '@'}</span>
+          <span>{teamCode(row.opponent_code, row.opponent_name)}</span>
+        </span>
+      ),
+    },
+    ...(isGoalie
+      ? [
+          {
+            type: 'custom' as const,
+            header: 'Games Started',
+            render: (row: PlayerLastFiveGameRecord) => (row.goalie_started ? 'Yes' : 'No'),
+            align: 'center' as const,
+          },
+          {
+            type: 'custom' as const,
+            header: 'Shots Against',
+            render: (row: PlayerLastFiveGameRecord) => row.shots_against ?? '—',
+            align: 'center' as const,
+          },
+          {
+            type: 'custom' as const,
+            header: 'Goals Against',
+            render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
+            align: 'center' as const,
+          },
+          {
+            type: 'custom' as const,
+            header: 'Save %',
+            render: (row: PlayerLastFiveGameRecord) => formatSavePct(row.save_pct),
+            align: 'center' as const,
+          },
+        ]
+      : [
+          { header: 'Goals', key: 'goals' as const, align: 'center' as const },
+          { header: 'Assist', key: 'assists' as const, align: 'center' as const },
+          { header: 'Points', key: 'points' as const, align: 'center' as const },
+        ]),
+  ];
 
   const playerEditTarget: TeamPlayerRecord = {
     ...player,
@@ -265,7 +338,7 @@ const PlayerDetailsPage = () => {
   const playerInfoCard = (
     <Card
       title="Player Info"
-      className={latestSeasonStats ? styles.playerInfoCard : undefined}
+      className={styles.playerInfoCard}
       action={
         <Button
           variant="outlined"
@@ -306,6 +379,24 @@ const PlayerDetailsPage = () => {
           value={player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null}
         />
       </div>
+    </Card>
+  );
+
+  const recentGamesCard = (
+    <Card
+      title="Last 5 Games"
+      className={styles.recentGamesCard}
+    >
+      <Table
+        columns={recentGameColumns}
+        data={lastFiveGames}
+        rowKey={(row) => row.game_id}
+        loading={lastFiveGamesLoading}
+        emptyMessage="No recent games recorded yet."
+        onRowClick={(row) =>
+          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+        }
+      />
     </Card>
   );
 
@@ -406,24 +497,25 @@ const PlayerDetailsPage = () => {
           tabs={[
             {
               label: 'Info',
-              content: latestSeasonStats ? (
+              content: (
                 <div className={styles.infoSummaryGrid}>
                   {playerInfoCard}
-                  <div className={styles.currentSeasonCards}>
-                    <SeasonStatCard
-                      title={`${latestSeasonStats.season_name} Regular Season`}
-                      stats={latestSeasonStats.regular}
-                      isGoalie={effectivePosition === 'G'}
-                    />
-                    <SeasonStatCard
-                      title={`${latestSeasonStats.season_name} Playoffs`}
-                      stats={latestSeasonStats.playoffs}
-                      isGoalie={effectivePosition === 'G'}
-                    />
-                  </div>
+                  {recentGamesCard}
+                  {latestSeasonStats && (
+                    <div className={styles.currentSeasonCards}>
+                      <SeasonStatCard
+                        title={`${latestSeasonStats.season_name} Regular Season`}
+                        stats={latestSeasonStats.regular}
+                        isGoalie={isGoalie}
+                      />
+                      <SeasonStatCard
+                        title={`${latestSeasonStats.season_name} Playoffs`}
+                        stats={latestSeasonStats.playoffs}
+                        isGoalie={isGoalie}
+                      />
+                    </div>
+                  )}
                 </div>
-              ) : (
-                playerInfoCard
               ),
             },
             {
