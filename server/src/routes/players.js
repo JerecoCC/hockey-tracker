@@ -236,7 +236,7 @@ router.get('/', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/players/:id/stats  – career stats for one player
-// Returns one row per season (aggregated across any mid-season trades).
+// Returns one row per season/team so mid-season trades keep each team's stats separate.
 // Columns: season_id, season_name, jersey_number, gp, goals, assists, points,
 //          team_id, team_name, team_logo, primary_color, text_color
 // ---------------------------------------------------------------------------
@@ -244,66 +244,84 @@ router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      WITH player_seasons AS (
-        SELECT DISTINCT season_id FROM player_teams WHERE player_id = ${id}
+      WITH player_team_rows AS (
+        SELECT DISTINCT ON (pt.season_id, pt.team_id)
+          pt.season_id,
+          pt.team_id,
+          pt.jersey_number,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at
+        FROM player_teams pt
+        WHERE pt.player_id = ${id}
+        ORDER BY pt.season_id, pt.team_id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
       ),
       gp_counts AS (
-        SELECT ga.season_id, COUNT(DISTINCT gr.game_id) AS gp
+        SELECT ga.season_id, gr.team_id, COUNT(DISTINCT gr.game_id) AS gp
         FROM game_rosters gr
         JOIN games ga ON ga.id = gr.game_id
         WHERE gr.player_id = ${id}
-        GROUP BY ga.season_id
+        GROUP BY ga.season_id, gr.team_id
       ),
       goal_counts AS (
-        SELECT ga.season_id, COUNT(*) AS goals
+        SELECT ga.season_id, gl.team_id, COUNT(*) AS goals
         FROM goals gl
         JOIN games ga ON ga.id = gl.game_id
         WHERE gl.scorer_id = ${id}
-        GROUP BY ga.season_id
+        GROUP BY ga.season_id, gl.team_id
       ),
       assist_counts AS (
-        SELECT ga.season_id, COUNT(*) AS assists
+        SELECT ga.season_id, gl.team_id, COUNT(*) AS assists
         FROM goals gl
         JOIN games ga ON ga.id = gl.game_id
         WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id}
-        GROUP BY ga.season_id
+        GROUP BY ga.season_id, gl.team_id
       ),
-      latest_team AS (
-        SELECT DISTINCT ON (pt.season_id)
-          pt.season_id, pt.team_id, pt.jersey_number
-        FROM player_teams pt
-        WHERE pt.player_id = ${id}
-        ORDER BY pt.season_id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+      stat_rows AS (
+        SELECT season_id, team_id FROM player_team_rows
+        UNION
+        SELECT season_id, team_id FROM gp_counts
+        UNION
+        SELECT season_id, team_id FROM goal_counts
+        UNION
+        SELECT season_id, team_id FROM assist_counts
       )
       SELECT
         s.id         AS season_id,
         s.name       AS season_name,
-        lt.jersey_number,
+        ptr.jersey_number,
         COALESCE(gc.gp, 0)      AS gp,
         COALESCE(gl.goals, 0)   AS goals,
         COALESCE(ac.assists, 0) AS assists,
         COALESCE(gl.goals, 0) + COALESCE(ac.assists, 0) AS points,
-        lt.team_id,
+        sr.team_id,
         ti.name  AS team_name,
         ti.logo  AS team_logo,
         t.primary_color,
         t.text_color
-      FROM player_seasons ps
-      JOIN seasons s ON s.id = ps.season_id
-      LEFT JOIN latest_team lt ON lt.season_id = ps.season_id
-      LEFT JOIN gp_counts gc ON gc.season_id = ps.season_id
-      LEFT JOIN goal_counts gl ON gl.season_id = ps.season_id
-      LEFT JOIN assist_counts ac ON ac.season_id = ps.season_id
-      LEFT JOIN teams t ON t.id = lt.team_id
+      FROM stat_rows sr
+      JOIN seasons s ON s.id = sr.season_id
+      LEFT JOIN player_team_rows ptr ON ptr.season_id = sr.season_id AND ptr.team_id = sr.team_id
+      LEFT JOIN gp_counts gc ON gc.season_id = sr.season_id AND gc.team_id = sr.team_id
+      LEFT JOIN goal_counts gl ON gl.season_id = sr.season_id AND gl.team_id = sr.team_id
+      LEFT JOIN assist_counts ac ON ac.season_id = sr.season_id AND ac.team_id = sr.team_id
+      LEFT JOIN teams t ON t.id = sr.team_id
       LEFT JOIN LATERAL (
         SELECT name, logo FROM team_iterations
-        WHERE team_id = lt.team_id
-          AND (start_date IS NULL OR start_date <= s.start_date)
-          AND (end_date IS NULL OR end_date >= s.start_date)
-        ORDER BY start_date DESC NULLS LAST, recorded_at DESC
+        WHERE team_id = sr.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(ptr.end_date, s.end_date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(ptr.start_date, s.start_date, ptr.created_at::date))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
         LIMIT 1
-      ) ti ON lt.team_id IS NOT NULL
-      ORDER BY s.created_at DESC
+      ) ti ON sr.team_id IS NOT NULL
+      ORDER BY s.created_at DESC, ti.name NULLS LAST
     `;
     return res.json(rows);
   } catch (err) {

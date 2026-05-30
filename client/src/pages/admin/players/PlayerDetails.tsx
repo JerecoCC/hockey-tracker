@@ -433,7 +433,7 @@ const PlayerDetailsPage = () => {
                   <Table
                     columns={statColumns}
                     data={stats}
-                    rowKey={(r) => r.season_id}
+                    rowKey={(r) => `${r.season_id}-${r.team_id ?? 'teamless'}`}
                     emptyMessage="No stats recorded yet."
                   />
                 </Card>
