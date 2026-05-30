@@ -34,6 +34,7 @@ export interface UpdateStintData {
   team_id?: string;
   season_id?: string;
   jersey_number?: number | null;
+  is_prospect?: boolean;
   photo?: string | null;
   position?: string | null;
   acquisition_type?: string | null;
@@ -45,6 +46,7 @@ export interface CreateStintData {
   team_id: string;
   season_id: string;
   jersey_number?: number | null;
+  is_prospect?: boolean;
   photo?: string | null;
   position?: string | null;
   acquisition_type?: string | null;
@@ -441,19 +443,27 @@ const useTeamPlayers = (
     player: TeamPlayerRecord,
     isProspect: boolean,
   ): Promise<boolean> => {
-    if (!player.team_id || !seasonId) return false;
+    if (!player.player_team_id && (!player.team_id || !seasonId)) return false;
     setBusy(player.id);
     try {
-      await axios.patch(
-        `${API}/admin/player-teams`,
-        {
-          player_id: player.id,
-          team_id: player.team_id,
-          season_id: seasonId,
-          is_prospect: isProspect,
-        },
-        { headers: authHeaders() },
-      );
+      if (player.player_team_id) {
+        await axios.patch(
+          `${API}/admin/player-teams/${player.player_team_id}`,
+          { is_prospect: isProspect },
+          { headers: authHeaders() },
+        );
+      } else {
+        await axios.patch(
+          `${API}/admin/player-teams`,
+          {
+            player_id: player.id,
+            team_id: player.team_id,
+            season_id: seasonId,
+            is_prospect: isProspect,
+          },
+          { headers: authHeaders() },
+        );
+      }
       toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });

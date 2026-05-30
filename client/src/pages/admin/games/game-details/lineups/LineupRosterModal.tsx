@@ -159,16 +159,24 @@ const LineupRosterModal = ({
   const updateProspectStatus = async (player: TeamPlayerRecord, isProspect: boolean) => {
     setMovingPlayerId(player.id);
     try {
-      await axios.patch(
-        `${API}/admin/player-teams`,
-        {
-          player_id: player.id,
-          team_id: player.team_id ?? teamId,
-          season_id: seasonId,
-          is_prospect: isProspect,
-        },
-        { headers: authHeaders() },
-      );
+      if (player.player_team_id) {
+        await axios.patch(
+          `${API}/admin/player-teams/${player.player_team_id}`,
+          { is_prospect: isProspect },
+          { headers: authHeaders() },
+        );
+      } else {
+        await axios.patch(
+          `${API}/admin/player-teams`,
+          {
+            player_id: player.id,
+            team_id: player.team_id ?? teamId,
+            season_id: seasonId,
+            is_prospect: isProspect,
+          },
+          { headers: authHeaders() },
+        );
+      }
       if (isProspect) {
         setSelected((prev) => {
           const next = new Set(prev);

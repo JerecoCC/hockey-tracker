@@ -40,6 +40,7 @@ export const ACQUISITION_TYPE_LABELS = Object.fromEntries(
 interface FormValues {
   team_id: string;
   position: string;
+  roster_status: 'roster' | 'prospect';
   acquisition_type: string;
   start_date: string;
   end_date: string;
@@ -76,6 +77,7 @@ const StintEditModal = ({
     defaultValues: {
       team_id: '',
       position: '',
+      roster_status: 'roster',
       acquisition_type: '',
       start_date: '',
       end_date: '',
@@ -105,6 +107,7 @@ const StintEditModal = ({
       reset({
         team_id: stint.team_id,
         position: stint.position ?? '',
+        roster_status: stint.is_prospect ? 'prospect' : 'roster',
         acquisition_type: stint.acquisition_type ?? '',
         start_date: stint.start_date?.slice(0, 10) ?? '',
         end_date: stint.end_date?.slice(0, 10) ?? '',
@@ -113,6 +116,7 @@ const StintEditModal = ({
       reset({
         team_id: '',
         position: '',
+        roster_status: 'roster',
         acquisition_type: '',
         start_date: '',
         end_date: '',
@@ -127,6 +131,7 @@ const StintEditModal = ({
       const ok = await createStint({
         team_id: data.team_id,
         season_id: seasonId,
+        is_prospect: data.roster_status === 'prospect',
         position: data.position || null,
         acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
@@ -139,6 +144,7 @@ const StintEditModal = ({
       const ok = await updateStint(stint.id, {
         team_id: data.team_id,
         ...(seasonId ? { season_id: seasonId } : {}),
+        is_prospect: data.roster_status === 'prospect',
         position: data.position || null,
         acquisition_type: data.acquisition_type || null,
         start_date: data.start_date || null,
@@ -189,6 +195,17 @@ const StintEditModal = ({
           name="position"
           options={POSITION_OPTIONS}
           placeholder="Inherit from player..."
+          disabled={isSubmitting}
+        />
+        <Field
+          type="select"
+          label="Roster Status"
+          control={control}
+          name="roster_status"
+          options={[
+            { value: 'roster', label: 'Roster' },
+            { value: 'prospect', label: 'Prospect' },
+          ]}
           disabled={isSubmitting}
         />
         <Field

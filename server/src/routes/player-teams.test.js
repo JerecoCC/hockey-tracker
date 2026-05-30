@@ -268,6 +268,64 @@ describe('PATCH /api/admin/player-teams', () => {
     });
     expect(sql).toHaveBeenCalledTimes(1);
   });
+
+  it('updates prospect status on a matching historical stint when no active row exists', async () => {
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: 'stint-sjs',
+        player_id: 'player-kyle-masters',
+        team_id: 'team-sjs',
+        season_id: 'season-1',
+        jersey_number: 44,
+        is_prospect: true,
+        position: 'C',
+      }]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams')
+      .send({
+        player_id: 'player-kyle-masters',
+        team_id: 'team-sjs',
+        season_id: 'season-1',
+        is_prospect: true,
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'stint-sjs',
+      is_prospect: true,
+    });
+    expect(sql).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('PATCH /api/admin/player-teams/:id', () => {
+  it('updates prospect status on a specific stint row', async () => {
+    sql.mockResolvedValueOnce([{
+      id: 'stint-1',
+      player_id: 'player-1',
+      team_id: 'team-1',
+      season_id: 'season-1',
+      jersey_number: 16,
+      is_prospect: true,
+      position: 'C',
+      acquisition_type: 'draft',
+      start_date: '2024-10-01',
+      end_date: '2025-01-15',
+    }]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams/stint-1')
+      .send({ is_prospect: true });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'stint-1',
+      is_prospect: true,
+    });
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('GET /api/admin/player-teams/history/:playerId/jerseys', () => {

@@ -172,7 +172,7 @@ router.patch('/', async (req, res) => {
       }
     }
 
-    const rows = await sql`
+    let rows = await sql`
       UPDATE player_teams
       SET
         jersey_number = CASE WHEN ${jerseyInBody}   THEN ${jersey_number ?? null} ELSE jersey_number END,
@@ -184,6 +184,30 @@ router.patch('/', async (req, res) => {
         AND end_date IS NULL
       RETURNING id, player_id, team_id, season_id, jersey_number, is_prospect, position
     `;
+
+    if (
+      rows.length === 0 &&
+      prospectInBody &&
+      !jerseyInBody &&
+      !photoInBody &&
+      !positionInBody
+    ) {
+      rows = await sql`
+        UPDATE player_teams
+        SET is_prospect = ${!!req.body.is_prospect}
+        WHERE id = (
+          SELECT id
+          FROM player_teams
+          WHERE player_id = ${player_id}
+            AND team_id   = ${team_id}
+            AND season_id = ${season_id}
+          ORDER BY end_date DESC NULLS FIRST, created_at DESC
+          LIMIT 1
+        )
+        RETURNING id, player_id, team_id, season_id, jersey_number, is_prospect, position
+      `;
+    }
+
     if (rows.length === 0) return res.status(404).json({ error: 'Player team record not found' });
     if (photoInBody) {
       if (photo) {
