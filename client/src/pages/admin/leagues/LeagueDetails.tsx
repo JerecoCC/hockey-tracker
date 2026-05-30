@@ -58,6 +58,8 @@ const LeagueDetailsPage = () => {
   const [bulkAddOpen, setBulkAddOpen] = useState(false);
   const [editTargetPlayer, setEditTargetPlayer] = useState<PlayerRecord | null>(null);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [playersPage, setPlayersPage] = useState(1);
+  const [playersSearch, setPlayersSearch] = useState('');
 
   useEffect(() => {
     if (selectedSeasonId === null && seasons.length > 0) {
@@ -68,13 +70,19 @@ const LeagueDetailsPage = () => {
 
   const {
     players,
+    total: playersTotal,
     loading: playersLoading,
+    fetching: playersFetching,
     busy: playerBusy,
     addPlayer,
     bulkAddPlayers,
     updatePlayer,
     deletePlayer,
-  } = useLeaguePlayers(id, selectedSeasonId ?? undefined);
+  } = useLeaguePlayers(id, selectedSeasonId ?? undefined, {
+    page: playersPage,
+    pageSize: 20,
+    search: playersSearch,
+  });
 
   if (loading) {
     return (
@@ -196,10 +204,23 @@ const LeagueDetailsPage = () => {
                   className={styles.col12}
                   leagueId={id ?? ''}
                   players={players}
+                  total={playersTotal}
+                  page={playersPage}
+                  pageSize={20}
+                  search={playersSearch}
                   seasons={seasons}
                   selectedSeasonId={selectedSeasonId}
-                  onSeasonChange={setSelectedSeasonId}
+                  onPageChange={setPlayersPage}
+                  onSearchChange={(query) => {
+                    setPlayersPage(1);
+                    setPlayersSearch(query);
+                  }}
+                  onSeasonChange={(seasonId) => {
+                    setPlayersPage(1);
+                    setSelectedSeasonId(seasonId);
+                  }}
                   loading={playersLoading}
+                  fetching={playersFetching}
                   busy={playerBusy}
                   onAdd={() => {
                     setEditTargetPlayer(null);

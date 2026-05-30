@@ -65,6 +65,24 @@ describe('GET /api/admin/players', () => {
     });
   });
 
+  it('returns paginated league players with total count', async () => {
+    sql
+      .mockResolvedValueOnce([PLAYER_WITH_ROSTER])
+      .mockResolvedValueOnce([{ total: 42 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=2&page_size=20&search=wayne');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(res.body).toEqual({
+      players: [PLAYER_WITH_ROSTER],
+      total: 42,
+      page: 2,
+      page_size: 20,
+    });
+  });
+
   it('filters by team_id and returns roster fields', async () => {
     sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
     const res = await request(app).get('/api/admin/players?team_id=team-1');

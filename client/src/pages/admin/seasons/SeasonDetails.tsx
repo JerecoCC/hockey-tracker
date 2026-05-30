@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import { useNavigate, useParams } from 'react-router-dom';
 import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
@@ -7,6 +7,7 @@ import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Badge from '@/components/Badge/Badge';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
+import { PaginatedTable } from '@/components/Pagination/Pagination';
 import Table, { type Column } from '@/components/Table/Table';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Tabs from '@/components/Tabs/Tabs';
@@ -200,6 +201,118 @@ const SeasonDetailsPage = () => {
     dir: 'desc',
   });
   const [goaliePage, setGoaliePage] = useState(1);
+
+  const {
+    items: forwardStatItems,
+    total: rawForwardStatsTotal,
+    loading: forwardStatsLoading,
+    fetching: forwardStatsFetching,
+  } = useSeasonStats(id, {
+    group: 'forwards',
+    page: fwdPage,
+    pageSize: PAGE_SIZE,
+    sortKey: fwdSort.key,
+    sortDir: fwdSort.dir,
+  });
+  const {
+    items: defenseStatItems,
+    total: rawDefenseStatsTotal,
+    loading: defenseStatsLoading,
+    fetching: defenseStatsFetching,
+  } = useSeasonStats(id, {
+    group: 'defense',
+    page: defPage,
+    pageSize: PAGE_SIZE,
+    sortKey: defSort.key,
+    sortDir: defSort.dir,
+  });
+  const {
+    items: goalieStatItems,
+    total: rawGoalieStatsTotal,
+    loading: goalieStatsLoading,
+    fetching: goalieStatsFetching,
+  } = useSeasonStats(id, {
+    group: 'goalies',
+    page: goaliePage,
+    pageSize: PAGE_SIZE,
+    sortKey: goalieSort.key,
+    sortDir: goalieSort.dir,
+  });
+
+  const sortSkaterTable = (arr: SkaterStatRecord[], sort: { key: string; dir: 'asc' | 'desc' }) =>
+    [...arr].sort((a, b) => {
+      const av = a[sort.key as keyof SkaterStatRecord] ?? '';
+      const bv = b[sort.key as keyof SkaterStatRecord] ?? '';
+      if (av < bv) return sort.dir === 'asc' ? -1 : 1;
+      if (av > bv) return sort.dir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+  const forwards = useMemo(
+    () => skaters.filter((s) => FORWARD_POSITIONS.has(s.position ?? '')),
+    [skaters],
+  );
+  const defensemen = useMemo(
+    () => skaters.filter((s) => DEFENSE_POSITIONS.has(s.position ?? '')),
+    [skaters],
+  );
+
+  const fallbackForwardStats = useMemo(
+    () => sortSkaterTable(forwards, fwdSort).slice((fwdPage - 1) * PAGE_SIZE, fwdPage * PAGE_SIZE),
+    [forwards, fwdSort, fwdPage],
+  );
+  const fallbackDefenseStats = useMemo(
+    () => sortSkaterTable(defensemen, defSort).slice((defPage - 1) * PAGE_SIZE, defPage * PAGE_SIZE),
+    [defensemen, defSort, defPage],
+  );
+  const fallbackGoalieStats = useMemo(
+    () =>
+      [...goalies]
+        .sort((a, b) => {
+          const av = a[goalieSort.key as keyof GoalieStatRecord] ?? -Infinity;
+          const bv = b[goalieSort.key as keyof GoalieStatRecord] ?? -Infinity;
+          if (av < bv) return goalieSort.dir === 'asc' ? -1 : 1;
+          if (av > bv) return goalieSort.dir === 'asc' ? 1 : -1;
+          return 0;
+        })
+        .slice((goaliePage - 1) * PAGE_SIZE, goaliePage * PAGE_SIZE),
+    [goalies, goalieSort, goaliePage],
+  );
+
+  const forwardStats = Array.isArray(forwardStatItems)
+    ? (forwardStatItems as SkaterStatRecord[])
+    : fallbackForwardStats;
+  const defenseStats = Array.isArray(defenseStatItems)
+    ? (defenseStatItems as SkaterStatRecord[])
+    : fallbackDefenseStats;
+  const goalieStats = Array.isArray(goalieStatItems)
+    ? (goalieStatItems as GoalieStatRecord[])
+    : fallbackGoalieStats;
+  const forwardStatsTotal = typeof rawForwardStatsTotal === 'number' ? rawForwardStatsTotal : forwards.length;
+  const defenseStatsTotal = typeof rawDefenseStatsTotal === 'number' ? rawDefenseStatsTotal : defensemen.length;
+  const goalieStatsTotal = typeof rawGoalieStatsTotal === 'number' ? rawGoalieStatsTotal : goalies.length;
+  const fwdPageCount = Math.max(1, Math.ceil(forwardStatsTotal / PAGE_SIZE));
+  const defPageCount = Math.max(1, Math.ceil(defenseStatsTotal / PAGE_SIZE));
+  const goaliePageCount = Math.max(1, Math.ceil(goalieStatsTotal / PAGE_SIZE));
+
+  useEffect(() => {
+    if (!forwardStatsLoading && forwardStatsTotal > 0 && fwdPage > fwdPageCount) {
+      setFwdPage(fwdPageCount);
+    }
+  }, [forwardStatsLoading, forwardStatsTotal, fwdPage, fwdPageCount]);
+
+  useEffect(() => {
+    if (!defenseStatsLoading && defenseStatsTotal > 0 && defPage > defPageCount) {
+      setDefPage(defPageCount);
+    }
+  }, [defenseStatsLoading, defenseStatsTotal, defPage, defPageCount]);
+
+  useEffect(() => {
+    if (!goalieStatsLoading && goalieStatsTotal > 0 && goaliePage > goaliePageCount) {
+      setGoaliePage(goaliePageCount);
+    }
+  }, [goalieStatsLoading, goalieStatsTotal, goaliePage, goaliePageCount]);
+
   // Standings sort + sub-tab
   const [standingsSort, setStandingsSort] = useState<{ key: string; dir: 'asc' | 'desc' }>({
     key: 'points',
@@ -266,42 +379,15 @@ const SeasonDetailsPage = () => {
       return count > 1 ? `T${rank}` : `${rank}`;
     });
 
-  const forwards = useMemo(
-    () => skaters.filter((s) => FORWARD_POSITIONS.has(s.position ?? '')),
-    [skaters],
-  );
-  const defensemen = useMemo(
-    () => skaters.filter((s) => DEFENSE_POSITIONS.has(s.position ?? '')),
-    [skaters],
-  );
-
   const summarySkaters = useMemo(
     () => sortBySkaterStat(skaters, summarySkaterStat),
     [skaters, summarySkaterStat],
   );
-  const sortSkaterTable = (arr: SkaterStatRecord[], sort: { key: string; dir: 'asc' | 'desc' }) =>
-    [...arr].sort((a, b) => {
-      const av = a[sort.key as keyof SkaterStatRecord] ?? '';
-      const bv = b[sort.key as keyof SkaterStatRecord] ?? '';
-      if (av < bv) return sort.dir === 'asc' ? -1 : 1;
-      if (av > bv) return sort.dir === 'asc' ? 1 : -1;
-      return 0;
-    });
-
-  const sortedForwards = useMemo(() => sortSkaterTable(forwards, fwdSort), [forwards, fwdSort]);
-  const fwdPageCount = Math.max(1, Math.ceil(sortedForwards.length / PAGE_SIZE));
-  const pagedForwards = sortedForwards.slice((fwdPage - 1) * PAGE_SIZE, fwdPage * PAGE_SIZE);
   const handleFwdSort = (key: string, dir: 'asc' | 'desc') => {
     setFwdSort({ key, dir });
     setFwdPage(1);
   };
 
-  const sortedDefensemen = useMemo(
-    () => sortSkaterTable(defensemen, defSort),
-    [defensemen, defSort],
-  );
-  const defPageCount = Math.max(1, Math.ceil(sortedDefensemen.length / PAGE_SIZE));
-  const pagedDefensemen = sortedDefensemen.slice((defPage - 1) * PAGE_SIZE, defPage * PAGE_SIZE);
   const handleDefSort = (key: string, dir: 'asc' | 'desc') => {
     setDefSort({ key, dir });
     setDefPage(1);
@@ -317,19 +403,6 @@ const SeasonDetailsPage = () => {
       })
       .slice(0, PAGE_SIZE);
   }, [goalies, summaryGoalieStat]);
-
-  const sortedGoalies = useMemo(() => {
-    return [...goalies].sort((a, b) => {
-      const av = a[goalieSort.key as keyof GoalieStatRecord] ?? -Infinity;
-      const bv = b[goalieSort.key as keyof GoalieStatRecord] ?? -Infinity;
-      if (av < bv) return goalieSort.dir === 'asc' ? -1 : 1;
-      if (av > bv) return goalieSort.dir === 'asc' ? 1 : -1;
-      return 0;
-    });
-  }, [goalies, goalieSort]);
-
-  const goaliePageCount = Math.max(1, Math.ceil(sortedGoalies.length / PAGE_SIZE));
-  const pagedGoalies = sortedGoalies.slice((goaliePage - 1) * PAGE_SIZE, goaliePage * PAGE_SIZE);
 
   const handleGoalieSort = (key: string, dir: 'asc' | 'desc') => {
     setGoalieSort({ key, dir });
@@ -821,112 +894,67 @@ const SeasonDetailsPage = () => {
 
                 {statsSubTab === 'Forwards' && (
                   <Card>
-                    <Table
+                    <PaginatedTable
                       columns={skaterColumns}
-                      data={pagedForwards}
+                      data={forwardStats}
                       rowKey={(r) => r.player_id}
-                      loading={statsLoading}
+                      loading={forwardStatsLoading}
+                      fetching={forwardStatsFetching}
                       emptyMessage="No forward stats recorded yet."
                       activeSortKey={fwdSort.key}
                       sortDir={fwdSort.dir}
                       onSort={handleFwdSort}
                       onRowClick={navigateToPlayer}
+                      page={fwdPage}
+                      pageSize={PAGE_SIZE}
+                      total={forwardStatsTotal}
+                      onPageChange={setFwdPage}
+                      loadingMessage="Loading forwards..."
                     />
-                    {fwdPageCount > 1 && (
-                      <div className={styles.statsPagination}>
-                        <button
-                          className={styles.statsPageBtn}
-                          onClick={() => setFwdPage((p) => p - 1)}
-                          disabled={fwdPage === 1}
-                        >
-                          ‹
-                        </button>
-                        <span className={styles.statsPageInfo}>
-                          {fwdPage} / {fwdPageCount}
-                        </span>
-                        <button
-                          className={styles.statsPageBtn}
-                          onClick={() => setFwdPage((p) => p + 1)}
-                          disabled={fwdPage === fwdPageCount}
-                        >
-                          ›
-                        </button>
-                      </div>
-                    )}
                   </Card>
                 )}
 
                 {statsSubTab === 'Defense' && (
                   <Card>
-                    <Table
+                    <PaginatedTable
                       columns={skaterColumns}
-                      data={pagedDefensemen}
+                      data={defenseStats}
                       rowKey={(r) => r.player_id}
-                      loading={statsLoading}
+                      loading={defenseStatsLoading}
+                      fetching={defenseStatsFetching}
                       emptyMessage="No defense stats recorded yet."
                       activeSortKey={defSort.key}
                       sortDir={defSort.dir}
                       onSort={handleDefSort}
                       onRowClick={navigateToPlayer}
+                      page={defPage}
+                      pageSize={PAGE_SIZE}
+                      total={defenseStatsTotal}
+                      onPageChange={setDefPage}
+                      loadingMessage="Loading defense..."
                     />
-                    {defPageCount > 1 && (
-                      <div className={styles.statsPagination}>
-                        <button
-                          className={styles.statsPageBtn}
-                          onClick={() => setDefPage((p) => p - 1)}
-                          disabled={defPage === 1}
-                        >
-                          ‹
-                        </button>
-                        <span className={styles.statsPageInfo}>
-                          {defPage} / {defPageCount}
-                        </span>
-                        <button
-                          className={styles.statsPageBtn}
-                          onClick={() => setDefPage((p) => p + 1)}
-                          disabled={defPage === defPageCount}
-                        >
-                          ›
-                        </button>
-                      </div>
-                    )}
                   </Card>
                 )}
 
                 {statsSubTab === 'Goalies' && (
                   <Card>
-                    <Table
+                    <PaginatedTable
                       columns={goalieColumns}
-                      data={pagedGoalies}
+                      data={goalieStats}
                       rowKey={(r) => r.player_id}
-                      loading={statsLoading}
+                      loading={goalieStatsLoading}
+                      fetching={goalieStatsFetching}
                       emptyMessage="No goalie stats recorded yet."
                       activeSortKey={goalieSort.key}
                       sortDir={goalieSort.dir}
                       onSort={handleGoalieSort}
                       onRowClick={navigateToPlayer}
+                      page={goaliePage}
+                      pageSize={PAGE_SIZE}
+                      total={goalieStatsTotal}
+                      onPageChange={setGoaliePage}
+                      loadingMessage="Loading goalies..."
                     />
-                    {goaliePageCount > 1 && (
-                      <div className={styles.statsPagination}>
-                        <button
-                          className={styles.statsPageBtn}
-                          onClick={() => setGoaliePage((p) => p - 1)}
-                          disabled={goaliePage === 1}
-                        >
-                          ‹
-                        </button>
-                        <span className={styles.statsPageInfo}>
-                          {goaliePage} / {goaliePageCount}
-                        </span>
-                        <button
-                          className={styles.statsPageBtn}
-                          onClick={() => setGoaliePage((p) => p + 1)}
-                          disabled={goaliePage === goaliePageCount}
-                        >
-                          ›
-                        </button>
-                      </div>
-                    )}
                   </Card>
                 )}
               </div>

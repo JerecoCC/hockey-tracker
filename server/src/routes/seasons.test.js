@@ -68,6 +68,42 @@ describe('GET /api/admin/seasons/:id', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:id/stats
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/seasons/:id/stats', () => {
+  it('returns paginated forward stats with total count', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        player_id: 'player-1',
+        first_name: 'Wayne',
+        last_name: 'Gretzky',
+        points: 215,
+        total: 42,
+      },
+    ]);
+
+    const res = await request(app)
+      .get('/api/admin/seasons/season-1/stats?group=forwards&page=2&page_size=10&sort_key=points&sort_dir=desc');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(1);
+    expect(res.body).toEqual({
+      items: [
+        {
+          player_id: 'player-1',
+          first_name: 'Wayne',
+          last_name: 'Gretzky',
+          points: 215,
+        },
+      ],
+      total: 42,
+      page: 2,
+      page_size: 10,
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/admin/seasons
 // ---------------------------------------------------------------------------
 describe('POST /api/admin/seasons', () => {

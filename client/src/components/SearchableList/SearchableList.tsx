@@ -12,6 +12,9 @@ interface Props<T> {
   placeholder?: string;
   /** Buttons / selects to place in the toolbar beside the search field. */
   actions?: ReactNode;
+  query?: string;
+  onQueryChange?: (query: string) => void;
+  disableClientFilter?: boolean;
   loading?: boolean;
   loadingMessage?: string;
   /** Shown when items is empty and no query is active. */
@@ -27,15 +30,25 @@ function SearchableList<T>({
   renderItems,
   placeholder = 'Search…',
   actions,
+  query: controlledQuery,
+  onQueryChange,
+  disableClientFilter = false,
   loading = false,
   loadingMessage = 'Loading…',
   emptyMessage,
   noResultsMessage,
   className,
 }: Props<T>) {
-  const [query, setQuery] = useState('');
+  const [internalQuery, setInternalQuery] = useState('');
+  const query = controlledQuery ?? internalQuery;
+  const setQuery = (value: string) => {
+    if (controlledQuery === undefined) setInternalQuery(value);
+    onQueryChange?.(value);
+  };
   const trimmed = query.trim();
-  const filtered = trimmed ? items.filter((item) => filterFn(item, trimmed)) : items;
+  const filtered = trimmed && !disableClientFilter
+    ? items.filter((item) => filterFn(item, trimmed))
+    : items;
 
   const resolveNoResults = noResultsMessage
     ? noResultsMessage(query)
@@ -55,12 +68,16 @@ function SearchableList<T>({
             type="text"
             placeholder={placeholder}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+            }}
           />
           {query && (
             <button
               className={styles.searchClear}
-              onClick={() => setQuery('')}
+              onClick={() => {
+                setQuery('');
+              }}
               aria-label="Clear search"
             >
               <Icon
@@ -76,7 +93,7 @@ function SearchableList<T>({
       {loading ? (
         <p className={styles.empty}>{loadingMessage}</p>
       ) : items.length === 0 ? (
-        <p className={styles.empty}>{emptyMessage}</p>
+        <p className={styles.empty}>{trimmed ? resolveNoResults : emptyMessage}</p>
       ) : filtered.length === 0 ? (
         <p className={styles.empty}>{resolveNoResults}</p>
       ) : (

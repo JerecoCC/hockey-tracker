@@ -532,50 +532,6 @@
   text-overflow: ellipsis;
 }
 
-.statsPagination {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-sm;
-  padding: $space-md $space-md $space-sm;
-  border-top: 1px solid $border;
-}
-
-.statsPageBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: rgba(255, 255, 255, 0.04);
-  color: $text-body;
-  font-size: $font-lg;
-  line-height: 1;
-  cursor: pointer;
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: $accent;
-  }
-
-  &:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-}
-
-.statsPageInfo {
-  font-size: $font-sm;
-  color: $text-dim;
-  min-width: 48px;
-  text-align: center;
-}
-
 .statsTeamLogo {
   width: 24px;
   height: 24px;
