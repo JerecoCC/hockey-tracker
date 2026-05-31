@@ -88,8 +88,9 @@ export interface PostGoalData {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-const useGameGoals = (gameId: string | undefined) => {
+const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean } = {}) => {
   const queryClient = useQueryClient();
+  const { enabled = true } = options;
 
   const { data: goals = [], isLoading: loading } = useQuery<GoalRecord[]>({
     queryKey: ['game-goals', gameId],
@@ -105,7 +106,7 @@ const useGameGoals = (gameId: string | undefined) => {
         return [];
       }
     },
-    enabled: !!gameId,
+    enabled: !!gameId && enabled,
   });
 
   const addGoal = async (data: PostGoalData): Promise<boolean> => {

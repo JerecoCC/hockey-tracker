@@ -126,8 +126,13 @@ const GameSummaryTab = ({
   const navigate = useNavigate();
 
   // ── Data hooks ───────────────────────────────────────────────────────────
-  const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(game.id);
-  const { attempts, addAttempt, updateAttempt, deleteAttempt } = useShootoutAttempts(game.id);
+  const gameHasStarted = game.status !== 'scheduled';
+  const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(game.id, {
+    enabled: gameHasStarted,
+  });
+  const { attempts, addAttempt, updateAttempt, deleteAttempt } = useShootoutAttempts(game.id, {
+    enabled: !!game.shootout,
+  });
 
   // Only the last recorded goal in the active period can be edited or deleted.
   const currentPeriodGoals = goals.filter((g) => g.period === game.current_period);
@@ -249,6 +254,31 @@ const GameSummaryTab = ({
   // ── Goal modal state ─────────────────────────────────────────────────────
   const [goalPeriod, setGoalPeriod] = useState<string | null>(null);
   const [editGoal, setEditGoal] = useState<GoalRecord | null>(null);
+  const lastRecordedGoalId = useMemo(() => {
+    const periodRank = (period: string) => {
+      if (period === '1') return 1;
+      if (period === '2') return 2;
+      if (period === '3') return 3;
+      if (period === 'OT') return 4;
+      return 5;
+    };
+    const toSecs = (time: string | null) => {
+      if (!time) return 0;
+      const [minutes, seconds] = time.split(':').map(Number);
+      return (minutes || 0) * 60 + (seconds || 0);
+    };
+    return [...goals]
+      .sort((a, b) => {
+        const periodDiff = periodRank(a.period) - periodRank(b.period);
+        if (periodDiff !== 0) return periodDiff;
+        const timeDiff = toSecs(a.period_time) - toSecs(b.period_time);
+        if (timeDiff !== 0) return timeDiff;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      })
+      .at(-1)?.id;
+  }, [goals]);
+  const lockGoalTimingFields =
+    !!editGoal && (editGoal.id !== lastRecordedGoalId || attempts.length > 0);
 
   // ── Shootout Attempt modal state ─────────────────────────────────────────
   const [attemptModalMode, setAttemptModalMode] = useState<null | 'add' | string>(null);
@@ -677,6 +707,7 @@ const GameSummaryTab = ({
           awayRoster={awayRoster}
           homeRoster={homeRoster}
           busy={!!busy}
+          lockTimingFields={lockGoalTimingFields}
           onClose={closeGoalModal}
           onAdd={addGoal}
           onUpdate={updateGoal}

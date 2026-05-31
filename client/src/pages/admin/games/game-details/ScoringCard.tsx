@@ -271,6 +271,7 @@ const ScoringCard = ({
           const isActive = !isFinal && game.current_period === periodId;
           const isDone = isFinal || isPostRegulation || currentIdx > idx;
           const periodGoals = sortedByTime(goals.filter((g) => g.period === periodId));
+          if (isFinal && !isEditMode && periodGoals.length === 0) return null;
           return (
             <Accordion
               key={num}
@@ -375,6 +376,7 @@ const ScoringCard = ({
                 const isThisActive = isOTActive && isLast;
                 const isThisDone = isOTDone || !isLast;
                 const periodGoals = isLast ? otGoals : [];
+                if (isFinal && !isEditMode && periodGoals.length === 0) return null;
                 return (
                   <Accordion
                     key={`OT${otNum}`}
@@ -444,6 +446,7 @@ const ScoringCard = ({
             }
 
             // Regular season: single OT accordion.
+            if (isFinal && !isEditMode && otGoals.length === 0) return null;
             return (
               <Accordion
                 ref={setAccordionRef ? setAccordionRef('OT') : undefined}
@@ -517,6 +520,7 @@ const ScoringCard = ({
           <ShootoutAccordion
             game={game}
             attempts={attempts}
+            goals={goals}
             isFinal={isFinal}
             isInProgress={isInProgress}
             soComplete={soComplete}

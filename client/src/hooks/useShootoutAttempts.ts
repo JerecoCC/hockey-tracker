@@ -51,8 +51,9 @@ export interface PutAttemptData {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-const useShootoutAttempts = (gameId: string | undefined) => {
+const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: boolean } = {}) => {
   const queryClient = useQueryClient();
+  const { enabled = true } = options;
 
   const { data: attempts = [], isLoading: loading } = useQuery<ShootoutAttempt[]>({
     queryKey: ['shootout-attempts', gameId],
@@ -68,7 +69,7 @@ const useShootoutAttempts = (gameId: string | undefined) => {
         return [];
       }
     },
-    enabled: !!gameId,
+    enabled: !!gameId && enabled,
   });
 
   const addAttempt = async (payload: PostAttemptData): Promise<ShootoutAttempt | null> => {

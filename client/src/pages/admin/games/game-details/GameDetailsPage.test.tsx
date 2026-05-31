@@ -1,3 +1,4 @@
+/* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useGameDetails } from '@/hooks/useGames';
@@ -97,5 +98,39 @@ describe('GameDetailsPage', () => {
       '/admin/leagues/league-1/teams/team-9/players/player-9',
     );
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
+  });
+
+  it('does not enable goalie stats or shootout fetches before a non-shootout game starts', () => {
+    mockUseParams.mockReturnValue({ leagueId: 'league-1', seasonId: 'season-1', id: 'game-1' });
+    mockUseGameDetails.mockReturnValue({
+      game: { ...game, status: 'scheduled', shootout: false },
+      loading: false,
+      busy: null,
+      startGame: jest.fn(), updateStatus: jest.fn(), advancePeriod: jest.fn(), advanceOTPeriod: jest.fn(),
+      revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
+      updatePeriodShots: jest.fn(), revertToEditMode: jest.fn(), deleteGame: jest.fn(),
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(mockUseGameGoalieStats).toHaveBeenCalledWith('game-1', { enabled: false });
+    expect(mockUseShootoutAttempts).toHaveBeenCalledWith('game-1', { enabled: false });
+  });
+
+  it('enables shootout attempts only when the game has shootout data', () => {
+    mockUseParams.mockReturnValue({ leagueId: 'league-1', seasonId: 'season-1', id: 'game-1' });
+    mockUseGameDetails.mockReturnValue({
+      game: { ...game, status: 'final', shootout: true },
+      loading: false,
+      busy: null,
+      startGame: jest.fn(), updateStatus: jest.fn(), advancePeriod: jest.fn(), advanceOTPeriod: jest.fn(),
+      revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
+      updatePeriodShots: jest.fn(), revertToEditMode: jest.fn(), deleteGame: jest.fn(),
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(mockUseGameGoalieStats).toHaveBeenCalledWith('game-1', { enabled: true });
+    expect(mockUseShootoutAttempts).toHaveBeenCalledWith('game-1', { enabled: true });
   });
 });

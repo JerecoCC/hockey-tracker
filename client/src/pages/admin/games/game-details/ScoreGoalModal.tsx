@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useForm } from 'react-hook-form';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
@@ -27,10 +28,22 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   busy: boolean;
+  lockTimingFields?: boolean;
   onClose: () => void;
   onAdd: (payload: PostGoalData) => Promise<unknown>;
   onUpdate: (id: string, payload: PostGoalData) => Promise<unknown>;
 }
+
+type FormValues = {
+  goalTeam: 'away' | 'home' | null;
+  goalPeriodTime: string;
+  goalType: string;
+  goalEmptyNet: boolean;
+  goalPenaltyShot: boolean;
+  goalScorerId: string;
+  goalAssist1Id: string;
+  goalAssist2Id: string;
+};
 
 const ScoreGoalModal = ({
   open,
@@ -41,53 +54,76 @@ const ScoreGoalModal = ({
   awayRoster,
   homeRoster,
   busy,
+  lockTimingFields = false,
   onClose,
   onAdd,
   onUpdate,
 }: Props) => {
-  const [goalTeam, setGoalTeam] = useState<'away' | 'home' | null>(null);
-  const [goalPeriodTime, setGoalPeriodTime] = useState('');
-  const [goalType, setGoalType] = useState('even-strength');
-  const [goalEmptyNet, setGoalEmptyNet] = useState(false);
-  const [goalPenaltyShot, setGoalPenaltyShot] = useState(false);
-  const [goalScorerId, setGoalScorerId] = useState('');
-  const [goalAssist1Id, setGoalAssist1Id] = useState('');
-  const [goalAssist2Id, setGoalAssist2Id] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const {
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { isDirty },
+  } = useForm<FormValues>({
+    defaultValues: {
+      goalTeam: null,
+      goalPeriodTime: '',
+      goalType: 'even-strength',
+      goalEmptyNet: false,
+      goalPenaltyShot: false,
+      goalScorerId: '',
+      goalAssist1Id: '',
+      goalAssist2Id: '',
+    },
+  });
+
+  const goalTeam = watch('goalTeam');
+  const goalPeriodTime = watch('goalPeriodTime');
+  const goalType = watch('goalType');
+  const goalEmptyNet = watch('goalEmptyNet');
+  const goalPenaltyShot = watch('goalPenaltyShot');
+  const goalScorerId = watch('goalScorerId');
+  const goalAssist1Id = watch('goalAssist1Id');
+  const goalAssist2Id = watch('goalAssist2Id');
 
   useEffect(() => {
     if (open) {
       if (editGoal) {
-        setGoalTeam(editGoal.team_id === game.away_team.id ? 'away' : 'home');
-        setGoalPeriodTime(editGoal.period_time ?? '');
-        setGoalType(
-          editGoal.goal_type === 'empty-net' || editGoal.goal_type === 'penalty-shot'
-            ? 'even-strength'
-            : editGoal.goal_type,
-        );
-        setGoalEmptyNet(editGoal.empty_net || editGoal.goal_type === 'empty-net');
-        setGoalPenaltyShot(editGoal.penalty_shot || editGoal.goal_type === 'penalty-shot');
-        setGoalScorerId(editGoal.scorer_id);
-        setGoalAssist1Id(editGoal.assist_1_id ?? '');
-        setGoalAssist2Id(editGoal.assist_2_id ?? '');
+        reset({
+          goalTeam: editGoal.team_id === game.away_team.id ? 'away' : 'home',
+          goalPeriodTime: editGoal.period_time ?? '',
+          goalType:
+            editGoal.goal_type === 'empty-net' || editGoal.goal_type === 'penalty-shot'
+              ? 'even-strength'
+              : editGoal.goal_type,
+          goalEmptyNet: editGoal.empty_net || editGoal.goal_type === 'empty-net',
+          goalPenaltyShot: editGoal.penalty_shot || editGoal.goal_type === 'penalty-shot',
+          goalScorerId: editGoal.scorer_id,
+          goalAssist1Id: editGoal.assist_1_id ?? '',
+          goalAssist2Id: editGoal.assist_2_id ?? '',
+        });
       } else {
-        setGoalTeam(null);
-        setGoalPeriodTime('');
-        setGoalType('even-strength');
-        setGoalEmptyNet(false);
-        setGoalPenaltyShot(false);
-        setGoalScorerId('');
-        setGoalAssist1Id('');
-        setGoalAssist2Id('');
+        reset({
+          goalTeam: null,
+          goalPeriodTime: '',
+          goalType: 'even-strength',
+          goalEmptyNet: false,
+          goalPenaltyShot: false,
+          goalScorerId: '',
+          goalAssist1Id: '',
+          goalAssist2Id: '',
+        });
       }
     }
-  }, [open, editGoal, game.away_team.id]);
+  }, [open, editGoal, game.away_team.id, reset]);
 
   const handleTeamChange = (team: 'away' | 'home') => {
-    setGoalTeam(team);
-    setGoalScorerId('');
-    setGoalAssist1Id('');
-    setGoalAssist2Id('');
+    setValue('goalTeam', team, { shouldDirty: true });
+    setValue('goalScorerId', '', { shouldDirty: true });
+    setValue('goalAssist1Id', '', { shouldDirty: true });
+    setValue('goalAssist2Id', '', { shouldDirty: true });
   };
 
   /** OT allows at most one goal. Block adding when one already exists (editing that goal is still OK). */
@@ -147,19 +183,19 @@ const ScoreGoalModal = ({
     };
   });
 
-  const handleConfirm = async () => {
-    if (!goalTeam) return;
-    const teamId = goalTeam === 'away' ? game.away_team.id : game.home_team.id;
+  const handleConfirm = handleSubmit(async (values) => {
+    if (!values.goalTeam) return;
+    const teamId = values.goalTeam === 'away' ? game.away_team.id : game.home_team.id;
     const payload: PostGoalData = {
       team_id: teamId,
       period,
-      goal_type: goalType,
-      empty_net: goalEmptyNet,
-      penalty_shot: goalPenaltyShot,
-      period_time: goalPeriodTime || '00:00',
-      scorer_id: goalScorerId,
-      assist_1_id: goalAssist1Id || null,
-      assist_2_id: goalAssist2Id || null,
+      goal_type: values.goalType,
+      empty_net: values.goalEmptyNet,
+      penalty_shot: values.goalPenaltyShot,
+      period_time: values.goalPeriodTime || '00:00',
+      scorer_id: values.goalScorerId,
+      assist_1_id: values.goalAssist1Id || null,
+      assist_2_id: values.goalAssist2Id || null,
     };
     setSubmitting(true);
     try {
@@ -172,7 +208,7 @@ const ScoreGoalModal = ({
     } finally {
       setSubmitting(false);
     }
-  };
+  });
 
   return (
     <Modal
@@ -181,7 +217,13 @@ const ScoreGoalModal = ({
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : editGoal ? 'Save Changes' : 'Record Goal'}
       confirmDisabled={
-        busy || submitting || !goalTeam || !goalScorerId || otGoalExists || !!periodTimeError
+        busy ||
+        submitting ||
+        !goalTeam ||
+        !goalScorerId ||
+        otGoalExists ||
+        !!periodTimeError ||
+        (!!editGoal && !isDirty)
       }
       busy={submitting}
       onConfirm={handleConfirm}
@@ -193,7 +235,7 @@ const ScoreGoalModal = ({
             value={goalTeam}
             onChange={(v) => handleTeamChange(v as 'away' | 'home')}
             options={teamOptions}
-            disabled={submitting || otGoalExists}
+            disabled={submitting || otGoalExists || lockTimingFields}
             autoFocus
           />
         </div>
@@ -205,8 +247,8 @@ const ScoreGoalModal = ({
             <TimePicker
               mode="duration"
               value={goalPeriodTime}
-              onChange={setGoalPeriodTime}
-              disabled={submitting}
+              onChange={(value) => setValue('goalPeriodTime', value, { shouldDirty: true })}
+              disabled={submitting || lockTimingFields}
             />
             {periodTimeError && (
               <span className={styles.goalPeriodTimeError}>{periodTimeError}</span>
@@ -218,10 +260,11 @@ const ScoreGoalModal = ({
               value={goalType}
               options={GOAL_TYPES}
               onChange={(next) => {
-                setGoalType(next);
-                if (next === 'own') {
-                  setGoalEmptyNet(false);
-                  setGoalPenaltyShot(false);
+                const nextType = next ?? 'even-strength';
+                setValue('goalType', nextType, { shouldDirty: true });
+                if (nextType === 'own') {
+                  setValue('goalEmptyNet', false, { shouldDirty: true });
+                  setValue('goalPenaltyShot', false, { shouldDirty: true });
                 }
               }}
               disabled={submitting}
@@ -235,7 +278,9 @@ const ScoreGoalModal = ({
                 className={[styles.emptyNetToggle, goalEmptyNet ? styles.emptyNetToggleOn : '']
                   .filter(Boolean)
                   .join(' ')}
-                onClick={() => setGoalEmptyNet((v) => !v)}
+                onClick={() =>
+                  setValue('goalEmptyNet', !goalEmptyNet, { shouldDirty: true })
+                }
                 disabled={submitting}
                 title="Empty Net"
               >
@@ -255,8 +300,8 @@ const ScoreGoalModal = ({
                   .filter(Boolean)
                   .join(' ')}
                 onClick={() => {
-                  setGoalPenaltyShot((v) => !v);
-                  setGoalEmptyNet(false);
+                  setValue('goalPenaltyShot', !goalPenaltyShot, { shouldDirty: true });
+                  setValue('goalEmptyNet', false, { shouldDirty: true });
                 }}
                 disabled={submitting}
                 title="Penalty Shot"
@@ -277,7 +322,7 @@ const ScoreGoalModal = ({
             value={goalScorerId || null}
             options={playerOptions}
             placeholder="— Select scorer —"
-            onChange={setGoalScorerId}
+            onChange={(value) => setValue('goalScorerId', value ?? '', { shouldDirty: true })}
             searchable
             disabled={submitting || !goalTeam}
           />
@@ -289,7 +334,7 @@ const ScoreGoalModal = ({
               value={goalAssist1Id || null}
               options={playerOptions}
               placeholder="— Optional —"
-              onChange={setGoalAssist1Id}
+              onChange={(value) => setValue('goalAssist1Id', value ?? '', { shouldDirty: true })}
               searchable
               disabled={submitting || !goalTeam}
             />
@@ -300,7 +345,7 @@ const ScoreGoalModal = ({
               value={goalAssist2Id || null}
               options={playerOptions}
               placeholder="— Optional —"
-              onChange={setGoalAssist2Id}
+              onChange={(value) => setValue('goalAssist2Id', value ?? '', { shouldDirty: true })}
               searchable
               disabled={submitting || !goalTeam}
             />
