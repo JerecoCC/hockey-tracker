@@ -758,7 +758,7 @@
   display: flex;
   gap: $space-sm;
   align-items: center;
-  padding: $space-xs $space-sm $space-sm;
+  padding: $space-xs 0 $space-sm;
   margin-top: -$space-xs;
 
   // Push the delete button to the right end

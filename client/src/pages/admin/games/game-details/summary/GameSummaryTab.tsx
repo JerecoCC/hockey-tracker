@@ -338,6 +338,31 @@ const GameSummaryTab = ({
   // ── Start Game modal ─────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const openStartGameModal = () => setStartGameModalOpen(true);
+  const handleStartGame = async (isoTime: string) => {
+    const started = await startGame(isoTime);
+    if (!started) return false;
+
+    const starterGoalieIds = new Set(
+      lineup
+        .filter((entry) => entry.position_slot === 'G')
+        .map((entry) => entry.player_id),
+    );
+    const starterGoalies = [...awayRoster, ...homeRoster].filter((entry) =>
+      starterGoalieIds.has(entry.player_id),
+    );
+
+    await Promise.all(
+      starterGoalies.map((goalie) =>
+        upsertGoalieStat({
+          goalie_id: goalie.player_id,
+          team_id: goalie.team_id,
+          shots_against: 0,
+        }),
+      ),
+    );
+
+    return true;
+  };
 
   // ── Delete Game confirm ──────────────────────────────────────────────────
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -738,7 +763,7 @@ const GameSummaryTab = ({
           isStarting={busy === 'in_progress'}
           disabled={!!busy}
           onClose={() => setStartGameModalOpen(false)}
-          onStart={startGame}
+          onStart={handleStartGame}
         />
       )}
 

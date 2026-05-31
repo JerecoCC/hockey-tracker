@@ -45,14 +45,18 @@ const GoalieSwitchModal = ({
   switchGoalie,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
+  const periodFromGame = game.current_period ?? '';
+  const currentPeriod = ['1', '2', '3', 'OT'].includes(periodFromGame)
+    ? periodFromGame
+    : '1';
 
   const { control, reset, watch, handleSubmit } = useForm<FormValues>({
     defaultValues: {
       team_side: 'away',
-      exited_period: '2',
+      exited_period: currentPeriod,
       exited_time: '',
       goalie_id: '',
-      entered_period: '2',
+      entered_period: currentPeriod,
       entered_time: '',
     },
   });
@@ -91,14 +95,14 @@ const GoalieSwitchModal = ({
     if (open) {
       reset({
         team_side: 'away',
-        exited_period: '2',
+        exited_period: currentPeriod,
         exited_time: '',
         goalie_id: '',
-        entered_period: '2',
+        entered_period: currentPeriod,
         entered_time: '',
       });
     }
-  }, [open, reset]);
+  }, [open, currentPeriod, reset]);
 
   const onSubmit = async (values: FormValues) => {
     if (!values.goalie_id || !values.entered_period) return;
@@ -177,8 +181,8 @@ const GoalieSwitchModal = ({
           <p className={styles.noGoalsText}>No other goalies on the roster for this team.</p>
         ) : (
           <>
-            <p className={styles.goalieSubLabel}>Incoming Goalie</p>
             <Field
+              label="Incoming Goalie"
               type="select"
               control={control}
               name="goalie_id"
