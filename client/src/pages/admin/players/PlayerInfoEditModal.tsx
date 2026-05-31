@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import {
@@ -50,6 +50,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
@@ -100,6 +101,20 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     });
     if (ok) onClose();
   });
+
+  const birthCity = useWatch({ control, name: 'birth_city' });
+  const birthCountry = useWatch({ control, name: 'birth_country' });
+
+  useEffect(() => {
+    if (!birthCountry) {
+      const cityArray: string[] = birthCity.split(',');
+      if (cityArray.length > 1) {
+        const country: string = cityArray[cityArray.length - 1].trim();
+        setValue('birth_country', country);
+        setValue('nationality', country);
+      }
+    }
+  }, [birthCity, birthCountry, setValue]);
 
   return (
     <Modal
