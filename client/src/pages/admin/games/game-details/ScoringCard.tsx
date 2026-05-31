@@ -312,7 +312,7 @@ const ScoringCard = ({
                                   label: 'End Period',
                                   next: String(num + 1) as CurrentPeriod,
                                 },
-                                false,
+                                true,
                               ),
                           }
                         : null,
@@ -326,7 +326,7 @@ const ScoringCard = ({
                               onOpenShotsModal(
                                 '3',
                                 { type: 'advance', label: 'Go to Overtime', next: 'OT' },
-                                false,
+                                true,
                               ),
                           }
                         : null,
@@ -416,7 +416,7 @@ const ScoringCard = ({
                                   intent: 'accent' as const,
                                   disabled: !!busy,
                                   onClick: () =>
-                                    onOpenShotsModal(`OT${otNum}`, { type: 'next-ot' }, false),
+                                    onOpenShotsModal(`OT${otNum}`, { type: 'next-ot' }, true),
                                 }
                               : null,
                             periodGoals.length > 0 && !isEditMode
@@ -484,7 +484,7 @@ const ScoringCard = ({
                                 onOpenShotsModal(
                                   'OT',
                                   { type: 'advance', label: 'Go to Shootouts', next: 'SO' },
-                                  false,
+                                  true,
                                   true,
                                 ),
                             }

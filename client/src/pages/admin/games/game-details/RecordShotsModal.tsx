@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+} from 'react';
 import type { Control, FieldArrayWithId } from 'react-hook-form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
@@ -240,8 +247,8 @@ const RecordShotsModal = ({
         end_time: isEndGame && game.time_end ? isoToETHHMM(game.time_end) : '',
         goalies: goalieRosterList.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          if (stat) return { shots_against: String(stat.shots_against) };
-          if (isEndGame)
+          if (hasSubstitution && stat) return { shots_against: String(stat.shots_against) };
+          if (showGoalies)
             return {
               shots_against: computeAutoSA(g, goalieStats, game, effectivePeriodShots, goals),
             };
@@ -262,7 +269,7 @@ const RecordShotsModal = ({
       justResetRef.current = false;
       return;
     }
-    if (!isEndGame || !open) return;
+    if (!showGoalies || !open) return;
     const formAway = parseInt(awayShots || '0', 10);
     const formHome = parseInt(homeShots || '0', 10);
     const effectivePeriodShots = [
@@ -325,7 +332,7 @@ const RecordShotsModal = ({
           ? 'Next Overtime'
           : 'Confirm';
 
-  const handleConfirm = async (e?: React.FormEvent) => {
+  const handleConfirm = async (e?: FormEvent) => {
     e?.preventDefault();
     const { away_shots, home_shots, end_time, goalies: goalieVals } = getValues();
     const isSOEndGame = period === 'SO' && isEndGame;
@@ -339,12 +346,23 @@ const RecordShotsModal = ({
         return;
       }
     }
+    const mergedShots = [
+      ...game.period_shots.filter((ps) => ps.period !== period),
+      {
+        period,
+        away_shots: parseInt(away_shots || '0', 10) || 0,
+        home_shots: parseInt(home_shots || '0', 10) || 0,
+      },
+    ];
+
     if (showGoalies) {
       for (let i = 0; i < goalieRosterList.length; i++) {
         const goalie = goalieRosterList[i];
         const row = goalieVals[i];
         if (!row || !goalie) continue;
-        const shots = parseInt(row.shots_against, 10);
+        const shots = hasSubstitution
+          ? parseInt(row.shots_against, 10)
+          : parseInt(computeAutoSA(goalie, goalieStats, game, mergedShots, goals), 10);
         if (!isNaN(shots)) {
           await upsertGoalieStat({
             goalie_id: goalie.player_id,
