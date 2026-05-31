@@ -232,4 +232,56 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getAllByDisplayValue('CAN').length).toBe(2);
     expect(screen.getByDisplayValue('195')).toBeInTheDocument();
   });
+
+  it('normalizes birth city country and nationality after birth city blur', async () => {
+    const user = userEvent.setup();
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: '1997-01-13',
+        birth_city: '',
+        birth_country: '',
+        nationality: '',
+        height_cm: 185,
+        weight_lbs: 195,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    const birthCity = screen.getByLabelText('Birth City');
+    await user.clear(birthCity);
+    await user.type(birthCity, 'Boston, Massachusetts, USA');
+    await user.tab();
+
+    expect(screen.getByLabelText('Birth City')).toHaveValue('Boston, Massachusetts');
+    expect(screen.getByLabelText('Birth Country')).toHaveValue('USA');
+    expect(screen.getByLabelText('Nationality')).toHaveValue('USA');
+  });
+
+  it('does not normalize birth city when birth country or nationality already has a value', async () => {
+    const user = userEvent.setup();
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    const birthCity = screen.getByLabelText('Birth City');
+    await user.clear(birthCity);
+    await user.type(birthCity, 'Boston, Massachusetts, USA');
+    await user.tab();
+
+    expect(screen.getByLabelText('Birth City')).toHaveValue('Boston, Massachusetts, USA');
+    expect(screen.getByLabelText('Birth Country')).toHaveValue('CAN');
+    expect(screen.getByLabelText('Nationality')).toHaveValue('CAN');
+  });
 });

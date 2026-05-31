@@ -1,5 +1,5 @@
-import { useEffect } from 'react';
-import { useForm, useWatch } from 'react-hook-form';
+import { useEffect, type FocusEvent } from 'react';
+import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import {
@@ -50,6 +50,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     control,
     handleSubmit,
     reset,
+    getValues,
     setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
@@ -102,19 +103,24 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     if (ok) onClose();
   });
 
-  const birthCity = useWatch({ control, name: 'birth_city' });
-  const birthCountry = useWatch({ control, name: 'birth_country' });
+  const normalizeBirthCity = (value: string) => {
+    const locationParts = value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (locationParts.length < 2) return;
 
-  useEffect(() => {
-    if (!birthCountry) {
-      const cityArray: string[] = birthCity.split(',');
-      if (cityArray.length > 1) {
-        const country: string = cityArray[cityArray.length - 1].trim();
-        setValue('birth_country', country);
-        setValue('nationality', country);
-      }
-    }
-  }, [birthCity, birthCountry, setValue]);
+    const country = locationParts[locationParts.length - 1];
+    const city = locationParts.slice(0, -1).join(', ');
+    setValue('birth_city', city, { shouldDirty: true, shouldTouch: true });
+    setValue('birth_country', country, { shouldDirty: true, shouldTouch: true });
+    setValue('nationality', country, { shouldDirty: true, shouldTouch: true });
+  };
+
+  const handleBirthCityBlur = (event: FocusEvent<HTMLInputElement>) => {
+    if (getValues('birth_country') || getValues('nationality')) return;
+    normalizeBirthCity(event.target.value);
+  };
 
   return (
     <Modal
@@ -147,6 +153,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
             placeholder="e.g. Edmonton"
             autoFocus
             disabled={isSubmitting}
+            onBlur={handleBirthCityBlur}
           />
         </div>
         <div className={styles.row}>
