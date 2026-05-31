@@ -1,6 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import usePlayerDetails, { usePlayerCurrentSeasonStats } from '@/hooks/usePlayerDetails';
+import usePlayerDetails, {
+  usePlayerCurrentSeasonStats,
+  usePlayerGameLogs,
+  usePlayerLastFiveGames,
+} from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
@@ -26,6 +30,8 @@ jest.mock('@/hooks/usePlayerDetails', () => ({
   __esModule: true,
   default: jest.fn(),
   usePlayerCurrentSeasonStats: jest.fn(),
+  usePlayerGameLogs: jest.fn(),
+  usePlayerLastFiveGames: jest.fn(),
 }));
 jest.mock('@/hooks/useTeamDetails', () => jest.fn());
 jest.mock('@/hooks/useSeasons', () => jest.fn());
@@ -84,6 +90,8 @@ jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => () => null);
 
 const mockUsePlayerDetails = usePlayerDetails as jest.Mock;
 const mockUsePlayerCurrentSeasonStats = usePlayerCurrentSeasonStats as jest.Mock;
+const mockUsePlayerGameLogs = usePlayerGameLogs as jest.Mock;
+const mockUsePlayerLastFiveGames = usePlayerLastFiveGames as jest.Mock;
 const mockUseTeamDetails = useTeamDetails as jest.Mock;
 const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseTeams = useTeams as jest.Mock;
@@ -162,6 +170,8 @@ beforeEach(() => {
       },
     },
   });
+  mockUsePlayerLastFiveGames.mockReturnValue({ lastFiveGames: [], loading: false });
+  mockUsePlayerGameLogs.mockReturnValue({ logs: [], total: 0, loading: false });
   mockUseTeamDetails.mockReturnValue({ team: { name: 'Toronto Maple Leafs', league_name: 'NHL' } });
   mockUsePlayerTradeHistory.mockReturnValue({
     stints: [

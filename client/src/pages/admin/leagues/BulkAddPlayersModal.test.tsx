@@ -80,7 +80,8 @@ describe('BulkAddPlayersModal – render', () => {
 
   it('starts with exactly one player row', () => {
     render(<BulkAddPlayersModal {...defaultProps} />);
-    expect(screen.getAllByRole('button', { name: /remove player/i })).toHaveLength(1);
+    expect(screen.getAllByPlaceholderText('First name')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /remove player/i })).not.toBeInTheDocument();
   });
 
   it('renders Create Player and Cancel buttons', () => {
@@ -133,8 +134,9 @@ describe('BulkAddPlayersModal – delete blank row', () => {
 
     // Confirm modal should NOT appear
     expect(screen.queryByText('Remove Player')).not.toBeInTheDocument();
-    // Row count drops back to 1
-    expect(screen.getAllByRole('button', { name: /remove player/i })).toHaveLength(1);
+    // Row count drops back to 1, so the remove button is hidden again.
+    expect(screen.getAllByPlaceholderText('First name')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /remove player/i })).not.toBeInTheDocument();
   });
 });
 
@@ -170,7 +172,8 @@ describe('BulkAddPlayersModal – delete dirty row', () => {
     fireEvent.click(screen.getByRole('button', { name: /^remove$/i }));
 
     expect(screen.queryByText('Remove Player')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /remove player/i })).toHaveLength(1);
+    expect(screen.getAllByPlaceholderText('First name')).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /remove player/i })).not.toBeInTheDocument();
   });
 
   it('keeps the row when cancelling the confirm dialog', () => {

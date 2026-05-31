@@ -132,7 +132,7 @@ const mockUseQueryClient = useQueryClient as jest.Mock;
 const mockAxios = axios as jest.Mocked<typeof axios>;
 const mockToPng = toPng as jest.Mock;
 
-const currentDate = new Date();
+const currentDate = new Date(2026, 4, 15, 12, 0, 0);
 const dateOffset = (days: number) => new Date(currentDate.getTime() + days * 86_400_000);
 const localDateString = (days: number) => {
   const d = dateOffset(days);
@@ -354,6 +354,11 @@ beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
   window.sessionStorage.clear();
+  window.sessionStorage.setItem('user-games-week-start', localDateString(0));
+  window.sessionStorage.setItem(
+    'user-games-calendar-month',
+    `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+  );
   mockUseQueryClient.mockReturnValue({
     invalidateQueries: mockInvalidateQueries,
     setQueriesData: mockSetQueriesData,

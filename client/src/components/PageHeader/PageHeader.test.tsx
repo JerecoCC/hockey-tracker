@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import PageHeader from './PageHeader';
 
@@ -43,15 +43,15 @@ describe('PageHeader – title resolution', () => {
   });
 
   it('renders no heading for an unmatched route', () => {
-    setup('/dashboard');
+    setup('/unknown');
     expect(screen.queryByRole('heading')).not.toBeInTheDocument();
   });
 });
 
 describe('PageHeader – user profile', () => {
-  it('renders the display name', () => {
+  it('renders the account menu button', () => {
     setup();
-    expect(screen.getByText('Jane Admin')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Account menu' })).toBeInTheDocument();
   });
 
   it('renders initials when user has no photo', () => {
@@ -71,7 +71,7 @@ describe('PageHeader – user profile', () => {
       logout: mockLogout,
     });
     render(<PageHeader />);
-    expect(screen.getByText('Fallback Name')).toBeInTheDocument();
+    expect(screen.getByText('FN')).toBeInTheDocument();
   });
 
   it('renders nothing when user is null', () => {
@@ -85,9 +85,9 @@ describe('PageHeader – user profile', () => {
 describe('PageHeader – switch button', () => {
   // The Tooltip always renders a role="tooltip" span in the DOM; its presence
   // indicates the switch button is mounted.
-  it('shows the switch button for admin users', () => {
+  it('does not render the legacy dashboard switch button for admin users', () => {
     setup();
-    expect(screen.getByRole('tooltip', { name: 'Dashboard' })).toBeInTheDocument();
+    expect(screen.queryByRole('tooltip', { name: 'Dashboard' })).not.toBeInTheDocument();
   });
 
   it('hides the switch button for non-admin users', () => {
@@ -95,17 +95,16 @@ describe('PageHeader – switch button', () => {
     expect(screen.queryByRole('tooltip', { name: 'Dashboard' })).not.toBeInTheDocument();
   });
 
-  it('navigates to /dashboard when on an admin panel route', () => {
+  it('does not navigate when clicking the account menu on an admin panel route', () => {
     setup('/admin/leagues');
-    // Switch button is the first <button> in the header (before the profile button)
-    fireEvent.click(screen.getAllByRole('button')[0]);
-    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 
-  it('navigates to /admin/leagues when on the dashboard', () => {
+  it('does not navigate when clicking the account menu on the dashboard', () => {
     setup('/dashboard', adminUser);
-    fireEvent.click(screen.getAllByRole('button')[0]);
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues');
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }));
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
 
@@ -117,13 +116,13 @@ describe('PageHeader – profile dropdown', () => {
 
   it('opens the dropdown when the profile button is clicked', () => {
     setup();
-    fireEvent.click(screen.getByText('Jane Admin'));
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }));
     expect(screen.getByText('Sign out')).toBeInTheDocument();
   });
 
   it('closes the dropdown when clicking outside', () => {
     setup();
-    fireEvent.click(screen.getByText('Jane Admin'));
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }));
     expect(screen.getByText('Sign out')).toBeInTheDocument();
     fireEvent.mouseDown(document.body);
     expect(screen.queryByText('Sign out')).not.toBeInTheDocument();
@@ -132,7 +131,7 @@ describe('PageHeader – profile dropdown', () => {
   it('calls logout and navigates to /login when Sign out is clicked', async () => {
     mockLogout.mockResolvedValue(undefined);
     setup();
-    fireEvent.click(screen.getByText('Jane Admin'));
+    fireEvent.click(screen.getByRole('button', { name: 'Account menu' }));
     fireEvent.click(screen.getByText('Sign out'));
     await waitFor(() => expect(mockLogout).toHaveBeenCalledTimes(1));
     expect(mockNavigate).toHaveBeenCalledWith('/login');

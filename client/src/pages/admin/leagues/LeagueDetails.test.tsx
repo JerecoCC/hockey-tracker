@@ -90,7 +90,10 @@ const setup = (hookOverrides = {}, groupOverrides = {}, locationState: unknown =
   return render(<LeagueDetailsPage />);
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  sessionStorage.clear();
+});
 
 const clickTeamsTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Teams' }));
 const clickPlayersTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Players' }));
@@ -144,7 +147,7 @@ describe('LeagueDetailsPage – main render', () => {
 
   it('renders a logo <img> when the league has a logo', () => {
     setup({ league: { ...mockLeague, logo: 'https://example.com/logo.png' } });
-    expect(screen.getByRole('img', { name: 'Test League' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'TL' })).toBeInTheDocument();
   });
 
   it('renders the Leagues breadcrumb as a button', () => {
@@ -212,13 +215,15 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('opens on the Teams tab when navigated back from team details', () => {
-    setup({ league: mockLeague }, {}, { activeTab: 2 });
+    sessionStorage.setItem('tab:league-details', '2');
+    setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
   it('opens on the Players tab when navigated with activeTab 3', () => {
-    setup({ league: mockLeague }, {}, { activeTab: 3 });
+    sessionStorage.setItem('tab:league-details', '3');
+    setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });

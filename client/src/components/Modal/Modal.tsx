@@ -135,7 +135,11 @@ const Modal = (props: Props) => {
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
-    const shouldLock = (open || isClosing) && window.matchMedia('(max-width: 768px)').matches;
+    const isMobile =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 768px)').matches;
+    const shouldLock = (open || isClosing) && isMobile;
     if (!shouldLock) return;
     lockMobileBackgroundScroll();
     return () => unlockMobileBackgroundScroll();
@@ -145,7 +149,10 @@ const Modal = (props: Props) => {
 
   const handleClose = () => {
     if (isClosing) return;
-    const isMobile = window.matchMedia('(max-width: 768px)').matches;
+    const isMobile =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(max-width: 768px)').matches;
     if (isMobile) {
       setIsClosing(true);
       setTimeout(() => {
