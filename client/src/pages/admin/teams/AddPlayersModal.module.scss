@@ -6,6 +6,20 @@
   gap: $space-md;
   margin-bottom: $space-lg;
   align-items: center;
+
+  > *:last-child {
+    width: 180px;
+    flex-shrink: 0;
+  }
+
+  @media (max-width: $bp-tablet) {
+    flex-direction: column;
+    align-items: stretch;
+
+    > *:last-child {
+      width: 100%;
+    }
+  }
 }
 
 .controlsGap {
@@ -18,7 +32,7 @@
   align-items: center;
   gap: $space-sm;
   height: 42px;
-  background: rgba(255, 255, 255, 0.04);
+  background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
   padding: 0 $space-md;
@@ -35,11 +49,14 @@
 
 .searchInput {
   flex: 1;
+  min-width: 0;
   background: transparent;
   border: none;
   outline: none;
   font-size: $font-base;
+  font-family: inherit;
   color: $text-body;
+  padding: 0;
 
   &::placeholder {
     color: $text-dim;
@@ -50,12 +67,11 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 360px;
+  max-height: 300px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 2px;
-  margin-bottom: $space-xl;
 }
 
 .jerseyWrap {
@@ -105,5 +121,4 @@
   font-style: italic;
   text-align: center;
   padding: $space-2xl 0;
-  margin-bottom: $space-xl;
 }

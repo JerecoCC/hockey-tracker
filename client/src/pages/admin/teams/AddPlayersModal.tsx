@@ -56,17 +56,19 @@ const AddPlayersModal = ({
   const [submitting, setSubmitting] = useState(false);
 
   const { data: allPlayers = [] } = useQuery<PlayerRecord[]>({
-    queryKey: ['players'],
+    queryKey: ['players', { league_id: leagueId, unassigned: true }],
     queryFn: async () => {
       const { data } = await axios.get<PlayerRecord[]>(`${API}/admin/players`, {
         headers: authHeaders(),
+        params: { league_id: leagueId, unassigned: 'true' },
       });
       return data;
     },
-    enabled: open,
+    enabled: open && !!leagueId,
   });
 
-  // Exclude players already on this team's roster
+  // The API returns league-scoped unassigned players; this keeps the modal safe
+  // if cached data is briefly stale after roster changes.
   const available = allPlayers.filter((p) => !existingPlayerIds.has(p.id));
 
   const filtered = query.trim()
@@ -122,7 +124,7 @@ const AddPlayersModal = ({
       open={open}
       title="Add Players to Roster"
       onClose={handleClose}
-      size="lg"
+      size="md"
       onConfirm={handleSubmit}
       confirmLabel={submitting ? 'Adding…' : 'Add to Roster'}
       confirmIcon="group_add"
@@ -164,7 +166,7 @@ const AddPlayersModal = ({
       {filtered.length === 0 ? (
         <p className={styles.empty}>
           {available.length === 0
-            ? 'All players are already on this roster.'
+            ? 'No unassigned players are available for this league.'
             : `No players match "${query}".`}
         </p>
       ) : (

@@ -160,6 +160,7 @@ const TeamDetailsPage = () => {
             content: (
               <TeamRosterTab
                 teamId={team.id}
+                teamName={team.name}
                 leagueId={team.league_id ?? ''}
                 leagueCode={team.league_code}
                 teamCode={team.code}

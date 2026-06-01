@@ -65,6 +65,21 @@ describe('GET /api/admin/players', () => {
     });
   });
 
+  it('returns unassigned players for a league', async () => {
+    sql.mockResolvedValueOnce([PLAYER]);
+    const res = await request(app).get('/api/admin/players?league_id=league-1&unassigned=true');
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(1);
+    expect(res.body).toEqual([PLAYER]);
+  });
+
+  it('requires league_id when requesting unassigned players', async () => {
+    const res = await request(app).get('/api/admin/players?unassigned=true');
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/league_id/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
   it('returns paginated league players with total count', async () => {
     sql
       .mockResolvedValueOnce([PLAYER_WITH_ROSTER])

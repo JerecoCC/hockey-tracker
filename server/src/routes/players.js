@@ -47,6 +47,7 @@ router.get('/', async (req, res) => {
   const { league_id, team_id, season_id, game_date } = req.query;
   const prospectsOnly = req.query.prospects_only === 'true';
   const includeProspects = prospectsOnly || req.query.include_prospects === 'true';
+  const unassignedOnly = req.query.unassigned === 'true';
   const wantsPagination = req.query.page !== undefined || req.query.page_size !== undefined || req.query.search !== undefined;
   const page = Math.max(1, Number.parseInt(req.query.page ?? '1', 10) || 1);
   const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query.page_size ?? '20', 10) || 20));
@@ -55,6 +56,47 @@ router.get('/', async (req, res) => {
   const searchPattern = `%${search.toLowerCase()}%`;
   const jerseyPattern = `${search.replace('#', '')}%`;
   try {
+    if (unassignedOnly) {
+      if (!league_id) {
+        return res.status(400).json({ error: 'league_id is required when unassigned is true' });
+      }
+
+      const players = await sql`
+        SELECT
+          p.id, p.first_name, p.last_name, p.photo,
+          p.date_of_birth::text AS date_of_birth,
+          p.birth_city, p.birth_country, p.nationality,
+          p.height_cm, p.weight_lbs, p.position, p.shoots,
+          p.is_active, p.created_at
+        FROM players p
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM player_teams active_pt
+          JOIN teams active_t ON active_t.id = active_pt.team_id
+          WHERE active_pt.player_id = p.id
+            AND active_t.league_id = ${league_id}
+            AND active_pt.end_date IS NULL
+        )
+        AND (
+          NOT EXISTS (
+            SELECT 1
+            FROM player_teams any_pt
+            WHERE any_pt.player_id = p.id
+          )
+          OR EXISTS (
+            SELECT 1
+            FROM player_teams league_pt
+            JOIN teams league_t ON league_t.id = league_pt.team_id
+            WHERE league_pt.player_id = p.id
+              AND league_t.league_id = ${league_id}
+          )
+        )
+        ORDER BY p.last_name, p.first_name, p.id
+      `;
+
+      return res.json(players);
+    }
+
     if (wantsPagination && league_id) {
       const players = league_id && season_id
         ? await sql`

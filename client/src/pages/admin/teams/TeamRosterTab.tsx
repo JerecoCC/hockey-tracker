@@ -10,6 +10,7 @@ import Select from '@/components/Select/Select';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
+import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreatePlayersModal';
 import AddPlayersModal from './AddPlayersModal';
 import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
@@ -45,13 +46,14 @@ const ROSTER_SECTIONS = [
 
 interface Props {
   teamId: string;
+  teamName: string;
   leagueId: string;
   leagueCode: string | null;
   teamCode: string | null;
   latestSeasonId: string | null;
 }
 
-const TeamRosterTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeasonId }: Props) => {
+const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, latestSeasonId }: Props) => {
   const navigate = useNavigate();
   const { seasons: leagueSeasons } = useSeasons(leagueId);
   const currentSeason = leagueSeasons.find((s) => s.is_current);
@@ -74,18 +76,22 @@ const TeamRosterTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeasonId 
     updatePlayerRosterRole,
     uploadPlayerPhoto,
     deletePlayer,
+    createAndRosterPlayers,
     bulkTradePlayers,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
   const { players: allTeamPlayers } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
     includeProspects: true,
   });
   const [addModalOpen, setAddModalOpen] = useState(false);
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
   const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
+  const rosterPlayerCount = players.length;
+  const rosterGoalieCount = players.filter((p) => p.position === 'G').length;
   const normalizedQuery = query.trim().toLowerCase();
   const filteredPlayers = normalizedQuery
     ? players.filter((p) => {
@@ -204,9 +210,20 @@ const TeamRosterTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeasonId 
               intent="accent"
               icon="group_add"
               size="sm"
+              disabled={!selectedSeasonId}
               onClick={() => setAddModalOpen(true)}
             >
               Add Players
+            </Button>
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="person_edit"
+              size="sm"
+              disabled={!selectedSeasonId || rosterPlayerCount >= 23}
+              onClick={() => setCreateModalOpen(true)}
+            >
+              Create Players
             </Button>
             <Button
               variant="outlined"
@@ -308,6 +325,25 @@ const TeamRosterTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeasonId 
         existingPlayerIds={existingPlayerIds}
         addPlayersToRoster={addPlayersToRoster}
       />
+
+      {selectedSeasonId && (
+        <LineupCreatePlayersModal
+          open={createModalOpen}
+          onClose={() => setCreateModalOpen(false)}
+          teamId={teamId}
+          leagueId={leagueId}
+          seasonId={selectedSeasonId}
+          teamName={teamName}
+          existingCount={rosterPlayerCount}
+          existingGoalieCount={rosterGoalieCount}
+          existingRoster={allTeamPlayers.map((p) => ({
+            first_name: p.first_name,
+            last_name: p.last_name,
+            jersey_number: p.jersey_number ?? null,
+          }))}
+          createAndRosterPlayers={createAndRosterPlayers}
+        />
+      )}
 
       <ConfirmModal
         open={!!confirmDelete}
