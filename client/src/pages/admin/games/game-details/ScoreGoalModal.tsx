@@ -10,6 +10,7 @@ import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalRecord, type PostGoalData } from '@/hooks/useGameGoals';
 import styles from './GameDetailsPage.module.scss';
+import { PERIOD } from './constants';
 
 const GOAL_TYPES = [
   { value: 'even-strength', label: 'Even Strength' },
@@ -128,7 +129,8 @@ const ScoreGoalModal = ({
 
   /** OT allows at most one goal. Block adding when one already exists (editing that goal is still OK). */
   const otGoalExists =
-    period === 'OT' && goals.some((g) => g.period === 'OT' && g.id !== editGoal?.id);
+    period === PERIOD.OVERTIME &&
+    goals.some((g) => g.period === PERIOD.OVERTIME && g.id !== editGoal?.id);
 
   /** Latest period_time already recorded for this period (excluding the goal being edited). */
   const toSecs = (t: string | null | undefined) => {

@@ -33,6 +33,7 @@ import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
 import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
+import { PERIOD, PERIOD_ORDER, otPeriodId } from '../constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -133,7 +134,9 @@ const GameSummaryTab = ({
     enabled: gameHasStarted,
   });
   const shouldFetchShootoutAttempts =
-    !!game.shootout || game.current_period === 'SO' || !!game.shootout_first_team_id;
+    !!game.shootout ||
+    game.current_period === PERIOD.SHOOTOUT ||
+    !!game.shootout_first_team_id;
   const { attempts, addAttempt, updateAttempt, deleteAttempt } = useShootoutAttempts(game.id, {
     enabled: shouldFetchShootoutAttempts,
   });
@@ -146,8 +149,8 @@ const GameSummaryTab = ({
   // OT period's shots can be tracked independently.
   const isPlayoff = game.game_type === 'playoff';
   const hasOTShots =
-    game.current_period === 'OT' ||
-    game.current_period === 'SO' ||
+    game.current_period === PERIOD.OVERTIME ||
+    game.current_period === PERIOD.SHOOTOUT ||
     game.period_shots.some((ps) => /^OT/.test(ps.period)) ||
     (game.overtime_periods ?? 0) > 0;
   const useShortNums = isPlayoff && (game.overtime_periods ?? 0) > 1;
@@ -158,11 +161,11 @@ const GameSummaryTab = ({
     ...(hasOTShots
       ? isPlayoff
         ? Array.from({ length: game.overtime_periods ?? 1 }, (_, i) => ({
-            id: `OT${i + 1}`,
+            id: otPeriodId(i + 1),
             label: `OT ${i + 1}`,
-            shortLabel: `OT${i + 1}`,
+            shortLabel: otPeriodId(i + 1),
           }))
-        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
+        : [{ id: PERIOD.OVERTIME, label: PERIOD.OVERTIME, shortLabel: PERIOD.OVERTIME }]
       : []),
   ];
 
@@ -260,10 +263,10 @@ const GameSummaryTab = ({
   const [editGoal, setEditGoal] = useState<GoalRecord | null>(null);
   const lastRecordedGoalId = useMemo(() => {
     const periodRank = (period: string) => {
-      if (period === '1') return 1;
-      if (period === '2') return 2;
-      if (period === '3') return 3;
-      if (period === 'OT') return 4;
+      if (period === PERIOD.FIRST) return 1;
+      if (period === PERIOD.SECOND) return 2;
+      if (period === PERIOD.THIRD) return 3;
+      if (period === PERIOD.OVERTIME) return 4;
       return 5;
     };
     const toSecs = (time: string | null) => {
@@ -456,7 +459,13 @@ const GameSummaryTab = ({
 
   // For edit-mode revert: use current_period if set (retained after endGame), else
   // fall back to the highest period that has a score recorded.
-  const PERIOD_PRIORITY: CurrentPeriod[] = ['SO', 'OT', '3', '2', '1'];
+  const PERIOD_PRIORITY: CurrentPeriod[] = [
+    PERIOD.SHOOTOUT,
+    PERIOD.OVERTIME,
+    PERIOD.THIRD,
+    PERIOD.SECOND,
+    PERIOD.FIRST,
+  ];
   const lastPlayedPeriod: CurrentPeriod =
     (game.current_period as CurrentPeriod | null) ??
     PERIOD_PRIORITY.find((p) => game.period_scores.some((ps) => ps.period === p)) ??
@@ -585,10 +594,13 @@ const GameSummaryTab = ({
               canEndGame={
                 editable &&
                 isInProgress &&
-                ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
-                (game.current_period !== 'SO' || soComplete) &&
-                (game.current_period !== 'OT' || goals.some((g) => g.period === 'OT')) &&
-                (game.current_period !== '3' || liveAwayScore !== liveHomeScore)
+                [PERIOD.THIRD, PERIOD.OVERTIME, PERIOD.SHOOTOUT].includes(
+                  game.current_period ?? '',
+                ) &&
+                (game.current_period !== PERIOD.SHOOTOUT || soComplete) &&
+                (game.current_period !== PERIOD.OVERTIME ||
+                  goals.some((g) => g.period === PERIOD.OVERTIME)) &&
+                (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
               }
               onStartGame={editable ? openStartGameModal : undefined}
               onReschedule={editable ? () => updateStatus('postponed') : undefined}

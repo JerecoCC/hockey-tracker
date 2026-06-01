@@ -17,13 +17,14 @@ import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
+import { PERIOD } from '../constants';
 
 const PERIOD_LABEL: Record<string, string> = {
-  '1': 'P1',
-  '2': 'P2',
-  '3': 'P3',
-  OT: 'OT',
-  SO: 'SO',
+  [PERIOD.FIRST]: 'P1',
+  [PERIOD.SECOND]: 'P2',
+  [PERIOD.THIRD]: 'P3',
+  [PERIOD.OVERTIME]: PERIOD.OVERTIME,
+  [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
 
 /** Format a single stint's entry→exit window for display. */
@@ -47,7 +48,7 @@ const stintLabels = (stat: GoalieStatRecord): string[] => {
     // Pure game-start starter with one uninterrupted stint — nothing to annotate
     if (
       stat.stints.length === 1 &&
-      stat.stints[0].entered_period === '1' &&
+      stat.stints[0].entered_period === PERIOD.FIRST &&
       !stat.stints[0].entered_time
     ) {
       return [];

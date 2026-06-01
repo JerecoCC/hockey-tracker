@@ -19,6 +19,7 @@ import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGam
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
+import { PERIOD, PERIOD_ORDER } from './constants';
 import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
 
 export type ShotsNextAction =
@@ -34,25 +35,24 @@ type ShotsFormValues = {
 };
 
 const PERIOD_LABEL: Record<string, string> = {
-  '1': '1st',
-  '2': '2nd',
-  '3': '3rd',
-  OT: 'OT',
-  SO: 'SO',
+  [PERIOD.FIRST]: '1st',
+  [PERIOD.SECOND]: '2nd',
+  [PERIOD.THIRD]: '3rd',
+  [PERIOD.OVERTIME]: PERIOD.OVERTIME,
+  [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
 
 const PERIOD_TITLE_LABEL: Record<string, string> = {
-  '1': '1st Period',
-  '2': '2nd Period',
-  '3': '3rd Period',
-  OT: 'Overtime',
-  SO: 'Shootout',
+  [PERIOD.FIRST]: '1st Period',
+  [PERIOD.SECOND]: '2nd Period',
+  [PERIOD.THIRD]: '3rd Period',
+  [PERIOD.OVERTIME]: 'Overtime',
+  [PERIOD.SHOOTOUT]: 'Shootout',
 };
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
-const PERIOD_ORDER = ['1', '2', '3', 'OT', 'SO'];
 const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
 
 /**
@@ -304,7 +304,7 @@ const RecordShotsModal = ({
   const handleConfirm = async (e?: FormEvent) => {
     e?.preventDefault();
     const { away_shots, home_shots, end_time, goalies: goalieVals } = getValues();
-    const isSOEndGame = period === 'SO' && isEndGame;
+    const isSOEndGame = period === PERIOD.SHOOTOUT && isEndGame;
     setSubmitting(true);
     if (!isSOEndGame) {
       const away = parseInt(away_shots || '0', 10);
@@ -454,7 +454,7 @@ const RecordShotsBody = ({
 
   return (
     <div className={styles.shotsModalBody}>
-      {!(isEndGame && period === 'SO') && (
+      {!(isEndGame && period === PERIOD.SHOOTOUT) && (
         <>
           <hr className={styles.lineupDivider} />
           <div className={styles.shotsGoalieHeader}>

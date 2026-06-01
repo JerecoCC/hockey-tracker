@@ -14,6 +14,7 @@ import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
 
 import styles from './GameDetailsPage.module.scss';
+import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
 import { DATE_FMT_SHORT } from './formatUtils';
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -52,7 +53,8 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const gameHasStarted = !!game && game.status !== 'scheduled';
   const hasShootout = !!game?.shootout;
   const shouldFetchShootoutAttempts =
-    !!game && (hasShootout || game.current_period === 'SO' || !!game.shootout_first_team_id);
+    !!game &&
+    (hasShootout || game.current_period === PERIOD.SHOOTOUT || !!game.shootout_first_team_id);
   const {
     goalieStats,
     upsertGoalieStat,
@@ -220,7 +222,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   // Use the backend-computed score as the canonical base.
   // For an in-progress shootout, the backend intentionally stays on the goal-based tied score,
   // so we still apply a temporary +1 client-side when the current attempts already reveal a winner.
-  const hasSoPeriodScore = game.period_scores.some((ps) => ps.period === 'SO');
+  const hasSoPeriodScore = game.period_scores.some((ps) => ps.period === PERIOD.SHOOTOUT);
   const soScoreAdj = !isFinal && soWinnerSide && !hasSoPeriodScore ? 1 : 0;
   const liveAwayScore = game.away_score + (soWinnerSide === 'away' ? soScoreAdj : 0);
   const liveHomeScore = game.home_score + (soWinnerSide === 'home' ? soScoreAdj : 0);
@@ -228,10 +230,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   // Derive OT/SO from period_scores (source of truth); stored columns are a fallback
   // for legacy games created before goal tracking was introduced.
   const overtimeSuffix =
-    game.shootout || game.period_scores.some((ps) => ps.period === 'SO')
-      ? '/SO'
-      : (game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT')
-        ? '/OT'
+    game.shootout || game.period_scores.some((ps) => ps.period === PERIOD.SHOOTOUT)
+      ? PERIOD_SUFFIX.SHOOTOUT
+      : (game.overtime_periods ?? 0) > 0 ||
+          game.period_scores.some((ps) => ps.period === PERIOD.OVERTIME)
+        ? PERIOD_SUFFIX.OVERTIME
         : '';
 
   // Period columns for the Linescore table (always 1–3, plus OT/SO if applicable).
@@ -240,14 +243,14 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const otCount = game.overtime_periods ?? 1;
   const hasSO =
     !isPlayoff &&
-    (game.period_scores.some((ps) => ps.period === 'SO') ||
+    (game.period_scores.some((ps) => ps.period === PERIOD.SHOOTOUT) ||
       game.shootout ||
-      game.current_period === 'SO');
+      game.current_period === PERIOD.SHOOTOUT);
   const hasOT =
     !hasSO &&
-    (game.period_scores.some((ps) => ps.period === 'OT') ||
+    (game.period_scores.some((ps) => ps.period === PERIOD.OVERTIME) ||
       (game.overtime_periods ?? 0) > 0 ||
-      game.current_period === 'OT');
+      game.current_period === PERIOD.OVERTIME);
   // Compact numeric labels when multiple OT columns are present in a playoff game.
   const useShortNums = isPlayoff && otCount > 1;
   const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
@@ -257,14 +260,14 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     ...(hasOT
       ? isPlayoff
         ? Array.from({ length: otCount }, (_, i) => ({
-            id: `OT${i + 1}`,
+            id: otPeriodId(i + 1),
             label: `Overtime ${i + 1}`,
-            shortLabel: `OT${i + 1}`,
+            shortLabel: otPeriodId(i + 1),
           }))
-        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
+        : [{ id: PERIOD.OVERTIME, label: PERIOD.OVERTIME, shortLabel: PERIOD.OVERTIME }]
       : []),
     // Shootouts don't exist in playoffs — suppress SO column for playoff games.
-    ...(hasSO ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }] : []),
+    ...(hasSO ? [{ id: PERIOD.SHOOTOUT, label: PERIOD.SHOOTOUT, shortLabel: PERIOD.SHOOTOUT }] : []),
   ];
 
   return (

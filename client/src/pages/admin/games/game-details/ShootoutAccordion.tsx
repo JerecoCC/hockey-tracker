@@ -11,6 +11,7 @@ import { formatPlayerName } from './formatUtils';
 import styles from './ShootoutAccordion.module.scss';
 import scoringStyles from './ScoringCard.module.scss';
 import { playerDataComplete } from './gameUtils';
+import { PERIOD } from './constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -57,7 +58,7 @@ const ShootoutAccordion = ({
   getPlayerHref,
   showPlayerDataStatus = false,
 }: Props) => {
-  const isSOActive = !isFinal && game.current_period === 'SO';
+  const isSOActive = !isFinal && game.current_period === PERIOD.SHOOTOUT;
   const isSODone = isFinal;
 
   // ── Shoot order & team split ──────────────────────────────────────────────

@@ -3,6 +3,7 @@ import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, PreviousMeeting } from '@/hooks/useGames';
 import styles from './SeasonSeriesCard.module.scss';
+import { PERIOD_SUFFIX } from '../constants';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -102,7 +103,11 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
           const rightScore = showScores ? rightNumericScore : '-';
           const leftLost = !showScores || leftNumericScore < rightNumericScore;
           const rightLost = !showScores || rightNumericScore < leftNumericScore;
-          const suffix = pm.shootout ? '/SO' : (pm.overtime_periods ?? 0) > 0 ? '/OT' : null;
+          const suffix = pm.shootout
+            ? PERIOD_SUFFIX.SHOOTOUT
+            : (pm.overtime_periods ?? 0) > 0
+              ? PERIOD_SUFFIX.OVERTIME
+              : null;
 
           return (
             <div

@@ -6,12 +6,13 @@ import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalieSwitchData, GoalieStatRecord } from '@/hooks/useGameGoalieStats';
 import styles from './GameDetailsPage.module.scss';
+import { PERIOD } from './constants';
 
 const PERIOD_OPTIONS = [
-  { value: '1', label: '1st Period' },
-  { value: '2', label: '2nd Period' },
-  { value: '3', label: '3rd Period' },
-  { value: 'OT', label: 'Overtime' },
+  { value: PERIOD.FIRST, label: '1st Period' },
+  { value: PERIOD.SECOND, label: '2nd Period' },
+  { value: PERIOD.THIRD, label: '3rd Period' },
+  { value: PERIOD.OVERTIME, label: 'Overtime' },
 ];
 
 interface Props {
@@ -46,9 +47,11 @@ const GoalieSwitchModal = ({
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const periodFromGame = game.current_period ?? '';
-  const currentPeriod = ['1', '2', '3', 'OT'].includes(periodFromGame)
+  const currentPeriod = [PERIOD.FIRST, PERIOD.SECOND, PERIOD.THIRD, PERIOD.OVERTIME].includes(
+    periodFromGame,
+  )
     ? periodFromGame
-    : '1';
+    : PERIOD.FIRST;
 
   const { control, reset, watch, handleSubmit } = useForm<FormValues>({
     defaultValues: {

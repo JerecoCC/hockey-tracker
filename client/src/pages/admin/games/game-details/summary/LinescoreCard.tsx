@@ -4,7 +4,7 @@ import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord } from '@/hooks/useGames';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
-import { PERIOD_IDS } from '../constants';
+import { PERIOD, PERIOD_IDS, otPeriodId } from '../constants';
 import styles from '../GameDetailsPage.module.scss';
 
 interface LinescorePeriod {
@@ -62,7 +62,8 @@ const LinescoreCard = ({
 }: Props) => {
   const currentPeriodIdx = PERIOD_IDS.indexOf(game.current_period as '1' | '2' | '3');
   // When the game is in OT or SO, all regular periods are complete.
-  const isPostRegulation = game.current_period === 'OT' || game.current_period === 'SO';
+  const isPostRegulation =
+    game.current_period === PERIOD.OVERTIME || game.current_period === PERIOD.SHOOTOUT;
 
   const rows = [
     {
@@ -210,17 +211,17 @@ const LinescoreCard = ({
                 // For numbered OT periods (OT1, OT2, …) only the last one maps to
                 // the actual 'OT' goals; earlier ones always show 0.
                 const isNumberedOT = /^OT[0-9]+$/.test(p.id);
-                const isLastOT = isNumberedOT && p.id === `OT${game.overtime_periods ?? 1}`;
+                const isLastOT = isNumberedOT && p.id === otPeriodId(game.overtime_periods ?? 1);
                 const ps = isNumberedOT
                   ? isLastOT
-                    ? game.period_scores.find((s) => s.period === 'OT')
+                    ? game.period_scores.find((s) => s.period === PERIOD.OVERTIME)
                     : undefined
                   : game.period_scores.find((s) => s.period === p.id);
                 const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
                 const isPeriodDone =
                   (isFinal && !isEditMode) ||
                   (pIdx >= 0 ? isPostRegulation || currentPeriodIdx > pIdx : true);
-                if (p.id === 'SO') {
+                if (p.id === PERIOD.SHOOTOUT) {
                   const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);
                   const soDisplay =
                     teamAttempts.length > 0
