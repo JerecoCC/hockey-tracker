@@ -51,6 +51,8 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   } = useGameDetails(id);
   const gameHasStarted = !!game && game.status !== 'scheduled';
   const hasShootout = !!game?.shootout;
+  const shouldFetchShootoutAttempts =
+    !!game && (hasShootout || game.current_period === 'SO' || !!game.shootout_first_team_id);
   const {
     goalieStats,
     upsertGoalieStat,
@@ -61,7 +63,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   } = useGameGoalieStats(id, { enabled: gameHasStarted });
   // attempts is needed here only for soWinnerSide → liveScore calculation for ScoreboardCard.
   // React Query deduplicates the request; GameSummaryTab also calls this hook.
-  const { attempts } = useShootoutAttempts(id, { enabled: hasShootout });
+  const { attempts } = useShootoutAttempts(id, { enabled: shouldFetchShootoutAttempts });
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );

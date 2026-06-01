@@ -132,8 +132,10 @@ const GameSummaryTab = ({
   const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(game.id, {
     enabled: gameHasStarted,
   });
+  const shouldFetchShootoutAttempts =
+    !!game.shootout || game.current_period === 'SO' || !!game.shootout_first_team_id;
   const { attempts, addAttempt, updateAttempt, deleteAttempt } = useShootoutAttempts(game.id, {
-    enabled: !!game.shootout,
+    enabled: shouldFetchShootoutAttempts,
   });
 
   // Only the last recorded goal in the active period can be edited or deleted.
@@ -345,9 +347,7 @@ const GameSummaryTab = ({
     if (!started) return false;
 
     const starterGoalieIds = new Set(
-      lineup
-        .filter((entry) => entry.position_slot === 'G')
-        .map((entry) => entry.player_id),
+      lineup.filter((entry) => entry.position_slot === 'G').map((entry) => entry.player_id),
     );
     const starterGoalies = [...awayRoster, ...homeRoster].filter((entry) =>
       starterGoalieIds.has(entry.player_id),
@@ -765,6 +765,7 @@ const GameSummaryTab = ({
       {editable && (
         <StartGameModal
           open={startGameModalOpen}
+          scheduledAt={game.scheduled_at}
           isStarting={busy === 'in_progress'}
           disabled={!!busy}
           onClose={() => setStartGameModalOpen(false)}

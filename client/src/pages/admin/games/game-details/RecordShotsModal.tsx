@@ -19,6 +19,7 @@ import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGam
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
+import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }
@@ -50,38 +51,6 @@ const PERIOD_TITLE_LABEL: Record<string, string> = {
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
-
-const isoToETHHMM = (iso: string): string => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  const h = parts.find((p) => p.type === 'hour')?.value ?? '';
-  const m = parts.find((p) => p.type === 'minute')?.value ?? '';
-  return h && m ? `${h}:${m}` : '';
-};
-
-/** Advances a "YYYY-MM-DD" string by one calendar day. */
-const nextETDate = (etDateStr: string): string => {
-  const [y, m, d] = etDateStr.split('-').map(Number);
-  const next = new Date(y, m - 1, d + 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
-};
-
-const etHHMMtoISO = (hhmm: string, etDateStr?: string): string => {
-  const etDate =
-    etDateStr ??
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
-  const tzName =
-    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
-      .formatToParts(probe)
-      .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
-  const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
-};
 
 const PERIOD_ORDER = ['1', '2', '3', 'OT', 'SO'];
 const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
@@ -377,11 +346,7 @@ const RecordShotsModal = ({
       // If the end time HH:mm is earlier than the start HH:mm the game ran past midnight —
       // use the next ET calendar day, mirroring the logic in GameInfoEditModal.
       const anchor = game.time_start ?? game.scheduled_at;
-      const etBase = anchor
-        ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-            new Date(anchor),
-          )
-        : undefined;
+      const etBase = anchor ? isoToETDate(anchor) : undefined;
       const startHHMM = game.time_start ? isoToETHHMM(game.time_start) : null;
       const isPastMidnight = !!startHHMM && end_time < startHHMM;
       const endDate = isPastMidnight && etBase ? nextETDate(etBase) : etBase;

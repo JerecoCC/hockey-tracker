@@ -2,26 +2,11 @@ import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import styles from './GameDetailsPage.module.scss';
-
-/** Treats an "HH:mm" string as Eastern Time and returns a UTC ISO string. */
-const etHHMMtoISO = (hhmm: string): string => {
-  const etDate = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    new Date(),
-  );
-  const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
-  const tzName =
-    new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      timeZoneName: 'short',
-    })
-      .formatToParts(probe)
-      .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
-  const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
-};
+import { etHHMMtoISO } from './formatUtils';
 
 interface Props {
   open: boolean;
+  scheduledAt?: string | null;
   /** True when the game-start action is in progress (external busy). */
   isStarting: boolean;
   /** True when any other action is in progress — disables the button. */
@@ -30,7 +15,7 @@ interface Props {
   onStart: (isoTime: string) => Promise<boolean>;
 }
 
-const StartGameModal = ({ open, isStarting, disabled, onClose, onStart }: Props) => {
+const StartGameModal = ({ open, scheduledAt, isStarting, disabled, onClose, onStart }: Props) => {
   const {
     control,
     handleSubmit,
@@ -44,7 +29,7 @@ const StartGameModal = ({ open, isStarting, disabled, onClose, onStart }: Props)
   };
 
   const onSubmit = handleSubmit(async (data) => {
-    const ok = await onStart(etHHMMtoISO(data.start_time));
+    const ok = await onStart(etHHMMtoISO(data.start_time, scheduledAt));
     if (ok) handleClose();
   });
 
