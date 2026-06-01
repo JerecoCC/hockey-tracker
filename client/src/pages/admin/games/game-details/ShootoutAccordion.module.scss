@@ -113,8 +113,8 @@
   }
 }
 
-.soWinnerGoalItem:last-child {
-  border-bottom: 1px solid $border;
+.soWinnerGoalItem {
+  border-bottom: 1px solid $border !important;
 }
 
 // Applied alongside .soAttemptCell — only overrides justify-content
