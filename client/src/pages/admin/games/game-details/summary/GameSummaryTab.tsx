@@ -34,6 +34,7 @@ import LastFiveCard from './LastFiveCard';
 import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_ORDER, otPeriodId } from '../constants';
+import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -926,7 +927,14 @@ const GameSummaryTab = ({
           onConfirm={async () => {
             const ok = await deleteGame();
             if (ok) {
-              navigate(`/admin/leagues/${leagueId}/seasons/${seasonId}`);
+              navigate(
+                buildSeasonDetailsPath({
+                  leagueCode: game.league_code,
+                  leagueId,
+                  seasonName: game.season_name,
+                  seasonId,
+                }),
+              );
             } else {
               setConfirmDeleteOpen(false);
             }

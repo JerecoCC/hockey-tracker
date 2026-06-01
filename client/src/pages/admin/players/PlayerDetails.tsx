@@ -36,7 +36,13 @@ import {
 } from '@/hooks/useTeamPlayers';
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
-import { buildPlayerDetailsPath, toRouteSlug } from '@/lib/routeSlugs';
+import {
+  buildGameDetailsPath,
+  buildLeagueDetailsPath,
+  buildPlayerDetailsPath,
+  buildTeamDetailsPath,
+  toRouteSlug,
+} from '@/lib/routeSlugs';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import MovePlayerModal from '../teams/MovePlayerModal';
 import StintEditModal, { ACQUISITION_TYPE_LABELS } from './StintEditModal';
@@ -402,7 +408,12 @@ const PlayerDetailsPage = () => {
 
   const latestStint = stints[0];
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
-  const teamHref = `/admin/leagues/${leagueId}/teams/${teamId}`;
+  const teamHref = buildTeamDetailsPath({
+    leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+    leagueId,
+    teamCode: teamDetails?.code ?? routeLookup?.team_code ?? routeTeamCode,
+    teamId,
+  });
   const canonicalPlayerPath =
     player && routeLookup
       ? buildPlayerDetailsPath({
@@ -450,7 +461,13 @@ const PlayerDetailsPage = () => {
           backPath: teamHref,
           backLabel: `Back to ${teamDetails?.name ?? 'Team'}`,
           items: [
-            { label: teamDetails?.league_name ?? '...', path: `/admin/leagues/${leagueId}` },
+            {
+              label: teamDetails?.league_name ?? '...',
+              path: buildLeagueDetailsPath({
+                leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+                leagueId,
+              }),
+            },
             {
               label: latestStint?.team.name ?? teamDetails?.name ?? '...',
               path: teamHref,
@@ -686,7 +703,18 @@ const PlayerDetailsPage = () => {
         loading={lastFiveGamesLoading}
         emptyMessage="No recent games recorded yet."
         onRowClick={(row) =>
-          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+          navigate(
+            buildGameDetailsPath({
+              leagueCode: routeLookup?.league_code ?? leagueCode,
+              leagueId,
+              seasonName: row.season_name,
+              seasonId: row.season_id,
+              gameId: row.game_id,
+              awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
+              homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
+              scheduledAt: row.scheduled_at,
+            }),
+          )
         }
       />
     </Card>
@@ -731,7 +759,18 @@ const PlayerDetailsPage = () => {
         loading={gameLogsLoading}
         emptyMessage="No game logs found."
         onRowClick={(row) =>
-          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+          navigate(
+            buildGameDetailsPath({
+              leagueCode: routeLookup?.league_code ?? leagueCode,
+              leagueId,
+              seasonName: row.season_name,
+              seasonId: row.season_id,
+              gameId: row.game_id,
+              awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
+              homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
+              scheduledAt: row.scheduled_at,
+            }),
+          )
         }
       />
       <div className={styles.paginationBar}>

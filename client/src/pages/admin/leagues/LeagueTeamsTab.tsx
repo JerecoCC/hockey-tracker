@@ -4,10 +4,12 @@ import Card from '@/components/Card/Card';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import SearchableList from '@/components/SearchableList/SearchableList';
 import { type TeamRecord } from '@/hooks/useTeams';
+import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
   leagueId: string;
+  leagueCode: string;
   teams: TeamRecord[];
   loading: boolean;
   busy: string | null;
@@ -18,7 +20,7 @@ interface Props {
 }
 
 const LeagueTeamsTab = (props: Props) => {
-  const { leagueId, teams, loading, busy, onAdd, onEdit, onDelete, className } = props;
+  const { leagueId, leagueCode, teams, loading, busy, onAdd, onEdit, onDelete, className } = props;
   const navigate = useNavigate();
 
   return (
@@ -57,7 +59,15 @@ const LeagueTeamsTab = (props: Props) => {
                       icon: 'open_in_new',
                       intent: 'accent',
                       tooltip: 'View team',
-                      onClick: () => navigate(`/admin/leagues/${leagueId}/teams/${t.id}`),
+                      onClick: () =>
+                        navigate(
+                          buildTeamDetailsPath({
+                            leagueCode,
+                            leagueId,
+                            teamCode: t.code,
+                            teamId: t.id,
+                          }),
+                        ),
                     },
                     {
                       icon: 'edit',

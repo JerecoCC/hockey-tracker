@@ -1,9 +1,18 @@
-import { useParams } from 'react-router-dom';
+import { useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
+import useLeagues from '@/hooks/useLeagues';
 import useTabState from '@/hooks/useTabState';
+import {
+  UUID_PATTERN,
+  buildLeagueDetailsPath,
+  buildTeamDetailsPath,
+  toRouteSlug,
+} from '@/lib/routeSlugs';
 import TeamInfoTab from './TeamInfoTab';
 import TeamGamesTab from './TeamGamesTab';
 import TeamRosterTab from './TeamRosterTab';
@@ -12,8 +21,42 @@ import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
-  const { id, leagueId } = useParams<{ id: string; leagueId: string }>();
-  const { team, loading, uploadLogo, updateTeam } = useTeamDetails(id);
+  const navigate = useNavigate();
+  const {
+    teamSlug: routeTeamSlug,
+    id: legacyTeamId,
+    leagueSlug: routeLeagueSlug,
+    leagueId: legacyLeagueId,
+  } = useParams<{
+    teamSlug?: string;
+    id?: string;
+    leagueSlug?: string;
+    leagueId?: string;
+  }>();
+  const teamSlug = routeTeamSlug ?? legacyTeamId;
+  const leagueSlug = routeLeagueSlug ?? legacyLeagueId;
+  const isLegacyTeamRoute = !!teamSlug && UUID_PATTERN.test(teamSlug);
+  const isLegacyLeagueRoute = !!leagueSlug && UUID_PATTERN.test(leagueSlug);
+  const { leagues: allLeagues, loading: leaguesLoading } = useLeagues();
+  const routeLeague = isLegacyLeagueRoute
+    ? null
+    : allLeagues.find(
+        (item) =>
+          toRouteSlug(item.code) === leagueSlug ||
+          toRouteSlug(item.name) === leagueSlug,
+      );
+  const leagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
+  const { teams: leagueTeams, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
+  const routeTeam = isLegacyTeamRoute
+    ? null
+    : leagueTeams.find(
+        (item) =>
+          toRouteSlug(item.code) === teamSlug ||
+          toRouteSlug(item.name) === teamSlug,
+      );
+  const id = isLegacyTeamRoute ? teamSlug : routeTeam?.id;
+  const { team, loading: teamLoading, uploadLogo, updateTeam } = useTeamDetails(id);
+  const loading = teamLoading || (!isLegacyLeagueRoute && leaguesLoading) || (!isLegacyTeamRoute && leagueDetailsLoading);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
   const [activeTab, handleTabChange] = useTabState('tab:team-details');
   const breadcrumbItems = [
@@ -21,12 +64,18 @@ const TeamDetailsPage = () => {
     {
       label: team?.league_name ?? '…',
       shortLabel: team?.league_code ?? undefined,
-      path: `/admin/leagues/${leagueId}`,
+      path: buildLeagueDetailsPath({
+        leagueCode: team?.league_code,
+        leagueId: team?.league_id ?? leagueId,
+      }),
     },
     { label: team?.name ?? '…' },
   ];
 
-  const backPath = `/admin/leagues/${leagueId}`;
+  const backPath = buildLeagueDetailsPath({
+    leagueCode: team?.league_code,
+    leagueId: team?.league_id ?? leagueId,
+  });
   const backTooltip = 'Back to League Details';
 
   usePageBreadcrumbs(
@@ -46,6 +95,22 @@ const TeamDetailsPage = () => {
       leagueId,
     ],
   );
+
+  useEffect(() => {
+    if (!team || isLegacyLeagueRoute || isLegacyTeamRoute) return;
+    const canonicalPath = buildTeamDetailsPath({
+      leagueCode: team.league_code,
+      leagueId: team.league_id,
+      teamCode: team.code,
+      teamId: team.id,
+    });
+    if (
+      leagueSlug !== toRouteSlug(team.league_code) ||
+      teamSlug !== toRouteSlug(team.code)
+    ) {
+      navigate(canonicalPath, { replace: true });
+    }
+  }, [isLegacyLeagueRoute, isLegacyTeamRoute, leagueSlug, navigate, team, teamSlug]);
 
   if (loading) {
     return (
@@ -84,7 +149,8 @@ const TeamDetailsPage = () => {
             content: (
               <TeamGamesTab
                 teamId={team.id}
-                leagueId={leagueId ?? ''}
+                leagueId={team.league_id ?? leagueId ?? ''}
+                leagueCode={team.league_code}
               />
             ),
           },

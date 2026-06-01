@@ -1,6 +1,8 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import useGames from '@/hooks/useGames';
+import useLeagueDetails from '@/hooks/useLeagueDetails';
+import useLeagues from '@/hooks/useLeagues';
 import useSeasonDetails from '@/hooks/useSeasonDetails';
 import useSeasonStandings from '@/hooks/useSeasonStandings';
 import useSeasonStats from '@/hooks/useSeasonStats';
@@ -14,6 +16,8 @@ jest.mock('react-router-dom', () => ({
   useParams: () => ({ leagueId: 'league-1', id: 'season-1' }),
 }));
 jest.mock('@/hooks/useGames', () => jest.fn());
+jest.mock('@/hooks/useLeagueDetails', () => jest.fn());
+jest.mock('@/hooks/useLeagues', () => jest.fn());
 jest.mock('@/hooks/useSeasonDetails', () => jest.fn());
 jest.mock('@/hooks/useSeasonStandings', () => jest.fn());
 jest.mock('@/hooks/useSeasonStats', () => jest.fn());
@@ -67,6 +71,8 @@ jest.mock('./SeasonPlayoffsTab', () => () => null);
 jest.mock('./SeasonTeamsCard', () => () => null);
 
 const mockUseGames = useGames as jest.Mock;
+const mockUseLeagueDetails = useLeagueDetails as jest.Mock;
+const mockUseLeagues = useLeagues as jest.Mock;
 const mockUseSeasonDetails = useSeasonDetails as jest.Mock;
 const mockUseSeasonStandings = useSeasonStandings as jest.Mock;
 const mockUseSeasonStats = useSeasonStats as jest.Mock;
@@ -76,6 +82,8 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUseTabState.mockReturnValue([4, jest.fn()]);
   mockUseGames.mockReturnValue({ games: [] });
+  mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
+  mockUseLeagueDetails.mockReturnValue({ seasons: [], loading: false });
   mockUseSeasonStats.mockReturnValue({
     skaters: [
       {
@@ -164,7 +172,7 @@ describe('SeasonDetails standings tab', () => {
 
     await user.click(screen.getByText('Toronto Maple Leafs'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/league-1/teams/team-1');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor');
   });
 });
 
@@ -177,7 +185,7 @@ describe('SeasonDetails stats tab', () => {
     await user.click(screen.getByText('John Smith'));
 
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin/leagues/league-1/teams/team-1/players/player-1',
+      '/admin/leagues/nhl/teams/tor/players/john-smith',
     );
   });
 
@@ -190,7 +198,7 @@ describe('SeasonDetails stats tab', () => {
     await user.click(screen.getByText('Smith, John'));
 
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin/leagues/league-1/teams/team-1/players/player-1',
+      '/admin/leagues/nhl/teams/tor/players/john-smith',
     );
   });
 });

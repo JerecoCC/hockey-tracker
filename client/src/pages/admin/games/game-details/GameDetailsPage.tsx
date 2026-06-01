@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
-import { useGameDetails } from '@/hooks/useGames';
+import useGames, { useGameDetails } from '@/hooks/useGames';
+import useLeagueDetails from '@/hooks/useLeagueDetails';
+import useLeagues from '@/hooks/useLeagues';
 import useGameLineup from '@/hooks/useGameLineup';
 import useGameRoster from '@/hooks/useGameRoster';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
@@ -16,7 +18,16 @@ import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
 import { DATE_FMT_SHORT } from './formatUtils';
-import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
+import {
+  buildGameDetailsPath,
+  buildLeagueDetailsPath,
+  buildPlayerDetailsPath,
+  buildSeasonDetailsPath,
+  gameDateRouteSlug,
+  gameRouteSlug,
+  UUID_PATTERN,
+  toRouteSlug,
+} from '@/lib/routeSlugs';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -26,18 +37,63 @@ interface Props {
 
 const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const {
-    leagueId = '',
-    seasonId,
-    id,
+    leagueSlug: routeLeagueSlug,
+    leagueId: legacyLeagueId = '',
+    seasonSlug: routeSeasonSlug,
+    seasonId: legacySeasonId,
+    id: legacyGameId,
+    gameDateSlug,
+    gameSlug: routeGameSlug,
   } = useParams<{
-    leagueId: string;
-    seasonId: string;
-    id: string;
+    leagueSlug?: string;
+    leagueId?: string;
+    seasonSlug?: string;
+    seasonId?: string;
+    id?: string;
+    gameDateSlug?: string;
+    gameSlug?: string;
   }>();
+  const leagueSlug = routeLeagueSlug ?? legacyLeagueId;
+  const seasonSlug = routeSeasonSlug ?? legacySeasonId;
+  const gameSlug = routeGameSlug ?? legacyGameId;
+  const navigate = useNavigate();
+  const isLegacyGameRoute = (!!legacyGameId && !routeGameSlug) || (!!gameSlug && UUID_PATTERN.test(gameSlug));
+  const isLegacyLeagueRoute =
+    (!!legacyLeagueId && !routeLeagueSlug) || (!!leagueSlug && UUID_PATTERN.test(leagueSlug));
+  const isLegacySeasonRoute =
+    (!!legacySeasonId && !routeSeasonSlug) || (!!seasonSlug && UUID_PATTERN.test(seasonSlug));
+  const { leagues: allLeagues, loading: leaguesLoading } = useLeagues();
+  const routeLeague = isLegacyLeagueRoute
+    ? null
+    : allLeagues.find(
+        (item) =>
+          toRouteSlug(item.code) === leagueSlug ||
+          toRouteSlug(item.name) === leagueSlug,
+      );
+  const routeLeagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
+  const { seasons: routeSeasons, loading: leagueDetailsLoading } = useLeagueDetails(routeLeagueId);
+  const routeSeason = isLegacySeasonRoute
+    ? null
+    : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
+  const routeSeasonId = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
+  const { games: routeGames, loading: routeGamesLoading } = useGames({
+    seasonId: !isLegacyGameRoute ? routeSeasonId : undefined,
+  });
+  const routeGame = isLegacyGameRoute
+    ? null
+    : routeGames.find(
+        (item) =>
+          gameRouteSlug({
+            awayTeamCode: item.away_team.code,
+            homeTeamCode: item.home_team.code,
+          }) === gameSlug &&
+          (!gameDateSlug || gameDateRouteSlug(item.scheduled_at) === gameDateSlug),
+      );
+  const gameId = isLegacyGameRoute ? gameSlug : routeGame?.id;
   const { user } = useAuth();
   const {
     game,
-    loading,
+    loading: gameDetailsLoading,
     busy,
     startGame,
     updateStatus,
@@ -50,7 +106,12 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     updatePeriodShots,
     revertToEditMode,
     deleteGame,
-  } = useGameDetails(id);
+  } = useGameDetails(gameId);
+  const loading =
+    gameDetailsLoading ||
+    (!isLegacyLeagueRoute && leaguesLoading) ||
+    (!isLegacySeasonRoute && leagueDetailsLoading) ||
+    (!isLegacyGameRoute && routeGamesLoading);
   const gameHasStarted = !!game && game.status !== 'scheduled';
   const hasShootout = !!game?.shootout;
   const shouldFetchShootoutAttempts =
@@ -63,10 +124,10 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     removeGoalieStat,
     updateGoalieStint,
     removeGoalieStint,
-  } = useGameGoalieStats(id, { enabled: gameHasStarted });
+  } = useGameGoalieStats(gameId, { enabled: gameHasStarted });
   // attempts is needed here only for soWinnerSide → liveScore calculation for ScoreboardCard.
   // React Query deduplicates the request; GameSummaryTab also calls this hook.
-  const { attempts } = useShootoutAttempts(id, { enabled: shouldFetchShootoutAttempts });
+  const { attempts } = useShootoutAttempts(gameId, { enabled: shouldFetchShootoutAttempts });
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
@@ -122,7 +183,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   }, [game, attempts]);
 
   // ── Game-day rosters ───────────────────────────────────────────────────────
-  const { roster, addToRoster, removeFromRoster } = useGameRoster(id);
+  const { roster, addToRoster, removeFromRoster } = useGameRoster(gameId);
   // Real entries are persisted to this game; inherited entries are pre-populated
   // from the last finished game and not yet saved.
   const awayRoster = roster.filter((e) => e.team_id === game?.away_team.id && !e.inherited);
@@ -135,7 +196,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   );
 
   // ── Starting lineup data ───────────────────────────────────────────────────
-  const { lineup, saveTeamLineup } = useGameLineup(id);
+  const { lineup, saveTeamLineup } = useGameLineup(gameId);
 
   // Both teams must have at least one persisted (non-inherited) roster entry.
   const rosterReady = awayRoster.length > 0 && homeRoster.length > 0;
@@ -155,8 +216,18 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     return hasAll(game.away_team.id) && hasAll(game.home_team.id);
   })();
 
-  const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
-  const leagueHref = `/admin/leagues/${leagueId}`;
+  const leagueId = game?.league_id ?? leagueSlug;
+  const seasonId = game?.season_id ?? seasonSlug;
+  const seasonHref = buildSeasonDetailsPath({
+    leagueCode: game?.league_code,
+    leagueId,
+    seasonName: game?.season_name,
+    seasonId,
+  });
+  const leagueHref = buildLeagueDetailsPath({
+    leagueCode: game?.league_code,
+    leagueId,
+  });
   const leagueName = game?.league_name ?? 'League';
   const seasonName = game?.season_name ?? 'Season';
   const gameCrumbLabel = game
@@ -194,6 +265,32 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     ],
   );
 
+  useEffect(() => {
+    if (!isAdminView || !game || !gameId) return;
+    const canonicalPath = buildGameDetailsPath({
+      leagueCode: game.league_code,
+      leagueId: game.league_id,
+      seasonName: game.season_name,
+      seasonId: game.season_id,
+      gameId,
+      awayTeamCode: game.away_team.code,
+      homeTeamCode: game.home_team.code,
+      scheduledAt: game.scheduled_at,
+    });
+    if (
+      leagueSlug !== toRouteSlug(game.league_code) ||
+      seasonSlug !== toRouteSlug(game.season_name) ||
+      gameSlug !==
+        gameRouteSlug({
+          awayTeamCode: game.away_team.code,
+          homeTeamCode: game.home_team.code,
+        }) ||
+      gameDateSlug !== gameDateRouteSlug(game.scheduled_at)
+    ) {
+      navigate(canonicalPath, { replace: true });
+    }
+  }, [game, gameDateSlug, gameId, gameSlug, isAdminView, leagueSlug, navigate, seasonSlug]);
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>
@@ -211,7 +308,13 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   const gameHrefBuilder = (gameId: string) =>
     isAdminView
-      ? `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`
+      ? buildGameDetailsPath({
+          leagueCode: game.league_code,
+          leagueId: game.league_id,
+          seasonName: game.season_name,
+          seasonId: game.season_id,
+          gameId,
+        })
       : `/games/${gameId}`;
   const playerHrefBuilder = isAdminView
     ? (
@@ -300,6 +403,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
         liveHomeScore={liveHomeScore}
         overtimeSuffix={overtimeSuffix}
         leagueId={isAdminView ? leagueId : undefined}
+        leagueCode={game.league_code}
       />
 
       {/* ── Tabs ── */}

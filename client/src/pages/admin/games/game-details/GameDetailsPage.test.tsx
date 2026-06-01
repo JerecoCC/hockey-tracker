@@ -1,6 +1,8 @@
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import { render, screen } from '@testing-library/react';
-import { useGameDetails } from '@/hooks/useGames';
+import useGames, { useGameDetails } from '@/hooks/useGames';
+import useLeagueDetails from '@/hooks/useLeagueDetails';
+import useLeagues from '@/hooks/useLeagues';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
@@ -19,7 +21,13 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => mockUseParams(),
 }));
-jest.mock('@/hooks/useGames', () => ({ useGameDetails: jest.fn() }));
+jest.mock('@/hooks/useGames', () => ({
+  __esModule: true,
+  default: jest.fn(),
+  useGameDetails: jest.fn(),
+}));
+jest.mock('@/hooks/useLeagueDetails', () => jest.fn());
+jest.mock('@/hooks/useLeagues', () => jest.fn());
 jest.mock('@/hooks/useGameGoalieStats', () => jest.fn());
 jest.mock('@/hooks/useShootoutAttempts', () => jest.fn());
 jest.mock('@/hooks/useTabState', () => jest.fn());
@@ -40,6 +48,9 @@ jest.mock('./summary/GameSummaryTab', () => (props: any) => mockSummaryTab(props
 jest.mock('./lineups/GameLineupsTab', () => (props: any) => mockLineupsTab(props));
 
 const mockUseGameDetails = useGameDetails as jest.Mock;
+const mockUseGames = useGames as jest.Mock;
+const mockUseLeagueDetails = useLeagueDetails as jest.Mock;
+const mockUseLeagues = useLeagues as jest.Mock;
 const mockUseGameGoalieStats = useGameGoalieStats as jest.Mock;
 const mockUseShootoutAttempts = useShootoutAttempts as jest.Mock;
 const mockUseTabState = useTabState as jest.Mock;
@@ -69,6 +80,9 @@ beforeEach(() => {
     revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
     updatePeriodShots: jest.fn(), revertToEditMode: jest.fn(), deleteGame: jest.fn(),
   });
+  mockUseGames.mockReturnValue({ games: [], loading: false });
+  mockUseLeagueDetails.mockReturnValue({ seasons: [], loading: false });
+  mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
   mockUseGameGoalieStats.mockReturnValue({ goalieStats: [], upsertGoalieStat: jest.fn(), switchGoalie: jest.fn(), removeGoalieStat: jest.fn(), updateGoalieStint: jest.fn(), removeGoalieStint: jest.fn() });
   mockUseShootoutAttempts.mockReturnValue({ attempts: [] });
   mockUseGameRoster.mockReturnValue({ roster: [], addToRoster: jest.fn(), removeFromRoster: jest.fn() });
@@ -95,7 +109,7 @@ describe('GameDetailsPage', () => {
     expect(mockScoreboardCard.mock.calls[0][0].leagueId).toBe('league-1');
     expect(mockSummaryTab.mock.calls[0][0].editable).toBe(true);
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe(
-      '/admin/leagues/league-1/seasons/season-1/games/game-2',
+      '/admin/leagues/nhl/seasons/2024-25/games/game-2',
     );
     expect(mockSummaryTab.mock.calls[0][0].playerHrefBuilder('team-1', 'player-9', 'John', 'Smith')).toBe(
       '/admin/leagues/nhl/teams/hom/players/john-smith',

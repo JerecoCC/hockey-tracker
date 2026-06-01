@@ -6,6 +6,7 @@ import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useScoreboardPortalContainer } from '@/context/ScoreboardPortalContext';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
+import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -45,6 +46,7 @@ interface Props {
   overtimeSuffix: string;
   /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
   leagueId?: string;
+  leagueCode?: string | null;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -102,6 +104,7 @@ const ScoreboardCard = ({
   liveHomeScore,
   overtimeSuffix,
   leagueId,
+  leagueCode,
 }: Props) => {
   const navigate = useNavigate();
   const portalContainer = useScoreboardPortalContainer();
@@ -198,7 +201,15 @@ const ScoreboardCard = ({
             className={styles.teamLogoBtn}
             onClick={
               leagueId
-                ? () => navigate(`/admin/leagues/${leagueId}/teams/${game.away_team.id}`)
+                ? () =>
+                    navigate(
+                      buildTeamDetailsPath({
+                        leagueCode,
+                        leagueId,
+                        teamCode: game.away_team.code,
+                        teamId: game.away_team.id,
+                      }),
+                    )
                 : undefined
             }
           >
@@ -335,7 +346,15 @@ const ScoreboardCard = ({
             className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
             onClick={
               leagueId
-                ? () => navigate(`/admin/leagues/${leagueId}/teams/${game.home_team.id}`)
+                ? () =>
+                    navigate(
+                      buildTeamDetailsPath({
+                        leagueCode,
+                        leagueId,
+                        teamCode: game.home_team.code,
+                        teamId: game.home_team.id,
+                      }),
+                    )
                 : undefined
             }
           >

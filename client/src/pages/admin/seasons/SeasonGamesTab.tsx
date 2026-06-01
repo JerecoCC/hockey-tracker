@@ -13,6 +13,7 @@ import { type SeasonTeam } from '@/hooks/useSeasonDetails';
 import type { SelectOption } from '@/components/Select/Select';
 import BulkCreateGamesModal from './BulkCreateGamesModal';
 import GameFormModal from './GameFormModal';
+import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import styles from './SeasonGamesTab.module.scss';
 
 // ── Display helpers ───────────────────────────────────────────────────────────
@@ -126,12 +127,14 @@ const fmtWeekRange = (start: Date, end: Date) => {
 
 interface Props {
   leagueId: string;
+  leagueCode: string | null | undefined;
   seasonId: string;
+  seasonName: string | null | undefined;
   seasonTeams: SeasonTeam[];
   isEnded: boolean;
 }
 
-const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => {
+const SeasonGamesTab = ({ leagueId, leagueCode, seasonId, seasonName, seasonTeams, isEnded }: Props) => {
   const navigate = useNavigate();
   const { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames } = useGames({
     seasonId,
@@ -394,7 +397,16 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                   {dayGames.map((game) => (
                     <GameListItem
                       key={game.id}
-                      href={`/admin/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`}
+                      href={buildGameDetailsPath({
+                        leagueCode,
+                        leagueId,
+                        seasonName,
+                        seasonId,
+                        gameId: game.id,
+                        awayTeamCode: game.away_team.code,
+                        homeTeamCode: game.home_team.code,
+                        scheduledAt: game.scheduled_at,
+                      })}
                       awayTeam={{
                         logo: game.away_team.logo,
                         code: game.away_team.code,
@@ -435,7 +447,16 @@ const SeasonGamesTab = ({ leagueId, seasonId, seasonTeams, isEnded }: Props) => 
                           tooltip: 'View game',
                           onClick: () =>
                             navigate(
-                              `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${game.id}`,
+                              buildGameDetailsPath({
+                                leagueCode,
+                                leagueId,
+                                seasonName,
+                                seasonId,
+                                gameId: game.id,
+                                awayTeamCode: game.away_team.code,
+                                homeTeamCode: game.home_team.code,
+                                scheduledAt: game.scheduled_at,
+                              }),
                             ),
                         },
                         ...(!isEnded

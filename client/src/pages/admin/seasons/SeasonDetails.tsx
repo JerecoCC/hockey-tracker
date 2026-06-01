@@ -11,6 +11,8 @@ import Table, { type Column } from '@/components/Table/Table';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import useLeagueDetails from '@/hooks/useLeagueDetails';
+import useLeagues from '@/hooks/useLeagues';
 import useGames from '@/hooks/useGames';
 import useSeasonDetails, {
   type SeasonGroupRecord,
@@ -19,7 +21,14 @@ import useSeasonDetails, {
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import { computeClinched, computeEliminated } from '@/lib/computeClinched';
-import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
+import {
+  UUID_PATTERN,
+  buildLeagueDetailsPath,
+  buildPlayerDetailsPath,
+  buildSeasonDetailsPath,
+  buildTeamDetailsPath,
+  toRouteSlug,
+} from '@/lib/routeSlugs';
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
@@ -73,8 +82,36 @@ function getAllTeamIds(groupId: string, allGroups: SeasonGroupRecord[]): Set<str
 }
 
 const SeasonDetailsPage = () => {
-  const { leagueId, id } = useParams<{ leagueId: string; id: string }>();
+  const {
+    leagueSlug: routeLeagueSlug,
+    leagueId: legacyLeagueId,
+    seasonSlug: routeSeasonSlug,
+    id: legacySeasonId,
+  } = useParams<{
+    leagueSlug?: string;
+    leagueId?: string;
+    seasonSlug?: string;
+    id?: string;
+  }>();
+  const leagueSlug = routeLeagueSlug ?? legacyLeagueId;
+  const seasonSlug = routeSeasonSlug ?? legacySeasonId;
   const navigate = useNavigate();
+  const isLegacyLeagueRoute = !!leagueSlug && UUID_PATTERN.test(leagueSlug);
+  const isLegacySeasonRoute = !!seasonSlug && UUID_PATTERN.test(seasonSlug);
+  const { leagues: allLeagues, loading: leaguesLoading } = useLeagues();
+  const routeLeague = isLegacyLeagueRoute
+    ? null
+    : allLeagues.find(
+        (item) =>
+          toRouteSlug(item.code) === leagueSlug ||
+          toRouteSlug(item.name) === leagueSlug,
+      );
+  const leagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
+  const { seasons: routeSeasons, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
+  const routeSeason = isLegacySeasonRoute
+    ? null
+    : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
+  const id = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
   const [activeTab, handleTabChange] = useTabState('tab:season-details');
   const [statsSubTab, setStatsSubTab] = useState('Summary');
 
@@ -83,7 +120,7 @@ const SeasonDetailsPage = () => {
     groups,
     seasonTeams,
     leagueTeams,
-    loading,
+    loading: detailsLoading,
     busy,
     groupBusy,
     setSeasonTeams,
@@ -97,6 +134,10 @@ const SeasonDetailsPage = () => {
     endSeason,
     updateSeason,
   } = useSeasonDetails(id);
+  const loading =
+    detailsLoading ||
+    (!isLegacyLeagueRoute && leaguesLoading) ||
+    (!isLegacySeasonRoute && leagueDetailsLoading);
 
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
   const { standings, loading: standingsLoading } = useSeasonStandings(id);
@@ -560,7 +601,35 @@ const SeasonDetailsPage = () => {
     { header: 'L', key: 'losses', align: 'center', sortable: true },
   ];
 
-  const leagueHref = `/admin/leagues/${leagueId}`;
+  const leagueHref = buildLeagueDetailsPath({
+    leagueCode: season?.league_code ?? routeLeague?.code,
+    leagueId,
+  });
+  const seasonHref = season
+    ? buildSeasonDetailsPath({
+        leagueCode: season.league_code,
+        leagueId: season.league_id,
+        seasonName: season.name,
+        seasonId: season.id,
+      })
+    : null;
+  useEffect(() => {
+    if (!season || isLegacyLeagueRoute || isLegacySeasonRoute || !seasonHref) return;
+    if (
+      leagueSlug !== toRouteSlug(season.league_code) ||
+      seasonSlug !== toRouteSlug(season.name)
+    ) {
+      navigate(seasonHref, { replace: true });
+    }
+  }, [
+    isLegacyLeagueRoute,
+    isLegacySeasonRoute,
+    leagueSlug,
+    navigate,
+    season,
+    seasonHref,
+    seasonSlug,
+  ]);
   usePageBreadcrumbs(
     loading && !season
       ? null
@@ -595,7 +664,14 @@ const SeasonDetailsPage = () => {
         : leagueHref,
     );
   const navigateToTeam = (row: TeamStandingRecord) =>
-    navigate(`/admin/leagues/${leagueId}/teams/${row.team_id}`);
+    navigate(
+      buildTeamDetailsPath({
+        leagueCode: season?.league_code,
+        leagueId,
+        teamCode: row.team_code,
+        teamId: row.team_id,
+      }),
+    );
 
   if (loading && !season) {
     return (
@@ -732,6 +808,7 @@ const SeasonDetailsPage = () => {
                 seasonTeams={seasonTeams}
                 groups={groups}
                 leagueTeams={leagueTeams}
+                leagueCode={season.league_code}
                 loading={loading}
                 busy={busy}
                 groupBusy={groupBusy}
@@ -751,7 +828,9 @@ const SeasonDetailsPage = () => {
             content: (
               <SeasonGamesTab
                 leagueId={leagueId!}
+                leagueCode={season.league_code}
                 seasonId={id!}
+                seasonName={season.name}
                 seasonTeams={effectiveSeasonTeams}
                 isEnded={season.is_ended}
               />
@@ -1060,6 +1139,8 @@ const SeasonDetailsPage = () => {
               <SeasonPlayoffsTab
                 seasonId={id!}
                 leagueId={season.league_id}
+                leagueCode={season.league_code}
+                seasonName={season.name}
                 bracketRuleSetId={season.bracket_rule_set_id ?? null}
                 groups={groups}
                 isEnded={season.is_ended}

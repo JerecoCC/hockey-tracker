@@ -16,14 +16,35 @@ import TeamFormModal from '../teams/TeamFormModal';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useLeagueDetails, { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
 import useLeaguePlayers, { type PlayerRecord } from '@/hooks/useLeaguePlayers';
+import useLeagues from '@/hooks/useLeagues';
 import useTabState from '@/hooks/useTabState';
 import { type TeamRecord } from '@/hooks/useTeams';
 import { type SeasonRecord } from '@/hooks/useSeasons';
+import {
+  UUID_PATTERN,
+  buildLeagueDetailsPath,
+  buildSeasonDetailsPath,
+  toRouteSlug,
+} from '@/lib/routeSlugs';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
   const navigate = useNavigate();
-  const { id } = useParams<{ id: string }>();
+  const { leagueSlug: routeLeagueSlug, id: legacyLeagueId } = useParams<{
+    leagueSlug?: string;
+    id?: string;
+  }>();
+  const leagueSlug = routeLeagueSlug ?? legacyLeagueId;
+  const isLegacyIdRoute = !!leagueSlug && UUID_PATTERN.test(leagueSlug);
+  const { leagues: allLeagues, loading: leaguesLoading } = useLeagues();
+  const routeLeague = isLegacyIdRoute
+    ? null
+    : allLeagues.find(
+        (item) =>
+          toRouteSlug(item.code) === leagueSlug ||
+          toRouteSlug(item.name) === leagueSlug,
+      );
+  const id = isLegacyIdRoute ? leagueSlug : routeLeague?.id;
   const [activeTab, handleTabChange] = useTabState('tab:league-details');
   const {
     league,
@@ -60,7 +81,7 @@ const LeagueDetailsPage = () => {
   const [playersSearch, setPlayersSearch] = useState('');
 
   usePageBreadcrumbs(
-    loading
+    loading || (!isLegacyIdRoute && leaguesLoading)
       ? null
       : {
           backPath: '/admin/leagues',
@@ -72,8 +93,19 @@ const LeagueDetailsPage = () => {
               : { label: 'Not Found' },
           ],
         },
-    [loading, league?.name, league?.code],
+    [loading, leaguesLoading, isLegacyIdRoute, league?.name, league?.code],
   );
+
+  useEffect(() => {
+    if (isLegacyIdRoute || !league) return;
+    const canonicalPath = buildLeagueDetailsPath({
+      leagueCode: league.code,
+      leagueId: league.id,
+    });
+    if (leagueSlug !== toRouteSlug(league.code)) {
+      navigate(canonicalPath, { replace: true });
+    }
+  }, [isLegacyIdRoute, league, leagueSlug, navigate]);
 
   useEffect(() => {
     if (selectedSeasonId === null && seasons.length > 0) {
@@ -98,7 +130,7 @@ const LeagueDetailsPage = () => {
     search: playersSearch,
   });
 
-  if (loading) {
+  if (loading || (!isLegacyIdRoute && leaguesLoading)) {
     return (
       <div className={styles.loaderWrapper}>
         <span className={styles.spinner} />
@@ -154,7 +186,16 @@ const LeagueDetailsPage = () => {
                     setConfirmDeleteSeason(s);
                     setConfirmDeleteSeasonOpen(true);
                   }}
-                  onView={(s) => navigate(`/admin/leagues/${id}/seasons/${s.id}`)}
+                  onView={(s) =>
+                    navigate(
+                      buildSeasonDetailsPath({
+                        leagueCode: league.code,
+                        leagueId: league.id,
+                        seasonName: s.name,
+                        seasonId: s.id,
+                      }),
+                    )
+                  }
                 />
               </div>
             ),
@@ -167,6 +208,7 @@ const LeagueDetailsPage = () => {
                 <LeagueTeamsTab
                   className={styles.col12}
                   leagueId={league.id}
+                  leagueCode={league.code}
                   teams={teams}
                   loading={loading}
                   busy={busy}
@@ -190,7 +232,7 @@ const LeagueDetailsPage = () => {
               <div className={styles.grid}>
                 <LeaguePlayersTab
                   className={styles.col12}
-                  leagueId={id ?? ''}
+                  leagueId={league.id}
                   leagueCode={league?.code}
                   players={players}
                   total={playersTotal}
@@ -272,7 +314,7 @@ const LeagueDetailsPage = () => {
       <TeamFormModal
         open={teamModalOpen}
         editTarget={editTargetTeam}
-        lockedLeagueId={id}
+        lockedLeagueId={league.id}
         onClose={() => {
           setTeamModalOpen(false);
           setEditTargetTeam(null);
@@ -308,7 +350,7 @@ const LeagueDetailsPage = () => {
             ? [{ value: league.id, label: league.name, logo: league.logo, code: league.code }]
             : []
         }
-        lockedLeagueId={id}
+        lockedLeagueId={league.id}
         onClose={() => {
           setSeasonModalOpen(false);
           setEditTargetSeason(null);
