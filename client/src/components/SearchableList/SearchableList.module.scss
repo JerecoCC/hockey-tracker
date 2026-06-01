@@ -1,11 +1,11 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 .toolbar {
   display: flex;
   align-items: center;
   gap: $space-sm;
-  margin-bottom: $space-xs;
+  margin-bottom: $space-md;
 }
 
 .search {
