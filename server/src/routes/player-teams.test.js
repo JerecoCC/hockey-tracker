@@ -128,7 +128,7 @@ describe('POST /api/admin/player-teams', () => {
         player_id: 'player-1',
         team_id: 'team-1',
         season_id: 'season-1',
-        acquisition_type: 'expansion_draft',
+        acquisition_type: 'call_up',
       });
 
     expect(res.status).toBe(400);

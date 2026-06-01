@@ -55,6 +55,7 @@ const StartGameModal = ({ open, scheduledAt, isStarting, disabled, onClose, onSt
           type="timepicker"
           control={control}
           name="start_time"
+          disabled={isStarting}
           placeholder="Select time…"
           autoFocus
         />
