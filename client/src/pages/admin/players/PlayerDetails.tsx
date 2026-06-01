@@ -18,6 +18,7 @@ import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
   usePlayerGameLogs,
   usePlayerLastFiveGames,
+  usePlayerRouteLookup,
   type PlayerCareerStatRecord,
   type PlayerCurrentSeasonStatBlock,
   type PlayerLastFiveGameRecord,
@@ -35,6 +36,7 @@ import {
 } from '@/hooks/useTeamPlayers';
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
+import { buildPlayerDetailsPath, toRouteSlug } from '@/lib/routeSlugs';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import MovePlayerModal from '../teams/MovePlayerModal';
 import StintEditModal, { ACQUISITION_TYPE_LABELS } from './StintEditModal';
@@ -46,6 +48,7 @@ import styles from './PlayerDetails.module.scss';
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const GAME_LOG_PAGE_SIZE = 20;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
@@ -257,8 +260,23 @@ const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
-  const { id, leagueId, teamId } = useParams<{ id: string; leagueId: string; teamId: string }>();
-  const { player, stats, loading } = usePlayerDetails(id);
+  const { leagueCode, teamCode: routeTeamCode, playerSlug } = useParams<{
+    leagueCode: string;
+    teamCode: string;
+    playerSlug: string;
+  }>();
+  const isLegacyIdRoute = !!playerSlug && UUID_PATTERN.test(playerSlug);
+  const { routeLookup, loading: routeLookupLoading } = usePlayerRouteLookup(
+    leagueCode,
+    routeTeamCode,
+    playerSlug,
+    !isLegacyIdRoute,
+  );
+  const id = isLegacyIdRoute ? playerSlug : routeLookup?.player_id;
+  const leagueId = isLegacyIdRoute ? leagueCode : routeLookup?.league_id;
+  const teamId = isLegacyIdRoute ? routeTeamCode : routeLookup?.team_id;
+  const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id);
+  const loading = routeLookupLoading || playerDetailsLoading;
   const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
   const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id);
   const { team: teamDetails } = useTeamDetails(teamId);
@@ -362,7 +380,15 @@ const PlayerDetailsPage = () => {
         queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
       ]);
 
-      navigate(`/admin/leagues/${leagueId}/teams/${toTeamId}/players/${playerId}`);
+      const toTeam = teams.find((team) => team.id === toTeamId);
+      navigate(
+        buildPlayerDetailsPath({
+          leagueCode,
+          teamCode: toTeam?.code ?? toTeamId,
+          firstName: player?.first_name,
+          lastName: player?.last_name,
+        }),
+      );
       return true;
     } catch (err) {
       const message =
@@ -377,6 +403,37 @@ const PlayerDetailsPage = () => {
   const latestStint = stints[0];
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
   const teamHref = `/admin/leagues/${leagueId}/teams/${teamId}`;
+  const canonicalPlayerPath =
+    player && routeLookup
+      ? buildPlayerDetailsPath({
+          leagueCode: routeLookup.league_code,
+          teamCode: routeLookup.team_code,
+          firstName: player.first_name,
+          lastName: player.last_name,
+        })
+      : null;
+
+  useEffect(() => {
+    if (isLegacyIdRoute || !canonicalPlayerPath) return;
+    if (
+      toRouteSlug(leagueCode) === toRouteSlug(routeLookup?.league_code) &&
+      toRouteSlug(routeTeamCode) === toRouteSlug(routeLookup?.team_code) &&
+      playerSlug === routeLookup?.player_slug
+    ) {
+      return;
+    }
+    navigate(canonicalPlayerPath, { replace: true });
+  }, [
+    canonicalPlayerPath,
+    isLegacyIdRoute,
+    leagueCode,
+    navigate,
+    playerSlug,
+    routeLookup?.league_code,
+    routeLookup?.player_slug,
+    routeLookup?.team_code,
+    routeTeamCode,
+  ]);
 
   useEffect(() => {
     if (!player) return;

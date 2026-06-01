@@ -16,6 +16,7 @@ import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
 import { DATE_FMT_SHORT } from './formatUtils';
+import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -213,8 +214,25 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       ? `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`
       : `/games/${gameId}`;
   const playerHrefBuilder = isAdminView
-    ? (teamId: string, playerId: string) =>
-        `/admin/leagues/${leagueId}/teams/${teamId}/players/${playerId}`
+    ? (
+        teamId: string,
+        _playerId: string,
+        firstName: string | null | undefined,
+        lastName: string | null | undefined,
+      ) => {
+        const team =
+          teamId === game.away_team.id
+            ? game.away_team
+            : teamId === game.home_team.id
+              ? game.home_team
+              : null;
+        return buildPlayerDetailsPath({
+          leagueCode: game.league_code,
+          teamCode: team?.code,
+          firstName,
+          lastName,
+        });
+      }
     : undefined;
 
   const isFinal = game.status === 'final';

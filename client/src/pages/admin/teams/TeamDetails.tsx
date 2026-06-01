@@ -95,6 +95,8 @@ const TeamDetailsPage = () => {
               <TeamRosterTab
                 teamId={team.id}
                 leagueId={team.league_id ?? ''}
+                leagueCode={team.league_code}
+                teamCode={team.code}
                 latestSeasonId={team.latest_season_id ?? null}
               />
             ),
@@ -106,6 +108,8 @@ const TeamDetailsPage = () => {
               <TeamProspectsTab
                 teamId={team.id}
                 leagueId={team.league_id ?? ''}
+                leagueCode={team.league_code}
+                teamCode={team.code}
                 latestSeasonId={team.latest_season_id ?? null}
               />
             ),

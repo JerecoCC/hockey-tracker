@@ -191,6 +191,7 @@ const LeagueDetailsPage = () => {
                 <LeaguePlayersTab
                   className={styles.col12}
                   leagueId={id ?? ''}
+                  leagueCode={league?.code}
                   players={players}
                   total={playersTotal}
                   page={playersPage}

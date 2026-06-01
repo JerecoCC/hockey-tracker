@@ -547,6 +547,7 @@ router.get('/:id', async (req, res) => {
         ) AS away_team,
         s.name AS season_name,
         l.id   AS league_id,
+        l.code AS league_code,
         l.name AS league_name,
         l.best_of_shootout,
         home_l5.home_last_five,

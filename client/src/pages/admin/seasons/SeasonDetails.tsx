@@ -19,6 +19,7 @@ import useSeasonDetails, {
 import { type SeasonRecord } from '@/hooks/useSeasons';
 import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import { computeClinched, computeEliminated } from '@/lib/computeClinched';
+import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
@@ -585,7 +586,12 @@ const SeasonDetailsPage = () => {
   const navigateToPlayer = (row: SkaterStatRecord | GoalieStatRecord) =>
     navigate(
       row.team_id
-        ? `/admin/leagues/${leagueId}/teams/${row.team_id}/players/${row.player_id}`
+        ? buildPlayerDetailsPath({
+            leagueCode: season?.league_code,
+            teamCode: row.team_code,
+            firstName: row.first_name,
+            lastName: row.last_name,
+          })
         : leagueHref,
     );
   const navigateToTeam = (row: TeamStandingRecord) =>

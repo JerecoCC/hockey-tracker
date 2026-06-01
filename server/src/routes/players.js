@@ -794,8 +794,72 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/players/:id  – get a single player
+// GET /api/admin/players/route-lookup
+// Resolves pretty player detail URLs back to the IDs used by the data APIs.
 // ---------------------------------------------------------------------------
+router.get('/route-lookup', async (req, res) => {
+  const leagueCode = String(req.query.league_code || '').trim();
+  const teamCode = String(req.query.team_code || '').trim();
+  const playerSlug = String(req.query.player_slug || '').trim().toLowerCase();
+
+  if (!leagueCode || !teamCode || !playerSlug) {
+    return res.status(400).json({ error: 'league_code, team_code, and player_slug are required' });
+  }
+
+  try {
+    const rows = await sql`
+      SELECT
+        p.id AS player_id,
+        t.id AS team_id,
+        l.id AS league_id,
+        l.code AS league_code,
+        ti.code AS team_code,
+        trim(both '-' from regexp_replace(
+          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+          '[^a-z0-9]+',
+          '-',
+          'g'
+        )) AS player_slug
+      FROM players p
+      JOIN player_teams pt ON pt.player_id = p.id
+      JOIN teams t ON t.id = pt.team_id
+      JOIN leagues l ON l.id = t.league_id
+      LEFT JOIN LATERAL (
+        SELECT code
+        FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY
+          CASE WHEN end_date IS NULL THEN 0 ELSE 1 END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC NULLS LAST
+        LIMIT 1
+      ) ti ON true
+      WHERE lower(l.code) = lower(${leagueCode})
+        AND lower(ti.code) = lower(${teamCode})
+        AND trim(both '-' from regexp_replace(
+          lower(trim(concat_ws(' ', p.first_name, p.last_name))),
+          '[^a-z0-9]+',
+          '-',
+          'g'
+        )) = ${playerSlug}
+      ORDER BY
+        CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+        pt.end_date DESC NULLS LAST,
+        pt.created_at DESC NULLS LAST
+      LIMIT 1
+    `;
+
+    if (!rows.length) {
+      return res.status(404).json({ error: 'Player route not found' });
+    }
+
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('players route-lookup error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/players/:id/last-five-games
 // Returns the player's five most recent final games with per-game stats.

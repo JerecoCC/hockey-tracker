@@ -47,7 +47,7 @@ const mockUseGameRoster = useGameRoster as jest.Mock;
 const mockUseGameLineup = useGameLineup as jest.Mock;
 
 const game = {
-  id: 'game-1', season_id: 'season-1', league_name: 'NHL', season_name: '2024-25', game_type: 'regular', status: 'final',
+  id: 'game-1', season_id: 'season-1', league_code: 'NHL', league_name: 'NHL', season_name: '2024-25', game_type: 'regular', status: 'final',
   scheduled_at: '2024-10-10T19:00:00Z', scheduled_time: '19:00', venue: null, time_start: null, time_end: null,
   home_team: { id: 'team-1', name: 'Home', code: 'HOM', logo: null, primary_color: '#111', secondary_color: '#222', text_color: '#fff' },
   away_team: { id: 'team-2', name: 'Away', code: 'AWY', logo: null, primary_color: '#333', secondary_color: '#444', text_color: '#fff' },
@@ -97,8 +97,8 @@ describe('GameDetailsPage', () => {
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe(
       '/admin/leagues/league-1/seasons/season-1/games/game-2',
     );
-    expect(mockSummaryTab.mock.calls[0][0].playerHrefBuilder('team-9', 'player-9')).toBe(
-      '/admin/leagues/league-1/teams/team-9/players/player-9',
+    expect(mockSummaryTab.mock.calls[0][0].playerHrefBuilder('team-1', 'player-9', 'John', 'Smith')).toBe(
+      '/admin/leagues/nhl/teams/hom/players/john-smith',
     );
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
   });

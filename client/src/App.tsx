@@ -132,7 +132,7 @@ const router = createBrowserRouter([
         element: <GameDetailsPage />,
       },
       {
-        path: '/admin/leagues/:leagueId/teams/:teamId/players/:id',
+        path: '/admin/leagues/:leagueCode/teams/:teamCode/players/:playerSlug',
         element: <PlayerDetailsPage />,
       },
     ],

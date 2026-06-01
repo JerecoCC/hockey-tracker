@@ -26,7 +26,12 @@ interface Props {
   isFinal: boolean;
   leagueId: string;
   seasonId: string | undefined;
-  playerHrefBuilder?: (teamId: string, playerId: string) => string;
+  playerHrefBuilder?: (
+    teamId: string,
+    playerId: string,
+    firstName: string | null | undefined,
+    lastName: string | null | undefined,
+  ) => string;
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   awayRosterInherited: GameRosterEntry[];
@@ -230,7 +235,7 @@ const GameLineupsTab = ({
                     ? String(e.jersey_number)
                     : `${e.first_name[0]}${e.last_name[0]}`
                 }
-                href={playerHrefBuilder?.(e.team_id, e.player_id)}
+                href={playerHrefBuilder?.(e.team_id, e.player_id, e.first_name, e.last_name)}
                 rightContent={
                   showStarterTag
                     ? { type: 'tag', label: 'Starter', intent: 'accent' }

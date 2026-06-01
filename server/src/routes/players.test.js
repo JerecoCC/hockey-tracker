@@ -116,6 +116,41 @@ describe('GET /api/admin/players', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/players/route-lookup
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/players/route-lookup', () => {
+  it('resolves a pretty player URL to database ids', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: 'team-1',
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: 'SJS',
+      player_slug: 'kyle-masters',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&team_code=sjs&player_slug=kyle-masters',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+
+  it('returns 404 when the pretty player URL cannot be resolved', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&team_code=sjs&player_slug=missing-player',
+    );
+
+    expect(res.status).toBe(404);
+    expect(res.body).toEqual({ error: 'Player route not found' });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/players/:id/latest-season-stats
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id/latest-season-stats', () => {

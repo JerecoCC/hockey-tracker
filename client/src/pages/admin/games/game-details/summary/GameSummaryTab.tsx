@@ -52,7 +52,12 @@ interface Props {
   liveHomeScore: number;
   overtimeSuffix: string;
   gameHrefBuilder: (gameId: string) => string;
-  playerHrefBuilder?: (teamId: string, playerId: string) => string;
+  playerHrefBuilder?: (
+    teamId: string,
+    playerId: string,
+    firstName: string | null | undefined,
+    lastName: string | null | undefined,
+  ) => string;
   linescorePeriods: { id: string; label: string; shortLabel: string }[];
   goalieStats: GoalieStatRecord[];
   awayRoster: GameRosterEntry[];
@@ -485,9 +490,10 @@ const GameSummaryTab = ({
                 playerGameStats={playerGameStats}
                 showPlayerDataStatus={showPlayerDataStatus}
                 getPlayerHref={
-                  playerHrefBuilder
-                    ? (teamId, playerId) => playerHrefBuilder(teamId, playerId)
-                    : undefined
+                playerHrefBuilder
+                  ? (teamId, playerId, firstName, lastName) =>
+                      playerHrefBuilder(teamId, playerId, firstName, lastName)
+                  : undefined
                 }
                 onEdit={
                   editable && isEditMode
@@ -532,7 +538,10 @@ const GameSummaryTab = ({
                 playerHrefBuilder
                   ? (playerId) => {
                       const teamId = playerTeamMap.get(playerId);
-                      return teamId ? playerHrefBuilder(teamId, playerId) : '#';
+                      const entry = roster.find((player) => player.player_id === playerId);
+                      return teamId && entry
+                        ? playerHrefBuilder(teamId, playerId, entry.first_name, entry.last_name)
+                        : '#';
                     }
                   : undefined
               }
@@ -548,9 +557,10 @@ const GameSummaryTab = ({
                 goalieStats={goalieStats}
                 lineup={lineup}
                 getPlayerHref={
-                  playerHrefBuilder
-                    ? (teamId, playerId) => playerHrefBuilder(teamId, playerId)
-                    : undefined
+                playerHrefBuilder
+                  ? (teamId, playerId, firstName, lastName) =>
+                      playerHrefBuilder(teamId, playerId, firstName, lastName)
+                  : undefined
                 }
                 isFinal={editable && isFinal && isEditMode}
                 isInProgress={isEditInProgress}
