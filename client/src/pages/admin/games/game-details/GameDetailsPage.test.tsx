@@ -1,6 +1,5 @@
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { useGameDetails } from '@/hooks/useGames';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
@@ -11,6 +10,7 @@ import GameDetailsPage from './GameDetailsPage';
 
 const mockNavigate = jest.fn();
 const mockUseParams = jest.fn();
+const mockUsePageBreadcrumbs = jest.fn();
 const mockSummaryTab = jest.fn(() => <div>summary</div>);
 const mockLineupsTab = jest.fn(() => <div>lineups</div>);
 const mockScoreboardCard = jest.fn(() => <div>scoreboard</div>);
@@ -25,6 +25,12 @@ jest.mock('@/hooks/useShootoutAttempts', () => jest.fn());
 jest.mock('@/hooks/useTabState', () => jest.fn());
 jest.mock('@/hooks/useGameRoster', () => jest.fn());
 jest.mock('@/hooks/useGameLineup', () => jest.fn());
+jest.mock('@/context/AuthContext', () => ({
+  useAuth: () => ({ user: { id: 'user-1', role: 'admin' } }),
+}));
+jest.mock('@/context/BreadcrumbContext', () => ({
+  usePageBreadcrumbs: (...args: any[]) => mockUsePageBreadcrumbs(...args),
+}));
 jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div>breadcrumbs</div>);
 jest.mock('@/components/Button/Button', () => ({ children, onClick, type = 'button' }: any) => <button type={type} onClick={onClick}>{children}</button>);
 jest.mock('@/components/Tabs/Tabs', () => ({ tabs }: any) => <div>{tabs.map((tab: any) => <div key={tab.label}>{tab.content}</div>)}</div>);
@@ -71,7 +77,6 @@ beforeEach(() => {
 
 describe('GameDetailsPage', () => {
   it('uses read-only user mode settings for the user route', async () => {
-    const user = userEvent.setup();
     mockUseParams.mockReturnValue({ id: 'game-1' });
     render(<GameDetailsPage mode="user" />);
 
@@ -80,9 +85,7 @@ describe('GameDetailsPage', () => {
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe('/games/game-2');
     expect(mockSummaryTab.mock.calls[0][0].playerHrefBuilder).toBeUndefined();
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(true);
-
-    await user.click(screen.getByRole('button'));
-    expect(mockNavigate).toHaveBeenCalledWith('/games');
+    expect(mockUsePageBreadcrumbs.mock.calls[0][0].backPath).toBe('/games');
   });
 
   it('keeps admin navigation and editable props in admin mode', () => {

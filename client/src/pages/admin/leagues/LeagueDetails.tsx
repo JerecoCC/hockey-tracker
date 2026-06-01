@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
-import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import LeagueEditModal from './LeagueEditModal';
 import LeagueInfoCard from './LeagueInfoCard';
@@ -15,7 +13,7 @@ import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
 import Tabs from '@/components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
-import TitleRow from '@/components/TitleRow/TitleRow';
+import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useLeagueDetails, { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
 import useLeaguePlayers, { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
@@ -61,6 +59,22 @@ const LeagueDetailsPage = () => {
   const [playersPage, setPlayersPage] = useState(1);
   const [playersSearch, setPlayersSearch] = useState('');
 
+  usePageBreadcrumbs(
+    loading
+      ? null
+      : {
+          backPath: '/admin/leagues',
+          backLabel: 'Back to Leagues',
+          items: [
+            { label: 'Leagues', path: '/admin/leagues' },
+            league
+              ? { label: league.name, shortLabel: league.code }
+              : { label: 'Not Found' },
+          ],
+        },
+    [loading, league?.name, league?.code],
+  );
+
   useEffect(() => {
     if (selectedSeasonId === null && seasons.length > 0) {
       const current = seasons.find((s) => s.is_current);
@@ -95,38 +109,12 @@ const LeagueDetailsPage = () => {
 
   if (!league) {
     return (
-      <>
-        <Breadcrumbs
-          items={[{ label: 'Leagues', path: '/admin/leagues' }, { label: 'Not Found' }]}
-        />
-        <p style={{ color: 'var(--text-dim)' }}>League not found.</p>
-      </>
+      <p style={{ color: 'var(--text-dim)' }}>League not found.</p>
     );
   }
 
   return (
     <>
-      <TitleRow
-        left={
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            size="sm"
-            tooltip="Back to Leagues"
-            onClick={() => navigate('/admin/leagues')}
-          />
-        }
-        right={
-          <Breadcrumbs
-            items={[
-              { label: 'Leagues', path: '/admin/leagues' },
-              { label: league.name, shortLabel: league.code },
-            ]}
-          />
-        }
-      />
-
       <Tabs
         activeIndex={activeTab}
         onTabChange={handleTabChange}

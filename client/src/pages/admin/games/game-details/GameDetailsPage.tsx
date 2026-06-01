@@ -1,9 +1,6 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
-import Button from '@/components/Button/Button';
+import { useParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
-import TitleRow from '@/components/TitleRow/TitleRow';
 import { useGameDetails } from '@/hooks/useGames';
 import useGameLineup from '@/hooks/useGameLineup';
 import useGameRoster from '@/hooks/useGameRoster';
@@ -11,6 +8,7 @@ import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
 import { useAuth } from '@/context/AuthContext';
+import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import GameLineupsTab from './lineups/GameLineupsTab';
 import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
@@ -34,7 +32,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     seasonId: string;
     id: string;
   }>();
-  const navigate = useNavigate();
   const { user } = useAuth();
   const {
     game,
@@ -154,6 +151,43 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   })();
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
+  const leagueHref = `/admin/leagues/${leagueId}`;
+  const leagueName = game?.league_name ?? 'League';
+  const seasonName = game?.season_name ?? 'Season';
+  const gameCrumbLabel = game
+    ? [
+        `${game.away_team.code} @ ${game.home_team.code}`,
+        game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : 'Not Found';
+
+  usePageBreadcrumbs(
+    loading
+      ? null
+      : {
+          backPath: isAdminView ? seasonHref : '/games',
+          backLabel: isAdminView ? `Back to ${seasonName}` : 'Back to Games',
+          items: isAdminView
+            ? [
+                { label: 'Leagues', path: '/admin/leagues' },
+                { label: leagueName, path: leagueHref },
+                { label: seasonName, path: seasonHref },
+                { label: gameCrumbLabel },
+              ]
+            : [],
+        },
+    [
+      loading,
+      isAdminView,
+      seasonHref,
+      seasonName,
+      leagueHref,
+      leagueName,
+      gameCrumbLabel,
+    ],
+  );
 
   if (loading) {
     return (
@@ -166,22 +200,10 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   if (!game) {
     return (
-      <>
-        <Breadcrumbs
-          items={[
-            { label: 'Leagues', path: '/admin/leagues' },
-            { label: 'Season', path: seasonHref },
-            { label: 'Not Found' },
-          ]}
-        />
-        <p style={{ color: 'var(--text-dim)' }}>Game not found.</p>
-      </>
+      <p style={{ color: 'var(--text-dim)' }}>Game not found.</p>
     );
   }
 
-  const leagueName = game.league_name ?? 'League';
-  const seasonName = game.season_name ?? 'Season';
-  const leagueHref = `/admin/leagues/${leagueId}`;
   const gameHrefBuilder = (gameId: string) =>
     isAdminView
       ? `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`
@@ -245,38 +267,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   return (
     <>
-      <TitleRow
-        left={
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            size="sm"
-            tooltip={isAdminView ? `Back to ${seasonName}` : 'Back to Games'}
-            onClick={() => navigate(isAdminView ? seasonHref : '/games')}
-          />
-        }
-        right={
-          isAdminView ? (
-            <Breadcrumbs
-              items={[
-                { label: 'Leagues', path: '/admin/leagues' },
-                { label: leagueName, path: leagueHref },
-                { label: seasonName, path: seasonHref },
-                {
-                  label: [
-                    `${game.away_team.code} @ ${game.home_team.code}`,
-                    game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · '),
-                },
-              ]}
-            />
-          ) : undefined
-        }
-      />
-
       {/* ── Scoreboard card ── */}
       <ScoreboardCard
         game={game}

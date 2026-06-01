@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import { useNavigate, useParams } from 'react-router-dom';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -11,7 +10,7 @@ import { PaginatedTable } from '@/components/Pagination/Pagination';
 import Table, { type Column } from '@/components/Table/Table';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Tabs from '@/components/Tabs/Tabs';
-import TitleRow from '@/components/TitleRow/TitleRow';
+import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useGames from '@/hooks/useGames';
 import useSeasonDetails, {
   type SeasonGroupRecord,
@@ -561,6 +560,28 @@ const SeasonDetailsPage = () => {
   ];
 
   const leagueHref = `/admin/leagues/${leagueId}`;
+  usePageBreadcrumbs(
+    loading && !season
+      ? null
+      : {
+          backPath: leagueHref,
+          backLabel: `Back to ${season?.league_name ?? 'League'}`,
+          items: [
+            { label: 'Leagues', path: '/admin/leagues' },
+            season
+              ? { label: season.league_name, shortLabel: season.league_code, path: leagueHref }
+              : { label: 'League', path: leagueHref },
+            { label: season?.name ?? 'Not Found' },
+          ],
+        },
+    [
+      loading,
+      leagueHref,
+      season?.league_name,
+      season?.league_code,
+      season?.name,
+    ],
+  );
   const navigateToPlayer = (row: SkaterStatRecord | GoalieStatRecord) =>
     navigate(
       row.team_id
@@ -581,43 +602,12 @@ const SeasonDetailsPage = () => {
 
   if (!season) {
     return (
-      <>
-        <Breadcrumbs
-          items={[
-            { label: 'Leagues', path: '/admin/leagues' },
-            { label: 'League', path: leagueHref },
-            { label: 'Not Found' },
-          ]}
-        />
-        <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>
-      </>
+      <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>
     );
   }
 
   return (
     <>
-      <TitleRow
-        left={
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            size="sm"
-            tooltip={`Back to ${season.league_name}`}
-            onClick={() => navigate(leagueHref)}
-          />
-        }
-        right={
-          <Breadcrumbs
-            items={[
-              { label: 'Leagues', path: '/admin/leagues' },
-              { label: season.league_name, shortLabel: season.league_code, path: leagueHref },
-              { label: season.name },
-            ]}
-          />
-        }
-      />
-
       <Tabs
         activeIndex={activeTab}
         onTabChange={handleTabChange}

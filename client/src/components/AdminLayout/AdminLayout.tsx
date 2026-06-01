@@ -1,8 +1,10 @@
 import { useState, useMemo } from 'react';
 import { Outlet } from 'react-router-dom';
+import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import TitleRowContext from '@/context/TitleRowContext';
 import ScoreboardPortalContext from '@/context/ScoreboardPortalContext';
 import MobileTabsContext, { type MobileTabsState } from '@/context/MobileTabsContext';
+import BreadcrumbTitleRow from '../Breadcrumbs/BreadcrumbTitleRow';
 import AdminNav from '../AdminNav/AdminNav';
 import Icon from '../Icon/Icon';
 import PageHeader from '../PageHeader/PageHeader';
@@ -19,14 +21,20 @@ const AdminLayout = () => {
   );
   const [scoreboardContainer, setScoreboardContainer] = useState<HTMLDivElement | null>(null);
   const [mobileTabs, setMobileTabs] = useState<MobileTabsState | null>(null);
+  const [breadcrumbConfig, setBreadcrumbs] = useState<BreadcrumbConfig | null>(null);
   const mobileTabsCtx = useMemo(() => ({ mobileTabs, setMobileTabs }), [mobileTabs]);
+  const breadcrumbCtx = useMemo(
+    () => ({ config: breadcrumbConfig, setBreadcrumbs }),
+    [breadcrumbConfig],
+  );
   const titleRowCtx = useMemo(
     () => ({ rowContainer: titleRowContainer, mobileLeftContainer: mobileTitleLeftContainer }),
     [titleRowContainer, mobileTitleLeftContainer],
   );
 
   return (
-    <MobileTabsContext.Provider value={mobileTabsCtx}>
+    <BreadcrumbContext.Provider value={breadcrumbCtx}>
+      <MobileTabsContext.Provider value={mobileTabsCtx}>
       <ScoreboardPortalContext.Provider value={scoreboardContainer}>
         <TitleRowContext.Provider value={titleRowCtx}>
           <div className={styles.page}>
@@ -75,13 +83,15 @@ const AdminLayout = () => {
               <main className={styles.main}>
                 {/* Portal target — TitleRow from any child page renders here */}
                 <div ref={setTitleRowContainer} />
+                <BreadcrumbTitleRow />
                 <Outlet />
               </main>
             </div>
           </div>
         </TitleRowContext.Provider>
       </ScoreboardPortalContext.Provider>
-    </MobileTabsContext.Provider>
+      </MobileTabsContext.Provider>
+    </BreadcrumbContext.Provider>
   );
 };
 

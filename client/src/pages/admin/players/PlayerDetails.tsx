@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
@@ -14,7 +13,7 @@ import Select from '@/components/Select/Select';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import Tooltip from '@/components/Tooltip/Tooltip';
-import TitleRow from '@/components/TitleRow/TitleRow';
+import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
   usePlayerGameLogs,
@@ -375,6 +374,36 @@ const PlayerDetailsPage = () => {
     }
   };
 
+  const latestStint = stints[0];
+  const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
+  const teamHref = `/admin/leagues/${leagueId}/teams/${teamId}`;
+
+  usePageBreadcrumbs(
+    loading
+      ? null
+      : {
+          backPath: teamHref,
+          backLabel: `Back to ${teamDetails?.name ?? 'Team'}`,
+          items: [
+            { label: teamDetails?.league_name ?? '...', path: `/admin/leagues/${leagueId}` },
+            {
+              label: latestStint?.team.name ?? teamDetails?.name ?? '...',
+              path: teamHref,
+            },
+            { label: fullName },
+          ],
+        },
+    [
+      loading,
+      teamHref,
+      teamDetails?.name,
+      teamDetails?.league_name,
+      latestStint?.team.name,
+      fullName,
+      leagueId,
+    ],
+  );
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>
@@ -386,9 +415,7 @@ const PlayerDetailsPage = () => {
 
   if (!player) return <p className={styles.loaderText}>Player not found.</p>;
 
-  const fullName = `${player.first_name} ${player.last_name}`;
   const initials = `${player.first_name[0]}${player.last_name[0]}`;
-  const latestStint = stints[0];
   const jerseyNumber = latestStint?.jersey_number ?? null;
   // Use the first stint (active) photo; if that's missing, fall back to the most-recent
   // historical stint that does have a photo; then fall back to the global player photo.
@@ -680,31 +707,6 @@ const PlayerDetailsPage = () => {
 
   return (
     <>
-      <TitleRow
-        left={
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            size="sm"
-            tooltip={`Back to ${teamDetails?.name ?? 'Team'}`}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${teamId}`)}
-          />
-        }
-        right={
-          <Breadcrumbs
-            items={[
-              { label: teamDetails?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
-              {
-                label: latestStint?.team.name ?? teamDetails?.name ?? '…',
-                path: `/admin/leagues/${leagueId}/teams/${teamId}`,
-              },
-              { label: fullName },
-            ]}
-          />
-        }
-      />
-
       {/* Hero card */}
       <Card>
         <div className={styles.hero}>
