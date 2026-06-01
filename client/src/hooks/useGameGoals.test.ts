@@ -10,8 +10,7 @@ jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn
 
 const mockedAxios = jest.mocked(axios);
 
-const createWrapper = () => {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+const createWrapper = (queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } })) => {
   return ({ children }: { children: React.ReactNode }) =>
     React.createElement(QueryClientProvider, { client: queryClient }, children);
 };
@@ -37,6 +36,64 @@ const GOAL_2 = {
   id: 'goal-2',
   period: '2',
   created_at: '2024-10-15T00:05:00Z',
+};
+
+const GAME = {
+  id: 'game-1',
+  season_id: 'season-1',
+  game_type: 'regular',
+  status: 'in_progress',
+  scheduled_at: '2024-10-15T19:00:00Z',
+  scheduled_time: '19:00',
+  venue: null,
+  time_start: null,
+  time_end: null,
+  home_team: {
+    id: 'team-1',
+    name: 'Sharks',
+    code: 'SJS',
+    logo: null,
+    primary_color: '#006272',
+    secondary_color: '#EA7200',
+    text_color: '#ffffff',
+  },
+  away_team: {
+    id: 'team-2',
+    name: 'Kings',
+    code: 'LAK',
+    logo: null,
+    primary_color: '#111111',
+    secondary_color: '#A2AAAD',
+    text_color: '#ffffff',
+  },
+  home_score: 0,
+  away_score: 0,
+  overtime_periods: null,
+  shootout: false,
+  winner_team_id: null,
+  shootout_first_team_id: null,
+  playoff_series_id: null,
+  game_number_in_series: null,
+  game_number: null,
+  playoff_round: null,
+  series_home_team_id: null,
+  series_away_team_id: null,
+  series_home_wins: null,
+  series_away_wins: null,
+  series_games_to_win: null,
+  notes: null,
+  created_at: '2024-09-01T00:00:00Z',
+  current_period: '1',
+  period_scores: [
+    { period: '1', home_goals: 0, away_goals: 0 },
+    { period: '2', home_goals: 0, away_goals: 0 },
+    { period: '3', home_goals: 0, away_goals: 0 },
+  ],
+  period_shots: [],
+  star_1_id: null,
+  star_2_id: null,
+  star_3_id: null,
+  best_of_shootout: 3,
 };
 
 const POST_DATA = {
@@ -103,6 +160,35 @@ describe('useGameGoals – addGoal', () => {
       POST_DATA,
       expect.objectContaining({ headers: expect.any(Object) }),
     );
+  });
+
+  it('updates the game detail cache without invalidating the detail query', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    queryClient.setQueryData(['games', 'game-1'], GAME);
+    queryClient.setQueryData(['games', {}], []);
+    mockedAxios.post.mockResolvedValueOnce({ data: GOAL });
+
+    const { result } = renderHook(() => useGameGoals('game-1'), {
+      wrapper: createWrapper(queryClient),
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    mockedAxios.get.mockClear();
+
+    await act(async () => {
+      await result.current.addGoal(POST_DATA);
+    });
+
+    const cachedGame = queryClient.getQueryData<typeof GAME>(['games', 'game-1']);
+    expect(cachedGame?.home_score).toBe(1);
+    expect(cachedGame?.away_score).toBe(0);
+    expect(cachedGame?.period_scores).toEqual([
+      { period: '1', home_goals: 1, away_goals: 0 },
+      { period: '2', home_goals: 0, away_goals: 0 },
+      { period: '3', home_goals: 0, away_goals: 0 },
+    ]);
+    expect(queryClient.getQueryState(['games', 'game-1'])?.isInvalidated).toBe(false);
+    expect(queryClient.getQueryState(['games', {}])?.isInvalidated).toBe(true);
+    expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
   it('returns false and shows error toast on failure', async () => {
