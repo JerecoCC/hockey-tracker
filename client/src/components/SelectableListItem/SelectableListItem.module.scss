@@ -2,6 +2,7 @@
 @use "styles/mixins" as *;
 
 .item {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $space-md;
@@ -14,6 +15,13 @@
   &:hover,
   &.checked {
     background: rgba(255, 255, 255, 0.05);
+  }
+
+  &:hover {
+    .actions {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
@@ -90,4 +98,8 @@
 .subtitle {
   font-size: $font-sm;
   color: $text-dim;
+}
+
+.actions {
+  z-index: 1;
 }

@@ -2,6 +2,7 @@ import { type CSSProperties } from 'react';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { DATE_FMT_SHORT } from '../formatUtils';
+import { PERIOD_PAREN_SUFFIX } from '../constants';
 import styles from './LastFiveCard.module.scss';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -18,7 +19,11 @@ interface Props {
 export default function LastGameSquare({ lg, teamPrimary, teamText, onNavigate }: Props) {
   const isOT = lg.overtime_periods != null && lg.overtime_periods > 0;
   const isSO = lg.shootout;
-  const suffix = isSO ? '(SO)' : isOT ? '(OT)' : null;
+  const suffix = isSO
+    ? PERIOD_PAREN_SUFFIX.SHOOTOUT
+    : isOT
+      ? PERIOD_PAREN_SUFFIX.OVERTIME
+      : null;
 
   return (
     <div

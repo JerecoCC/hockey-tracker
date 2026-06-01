@@ -8,7 +8,6 @@ import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
-import useSeasons from '@/hooks/useSeasons';
 import styles from './TeamDetails.module.scss';
 
 interface Props {
@@ -27,13 +26,12 @@ interface FormValues {
   code: string;
   logo: File | string | null;
   note: string;
-  start_season_id: string;
-  latest_season_id: string;
+  start_date: string;
+  end_date: string;
 }
 
 const TeamHistoryTab = ({
   teamId,
-  leagueId,
   teamName,
   teamCode,
   teamLogo,
@@ -43,32 +41,12 @@ const TeamHistoryTab = ({
 }: Props) => {
   const { iterations, isLoading, busy, addIteration, updateIteration, deleteIteration } =
     useTeamHistory(teamId);
-  const { seasons } = useSeasons();
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamIteration | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<TeamIteration | null>(null);
 
   const isEditing = editTarget !== null;
 
-  // Seasons belonging to this team's league, newest first
-  const leagueSeasons = seasons
-    .filter((s) => leagueId && s.league_id === leagueId)
-    .sort((a, b) => {
-      if (!a.start_date && !b.start_date) return 0;
-      if (!a.start_date) return 1;
-      if (!b.start_date) return -1;
-      return b.start_date.localeCompare(a.start_date);
-    });
-
-  const seasonOptions = leagueSeasons.map((s) => ({
-    value: s.id,
-    label: s.name,
-  }));
-
-  // Maps season id → the 4-digit start year (e.g. "2024"), used for iteration subtitles.
-  const seasonStartYearMap = new Map(
-    leagueSeasons.filter((s) => s.start_date).map((s) => [s.id, s.start_date!.slice(0, 4)]),
-  );
 
   const {
     control,
@@ -81,8 +59,8 @@ const TeamHistoryTab = ({
       code: '',
       logo: null,
       note: '',
-      start_season_id: '',
-      latest_season_id: '',
+      start_date: '',
+      end_date: '',
     },
   });
 
@@ -109,8 +87,8 @@ const TeamHistoryTab = ({
         code: editTarget.code ?? '',
         logo: editTarget.logo,
         note: editTarget.note ?? '',
-        start_season_id: editTarget.start_season_id ?? '',
-        latest_season_id: editTarget.latest_season_id ?? '',
+        start_date: editTarget.start_date?.slice(0, 10) ?? '',
+        end_date: editTarget.end_date?.slice(0, 10) ?? '',
       });
     } else {
       reset({
@@ -118,8 +96,8 @@ const TeamHistoryTab = ({
         code: teamCode,
         logo: teamLogo,
         note: '',
-        start_season_id: '',
-        latest_season_id: '',
+        start_date: '',
+        end_date: '',
       });
     }
   }, [modalOpen, editTarget, teamName, teamCode, teamLogo, reset]);
@@ -136,8 +114,8 @@ const TeamHistoryTab = ({
       code: data.code || null,
       logo: logoUrl,
       note: data.note || null,
-      start_season_id: data.start_season_id || null,
-      latest_season_id: data.latest_season_id || null,
+      start_date: data.start_date || null,
+      end_date: data.end_date || null,
     };
     const ok = isEditing
       ? await updateIteration(editTarget.id, payload)
@@ -169,20 +147,10 @@ const TeamHistoryTab = ({
         ) : (
           <ul className={styles.historyList}>
             {iterations.map((iter) => {
-              // Year range subtitle: "2024 – Present" or "2022 – 2028"
-              const startYear = iter.start_season_id
-                ? seasonStartYearMap.get(iter.start_season_id)
-                : undefined;
-              const latestYear = iter.latest_season_id
-                ? seasonStartYearMap.get(iter.latest_season_id)
-                : undefined;
-              const endLabel = latestYear ?? 'Present';
-              const subtitle = startYear
-                ? startYear === latestYear
-                  ? startYear
-                  : `${startYear} – ${endLabel}`
-                : latestYear
-                  ? `Up to ${latestYear}`
+              const subtitle = iter.start_date
+                ? `${iter.start_date.slice(0, 10)} - ${iter.end_date?.slice(0, 10) ?? 'Present'}`
+                : iter.end_date
+                  ? `Until ${iter.end_date.slice(0, 10)}`
                   : undefined;
               return (
                 <ListItem
@@ -258,21 +226,19 @@ const TeamHistoryTab = ({
           />
           <div className={styles.historyFormRow}>
             <Field
-              label="Starting Season"
-              type="select"
+              label="Start Date"
+              type="datepicker"
               control={control}
-              name="start_season_id"
-              options={seasonOptions}
-              placeholder="— None —"
+              name="start_date"
+              placeholder="YYYY-MM-DD"
               disabled={isSubmitting}
             />
             <Field
-              label="Latest Season"
-              type="select"
+              label="End Date"
+              type="datepicker"
               control={control}
-              name="latest_season_id"
-              options={seasonOptions}
-              placeholder="— None —"
+              name="end_date"
+              placeholder="YYYY-MM-DD (leave blank if current)"
               disabled={isSubmitting}
             />
           </div>

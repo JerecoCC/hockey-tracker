@@ -1,4 +1,6 @@
 const { neon } = require('@neondatabase/serverless');
+const { drizzle } = require('drizzle-orm/neon-http');
+const schema = require('./schema');
 
 const rawUrl = process.env.POSTGRES_URL;
 
@@ -14,6 +16,7 @@ const connectionString = `${rawUrl}${sep}options=-c%20TimeZone%3DAmerica/New_Yor
 
 // `sql` is a tagged-template function – every call opens a pooled HTTP connection
 const sql = neon(connectionString);
+const db = drizzle(sql, { schema });
 
 /**
  * Run once at startup: create the users table if it doesn't exist.
@@ -229,16 +232,20 @@ async function initSchema() {
       code        TEXT,
       logo        TEXT,
       note        TEXT,
+      start_date  DATE,
+      end_date    DATE,
       recorded_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
   `;
   // Migration: drop legacy effective_from column if it still exists
   await sql`ALTER TABLE team_iterations DROP COLUMN IF EXISTS effective_from`;
-  // Migration: add columns added after initial creation
+  // Migration: date-based iteration windows replaced season-linked windows.
   await sql`
     ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
       season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
   `;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS start_date DATE`;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS end_date DATE`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS code TEXT`;
   await sql`
     ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
@@ -247,6 +254,30 @@ async function initSchema() {
   await sql`
     ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
       latest_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
+  `;
+  // await sql`
+  //   UPDATE team_iterations ti
+  //   SET start_date = COALESCE(ti.start_date, ss.start_date),
+  //       end_date   = COALESCE(ti.end_date, ls.end_date)
+  //   FROM seasons ss
+  //   LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
+  //   WHERE ti.start_season_id = ss.id
+  //     AND (ti.start_date IS NULL OR ti.end_date IS NULL)
+  // `;
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'team_iterations' AND column_name = 'season_id'
+      ) THEN
+        UPDATE team_iterations ti
+        SET start_date = COALESCE(ti.start_date, s.start_date),
+            end_date   = COALESCE(ti.end_date, s.end_date)
+        FROM seasons s
+        WHERE ti.season_id = s.id;
+      END IF;
+    END $$
   `;
 
   // Migration: for any existing team that has no base iteration yet,
@@ -258,12 +289,12 @@ async function initSchema() {
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'teams' AND column_name = 'name'
       ) THEN
-        INSERT INTO team_iterations (team_id, season_id, name, code, logo, recorded_at)
-        SELECT t.id, NULL, t.name, t.code, t.logo, NOW()
+        INSERT INTO team_iterations (team_id, name, code, logo, recorded_at)
+        SELECT t.id, t.name, t.code, t.logo, NOW()
         FROM teams t
         WHERE NOT EXISTS (
           SELECT 1 FROM team_iterations ti
-          WHERE ti.team_id = t.id AND ti.season_id IS NULL
+          WHERE ti.team_id = t.id
         );
       END IF;
     END $$
@@ -290,7 +321,7 @@ async function initSchema() {
       id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       first_name     TEXT NOT NULL,
       last_name      TEXT NOT NULL,
-      -- Generic headshot (no team branding). Season-specific photos live on player_teams.
+      -- Generic headshot (no team branding). Team/season photos live on player_photos.
       photo          TEXT,
       date_of_birth  DATE,
       birth_city     TEXT,
@@ -315,7 +346,7 @@ async function initSchema() {
   // Player roster stints: one row per player-team-season stint.
   // A mid-season trade is recorded by setting end_date on the current row
   // and inserting a new row for the new team.
-  // jersey_number and photo are stint-specific (team jersey, team headshot).
+  // jersey_number is stint-specific; team/season headshots live on player_photos.
   // League is intentionally omitted — derivable via team.league_id.
   await sql`
     CREATE TABLE IF NOT EXISTS player_teams (
@@ -324,7 +355,9 @@ async function initSchema() {
       team_id        UUID NOT NULL REFERENCES teams(id)    ON DELETE CASCADE,
       season_id      UUID NOT NULL REFERENCES seasons(id)  ON DELETE CASCADE,
       jersey_number  SMALLINT,
+      is_prospect    BOOLEAN NOT NULL DEFAULT FALSE,
       photo          TEXT,
+      acquisition_type TEXT,
       start_date     DATE,
       -- NULL means the player is currently on this team
       end_date       DATE,
@@ -338,6 +371,49 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS end_date DATE`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS position TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS acquisition_type TEXT`;
+  await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS is_prospect BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_acquisition_type_check`;
+  await sql`
+    ALTER TABLE player_teams ADD CONSTRAINT player_teams_acquisition_type_check
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'call_up', 'loan', 'other'))
+  `;
+
+  // Player photos are one per player/team/season. They are intentionally
+  // separate from stints so an in-season trade can inherit the latest season
+  // photo without duplicating it on every player_teams row.
+  await sql`
+    CREATE TABLE IF NOT EXISTS player_photos (
+      id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      player_id  UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      team_id    UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      season_id  UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      photo      TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (player_id, team_id, season_id)
+    )
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS player_photos_lookup
+      ON player_photos (player_id, season_id, team_id, created_at DESC)
+  `;
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'player_teams' AND column_name = 'photo'
+      ) THEN
+        INSERT INTO player_photos (player_id, team_id, season_id, photo, created_at)
+        SELECT DISTINCT ON (player_id, team_id, season_id)
+          player_id, team_id, season_id, photo, created_at
+        FROM player_teams
+        WHERE photo IS NOT NULL
+        ORDER BY player_id, team_id, season_id, end_date DESC NULLS FIRST, created_at DESC
+        ON CONFLICT (player_id, team_id, season_id) DO NOTHING;
+      END IF;
+    END $$
+  `;
 
   // Expand player_teams position check constraint to include 'F', 'LD', 'RD'
   await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_position_check`;
@@ -557,7 +633,8 @@ async function initSchema() {
   // One row per goal scored. scorer_id / assist_1_id / assist_2_id FK to
   // players so credit can be attributed even if roster data changes later.
   // period: '1' | '2' | '3' | 'OT' | 'SO' — mirrors games.current_period.
-  // goal_type defaults to even-strength; own-goals have no assist columns.
+  // goal_type defaults to even-strength; modifiers like empty-net and penalty-shot
+  // are tracked independently so strengths can be combined with them.
   await sql`
     CREATE TABLE IF NOT EXISTS goals (
       id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -571,9 +648,11 @@ async function initSchema() {
                        'shorthanded',
                        'empty-net',
                        'penalty-shot',
+                       'awarded',
                        'own'
                      )),
       period_time  TEXT CHECK (period_time ~ '^[0-9]{1,2}:[0-5][0-9]$'),
+      penalty_shot BOOLEAN NOT NULL DEFAULT FALSE,
       scorer_id    UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
       assist_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       assist_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
@@ -596,12 +675,20 @@ async function initSchema() {
   await sql`
     ALTER TABLE goals ADD COLUMN IF NOT EXISTS empty_net BOOLEAN NOT NULL DEFAULT FALSE
   `;
+  await sql`
+    ALTER TABLE goals ADD COLUMN IF NOT EXISTS penalty_shot BOOLEAN NOT NULL DEFAULT FALSE
+  `;
   // Migrate legacy 'empty-net' goal_type rows: mark empty_net = true and reclassify as
   // 'even-strength' (the most common scenario — adjust if other strengths existed).
   await sql`
     UPDATE goals
     SET empty_net = TRUE, goal_type = 'even-strength'
     WHERE goal_type = 'empty-net'
+  `;
+  await sql`
+    UPDATE goals
+    SET penalty_shot = TRUE, goal_type = 'even-strength'
+    WHERE goal_type = 'penalty-shot'
   `;
 
   // ── Game starting lineup ───────────────────────────────────────────────────
@@ -1023,22 +1110,33 @@ async function initSchema() {
   `;
 
   // ── Helper function: best available photo for a player ───────────────────
-  // Returns the photo from the most recent player_teams stint that has a
-  // non-null photo (active stint first, then most-recently-started historical
-  // stint). Used as COALESCE(pt.photo, best_player_photo(p.id), p.photo)
+  // Returns the best team/season photo. Exact team-season photo wins; otherwise
+  // inherit the latest photo from the same season, then the latest overall.
   // across roster, lineup, goalie, and shootout queries so the logic lives
   // in one place rather than being repeated as a LEFT JOIN LATERAL everywhere.
+  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid)`;
+  await sql`DROP FUNCTION IF EXISTS best_player_photo(uuid, uuid, uuid)`;
   await sql`
-    CREATE OR REPLACE FUNCTION best_player_photo(pid uuid)
+    CREATE OR REPLACE FUNCTION best_player_photo(pid uuid, sid uuid DEFAULT NULL, tid uuid DEFAULT NULL)
     RETURNS text
     LANGUAGE sql
     STABLE
     AS $$
-      SELECT photo
-      FROM   player_teams
+      SELECT NULLIF(photo, '')
+      FROM   player_photos
       WHERE  player_id = pid
-        AND  photo IS NOT NULL
-      ORDER  BY end_date DESC NULLS FIRST, created_at DESC
+        AND  NULLIF(photo, '') IS NOT NULL
+        AND  (sid IS NULL OR season_id = sid OR NOT EXISTS (
+          SELECT 1 FROM player_photos pp_same
+          WHERE pp_same.player_id = pid AND pp_same.season_id = sid
+        ))
+      ORDER  BY
+        CASE
+          WHEN sid IS NOT NULL AND tid IS NOT NULL AND season_id = sid AND team_id = tid THEN 0
+          WHEN sid IS NOT NULL AND season_id = sid THEN 1
+          ELSE 2
+        END,
+        created_at DESC
       LIMIT  1
     $$
   `;
@@ -1300,5 +1398,5 @@ async function initSchema() {
   console.log('Database schema ready');
 }
 
-module.exports = { sql, initSchema };
+module.exports = { sql, db, schema, initSchema };
 

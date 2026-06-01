@@ -87,6 +87,39 @@ export interface PlayerCurrentSeasonStats {
   playoffs: PlayerCurrentSeasonStatBlock | null;
 }
 
+export interface PlayerLastFiveGameRecord {
+  game_id: string;
+  season_id: string;
+  season_name?: string;
+  scheduled_at: string | null;
+  game_type: string;
+  team_id: string | null;
+  team_name: string | null;
+  team_code: string | null;
+  team_logo: string | null;
+  team_primary_color: string | null;
+  team_text_color: string | null;
+  opponent_team_id: string | null;
+  opponent_name: string | null;
+  opponent_code: string | null;
+  opponent_logo: string | null;
+  opponent_primary_color: string | null;
+  opponent_text_color: string | null;
+  is_home: boolean;
+  goals: number;
+  assists: number;
+  points: number;
+  goalie_started: boolean | null;
+  shots_against: number | null;
+  goals_against: number | null;
+  save_pct: number | null;
+}
+
+export interface PlayerGameLogsResponse {
+  games: PlayerLastFiveGameRecord[];
+  total: number;
+}
+
 export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined) => {
   const { data: currentSeasonStats = null, isLoading: loading } =
     useQuery<PlayerCurrentSeasonStats | null>({
@@ -109,6 +142,63 @@ export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined)
 };
 
 // ── Combined hook ───────────────────────────────────────────────────────────
+export const usePlayerLastFiveGames = (playerId: string | null | undefined) => {
+  const { data: lastFiveGames = [], isLoading: loading } = useQuery<PlayerLastFiveGameRecord[]>({
+    queryKey: ['player-last-five-games', playerId],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayerLastFiveGameRecord[]>(
+          `${API}/admin/players/${playerId}/last-five-games`,
+          { headers: authHeaders() },
+        );
+        return data;
+      } catch {
+        toast.error('Failed to load recent games');
+        return [];
+      }
+    },
+    enabled: !!playerId,
+  });
+  return { lastFiveGames, loading };
+};
+
+export const usePlayerGameLogs = (
+  playerId: string | null | undefined,
+  params: {
+    seasonId?: string | null;
+    gameType?: string | null;
+    page?: number;
+    pageSize?: number;
+  },
+) => {
+  const { seasonId = null, gameType = null, page = 1, pageSize = 20 } = params;
+  const { data, isLoading: loading } = useQuery<PlayerGameLogsResponse>({
+    queryKey: ['player-game-logs', playerId, seasonId, gameType, page, pageSize],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayerGameLogsResponse>(
+          `${API}/admin/players/${playerId}/game-logs`,
+          {
+            headers: authHeaders(),
+            params: {
+              season_id: seasonId || undefined,
+              game_type: gameType || undefined,
+              limit: pageSize,
+              offset: (page - 1) * pageSize,
+            },
+          },
+        );
+        return data;
+      } catch {
+        toast.error('Failed to load game logs');
+        return { games: [], total: 0 };
+      }
+    },
+    enabled: !!playerId,
+  });
+  return { gameLogs: data?.games ?? [], total: data?.total ?? 0, loading };
+};
+
 const usePlayerDetails = (playerId: string | null | undefined) => {
   const { player, loading: playerLoading } = usePlayer(playerId);
   const { stats, loading: statsLoading } = usePlayerCareerStats(playerId);

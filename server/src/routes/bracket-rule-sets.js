@@ -1,35 +1,42 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
-const { sql } = require('../db');
+const { asc, eq } = require('drizzle-orm');
+const { db, schema } = require('../db');
+
+const { bracketRuleSets, bracketSlotRules } = schema;
 
 router.use(requireAdmin);
 
 // Helper: insert/replace all slot rules for a rule set
 async function upsertSlots(ruleSetId, slots) {
-  await sql`DELETE FROM bracket_slot_rules WHERE rule_set_id = ${ruleSetId}`;
-  for (const slot of slots) {
-    await sql`
-      INSERT INTO bracket_slot_rules
-        (rule_set_id, slot_key, rule_type, rank, scope, group_id, pool, choice_ref, matchup_ref)
-      VALUES (
-        ${ruleSetId},
-        ${slot.slot_key},
-        ${slot.rule_type},
-        ${slot.rank ?? null},
-        ${slot.scope ?? null},
-        ${slot.group_id ?? null},
-        ${slot.pool ? JSON.stringify(slot.pool) : '[]'}::jsonb,
-        ${slot.choice_ref ?? null},
-        ${slot.matchup_ref ?? null}
-      )
-    `;
+  await db.delete(bracketSlotRules).where(eq(bracketSlotRules.ruleSetId, ruleSetId));
+  if (slots.length > 0) {
+    await db.insert(bracketSlotRules).values(slots.map((slot) => ({
+      ruleSetId,
+      slotKey: slot.slot_key,
+      ruleType: slot.rule_type,
+      rank: slot.rank ?? null,
+      scope: slot.scope ?? null,
+      groupId: slot.group_id ?? null,
+      pool: slot.pool ?? [],
+      choiceRef: slot.choice_ref ?? null,
+      matchupRef: slot.matchup_ref ?? null,
+    })));
   }
-  return sql`
-    SELECT slot_key, rule_type, rank, scope, group_id, pool, choice_ref, matchup_ref
-    FROM bracket_slot_rules
-    WHERE rule_set_id = ${ruleSetId}
-    ORDER BY slot_key
-  `;
+  return db
+    .select({
+      slot_key: bracketSlotRules.slotKey,
+      rule_type: bracketSlotRules.ruleType,
+      rank: bracketSlotRules.rank,
+      scope: bracketSlotRules.scope,
+      group_id: bracketSlotRules.groupId,
+      pool: bracketSlotRules.pool,
+      choice_ref: bracketSlotRules.choiceRef,
+      matchup_ref: bracketSlotRules.matchupRef,
+    })
+    .from(bracketSlotRules)
+    .where(eq(bracketSlotRules.ruleSetId, ruleSetId))
+    .orderBy(asc(bracketSlotRules.slotKey));
 }
 
 // ---------------------------------------------------------------------------
@@ -39,12 +46,17 @@ router.get('/', async (req, res) => {
   const { league_id } = req.query;
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   try {
-    const rows = await sql`
-      SELECT id, league_id, name, round_names, created_at
-      FROM bracket_rule_sets
-      WHERE league_id = ${league_id}
-      ORDER BY name ASC
-    `;
+    const rows = await db
+      .select({
+        id: bracketRuleSets.id,
+        league_id: bracketRuleSets.leagueId,
+        name: bracketRuleSets.name,
+        round_names: bracketRuleSets.roundNames,
+        created_at: bracketRuleSets.createdAt,
+      })
+      .from(bracketRuleSets)
+      .where(eq(bracketRuleSets.leagueId, league_id))
+      .orderBy(asc(bracketRuleSets.name));
     return res.json(rows);
   } catch (err) {
     console.error('bracket-rule-sets list error:', err);
@@ -58,15 +70,31 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const sets = await sql`
-      SELECT id, league_id, name, round_names, created_at
-      FROM bracket_rule_sets WHERE id = ${id}
-    `;
+    const sets = await db
+      .select({
+        id: bracketRuleSets.id,
+        league_id: bracketRuleSets.leagueId,
+        name: bracketRuleSets.name,
+        round_names: bracketRuleSets.roundNames,
+        created_at: bracketRuleSets.createdAt,
+      })
+      .from(bracketRuleSets)
+      .where(eq(bracketRuleSets.id, id));
     if (sets.length === 0) return res.status(404).json({ error: 'Rule set not found' });
-    const slots = await sql`
-      SELECT slot_key, rule_type, rank, scope, group_id, pool, choice_ref, matchup_ref
-      FROM bracket_slot_rules WHERE rule_set_id = ${id} ORDER BY slot_key
-    `;
+    const slots = await db
+      .select({
+        slot_key: bracketSlotRules.slotKey,
+        rule_type: bracketSlotRules.ruleType,
+        rank: bracketSlotRules.rank,
+        scope: bracketSlotRules.scope,
+        group_id: bracketSlotRules.groupId,
+        pool: bracketSlotRules.pool,
+        choice_ref: bracketSlotRules.choiceRef,
+        matchup_ref: bracketSlotRules.matchupRef,
+      })
+      .from(bracketSlotRules)
+      .where(eq(bracketSlotRules.ruleSetId, id))
+      .orderBy(asc(bracketSlotRules.slotKey));
     return res.json({ ...sets[0], slots });
   } catch (err) {
     console.error('bracket-rule-sets get error:', err);
@@ -83,11 +111,20 @@ router.post('/', async (req, res) => {
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
-    const sets = await sql`
-      INSERT INTO bracket_rule_sets (league_id, name, round_names)
-      VALUES (${league_id}, ${name.trim()}, ${round_names ? JSON.stringify(round_names) : null}::jsonb)
-      RETURNING id, league_id, name, round_names, created_at
-    `;
+    const sets = await db
+      .insert(bracketRuleSets)
+      .values({
+        leagueId: league_id,
+        name: name.trim(),
+        roundNames: round_names ?? null,
+      })
+      .returning({
+        id: bracketRuleSets.id,
+        league_id: bracketRuleSets.leagueId,
+        name: bracketRuleSets.name,
+        round_names: bracketRuleSets.roundNames,
+        created_at: bracketRuleSets.createdAt,
+      });
     const savedSlots = await upsertSlots(sets[0].id, slots);
     return res.status(201).json({ ...sets[0], slots: savedSlots });
   } catch (err) {
@@ -106,24 +143,21 @@ router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const { name, round_names } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
-  // When round_names is present in the body (even null), write it; otherwise keep existing.
-  const roundNamesJson = round_names != null ? JSON.stringify(round_names) : null;
   try {
-    const rows =
-      round_names !== undefined
-        ? await sql`
-            UPDATE bracket_rule_sets
-            SET name        = ${name.trim()},
-                round_names = ${roundNamesJson}::jsonb
-            WHERE id = ${id}
-            RETURNING id, league_id, name, round_names, created_at
-          `
-        : await sql`
-            UPDATE bracket_rule_sets
-            SET name = ${name.trim()}
-            WHERE id = ${id}
-            RETURNING id, league_id, name, round_names, created_at
-          `;
+    const changes = { name: name.trim() };
+    if (round_names !== undefined) changes.roundNames = round_names;
+
+    const rows = await db
+      .update(bracketRuleSets)
+      .set(changes)
+      .where(eq(bracketRuleSets.id, id))
+      .returning({
+        id: bracketRuleSets.id,
+        league_id: bracketRuleSets.leagueId,
+        name: bracketRuleSets.name,
+        round_names: bracketRuleSets.roundNames,
+        created_at: bracketRuleSets.createdAt,
+      });
     if (rows.length === 0) return res.status(404).json({ error: 'Rule set not found' });
     return res.json(rows[0]);
   } catch (err) {
@@ -140,7 +174,10 @@ router.put('/:id/slots', async (req, res) => {
   const { id } = req.params;
   const { slots = [] } = req.body;
   try {
-    const sets = await sql`SELECT id FROM bracket_rule_sets WHERE id = ${id}`;
+    const sets = await db
+      .select({ id: bracketRuleSets.id })
+      .from(bracketRuleSets)
+      .where(eq(bracketRuleSets.id, id));
     if (sets.length === 0) return res.status(404).json({ error: 'Rule set not found' });
     const savedSlots = await upsertSlots(id, slots);
     return res.json({ id, slots: savedSlots });
@@ -156,9 +193,10 @@ router.put('/:id/slots', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
-    const rows = await sql`
-      DELETE FROM bracket_rule_sets WHERE id = ${id} RETURNING id
-    `;
+    const rows = await db
+      .delete(bracketRuleSets)
+      .where(eq(bracketRuleSets.id, id))
+      .returning({ id: bracketRuleSets.id });
     if (rows.length === 0) return res.status(404).json({ error: 'Rule set not found' });
     return res.json({ message: 'Rule set deleted' });
   } catch (err) {

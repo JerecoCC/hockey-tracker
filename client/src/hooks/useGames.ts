@@ -36,6 +36,10 @@ export interface PreviousMeeting {
   status:                GameStatus;
   /** True when the current game's home team was also home in this meeting. */
   current_home_was_home: boolean;
+  /** Actual home team for this meeting. */
+  home_team:             TeamInfo;
+  /** Actual away team for this meeting. */
+  away_team:             TeamInfo;
   /** Score of the meeting's home team (not necessarily the current game's home team). */
   home_score:            number;
   /** Score of the meeting's away team (not necessarily the current game's away team). */

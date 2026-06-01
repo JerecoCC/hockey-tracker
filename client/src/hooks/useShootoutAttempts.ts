@@ -26,6 +26,9 @@ export interface ShootoutAttempt {
   shooter_last_name: string;
   shooter_photo: string | null;
   shooter_jersey_number: number | null;
+  shooter_date_of_birth: string | null;
+  shooter_start_date : string | null;
+  shooter_acquisition_type: string | null;
   // Team info
   team_name: string;
   team_code: string;
@@ -48,8 +51,9 @@ export interface PutAttemptData {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-const useShootoutAttempts = (gameId: string | undefined) => {
+const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: boolean } = {}) => {
   const queryClient = useQueryClient();
+  const { enabled = true } = options;
 
   const { data: attempts = [], isLoading: loading } = useQuery<ShootoutAttempt[]>({
     queryKey: ['shootout-attempts', gameId],
@@ -65,7 +69,7 @@ const useShootoutAttempts = (gameId: string | undefined) => {
         return [];
       }
     },
-    enabled: !!gameId,
+    enabled: !!gameId && enabled,
   });
 
   const addAttempt = async (payload: PostAttemptData): Promise<ShootoutAttempt | null> => {

@@ -5,15 +5,20 @@ import Accordion, { type AccordionAction } from '@/components/Accordion/Accordio
 import Button from '@/components/Button/Button';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
+import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import { formatPlayerName } from './formatUtils';
 import styles from './ShootoutAccordion.module.scss';
+import scoringStyles from './ScoringCard.module.scss';
+import { playerDataComplete } from './gameUtils';
+import { PERIOD } from './constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
 interface Props {
   game: GameRecord;
   attempts: ShootoutAttempt[];
+  goals: GoalRecord[];
   isFinal: boolean;
   isInProgress: boolean;
   soComplete: boolean;
@@ -30,6 +35,7 @@ interface Props {
   onEndGame?: () => void;
   /** When provided, shooter names become navigation links. */
   getPlayerHref?: (playerId: string) => string;
+  showPlayerDataStatus?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -37,6 +43,7 @@ interface Props {
 const ShootoutAccordion = ({
   game,
   attempts,
+  goals,
   isFinal,
   isInProgress,
   soComplete,
@@ -49,8 +56,9 @@ const ShootoutAccordion = ({
   onDeleteAttempt,
   onEndGame,
   getPlayerHref,
+  showPlayerDataStatus = false,
 }: Props) => {
-  const isSOActive = !isFinal && game.current_period === 'SO';
+  const isSOActive = !isFinal && game.current_period === PERIOD.SHOOTOUT;
   const isSODone = isFinal;
 
   // ── Shoot order & team split ──────────────────────────────────────────────
@@ -126,13 +134,33 @@ const ShootoutAccordion = ({
   const awayShootsFirst = firstSide === 'away';
   const leftInfo = awayShootsFirst ? firstTeamInfo : secondTeamInfo;
   const rightInfo = awayShootsFirst ? secondTeamInfo : firstTeamInfo;
-  const leftAttempts = awayShootsFirst ? firstTeamAttempts : secondTeamAttempts;
-  const rightAttempts = awayShootsFirst ? secondTeamAttempts : firstTeamAttempts;
+  const orderedAttempts = [...attempts].sort((a, b) => a.attempt_order - b.attempt_order);
+  const awayPreShootoutScore = goals.filter((goal) => goal.team_id === game.away_team.id).length;
+  const homePreShootoutScore = goals.filter((goal) => goal.team_id === game.home_team.id).length;
 
   // ── Label summary (e.g. "2/3 – 1/3") ─────────────────────────────────────
 
   const awayAttempts = firstSide === 'away' ? firstTeamAttempts : secondTeamAttempts;
   const homeAttempts = firstSide === 'home' ? firstTeamAttempts : secondTeamAttempts;
+  const awayShootoutGoals = awayAttempts.filter((a) => a.scored).length;
+  const homeShootoutGoals = homeAttempts.filter((a) => a.scored).length;
+  const shootoutWinnerAttempt = (() => {
+    if (!soComplete) return null;
+    const winnerTeamId =
+      awayShootoutGoals > homeShootoutGoals
+        ? game.away_team.id
+        : homeShootoutGoals > awayShootoutGoals
+          ? game.home_team.id
+          : null;
+    if (!winnerTeamId) return null;
+    const losingGoalTotal =
+      winnerTeamId === game.away_team.id ? homeShootoutGoals : awayShootoutGoals;
+    return (
+      orderedAttempts.filter((attempt) => attempt.team_id === winnerTeamId && attempt.scored)[
+        losingGoalTotal
+      ] ?? null
+    );
+  })();
   const soLabelSummary =
     attempts.length > 0
       ? `${awayAttempts.filter((a) => a.scored).length}/${awayAttempts.length} – ${homeAttempts.filter((a) => a.scored).length}/${homeAttempts.length}`
@@ -170,7 +198,6 @@ const ShootoutAccordion = ({
     const shooterName = formatPlayerName(attempt.shooter_first_name, attempt.shooter_last_name);
     const jerseyLabel =
       attempt.shooter_jersey_number != null ? `#${attempt.shooter_jersey_number}` : null;
-
     const resultBadge = (
       <span
         className={[
@@ -199,6 +226,12 @@ const ShootoutAccordion = ({
         className={styles.soAttemptName}
       >
         {shooterName}
+        {playerDataComplete(
+          attempt.shooter_date_of_birth,
+          attempt.shooter_start_date,
+          attempt.shooter_acquisition_type,
+          showPlayerDataStatus,
+        )}
       </Link>
     ) : (
       <span className={styles.soAttemptName}>{shooterName}</span>
@@ -267,6 +300,69 @@ const ShootoutAccordion = ({
     );
   };
 
+  const renderAttemptSpacer = () => <div className={styles.soAttemptSpacer} />;
+
+  const renderShootoutWinner = () => {
+    if (!shootoutWinnerAttempt) return null;
+    const isAwayWinner = shootoutWinnerAttempt.team_id === game.away_team.id;
+    const team = isAwayWinner ? game.away_team : game.home_team;
+    const displayedAwayScore = awayPreShootoutScore + (isAwayWinner ? 1 : 0);
+    const displayedHomeScore = homePreShootoutScore + (!isAwayWinner ? 1 : 0);
+    const shooterName = formatPlayerName(
+      shootoutWinnerAttempt.shooter_first_name,
+      shootoutWinnerAttempt.shooter_last_name,
+    );
+    const shooter = getPlayerHref ? (
+      <Link
+        to={getPlayerHref(shootoutWinnerAttempt.shooter_id)}
+        className={scoringStyles.playerLink}
+      >
+        {shooterName}
+        {playerDataComplete(
+          shootoutWinnerAttempt.shooter_date_of_birth,
+          shootoutWinnerAttempt.shooter_start_date,
+          shootoutWinnerAttempt.shooter_acquisition_type,
+          showPlayerDataStatus,
+        )}
+      </Link>
+    ) : (
+      shooterName
+    );
+
+    return (
+      <ul className={scoringStyles.goalList}>
+        <li className={[scoringStyles.goalItem, styles.soWinnerGoalItem].join(' ')}>
+          <span className={scoringStyles.goalTime}>SO</span>
+          <TeamLogo
+            logo={team.logo}
+            code={team.code ?? '?'}
+            primaryColor={team.primary_color}
+            textColor={team.text_color}
+            size={36}
+            shape="square"
+          />
+          <PlayerAvatar
+            photo={shootoutWinnerAttempt.shooter_photo}
+            initials={
+              `${shootoutWinnerAttempt.shooter_first_name?.charAt(0) ?? ''}${shootoutWinnerAttempt.shooter_last_name?.charAt(0) ?? ''}`.trim() ||
+              '?'
+            }
+            primaryColor={team.primary_color}
+            textColor={team.text_color}
+            size={48}
+          />
+          <div className={scoringStyles.goalInfo}>
+            <span className={scoringStyles.goalScorer}>{shooter}</span>
+            <span className={scoringStyles.goalAssists}>Shootout Winner</span>
+          </div>
+          <span className={scoringStyles.goalScore}>
+            {displayedAwayScore} - {displayedHomeScore}
+          </span>
+        </li>
+      </ul>
+    );
+  };
+
   // ── Accordion actions ─────────────────────────────────────────────────────
 
   // The current round is "unbalanced" when the first team has already taken
@@ -327,6 +423,7 @@ const ShootoutAccordion = ({
     >
       {(isSOActive || isSODone) && (
         <div className={styles.soAttemptGrid}>
+          {renderShootoutWinner()}
           {/* Header row — away always left, home always right */}
           <div className={styles.soAttemptHeaderRow}>
             <div className={styles.soAttemptColHeader}>
@@ -339,10 +436,8 @@ const ShootoutAccordion = ({
                 shape="square"
               />
               <span>{leftInfo.code}</span>
-              {awayShootsFirst && <span className={styles.soFirstShooterBadge}>shoots first</span>}
             </div>
             <div className={[styles.soAttemptColHeader, styles.soAttemptColHeaderAway].join(' ')}>
-              {!awayShootsFirst && <span className={styles.soFirstShooterBadge}>shoots first</span>}
               <TeamLogo
                 logo={rightInfo.logo}
                 code={rightInfo.code}
@@ -354,16 +449,32 @@ const ShootoutAccordion = ({
               <span>{rightInfo.code}</span>
             </div>
           </div>
-          {/* Round rows */}
-          {Array.from({ length: roundCount }, (_, i) => (
-            <div
-              key={i}
-              className={styles.soAttemptRow}
-            >
-              {renderAttemptCell(leftAttempts[i], leftInfo, 'away')}
-              {renderAttemptCell(rightAttempts[i], rightInfo, 'home')}
-            </div>
-          ))}
+          {orderedAttempts.length === 0
+            ? Array.from({ length: roundCount }, (_, i) => (
+                <div
+                  key={i}
+                  className={styles.soAttemptRow}
+                >
+                  {renderAttemptCell(undefined, leftInfo, 'away')}
+                  {renderAttemptCell(undefined, rightInfo, 'home')}
+                </div>
+              ))
+            : orderedAttempts.map((attempt) => {
+                const isAwayAttempt = attempt.team_id === game.away_team.id;
+                return (
+                  <div
+                    key={attempt.id}
+                    className={styles.soAttemptRow}
+                  >
+                    {isAwayAttempt
+                      ? renderAttemptCell(attempt, leftInfo, 'away')
+                      : renderAttemptSpacer()}
+                    {isAwayAttempt
+                      ? renderAttemptSpacer()
+                      : renderAttemptCell(attempt, rightInfo, 'home')}
+                  </div>
+                );
+              })}
         </div>
       )}
     </Accordion>

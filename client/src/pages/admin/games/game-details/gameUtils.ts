@@ -20,3 +20,28 @@ export const buildFormRecord = (games: LastFiveGame[]) => {
   }
   return { w, otw, otl, l };
 };
+
+export const playerDataComplete = (
+  dateOfBirth: string | null,
+  startDate: string | null,
+  acquisitionType: string | null,
+  isAdmin: boolean,
+) => {
+  if (!isAdmin) return '';
+
+  let emoji: string = '';
+  if (dateOfBirth && startDate && acquisitionType) {
+    emoji = ' ✅';
+  } else {
+    if (dateOfBirth) {
+      emoji += ' 📝';
+    }
+    if (startDate) {
+      emoji += ' 🕰️';
+    }
+    if (acquisitionType) {
+      emoji += ' 🤝🏼';
+    }
+  }
+  return emoji;
+};

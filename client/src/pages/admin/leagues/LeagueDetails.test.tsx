@@ -1,5 +1,8 @@
 import { render, screen, fireEvent } from '@testing-library/react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
+import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
+import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import LeagueDetailsPage from './LeagueDetails';
@@ -81,16 +84,34 @@ const mockLeague = {
   created_at: '2024-01-01T00:00:00Z',
 };
 
+const BreadcrumbHarness = ({ children }: { children: ReactNode }) => {
+  const [config, setBreadcrumbs] = useState<BreadcrumbConfig | null>(null);
+  const value = useMemo(() => ({ config, setBreadcrumbs }), [config]);
+  return (
+    <BreadcrumbContext.Provider value={value}>
+      <BreadcrumbTitleRow />
+      {children}
+    </BreadcrumbContext.Provider>
+  );
+};
+
 const setup = (hookOverrides = {}, groupOverrides = {}, locationState: unknown = null) => {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   (useParams as jest.Mock).mockReturnValue({ id: 'lg1' });
   (useLocation as jest.Mock).mockReturnValue({ state: locationState });
   (useLeagueDetails as jest.Mock).mockReturnValue({ ...baseHook, ...hookOverrides });
   (useLeagueGroups as jest.Mock).mockReturnValue({ ...baseGroupsHook, ...groupOverrides });
-  return render(<LeagueDetailsPage />);
+  return render(
+    <BreadcrumbHarness>
+      <LeagueDetailsPage />
+    </BreadcrumbHarness>,
+  );
 };
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  sessionStorage.clear();
+});
 
 const clickTeamsTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Teams' }));
 const clickPlayersTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Players' }));
@@ -144,7 +165,7 @@ describe('LeagueDetailsPage – main render', () => {
 
   it('renders a logo <img> when the league has a logo', () => {
     setup({ league: { ...mockLeague, logo: 'https://example.com/logo.png' } });
-    expect(screen.getByRole('img', { name: 'Test League' })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: 'TL' })).toBeInTheDocument();
   });
 
   it('renders the Leagues breadcrumb as a button', () => {
@@ -212,13 +233,15 @@ describe('LeagueDetailsPage – tabs', () => {
   });
 
   it('opens on the Teams tab when navigated back from team details', () => {
-    setup({ league: mockLeague }, {}, { activeTab: 2 });
+    sessionStorage.setItem('tab:league-details', '2');
+    setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
   it('opens on the Players tab when navigated with activeTab 3', () => {
-    setup({ league: mockLeague }, {}, { activeTab: 3 });
+    sessionStorage.setItem('tab:league-details', '3');
+    setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });

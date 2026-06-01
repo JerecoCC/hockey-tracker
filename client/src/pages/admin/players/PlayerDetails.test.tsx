@@ -1,11 +1,20 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import usePlayerDetails, { usePlayerCurrentSeasonStats } from '@/hooks/usePlayerDetails';
+import usePlayerDetails, {
+  usePlayerCurrentSeasonStats,
+  usePlayerGameLogs,
+  usePlayerLastFiveGames,
+} from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
 import useTeams from '@/hooks/useTeams';
 import useTabState from '@/hooks/useTabState';
-import { useJerseyHistory, usePlayerTradeHistory, useStintActions } from '@/hooks/useTeamPlayers';
+import {
+  useJerseyHistory,
+  usePlayerPhotoHistory,
+  usePlayerTradeHistory,
+  useStintActions,
+} from '@/hooks/useTeamPlayers';
 import PlayerDetails from './PlayerDetails';
 
 const mockNavigate = jest.fn();
@@ -21,6 +30,8 @@ jest.mock('@/hooks/usePlayerDetails', () => ({
   __esModule: true,
   default: jest.fn(),
   usePlayerCurrentSeasonStats: jest.fn(),
+  usePlayerGameLogs: jest.fn(),
+  usePlayerLastFiveGames: jest.fn(),
 }));
 jest.mock('@/hooks/useTeamDetails', () => jest.fn());
 jest.mock('@/hooks/useSeasons', () => jest.fn());
@@ -29,17 +40,19 @@ jest.mock('@/hooks/useTabState', () => jest.fn());
 jest.mock('@/hooks/useTeamPlayers', () => ({
   usePlayerTradeHistory: jest.fn(),
   useJerseyHistory: jest.fn(),
+  usePlayerPhotoHistory: jest.fn(),
   useStintActions: jest.fn(),
 }));
 jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
 jest.mock(
   '@/components/Button/Button',
   () =>
-    ({ children, onClick, type = 'button', disabled }: any) => (
+    ({ children, onClick, type = 'button', disabled, icon, tooltip }: any) => (
       <button
         type={type}
         onClick={onClick}
         disabled={disabled}
+        aria-label={tooltip ?? (icon === 'edit' ? 'Edit' : icon)}
       >
         {children}
       </button>
@@ -66,19 +79,26 @@ jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
 ));
 jest.mock('@/components/Tooltip/Tooltip', () => ({ children }: any) => <>{children}</>);
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
-jest.mock('../teams/TradePlayerModal', () => () => null);
-jest.mock('./StintEditModal', () => () => null);
+jest.mock('../teams/MovePlayerModal', () => () => null);
+jest.mock('./StintEditModal', () => ({
+  __esModule: true,
+  default: () => null,
+  ACQUISITION_TYPE_LABELS: { trade: 'Trade' },
+}));
 jest.mock('./ChangeJerseyModal', () => () => null);
 jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => () => null);
 
 const mockUsePlayerDetails = usePlayerDetails as jest.Mock;
 const mockUsePlayerCurrentSeasonStats = usePlayerCurrentSeasonStats as jest.Mock;
+const mockUsePlayerGameLogs = usePlayerGameLogs as jest.Mock;
+const mockUsePlayerLastFiveGames = usePlayerLastFiveGames as jest.Mock;
 const mockUseTeamDetails = useTeamDetails as jest.Mock;
 const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseTeams = useTeams as jest.Mock;
 const mockUseTabState = useTabState as jest.Mock;
 const mockUsePlayerTradeHistory = usePlayerTradeHistory as jest.Mock;
 const mockUseJerseyHistory = useJerseyHistory as jest.Mock;
+const mockUsePlayerPhotoHistory = usePlayerPhotoHistory as jest.Mock;
 const mockUseStintActions = useStintActions as jest.Mock;
 
 beforeAll(() => {
@@ -150,6 +170,8 @@ beforeEach(() => {
       },
     },
   });
+  mockUsePlayerLastFiveGames.mockReturnValue({ lastFiveGames: [], loading: false });
+  mockUsePlayerGameLogs.mockReturnValue({ logs: [], total: 0, loading: false });
   mockUseTeamDetails.mockReturnValue({ team: { name: 'Toronto Maple Leafs', league_name: 'NHL' } });
   mockUsePlayerTradeHistory.mockReturnValue({
     stints: [
@@ -157,13 +179,18 @@ beforeEach(() => {
         id: 'stint-1',
         team_id: 'team-1',
         season_id: 'season-1',
-        team_name: 'Toronto Maple Leafs',
-        team_code: 'TOR',
-        team_logo: null,
-        primary_color: '#003e7e',
-        text_color: '#ffffff',
+        team: {
+          id: 'team-1',
+          name: 'Toronto Maple Leafs',
+          code: 'TOR',
+          logo: null,
+          primary_color: '#003e7e',
+          text_color: '#ffffff',
+        },
         jersey_number: 19,
+        is_prospect: false,
         position: 'C',
+        acquisition_type: 'trade',
         start_date: '2024-10-01',
         end_date: null,
         photo: null,
@@ -171,6 +198,7 @@ beforeEach(() => {
     ],
   });
   mockUseJerseyHistory.mockReturnValue({ byStint: {} });
+  mockUsePlayerPhotoHistory.mockReturnValue({ byTeam: {} });
   mockUseStintActions.mockReturnValue({
     createStint: jest.fn(),
     updateStint: jest.fn(),
@@ -203,5 +231,71 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByDisplayValue('Edmonton')).toBeInTheDocument();
     expect(screen.getAllByDisplayValue('CAN').length).toBe(2);
     expect(screen.getByDisplayValue('195')).toBeInTheDocument();
+  });
+
+  it('normalizes birth city country and nationality after birth city blur', async () => {
+    const user = userEvent.setup();
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: '1997-01-13',
+        birth_city: '',
+        birth_country: '',
+        nationality: '',
+        height_cm: 185,
+        weight_lbs: 195,
+        position: 'C',
+        shoots: 'L',
+        is_active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    const birthCity = screen.getByLabelText('Birth City');
+    await user.clear(birthCity);
+    await user.type(birthCity, 'Boston, Massachusetts, USA');
+    await user.tab();
+
+    expect(screen.getByLabelText('Birth City')).toHaveValue('Boston, Massachusetts');
+    expect(screen.getByLabelText('Birth Country')).toHaveValue('USA');
+    expect(screen.getByLabelText('Nationality')).toHaveValue('USA');
+  });
+
+  it('does not normalize birth city when birth country or nationality already has a value', async () => {
+    const user = userEvent.setup();
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    const birthCity = screen.getByLabelText('Birth City');
+    await user.clear(birthCity);
+    await user.type(birthCity, 'Boston, Massachusetts, USA');
+    await user.tab();
+
+    expect(screen.getByLabelText('Birth City')).toHaveValue('Boston, Massachusetts, USA');
+    expect(screen.getByLabelText('Birth Country')).toHaveValue('CAN');
+    expect(screen.getByLabelText('Nationality')).toHaveValue('CAN');
+  });
+
+  it('rejects invalid height inches values', async () => {
+    const user = userEvent.setup();
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    const inches = screen.getByPlaceholderText('0');
+    expect(inches).toHaveValue(1);
+
+    fireEvent.change(inches, { target: { value: '12' } });
+
+    expect(inches).toHaveValue(1);
   });
 });

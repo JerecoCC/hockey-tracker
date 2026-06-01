@@ -17,6 +17,10 @@ client/dist/
 *.log
 npm-debug.log*
 
+# Graphify generated artifacts
+graphify-out/
+**/graphify-out/
+.graphify_*
 
 .vercel
 .env*.local

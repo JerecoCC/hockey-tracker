@@ -2,12 +2,39 @@ import type { CurrentPeriod, GameType } from '@/hooks/useGames';
 
 // ── Period config ─────────────────────────────────────────────────────────────
 
-export const PERIOD_IDS = ['1', '2', '3'] as const;
+export const PERIOD = {
+  FIRST: '1',
+  SECOND: '2',
+  THIRD: '3',
+  OVERTIME: 'OT',
+  SHOOTOUT: 'SO',
+} as const;
+
+export const PERIOD_IDS = [PERIOD.FIRST, PERIOD.SECOND, PERIOD.THIRD] as const;
+export const PERIOD_ORDER = [
+  PERIOD.FIRST,
+  PERIOD.SECOND,
+  PERIOD.THIRD,
+  PERIOD.OVERTIME,
+  PERIOD.SHOOTOUT,
+] as const;
+
+export const otPeriodId = (periodNumber: number): string => `${PERIOD.OVERTIME}${periodNumber}`;
+
+export const PERIOD_SUFFIX = {
+  OVERTIME: `/${PERIOD.OVERTIME}`,
+  SHOOTOUT: `/${PERIOD.SHOOTOUT}`,
+} as const;
+
+export const PERIOD_PAREN_SUFFIX = {
+  OVERTIME: `(${PERIOD.OVERTIME})`,
+  SHOOTOUT: `(${PERIOD.SHOOTOUT})`,
+} as const;
 
 export const PERIODS: { num: number; label: string; periodId: CurrentPeriod }[] = [
-  { num: 1, label: '1st Period', periodId: '1' },
-  { num: 2, label: '2nd Period', periodId: '2' },
-  { num: 3, label: '3rd Period', periodId: '3' },
+  { num: 1, label: '1st Period', periodId: PERIOD.FIRST },
+  { num: 2, label: '2nd Period', periodId: PERIOD.SECOND },
+  { num: 3, label: '3rd Period', periodId: PERIOD.THIRD },
 ];
 
 // ── Label maps ────────────────────────────────────────────────────────────────
@@ -45,5 +72,6 @@ export const GOAL_TYPE_BADGE: Record<
   shorthanded: { label: 'SH', tooltip: 'Shorthanded', intent: 'warning' },
   'empty-net': { label: 'EN', tooltip: 'Empty Net', intent: 'neutral' },
   'penalty-shot': { label: 'PS', tooltip: 'Penalty Shot', intent: 'success' },
+  'awarded': { label: 'AWD', tooltip: 'Awarded Goal', intent: 'success' },
   own: { label: 'OG', tooltip: 'Own Goal', intent: 'danger' },
 };

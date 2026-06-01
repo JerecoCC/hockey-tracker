@@ -5,6 +5,7 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import styles from './ThreeStarsCard.module.scss';
+import { playerDataComplete } from '../gameUtils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ interface Props {
   teamName?: string;
   stats: { goals: number; assists: number };
   goalieStatRecord?: { shots_against: number; saves: number } | null;
+  showPlayerDataStatus?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -34,6 +36,7 @@ const StarCard = ({
   teamName,
   stats,
   goalieStatRecord,
+  showPlayerDataStatus = false,
 }: Props) => {
   const nameLabel = `${player.first_name} ${player.last_name}`;
   const subLabel = [
@@ -68,6 +71,12 @@ const StarCard = ({
           className={`${styles.starName} ${styles.playerLink}`}
         >
           {nameLabel}
+          {playerDataComplete(
+            player.date_of_birth,
+            player.start_date,
+            player.acquisition_type,
+            showPlayerDataStatus,
+          )}
         </Link>
       ) : (
         <span className={styles.starName}>{nameLabel}</span>

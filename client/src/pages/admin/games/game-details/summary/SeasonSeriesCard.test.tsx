@@ -63,6 +63,24 @@ const game = {
       created_at: '2024-09-01T10:00:00Z',
       status: 'final',
       current_home_was_home: true,
+      home_team: {
+        id: 'home-team',
+        name: 'Home Team',
+        code: 'HOM',
+        logo: null,
+        primary_color: '#111111',
+        secondary_color: '#222222',
+        text_color: '#ffffff',
+      },
+      away_team: {
+        id: 'away-team',
+        name: 'Away Team',
+        code: 'AWY',
+        logo: null,
+        primary_color: '#333333',
+        secondary_color: '#444444',
+        text_color: '#ffffff',
+      },
       home_score: 4,
       away_score: 2,
       overtime_periods: null,
@@ -74,6 +92,24 @@ const game = {
       created_at: '2024-09-01T14:00:00Z',
       status: 'scheduled',
       current_home_was_home: false,
+      home_team: {
+        id: 'away-team',
+        name: 'Away Team',
+        code: 'AWY',
+        logo: null,
+        primary_color: '#333333',
+        secondary_color: '#444444',
+        text_color: '#ffffff',
+      },
+      away_team: {
+        id: 'home-team',
+        name: 'Home Team',
+        code: 'HOM',
+        logo: null,
+        primary_color: '#111111',
+        secondary_color: '#222222',
+        text_color: '#ffffff',
+      },
       home_score: 0,
       away_score: 0,
       overtime_periods: null,
@@ -98,6 +134,11 @@ describe('SeasonSeriesCard', () => {
 
     expect(container.querySelectorAll('.prevMeetingRow')).toHaveLength(3);
     expect(screen.getByText('SCHEDULED')).toBeInTheDocument();
+    expect(
+      Array.from(container.querySelectorAll('.prevMeetingRow')[2].querySelectorAll('.teamCode')).map(
+        (node) => node.textContent,
+      ),
+    ).toEqual(['HOM', 'AWY']);
 
     await user.click(screen.getAllByRole('button')[1]);
 

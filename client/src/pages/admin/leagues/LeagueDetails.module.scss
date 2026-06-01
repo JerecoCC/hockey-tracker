@@ -109,6 +109,34 @@
   gap: $space-xs;
 }
 
+.rosterList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.rosterItem {
+  --list-item-logo-size: 48px;
+  --list-item-jersey-size: 32px;
+
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $border;
+  border-radius: $radius-md;
+}
+
+.listSpinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid $border;
+  border-top-color: $accent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+
 // ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
 
 .ruleSetList {

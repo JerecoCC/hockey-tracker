@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 
@@ -31,6 +31,7 @@ export interface PlayerRecord {
   is_active: boolean;
   created_at: string;
   // Roster fields — populated when fetching by league_id or team_id
+  player_team_id?: string | null;
   jersey_number?: number | null;
   team_id?: string | null;
   team_name?: string | null;
@@ -38,6 +39,7 @@ export interface PlayerRecord {
   team_logo?: string | null;
   primary_color?: string | null;
   text_color?: string | null;
+  is_prospect?: boolean;
 }
 
 export interface CreatePlayerData {
@@ -62,28 +64,62 @@ export interface BulkPlayerInput {
   shoots: PlayerShoots;
 }
 
-const useLeaguePlayers = (leagueId?: string, seasonId?: string) => {
+interface UseLeaguePlayersOptions {
+  page?: number;
+  pageSize?: number;
+  search?: string;
+}
+
+interface PaginatedPlayersResponse {
+  players: PlayerRecord[];
+  total: number;
+  page: number;
+  page_size: number;
+}
+
+const useLeaguePlayers = (
+  leagueId?: string,
+  seasonId?: string,
+  options: UseLeaguePlayersOptions = {},
+) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const isPaginated = options.page !== undefined || options.pageSize !== undefined || options.search !== undefined;
 
-  const { data: players = [], isLoading: loading } = useQuery<PlayerRecord[]>({
-    queryKey: ['players', { league_id: leagueId, season_id: seasonId }],
+  const { data, isFetching: fetching, isLoading: loading } = useQuery<PlayerRecord[] | PaginatedPlayersResponse>({
+    queryKey: [
+      'players',
+      {
+        league_id: leagueId,
+        season_id: seasonId,
+        page: options.page,
+        page_size: options.pageSize,
+        search: options.search,
+      },
+    ],
     queryFn: async () => {
       try {
         const params: Record<string, string> = {};
         if (leagueId) params.league_id = leagueId;
         if (seasonId) params.season_id = seasonId;
-        const { data } = await axios.get<PlayerRecord[]>(
+        if (options.page !== undefined) params.page = String(options.page);
+        if (options.pageSize !== undefined) params.page_size = String(options.pageSize);
+        if (options.search !== undefined) params.search = options.search;
+        const { data } = await axios.get<PlayerRecord[] | PaginatedPlayersResponse>(
           `${API}/admin/players`,
           { headers: authHeaders(), params: Object.keys(params).length ? params : undefined },
         );
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load players'));
-        return [];
+        return isPaginated ? { players: [], total: 0, page: options.page ?? 1, page_size: options.pageSize ?? 20 } : [];
       }
     },
+    placeholderData: keepPreviousData,
   });
+
+  const players = Array.isArray(data) ? data : (data?.players ?? []);
+  const total = Array.isArray(data) ? data.length : (data?.total ?? 0);
 
   const addPlayer = async (payload: CreatePlayerData): Promise<boolean> => {
     try {
@@ -146,7 +182,7 @@ const useLeaguePlayers = (leagueId?: string, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayer, bulkAddPlayers, updatePlayer, deletePlayer };
+  return { players, total, loading, fetching, busy, addPlayer, bulkAddPlayers, updatePlayer, deletePlayer };
 };
 
 export default useLeaguePlayers;

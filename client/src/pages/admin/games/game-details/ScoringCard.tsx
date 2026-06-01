@@ -14,8 +14,9 @@ import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import type { ShotsNextAction } from './RecordShotsModal';
 import ShootoutAccordion from './ShootoutAccordion';
 import { formatPlayerName } from './formatUtils';
-import { PERIOD_IDS, PERIODS, GOAL_TYPE_BADGE } from './constants';
+import { PERIOD, PERIOD_IDS, PERIODS, GOAL_TYPE_BADGE, otPeriodId } from './constants';
 import styles from './ScoringCard.module.scss';
+import { playerDataComplete } from './gameUtils';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,6 +62,7 @@ interface Props {
   onGoBackOTPeriod?: (targetNum: number) => void;
   /** When provided, player names in goal rows become navigation links. */
   getPlayerHref?: (playerId: string) => string;
+  showPlayerDataStatus?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -92,6 +94,7 @@ const ScoringCard = ({
   onGoBackPeriod,
   onGoBackOTPeriod,
   getPlayerHref,
+  showPlayerDataStatus = false,
 }: Props) => {
   // ── Helpers ────────────────────────────────────────────────────────────────
   const periodTimeToSecs = (t: string | null | undefined): number => {
@@ -108,140 +111,157 @@ const ScoringCard = ({
   // ── Shared goal-list renderer ──────────────────────────────────────────────
   const renderGoalList = (periodGoals: GoalRecord[]) => {
     return (
-    <ul className={styles.goalList}>
-      {periodGoals.map((goal) => {
+      <ul className={styles.goalList}>
+        {periodGoals.map((goal) => {
           if (awayTeamId === goal.team_id) {
             awayScore += 1;
           } else if (homeTeamId === goal.team_id) {
             homeScore += 1;
           }
-        const tally = tallyByGoalId.get(goal.id);
-        const scorerBaseName = formatPlayerName(goal.scorer_first_name, goal.scorer_last_name);
-        const scorerTally = tally ? ` (${tally.scorerGoals})` : '';
-        const assistList = [
-          goal.assist_1_id
-            ? {
-                id: goal.assist_1_id,
-                name: formatPlayerName(goal.assist_1_first_name, goal.assist_1_last_name),
-                tally: tally?.assist1Assists != null ? ` (${tally.assist1Assists})` : '',
-              }
-            : null,
-          goal.assist_2_id
-            ? {
-                id: goal.assist_2_id,
-                name: formatPlayerName(goal.assist_2_first_name, goal.assist_2_last_name),
-                tally: tally?.assist2Assists != null ? ` (${tally.assist2Assists})` : '',
-              }
-            : null,
-        ].filter(Boolean) as { id: string; name: string; tally: string }[];
-        const primaryBadge =
-          goal.goal_type === 'empty-net' ? null : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
-        const showEN = goal.empty_net || goal.goal_type === 'empty-net';
-        return (
-          <li
-            key={goal.id}
-            className={styles.goalItem}
-          >
-            <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
-            <TeamLogo
-              logo={goal.team_logo}
-              code={goal.team_code ?? '?'}
-              primaryColor={goal.team_primary_color}
-              textColor={goal.team_text_color}
-              size={36}
-              shape="square"
-            />
-            <PlayerAvatar
-              photo={goal.scorer_photo}
-              initials={
-                `${goal.scorer_first_name?.charAt(0) ?? ''}${goal.scorer_last_name?.charAt(0) ?? ''}`.trim() ||
-                '?'
-              }
-              primaryColor={goal.team_primary_color}
-              textColor={goal.team_text_color}
-              size={48}
-            />
-            <div className={styles.goalInfo}>
-              <span className={styles.goalScorer}>
-                {getPlayerHref ? (
-                  <Link
-                    to={getPlayerHref(goal.scorer_id)}
-                    className={styles.playerLink}
-                  >
-                    {scorerBaseName}
-                  </Link>
-                ) : (
-                  scorerBaseName
-                )}
-                {scorerTally}
-              </span>
-              <span className={styles.goalAssists}>
-                {assistList.length > 0
-                  ? assistList.map((a, i) => (
-                      <React.Fragment key={a.id}>
-                        {i > 0 && ', '}
-                        {getPlayerHref ? (
-                          <Link
-                            to={getPlayerHref(a.id)}
-                            className={styles.playerLink}
-                          >
-                            {a.name}
-                          </Link>
-                        ) : (
-                          a.name
-                        )}
-                        {a.tally}
-                      </React.Fragment>
-                    ))
-                  : 'Unassisted'}
-              </span>
-            </div>
-            {primaryBadge && (
-              <Tooltip text={primaryBadge.tooltip}>
-                <Badge
-                  label={primaryBadge.label}
-                  intent={primaryBadge.intent}
-                />
-              </Tooltip>
-            )}
-            {showEN && (
-              <Tooltip text="Empty Net">
-                <Badge
-                  label="EN"
-                  intent="neutral"
-                />
-              </Tooltip>
-            )}
+          const tally = tallyByGoalId.get(goal.id);
+          const scorerBaseName = formatPlayerName(goal.scorer_first_name, goal.scorer_last_name);
+          const scorerTally = tally ? ` (${tally.scorerGoals})` : '';
+          const assistList = [
+            goal.assist_1_id
+              ? {
+                  id: goal.assist_1_id,
+                  name: formatPlayerName(goal.assist_1_first_name, goal.assist_1_last_name),
+                  tally: tally?.assist1Assists != null ? ` (${tally.assist1Assists})` : '',
+                }
+              : null,
+            goal.assist_2_id
+              ? {
+                  id: goal.assist_2_id,
+                  name: formatPlayerName(goal.assist_2_first_name, goal.assist_2_last_name),
+                  tally: tally?.assist2Assists != null ? ` (${tally.assist2Assists})` : '',
+                }
+              : null,
+          ].filter(Boolean) as { id: string; name: string; tally: string }[];
+          const primaryBadge =
+            goal.goal_type === 'empty-net' || goal.goal_type === 'penalty-shot'
+              ? null
+              : (GOAL_TYPE_BADGE[goal.goal_type] ?? null);
+          const showEN = goal.empty_net || goal.goal_type === 'empty-net';
+          const showPS = goal.penalty_shot || goal.goal_type === 'penalty-shot';
+          return (
+            <li
+              key={goal.id}
+              className={styles.goalItem}
+            >
+              <span className={styles.goalTime}>{goal.period_time ?? '—'}</span>
+              <TeamLogo
+                logo={goal.team_logo}
+                code={goal.team_code ?? '?'}
+                primaryColor={goal.team_primary_color}
+                textColor={goal.team_text_color}
+                size={36}
+                shape="square"
+              />
+              <PlayerAvatar
+                photo={goal.scorer_photo}
+                initials={
+                  `${goal.scorer_first_name?.charAt(0) ?? ''}${goal.scorer_last_name?.charAt(0) ?? ''}`.trim() ||
+                  '?'
+                }
+                primaryColor={goal.team_primary_color}
+                textColor={goal.team_text_color}
+                size={48}
+              />
+              <div className={styles.goalInfo}>
+                <span className={styles.goalScorer}>
+                  {getPlayerHref ? (
+                    <Link
+                      to={getPlayerHref(goal.scorer_id)}
+                      className={styles.playerLink}
+                    >
+                      {scorerBaseName}
+                      {playerDataComplete(
+                        goal.scorer_date_of_birth,
+                        goal.scorer_start_date,
+                        goal.scorer_acquisition_type,
+                        showPlayerDataStatus,
+                      )}
+                    </Link>
+                  ) : (
+                    scorerBaseName
+                  )}
+                  {scorerTally}
+                </span>
+                <span className={styles.goalAssists}>
+                  {assistList.length > 0
+                    ? assistList.map((a, i) => (
+                        <React.Fragment key={a.id}>
+                          {i > 0 && ', '}
+                          {getPlayerHref ? (
+                            <Link
+                              to={getPlayerHref(a.id)}
+                              className={styles.playerLink}
+                            >
+                              {a.name}
+                            </Link>
+                          ) : (
+                            a.name
+                          )}
+                          {a.tally}
+                        </React.Fragment>
+                      ))
+                    : 'Unassisted'}
+                </span>
+              </div>
+              {primaryBadge && (
+                <Tooltip text={primaryBadge.tooltip}>
+                  <Badge
+                    label={primaryBadge.label}
+                    intent={primaryBadge.intent}
+                  />
+                </Tooltip>
+              )}
+              {showEN && (
+                <Tooltip text="Empty Net">
+                  <Badge
+                    label="EN"
+                    intent="neutral"
+                  />
+                </Tooltip>
+              )}
+              {showPS && (
+                <Tooltip text="Penalty Shot">
+                  <Badge
+                    label="PS"
+                    intent="success"
+                  />
+                </Tooltip>
+              )}
               <span className={styles.goalScore}>
                 {awayScore} - {homeScore}
               </span>
-            {isInProgress && onEditGoal && onDeleteGoal && (
-              <ActionOverlay className={styles.goalActions}>
-                <Button
-                  variant="ghost"
-                  intent="neutral"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit goal"
-                  onClick={() => onEditGoal(goal)}
-                />
-                {goal.id === lastCurrentPeriodGoalId && (
+              {isInProgress && onEditGoal && onDeleteGoal && (
+                <ActionOverlay className={styles.goalActions}>
                   <Button
                     variant="ghost"
-                    intent="danger"
-                    icon="delete"
+                    intent="neutral"
+                    icon="edit"
                     size="sm"
-                    tooltip="Delete goal"
-                    onClick={() => onDeleteGoal(goal.id)}
+                    tooltip="Edit goal"
+                    onClick={() => onEditGoal(goal)}
                   />
-                )}
-              </ActionOverlay>
-            )}
-          </li>
-        );
-      })}
-    </ul>
-  );
+                  {goal.id === lastCurrentPeriodGoalId && (
+                    <Button
+                      variant="ghost"
+                      intent="danger"
+                      icon="delete"
+                      size="sm"
+                      tooltip="Delete goal"
+                      onClick={() => onDeleteGoal(goal.id)}
+                    />
+                  )}
+                </ActionOverlay>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    );
   };
 
   return (
@@ -250,10 +270,12 @@ const ScoringCard = ({
         {/* ── Regular period accordions ── */}
         {PERIODS.map(({ num, label, periodId }, idx) => {
           const currentIdx = PERIOD_IDS.indexOf(game.current_period as '1' | '2' | '3');
-          const isPostRegulation = game.current_period === 'OT' || game.current_period === 'SO';
+          const isPostRegulation =
+            game.current_period === PERIOD.OVERTIME || game.current_period === PERIOD.SHOOTOUT;
           const isActive = !isFinal && game.current_period === periodId;
           const isDone = isFinal || isPostRegulation || currentIdx > idx;
           const periodGoals = sortedByTime(goals.filter((g) => g.period === periodId));
+          if (isFinal && !isEditMode && periodGoals.length === 0) return null;
           return (
             <Accordion
               key={num}
@@ -294,7 +316,7 @@ const ScoringCard = ({
                                   label: 'End Period',
                                   next: String(num + 1) as CurrentPeriod,
                                 },
-                                false,
+                                true,
                               ),
                           }
                         : null,
@@ -306,9 +328,13 @@ const ScoringCard = ({
                             disabled: !!busy,
                             onClick: () =>
                               onOpenShotsModal(
-                                '3',
-                                { type: 'advance', label: 'Go to Overtime', next: 'OT' },
-                                false,
+                                PERIOD.THIRD,
+                                {
+                                  type: 'advance',
+                                  label: 'Go to Overtime',
+                                  next: PERIOD.OVERTIME,
+                                },
+                                true,
                               ),
                           }
                         : null,
@@ -318,7 +344,7 @@ const ScoringCard = ({
                             tooltip: 'End Game',
                             intent: 'danger' as const,
                             disabled: !!busy,
-                            onClick: () => onOpenShotsModal('3', { type: 'end-game' }, true),
+                            onClick: () => onOpenShotsModal(PERIOD.THIRD, { type: 'end-game' }, true),
                           }
                         : null,
                     ].filter(Boolean) as AccordionAction[])
@@ -337,16 +363,16 @@ const ScoringCard = ({
         })}
 
         {/* ── Overtime accordion(s) ── */}
-        {(game.current_period === 'OT' ||
-          game.current_period === 'SO' ||
-          goals.some((g) => g.period === 'OT') ||
+        {(game.current_period === PERIOD.OVERTIME ||
+          game.current_period === PERIOD.SHOOTOUT ||
+          goals.some((g) => g.period === PERIOD.OVERTIME) ||
           (isFinal && (game.overtime_periods ?? 0) > 0) ||
           (isFinal && game.shootout)) &&
           (() => {
             const isPlayoff = game.game_type === 'playoff';
-            const isOTActive = !isFinal && game.current_period === 'OT';
-            const isOTDone = isFinal || game.current_period === 'SO';
-            const otGoals = sortedByTime(goals.filter((g) => g.period === 'OT'));
+            const isOTActive = !isFinal && game.current_period === PERIOD.OVERTIME;
+            const isOTDone = isFinal || game.current_period === PERIOD.SHOOTOUT;
+            const otGoals = sortedByTime(goals.filter((g) => g.period === PERIOD.OVERTIME));
             const otCount = game.overtime_periods ?? 1;
 
             if (isPlayoff) {
@@ -358,10 +384,11 @@ const ScoringCard = ({
                 const isThisActive = isOTActive && isLast;
                 const isThisDone = isOTDone || !isLast;
                 const periodGoals = isLast ? otGoals : [];
+                if (isFinal && !isEditMode && periodGoals.length === 0) return null;
                 return (
                   <Accordion
-                    key={`OT${otNum}`}
-                    ref={isLast && setAccordionRef ? setAccordionRef('OT') : undefined}
+                    key={otPeriodId(otNum)}
+                    ref={isLast && setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                     variant="static"
                     className={isThisActive ? styles.periodItemActive : undefined}
                     label={<span className={styles.periodLabel}>Overtime {otNum}</span>}
@@ -377,7 +404,7 @@ const ScoringCard = ({
                                   disabled: !!busy,
                                   onClick: () =>
                                     otNum === 1
-                                      ? onGoBackPeriod?.('3')
+                                      ? onGoBackPeriod?.(PERIOD.THIRD)
                                       : onGoBackOTPeriod?.(otNum - 1),
                                 }
                               : null,
@@ -387,7 +414,7 @@ const ScoringCard = ({
                                   tooltip: 'Score Goal',
                                   intent: 'success' as const,
                                   disabled: !!busy,
-                                  onClick: () => onScoreGoal('OT'),
+                                  onClick: () => onScoreGoal(PERIOD.OVERTIME),
                                 }
                               : null,
                             periodGoals.length === 0
@@ -397,7 +424,7 @@ const ScoringCard = ({
                                   intent: 'accent' as const,
                                   disabled: !!busy,
                                   onClick: () =>
-                                    onOpenShotsModal(`OT${otNum}`, { type: 'next-ot' }, false),
+                                    onOpenShotsModal(otPeriodId(otNum), { type: 'next-ot' }, true),
                                 }
                               : null,
                             periodGoals.length > 0 && !isEditMode
@@ -407,7 +434,7 @@ const ScoringCard = ({
                                   intent: 'danger' as const,
                                   disabled: !!busy,
                                   onClick: () =>
-                                    onOpenShotsModal(`OT${otNum}`, { type: 'end-game' }, true),
+                                    onOpenShotsModal(otPeriodId(otNum), { type: 'end-game' }, true),
                                 }
                               : null,
                           ].filter(Boolean) as AccordionAction[])
@@ -427,9 +454,10 @@ const ScoringCard = ({
             }
 
             // Regular season: single OT accordion.
+            if (isFinal && !isEditMode && otGoals.length === 0) return null;
             return (
               <Accordion
-                ref={setAccordionRef ? setAccordionRef('OT') : undefined}
+                ref={setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
                 variant="static"
                 className={isOTActive ? styles.periodItemActive : undefined}
                 label={<span className={styles.periodLabel}>Overtime</span>}
@@ -442,7 +470,7 @@ const ScoringCard = ({
                               tooltip: 'Go Back to Previous Period',
                               intent: 'neutral' as const,
                               disabled: !!busy,
-                              onClick: () => onGoBackPeriod('3'),
+                              onClick: () => onGoBackPeriod(PERIOD.THIRD),
                             }
                           : null,
                         otGoals.length === 0
@@ -451,7 +479,7 @@ const ScoringCard = ({
                               tooltip: 'Score Goal',
                               intent: 'success' as const,
                               disabled: !!busy,
-                              onClick: () => onScoreGoal('OT'),
+                              onClick: () => onScoreGoal(PERIOD.OVERTIME),
                             }
                           : null,
                         otGoals.length === 0
@@ -462,9 +490,13 @@ const ScoringCard = ({
                               disabled: !!busy,
                               onClick: () =>
                                 onOpenShotsModal(
-                                  'OT',
-                                  { type: 'advance', label: 'Go to Shootouts', next: 'SO' },
-                                  false,
+                                  PERIOD.OVERTIME,
+                                  {
+                                    type: 'advance',
+                                    label: 'Go to Shootouts',
+                                    next: PERIOD.SHOOTOUT,
+                                  },
+                                  true,
                                   true,
                                 ),
                             }
@@ -475,7 +507,8 @@ const ScoringCard = ({
                               tooltip: 'End Game',
                               intent: 'danger' as const,
                               disabled: !!busy,
-                              onClick: () => onOpenShotsModal('OT', { type: 'end-game' }, true),
+                              onClick: () =>
+                                onOpenShotsModal(PERIOD.OVERTIME, { type: 'end-game' }, true),
                             }
                           : null,
                       ].filter(Boolean) as AccordionAction[])
@@ -494,28 +527,32 @@ const ScoringCard = ({
           })()}
 
         {/* ── Shootouts accordion ── */}
-        {(game.current_period === 'SO' ||
-          goals.some((g) => g.period === 'SO') ||
+        {(game.current_period === PERIOD.SHOOTOUT ||
+          goals.some((g) => g.period === PERIOD.SHOOTOUT) ||
           (isFinal && game.shootout)) && (
           <ShootoutAccordion
             game={game}
             attempts={attempts}
+            goals={goals}
             isFinal={isFinal}
             isInProgress={isInProgress}
             soComplete={soComplete}
             busy={busy}
             deletingAttemptId={deletingAttemptId}
             className={
-              !isFinal && game.current_period === 'SO' ? styles.periodItemActive : undefined
+              !isFinal && game.current_period === PERIOD.SHOOTOUT
+                ? styles.periodItemActive
+                : undefined
             }
             labelClassName={styles.periodLabel}
             onAddAttempt={onAddAttempt}
             onEditAttempt={onEditAttempt}
             onDeleteAttempt={onDeleteAttempt}
             getPlayerHref={getPlayerHref}
+            showPlayerDataStatus={showPlayerDataStatus}
             onEndGame={
               onOpenShotsModal && !isEditMode
-                ? () => onOpenShotsModal('SO', { type: 'end-game' }, true)
+                ? () => onOpenShotsModal(PERIOD.SHOOTOUT, { type: 'end-game' }, true)
                 : undefined
             }
           />

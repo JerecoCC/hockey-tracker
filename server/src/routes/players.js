@@ -45,7 +45,190 @@ router.post('/upload', upload.single('photo'), async (req, res) => {
 // ---------------------------------------------------------------------------
 router.get('/', async (req, res) => {
   const { league_id, team_id, season_id, game_date } = req.query;
+  const prospectsOnly = req.query.prospects_only === 'true';
+  const includeProspects = prospectsOnly || req.query.include_prospects === 'true';
+  const wantsPagination = req.query.page !== undefined || req.query.page_size !== undefined || req.query.search !== undefined;
+  const page = Math.max(1, Number.parseInt(req.query.page ?? '1', 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query.page_size ?? '20', 10) || 20));
+  const offset = (page - 1) * pageSize;
+  const search = String(req.query.search ?? '').trim();
+  const searchPattern = `%${search.toLowerCase()}%`;
+  const jerseyPattern = `${search.replace('#', '')}%`;
   try {
+    if (wantsPagination && league_id) {
+      const players = league_id && season_id
+        ? await sql`
+            WITH roster AS (
+              SELECT
+                id, first_name, last_name, photo,
+                date_of_birth::text AS date_of_birth,
+                birth_city, birth_country, nationality,
+                height_cm, weight_lbs, position, shoots,
+                is_active, created_at,
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+              FROM (
+                SELECT DISTINCT ON (p.id)
+                  p.id, p.first_name, p.last_name,
+                  COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
+                  p.date_of_birth,
+                  p.birth_city, p.birth_country, p.nationality,
+                  p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+                  p.is_active, p.created_at,
+                  pt.jersey_number,
+                  pt.id          AS player_team_id,
+                  pt.is_prospect,
+                  t.id           AS team_id,
+                  ti.name        AS team_name,
+                  ti.code        AS team_code,
+                  ti.logo        AS team_logo,
+                  t.primary_color,
+                  t.text_color
+                FROM players p
+                JOIN player_teams pt ON pt.player_id = p.id
+                                    AND pt.season_id  = ${season_id}
+                                    AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                    AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
+                JOIN teams        t  ON t.id          = pt.team_id
+                                    AND t.league_id   = ${league_id}
+                JOIN seasons      s  ON s.id          = pt.season_id
+                LEFT JOIN LATERAL (
+                  SELECT name, code, logo FROM team_iterations
+                  WHERE team_id = t.id
+                    AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
+                    AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
+                  ORDER BY start_date DESC NULLS LAST, recorded_at DESC
+                  LIMIT 1
+                ) ti ON TRUE
+                ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+              ) sub
+            )
+            SELECT *
+            FROM roster
+            WHERE (
+              ${search} = ''
+              OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
+              OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
+            )
+            ORDER BY first_name, last_name, id
+            LIMIT ${pageSize} OFFSET ${offset}
+          `
+        : await sql`
+            WITH roster AS (
+              SELECT
+                id, first_name, last_name, photo,
+                date_of_birth::text AS date_of_birth,
+                birth_city, birth_country, nationality,
+                height_cm, weight_lbs, position, shoots,
+                is_active, created_at,
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+              FROM (
+                SELECT DISTINCT ON (p.id)
+                  p.id, p.first_name, p.last_name,
+                  COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
+                  p.date_of_birth,
+                  p.birth_city, p.birth_country, p.nationality,
+                  p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+                  p.is_active, p.created_at,
+                  pt.jersey_number,
+                  pt.id          AS player_team_id,
+                  pt.is_prospect,
+                  t.id           AS team_id,
+                  ti.name        AS team_name,
+                  ti.code        AS team_code,
+                  ti.logo        AS team_logo,
+                  t.primary_color,
+                  t.text_color
+                FROM players p
+                JOIN player_teams pt ON pt.player_id = p.id
+                                    AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                    AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
+                JOIN teams        t  ON t.id          = pt.team_id
+                                    AND t.league_id   = ${league_id}
+                LEFT JOIN LATERAL (
+                  SELECT name, code, logo FROM team_iterations
+                  WHERE team_id = t.id
+                  ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+                  LIMIT 1
+                ) ti ON TRUE
+                ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+              ) sub
+            )
+            SELECT *
+            FROM roster
+            WHERE (
+              ${search} = ''
+              OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
+              OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
+            )
+            ORDER BY first_name, last_name, id
+            LIMIT ${pageSize} OFFSET ${offset}
+          `;
+
+      const countRows = league_id && season_id
+        ? await sql`
+            WITH roster AS (
+              SELECT id, first_name, last_name, position, jersey_number
+              FROM (
+                SELECT DISTINCT ON (p.id)
+                  p.id, p.first_name, p.last_name,
+                  COALESCE(pt.position, p.position) AS position,
+                  pt.jersey_number
+                FROM players p
+                JOIN player_teams pt ON pt.player_id = p.id
+                                    AND pt.season_id  = ${season_id}
+                                    AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                    AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
+                JOIN teams        t  ON t.id          = pt.team_id
+                                    AND t.league_id   = ${league_id}
+                ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+              ) sub
+            )
+            SELECT COUNT(*)::int AS total
+            FROM roster
+            WHERE (
+              ${search} = ''
+              OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
+              OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
+            )
+          `
+        : await sql`
+            WITH roster AS (
+              SELECT id, first_name, last_name, position, jersey_number
+              FROM (
+                SELECT DISTINCT ON (p.id)
+                  p.id, p.first_name, p.last_name,
+                  COALESCE(pt.position, p.position) AS position,
+                  pt.jersey_number
+                FROM players p
+                JOIN player_teams pt ON pt.player_id = p.id
+                                    AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                    AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
+                JOIN teams        t  ON t.id          = pt.team_id
+                                    AND t.league_id   = ${league_id}
+                ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+              ) sub
+            )
+            SELECT COUNT(*)::int AS total
+            FROM roster
+            WHERE (
+              ${search} = ''
+              OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
+              OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
+              OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
+            )
+          `;
+
+      return res.json({
+        players,
+        total: countRows[0]?.total ?? 0,
+        page,
+        page_size: pageSize,
+      });
+    }
+
     const players = league_id && season_id
       ? await sql`
           SELECT
@@ -54,16 +237,18 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.is_prospect,
               t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
@@ -73,13 +258,17 @@ router.get('/', async (req, res) => {
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.season_id  = ${season_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
+            JOIN seasons      s  ON s.id          = pt.season_id
             LEFT JOIN LATERAL (
               SELECT name, code, logo FROM team_iterations
               WHERE team_id = t.id
-                AND (season_id = ${season_id} OR season_id IS NULL)
-              ORDER BY CASE WHEN season_id = ${season_id} THEN 0 ELSE 1 END, recorded_at DESC
+                AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
+                AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
+              ORDER BY start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
@@ -94,16 +283,18 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_id, team_name, team_code, team_logo, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.is_prospect,
               t.id          AS team_id,
               ti.name       AS team_name,
               ti.code       AS team_code,
@@ -112,12 +303,14 @@ router.get('/', async (req, res) => {
               t.text_color
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             LEFT JOIN LATERAL (
               SELECT name, code, logo FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY season_id DESC NULLS LAST
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
@@ -132,16 +325,19 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
-              COALESCE(pt.photo, best_player_photo(p.id), p.photo) AS photo,
+              COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.team_id,
+              pt.is_prospect,
               ti.name       AS team_name,
               t.primary_color,
               t.text_color
@@ -149,13 +345,15 @@ router.get('/', async (req, res) => {
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.team_id   = ${team_id}
                                 AND pt.season_id = ${season_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                                 AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
                                 AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(${game_date ?? null}::date, CURRENT_DATE))
             JOIN teams        t  ON t.id          = pt.team_id
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY season_id DESC NULLS LAST
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id
@@ -170,26 +368,31 @@ router.get('/', async (req, res) => {
             birth_city, birth_country, nationality,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, team_name, primary_color, text_color
+            jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
             SELECT DISTINCT ON (p.id)
-              p.id, p.first_name, p.last_name, p.photo,
+              p.id, p.first_name, p.last_name, COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
               p.birth_city, p.birth_country, p.nationality,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
+              pt.id          AS player_team_id,
+              pt.team_id,
+              pt.is_prospect,
               ti.name       AS team_name,
               t.primary_color,
               t.text_color
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.team_id   = ${team_id}
+                                AND (${includeProspects} OR pt.is_prospect = FALSE)
+                                AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
             LEFT JOIN LATERAL (
               SELECT name FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY season_id DESC NULLS LAST
+              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
             ORDER BY p.id, pt.season_id DESC
@@ -214,7 +417,7 @@ router.get('/', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/players/:id/stats  – career stats for one player
-// Returns one row per season (aggregated across any mid-season trades).
+// Returns one row per season/team so mid-season trades keep each team's stats separate.
 // Columns: season_id, season_name, jersey_number, gp, goals, assists, points,
 //          team_id, team_name, team_logo, primary_color, text_color
 // ---------------------------------------------------------------------------
@@ -222,65 +425,84 @@ router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      WITH player_seasons AS (
-        SELECT DISTINCT season_id FROM player_teams WHERE player_id = ${id}
+      WITH player_team_rows AS (
+        SELECT DISTINCT ON (pt.season_id, pt.team_id)
+          pt.season_id,
+          pt.team_id,
+          pt.jersey_number,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at
+        FROM player_teams pt
+        WHERE pt.player_id = ${id}
+        ORDER BY pt.season_id, pt.team_id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
       ),
       gp_counts AS (
-        SELECT ga.season_id, COUNT(DISTINCT gr.game_id) AS gp
+        SELECT ga.season_id, gr.team_id, COUNT(DISTINCT gr.game_id) AS gp
         FROM game_rosters gr
         JOIN games ga ON ga.id = gr.game_id
         WHERE gr.player_id = ${id}
-        GROUP BY ga.season_id
+        GROUP BY ga.season_id, gr.team_id
       ),
       goal_counts AS (
-        SELECT ga.season_id, COUNT(*) AS goals
+        SELECT ga.season_id, gl.team_id, COUNT(*) AS goals
         FROM goals gl
         JOIN games ga ON ga.id = gl.game_id
         WHERE gl.scorer_id = ${id}
-        GROUP BY ga.season_id
+        GROUP BY ga.season_id, gl.team_id
       ),
       assist_counts AS (
-        SELECT ga.season_id, COUNT(*) AS assists
+        SELECT ga.season_id, gl.team_id, COUNT(*) AS assists
         FROM goals gl
         JOIN games ga ON ga.id = gl.game_id
         WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id}
-        GROUP BY ga.season_id
+        GROUP BY ga.season_id, gl.team_id
       ),
-      latest_team AS (
-        SELECT DISTINCT ON (pt.season_id)
-          pt.season_id, pt.team_id, pt.jersey_number
-        FROM player_teams pt
-        WHERE pt.player_id = ${id}
-        ORDER BY pt.season_id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+      stat_rows AS (
+        SELECT season_id, team_id FROM player_team_rows
+        UNION
+        SELECT season_id, team_id FROM gp_counts
+        UNION
+        SELECT season_id, team_id FROM goal_counts
+        UNION
+        SELECT season_id, team_id FROM assist_counts
       )
       SELECT
         s.id         AS season_id,
         s.name       AS season_name,
-        lt.jersey_number,
+        ptr.jersey_number,
         COALESCE(gc.gp, 0)      AS gp,
         COALESCE(gl.goals, 0)   AS goals,
         COALESCE(ac.assists, 0) AS assists,
         COALESCE(gl.goals, 0) + COALESCE(ac.assists, 0) AS points,
-        lt.team_id,
+        sr.team_id,
         ti.name  AS team_name,
         ti.logo  AS team_logo,
         t.primary_color,
         t.text_color
-      FROM player_seasons ps
-      JOIN seasons s ON s.id = ps.season_id
-      LEFT JOIN latest_team lt ON lt.season_id = ps.season_id
-      LEFT JOIN gp_counts gc ON gc.season_id = ps.season_id
-      LEFT JOIN goal_counts gl ON gl.season_id = ps.season_id
-      LEFT JOIN assist_counts ac ON ac.season_id = ps.season_id
-      LEFT JOIN teams t ON t.id = lt.team_id
+      FROM stat_rows sr
+      JOIN seasons s ON s.id = sr.season_id
+      LEFT JOIN player_team_rows ptr ON ptr.season_id = sr.season_id AND ptr.team_id = sr.team_id
+      LEFT JOIN gp_counts gc ON gc.season_id = sr.season_id AND gc.team_id = sr.team_id
+      LEFT JOIN goal_counts gl ON gl.season_id = sr.season_id AND gl.team_id = sr.team_id
+      LEFT JOIN assist_counts ac ON ac.season_id = sr.season_id AND ac.team_id = sr.team_id
+      LEFT JOIN teams t ON t.id = sr.team_id
       LEFT JOIN LATERAL (
         SELECT name, logo FROM team_iterations
-        WHERE team_id = lt.team_id
-        ORDER BY CASE WHEN season_id = ps.season_id THEN 0 ELSE 1 END,
-                 recorded_at DESC
+        WHERE team_id = sr.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(ptr.end_date, s.end_date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(ptr.start_date, s.start_date, ptr.created_at::date))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
         LIMIT 1
-      ) ti ON lt.team_id IS NOT NULL
-      ORDER BY s.created_at DESC
+      ) ti ON sr.team_id IS NOT NULL
+      ORDER BY s.created_at DESC, ti.name NULLS LAST
     `;
     return res.json(rows);
   } catch (err) {
@@ -302,13 +524,18 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
   const { id } = req.params;
   try {
     // 1. Resolve the latest season where the player actually appeared in a final game.
+    // Goalies only count as having appeared when they have an active goalie stint.
     const playedSeasonRows = await sql`
-      WITH skater_seasons AS (
+      WITH player_info AS (
+        SELECT position FROM players WHERE id = ${id}
+      ),
+      skater_seasons AS (
         SELECT DISTINCT g.season_id
         FROM game_rosters gr
         JOIN games g ON g.id = gr.game_id
           AND g.status = 'final'
         WHERE gr.player_id = ${id}
+          AND COALESCE((SELECT position FROM player_info), '') <> 'G'
       ),
       goalie_seasons AS (
         SELECT DISTINCT g.season_id
@@ -322,14 +549,17 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
         UNION
         SELECT season_id FROM goalie_seasons
       )
-      SELECT s.id AS season_id, s.name AS season_name
+      SELECT
+        s.id AS season_id,
+        s.name AS season_name,
+        (SELECT position FROM player_info) AS player_position
       FROM played_seasons ps
       JOIN seasons s ON s.id = ps.season_id
       ORDER BY s.start_date DESC NULLS LAST, s.created_at DESC, s.name DESC
       LIMIT 1
     `;
     if (playedSeasonRows.length === 0) return res.json(null);
-    const { season_id, season_name } = playedSeasonRows[0];
+    const { season_id, season_name, player_position } = playedSeasonRows[0];
 
     // 2. Skater stats (GP / goals / assists) per game_type
     const skaterRows = await sql`
@@ -519,6 +749,22 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
     const makeStats = (gameType) => {
       const sk = skaterByType[gameType];
       const go = goalieByType[gameType];
+      if (player_position === 'G') {
+        if (!go) return null;
+        const sa = Number(go.shots_against ?? 0);
+        const ga = Number(go.goals_against ?? 0);
+        return {
+          gp:            Number(go.gp ?? 0),
+          goals:         0,
+          assists:       0,
+          points:        0,
+          wins:          Number(go.wins ?? 0),
+          shootout_wins: Number(go.shootout_wins ?? 0),
+          goals_against: ga,
+          shots_against: sa,
+          save_pct:      sa > 0 ? Math.round((sa - ga) / sa * 1000) / 1000 : null,
+        };
+      }
       if (!sk && !go) return null;
       const sa = Number(go?.shots_against ?? 0);
       const ga = Number(go?.goals_against ?? 0);
@@ -550,6 +796,443 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
 // ---------------------------------------------------------------------------
 // GET /api/admin/players/:id  – get a single player
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/last-five-games
+// Returns the player's five most recent final games with per-game stats.
+// Goalies are attributed only through active goalie stints.
+// ---------------------------------------------------------------------------
+router.get('/:id/last-five-games', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      WITH player_info AS (
+        SELECT position FROM players WHERE id = ${id}
+      ),
+      period_vals (p, v) AS (
+        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+      ),
+      skater_games AS (
+        SELECT
+          g.id AS game_id,
+          g.season_id,
+          g.scheduled_at,
+          g.game_type,
+          gr.team_id,
+          CASE WHEN g.home_team_id = gr.team_id THEN g.away_team_id ELSE g.home_team_id END AS opponent_team_id,
+          g.home_team_id = gr.team_id AS is_home,
+          COUNT(gl.id) FILTER (WHERE gl.scorer_id = ${id})::int AS goals,
+          COUNT(gl.id) FILTER (WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id})::int AS assists,
+          NULL::boolean AS goalie_started,
+          NULL::int AS shots_against,
+          NULL::int AS goals_against,
+          NULL::float AS save_pct
+        FROM game_rosters gr
+        JOIN games g ON g.id = gr.game_id
+          AND g.status = 'final'
+        LEFT JOIN goals gl ON gl.game_id = g.id
+          AND gl.team_id = gr.team_id
+        WHERE gr.player_id = ${id}
+          AND COALESCE((SELECT position FROM player_info), '') <> 'G'
+        GROUP BY g.id, g.season_id, g.scheduled_at, g.game_type, gr.team_id, g.home_team_id, g.away_team_id
+      ),
+      goalie_stint_ranges AS (
+        SELECT
+          st.id,
+          st.game_id,
+          g.season_id,
+          st.team_id,
+          st.stint_ord,
+          g.scheduled_at,
+          g.game_type,
+          CASE WHEN g.home_team_id = st.team_id THEN g.away_team_id ELSE g.home_team_id END AS opponent_team_id,
+          g.home_team_id = st.team_id AS is_home,
+          st.shots_against,
+          st.goals_against AS goals_against_override,
+          pv_in.v * 100000
+            + COALESCE(
+                SPLIT_PART(st.entered_time, ':', 1)::int * 60
+                + SPLIT_PART(st.entered_time, ':', 2)::int,
+                0
+              ) AS from_pos,
+          CASE
+            WHEN st.exited_period IS NULL THEN NULL
+            ELSE pv_out.v * 100000
+                 + COALESCE(
+                     SPLIT_PART(st.exited_time, ':', 1)::int * 60
+                     + SPLIT_PART(st.exited_time, ':', 2)::int,
+                     0
+                   )
+          END AS until_pos
+        FROM game_goalie_stints st
+        JOIN games g ON g.id = st.game_id
+          AND g.status = 'final'
+        JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
+        LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
+        WHERE st.goalie_id = ${id}
+          AND (SELECT position FROM player_info) = 'G'
+      ),
+      goalie_stint_ga AS (
+        SELECT sr.id AS stint_id, COUNT(gl.id)::int AS goals_against
+        FROM goalie_stint_ranges sr
+        JOIN goals gl
+          ON gl.game_id = sr.game_id
+         AND gl.team_id != sr.team_id
+         AND gl.empty_net = false
+        JOIN period_vals pv ON pv.p = gl.period
+        WHERE (pv.v * 100000
+               + COALESCE(
+                   SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                   + SPLIT_PART(gl.period_time, ':', 2)::int,
+                   0
+                 )) >= sr.from_pos
+          AND (sr.until_pos IS NULL
+               OR (pv.v * 100000
+                   + COALESCE(
+                       SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                       + SPLIT_PART(gl.period_time, ':', 2)::int,
+                       0
+                     )) < sr.until_pos)
+        GROUP BY sr.id
+      ),
+      goalie_games AS (
+        SELECT
+          sr.game_id,
+          sr.season_id,
+          sr.scheduled_at,
+          sr.game_type,
+          sr.team_id,
+          sr.opponent_team_id,
+          sr.is_home,
+          0::int AS goals,
+          0::int AS assists,
+          MIN(sr.stint_ord) = 1 AS goalie_started,
+          SUM(sr.shots_against)::int AS shots_against,
+          SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0))::int AS goals_against,
+          CASE
+            WHEN SUM(sr.shots_against) > 0
+              THEN ROUND(
+                ((SUM(sr.shots_against) - SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0)))::numeric
+                  / SUM(sr.shots_against)),
+                3
+              )::float
+            ELSE NULL::float
+          END AS save_pct
+        FROM goalie_stint_ranges sr
+        LEFT JOIN goalie_stint_ga sga ON sga.stint_id = sr.id
+        GROUP BY sr.game_id, sr.season_id, sr.scheduled_at, sr.game_type, sr.team_id, sr.opponent_team_id, sr.is_home
+      ),
+      combined_games AS (
+        SELECT * FROM skater_games
+        UNION ALL
+        SELECT * FROM goalie_games
+      ),
+      recent_games AS (
+        SELECT *
+        FROM combined_games
+        ORDER BY scheduled_at DESC NULLS LAST, game_id DESC
+        LIMIT 5
+      )
+      SELECT
+        rg.game_id,
+        rg.season_id,
+        rg.scheduled_at,
+        rg.game_type,
+        rg.team_id,
+        ti.name AS team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo,
+        t.primary_color AS team_primary_color,
+        t.text_color AS team_text_color,
+        rg.opponent_team_id,
+        oti.name AS opponent_name,
+        oti.code AS opponent_code,
+        oti.logo AS opponent_logo,
+        ot.primary_color AS opponent_primary_color,
+        ot.text_color AS opponent_text_color,
+        rg.is_home,
+        rg.goals,
+        rg.assists,
+        rg.goals + rg.assists AS points,
+        rg.goalie_started,
+        rg.shots_against,
+        rg.goals_against,
+        rg.save_pct
+      FROM recent_games rg
+      LEFT JOIN teams t ON t.id = rg.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo
+        FROM team_iterations
+        WHERE team_id = rg.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON TRUE
+      LEFT JOIN teams ot ON ot.id = rg.opponent_team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo
+        FROM team_iterations
+        WHERE team_id = rg.opponent_team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(rg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) oti ON TRUE
+      ORDER BY rg.scheduled_at DESC NULLS LAST, rg.game_id DESC
+    `;
+
+    return res.json(rows);
+  } catch (err) {
+    console.error('players last-five-games error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/game-logs
+// Paginated game log with the same per-game stats as the last-five endpoint.
+// Supports optional season_id and game_type filters.
+// ---------------------------------------------------------------------------
+router.get('/:id/game-logs', async (req, res) => {
+  const { id } = req.params;
+  const seasonId = typeof req.query.season_id === 'string' ? req.query.season_id : null;
+  const gameType = typeof req.query.game_type === 'string' ? req.query.game_type : null;
+  const limit = Math.min(Math.max(Number.parseInt(String(req.query.limit ?? '20'), 10) || 20, 1), 100);
+  const offset = Math.max(Number.parseInt(String(req.query.offset ?? '0'), 10) || 0, 0);
+
+  try {
+    const rows = await sql`
+      WITH player_info AS (
+        SELECT position FROM players WHERE id = ${id}
+      ),
+      period_vals (p, v) AS (
+        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+      ),
+      skater_games AS (
+        SELECT
+          g.id AS game_id,
+          g.season_id,
+          s.name AS season_name,
+          g.scheduled_at,
+          g.game_type,
+          gr.team_id,
+          CASE WHEN g.home_team_id = gr.team_id THEN g.away_team_id ELSE g.home_team_id END AS opponent_team_id,
+          g.home_team_id = gr.team_id AS is_home,
+          COUNT(gl.id) FILTER (WHERE gl.scorer_id = ${id})::int AS goals,
+          COUNT(gl.id) FILTER (WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id})::int AS assists,
+          NULL::boolean AS goalie_started,
+          NULL::int AS shots_against,
+          NULL::int AS goals_against,
+          NULL::float AS save_pct
+        FROM game_rosters gr
+        JOIN games g ON g.id = gr.game_id
+          AND g.status = 'final'
+          AND (${seasonId}::uuid IS NULL OR g.season_id = ${seasonId}::uuid)
+          AND (${gameType}::text IS NULL OR g.game_type = ${gameType}::text)
+        JOIN seasons s ON s.id = g.season_id
+        LEFT JOIN goals gl ON gl.game_id = g.id
+          AND gl.team_id = gr.team_id
+        WHERE gr.player_id = ${id}
+          AND COALESCE((SELECT position FROM player_info), '') <> 'G'
+        GROUP BY g.id, g.season_id, s.name, g.scheduled_at, g.game_type, gr.team_id, g.home_team_id, g.away_team_id
+      ),
+      goalie_stint_ranges AS (
+        SELECT
+          st.id,
+          st.game_id,
+          g.season_id,
+          s.name AS season_name,
+          st.team_id,
+          st.stint_ord,
+          g.scheduled_at,
+          g.game_type,
+          CASE WHEN g.home_team_id = st.team_id THEN g.away_team_id ELSE g.home_team_id END AS opponent_team_id,
+          g.home_team_id = st.team_id AS is_home,
+          st.shots_against,
+          st.goals_against AS goals_against_override,
+          pv_in.v * 100000
+            + COALESCE(
+                SPLIT_PART(st.entered_time, ':', 1)::int * 60
+                + SPLIT_PART(st.entered_time, ':', 2)::int,
+                0
+              ) AS from_pos,
+          CASE
+            WHEN st.exited_period IS NULL THEN NULL
+            ELSE pv_out.v * 100000
+                 + COALESCE(
+                     SPLIT_PART(st.exited_time, ':', 1)::int * 60
+                     + SPLIT_PART(st.exited_time, ':', 2)::int,
+                     0
+                   )
+          END AS until_pos
+        FROM game_goalie_stints st
+        JOIN games g ON g.id = st.game_id
+          AND g.status = 'final'
+          AND (${seasonId}::uuid IS NULL OR g.season_id = ${seasonId}::uuid)
+          AND (${gameType}::text IS NULL OR g.game_type = ${gameType}::text)
+        JOIN seasons s ON s.id = g.season_id
+        JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
+        LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
+        WHERE st.goalie_id = ${id}
+          AND (SELECT position FROM player_info) = 'G'
+      ),
+      goalie_stint_ga AS (
+        SELECT sr.id AS stint_id, COUNT(gl.id)::int AS goals_against
+        FROM goalie_stint_ranges sr
+        JOIN goals gl
+          ON gl.game_id = sr.game_id
+         AND gl.team_id != sr.team_id
+         AND gl.empty_net = false
+        JOIN period_vals pv ON pv.p = gl.period
+        WHERE (pv.v * 100000
+               + COALESCE(
+                   SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                   + SPLIT_PART(gl.period_time, ':', 2)::int,
+                   0
+                 )) >= sr.from_pos
+          AND (sr.until_pos IS NULL
+               OR (pv.v * 100000
+                   + COALESCE(
+                       SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                       + SPLIT_PART(gl.period_time, ':', 2)::int,
+                       0
+                     )) < sr.until_pos)
+        GROUP BY sr.id
+      ),
+      goalie_games AS (
+        SELECT
+          sr.game_id,
+          sr.season_id,
+          sr.season_name,
+          sr.scheduled_at,
+          sr.game_type,
+          sr.team_id,
+          sr.opponent_team_id,
+          sr.is_home,
+          0::int AS goals,
+          0::int AS assists,
+          MIN(sr.stint_ord) = 1 AS goalie_started,
+          SUM(sr.shots_against)::int AS shots_against,
+          SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0))::int AS goals_against,
+          CASE
+            WHEN SUM(sr.shots_against) > 0
+              THEN ROUND(
+                ((SUM(sr.shots_against) - SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0)))::numeric
+                  / SUM(sr.shots_against)),
+                3
+              )::float
+            ELSE NULL::float
+          END AS save_pct
+        FROM goalie_stint_ranges sr
+        LEFT JOIN goalie_stint_ga sga ON sga.stint_id = sr.id
+        GROUP BY sr.game_id, sr.season_id, sr.season_name, sr.scheduled_at, sr.game_type, sr.team_id, sr.opponent_team_id, sr.is_home
+      ),
+      combined_games AS (
+        SELECT * FROM skater_games
+        UNION ALL
+        SELECT * FROM goalie_games
+      ),
+      counted_games AS (
+        SELECT *, COUNT(*) OVER ()::int AS total_count
+        FROM combined_games
+      ),
+      page_games AS (
+        SELECT *
+        FROM counted_games
+        ORDER BY scheduled_at DESC NULLS LAST, game_id DESC
+        LIMIT ${limit}
+        OFFSET ${offset}
+      )
+      SELECT
+        pg.total_count,
+        pg.game_id,
+        pg.season_id,
+        pg.season_name,
+        pg.scheduled_at,
+        pg.game_type,
+        pg.team_id,
+        ti.name AS team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo,
+        t.primary_color AS team_primary_color,
+        t.text_color AS team_text_color,
+        pg.opponent_team_id,
+        oti.name AS opponent_name,
+        oti.code AS opponent_code,
+        oti.logo AS opponent_logo,
+        ot.primary_color AS opponent_primary_color,
+        ot.text_color AS opponent_text_color,
+        pg.is_home,
+        pg.goals,
+        pg.assists,
+        pg.goals + pg.assists AS points,
+        pg.goalie_started,
+        pg.shots_against,
+        pg.goals_against,
+        pg.save_pct
+      FROM page_games pg
+      LEFT JOIN teams t ON t.id = pg.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo
+        FROM team_iterations
+        WHERE team_id = pg.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON TRUE
+      LEFT JOIN teams ot ON ot.id = pg.opponent_team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo
+        FROM team_iterations
+        WHERE team_id = pg.opponent_team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pg.scheduled_at::date, CURRENT_DATE))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) oti ON TRUE
+      ORDER BY pg.scheduled_at DESC NULLS LAST, pg.game_id DESC
+    `;
+
+    const total = Number(rows[0]?.total_count ?? 0);
+    return res.json({
+      total,
+      games: rows.map(({ total_count, ...row }) => row),
+    });
+  } catch (err) {
+    console.error('players game-logs error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {

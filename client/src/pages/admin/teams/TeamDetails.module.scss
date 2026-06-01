@@ -192,13 +192,92 @@
   margin: 0;
 }
 
+.rosterToolbar {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.rosterSearch {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.rosterSearchIcon {
+  position: absolute;
+  left: $space-md;
+  top: 50%;
+  transform: translateY(-50%);
+  color: $text-dim;
+  pointer-events: none;
+}
+
+.rosterSearchInput {
+  width: 100%;
+  min-height: 38px;
+  padding: 0 2.25rem 0 2.35rem;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.04);
+  color: $text-body;
+  font-size: $font-base;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $accent;
+  }
+}
+
+.rosterSearchClear {
+  position: absolute;
+  right: $space-sm;
+  top: 50%;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: $radius-sm;
+  background: transparent;
+  color: $text-dim;
+  cursor: pointer;
+
+  &:hover {
+    color: $text-body;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}
+
+.rosterSections {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+  margin-top: $space-lg;
+}
+
 .rosterList {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
+  gap: $space-md;
+}
+
+.rosterItem {
+  --list-item-logo-size: 48px;
+  --list-item-jersey-size: 32px;
+
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid $border;
+  border-radius: $radius-md;
 }
 
 // ── League badge ───────────────────────────────────────────────────────

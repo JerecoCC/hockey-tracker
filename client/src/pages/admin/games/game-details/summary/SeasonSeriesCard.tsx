@@ -3,6 +3,7 @@ import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, PreviousMeeting } from '@/hooks/useGames';
 import styles from './SeasonSeriesCard.module.scss';
+import { PERIOD_SUFFIX } from '../constants';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -14,8 +15,6 @@ interface Props {
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-
-type TeamMeta = { code: string; logo: string | null; primary: string; text: string };
 
 const DATE_FMT_SERIES = new Intl.DateTimeFormat('en-US', {
   month: 'short',
@@ -45,25 +44,14 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
   const navigate = useNavigate();
   const meetings = game.previous_meetings ?? [];
 
-  const awayTeam: TeamMeta = {
-    code: game.away_team.code,
-    logo: game.away_team.logo,
-    primary: game.away_team.primary_color,
-    text: game.away_team.text_color,
-  };
-  const homeTeam: TeamMeta = {
-    code: game.home_team.code,
-    logo: game.home_team.logo,
-    primary: game.home_team.primary_color,
-    text: game.home_team.text_color,
-  };
-
   const currentMeeting: PreviousMeeting = {
     game_id: game.id,
     scheduled_at: game.scheduled_at,
     created_at: game.created_at,
     status: game.status,
     current_home_was_home: true,
+    home_team: game.home_team,
+    away_team: game.away_team,
     home_score: liveHomeScore,
     away_score: liveAwayScore,
     overtime_periods: game.overtime_periods,
@@ -81,12 +69,10 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
   let awayWins = 0;
   completedMeetings.forEach((pm) => {
     const historicalHomeWon = pm.home_score > pm.away_score;
-    if (pm.current_home_was_home) {
-      // historical home team === current home team
+    if (pm.home_team.id === game.home_team.id) {
       if (historicalHomeWon) homeWins++;
       else awayWins++;
-    } else {
-      // historical home team === current away team
+    } else if (pm.home_team.id === game.away_team.id) {
       if (historicalHomeWon) awayWins++;
       else homeWins++;
     }
@@ -111,13 +97,17 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
           const isCurrentGame = pm.game_id === game.id;
           const status = pm.status;
           const showScores = status === 'final' || (isCurrentGame && status === 'in_progress');
-          const leftNumericScore = pm.current_home_was_home ? pm.away_score : pm.home_score;
-          const rightNumericScore = pm.current_home_was_home ? pm.home_score : pm.away_score;
+          const leftNumericScore = pm.away_score;
+          const rightNumericScore = pm.home_score;
           const leftScore = showScores ? leftNumericScore : '-';
           const rightScore = showScores ? rightNumericScore : '-';
           const leftLost = !showScores || leftNumericScore < rightNumericScore;
           const rightLost = !showScores || rightNumericScore < leftNumericScore;
-          const suffix = pm.shootout ? '/SO' : (pm.overtime_periods ?? 0) > 0 ? '/OT' : null;
+          const suffix = pm.shootout
+            ? PERIOD_SUFFIX.SHOOTOUT
+            : (pm.overtime_periods ?? 0) > 0
+              ? PERIOD_SUFFIX.OVERTIME
+              : null;
 
           return (
             <div
@@ -142,14 +132,14 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
                   .join(' ')}
               >
                 <TeamLogo
-                  logo={awayTeam.logo}
-                  code={awayTeam.code}
-                  primaryColor={awayTeam.primary}
-                  textColor={awayTeam.text}
+                  logo={pm.away_team.logo}
+                  code={pm.away_team.code}
+                  primaryColor={pm.away_team.primary_color}
+                  textColor={pm.away_team.text_color}
                   size={32}
                   shape="circle"
                 />
-                <span className={styles.teamCode}>{awayTeam.code}</span>
+                <span className={styles.teamCode}>{pm.away_team.code}</span>
                 <span className={styles.teamScore}>{leftScore}</span>
               </div>
               <div
@@ -158,14 +148,14 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
                   .join(' ')}
               >
                 <TeamLogo
-                  logo={homeTeam.logo}
-                  code={homeTeam.code}
-                  primaryColor={homeTeam.primary}
-                  textColor={homeTeam.text}
+                  logo={pm.home_team.logo}
+                  code={pm.home_team.code}
+                  primaryColor={pm.home_team.primary_color}
+                  textColor={pm.home_team.text_color}
                   size={32}
                   shape="circle"
                 />
-                <span className={styles.teamCode}>{homeTeam.code}</span>
+                <span className={styles.teamCode}>{pm.home_team.code}</span>
                 <span className={styles.teamScore}>{rightScore}</span>
               </div>
               <div className={styles.gameInfo}>

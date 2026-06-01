@@ -3,20 +3,24 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
+import ListItem from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Select from '@/components/Select/Select';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import Tooltip from '@/components/Tooltip/Tooltip';
-import TitleRow from '@/components/TitleRow/TitleRow';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
+  usePlayerGameLogs,
+  usePlayerLastFiveGames,
   type PlayerCareerStatRecord,
   type PlayerCurrentSeasonStatBlock,
+  type PlayerLastFiveGameRecord,
 } from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
@@ -25,20 +29,23 @@ import {
   usePlayerTradeHistory,
   useStintActions,
   useJerseyHistory,
+  usePlayerPhotoHistory,
   type PlayerStintRecord,
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
-import TradePlayerModal from '../teams/TradePlayerModal';
-import StintEditModal from './StintEditModal';
+import MovePlayerModal from '../teams/MovePlayerModal';
+import StintEditModal, { ACQUISITION_TYPE_LABELS } from './StintEditModal';
 import ChangeJerseyModal from './ChangeJerseyModal';
+import ChangePhotoModal from './ChangePhotoModal';
 import PlayerInfoEditModal from './PlayerInfoEditModal';
 import styles from './PlayerDetails.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
+const GAME_LOG_PAGE_SIZE = 20;
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
@@ -94,18 +101,172 @@ const STAT_LABELS = {
   'SV%': 'Save Percentage',
 } as const;
 
+const DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const teamCodePlaceholder = (stint: PlayerStintRecord) =>
+  stint.team.code ?? (stint.team.name ? stint.team.name.slice(0, 3).toUpperCase() : 'TEAM');
+
+const formatStintDates = (stint: PlayerStintRecord) => {
+  const start = stint.start_date ? DATE_FMT.format(new Date(stint.start_date)) : null;
+  const end = stint.end_date ? DATE_FMT.format(new Date(stint.end_date)) : null;
+  if (start && end) return `${start} - ${end}`;
+  if (start) return `${start} - Present`;
+  if (end) return `Until ${end}`;
+  return 'Dates not set';
+};
+
+const teamCode = (code: string | null, name: string | null) =>
+  code ?? (name ? name.slice(0, 3).toUpperCase() : 'TEAM');
+
+const formatShortDate = (iso: string | null) => {
+  if (!iso) return '—';
+  return DATE_FMT.format(new Date(iso));
+};
+
+const formatSavePct = (value: number | null) => {
+  if (value == null) return '—';
+  return value.toFixed(3).replace(/^0/, '');
+};
+
+const StatHeader = ({ label, tooltip }: { label: string; tooltip: string }) => (
+  <Tooltip text={tooltip}>
+    <span>{label}</span>
+  </Tooltip>
+);
+
+const TeamCodeCell = ({ code, name }: { code: string | null; name: string | null }) => (
+  <Tooltip text={name ?? teamCode(code, name)}>
+    <span className={styles.teamCodeCell}>{teamCode(code, name)}</span>
+  </Tooltip>
+);
+
+const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord>[] => [
+  {
+    type: 'custom',
+    header: 'Date',
+    render: (row) => formatShortDate(row.scheduled_at),
+  },
+  {
+    type: 'custom',
+    header: 'Team',
+    render: (row) => (
+      <TeamCodeCell
+        code={row.team_code}
+        name={row.team_name}
+      />
+    ),
+  },
+  {
+    type: 'custom',
+    header: 'Opponent',
+    render: (row) => (
+      <span className={styles.opponentCell}>
+        <span className={styles.opponentPrefix}>{row.is_home ? 'vs' : '@'}</span>
+        <TeamCodeCell
+          code={row.opponent_code}
+          name={row.opponent_name}
+        />
+      </span>
+    ),
+  },
+  ...(isGoalie
+    ? [
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="GS"
+              tooltip="Games Started"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => (row.goalie_started ? 'Yes' : 'No'),
+          align: 'center' as const,
+        },
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="SA"
+              tooltip="Shots Against"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => row.shots_against ?? '—',
+          align: 'center' as const,
+        },
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="GA"
+              tooltip="Goals Against"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
+          align: 'center' as const,
+        },
+        {
+          type: 'custom' as const,
+          header: (
+            <StatHeader
+              label="SV%"
+              tooltip="Save Percentage"
+            />
+          ),
+          render: (row: PlayerLastFiveGameRecord) => formatSavePct(row.save_pct),
+          align: 'center' as const,
+        },
+      ]
+    : [
+        {
+          header: (
+            <StatHeader
+              label="G"
+              tooltip="Goals"
+            />
+          ),
+          key: 'goals' as const,
+          align: 'center' as const,
+        },
+        {
+          header: (
+            <StatHeader
+              label="A"
+              tooltip="Assist"
+            />
+          ),
+          key: 'assists' as const,
+          align: 'center' as const,
+        },
+        {
+          header: (
+            <StatHeader
+              label="PTS"
+              tooltip="Points"
+            />
+          ),
+          key: 'points' as const,
+          align: 'center' as const,
+        },
+      ]),
+];
+
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
   const { id, leagueId, teamId } = useParams<{ id: string; leagueId: string; teamId: string }>();
   const { player, stats, loading } = usePlayerDetails(id);
   const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
+  const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id);
   const { team: teamDetails } = useTeamDetails(teamId);
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
-  const { createStint, updateStint, changeJerseyNumber, uploadStintPhoto } = useStintActions(
-    id ?? null,
-  );
+  const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(id ?? null);
+  const { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto } =
+    useStintActions(id ?? null);
   const { teams } = useTeams();
   const { seasons } = useSeasons();
   const queryClient = useQueryClient();
@@ -115,8 +276,22 @@ const PlayerDetailsPage = () => {
   const [editingStint, setEditingStint] = useState<PlayerStintRecord | null>(null);
   const [creatingStint, setCreatingStint] = useState(false);
   const [changingJerseyStint, setChangingJerseyStint] = useState<PlayerStintRecord | null>(null);
+  const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
-  const [tradePlayerOpen, setTradePlayerOpen] = useState(false);
+  const [movePlayerOpen, setMovePlayerOpen] = useState(false);
+  const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
+  const [gameLogType, setGameLogType] = useState('all');
+  const [gameLogPage, setGameLogPage] = useState(1);
+  const {
+    gameLogs,
+    total: gameLogsTotal,
+    loading: gameLogsLoading,
+  } = usePlayerGameLogs(id, {
+    seasonId: gameLogSeasonId === 'all' ? null : gameLogSeasonId,
+    gameType: gameLogType === 'all' ? null : gameLogType,
+    page: gameLogPage,
+    pageSize: GAME_LOG_PAGE_SIZE,
+  });
 
   const updatePlayer = async (
     playerId: string,
@@ -147,13 +322,14 @@ const PlayerDetailsPage = () => {
     return updateStint(stint.id, payload);
   };
 
-  const tradePlayer = async (
+  const movePlayer = async (
     playerId: string,
     seasonId: string,
     toTeamId: string,
-    tradeDate: string,
+    moveDate: string,
     jerseyNumber?: number | null,
     position?: string | null,
+    acquisitionType?: string | null,
   ): Promise<boolean> => {
     try {
       await axios.post(
@@ -162,14 +338,15 @@ const PlayerDetailsPage = () => {
           player_id: playerId,
           season_id: seasonId,
           to_team_id: toTeamId,
-          trade_date: tradeDate,
+          trade_date: moveDate,
           jersey_number: jerseyNumber ?? null,
           position: position ?? null,
+          acquisition_type: acquisitionType ?? 'trade',
         },
         { headers: authHeaders() },
       );
 
-      toast.success('Player traded successfully!');
+      toast.success('Player moved successfully!');
 
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['player', playerId] }),
@@ -191,11 +368,41 @@ const PlayerDetailsPage = () => {
       const message =
         axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
           ? err.response.data.error
-          : 'Failed to trade player';
+          : 'Failed to move player';
       toast.error(message);
       return false;
     }
   };
+
+  const latestStint = stints[0];
+  const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
+  const teamHref = `/admin/leagues/${leagueId}/teams/${teamId}`;
+
+  usePageBreadcrumbs(
+    loading
+      ? null
+      : {
+          backPath: teamHref,
+          backLabel: `Back to ${teamDetails?.name ?? 'Team'}`,
+          items: [
+            { label: teamDetails?.league_name ?? '...', path: `/admin/leagues/${leagueId}` },
+            {
+              label: latestStint?.team.name ?? teamDetails?.name ?? '...',
+              path: teamHref,
+            },
+            { label: fullName },
+          ],
+        },
+    [
+      loading,
+      teamHref,
+      teamDetails?.name,
+      teamDetails?.league_name,
+      latestStint?.team.name,
+      fullName,
+      leagueId,
+    ],
+  );
 
   if (loading) {
     return (
@@ -208,17 +415,15 @@ const PlayerDetailsPage = () => {
 
   if (!player) return <p className={styles.loaderText}>Player not found.</p>;
 
-  const fullName = `${player.first_name} ${player.last_name}`;
   const initials = `${player.first_name[0]}${player.last_name[0]}`;
-  const latestStint = stints[0];
   const jerseyNumber = latestStint?.jersey_number ?? null;
   // Use the first stint (active) photo; if that's missing, fall back to the most-recent
   // historical stint that does have a photo; then fall back to the global player photo.
   const photo = stints.find((s) => s.photo)?.photo ?? player.photo;
-  const avatarBg = latestStint?.primary_color ?? undefined;
-  const avatarColor = latestStint?.text_color ?? undefined;
+  const avatarBg = latestStint?.team.primary_color ?? undefined;
+  const avatarColor = latestStint?.team.text_color ?? undefined;
   const effectivePosition = latestStint?.position ?? player.position;
-  const canTradePlayer = !!(
+  const canMovePlayer = !!(
     latestStint?.team_id &&
     latestStint?.season_id &&
     !latestStint?.end_date
@@ -226,20 +431,141 @@ const PlayerDetailsPage = () => {
   const positionLabel = effectivePosition
     ? (POSITION_LABELS[effectivePosition] ?? effectivePosition)
     : null;
+  const isGoalie = effectivePosition === 'G';
+  const recentGameColumns: Column<PlayerLastFiveGameRecord>[] = [
+    {
+      type: 'custom',
+      header: 'Date',
+      render: (row) => formatShortDate(row.scheduled_at),
+    },
+    {
+      type: 'custom',
+      header: 'Team',
+      render: (row) => (
+        <TeamCodeCell
+          code={row.team_code}
+          name={row.team_name}
+        />
+      ),
+    },
+    {
+      type: 'custom',
+      header: 'Opponent',
+      render: (row) => (
+        <span className={styles.opponentCell}>
+          <span className={styles.opponentPrefix}>{row.is_home ? 'vs' : '@'}</span>
+          <TeamCodeCell
+            code={row.opponent_code}
+            name={row.opponent_name}
+          />
+        </span>
+      ),
+    },
+    ...(isGoalie
+      ? [
+          {
+            type: 'custom' as const,
+            header: (
+              <StatHeader
+                label="GS"
+                tooltip="Games Started"
+              />
+            ),
+            render: (row: PlayerLastFiveGameRecord) => (row.goalie_started ? 'Yes' : 'No'),
+            align: 'center' as const,
+          },
+          {
+            type: 'custom' as const,
+            header: (
+              <StatHeader
+                label="SA"
+                tooltip="Shots Against"
+              />
+            ),
+            render: (row: PlayerLastFiveGameRecord) => row.shots_against ?? '—',
+            align: 'center' as const,
+          },
+          {
+            type: 'custom' as const,
+            header: (
+              <StatHeader
+                label="GA"
+                tooltip="Goals Against"
+              />
+            ),
+            render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
+            align: 'center' as const,
+          },
+          {
+            type: 'custom' as const,
+            header: (
+              <StatHeader
+                label="SV%"
+                tooltip="Save Percentage"
+              />
+            ),
+            render: (row: PlayerLastFiveGameRecord) => formatSavePct(row.save_pct),
+            align: 'center' as const,
+          },
+        ]
+      : [
+          {
+            header: (
+              <StatHeader
+                label="G"
+                tooltip="Goals"
+              />
+            ),
+            key: 'goals' as const,
+            align: 'center' as const,
+          },
+          {
+            header: (
+              <StatHeader
+                label="A"
+                tooltip="Assist"
+              />
+            ),
+            key: 'assists' as const,
+            align: 'center' as const,
+          },
+          {
+            header: (
+              <StatHeader
+                label="PTS"
+                tooltip="Points"
+              />
+            ),
+            key: 'points' as const,
+            align: 'center' as const,
+          },
+        ]),
+  ];
+  const gameLogColumns = buildGameLogColumns(isGoalie);
+  const gameLogPageCount = Math.max(1, Math.ceil(gameLogsTotal / GAME_LOG_PAGE_SIZE));
+  const filteredSeasonOptions = [
+    { value: 'all', label: 'All seasons' },
+    ...seasons
+      .filter((season) => !leagueId || season.league_id === leagueId)
+      .map((season) => ({ value: season.id, label: season.name })),
+  ];
 
   const playerEditTarget: TeamPlayerRecord = {
     ...player,
     photo,
+    player_team_id: latestStint?.id ?? null,
     jersey_number: latestStint?.jersey_number ?? null,
-    team_name: latestStint?.team_name ?? null,
-    primary_color: latestStint?.primary_color ?? null,
-    text_color: latestStint?.text_color ?? null,
+    team_id: latestStint?.team_id ?? null,
+    team_name: latestStint?.team.name ?? null,
+    primary_color: latestStint?.team.primary_color ?? null,
+    text_color: latestStint?.team.text_color ?? null,
+    is_prospect: latestStint?.is_prospect ?? false,
   };
 
   const playerInfoCard = (
     <Card
       title="Player Info"
-      className={latestSeasonStats ? styles.playerInfoCard : undefined}
+      className={styles.playerInfoCard}
       action={
         <Button
           variant="outlined"
@@ -247,9 +573,7 @@ const PlayerDetailsPage = () => {
           icon="edit"
           size="sm"
           onClick={() => setEditPlayerInfoOpen(true)}
-        >
-          Edit
-        </Button>
+        />
       }
     >
       <div className={styles.infoGrid}>
@@ -278,39 +602,111 @@ const PlayerDetailsPage = () => {
           value={player.weight_lbs ? `${player.weight_lbs} lbs` : null}
         />
         <InfoCell
-          label="Shoots"
+          label={player.position === 'G' ? 'Catches' : 'Shoots'}
           value={player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null}
         />
       </div>
     </Card>
   );
 
-  return (
-    <>
-      <TitleRow
-        left={
+  const recentGamesCard = (
+    <Card
+      title="Last 5 Games"
+      className={styles.recentGamesCard}
+    >
+      <Table
+        columns={recentGameColumns}
+        data={lastFiveGames}
+        rowKey={(row) => row.game_id}
+        loading={lastFiveGamesLoading}
+        emptyMessage="No recent games recorded yet."
+        onRowClick={(row) =>
+          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+        }
+      />
+    </Card>
+  );
+
+  const gameLogsCard = (
+    <Card
+      title="Game Logs"
+      action={
+        <div className={styles.gameLogFilters}>
+          <div className={styles.gameLogSeasonSelect}>
+            <Select
+              value={gameLogSeasonId}
+              options={filteredSeasonOptions}
+              onChange={(value) => {
+                setGameLogSeasonId(value);
+                setGameLogPage(1);
+              }}
+              placeholder="All seasons"
+            />
+          </div>
+          <SegmentedControl
+            value={gameLogType}
+            onChange={(value) => {
+              setGameLogType(value);
+              setGameLogPage(1);
+            }}
+            options={[
+              { value: 'all', label: 'All' },
+              { value: 'regular', label: 'Regular' },
+              { value: 'playoff', label: 'Playoffs' },
+            ]}
+            className={styles.gameLogTypeControl}
+          />
+        </div>
+      }
+    >
+      <Table
+        columns={gameLogColumns}
+        data={gameLogs}
+        rowKey={(row) => row.game_id}
+        loading={gameLogsLoading}
+        emptyMessage="No game logs found."
+        onRowClick={(row) =>
+          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+        }
+      />
+      <div className={styles.paginationBar}>
+        <span className={styles.paginationSummary}>
+          {gameLogsTotal === 0
+            ? 'No games'
+            : `${(gameLogPage - 1) * GAME_LOG_PAGE_SIZE + 1}-${Math.min(
+                gameLogPage * GAME_LOG_PAGE_SIZE,
+                gameLogsTotal,
+              )} of ${gameLogsTotal}`}
+        </span>
+        <div className={styles.paginationActions}>
           <Button
             variant="outlined"
             intent="neutral"
-            icon="arrow_back"
-            tooltip={`Back to ${teamDetails?.name ?? 'Team'}`}
-            onClick={() => navigate(`/admin/leagues/${leagueId}/teams/${teamId}`)}
+            icon="chevron_left"
+            size="sm"
+            tooltip="Previous page"
+            disabled={gameLogPage <= 1}
+            onClick={() => setGameLogPage((page) => Math.max(1, page - 1))}
           />
-        }
-        right={
-          <Breadcrumbs
-            items={[
-              { label: teamDetails?.league_name ?? '…', path: `/admin/leagues/${leagueId}` },
-              {
-                label: latestStint?.team_name ?? teamDetails?.name ?? '…',
-                path: `/admin/leagues/${leagueId}/teams/${teamId}`,
-              },
-              { label: fullName },
-            ]}
+          <span className={styles.paginationPage}>
+            Page {gameLogPage} of {gameLogPageCount}
+          </span>
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="chevron_right"
+            size="sm"
+            tooltip="Next page"
+            disabled={gameLogPage >= gameLogPageCount}
+            onClick={() => setGameLogPage((page) => Math.min(gameLogPageCount, page + 1))}
           />
-        }
-      />
+        </div>
+      </div>
+    </Card>
+  );
 
+  return (
+    <>
       {/* Hero card */}
       <Card>
         <div className={styles.hero}>
@@ -343,7 +739,7 @@ const PlayerDetailsPage = () => {
             <div className={styles.heroMeta}>
               {positionLabel && <span>{positionLabel}</span>}
               {jerseyNumber != null && <span>#{jerseyNumber}</span>}
-              {latestStint?.team_name && <span>{latestStint.team_name}</span>}
+              {latestStint?.team.name && <span>{latestStint.team.name}</span>}
             </div>
           </div>
           <span
@@ -352,14 +748,14 @@ const PlayerDetailsPage = () => {
             {player.is_active ? 'Active' : 'Inactive'}
           </span>
           <div className={styles.heroActions}>
-            {canTradePlayer && (
+            {canMovePlayer && (
               <Button
                 variant="outlined"
                 intent="neutral"
                 icon="swap_horiz"
                 size="sm"
-                tooltip="Trade player"
-                onClick={() => setTradePlayerOpen(true)}
+                tooltip="Move player"
+                onClick={() => setMovePlayerOpen(true)}
               />
             )}
             <Button
@@ -381,25 +777,30 @@ const PlayerDetailsPage = () => {
           tabs={[
             {
               label: 'Info',
-              content: latestSeasonStats ? (
+              content: (
                 <div className={styles.infoSummaryGrid}>
                   {playerInfoCard}
-                  <div className={styles.currentSeasonCards}>
-                    <SeasonStatCard
-                      title={`${latestSeasonStats.season_name} Regular Season`}
-                      stats={latestSeasonStats.regular}
-                      isGoalie={effectivePosition === 'G'}
-                    />
-                    <SeasonStatCard
-                      title={`${latestSeasonStats.season_name} Playoffs`}
-                      stats={latestSeasonStats.playoffs}
-                      isGoalie={effectivePosition === 'G'}
-                    />
-                  </div>
+                  {recentGamesCard}
+                  {latestSeasonStats && (
+                    <div className={styles.currentSeasonCards}>
+                      <SeasonStatCard
+                        title={`${latestSeasonStats.season_name} Regular Season`}
+                        stats={latestSeasonStats.regular}
+                        isGoalie={isGoalie}
+                      />
+                      <SeasonStatCard
+                        title={`${latestSeasonStats.season_name} Playoffs`}
+                        stats={latestSeasonStats.playoffs}
+                        isGoalie={isGoalie}
+                      />
+                    </div>
+                  )}
                 </div>
-              ) : (
-                playerInfoCard
               ),
+            },
+            {
+              label: 'Game Logs',
+              content: gameLogsCard,
             },
             {
               label: 'Career Stats',
@@ -408,7 +809,7 @@ const PlayerDetailsPage = () => {
                   <Table
                     columns={statColumns}
                     data={stats}
-                    rowKey={(r) => r.season_id}
+                    rowKey={(r) => `${r.season_id}-${r.team_id ?? 'teamless'}`}
                     emptyMessage="No stats recorded yet."
                   />
                 </Card>
@@ -436,45 +837,46 @@ const PlayerDetailsPage = () => {
                   ) : (
                     <ul className={styles.stintList}>
                       {stints.map((s) => (
-                        <li
+                        <ListItem
                           key={s.id}
                           className={styles.stintItem}
-                        >
-                          <TeamLogo
-                            logo={s.team_logo}
-                            code={s.team_code ?? s.team_name ?? '?'}
-                            primaryColor={s.primary_color}
-                            textColor={s.text_color}
-                            size={32}
-                            shape="square"
-                          />
-                          <div className={styles.stintInfo}>
-                            <span className={styles.stintTeam}>{s.team_name ?? '—'}</span>
-                            <span className={styles.stintMeta}>
-                              {s.jersey_number != null ? `#${s.jersey_number} · ` : ''}
-                              {s.start_date ? s.start_date.slice(0, 10) : '?'} –{' '}
-                              {s.end_date ? s.end_date.slice(0, 10) : 'Present'}
-                            </span>
-                          </div>
-                          {!s.end_date && (
-                            <Button
-                              variant="outlined"
-                              intent="neutral"
-                              icon="jersey"
-                              size="sm"
-                              tooltip="Change jersey number"
-                              onClick={() => setChangingJerseyStint(s)}
-                            />
-                          )}
-                          <Button
-                            variant="outlined"
-                            intent="neutral"
-                            icon="edit"
-                            size="sm"
-                            tooltip="Edit stint"
-                            onClick={() => setEditingStint(s)}
-                          />
-                        </li>
+                          image={s.team.logo}
+                          image_shape="square"
+                          name={s.team.name ?? 'Unknown team'}
+                          placeholder={teamCodePlaceholder(s)}
+                          primaryColor={s.team.primary_color}
+                          textColor={s.team.text_color}
+                          jerseyNumber={s.jersey_number}
+                          subtitle={formatStintDates(s)}
+                          rightContent={
+                            s.acquisition_type
+                              ? {
+                                  type: 'tag',
+                                  label:
+                                    ACQUISITION_TYPE_LABELS[s.acquisition_type] ??
+                                    s.acquisition_type,
+                                  intent: 'info',
+                                }
+                              : undefined
+                          }
+                          actions={[
+                            !s.end_date && {
+                              icon: 'jersey',
+                              tooltip: 'Change jersey number',
+                              onClick: () => setChangingJerseyStint(s),
+                            },
+                            {
+                              icon: 'image',
+                              tooltip: 'Change season photo',
+                              onClick: () => setChangingPhotoStint(s),
+                            },
+                            {
+                              icon: 'edit',
+                              tooltip: 'Edit stint',
+                              onClick: () => setEditingStint(s),
+                            },
+                          ]}
+                        />
                       ))}
                     </ul>
                   )}
@@ -496,14 +898,14 @@ const PlayerDetailsPage = () => {
         uploadPlayerPhoto={uploadStintPhoto}
       />
 
-      <TradePlayerModal
-        open={tradePlayerOpen}
+      <MovePlayerModal
+        open={movePlayerOpen}
         player={playerEditTarget}
         currentTeamId={latestStint?.team_id ?? teamId ?? ''}
         seasonId={latestStint?.season_id ?? ''}
         leagueId={leagueId ?? ''}
-        onClose={() => setTradePlayerOpen(false)}
-        tradePlayer={tradePlayer}
+        onClose={() => setMovePlayerOpen(false)}
+        movePlayer={movePlayer}
       />
 
       <PlayerInfoEditModal
@@ -532,7 +934,18 @@ const PlayerDetailsPage = () => {
         }}
         createStint={createStint}
         updateStint={updateStint}
-        uploadStintPhoto={uploadStintPhoto}
+      />
+
+      <ChangePhotoModal
+        open={!!changingPhotoStint}
+        stint={changingPhotoStint}
+        seasons={seasons.filter(
+          (s) => s.league_id === teams.find((t) => t.id === changingPhotoStint?.team_id)?.league_id,
+        )}
+        history={photoHistoryByTeam[changingPhotoStint?.team_id ?? ''] ?? []}
+        onClose={() => setChangingPhotoStint(null)}
+        uploadPhoto={uploadStintPhoto}
+        changePlayerPhoto={changePlayerPhoto}
       />
 
       <ImagePreviewModal

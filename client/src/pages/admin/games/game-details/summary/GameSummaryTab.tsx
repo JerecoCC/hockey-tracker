@@ -33,6 +33,7 @@ import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
 import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
+import { PERIOD, PERIOD_ORDER, otPeriodId } from '../constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -43,6 +44,7 @@ interface Props {
   isEditMode: boolean;
   setIsEditMode: (value: boolean) => void;
   editable?: boolean;
+  showPlayerDataStatus?: boolean;
   busy: string | null;
   leagueId: string;
   seasonId: string;
@@ -90,6 +92,7 @@ const GameSummaryTab = ({
   isEditMode,
   setIsEditMode,
   editable = true,
+  showPlayerDataStatus = false,
   busy,
   leagueId,
   seasonId,
@@ -126,8 +129,17 @@ const GameSummaryTab = ({
   const navigate = useNavigate();
 
   // ── Data hooks ───────────────────────────────────────────────────────────
-  const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(game.id);
-  const { attempts, addAttempt, updateAttempt, deleteAttempt } = useShootoutAttempts(game.id);
+  const gameHasStarted = game.status !== 'scheduled';
+  const { goals, addGoal, updateGoal, deleteGoal } = useGameGoals(game.id, {
+    enabled: gameHasStarted,
+  });
+  const shouldFetchShootoutAttempts =
+    !!game.shootout ||
+    game.current_period === PERIOD.SHOOTOUT ||
+    !!game.shootout_first_team_id;
+  const { attempts, addAttempt, updateAttempt, deleteAttempt } = useShootoutAttempts(game.id, {
+    enabled: shouldFetchShootoutAttempts,
+  });
 
   // Only the last recorded goal in the active period can be edited or deleted.
   const currentPeriodGoals = goals.filter((g) => g.period === game.current_period);
@@ -137,8 +149,8 @@ const GameSummaryTab = ({
   // OT period's shots can be tracked independently.
   const isPlayoff = game.game_type === 'playoff';
   const hasOTShots =
-    game.current_period === 'OT' ||
-    game.current_period === 'SO' ||
+    game.current_period === PERIOD.OVERTIME ||
+    game.current_period === PERIOD.SHOOTOUT ||
     game.period_shots.some((ps) => /^OT/.test(ps.period)) ||
     (game.overtime_periods ?? 0) > 0;
   const useShortNums = isPlayoff && (game.overtime_periods ?? 0) > 1;
@@ -149,11 +161,11 @@ const GameSummaryTab = ({
     ...(hasOTShots
       ? isPlayoff
         ? Array.from({ length: game.overtime_periods ?? 1 }, (_, i) => ({
-            id: `OT${i + 1}`,
+            id: otPeriodId(i + 1),
             label: `OT ${i + 1}`,
-            shortLabel: `OT${i + 1}`,
+            shortLabel: otPeriodId(i + 1),
           }))
-        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
+        : [{ id: PERIOD.OVERTIME, label: PERIOD.OVERTIME, shortLabel: PERIOD.OVERTIME }]
       : []),
   ];
 
@@ -249,6 +261,31 @@ const GameSummaryTab = ({
   // ── Goal modal state ─────────────────────────────────────────────────────
   const [goalPeriod, setGoalPeriod] = useState<string | null>(null);
   const [editGoal, setEditGoal] = useState<GoalRecord | null>(null);
+  const lastRecordedGoalId = useMemo(() => {
+    const periodRank = (period: string) => {
+      if (period === PERIOD.FIRST) return 1;
+      if (period === PERIOD.SECOND) return 2;
+      if (period === PERIOD.THIRD) return 3;
+      if (period === PERIOD.OVERTIME) return 4;
+      return 5;
+    };
+    const toSecs = (time: string | null) => {
+      if (!time) return 0;
+      const [minutes, seconds] = time.split(':').map(Number);
+      return (minutes || 0) * 60 + (seconds || 0);
+    };
+    return [...goals]
+      .sort((a, b) => {
+        const periodDiff = periodRank(a.period) - periodRank(b.period);
+        if (periodDiff !== 0) return periodDiff;
+        const timeDiff = toSecs(a.period_time) - toSecs(b.period_time);
+        if (timeDiff !== 0) return timeDiff;
+        return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+      })
+      .at(-1)?.id;
+  }, [goals]);
+  const lockGoalTimingFields =
+    !!editGoal && (editGoal.id !== lastRecordedGoalId || attempts.length > 0);
 
   // ── Shootout Attempt modal state ─────────────────────────────────────────
   const [attemptModalMode, setAttemptModalMode] = useState<null | 'add' | string>(null);
@@ -308,6 +345,29 @@ const GameSummaryTab = ({
   // ── Start Game modal ─────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
   const openStartGameModal = () => setStartGameModalOpen(true);
+  const handleStartGame = async (isoTime: string) => {
+    const started = await startGame(isoTime);
+    if (!started) return false;
+
+    const starterGoalieIds = new Set(
+      lineup.filter((entry) => entry.position_slot === 'G').map((entry) => entry.player_id),
+    );
+    const starterGoalies = [...awayRoster, ...homeRoster].filter((entry) =>
+      starterGoalieIds.has(entry.player_id),
+    );
+
+    await Promise.all(
+      starterGoalies.map((goalie) =>
+        upsertGoalieStat({
+          goalie_id: goalie.player_id,
+          team_id: goalie.team_id,
+          shots_against: 0,
+        }),
+      ),
+    );
+
+    return true;
+  };
 
   // ── Delete Game confirm ──────────────────────────────────────────────────
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
@@ -399,7 +459,13 @@ const GameSummaryTab = ({
 
   // For edit-mode revert: use current_period if set (retained after endGame), else
   // fall back to the highest period that has a score recorded.
-  const PERIOD_PRIORITY: CurrentPeriod[] = ['SO', 'OT', '3', '2', '1'];
+  const PERIOD_PRIORITY: CurrentPeriod[] = [
+    PERIOD.SHOOTOUT,
+    PERIOD.OVERTIME,
+    PERIOD.THIRD,
+    PERIOD.SECOND,
+    PERIOD.FIRST,
+  ];
   const lastPlayedPeriod: CurrentPeriod =
     (game.current_period as CurrentPeriod | null) ??
     PERIOD_PRIORITY.find((p) => game.period_scores.some((ps) => ps.period === p)) ??
@@ -417,6 +483,7 @@ const GameSummaryTab = ({
                 roster={roster}
                 goalieStats={goalieStats}
                 playerGameStats={playerGameStats}
+                showPlayerDataStatus={showPlayerDataStatus}
                 getPlayerHref={
                   playerHrefBuilder
                     ? (teamId, playerId) => playerHrefBuilder(teamId, playerId)
@@ -469,6 +536,7 @@ const GameSummaryTab = ({
                     }
                   : undefined
               }
+              showPlayerDataStatus={showPlayerDataStatus}
             />
 
             {/* ── Goalie Stats card ── */}
@@ -490,6 +558,7 @@ const GameSummaryTab = ({
                 updateGoalieStint={editable ? updateGoalieStint : undefined}
                 removeGoalieStint={editable ? removeGoalieStint : undefined}
                 removeGoalieStat={editable ? removeGoalieStat : undefined}
+                showPlayerDataStatus={showPlayerDataStatus}
               />
             )}
 
@@ -525,10 +594,13 @@ const GameSummaryTab = ({
               canEndGame={
                 editable &&
                 isInProgress &&
-                ['3', 'OT', 'SO'].includes(game.current_period ?? '') &&
-                (game.current_period !== 'SO' || soComplete) &&
-                (game.current_period !== 'OT' || goals.some((g) => g.period === 'OT')) &&
-                (game.current_period !== '3' || liveAwayScore !== liveHomeScore)
+                [PERIOD.THIRD, PERIOD.OVERTIME, PERIOD.SHOOTOUT].includes(
+                  game.current_period ?? '',
+                ) &&
+                (game.current_period !== PERIOD.SHOOTOUT || soComplete) &&
+                (game.current_period !== PERIOD.OVERTIME ||
+                  goals.some((g) => g.period === PERIOD.OVERTIME)) &&
+                (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
               }
               onStartGame={editable ? openStartGameModal : undefined}
               onReschedule={editable ? () => updateStatus('postponed') : undefined}
@@ -677,6 +749,7 @@ const GameSummaryTab = ({
           awayRoster={awayRoster}
           homeRoster={homeRoster}
           busy={!!busy}
+          lockTimingFields={lockGoalTimingFields}
           onClose={closeGoalModal}
           onAdd={addGoal}
           onUpdate={updateGoal}
@@ -704,10 +777,11 @@ const GameSummaryTab = ({
       {editable && (
         <StartGameModal
           open={startGameModalOpen}
+          scheduledAt={game.scheduled_at}
           isStarting={busy === 'in_progress'}
           disabled={!!busy}
           onClose={() => setStartGameModalOpen(false)}
-          onStart={startGame}
+          onStart={handleStartGame}
         />
       )}
 

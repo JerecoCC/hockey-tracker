@@ -93,15 +93,16 @@ export interface GoalieStatRecord {
 
 // ── Hook ─────────────────────────────────────────────────────────────────────
 
-const useGameGoalieStats = (gameId: string | undefined) => {
+const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boolean } = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const { enabled = true } = options;
 
   const queryKey = ['game-goalie-stats', gameId];
 
   const { data: goalieStats = [], isLoading: loading } = useQuery<GoalieStatRecord[]>({
     queryKey,
-    enabled: !!gameId,
+    enabled: !!gameId && enabled,
     queryFn: async () => {
       if (!gameId) return [];
       try {

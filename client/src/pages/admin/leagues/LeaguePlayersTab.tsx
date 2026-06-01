@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Pagination from '@/components/Pagination/Pagination';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SearchableList from '@/components/SearchableList/SearchableList';
 import Select from '@/components/Select/Select';
@@ -22,10 +23,17 @@ const POSITION_LABELS: Record<string, string> = {
 interface Props {
   leagueId: string;
   players: PlayerRecord[];
+  total: number;
+  page: number;
+  pageSize: number;
+  search: string;
   seasons: LeagueSeasonRecord[];
   selectedSeasonId: string | null;
+  onPageChange: (page: number) => void;
+  onSearchChange: (query: string) => void;
   onSeasonChange: (id: string) => void;
   loading: boolean;
+  fetching: boolean;
   busy: string | null;
   onAdd: () => void;
   onBulkAdd: () => void;
@@ -37,10 +45,17 @@ interface Props {
 const LeaguePlayersTab = ({
   leagueId,
   players,
+  total,
+  page,
+  pageSize,
+  search,
   seasons,
   selectedSeasonId,
+  onPageChange,
+  onSearchChange,
   onSeasonChange,
   loading,
+  fetching,
   busy,
   onAdd,
   onBulkAdd,
@@ -51,6 +66,11 @@ const LeaguePlayersTab = ({
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+
+  useEffect(() => {
+    if (!loading && total > 0 && page > pageCount) onPageChange(pageCount);
+  }, [loading, page, pageCount, total, onPageChange]);
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -73,14 +93,16 @@ const LeaguePlayersTab = ({
                 value: s.id,
                 label: s.is_current ? `${s.name} ✦` : s.name,
               }))}
-              onChange={onSeasonChange}
+              onChange={(value) => {
+                onSeasonChange(value);
+              }}
             />
           ) : undefined
         }
       >
         <SearchableList
           items={[...players].sort((a, b) =>
-            `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`),
+            `${a.first_name} ${a.last_name}`.localeCompare(`${b.first_name} ${b.last_name}`),
           )}
           filterFn={(p, q) => {
             const query = q.toLowerCase();
@@ -91,83 +113,100 @@ const LeaguePlayersTab = ({
               name.includes(query) || pos.includes(query) || jersey.startsWith(q.replace('#', ''))
             );
           }}
-          renderItems={(filtered) => (
-            <ul className={styles.teamList}>
-              {filtered.map((p) => {
-                const initials = `${p.first_name[0] ?? ''}${p.last_name[0] ?? ''}` || '?';
+          renderItems={(filtered) => {
+            return (
+              <>
+                <ul className={styles.rosterList}>
+                  {filtered.map((p) => {
+                    const initials = `${p.first_name[0] ?? ''}${p.last_name[0] ?? ''}` || '?';
 
-                return (
-                  <ListItem
-                    key={p.id}
-                    leadingImage={p.team_logo}
-                    leadingImagePlaceholder={
-                      (p.team_code ?? (p.team_name ?? '').slice(0, 3)) || undefined
-                    }
-                    leadingImagePrimaryColor={p.primary_color ?? undefined}
-                    leadingImageTextColor={p.text_color ?? undefined}
-                    imageNode={
-                      <PlayerAvatar
-                        photo={p.photo}
-                        initials={initials}
-                        primaryColor={p.primary_color}
-                        textColor={p.text_color}
-                        size={40}
+                    return (
+                      <ListItem
+                        key={p.id}
+                        className={styles.rosterItem}
+                        leadingImage={p.team_logo}
+                        leadingImagePlaceholder={
+                          (p.team_code ?? (p.team_name ?? '').slice(0, 3)) || undefined
+                        }
+                        leadingImagePrimaryColor={p.primary_color ?? undefined}
+                        leadingImageTextColor={p.text_color ?? undefined}
+                        imageNode={
+                          <PlayerAvatar
+                            photo={p.photo}
+                            initials={initials}
+                            primaryColor={p.primary_color}
+                            textColor={p.text_color}
+                            size={40}
+                          />
+                        }
+                        name={`${p.first_name} ${p.last_name}`}
+                        placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+                        primaryColor={p.primary_color ?? undefined}
+                        textColor={p.text_color ?? undefined}
+                        jerseyNumber={p.jersey_number}
+                        subtitle={
+                          p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined
+                        }
+                        rightContent={{
+                          type: 'tag',
+                          label: p.is_active ? 'Active' : 'Inactive',
+                          intent: p.is_active ? 'success' : 'neutral',
+                        }}
+                        actions={
+                          [
+                            {
+                              icon: 'open_in_new',
+                              intent: 'neutral',
+                              tooltip: 'View player',
+                              onClick: () =>
+                                navigate(
+                                  p.team_id
+                                    ? `/admin/leagues/${leagueId}/teams/${p.team_id}/players/${p.id}`
+                                    : `/admin/leagues/${leagueId}`,
+                                ),
+                            },
+                            {
+                              icon: 'edit',
+                              intent: 'neutral',
+                              tooltip: 'Edit player',
+                              disabled: busy === p.id,
+                              onClick: () => onEdit(p),
+                            },
+                            {
+                              icon: 'delete',
+                              intent: 'danger',
+                              tooltip: 'Delete player',
+                              disabled: busy === p.id,
+                              onClick: () => setConfirmDelete(p),
+                            },
+                          ] satisfies ListItemAction[]
+                        }
                       />
-                    }
-                    name={`${p.first_name} ${p.last_name}`}
-                    placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                    primaryColor={p.primary_color ?? undefined}
-                    textColor={p.text_color ?? undefined}
-                    eyebrow={
-                      [
-                        p.jersey_number != null ? `#${p.jersey_number}` : null,
-                        p.position ? (POSITION_LABELS[p.position] ?? p.position) : null,
-                      ]
-                        .filter(Boolean)
-                        .join(' · ') || undefined
-                    }
-                    rightContent={{
-                      type: 'tag',
-                      label: p.is_active ? 'Active' : 'Inactive',
-                      intent: p.is_active ? 'success' : 'neutral',
-                    }}
-                    actions={
-                      [
-                        {
-                          icon: 'open_in_new',
-                          intent: 'neutral',
-                          tooltip: 'View player',
-                          onClick: () =>
-                            navigate(
-                              p.team_id
-                                ? `/admin/leagues/${leagueId}/teams/${p.team_id}/players/${p.id}`
-                                : `/admin/leagues/${leagueId}`,
-                            ),
-                        },
-                        {
-                          icon: 'edit',
-                          intent: 'neutral',
-                          tooltip: 'Edit player',
-                          disabled: busy === p.id,
-                          onClick: () => onEdit(p),
-                        },
-                        {
-                          icon: 'delete',
-                          intent: 'danger',
-                          tooltip: 'Delete player',
-                          disabled: busy === p.id,
-                          onClick: () => setConfirmDelete(p),
-                        },
-                      ] satisfies ListItemAction[]
-                    }
-                  />
-                );
-              })}
-            </ul>
-          )}
+                    );
+                  })}
+                </ul>
+
+                <Pagination
+                  page={page}
+                  pageSize={pageSize}
+                  total={total}
+                  onPageChange={onPageChange}
+                />
+              </>
+            );
+          }}
           placeholder="Search players…"
+          query={search}
+          onQueryChange={onSearchChange}
+          disableClientFilter
           actions={
             <>
+              {fetching && (
+                <span
+                  className={styles.listSpinner}
+                  aria-label="Loading players"
+                />
+              )}
               <Button
                 variant="outlined"
                 intent="neutral"

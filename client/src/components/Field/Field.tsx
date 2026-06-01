@@ -2,6 +2,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type FocusEvent,
   type InputHTMLAttributes,
   type ReactNode,
   type TextareaHTMLAttributes,
@@ -112,6 +113,10 @@ const Field = (props: FieldProps) => {
             const onChange = transform
               ? (e: ChangeEvent<HTMLTextAreaElement>) => field.onChange(transform(e.target.value))
               : (e: ChangeEvent<HTMLTextAreaElement>) => field.onChange(e.target.value);
+            const onBlur = (e: FocusEvent<HTMLTextAreaElement>) => {
+              field.onBlur();
+              rest.onBlur?.(e);
+            };
             return (
               <textarea
                 className={cn(styles.field, styles.textarea, hasError && styles.fieldError)}
@@ -119,7 +124,7 @@ const Field = (props: FieldProps) => {
                 {...rest}
                 value={(field.value as string) ?? ''}
                 onChange={onChange}
-                onBlur={field.onBlur}
+                onBlur={onBlur}
               />
             );
           } else if (props.type === 'select') {
@@ -209,6 +214,10 @@ const Field = (props: FieldProps) => {
             const onChange = transform
               ? (e: ChangeEvent<HTMLInputElement>) => field.onChange(transform(e.target.value))
               : field.onChange;
+            const onBlur = (e: FocusEvent<HTMLInputElement>) => {
+              field.onBlur();
+              rest.onBlur?.(e);
+            };
             const isPassword = props.type === 'password';
             const hasSuffix = !isPassword && !!suffix;
             const input = (
@@ -223,7 +232,7 @@ const Field = (props: FieldProps) => {
                 type={isPassword ? (showPassword ? 'text' : 'password') : rest.type}
                 value={(field.value as string) ?? ''}
                 onChange={onChange}
-                onBlur={field.onBlur}
+                onBlur={onBlur}
               />
             );
             if (!isPassword && !hasSuffix) return input;

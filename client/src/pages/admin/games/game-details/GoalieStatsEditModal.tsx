@@ -12,16 +12,17 @@ import {
 } from '@/hooks/useGameGoalieStats';
 import styles from './GameDetailsPage.module.scss';
 import fieldStyles from '@/components/Field/Field.module.scss';
+import { PERIOD } from './constants';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
 const PERIOD_LABEL: Record<string, string> = {
-  '1': 'P1',
-  '2': 'P2',
-  '3': 'P3',
-  OT: 'OT',
-  SO: 'SO',
+  [PERIOD.FIRST]: 'P1',
+  [PERIOD.SECOND]: 'P2',
+  [PERIOD.THIRD]: 'P3',
+  [PERIOD.OVERTIME]: PERIOD.OVERTIME,
+  [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
 
 const fmtStintWindow = (stint: GoalieStintRecord) => {

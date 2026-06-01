@@ -1,6 +1,16 @@
 import { type ReactNode } from 'react';
+import ActionOverlay from '../ActionOverlay/ActionOverlay';
+import Button, { type ButtonIntent } from '../Button/Button';
 import Checkbox from '../Checkbox/Checkbox';
 import styles from './SelectableListItem.module.scss';
+
+export interface SelectableListItemAction {
+  icon: string;
+  intent?: ButtonIntent;
+  tooltip?: string;
+  disabled?: boolean;
+  onClick: () => void;
+}
 
 export interface SelectableListItemProps {
   checked: boolean;
@@ -25,6 +35,8 @@ export interface SelectableListItemProps {
   subtitle?: string;
   /** Optional node rendered at the trailing edge of the row (e.g. a code badge or jersey input). */
   rightContent?: ReactNode;
+  /** Hover-revealed actions. Button clicks do not toggle the row checkbox. */
+  actions?: (SelectableListItemAction | false | null | undefined)[];
 }
 
 const SelectableListItem = ({
@@ -41,46 +53,71 @@ const SelectableListItem = ({
   name,
   subtitle,
   rightContent,
-}: SelectableListItemProps) => (
-  <li
-    className={[styles.item, checked ? styles.checked : ''].filter(Boolean).join(' ')}
-    onClick={onToggle}
-  >
-    <Checkbox
-      checked={checked}
-      onChange={onToggle}
-    />
+  actions,
+}: SelectableListItemProps) => {
+  const visibleActions = actions?.filter((a): a is SelectableListItemAction => Boolean(a)) ?? [];
 
-    {!hideImage && (
-      <div
-        className={[styles.image, styles[imageShape]].join(' ')}
-        style={
-          !image && imagePrimaryColor
-            ? { background: imagePrimaryColor, color: imageTextColor ?? undefined }
-            : undefined
-        }
-      >
-        {image ? (
-          <img
-            src={image}
-            alt=""
-          />
-        ) : (
-          imagePlaceholder
-        )}
+  return (
+    <li
+      className={[styles.item, checked ? styles.checked : ''].filter(Boolean).join(' ')}
+      onClick={onToggle}
+    >
+      <Checkbox
+        checked={checked}
+        onChange={onToggle}
+      />
+
+      {!hideImage && (
+        <div
+          className={[styles.image, styles[imageShape]].join(' ')}
+          style={
+            !image && imagePrimaryColor
+              ? { background: imagePrimaryColor, color: imageTextColor ?? undefined }
+              : undefined
+          }
+        >
+          {image ? (
+            <img
+              src={image}
+              alt=""
+            />
+          ) : (
+            imagePlaceholder
+          )}
+        </div>
+      )}
+
+      {jerseyNumber != null && <span className={styles.jerseyChip}>{jerseyNumber}</span>}
+
+      <div className={styles.info}>
+        {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
+        <div className={styles.name}>{name}</div>
+        {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
       </div>
-    )}
 
-    {jerseyNumber != null && <span className={styles.jerseyChip}>{jerseyNumber}</span>}
+      {rightContent}
 
-    <div className={styles.info}>
-      {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
-      <div className={styles.name}>{name}</div>
-      {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
-    </div>
-
-    {rightContent}
-  </li>
-);
+      {visibleActions.length > 0 && (
+        <ActionOverlay className={styles.actions}>
+          {visibleActions.map((action, i) => (
+            <Button
+              key={i}
+              variant="outlined"
+              intent={action.intent ?? 'neutral'}
+              icon={action.icon}
+              size="sm"
+              tooltip={action.tooltip}
+              disabled={action.disabled}
+              onClick={(e) => {
+                e.stopPropagation();
+                action.onClick();
+              }}
+            />
+          ))}
+        </ActionOverlay>
+      )}
+    </li>
+  );
+};
 
 export default SelectableListItem;

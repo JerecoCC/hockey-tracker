@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useEffect, type FocusEvent } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import {
   type CreatePlayerData,
   type PlayerRecord,
@@ -27,6 +28,20 @@ const cmToFtIn = (cm: number) => {
 
 const ftInToCm = (ft: number, inches: number) => Math.round((ft * 12 + inches) * 2.54);
 
+const validateFeet = (value: string) => {
+  if (!value) return true;
+  const feet = Number(value);
+  return (Number.isInteger(feet) && feet >= 0) || 'Feet must be a whole number';
+};
+
+const validateInches = (value: string) => {
+  if (!value) return true;
+  const inches = Number(value);
+  return (Number.isInteger(inches) && inches >= 0 && inches <= 11) || 'Inches must be 0-11';
+};
+
+const isWholeNumberInput = (value: string) => value === '' || /^\d+$/.test(value);
+
 interface FormValues {
   shoots: PlayerShoots | null;
   date_of_birth: string;
@@ -50,6 +65,9 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     control,
     handleSubmit,
     reset,
+    getValues,
+    setError,
+    setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
@@ -67,7 +85,9 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
   useEffect(() => {
     if (!open) return;
     const { ft, inches } =
-      player?.height_cm != null ? cmToFtIn(player.height_cm) : { ft: null as null, inches: null as null };
+      player?.height_cm != null
+        ? cmToFtIn(player.height_cm)
+        : { ft: null as null, inches: null as null };
     reset({
       shoots: player?.shoots ?? null,
       date_of_birth: player?.date_of_birth ?? '',
@@ -82,6 +102,17 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
 
   const onSubmit = handleSubmit(async (data) => {
     if (!player) return;
+    const feetError = validateFeet(data.height_ft);
+    const inchesError = validateInches(data.height_in);
+    if (feetError !== true) {
+      setError('height_ft', { type: 'validate', message: feetError });
+      return;
+    }
+    if (inchesError !== true) {
+      setError('height_in', { type: 'validate', message: inchesError });
+      return;
+    }
+
     const hasFt = data.height_ft !== '';
     const hasIn = data.height_in !== '';
     const ok = await updatePlayer(player.id, {
@@ -91,11 +122,32 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
       birth_country: data.birth_country || null,
       nationality: data.nationality || null,
       height_cm:
-        hasFt || hasIn ? ftInToCm(hasFt ? Number(data.height_ft) : 0, hasIn ? Number(data.height_in) : 0) : null,
+        hasFt || hasIn
+          ? ftInToCm(hasFt ? Number(data.height_ft) : 0, hasIn ? Number(data.height_in) : 0)
+          : null,
       weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
     });
     if (ok) onClose();
   });
+
+  const normalizeBirthCity = (value: string) => {
+    const locationParts = value
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean);
+    if (locationParts.length < 2) return;
+
+    const country = locationParts[locationParts.length - 1];
+    const city = locationParts.slice(0, -1).join(', ');
+    setValue('birth_city', city, { shouldDirty: true, shouldTouch: true });
+    setValue('birth_country', country, { shouldDirty: true, shouldTouch: true });
+    setValue('nationality', country, { shouldDirty: true, shouldTouch: true });
+  };
+
+  const handleBirthCityBlur = (event: FocusEvent<HTMLInputElement>) => {
+    if (getValues('birth_country') || getValues('nationality')) return;
+    normalizeBirthCity(event.target.value);
+  };
 
   return (
     <Modal
@@ -113,22 +165,137 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
         onSubmit={onSubmit}
       >
         <div className={styles.row}>
-          <Field type="datepicker" label="Date of Birth" control={control} name="date_of_birth" placeholder="YYYY-MM-DD" disabled={isSubmitting} />
-          <Field label="Birth City" control={control} name="birth_city" placeholder="e.g. Edmonton" autoFocus disabled={isSubmitting} />
+          <Field
+            type="datepicker"
+            label="Date of Birth"
+            control={control}
+            name="date_of_birth"
+            placeholder="YYYY-MM-DD"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Birth City"
+            control={control}
+            name="birth_city"
+            placeholder="e.g. Edmonton"
+            autoFocus
+            disabled={isSubmitting}
+            onBlur={handleBirthCityBlur}
+          />
         </div>
         <div className={styles.row}>
-          <Field label="Birth Country" control={control} name="birth_country" placeholder="e.g. CAN" disabled={isSubmitting} />
-          <Field label="Nationality" control={control} name="nationality" placeholder="e.g. CAN" disabled={isSubmitting} />
+          <Field
+            label="Birth Country"
+            control={control}
+            name="birth_country"
+            placeholder="e.g. CAN"
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Nationality"
+            control={control}
+            name="nationality"
+            placeholder="e.g. CAN"
+            disabled={isSubmitting}
+          />
         </div>
         <div className={styles.row}>
-          <Field type="select" label="Shoots" control={control} name="shoots" options={SHOOTS_OPTIONS} placeholder="Select side" disabled={isSubmitting} />
-          <Field type="number" label="Weight" suffix="lbs" control={control} name="weight_lbs" placeholder="e.g. 193" min={0} disabled={isSubmitting} rules={{ validate: (v) => !v || Number(v) >= 0 }} />
+          <div className={styles.heightGroup}>
+            <span className={styles.heightGroupLabel}>Height</span>
+            <div className={styles.heightSegmentedField}>
+              <Controller
+                control={control}
+                name="height_ft"
+                rules={{ validate: validateFeet }}
+                render={({ field, fieldState }) => (
+                  <label
+                    className={[
+                      styles.heightSegment,
+                      fieldState.error ? styles.heightSegmentError : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <input
+                      {...field}
+                      type="number"
+                      min={0}
+                      placeholder="6"
+                      disabled={isSubmitting}
+                      aria-invalid={fieldState.invalid}
+                      onChange={(event) => {
+                        if (isWholeNumberInput(event.target.value)) {
+                          field.onChange(event.target.value);
+                        }
+                      }}
+                    />
+                    <span>FT</span>
+                  </label>
+                )}
+              />
+              <Controller
+                control={control}
+                name="height_in"
+                rules={{ validate: validateInches }}
+                render={({ field, fieldState }) => (
+                  <label
+                    className={[
+                      styles.heightSegment,
+                      fieldState.error ? styles.heightSegmentError : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <input
+                      {...field}
+                      type="number"
+                      min={0}
+                      max={11}
+                      placeholder="0"
+                      disabled={isSubmitting}
+                      aria-invalid={fieldState.invalid}
+                      onChange={(event) => {
+                        const { value } = event.target;
+                        if (isWholeNumberInput(value) && (!value || Number(value) <= 11)) {
+                          field.onChange(value);
+                        }
+                      }}
+                    />
+                    <span>IN</span>
+                  </label>
+                )}
+              />
+            </div>
+          </div>
+          <Field
+            type="number"
+            label="Weight"
+            suffix="lbs"
+            control={control}
+            name="weight_lbs"
+            placeholder="e.g. 193"
+            min={0}
+            disabled={isSubmitting}
+            rules={{ validate: (v) => !v || Number(v) >= 0 }}
+          />
         </div>
-        <div className={styles.heightGroup}>
-          <span className={styles.heightGroupLabel}>Height</span>
-          <div className={styles.heightInputs}>
-            <Field type="number" suffix="ft" control={control} name="height_ft" placeholder="6" min={0} disabled={isSubmitting} rules={{ validate: (v) => !v || (Number(v) >= 0 && Number.isInteger(Number(v))) }} />
-            <Field type="number" suffix="in" control={control} name="height_in" placeholder="0" min={0} max={11} disabled={isSubmitting} rules={{ validate: (v) => !v || (Number(v) >= 0 && Number(v) <= 11 && Number.isInteger(Number(v))) }} />
+        <div className={styles.fullRow}>
+          <div className={styles.segmentedField}>
+            <span className={styles.heightGroupLabel}>
+              {player?.position === 'G' ? 'Catches' : 'Shoots'}
+            </span>
+            <Controller
+              control={control}
+              name="shoots"
+              render={({ field }) => (
+                <SegmentedControl
+                  value={field.value}
+                  onChange={(value) => field.onChange(value as PlayerShoots)}
+                  options={SHOOTS_OPTIONS}
+                  disabled={isSubmitting}
+                />
+              )}
+            />
           </div>
         </div>
       </form>

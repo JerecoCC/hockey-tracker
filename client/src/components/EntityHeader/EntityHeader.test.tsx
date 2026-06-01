@@ -34,7 +34,7 @@ describe('EntityHeader – logo', () => {
     );
     const img = screen.getByRole('img');
     expect(img).toHaveAttribute('src', 'https://example.com/logo.png');
-    expect(img).toHaveAttribute('alt', 'Toronto Maple Leafs');
+    expect(img).toHaveAttribute('alt', 'TORONTO');
   });
 
   it('renders a placeholder showing the first 3 chars of code when no logo', () => {
@@ -46,8 +46,8 @@ describe('EntityHeader – logo', () => {
   it('applies primaryColor and textColor to the placeholder', () => {
     render(<EntityHeader {...defaultProps} />);
     const placeholder = screen.getByText('TOR');
-    // toHaveStyle normalizes both sides so hex === computed rgb
-    expect(placeholder).toHaveStyle({ background: '#003087', color: '#ffffff' });
+    expect(placeholder).toHaveStyle({ color: '#ffffff' });
+    expect(placeholder.parentElement).toHaveStyle({ background: '#003087' });
   });
 });
 

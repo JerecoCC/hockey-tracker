@@ -4,6 +4,7 @@ import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { type GameRecord, type GameType, type UpdateGameInfoData } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
+import { etHHMMtoISO, isoToETHHMM } from './formatUtils';
 
 const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
   { value: 'preseason', label: 'Preseason' },
@@ -11,41 +12,6 @@ const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
   { value: 'playoff', label: 'Playoffs' },
 ];
 
-/** Converts an ISO timestamp to "HH:mm" in Eastern Time. */
-const isoToETHHMM = (iso: string): string => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  return `${parts.find((p) => p.type === 'hour')!.value}:${parts.find((p) => p.type === 'minute')!.value}`;
-};
-
-/**
- * Treats an "HH:mm" string as Eastern Time on the given ET calendar date and
- * returns a UTC ISO string.
- *
- * @param hhmm      - 24-hour time string, e.g. "22:12" or "00:49"
- * @param etDateStr - ET calendar date as "YYYY-MM-DD". Defaults to today in ET
- *                    when omitted. Always pass the game's scheduled date so that
- *                    times are anchored to the correct day regardless of when
- *                    the edit modal is opened.
- */
-const etHHMMtoISO = (hhmm: string, etDateStr?: string): string => {
-  const etDate =
-    etDateStr ??
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
-  const tzName =
-    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
-      .formatToParts(probe)
-      .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
-  const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
-};
-
-/** Advances a "YYYY-MM-DD" string by one calendar day. */
 const nextETDate = (etDateStr: string): string => {
   const [y, m, d] = etDateStr.split('-').map(Number);
   const next = new Date(y, m - 1, d + 1); // local Date arithmetic — no timezone ambiguity
@@ -234,7 +200,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
               !value || !!formValues.scheduled_date || 'A date is required when time is set',
           }}
         />
-        {game.status !== 'scheduled' && game.status !== 'final' && (
+        {game.status !== 'scheduled' && (
           <>
             <Field
               label="Start Time"

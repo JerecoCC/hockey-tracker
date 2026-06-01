@@ -1,4 +1,11 @@
-import { useState, useEffect, useRef, type Dispatch, type SetStateAction } from 'react';
+import {
+  useState,
+  useEffect,
+  useRef,
+  type Dispatch,
+  type FormEvent,
+  type SetStateAction,
+} from 'react';
 import type { Control, FieldArrayWithId } from 'react-hook-form';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
@@ -12,6 +19,8 @@ import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGam
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
+import { PERIOD, PERIOD_ORDER } from './constants';
+import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }
@@ -26,57 +35,24 @@ type ShotsFormValues = {
 };
 
 const PERIOD_LABEL: Record<string, string> = {
-  '1': '1st',
-  '2': '2nd',
-  '3': '3rd',
-  OT: 'OT',
-  SO: 'SO',
+  [PERIOD.FIRST]: '1st',
+  [PERIOD.SECOND]: '2nd',
+  [PERIOD.THIRD]: '3rd',
+  [PERIOD.OVERTIME]: PERIOD.OVERTIME,
+  [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
 
 const PERIOD_TITLE_LABEL: Record<string, string> = {
-  '1': '1st Period',
-  '2': '2nd Period',
-  '3': '3rd Period',
-  OT: 'Overtime',
-  SO: 'Shootout',
+  [PERIOD.FIRST]: '1st Period',
+  [PERIOD.SECOND]: '2nd Period',
+  [PERIOD.THIRD]: '3rd Period',
+  [PERIOD.OVERTIME]: 'Overtime',
+  [PERIOD.SHOOTOUT]: 'Shootout',
 };
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
 
-const isoToETHHMM = (iso: string): string => {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  }).formatToParts(new Date(iso));
-  const h = parts.find((p) => p.type === 'hour')?.value ?? '';
-  const m = parts.find((p) => p.type === 'minute')?.value ?? '';
-  return h && m ? `${h}:${m}` : '';
-};
-
-/** Advances a "YYYY-MM-DD" string by one calendar day. */
-const nextETDate = (etDateStr: string): string => {
-  const [y, m, d] = etDateStr.split('-').map(Number);
-  const next = new Date(y, m - 1, d + 1);
-  return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}-${String(next.getDate()).padStart(2, '0')}`;
-};
-
-const etHHMMtoISO = (hhmm: string, etDateStr?: string): string => {
-  const etDate =
-    etDateStr ??
-    new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date());
-  const probe = new Date(`${etDate}T${hhmm}:00-05:00`);
-  const tzName =
-    new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', timeZoneName: 'short' })
-      .formatToParts(probe)
-      .find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
-  const offset = tzName === 'EDT' ? '-04:00' : '-05:00';
-  return new Date(`${etDate}T${hhmm}:00${offset}`).toISOString();
-};
-
-const PERIOD_ORDER = ['1', '2', '3', 'OT', 'SO'];
 const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
 
 /**
@@ -240,8 +216,8 @@ const RecordShotsModal = ({
         end_time: isEndGame && game.time_end ? isoToETHHMM(game.time_end) : '',
         goalies: goalieRosterList.map((g) => {
           const stat = goalieStats.find((gs) => gs.goalie_id === g.player_id);
-          if (stat) return { shots_against: String(stat.shots_against) };
-          if (isEndGame)
+          if (hasSubstitution && stat) return { shots_against: String(stat.shots_against) };
+          if (showGoalies)
             return {
               shots_against: computeAutoSA(g, goalieStats, game, effectivePeriodShots, goals),
             };
@@ -262,7 +238,7 @@ const RecordShotsModal = ({
       justResetRef.current = false;
       return;
     }
-    if (!isEndGame || !open) return;
+    if (!showGoalies || !open) return;
     const formAway = parseInt(awayShots || '0', 10);
     const formHome = parseInt(homeShots || '0', 10);
     const effectivePeriodShots = [
@@ -325,10 +301,10 @@ const RecordShotsModal = ({
           ? 'Next Overtime'
           : 'Confirm';
 
-  const handleConfirm = async (e?: React.FormEvent) => {
+  const handleConfirm = async (e?: FormEvent) => {
     e?.preventDefault();
     const { away_shots, home_shots, end_time, goalies: goalieVals } = getValues();
-    const isSOEndGame = period === 'SO' && isEndGame;
+    const isSOEndGame = period === PERIOD.SHOOTOUT && isEndGame;
     setSubmitting(true);
     if (!isSOEndGame) {
       const away = parseInt(away_shots || '0', 10);
@@ -339,12 +315,23 @@ const RecordShotsModal = ({
         return;
       }
     }
+    const mergedShots = [
+      ...game.period_shots.filter((ps) => ps.period !== period),
+      {
+        period,
+        away_shots: parseInt(away_shots || '0', 10) || 0,
+        home_shots: parseInt(home_shots || '0', 10) || 0,
+      },
+    ];
+
     if (showGoalies) {
       for (let i = 0; i < goalieRosterList.length; i++) {
         const goalie = goalieRosterList[i];
         const row = goalieVals[i];
         if (!row || !goalie) continue;
-        const shots = parseInt(row.shots_against, 10);
+        const shots = hasSubstitution
+          ? parseInt(row.shots_against, 10)
+          : parseInt(computeAutoSA(goalie, goalieStats, game, mergedShots, goals), 10);
         if (!isNaN(shots)) {
           await upsertGoalieStat({
             goalie_id: goalie.player_id,
@@ -359,11 +346,7 @@ const RecordShotsModal = ({
       // If the end time HH:mm is earlier than the start HH:mm the game ran past midnight —
       // use the next ET calendar day, mirroring the logic in GameInfoEditModal.
       const anchor = game.time_start ?? game.scheduled_at;
-      const etBase = anchor
-        ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-            new Date(anchor),
-          )
-        : undefined;
+      const etBase = anchor ? isoToETDate(anchor) : undefined;
       const startHHMM = game.time_start ? isoToETHHMM(game.time_start) : null;
       const isPastMidnight = !!startHHMM && end_time < startHHMM;
       const endDate = isPastMidnight && etBase ? nextETDate(etBase) : etBase;
@@ -471,7 +454,7 @@ const RecordShotsBody = ({
 
   return (
     <div className={styles.shotsModalBody}>
-      {!(isEndGame && period === 'SO') && (
+      {!(isEndGame && period === PERIOD.SHOOTOUT) && (
         <>
           <hr className={styles.lineupDivider} />
           <div className={styles.shotsGoalieHeader}>

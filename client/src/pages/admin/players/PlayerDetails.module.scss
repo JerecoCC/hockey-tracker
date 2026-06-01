@@ -127,6 +127,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: $space-xl;
   align-items: start;
+  grid-auto-flow: dense;
 
   @media (max-width: 960px) {
     grid-template-columns: 1fr;
@@ -134,10 +135,22 @@
 }
 
 .playerInfoCard {
-  grid-column: span 2;
+  grid-column: 1 / span 2;
+  grid-row: 1;
 
   @media (max-width: 960px) {
     grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+.recentGamesCard {
+  grid-column: 1 / span 2;
+  grid-row: 2;
+
+  @media (max-width: 960px) {
+    grid-column: auto;
+    grid-row: auto;
   }
 }
 
@@ -192,13 +205,12 @@
 }
 
 .stintItem {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-md $space-lg;
+  --list-item-logo-size: 48px;
+  --list-item-jersey-size: 32px;
+
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid $border;
-  border-radius: $radius-lg;
+  border-radius: $radius-md;
 }
 
 .stintLogo {
@@ -248,6 +260,77 @@
   display: flex;
   flex-direction: column;
   gap: $space-lg;
+  grid-column: 3;
+  grid-row: 1 / span 2;
+
+  @media (max-width: 960px) {
+    grid-column: auto;
+    grid-row: auto;
+  }
+}
+
+.opponentCell {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  font-weight: 600;
+  color: $text-body;
+}
+
+.opponentPrefix {
+  color: $text-dim;
+  font-weight: 500;
+}
+
+.teamCodeCell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3ch;
+  font-weight: 700;
+  color: $text-bright;
+}
+
+.gameLogFilters {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  flex-wrap: wrap;
+}
+
+.gameLogSeasonSelect {
+  width: 180px;
+}
+
+.gameLogTypeControl {
+  width: 260px;
+}
+
+.paginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  margin-top: $space-lg;
+  color: $text-dim;
+  font-size: $font-sm;
+
+  @media (max-width: 640px) {
+    align-items: stretch;
+    flex-direction: column;
+  }
+}
+
+.paginationActions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-md;
+}
+
+.paginationSummary,
+.paginationPage {
+  white-space: nowrap;
 }
 
 .statGrid {

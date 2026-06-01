@@ -3,8 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Icon from '@/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
-import SearchableList from '@/components/SearchableList/SearchableList';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Select from '@/components/Select/Select';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
@@ -24,6 +25,23 @@ const POSITION_LABELS: Record<string, string> = {
   G: 'Goalie',
 };
 
+const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD', 'D1', 'D2']);
+
+const ROSTER_SECTIONS = [
+  {
+    title: 'Forwards',
+    matches: (p: TeamPlayerRecord) => p.position !== 'G' && !DEFENSE_POSITIONS.has(p.position ?? ''),
+  },
+  {
+    title: 'Defense',
+    matches: (p: TeamPlayerRecord) => DEFENSE_POSITIONS.has(p.position ?? ''),
+  },
+  {
+    title: 'Goalies',
+    matches: (p: TeamPlayerRecord) => p.position === 'G',
+  },
+];
+
 interface Props {
   teamId: string;
   leagueId: string;
@@ -32,12 +50,10 @@ interface Props {
 
 const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
   const navigate = useNavigate();
-  // Load all seasons for this league
   const { seasons: leagueSeasons } = useSeasons(leagueId);
   const currentSeason = leagueSeasons.find((s) => s.is_current);
-
-  // Selected season — null until seasons load, then defaults to current (or most recent)
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
 
   useEffect(() => {
     if (selectedSeasonId === null && leagueSeasons.length > 0) {
@@ -52,17 +68,44 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     addPlayersToRoster,
     updatePlayer,
     updatePlayerTeam,
+    updatePlayerRosterRole,
     uploadPlayerPhoto,
     deletePlayer,
     bulkTradePlayers,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
+  const { players: allTeamPlayers } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
+    includeProspects: true,
+  });
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const existingPlayerIds = new Set(players.map((p) => p.id));
+  const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredPlayers = normalizedQuery
+    ? players.filter((p) => {
+        const name = `${p.first_name} ${p.last_name}`.toLowerCase();
+        const pos = (p.position ?? '').toLowerCase();
+        const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
+        return (
+          name.includes(normalizedQuery) ||
+          pos.includes(normalizedQuery) ||
+          jersey.startsWith(normalizedQuery.replace('#', ''))
+        );
+      })
+    : players;
+
+  const sortPlayers = (items: TeamPlayerRecord[]) =>
+    [...items].sort((a, b) => {
+      if (a.jersey_number == null && b.jersey_number == null) {
+        return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+      }
+      if (a.jersey_number == null) return 1;
+      if (b.jersey_number == null) return -1;
+      return a.jersey_number - b.jersey_number;
+    });
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -71,6 +114,64 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
     setIsDeleting(false);
     setConfirmDelete(null);
   };
+
+  const renderPlayer = (p: TeamPlayerRecord) => (
+    <ListItem
+      key={p.id}
+      className={styles.rosterItem}
+      imageNode={
+        <PlayerAvatar
+          photo={p.photo}
+          initials={`${p.first_name?.charAt(0) ?? ''}${p.last_name?.charAt(0) ?? ''}`.trim() || '?'}
+          primaryColor={p.primary_color}
+          textColor={p.text_color}
+          size={48}
+        />
+      }
+      name={`${p.first_name} ${p.last_name}`}
+      placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+      primaryColor={p.primary_color ?? undefined}
+      textColor={p.text_color ?? undefined}
+      jerseyNumber={p.jersey_number}
+      subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+      rightContent={{
+        type: 'tag',
+        label: p.is_active ? 'Active' : 'Inactive',
+        intent: p.is_active ? 'success' : 'neutral',
+      }}
+      actions={
+        [
+          {
+            icon: 'open_in_new',
+            intent: 'neutral',
+            tooltip: 'View player',
+            onClick: () => navigate(`/admin/leagues/${leagueId}/teams/${teamId}/players/${p.id}`),
+          },
+          {
+            icon: 'edit',
+            intent: 'neutral',
+            tooltip: 'Edit player',
+            disabled: busy === p.id,
+            onClick: () => setEditTarget(p),
+          },
+          {
+            icon: 'south',
+            intent: 'neutral',
+            tooltip: 'Move to prospects',
+            disabled: busy === p.id,
+            onClick: () => updatePlayerRosterRole(p, true),
+          },
+          {
+            icon: 'delete',
+            intent: 'danger',
+            tooltip: 'Delete player',
+            disabled: busy === p.id,
+            onClick: () => setConfirmDelete(p),
+          },
+        ] satisfies ListItemAction[]
+      }
+    />
+  );
 
   return (
     <>
@@ -83,11 +184,19 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
                 value={selectedSeasonId}
                 options={leagueSeasons.map((s) => ({
                   value: s.id,
-                  label: s.is_current ? `${s.name} ✦` : s.name,
+                  label: s.is_current ? `${s.name} *` : s.name,
                 }))}
                 onChange={setSelectedSeasonId}
               />
             )}
+            <Button
+              intent="accent"
+              icon="group_add"
+              size="sm"
+              onClick={() => setAddModalOpen(true)}
+            >
+              Add Players
+            </Button>
             <Button
               variant="outlined"
               intent="neutral"
@@ -101,83 +210,62 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
           </div>
         }
       >
-        <SearchableList
-          items={players}
-          filterFn={(p, q) => {
-            const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-            const pos = (p.position ?? '').toLowerCase();
-            return name.includes(q.toLowerCase()) || pos.includes(q.toLowerCase());
-          }}
-          renderItems={(filtered) => {
-            const sorted = [...filtered].sort((a, b) => {
-              if (a.jersey_number == null && b.jersey_number == null) return 0;
-              if (a.jersey_number == null) return 1;
-              if (b.jersey_number == null) return -1;
-              return a.jersey_number - b.jersey_number;
-            });
-            return (
-              <ul className={styles.rosterList}>
-                {sorted.map((p) => (
-                  <ListItem
-                    key={p.id}
-                    image={p.photo}
-                    image_shape="circle"
-                    name={`${p.jersey_number != null ? `#${p.jersey_number} ` : ''}${p.first_name} ${p.last_name}`}
-                    placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-                    primaryColor={p.primary_color ?? undefined}
-                    textColor={p.text_color ?? undefined}
-                    subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
-                    rightContent={{
-                      type: 'tag',
-                      label: p.is_active ? 'Active' : 'Inactive',
-                      intent: p.is_active ? 'success' : 'neutral',
-                    }}
-                    actions={
-                      [
-                        {
-                          icon: 'open_in_new',
-                          intent: 'neutral',
-                          tooltip: 'View player',
-                          onClick: () =>
-                            navigate(`/admin/leagues/${leagueId}/teams/${teamId}/players/${p.id}`),
-                        },
-                        {
-                          icon: 'edit',
-                          intent: 'neutral',
-                          tooltip: 'Edit player',
-                          disabled: busy === p.id,
-                          onClick: () => setEditTarget(p),
-                        },
-                        {
-                          icon: 'delete',
-                          intent: 'danger',
-                          tooltip: 'Delete player',
-                          disabled: busy === p.id,
-                          onClick: () => setConfirmDelete(p),
-                        },
-                      ] satisfies ListItemAction[]
-                    }
-                  />
-                ))}
-              </ul>
-            );
-          }}
-          placeholder="Search players…"
-          actions={
-            <Button
-              intent="accent"
-              icon="group_add"
-              size="sm"
-              onClick={() => setAddModalOpen(true)}
-            >
-              Add Players
-            </Button>
-          }
-          loading={loading}
-          emptyMessage="No players on this roster yet."
-          noResultsMessage={(q) => `No players match "${q}".`}
-        />
+        <div className={styles.rosterToolbar}>
+          <div className={styles.rosterSearch}>
+            <Icon
+              name="search"
+              size="1em"
+              className={styles.rosterSearchIcon}
+            />
+            <input
+              className={styles.rosterSearchInput}
+              type="text"
+              placeholder="Search players..."
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+            />
+            {query && (
+              <button
+                type="button"
+                className={styles.rosterSearchClear}
+                onClick={() => setQuery('')}
+                aria-label="Clear search"
+              >
+                <Icon
+                  name="close"
+                  size="0.8em"
+                />
+              </button>
+            )}
+          </div>
+        </div>
       </Card>
+
+      <div className={styles.rosterSections}>
+        {ROSTER_SECTIONS.map((section) => {
+          const sectionPlayers = sortPlayers(filteredPlayers.filter(section.matches));
+          return (
+            <Card
+              key={section.title}
+              title={`${section.title} (${sectionPlayers.length})`}
+            >
+              {loading ? (
+                <p className={styles.rosterEmpty}>Loading...</p>
+              ) : sectionPlayers.length > 0 ? (
+                <ul className={styles.rosterList}>{sectionPlayers.map(renderPlayer)}</ul>
+              ) : (
+                <p className={styles.rosterEmpty}>
+                  {players.length === 0
+                    ? 'No players on this roster yet.'
+                    : normalizedQuery
+                      ? `No ${section.title.toLowerCase()} match "${query}".`
+                      : `No ${section.title.toLowerCase()} on this roster.`}
+                </p>
+              )}
+            </Card>
+          );
+        })}
+      </div>
 
       <TeamPlayerEditModal
         open={!!editTarget}

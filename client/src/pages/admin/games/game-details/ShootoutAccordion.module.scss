@@ -39,14 +39,6 @@
   justify-content: flex-end;
 }
 
-.soFirstShooterBadge {
-  font-size: $font-xs;
-  font-weight: 500;
-  color: $text-dim;
-  opacity: 0.7;
-  white-space: nowrap;
-}
-
 .soAttemptColLogo {
   width: 20px;
   height: 20px;
@@ -95,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: $space-sm;
-  padding: $space-sm $space-md;
+  padding: $space-xs $space-md;
   border-right: 1px solid #334155;
 
   &:hover .goalActions {
@@ -110,6 +102,19 @@
 
 .soAttemptCellAway {
   justify-content: flex-end;
+}
+
+.soAttemptSpacer {
+  min-height: 48px;
+  border-right: 1px solid #334155;
+
+  &:last-child {
+    border-right: none;
+  }
+}
+
+.soWinnerGoalItem {
+  border-bottom: 1px solid $border !important;
 }
 
 // Applied alongside .soAttemptCell — only overrides justify-content

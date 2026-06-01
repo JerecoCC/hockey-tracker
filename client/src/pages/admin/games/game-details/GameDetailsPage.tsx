@@ -1,20 +1,20 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
-import Button from '@/components/Button/Button';
+import { useParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
-import TitleRow from '@/components/TitleRow/TitleRow';
 import { useGameDetails } from '@/hooks/useGames';
 import useGameLineup from '@/hooks/useGameLineup';
 import useGameRoster from '@/hooks/useGameRoster';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
+import { useAuth } from '@/context/AuthContext';
+import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import GameLineupsTab from './lineups/GameLineupsTab';
 import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
 
 import styles from './GameDetailsPage.module.scss';
+import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
 import { DATE_FMT_SHORT } from './formatUtils';
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -33,7 +33,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     seasonId: string;
     id: string;
   }>();
-  const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     game,
     loading,
@@ -50,6 +50,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     revertToEditMode,
     deleteGame,
   } = useGameDetails(id);
+  const gameHasStarted = !!game && game.status !== 'scheduled';
+  const hasShootout = !!game?.shootout;
+  const shouldFetchShootoutAttempts =
+    !!game &&
+    (hasShootout || game.current_period === PERIOD.SHOOTOUT || !!game.shootout_first_team_id);
   const {
     goalieStats,
     upsertGoalieStat,
@@ -57,15 +62,16 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     removeGoalieStat,
     updateGoalieStint,
     removeGoalieStint,
-  } = useGameGoalieStats(id);
+  } = useGameGoalieStats(id, { enabled: gameHasStarted });
   // attempts is needed here only for soWinnerSide → liveScore calculation for ScoreboardCard.
   // React Query deduplicates the request; GameSummaryTab also calls this hook.
-  const { attempts } = useShootoutAttempts(id);
+  const { attempts } = useShootoutAttempts(id, { enabled: shouldFetchShootoutAttempts });
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
   const [isEditMode, setIsEditMode] = useState(false);
   const isAdminView = mode === 'admin';
+  const isAdminUser = user?.role === 'admin';
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -149,6 +155,43 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   })();
 
   const seasonHref = `/admin/leagues/${leagueId}/seasons/${seasonId}`;
+  const leagueHref = `/admin/leagues/${leagueId}`;
+  const leagueName = game?.league_name ?? 'League';
+  const seasonName = game?.season_name ?? 'Season';
+  const gameCrumbLabel = game
+    ? [
+        `${game.away_team.code} @ ${game.home_team.code}`,
+        game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : 'Not Found';
+
+  usePageBreadcrumbs(
+    loading
+      ? null
+      : {
+          backPath: isAdminView ? seasonHref : '/games',
+          backLabel: isAdminView ? `Back to ${seasonName}` : 'Back to Games',
+          items: isAdminView
+            ? [
+                { label: 'Leagues', path: '/admin/leagues' },
+                { label: leagueName, path: leagueHref },
+                { label: seasonName, path: seasonHref },
+                { label: gameCrumbLabel },
+              ]
+            : [],
+        },
+    [
+      loading,
+      isAdminView,
+      seasonHref,
+      seasonName,
+      leagueHref,
+      leagueName,
+      gameCrumbLabel,
+    ],
+  );
 
   if (loading) {
     return (
@@ -161,22 +204,10 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   if (!game) {
     return (
-      <>
-        <Breadcrumbs
-          items={[
-            { label: 'Leagues', path: '/admin/leagues' },
-            { label: 'Season', path: seasonHref },
-            { label: 'Not Found' },
-          ]}
-        />
-        <p style={{ color: 'var(--text-dim)' }}>Game not found.</p>
-      </>
+      <p style={{ color: 'var(--text-dim)' }}>Game not found.</p>
     );
   }
 
-  const leagueName = game.league_name ?? 'League';
-  const seasonName = game.season_name ?? 'Season';
-  const leagueHref = `/admin/leagues/${leagueId}`;
   const gameHrefBuilder = (gameId: string) =>
     isAdminView
       ? `/admin/leagues/${leagueId}/seasons/${seasonId}/games/${gameId}`
@@ -191,7 +222,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   // Use the backend-computed score as the canonical base.
   // For an in-progress shootout, the backend intentionally stays on the goal-based tied score,
   // so we still apply a temporary +1 client-side when the current attempts already reveal a winner.
-  const hasSoPeriodScore = game.period_scores.some((ps) => ps.period === 'SO');
+  const hasSoPeriodScore = game.period_scores.some((ps) => ps.period === PERIOD.SHOOTOUT);
   const soScoreAdj = !isFinal && soWinnerSide && !hasSoPeriodScore ? 1 : 0;
   const liveAwayScore = game.away_score + (soWinnerSide === 'away' ? soScoreAdj : 0);
   const liveHomeScore = game.home_score + (soWinnerSide === 'home' ? soScoreAdj : 0);
@@ -199,10 +230,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   // Derive OT/SO from period_scores (source of truth); stored columns are a fallback
   // for legacy games created before goal tracking was introduced.
   const overtimeSuffix =
-    game.shootout || game.period_scores.some((ps) => ps.period === 'SO')
-      ? '/SO'
-      : (game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT')
-        ? '/OT'
+    game.shootout || game.period_scores.some((ps) => ps.period === PERIOD.SHOOTOUT)
+      ? PERIOD_SUFFIX.SHOOTOUT
+      : (game.overtime_periods ?? 0) > 0 ||
+          game.period_scores.some((ps) => ps.period === PERIOD.OVERTIME)
+        ? PERIOD_SUFFIX.OVERTIME
         : '';
 
   // Period columns for the Linescore table (always 1–3, plus OT/SO if applicable).
@@ -211,14 +243,14 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const otCount = game.overtime_periods ?? 1;
   const hasSO =
     !isPlayoff &&
-    (game.period_scores.some((ps) => ps.period === 'SO') ||
+    (game.period_scores.some((ps) => ps.period === PERIOD.SHOOTOUT) ||
       game.shootout ||
-      game.current_period === 'SO');
+      game.current_period === PERIOD.SHOOTOUT);
   const hasOT =
     !hasSO &&
-    (game.period_scores.some((ps) => ps.period === 'OT') ||
+    (game.period_scores.some((ps) => ps.period === PERIOD.OVERTIME) ||
       (game.overtime_periods ?? 0) > 0 ||
-      game.current_period === 'OT');
+      game.current_period === PERIOD.OVERTIME);
   // Compact numeric labels when multiple OT columns are present in a playoff game.
   const useShortNums = isPlayoff && otCount > 1;
   const linescorePeriods: { id: string; label: string; shortLabel: string }[] = [
@@ -228,49 +260,18 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     ...(hasOT
       ? isPlayoff
         ? Array.from({ length: otCount }, (_, i) => ({
-            id: `OT${i + 1}`,
+            id: otPeriodId(i + 1),
             label: `Overtime ${i + 1}`,
-            shortLabel: `OT${i + 1}`,
+            shortLabel: otPeriodId(i + 1),
           }))
-        : [{ id: 'OT', label: 'OT', shortLabel: 'OT' }]
+        : [{ id: PERIOD.OVERTIME, label: PERIOD.OVERTIME, shortLabel: PERIOD.OVERTIME }]
       : []),
     // Shootouts don't exist in playoffs — suppress SO column for playoff games.
-    ...(hasSO ? [{ id: 'SO', label: 'SO', shortLabel: 'SO' }] : []),
+    ...(hasSO ? [{ id: PERIOD.SHOOTOUT, label: PERIOD.SHOOTOUT, shortLabel: PERIOD.SHOOTOUT }] : []),
   ];
 
   return (
     <>
-      <TitleRow
-        left={
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            tooltip={isAdminView ? `Back to ${seasonName}` : 'Back to Games'}
-            onClick={() => navigate(isAdminView ? seasonHref : '/games')}
-          />
-        }
-        right={
-          isAdminView ? (
-            <Breadcrumbs
-              items={[
-                { label: 'Leagues', path: '/admin/leagues' },
-                { label: leagueName, path: leagueHref },
-                { label: seasonName, path: seasonHref },
-                {
-                  label: [
-                    `${game.away_team.code} @ ${game.home_team.code}`,
-                    game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · '),
-                },
-              ]}
-            />
-          ) : undefined
-        }
-      />
-
       {/* ── Scoreboard card ── */}
       <ScoreboardCard
         game={game}
@@ -299,6 +300,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 isEditMode={isEditMode}
                 setIsEditMode={setIsEditMode}
                 editable={isAdminView}
+                showPlayerDataStatus={isAdminUser}
                 busy={busy}
                 leagueId={leagueId}
                 seasonId={seasonId ?? ''}
@@ -342,6 +344,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 game={game}
                 isEditMode={isEditMode}
                 readOnly={!isAdminView}
+                showPlayerDataStatus={isAdminUser}
                 isFinal={isFinal}
                 leagueId={leagueId}
                 seasonId={seasonId}

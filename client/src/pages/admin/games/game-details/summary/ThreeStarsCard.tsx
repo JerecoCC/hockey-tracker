@@ -15,6 +15,7 @@ interface Props {
   playerGameStats: Map<string, { goals: number; assists: number }>;
   getPlayerHref?: (teamId: string, playerId: string) => string;
   onEdit?: () => void;
+  showPlayerDataStatus?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -26,6 +27,7 @@ const ThreeStarsCard = ({
   playerGameStats,
   getPlayerHref,
   onEdit,
+  showPlayerDataStatus = false,
 }: Props) => {
   const starDefs = [
     { starCount: 1, playerId: game.star_1_id! },
@@ -72,6 +74,7 @@ const ThreeStarsCard = ({
               teamName={team.name}
               stats={stats}
               goalieStatRecord={goalieStatRecord}
+              showPlayerDataStatus={showPlayerDataStatus}
             />
           );
         })}

@@ -993,7 +993,267 @@ router.get('/:id/standings', async (req, res) => {
 
 router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
+  const group = req.query.group;
+  const page = Math.max(1, Number.parseInt(req.query.page ?? '1', 10) || 1);
+  const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query.page_size ?? '10', 10) || 10));
+  const offset = (page - 1) * pageSize;
+  const sortKey = String(req.query.sort_key ?? (group === 'goalies' ? 'save_pct' : 'points'));
+  const sortDir = String(req.query.sort_dir ?? 'desc') === 'asc' ? 'asc' : 'desc';
+
   try {
+    if (group === 'forwards' || group === 'defense') {
+      const positions = group === 'forwards' ? ['C', 'LW', 'RW'] : ['D', 'LD', 'RD'];
+      const rows = await sql`
+        WITH season_games AS (
+          SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
+        ),
+        player_gp AS (
+          SELECT gr.player_id, COUNT(DISTINCT gr.game_id) AS gp
+          FROM game_rosters gr
+          WHERE gr.game_id IN (SELECT id FROM season_games)
+          GROUP BY gr.player_id
+        ),
+        player_goals_agg AS (
+          SELECT scorer_id AS player_id, COUNT(*) AS goals
+          FROM goals
+          WHERE game_id IN (SELECT id FROM season_games) AND goal_type != 'own'
+          GROUP BY scorer_id
+        ),
+        player_assists_agg AS (
+          SELECT player_id, COUNT(*) AS assists
+          FROM (
+            SELECT assist_1_id AS player_id FROM goals
+              WHERE game_id IN (SELECT id FROM season_games) AND assist_1_id IS NOT NULL
+            UNION ALL
+            SELECT assist_2_id AS player_id FROM goals
+              WHERE game_id IN (SELECT id FROM season_games) AND assist_2_id IS NOT NULL
+          ) a
+          GROUP BY player_id
+        ),
+        player_team AS (
+          SELECT DISTINCT ON (pt.player_id)
+            pt.player_id, pt.team_id, pt.jersey_number, pt.photo
+          FROM player_teams pt
+          WHERE pt.season_id = ${id}
+          ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
+        ),
+        stats AS (
+          SELECT
+            p.id                                          AS player_id,
+            p.first_name,
+            p.last_name,
+            COALESCE(ptr.photo, p.photo)                  AS photo,
+            p.position,
+            ptr.jersey_number,
+            ptr.team_id,
+            ti.code                                       AS team_code,
+            ti.name                                       AS team_name,
+            ti.logo                                       AS team_logo,
+            t.primary_color                               AS team_primary_color,
+            t.text_color                                  AS team_text_color,
+            pgp.gp::int                                   AS gp,
+            COALESCE(pg.goals,   0)::int                  AS goals,
+            COALESCE(pa.assists, 0)::int                  AS assists,
+            (COALESCE(pg.goals, 0) + COALESCE(pa.assists, 0))::int AS points
+          FROM player_gp pgp
+          JOIN players  p   ON p.id   = pgp.player_id
+          LEFT JOIN player_team        ptr ON ptr.player_id = p.id
+          LEFT JOIN teams              t   ON t.id          = ptr.team_id
+          LEFT JOIN LATERAL (
+            SELECT name, code, logo FROM team_iterations
+            WHERE team_id = ptr.team_id
+            ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+            LIMIT 1
+          ) ti ON true
+          LEFT JOIN player_goals_agg   pg  ON pg.player_id  = p.id
+          LEFT JOIN player_assists_agg pa  ON pa.player_id  = p.id
+          WHERE p.position = ANY(${positions})
+        )
+        SELECT stats.*, COUNT(*) OVER()::int AS total
+        FROM stats
+        ORDER BY
+          CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'asc' THEN last_name END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'desc' THEN last_name END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'gp' AND ${sortDir} = 'asc' THEN gp END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'gp' AND ${sortDir} = 'desc' THEN gp END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'goals' AND ${sortDir} = 'asc' THEN goals END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'goals' AND ${sortDir} = 'desc' THEN goals END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'assists' AND ${sortDir} = 'asc' THEN assists END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'assists' AND ${sortDir} = 'desc' THEN assists END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'points' AND ${sortDir} = 'asc' THEN points END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'points' AND ${sortDir} = 'desc' THEN points END DESC NULLS LAST,
+          points DESC, goals DESC, assists DESC, gp DESC, last_name ASC, first_name ASC
+        LIMIT ${pageSize} OFFSET ${offset}
+      `;
+      const total = rows[0]?.total ?? 0;
+      const items = rows.map(({ total: _total, ...row }) => row);
+      return res.json({ items, total, page, page_size: pageSize });
+    }
+
+    if (group === 'goalies') {
+      const rows = await sql`
+        WITH period_vals (p, v) AS (
+          VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+        ),
+        player_team AS (
+          SELECT DISTINCT ON (pt.player_id)
+            pt.player_id, pt.team_id, pt.jersey_number, pt.photo
+          FROM player_teams pt
+          WHERE pt.season_id = ${id}
+          ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
+        ),
+        stint_ranges AS (
+          SELECT
+            st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
+            st.shots_against,
+            st.goals_against AS goals_against_override,
+            st.exited_period,
+            pv_in.v * 100000
+              + COALESCE(
+                  SPLIT_PART(st.entered_time, ':', 1)::int * 60
+                  + SPLIT_PART(st.entered_time, ':', 2)::int,
+                  0
+                ) AS from_pos,
+            CASE
+              WHEN st.exited_period IS NULL THEN NULL
+              ELSE pv_out.v * 100000
+                + COALESCE(
+                    SPLIT_PART(st.exited_time, ':', 1)::int * 60
+                    + SPLIT_PART(st.exited_time, ':', 2)::int,
+                    0
+                  )
+            END AS until_pos
+          FROM game_goalie_stints st
+          JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final'
+          JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
+          LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
+        ),
+        stint_ga_derived AS (
+          SELECT sr.id AS stint_id, COUNT(*)::int AS ga
+          FROM stint_ranges sr
+          JOIN goals gl
+            ON gl.game_id   = sr.game_id
+           AND gl.team_id  != sr.team_id
+           AND gl.empty_net = false
+          JOIN period_vals pv ON pv.p = gl.period
+          WHERE (pv.v * 100000
+                 + COALESCE(
+                     SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                     + SPLIT_PART(gl.period_time, ':', 2)::int,
+                     0
+                   )) >= sr.from_pos
+            AND (sr.until_pos IS NULL
+                 OR (pv.v * 100000
+                     + COALESCE(
+                         SPLIT_PART(gl.period_time, ':', 1)::int * 60
+                         + SPLIT_PART(gl.period_time, ':', 2)::int,
+                         0
+                       )) < sr.until_pos)
+          GROUP BY sr.id
+        ),
+        stints_resolved AS (
+          SELECT
+            sr.*,
+            COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga
+          FROM stint_ranges sr
+          LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
+        ),
+        goalie_game AS (
+          SELECT
+            game_id, goalie_id, team_id,
+            MIN(from_pos)           AS first_from_pos,
+            SUM(shots_against)::int AS shots_against,
+            SUM(resolved_ga)::int   AS goals_against
+          FROM stints_resolved
+          GROUP BY game_id, goalie_id, team_id
+        ),
+        team_game_last_goalie AS (
+          SELECT DISTINCT ON (game_id, team_id)
+            game_id, team_id, goalie_id
+          FROM stints_resolved
+          ORDER BY game_id, team_id, stint_ord DESC
+        ),
+        goalie_game_agg AS (
+          SELECT
+            gg.goalie_id,
+            gg.team_id,
+            COUNT(*)::int                                          AS gp,
+            SUM(gg.shots_against)::int                            AS shots_against,
+            SUM(gg.goals_against)::int                            AS goals_against,
+            (SUM(gg.shots_against) - SUM(gg.goals_against))::int AS saves,
+            COUNT(*) FILTER (
+              WHERE gg.shots_against > 0
+                AND gg.goals_against = 0
+                AND gg.first_from_pos = 100000
+                AND tgl.goalie_id = gg.goalie_id
+            )::int                                                 AS shutouts
+          FROM goalie_game gg
+          JOIN team_game_last_goalie tgl
+            ON tgl.game_id = gg.game_id AND tgl.team_id = gg.team_id
+          GROUP BY gg.goalie_id, gg.team_id
+        ),
+        stats AS (
+          SELECT
+            p.id                                                   AS player_id,
+            p.first_name,
+            p.last_name,
+            COALESCE(ptr.photo, p.photo)                           AS photo,
+            ptr.jersey_number,
+            agg.team_id                                            AS team_id,
+            ti.code                                                AS team_code,
+            ti.name                                                AS team_name,
+            ti.logo                                                AS team_logo,
+            t.primary_color                                        AS team_primary_color,
+            t.text_color                                           AS team_text_color,
+            agg.gp,
+            agg.shots_against,
+            agg.saves,
+            agg.goals_against,
+            CASE WHEN agg.shots_against > 0
+              THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
+              ELSE NULL END                                        AS save_pct,
+            agg.shutouts,
+            CASE WHEN agg.gp > 0
+              THEN ROUND(agg.goals_against::numeric / agg.gp, 2)
+              ELSE NULL END                                        AS gaa
+          FROM goalie_game_agg agg
+          JOIN players p    ON p.id  = agg.goalie_id
+          LEFT JOIN player_team ptr ON ptr.player_id = agg.goalie_id
+          LEFT JOIN teams       t   ON t.id          = agg.team_id
+          LEFT JOIN LATERAL (
+            SELECT name, code, logo FROM team_iterations
+            WHERE team_id = agg.team_id
+            ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+            LIMIT 1
+          ) ti ON true
+        )
+        SELECT stats.*, COUNT(*) OVER()::int AS total
+        FROM stats
+        ORDER BY
+          CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'asc' THEN last_name END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'desc' THEN last_name END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'gp' AND ${sortDir} = 'asc' THEN gp END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'gp' AND ${sortDir} = 'desc' THEN gp END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'shots_against' AND ${sortDir} = 'asc' THEN shots_against END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'shots_against' AND ${sortDir} = 'desc' THEN shots_against END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'saves' AND ${sortDir} = 'asc' THEN saves END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'saves' AND ${sortDir} = 'desc' THEN saves END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'goals_against' AND ${sortDir} = 'asc' THEN goals_against END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'goals_against' AND ${sortDir} = 'desc' THEN goals_against END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'save_pct' AND ${sortDir} = 'asc' THEN save_pct END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'save_pct' AND ${sortDir} = 'desc' THEN save_pct END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'gaa' AND ${sortDir} = 'asc' THEN gaa END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'gaa' AND ${sortDir} = 'desc' THEN gaa END DESC NULLS LAST,
+          CASE WHEN ${sortKey} = 'shutouts' AND ${sortDir} = 'asc' THEN shutouts END ASC NULLS LAST,
+          CASE WHEN ${sortKey} = 'shutouts' AND ${sortDir} = 'desc' THEN shutouts END DESC NULLS LAST,
+          save_pct DESC NULLS LAST, saves DESC, last_name ASC, first_name ASC
+        LIMIT ${pageSize} OFFSET ${offset}
+      `;
+      const total = rows[0]?.total ?? 0;
+      const items = rows.map(({ total: _total, ...row }) => row);
+      return res.json({ items, total, page, page_size: pageSize });
+    }
+
     const skaters = await sql`
       WITH season_games AS (
         SELECT id FROM games WHERE season_id = ${id} AND status = 'final'

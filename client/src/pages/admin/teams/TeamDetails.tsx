@@ -1,8 +1,6 @@
-import { useNavigate, useParams } from 'react-router-dom';
-import Breadcrumbs from '@/components/Breadcrumbs/Breadcrumbs';
-import Button from '@/components/Button/Button';
+import { useParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
-import TitleRow from '@/components/TitleRow/TitleRow';
+import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import useTabState from '@/hooks/useTabState';
@@ -14,7 +12,6 @@ import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
 
 const TeamDetailsPage = () => {
-  const navigate = useNavigate();
   const { id, leagueId } = useParams<{ id: string; leagueId: string }>();
   const { team, loading, uploadLogo, updateTeam } = useTeamDetails(id);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
@@ -32,6 +29,24 @@ const TeamDetailsPage = () => {
   const backPath = `/admin/leagues/${leagueId}`;
   const backTooltip = 'Back to League Details';
 
+  usePageBreadcrumbs(
+    loading
+      ? null
+      : {
+          backPath,
+          backLabel: backTooltip,
+          items: breadcrumbItems,
+        },
+    [
+      loading,
+      backPath,
+      team?.league_name,
+      team?.league_code,
+      team?.name,
+      leagueId,
+    ],
+  );
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>
@@ -47,19 +62,6 @@ const TeamDetailsPage = () => {
 
   return (
     <>
-      <TitleRow
-        left={
-          <Button
-            variant="outlined"
-            intent="neutral"
-            icon="arrow_back"
-            tooltip={backTooltip}
-            onClick={() => navigate(backPath)}
-          />
-        }
-        right={<Breadcrumbs items={breadcrumbItems} />}
-      />
-
       <Tabs
         activeIndex={activeTab}
         onTabChange={handleTabChange}
@@ -97,7 +99,17 @@ const TeamDetailsPage = () => {
               />
             ),
           },
-          { label: 'Prospects', icon: 'search', content: <TeamProspectsTab /> },
+          {
+            label: 'Prospects',
+            icon: 'search',
+            content: (
+              <TeamProspectsTab
+                teamId={team.id}
+                leagueId={team.league_id ?? ''}
+                latestSeasonId={team.latest_season_id ?? null}
+              />
+            ),
+          },
           {
             label: 'History',
             icon: 'history',

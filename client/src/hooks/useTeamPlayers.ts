@@ -13,24 +13,31 @@ export interface PlayerStintRecord {
   team_id: string;
   season_id: string;
   jersey_number: number | null;
+  is_prospect: boolean;
   photo: string | null;
   position: string | null;
+  acquisition_type: string | null;
   start_date: string | null;
   end_date: string | null;
   created_at: string;
-  team_name: string | null;
-  team_code: string | null;
-  team_logo: string | null;
-  primary_color: string | null;
-  text_color: string | null;
+  team: {
+    id: string;
+    name: string | null;
+    code: string | null;
+    logo: string | null;
+    primary_color: string | null;
+    text_color: string | null;
+  };
 }
 
 export interface UpdateStintData {
   team_id?: string;
   season_id?: string;
   jersey_number?: number | null;
+  is_prospect?: boolean;
   photo?: string | null;
   position?: string | null;
+  acquisition_type?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -39,8 +46,10 @@ export interface CreateStintData {
   team_id: string;
   season_id: string;
   jersey_number?: number | null;
+  is_prospect?: boolean;
   photo?: string | null;
   position?: string | null;
+  acquisition_type?: string | null;
   start_date?: string | null;
   end_date?: string | null;
 }
@@ -52,6 +61,17 @@ export interface JerseyHistoryEntry {
   jersey_number: number;
   /** YYYY-MM-DD */
   effective_from: string;
+}
+
+export interface PlayerPhotoEntry {
+  id: string;
+  player_id: string;
+  team_id: string;
+  season_id: string;
+  photo: string;
+  created_at: string;
+  season_name: string | null;
+  team_name: string | null;
 }
 
 /**
@@ -81,6 +101,31 @@ export const useJerseyHistory = (playerId: string | null) => {
   }, [data]);
 
   return { byStint };
+};
+
+export const usePlayerPhotoHistory = (playerId: string | null) => {
+  const { data: photos = [] } = useQuery<PlayerPhotoEntry[]>({
+    queryKey: ['player-photo-history', playerId],
+    queryFn: async () => {
+      const { data } = await axios.get<PlayerPhotoEntry[]>(
+        `${API}/admin/player-teams/history/${playerId}/photos`,
+        { headers: authHeaders() },
+      );
+      return data;
+    },
+    enabled: !!playerId,
+  });
+
+  const byTeam = useMemo(() => {
+    const map: Record<string, PlayerPhotoEntry[]> = {};
+    for (const entry of photos) {
+      if (!map[entry.team_id]) map[entry.team_id] = [];
+      map[entry.team_id].push(entry);
+    }
+    return map;
+  }, [photos]);
+
+  return { photos, byTeam };
 };
 
 /** Fetch all stints for a player, optionally scoped to a season. */
@@ -201,20 +246,58 @@ export const useStintActions = (playerId: string | null) => {
     }
   };
 
-  return { createStint, updateStint, changeJerseyNumber, uploadStintPhoto, saving };
+  const changePlayerPhoto = async (
+    stint: PlayerStintRecord,
+    seasonId: string,
+    photo: string,
+  ): Promise<boolean> => {
+    setSaving(true);
+    try {
+      await axios.post(
+        `${API}/admin/player-teams/history/${playerId}/photos`,
+        {
+          team_id: stint.team_id,
+          season_id: seasonId,
+          photo,
+        },
+        { headers: authHeaders() },
+      );
+      toast.success('Season photo updated!');
+      await queryClient.invalidateQueries({ queryKey: ['player-photo-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update season photo'));
+      return false;
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return { createStint, updateStint, changeJerseyNumber, changePlayerPhoto, uploadStintPhoto, saving };
 };
 
 export interface PlayerRosterInput {
   player_id: string;
   jersey_number?: number | null;
+  is_prospect?: boolean;
 }
 
 /** Extends PlayerRecord with team-assignment fields returned when fetching by team_id. */
 export interface TeamPlayerRecord extends PlayerRecord {
+  player_team_id: string | null;
   jersey_number: number | null;
+  team_id: string | null;
   team_name: string | null;
   primary_color: string | null;
   text_color: string | null;
+  is_prospect: boolean;
 }
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -226,17 +309,28 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
+interface UseTeamPlayersOptions {
+  includeProspects?: boolean;
+  prospectsOnly?: boolean;
+}
+
+const useTeamPlayers = (
+  teamId: string | undefined,
+  seasonId?: string,
+  options: UseTeamPlayersOptions = {},
+) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
 
   const { data: players = [], isLoading: loading } = useQuery<TeamPlayerRecord[]>({
-    queryKey: ['players', { team_id: teamId, season_id: seasonId }],
+    queryKey: ['players', { team_id: teamId, season_id: seasonId, ...options }],
     queryFn: async () => {
       try {
         const params: Record<string, string> = {};
         if (teamId) params.team_id = teamId;
         if (seasonId) params.season_id = seasonId;
+        if (options.includeProspects) params.include_prospects = 'true';
+        if (options.prospectsOnly) params.prospects_only = 'true';
         const { data } = await axios.get<TeamPlayerRecord[]>(
           `${API}/admin/players`,
           { headers: authHeaders(), params },
@@ -345,6 +439,44 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
+  const updatePlayerRosterRole = async (
+    player: TeamPlayerRecord,
+    isProspect: boolean,
+  ): Promise<boolean> => {
+    if (!player.player_team_id && (!player.team_id || !seasonId)) return false;
+    setBusy(player.id);
+    try {
+      if (player.player_team_id) {
+        await axios.patch(
+          `${API}/admin/player-teams/${player.player_team_id}`,
+          { is_prospect: isProspect },
+          { headers: authHeaders() },
+        );
+      } else {
+        await axios.patch(
+          `${API}/admin/player-teams`,
+          {
+            player_id: player.id,
+            team_id: player.team_id,
+            season_id: seasonId,
+            is_prospect: isProspect,
+          },
+          { headers: authHeaders() },
+        );
+      }
+      toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update roster status'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const deletePlayer = async (playerId: string): Promise<void> => {
     setBusy(playerId);
     try {
@@ -376,7 +508,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
           ? `${count} player${count !== 1 ? 's' : ''} added (${skipped} already rostered)`
           : `${count} player${count !== 1 ? 's' : ''} added to roster!`,
       );
-      await queryClient.invalidateQueries({ queryKey: ['players', { team_id: teamId }] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to add players to roster'));
@@ -448,6 +580,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     sId: string,
     toTeamId: string,
     tradeDate: string,
+    acquisitionType = 'trade',
   ): Promise<boolean> => {
     try {
       const { data } = await axios.post(
@@ -457,6 +590,7 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
           season_id: sId,
           to_team_id: toTeamId,
           trade_date: tradeDate,
+          acquisition_type: acquisitionType,
         },
         { headers: authHeaders() },
       );
@@ -476,7 +610,20 @@ const useTeamPlayers = (teamId: string | undefined, seasonId?: string) => {
     }
   };
 
-  return { players, loading, busy, addPlayersToRoster, createAndRosterPlayers, updatePlayer, updateJerseyNumber, updatePlayerTeam, uploadPlayerPhoto, deletePlayer, bulkTradePlayers };
+  return {
+    players,
+    loading,
+    busy,
+    addPlayersToRoster,
+    createAndRosterPlayers,
+    updatePlayer,
+    updateJerseyNumber,
+    updatePlayerTeam,
+    updatePlayerRosterRole,
+    uploadPlayerPhoto,
+    deletePlayer,
+    bulkTradePlayers,
+  };
 };
 
 export default useTeamPlayers;

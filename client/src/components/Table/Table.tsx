@@ -6,21 +6,21 @@ import styles from './Table.module.scss';
 export type Column<T> =
   | {
       type?: 'text';
-      header: string;
+      header: ReactNode;
       key: keyof T;
       sortable?: true;
       align?: 'left' | 'center' | 'right';
     }
   | {
       type: 'date';
-      header: string;
+      header: ReactNode;
       key: keyof T;
       sortable?: true;
       align?: 'left' | 'center' | 'right';
     }
   | {
       type: 'logo';
-      header: string;
+      header: ReactNode;
       getLogo: (row: T) => string | null | undefined;
       getName: (row: T) => string;
       getCode: (row: T) => string;
@@ -30,7 +30,7 @@ export type Column<T> =
     }
   | {
       type: 'custom';
-      header: string;
+      header: ReactNode;
       render: (row: T) => ReactNode;
       sortable?: true;
       sortKey?: string;
@@ -108,7 +108,7 @@ const Table = <T,>({
       <table>
         <thead>
           <tr>
-            {columns.map((col) => {
+            {columns.map((col, index) => {
               const colKey = getColSortKey(col);
               const isActive = col.sortable && !!colKey && colKey === activeSortKey;
               const handleClick =
@@ -121,7 +121,7 @@ const Table = <T,>({
 
               return (
                 <th
-                  key={col.header}
+                  key={colKey ?? index}
                   style={col.align ? { textAlign: col.align } : undefined}
                   className={col.sortable ? styles.thSortable : undefined}
                 >
@@ -162,9 +162,9 @@ const Table = <T,>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={onRowClick ? styles.clickableRow : undefined}
               >
-                {columns.map((col) => (
+                {columns.map((col, index) => (
                   <td
-                    key={col.header}
+                    key={`${rowKey(row)}-${getColSortKey(col) ?? index}`}
                     style={col.align ? { textAlign: col.align } : undefined}
                   >
                     {renderCell(col, row)}
