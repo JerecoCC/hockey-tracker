@@ -330,7 +330,7 @@ const LineupRosterModal = ({
                 imageShape="square"
                 imagePrimaryColor={p.primary_color}
                 imageTextColor={p.text_color}
-                eyebrow={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+                subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                 name={`${p.last_name}, ${p.first_name}`}
                 rightContent={p.is_prospect ? <Badge label="Prospect" /> : undefined}
                 actions={[
