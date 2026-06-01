@@ -48,6 +48,27 @@ const validateGoalParticipants = (scorerId, assist1Id, assist2Id) => {
   return null;
 };
 
+const validateLineupPlayers = (slotMap) => {
+  const slotLabel = {
+    C: 'center_id',
+    LW: 'left_wing_id',
+    RW: 'right_wing_id',
+    D1: 'defense_1_id',
+    D2: 'defense_2_id',
+    G: 'goalie_id',
+  };
+  const seen = new Map();
+  for (const slot of Object.keys(slotLabel)) {
+    const playerId = slotMap[slot];
+    if (!playerId) continue;
+    if (seen.has(playerId)) {
+      return `${seen.get(playerId)} and ${slotLabel[slot]} must be different`;
+    }
+    seen.set(playerId, slotLabel[slot]);
+  }
+  return null;
+};
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/games
 // Query params: season_id, team_id (home OR away), game_type, status
@@ -1609,6 +1630,9 @@ router.put('/:id/lineup', async (req, res) => {
     for (const { position_slot, player_id } of slots) {
       slotMap[position_slot] = player_id || null;
     }
+
+    const lineupError = validateLineupPlayers(slotMap);
+    if (lineupError) return res.status(400).json({ error: lineupError });
 
     const centerId    = slotMap['C']  ?? null;
     const leftWingId  = slotMap['LW'] ?? null;

@@ -720,6 +720,29 @@ describe('POST /api/admin/games/:id/roster', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PUT /api/admin/games/:id/lineup
+// ---------------------------------------------------------------------------
+describe('PUT /api/admin/games/:id/lineup', () => {
+  it('returns 400 when the same player is used in multiple starting lineup slots', async () => {
+    const res = await request(app).put('/api/admin/games/game-1/lineup').send({
+      team_id: 'team-1',
+      slots: [
+        { position_slot: 'C', player_id: 'player-1' },
+        { position_slot: 'LW', player_id: 'player-1' },
+        { position_slot: 'RW', player_id: 'player-2' },
+        { position_slot: 'D1', player_id: 'player-3' },
+        { position_slot: 'D2', player_id: 'player-4' },
+        { position_slot: 'G', player_id: 'player-5' },
+      ],
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/center_id and left_wing_id must be different/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/:id/goalie-stats
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/games/:id/goalie-stats', () => {

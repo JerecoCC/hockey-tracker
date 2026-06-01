@@ -73,6 +73,27 @@ const SLOT_LABEL: Record<LineupPositionSlot, string> = {
   G: 'Goalie',
 };
 
+const duplicateLineupPlayerError = (draft: Draft) => {
+  const playerSlots = new Map<string, LineupPositionSlot[]>();
+  (Object.keys(draft) as LineupPositionSlot[]).forEach((slot) => {
+    const playerId = draft[slot];
+    if (!playerId) return;
+    const slots = playerSlots.get(playerId) ?? [];
+    slots.push(slot);
+    playerSlots.set(playerId, slots);
+  });
+
+  for (const slots of playerSlots.values()) {
+    if (slots.length > 1) {
+      return `A player cannot be used in multiple starting lineup slots (${slots
+        .map((slot) => SLOT_LABEL[slot])
+        .join(', ')})`;
+    }
+  }
+
+  return null;
+};
+
 const SetLineupModal = ({
   open,
   onClose,
@@ -90,6 +111,7 @@ const SetLineupModal = ({
   const hasChanges = (Object.keys(draft) as LineupPositionSlot[]).some(
     (slot) => draft[slot] !== savedDraft[slot],
   );
+  const duplicateError = duplicateLineupPlayerError(draft);
 
   // Sync draft from existing lineup when modal opens or lineup data changes
   useEffect(() => {
@@ -109,6 +131,7 @@ const SetLineupModal = ({
 
   const handleSave = async () => {
     if (!allFilled) return;
+    if (duplicateError) return;
     setSaving(true);
     const slots = (Object.keys(draft) as LineupPositionSlot[]).map((slot) => ({
       position_slot: slot,
@@ -173,7 +196,7 @@ const SetLineupModal = ({
             icon="set_lineup"
             onClick={handleSave}
             type="button"
-            disabled={saving || !allFilled || !hasChanges}
+            disabled={saving || !allFilled || !hasChanges || !!duplicateError}
             className={styles.footerSave}
           >
             {saving ? 'Saving…' : 'Save Lineup'}
@@ -196,6 +219,7 @@ const SetLineupModal = ({
         {/* Goalie — spans both columns */}
         <div className={styles.spanFull}>{slotSelect('G', SLOT_LABEL.G)}</div>
       </div>
+      {duplicateError && <p className={styles.error}>{duplicateError}</p>}
     </Modal>
   );
 };

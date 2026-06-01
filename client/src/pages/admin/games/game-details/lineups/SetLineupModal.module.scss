@@ -27,6 +27,12 @@
   color: $text-dim;
 }
 
+.error {
+  margin: $space-md 0 0;
+  font-size: $font-sm;
+  color: $danger;
+}
+
 .footerActions {
   display: flex;
   align-items: center;
