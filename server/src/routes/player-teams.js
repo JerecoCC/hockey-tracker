@@ -7,7 +7,17 @@ router.use(requireAdmin);
 
 const { playerTeams, teams } = schema;
 
-const ACQUISITION_TYPES = new Set(['draft', 'trade', 'free_agency', 'waivers', 'signing', 'call_up', 'loan', 'other']);
+const ACQUISITION_TYPES = new Set([
+  'draft',
+  'trade',
+  'free_agency',
+  'waivers',
+  'signing',
+  'expansion_draft',
+  'team_transfer',
+  'loan',
+  'other',
+]);
 const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
 const isValidAcquisitionType = (value) => value == null || ACQUISITION_TYPES.has(value);
 const hasPlayerTeamsAcquisitionType = async () => {

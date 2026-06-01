@@ -71,7 +71,12 @@ interface Props {
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
   lineup: LineupEntry[];
-  getPlayerHref?: (teamId: string, playerId: string) => string;
+  getPlayerHref?: (
+    teamId: string,
+    playerId: string,
+    firstName: string | null | undefined,
+    lastName: string | null | undefined,
+  ) => string;
   isFinal: boolean;
   isInProgress?: boolean;
   onSwitchGoalie?: () => void;
@@ -175,7 +180,12 @@ const GoalieStatsCard = ({
                     ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                     : '1.000';
                 const windows = stintLabels(stat);
-                const playerHref = getPlayerHref?.(goalie.team_id, goalie.player_id);
+                const playerHref = getPlayerHref?.(
+                  goalie.team_id,
+                  goalie.player_id,
+                  goalie.first_name,
+                  goalie.last_name,
+                );
                 return (
                   <tr
                     key={goalie.player_id}

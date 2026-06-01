@@ -22,6 +22,7 @@ import { type CreateSeasonData } from '@/hooks/useSeasons';
 import Select from '@/components/Select/Select';
 import useBracketRuleSets, { type BracketSlotRule } from '@/hooks/useBracketRuleSets';
 import useSeasonStandings from '@/hooks/useSeasonStandings';
+import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import BracketRulesModal, {
   type BracketStructure,
   deriveBracketStructureFromSize,
@@ -434,7 +435,9 @@ interface BracketSlotProps {
   series: PlayoffSeriesRecord | null;
   busy: string | null;
   leagueId: string;
+  leagueCode: string | null | undefined;
   seasonId: string;
+  seasonName: string | null | undefined;
   /** Simulated team name for Team 1 (home ice). Only shown when series is null. */
   simulatedTeam1?: string | null;
   /** Simulated team name for Team 2. Only shown when series is null. */
@@ -454,7 +457,9 @@ const BracketSlot = ({
   series,
   busy,
   leagueId,
+  leagueCode,
   seasonId,
+  seasonName,
   simulatedTeam1,
   simulatedTeam2,
   canAdvance = false,
@@ -504,7 +509,17 @@ const BracketSlot = ({
   const awayWon = series.winner_team_id === series.away_team_id;
   const isComplete = series.status === 'complete';
 
-  const gameBase = `/admin/leagues/${leagueId}/seasons/${seasonId}/games`;
+  const gameHref = (gameId: string) =>
+    buildGameDetailsPath({
+      leagueCode,
+      leagueId,
+      seasonName,
+      seasonId,
+      gameId,
+      awayTeamCode: series?.away_team_code,
+      homeTeamCode: series?.home_team_code,
+      scheduledAt: series?.games.find((game) => game.id === gameId)?.scheduled_at,
+    });
 
   // Returns win games (0-indexed) for a given team, sorted by game number.
   const winGamesFor = (teamId: string): SeriesGame[] =>
@@ -557,7 +572,7 @@ const BracketSlot = ({
               content={makeDotTooltip(game)}
             >
               <Link
-                to={`${gameBase}/${game.id}`}
+                to={gameHref(game.id)}
                 className={cls}
               >
                 <Icon
@@ -672,6 +687,8 @@ const BracketSlot = ({
 interface Props {
   seasonId: string;
   leagueId: string;
+  leagueCode: string | null | undefined;
+  seasonName: string | null | undefined;
   bracketRuleSetId: string | null;
   groups: SeasonGroupRecord[];
   isEnded: boolean;
@@ -690,6 +707,8 @@ interface Props {
 const SeasonPlayoffsTab = ({
   seasonId,
   leagueId,
+  leagueCode,
+  seasonName,
   bracketRuleSetId,
   groups,
   isEnded,
@@ -1083,7 +1102,9 @@ const SeasonPlayoffsTab = ({
                               series={s}
                               busy={seriesBusy}
                               leagueId={leagueId}
+                              leagueCode={leagueCode}
                               seasonId={seasonId}
+                              seasonName={seasonName}
                               simulatedTeam1={
                                 simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
                               }

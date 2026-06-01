@@ -12,6 +12,7 @@ import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type LeagueTeam, type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
+import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import SeasonTeamOverrideModal from './SeasonTeamOverrideModal';
 import styles from './SeasonDetails.module.scss';
 
@@ -264,6 +265,7 @@ const GroupFormModal = ({
 interface GroupNodeProps {
   group: SeasonGroupRecord;
   allGroups: SeasonGroupRecord[];
+  leagueCode: string | null | undefined;
   seasonBusy: string | null;
   groupBusy: string | null;
   isEnded: boolean;
@@ -278,6 +280,7 @@ interface GroupNodeProps {
 const GroupNode = ({
   group,
   allGroups,
+  leagueCode,
   seasonBusy,
   groupBusy,
   isEnded,
@@ -377,7 +380,12 @@ const GroupNode = ({
                 rightContent={{ type: 'code', value: t.code }}
                 primaryColor={t.primary_color}
                 textColor={t.text_color}
-                href={`/admin/leagues/${group.league_id}/teams/${t.id}`}
+                href={buildTeamDetailsPath({
+                  leagueCode,
+                  leagueId: group.league_id,
+                  teamCode: t.code,
+                  teamId: t.id,
+                })}
               />
             ))}
           </ul>
@@ -393,6 +401,7 @@ const GroupNode = ({
                   key={child.id}
                   group={child}
                   allGroups={allGroups}
+                  leagueCode={leagueCode}
                   seasonBusy={seasonBusy}
                   groupBusy={groupBusy}
                   isEnded={isEnded}
@@ -418,6 +427,7 @@ interface Props {
   seasonTeams: SeasonTeam[];
   groups: SeasonGroupRecord[];
   leagueTeams: LeagueTeam[];
+  leagueCode: string | null | undefined;
   loading: boolean;
   busy: string | null;
   groupBusy: string | null;
@@ -440,6 +450,7 @@ const SeasonTeamsCard = ({
   seasonTeams,
   groups,
   leagueTeams,
+  leagueCode,
   loading,
   busy,
   groupBusy,
@@ -544,7 +555,12 @@ const SeasonTeamsCard = ({
                       rightContent={{ type: 'code', value: t.code }}
                       primaryColor={t.primary_color}
                       textColor={t.text_color}
-                      href={`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`}
+                      href={buildTeamDetailsPath({
+                        leagueCode,
+                        leagueId: autoGroup!.league_id,
+                        teamCode: t.code,
+                        teamId: t.id,
+                      })}
                       actions={
                         [
                           {
@@ -552,7 +568,14 @@ const SeasonTeamsCard = ({
                             intent: 'neutral',
                             tooltip: 'View team',
                             onClick: () =>
-                              navigate(`/admin/leagues/${autoGroup!.league_id}/teams/${t.id}`),
+                              navigate(
+                                buildTeamDetailsPath({
+                                  leagueCode,
+                                  leagueId: autoGroup!.league_id,
+                                  teamCode: t.code,
+                                  teamId: t.id,
+                                }),
+                              ),
                           },
                           !isEnded && {
                             icon: 'remove_circle_outline',
@@ -578,6 +601,7 @@ const SeasonTeamsCard = ({
                       key={g.id}
                       group={g}
                       allGroups={userGroups}
+                      leagueCode={leagueCode}
                       seasonBusy={busy}
                       groupBusy={groupBusy}
                       isEnded={isEnded}

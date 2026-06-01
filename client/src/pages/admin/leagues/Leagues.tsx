@@ -4,6 +4,7 @@ import Button from '@/components/Button/Button';
 import Table, { Column } from '@/components/Table/Table';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
+import { buildLeagueDetailsPath } from '@/lib/routeSlugs';
 import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
 import Card from '@/components/Card/Card';
@@ -160,7 +161,9 @@ const LeaguesPage = () => {
           activeSortKey={sortKey}
           sortDir={sortDir}
           onSort={handleSort}
-          onRowClick={(l) => navigate(`/admin/leagues/${l.id}`)}
+          onRowClick={(l) =>
+            navigate(buildLeagueDetailsPath({ leagueCode: l.code, leagueId: l.id }))
+          }
         />
       </Card>
 

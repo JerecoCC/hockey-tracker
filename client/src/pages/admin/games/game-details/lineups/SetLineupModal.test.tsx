@@ -205,6 +205,27 @@ describe('SetLineupModal – Save button', () => {
     expect(screen.getByRole('button', { name: /save lineup/i })).not.toBeDisabled();
   });
 
+  it('"Save Lineup" button is disabled when a player is selected in multiple slots', async () => {
+    render(<SetLineupModal {...defaultProps} />);
+    const selects = screen.getAllByRole('combobox');
+    fireEvent.change(selects[0], { target: { value: 'c1' } });
+    fireEvent.change(selects[1], { target: { value: 'c1' } });
+    fireEvent.change(selects[2], { target: { value: 'rw1' } });
+    fireEvent.change(selects[3], { target: { value: 'd1' } });
+    fireEvent.change(selects[4], { target: { value: 'd2' } });
+    fireEvent.change(selects[5], { target: { value: 'g1' } });
+
+    expect(screen.getByText(/cannot be used in multiple/i)).toHaveTextContent(
+      'A player cannot be used in multiple starting lineup slots (Center, Left Wing)',
+    );
+    expect(screen.getByRole('button', { name: /save lineup/i })).toBeDisabled();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /save lineup/i }));
+    });
+    expect(defaultProps.saveTeamLineup).not.toHaveBeenCalled();
+  });
+
   it('calls saveTeamLineup with correct args when Save is clicked', async () => {
     render(<SetLineupModal {...defaultProps} />);
     const selects = screen.getAllByRole('combobox');

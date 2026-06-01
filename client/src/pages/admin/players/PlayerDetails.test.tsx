@@ -4,6 +4,7 @@ import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
   usePlayerGameLogs,
   usePlayerLastFiveGames,
+  usePlayerRouteLookup,
 } from '@/hooks/usePlayerDetails';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useSeasons from '@/hooks/useSeasons';
@@ -24,7 +25,11 @@ jest.mock('@tanstack/react-query', () => ({
 }));
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  useParams: () => ({ leagueId: 'league-1', teamId: 'team-1', id: 'player-1' }),
+  useParams: () => ({
+    leagueCode: 'nhl',
+    teamCode: 'tor',
+    playerSlug: 'john-smith',
+  }),
 }));
 jest.mock('@/hooks/usePlayerDetails', () => ({
   __esModule: true,
@@ -32,6 +37,7 @@ jest.mock('@/hooks/usePlayerDetails', () => ({
   usePlayerCurrentSeasonStats: jest.fn(),
   usePlayerGameLogs: jest.fn(),
   usePlayerLastFiveGames: jest.fn(),
+  usePlayerRouteLookup: jest.fn(),
 }));
 jest.mock('@/hooks/useTeamDetails', () => jest.fn());
 jest.mock('@/hooks/useSeasons', () => jest.fn());
@@ -92,6 +98,7 @@ const mockUsePlayerDetails = usePlayerDetails as jest.Mock;
 const mockUsePlayerCurrentSeasonStats = usePlayerCurrentSeasonStats as jest.Mock;
 const mockUsePlayerGameLogs = usePlayerGameLogs as jest.Mock;
 const mockUsePlayerLastFiveGames = usePlayerLastFiveGames as jest.Mock;
+const mockUsePlayerRouteLookup = usePlayerRouteLookup as jest.Mock;
 const mockUseTeamDetails = useTeamDetails as jest.Mock;
 const mockUseSeasons = useSeasons as jest.Mock;
 const mockUseTeams = useTeams as jest.Mock;
@@ -121,7 +128,19 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  document.title = 'Hockey Tracker';
   mockUseTabState.mockReturnValue([0, jest.fn()]);
+  mockUsePlayerRouteLookup.mockReturnValue({
+    routeLookup: {
+      player_id: 'player-1',
+      team_id: 'team-1',
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: 'TOR',
+      player_slug: 'john-smith',
+    },
+    loading: false,
+  });
   mockUsePlayerDetails.mockReturnValue({
     player: {
       id: 'player-1',
@@ -210,6 +229,16 @@ beforeEach(() => {
 });
 
 describe('PlayerDetails info tab', () => {
+  it("sets the browser title to the player's full name", () => {
+    const { unmount } = render(<PlayerDetails />);
+
+    expect(document.title).toBe('John Smith');
+
+    unmount();
+
+    expect(document.title).toBe('Hockey Tracker');
+  });
+
   it('renders the titled player info card and the latest played season stat cards', () => {
     const { container } = render(<PlayerDetails />);
 

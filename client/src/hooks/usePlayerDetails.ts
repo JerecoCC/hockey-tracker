@@ -120,6 +120,47 @@ export interface PlayerGameLogsResponse {
   total: number;
 }
 
+export interface PlayerRouteLookup {
+  player_id: string;
+  team_id: string;
+  league_id: string;
+  league_code: string;
+  team_code: string;
+  player_slug: string;
+}
+
+export const usePlayerRouteLookup = (
+  leagueCode: string | null | undefined,
+  teamCode: string | null | undefined,
+  playerSlug: string | null | undefined,
+  enabled = true,
+) => {
+  const { data: routeLookup = null, isLoading: loading } = useQuery<PlayerRouteLookup | null>({
+    queryKey: ['player-route-lookup', leagueCode, teamCode, playerSlug],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayerRouteLookup>(
+          `${API}/admin/players/route-lookup`,
+          {
+            headers: authHeaders(),
+            params: {
+              league_code: leagueCode,
+              team_code: teamCode,
+              player_slug: playerSlug,
+            },
+          },
+        );
+        return data;
+      } catch {
+        toast.error('Failed to find player route');
+        return null;
+      }
+    },
+    enabled: enabled && !!leagueCode && !!teamCode && !!playerSlug,
+  });
+  return { routeLookup, loading };
+};
+
 export const usePlayerCurrentSeasonStats = (playerId: string | null | undefined) => {
   const { data: currentSeasonStats = null, isLoading: loading } =
     useQuery<PlayerCurrentSeasonStats | null>({

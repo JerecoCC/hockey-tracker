@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -18,6 +18,7 @@ import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
   usePlayerGameLogs,
   usePlayerLastFiveGames,
+  usePlayerRouteLookup,
   type PlayerCareerStatRecord,
   type PlayerCurrentSeasonStatBlock,
   type PlayerLastFiveGameRecord,
@@ -35,6 +36,13 @@ import {
 } from '@/hooks/useTeamPlayers';
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
+import {
+  buildGameDetailsPath,
+  buildLeagueDetailsPath,
+  buildPlayerDetailsPath,
+  buildTeamDetailsPath,
+  toRouteSlug,
+} from '@/lib/routeSlugs';
 import TeamPlayerEditModal from '../teams/TeamPlayerEditModal';
 import MovePlayerModal from '../teams/MovePlayerModal';
 import StintEditModal, { ACQUISITION_TYPE_LABELS } from './StintEditModal';
@@ -46,6 +54,7 @@ import styles from './PlayerDetails.module.scss';
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const GAME_LOG_PAGE_SIZE = 20;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
@@ -257,8 +266,23 @@ const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
-  const { id, leagueId, teamId } = useParams<{ id: string; leagueId: string; teamId: string }>();
-  const { player, stats, loading } = usePlayerDetails(id);
+  const { leagueCode, teamCode: routeTeamCode, playerSlug } = useParams<{
+    leagueCode: string;
+    teamCode: string;
+    playerSlug: string;
+  }>();
+  const isLegacyIdRoute = !!playerSlug && UUID_PATTERN.test(playerSlug);
+  const { routeLookup, loading: routeLookupLoading } = usePlayerRouteLookup(
+    leagueCode,
+    routeTeamCode,
+    playerSlug,
+    !isLegacyIdRoute,
+  );
+  const id = isLegacyIdRoute ? playerSlug : routeLookup?.player_id;
+  const leagueId = isLegacyIdRoute ? leagueCode : routeLookup?.league_id;
+  const teamId = isLegacyIdRoute ? routeTeamCode : routeLookup?.team_id;
+  const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id);
+  const loading = routeLookupLoading || playerDetailsLoading;
   const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
   const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id);
   const { team: teamDetails } = useTeamDetails(teamId);
@@ -362,7 +386,15 @@ const PlayerDetailsPage = () => {
         queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
       ]);
 
-      navigate(`/admin/leagues/${leagueId}/teams/${toTeamId}/players/${playerId}`);
+      const toTeam = teams.find((team) => team.id === toTeamId);
+      navigate(
+        buildPlayerDetailsPath({
+          leagueCode,
+          teamCode: toTeam?.code ?? toTeamId,
+          firstName: player?.first_name,
+          lastName: player?.last_name,
+        }),
+      );
       return true;
     } catch (err) {
       const message =
@@ -376,7 +408,51 @@ const PlayerDetailsPage = () => {
 
   const latestStint = stints[0];
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
-  const teamHref = `/admin/leagues/${leagueId}/teams/${teamId}`;
+  const teamHref = buildTeamDetailsPath({
+    leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+    leagueId,
+    teamCode: teamDetails?.code ?? routeLookup?.team_code ?? routeTeamCode,
+    teamId,
+  });
+  const canonicalPlayerPath =
+    player && routeLookup
+      ? buildPlayerDetailsPath({
+          leagueCode: routeLookup.league_code,
+          teamCode: routeLookup.team_code,
+          firstName: player.first_name,
+          lastName: player.last_name,
+        })
+      : null;
+
+  useEffect(() => {
+    if (isLegacyIdRoute || !canonicalPlayerPath) return;
+    if (
+      toRouteSlug(leagueCode) === toRouteSlug(routeLookup?.league_code) &&
+      toRouteSlug(routeTeamCode) === toRouteSlug(routeLookup?.team_code) &&
+      playerSlug === routeLookup?.player_slug
+    ) {
+      return;
+    }
+    navigate(canonicalPlayerPath, { replace: true });
+  }, [
+    canonicalPlayerPath,
+    isLegacyIdRoute,
+    leagueCode,
+    navigate,
+    playerSlug,
+    routeLookup?.league_code,
+    routeLookup?.player_slug,
+    routeLookup?.team_code,
+    routeTeamCode,
+  ]);
+
+  useEffect(() => {
+    if (!player) return;
+    document.title = fullName;
+    return () => {
+      document.title = 'Hockey Tracker';
+    };
+  }, [player, fullName]);
 
   usePageBreadcrumbs(
     loading
@@ -385,7 +461,13 @@ const PlayerDetailsPage = () => {
           backPath: teamHref,
           backLabel: `Back to ${teamDetails?.name ?? 'Team'}`,
           items: [
-            { label: teamDetails?.league_name ?? '...', path: `/admin/leagues/${leagueId}` },
+            {
+              label: teamDetails?.league_name ?? '...',
+              path: buildLeagueDetailsPath({
+                leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+                leagueId,
+              }),
+            },
             {
               label: latestStint?.team.name ?? teamDetails?.name ?? '...',
               path: teamHref,
@@ -621,7 +703,18 @@ const PlayerDetailsPage = () => {
         loading={lastFiveGamesLoading}
         emptyMessage="No recent games recorded yet."
         onRowClick={(row) =>
-          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+          navigate(
+            buildGameDetailsPath({
+              leagueCode: routeLookup?.league_code ?? leagueCode,
+              leagueId,
+              seasonName: row.season_name,
+              seasonId: row.season_id,
+              gameId: row.game_id,
+              awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
+              homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
+              scheduledAt: row.scheduled_at,
+            }),
+          )
         }
       />
     </Card>
@@ -666,7 +759,18 @@ const PlayerDetailsPage = () => {
         loading={gameLogsLoading}
         emptyMessage="No game logs found."
         onRowClick={(row) =>
-          navigate(`/admin/leagues/${leagueId}/seasons/${row.season_id}/games/${row.game_id}`)
+          navigate(
+            buildGameDetailsPath({
+              leagueCode: routeLookup?.league_code ?? leagueCode,
+              leagueId,
+              seasonName: row.season_name,
+              seasonId: row.season_id,
+              gameId: row.game_id,
+              awayTeamCode: row.is_home ? row.opponent_code : row.team_code,
+              homeTeamCode: row.is_home ? row.team_code : row.opponent_code,
+              scheduledAt: row.scheduled_at,
+            }),
+          )
         }
       />
       <div className={styles.paginationBar}>

@@ -6,6 +6,7 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select from '@/components/Select/Select';
 import TimePicker from '@/components/TimePicker/TimePicker';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalRecord, type PostGoalData } from '@/hooks/useGameGoals';
@@ -153,6 +154,26 @@ const ScoreGoalModal = ({
       ? `Must be ${latestPeriodTime} or later`
       : null;
 
+  useEffect(() => {
+    if (!goalAssist1Id && goalAssist2Id) {
+      setValue('goalAssist2Id', '', { shouldDirty: true });
+    }
+  }, [goalAssist1Id, goalAssist2Id, setValue]);
+
+  const duplicateParticipantError =
+    goalScorerId && goalAssist1Id && goalScorerId === goalAssist1Id
+      ? 'Scorer and 1st assist must be different players'
+      : goalScorerId && goalAssist2Id && goalScorerId === goalAssist2Id
+        ? 'Scorer and 2nd assist must be different players'
+        : goalAssist1Id && goalAssist2Id && goalAssist1Id === goalAssist2Id
+          ? '1st and 2nd assists must be different players'
+          : null;
+
+  const assistOrderError =
+    !goalAssist1Id && goalAssist2Id ? 'Add a 1st assist before adding a 2nd assist' : null;
+
+  const goalParticipantError = duplicateParticipantError ?? assistOrderError;
+
   const teamRoster = goalTeam === 'away' ? awayRoster : goalTeam === 'home' ? homeRoster : [];
   const playerOptions = teamRoster.map((e) => ({
     value: e.player_id,
@@ -187,6 +208,7 @@ const ScoreGoalModal = ({
 
   const handleConfirm = handleSubmit(async (values) => {
     if (!values.goalTeam) return;
+    if (goalParticipantError) return;
     const teamId = values.goalTeam === 'away' ? game.away_team.id : game.home_team.id;
     const payload: PostGoalData = {
       team_id: teamId,
@@ -225,6 +247,7 @@ const ScoreGoalModal = ({
         !goalScorerId ||
         otGoalExists ||
         !!periodTimeError ||
+        !!goalParticipantError ||
         (!!editGoal && !isDirty)
       }
       busy={submitting}
@@ -275,44 +298,48 @@ const ScoreGoalModal = ({
           {goalType !== 'own' && !goalPenaltyShot && (
             <div className={styles.goalFormField}>
               <label className={styles.goalFormLabel}>EN</label>
-              <button
-                type="button"
-                className={[styles.emptyNetToggle, goalEmptyNet ? styles.emptyNetToggleOn : '']
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() =>
-                  setValue('goalEmptyNet', !goalEmptyNet, { shouldDirty: true })
-                }
-                disabled={submitting}
-                title="Empty Net"
-              >
-                <Icon
-                  name={goalEmptyNet ? 'check_box' : 'check_box_outline_blank'}
-                  size="1.25rem"
-                />
-              </button>
+              <Tooltip text="Empty Net">
+                <button
+                  type="button"
+                  className={[styles.emptyNetToggle, goalEmptyNet ? styles.emptyNetToggleOn : '']
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() =>
+                    setValue('goalEmptyNet', !goalEmptyNet, { shouldDirty: true })
+                  }
+                  disabled={submitting}
+                  aria-label="Empty Net"
+                >
+                  <Icon
+                    name={goalEmptyNet ? 'check_box' : 'check_box_outline_blank'}
+                    size="1.25rem"
+                  />
+                </button>
+              </Tooltip>
             </div>
           )}
           {goalType !== 'own' && (
             <div className={styles.goalFormField}>
               <label className={styles.goalFormLabel}>PS</label>
-              <button
-                type="button"
-                className={[styles.emptyNetToggle, goalPenaltyShot ? styles.emptyNetToggleOn : '']
-                  .filter(Boolean)
-                  .join(' ')}
-                onClick={() => {
-                  setValue('goalPenaltyShot', !goalPenaltyShot, { shouldDirty: true });
-                  setValue('goalEmptyNet', false, { shouldDirty: true });
-                }}
-                disabled={submitting}
-                title="Penalty Shot"
-              >
-                <Icon
-                  name={goalPenaltyShot ? 'check_box' : 'check_box_outline_blank'}
-                  size="1.25rem"
-                />
-              </button>
+              <Tooltip text="Penalty Shot">
+                <button
+                  type="button"
+                  className={[styles.emptyNetToggle, goalPenaltyShot ? styles.emptyNetToggleOn : '']
+                    .filter(Boolean)
+                    .join(' ')}
+                  onClick={() => {
+                    setValue('goalPenaltyShot', !goalPenaltyShot, { shouldDirty: true });
+                    setValue('goalEmptyNet', false, { shouldDirty: true });
+                  }}
+                  disabled={submitting}
+                  aria-label="Penalty Shot"
+                >
+                  <Icon
+                    name={goalPenaltyShot ? 'check_box' : 'check_box_outline_blank'}
+                    size="1.25rem"
+                  />
+                </button>
+              </Tooltip>
             </div>
           )}
         </div>
@@ -349,10 +376,13 @@ const ScoreGoalModal = ({
               placeholder="— Optional —"
               onChange={(value) => setValue('goalAssist2Id', value ?? '', { shouldDirty: true })}
               searchable
-              disabled={submitting || !goalTeam}
+              disabled={submitting || !goalTeam || !goalAssist1Id}
             />
           </div>
         </div>
+        {goalParticipantError && (
+          <span className={styles.goalFormError}>{goalParticipantError}</span>
+        )}
       </div>
     </Modal>
   );

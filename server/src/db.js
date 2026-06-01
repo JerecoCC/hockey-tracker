@@ -374,9 +374,10 @@ async function initSchema() {
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS acquisition_type TEXT`;
   await sql`ALTER TABLE player_teams ADD COLUMN IF NOT EXISTS is_prospect BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_acquisition_type_check`;
+  await sql`ALTER TABLE player_teams DROP CONSTRAINT IF EXISTS player_teams_check`;
   await sql`
     ALTER TABLE player_teams ADD CONSTRAINT player_teams_acquisition_type_check
-    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'call_up', 'loan', 'other'))
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
   `;
 
   // Player photos are one per player/team/season. They are intentionally
@@ -1297,6 +1298,29 @@ async function initSchema() {
       name       TEXT PRIMARY KEY,
       applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  // Player acquisition type backfill
+  // One-time player acquisition type backfill for older roster data.
+  // The values remain valid for future use; this only reclassifies existing rows
+  // that were recorded before Expansion Draft and Team Transfer were available.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_player_team_acquisition_types_v1'
+      ) THEN
+        UPDATE player_teams
+        SET acquisition_type = CASE acquisition_type
+          WHEN 'other' THEN 'expansion_draft'
+          WHEN 'loan' THEN 'team_transfer'
+          ELSE acquisition_type
+        END
+        WHERE acquisition_type IN ('other', 'loan');
+
+        INSERT INTO _migrations (name) VALUES ('backfill_player_team_acquisition_types_v1');
+      END IF;
+    END $$
   `;
 
   // ── Swap home/away on existing scheduled playoff games ────────────────────

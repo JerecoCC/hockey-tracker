@@ -135,6 +135,9 @@ const ShootoutAccordion = ({
   const leftInfo = awayShootsFirst ? firstTeamInfo : secondTeamInfo;
   const rightInfo = awayShootsFirst ? secondTeamInfo : firstTeamInfo;
   const orderedAttempts = [...attempts].sort((a, b) => a.attempt_order - b.attempt_order);
+  const visibleAttemptRowCount = isSOActive
+    ? Math.max(orderedAttempts.length, roundCount * 2)
+    : orderedAttempts.length;
   const awayPreShootoutScore = goals.filter((goal) => goal.team_id === game.away_team.id).length;
   const homePreShootoutScore = goals.filter((goal) => goal.team_id === game.home_team.id).length;
 
@@ -302,6 +305,31 @@ const ShootoutAccordion = ({
 
   const renderAttemptSpacer = () => <div className={styles.soAttemptSpacer} />;
 
+  const renderAttemptRow = (attempt: ShootoutAttempt | undefined, index: number) => {
+    const expectedSide =
+      index % 2 === 0 ? firstSide : firstSide === 'away' ? 'home' : 'away';
+    const side = attempt
+      ? attempt.team_id === game.away_team.id
+        ? 'away'
+        : 'home'
+      : expectedSide;
+    const teamInfo = side === 'away' ? leftInfo : rightInfo;
+
+    return (
+      <div
+        key={attempt?.id ?? `empty-${index}`}
+        className={styles.soAttemptRow}
+      >
+        {side === 'away'
+          ? renderAttemptCell(attempt, teamInfo, 'away')
+          : renderAttemptSpacer()}
+        {side === 'away'
+          ? renderAttemptSpacer()
+          : renderAttemptCell(attempt, teamInfo, 'home')}
+      </div>
+    );
+  };
+
   const renderShootoutWinner = () => {
     if (!shootoutWinnerAttempt) return null;
     const isAwayWinner = shootoutWinnerAttempt.team_id === game.away_team.id;
@@ -449,32 +477,9 @@ const ShootoutAccordion = ({
               <span>{rightInfo.code}</span>
             </div>
           </div>
-          {orderedAttempts.length === 0
-            ? Array.from({ length: roundCount }, (_, i) => (
-                <div
-                  key={i}
-                  className={styles.soAttemptRow}
-                >
-                  {renderAttemptCell(undefined, leftInfo, 'away')}
-                  {renderAttemptCell(undefined, rightInfo, 'home')}
-                </div>
-              ))
-            : orderedAttempts.map((attempt) => {
-                const isAwayAttempt = attempt.team_id === game.away_team.id;
-                return (
-                  <div
-                    key={attempt.id}
-                    className={styles.soAttemptRow}
-                  >
-                    {isAwayAttempt
-                      ? renderAttemptCell(attempt, leftInfo, 'away')
-                      : renderAttemptSpacer()}
-                    {isAwayAttempt
-                      ? renderAttemptSpacer()
-                      : renderAttemptCell(attempt, rightInfo, 'home')}
-                  </div>
-                );
-              })}
+          {Array.from({ length: visibleAttemptRowCount }, (_, index) =>
+            renderAttemptRow(orderedAttempts[index], index),
+          )}
         </div>
       )}
     </Accordion>

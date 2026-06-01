@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import type { GameRecord } from './useGames';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -27,6 +28,59 @@ const sortGoals = (goals: GoalRecord[]) =>
     const periodDiff = goalPeriodOrder(a.period) - goalPeriodOrder(b.period);
     if (periodDiff !== 0) return periodDiff;
     return new Date(a.created_at).getTime() - new Date(b.created_at).getTime();
+  });
+
+const periodScoresFromGoals = (goals: GoalRecord[], game: GameRecord) => {
+  const periodOrder = new Map<string, number>();
+  game.period_scores.forEach((score, index) => periodOrder.set(score.period, index));
+
+  const scores = new Map<string, { period: string; home_goals: number; away_goals: number }>();
+  game.period_scores.forEach((score) => {
+    scores.set(score.period, { ...score, home_goals: 0, away_goals: 0 });
+  });
+
+  for (const goal of goals) {
+    const current = scores.get(goal.period) ?? {
+      period: goal.period,
+      home_goals: 0,
+      away_goals: 0,
+    };
+    if (goal.team_id === game.home_team.id) current.home_goals += 1;
+    if (goal.team_id === game.away_team.id) current.away_goals += 1;
+    scores.set(goal.period, current);
+  }
+
+  return [...scores.values()].sort(
+    (a, b) =>
+      (periodOrder.get(a.period) ?? goalPeriodOrder(a.period)) -
+      (periodOrder.get(b.period) ?? goalPeriodOrder(b.period)),
+  );
+};
+
+const applyGoalsToGameCache = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  gameId: string,
+  goals: GoalRecord[],
+) => {
+  queryClient.setQueryData<GameRecord | null>(['games', gameId], (game) => {
+    if (!game) return game;
+    const period_scores = periodScoresFromGoals(goals, game);
+    return {
+      ...game,
+      period_scores,
+      home_score: period_scores.reduce((sum, score) => sum + score.home_goals, 0),
+      away_score: period_scores.reduce((sum, score) => sum + score.away_goals, 0),
+    };
+  });
+};
+
+const invalidateGameListQueries = (queryClient: ReturnType<typeof useQueryClient>) =>
+  queryClient.invalidateQueries({
+    predicate: (query) =>
+      query.queryKey[0] === 'games' &&
+      query.queryKey.length === 2 &&
+      typeof query.queryKey[1] === 'object' &&
+      query.queryKey[1] !== null,
   });
 
 // ── Types ────────────────────────────────────────────────────────────────────
@@ -117,12 +171,16 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         data,
         { headers: authHeaders() },
       );
-      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) =>
-        sortGoals([...current.filter((goal) => goal.id !== response.data.id), response.data]),
-      );
-      // Also refresh the game record so period scores update in the scoreboard.
-      await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      let nextGoals: GoalRecord[] = [];
+      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) => {
+        nextGoals = sortGoals([
+          ...current.filter((goal) => goal.id !== response.data.id),
+          response.data,
+        ]);
+        return nextGoals;
+      });
+      applyGoalsToGameCache(queryClient, gameId, nextGoals);
+      await invalidateGameListQueries(queryClient);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record goal'));
@@ -138,11 +196,13 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         data,
         { headers: authHeaders() },
       );
-      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) =>
-        sortGoals(current.map((goal) => (goal.id === goalId ? response.data : goal))),
-      );
-      await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      let nextGoals: GoalRecord[] = [];
+      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) => {
+        nextGoals = sortGoals(current.map((goal) => (goal.id === goalId ? response.data : goal)));
+        return nextGoals;
+      });
+      applyGoalsToGameCache(queryClient, gameId, nextGoals);
+      await invalidateGameListQueries(queryClient);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update goal'));
@@ -157,12 +217,13 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         `${API}/admin/games/${gameId}/goals/${goalId}`,
         { headers: authHeaders() },
       );
-      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) =>
-        current.filter((goal) => goal.id !== goalId),
-      );
-      // Refresh game so period scores and totals recalculate.
-      await queryClient.invalidateQueries({ queryKey: ['games', gameId] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      let nextGoals: GoalRecord[] = [];
+      queryClient.setQueryData<GoalRecord[]>(['game-goals', gameId], (current = []) => {
+        nextGoals = current.filter((goal) => goal.id !== goalId);
+        return nextGoals;
+      });
+      applyGoalsToGameCache(queryClient, gameId, nextGoals);
+      await invalidateGameListQueries(queryClient);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete goal'));

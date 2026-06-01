@@ -316,7 +316,7 @@ describe('TeamGamesTab', () => {
     await user.click(screen.getByLabelText('Open game vs Away Team'));
 
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin/leagues/league-1/seasons/season-1/games/game-home',
+      '/admin/leagues/league-1/seasons/season-1/games/06-05-2026/awy-vs-hom',
     );
   });
 

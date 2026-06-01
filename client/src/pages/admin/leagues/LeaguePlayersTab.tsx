@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Pagination from '@/components/Pagination/Pagination';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import { buildLeagueDetailsPath, buildPlayerDetailsPath } from '@/lib/routeSlugs';
 import SearchableList from '@/components/SearchableList/SearchableList';
 import Select from '@/components/Select/Select';
 import { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
@@ -22,6 +23,7 @@ const POSITION_LABELS: Record<string, string> = {
 
 interface Props {
   leagueId: string;
+  leagueCode: string | null | undefined;
   players: PlayerRecord[];
   total: number;
   page: number;
@@ -44,6 +46,7 @@ interface Props {
 
 const LeaguePlayersTab = ({
   leagueId,
+  leagueCode,
   players,
   total,
   page,
@@ -161,8 +164,15 @@ const LeaguePlayersTab = ({
                               onClick: () =>
                                 navigate(
                                   p.team_id
-                                    ? `/admin/leagues/${leagueId}/teams/${p.team_id}/players/${p.id}`
-                                    : `/admin/leagues/${leagueId}`,
+                                    ? buildPlayerDetailsPath({
+                                        leagueCode,
+                                        leagueId,
+                                        teamCode: p.team_code,
+                                        teamId: p.team_id,
+                                        firstName: p.first_name,
+                                        lastName: p.last_name,
+                                      })
+                                    : buildLeagueDetailsPath({ leagueCode, leagueId }),
                                 ),
                             },
                             {

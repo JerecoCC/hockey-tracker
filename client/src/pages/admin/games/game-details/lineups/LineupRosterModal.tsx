@@ -27,6 +27,14 @@ const POSITION_LABELS: Record<string, string> = {
   G: 'Goalie',
 };
 
+const playerFullName = (player: Pick<TeamPlayerRecord, 'first_name' | 'last_name'>) =>
+  `${player.first_name} ${player.last_name}`.trim();
+
+type JerseyNotice = {
+  number: number;
+  name: string;
+};
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -59,7 +67,8 @@ const LineupRosterModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [jerseyInput, setJerseyInput] = useState('');
   const [pendingMissing, setPendingMissing] = useState<number[]>([]);
-  const [alreadyAdded, setAlreadyAdded] = useState<number[]>([]);
+  const [alreadyAdded, setAlreadyAdded] = useState<JerseyNotice[]>([]);
+  const [prospectMatches, setProspectMatches] = useState<JerseyNotice[]>([]);
   const [showProspects, setShowProspects] = useState(false);
   const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
 
@@ -130,17 +139,18 @@ const LineupRosterModal = ({
 
     const matched: string[] = [];
     const missing: number[] = [];
-    const inLineup: number[] = [];
+    const inLineup: JerseyNotice[] = [];
+    const prospects: JerseyNotice[] = [];
 
     for (const num of nums) {
-      const inAvailable = available.find((p) => p.jersey_number === num);
-      if (inAvailable) {
-        matched.push(inAvailable.id);
-      } else if (allPlayers.some((p) => p.jersey_number === num)) {
-        // Player exists on the team but is already in this lineup
-        inLineup.push(num);
-      } else {
+      const player = allPlayers.find((p) => p.jersey_number === num);
+      if (!player) {
         missing.push(num);
+      } else if (existingPlayerIds.has(player.id)) {
+        inLineup.push({ number: num, name: playerFullName(player) });
+      } else {
+        matched.push(player.id);
+        if (player.is_prospect) prospects.push({ number: num, name: playerFullName(player) });
       }
     }
 
@@ -153,6 +163,7 @@ const LineupRosterModal = ({
     }
     setPendingMissing(missing);
     setAlreadyAdded(inLineup);
+    setProspectMatches(prospects);
     setJerseyInput('');
   };
 
@@ -199,6 +210,7 @@ const LineupRosterModal = ({
     setJerseyInput('');
     setPendingMissing([]);
     setAlreadyAdded([]);
+    setProspectMatches([]);
     setShowProspects(false);
     setMovingPlayerId(null);
     onClose();
@@ -268,7 +280,19 @@ const LineupRosterModal = ({
                 name="info"
                 size="0.85em"
               />
-              Already in lineup: {alreadyAdded.map((n) => `#${n}`).join(', ')}
+              Already in lineup:{' '}
+              {alreadyAdded.map((p) => `#${p.number} ${p.name}`).join(', ')}
+            </p>
+          )}
+          {prospectMatches.length > 0 && (
+            <p className={styles.prospectNote}>
+              <Icon
+                name="info"
+                size="0.85em"
+              />
+              Prospect{prospectMatches.length !== 1 ? 's' : ''}:{' '}
+              {prospectMatches.map((p) => `#${p.number} ${p.name}`).join(', ')}
+              {' - will be moved to roster when added.'}
             </p>
           )}
           {pendingMissing.length > 0 && (

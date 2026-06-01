@@ -9,6 +9,7 @@ import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Select from '@/components/Select/Select';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
 import AddPlayersModal from './AddPlayersModal';
 import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
@@ -45,10 +46,12 @@ const ROSTER_SECTIONS = [
 interface Props {
   teamId: string;
   leagueId: string;
+  leagueCode: string | null;
+  teamCode: string | null;
   latestSeasonId: string | null;
 }
 
-const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
+const TeamRosterTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeasonId }: Props) => {
   const navigate = useNavigate();
   const { seasons: leagueSeasons } = useSeasons(leagueId);
   const currentSeason = leagueSeasons.find((s) => s.is_current);
@@ -145,7 +148,15 @@ const TeamRosterTab = ({ teamId, leagueId, latestSeasonId }: Props) => {
             icon: 'open_in_new',
             intent: 'neutral',
             tooltip: 'View player',
-            onClick: () => navigate(`/admin/leagues/${leagueId}/teams/${teamId}/players/${p.id}`),
+            onClick: () =>
+              navigate(
+                buildPlayerDetailsPath({
+                  leagueCode,
+                  teamCode,
+                  firstName: p.first_name,
+                  lastName: p.last_name,
+                }),
+              ),
           },
           {
             icon: 'edit',

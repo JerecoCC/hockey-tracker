@@ -9,6 +9,7 @@ import Tooltip from '@/components/Tooltip/Tooltip';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import useSeasons from '@/hooks/useSeasons';
 import GameListItem from '@/pages/admin/seasons/GameListItem';
+import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import seasonStyles from '@/pages/admin/seasons/SeasonGamesTab.module.scss';
 import styles from './TeamGamesTab.module.scss';
 
@@ -194,9 +195,10 @@ const TeamCalendarGame = ({
 interface Props {
   teamId: string;
   leagueId: string;
+  leagueCode?: string | null;
 }
 
-const TeamGamesTab = ({ teamId, leagueId }: Props) => {
+const TeamGamesTab = ({ teamId, leagueId, leagueCode }: Props) => {
   const navigate = useNavigate();
   const { seasons, loading: seasonsLoading } = useSeasons(leagueId);
   const [seasonId, setSeasonId] = useState<string>('');
@@ -267,7 +269,18 @@ const TeamGamesTab = ({ teamId, leagueId }: Props) => {
 
   const loading = seasonsLoading || gamesLoading;
   const openGame = (game: GameRecord) =>
-    navigate(`/admin/leagues/${leagueId}/seasons/${game.season_id}/games/${game.id}`);
+    navigate(
+      buildGameDetailsPath({
+        leagueCode: game.league_code ?? leagueCode,
+        leagueId,
+        seasonName: game.season_name,
+        seasonId: game.season_id,
+        gameId: game.id,
+        awayTeamCode: game.away_team.code,
+        homeTeamCode: game.home_team.code,
+        scheduledAt: game.scheduled_at,
+      }),
+    );
   const changeCalendarMonth = (value: string) => {
     if (!value) return;
     setCalendarMonth(fromMonthPickerValue(value));
@@ -321,7 +334,16 @@ const TeamGamesTab = ({ teamId, leagueId }: Props) => {
           {games.map((game) => (
             <GameListItem
               key={game.id}
-              href={`/admin/leagues/${leagueId}/seasons/${game.season_id}/games/${game.id}`}
+              href={buildGameDetailsPath({
+                leagueCode: game.league_code ?? leagueCode,
+                leagueId,
+                seasonName: game.season_name,
+                seasonId: game.season_id,
+                gameId: game.id,
+                awayTeamCode: game.away_team.code,
+                homeTeamCode: game.home_team.code,
+                scheduledAt: game.scheduled_at,
+              })}
               awayTeam={{
                 logo: game.away_team.logo,
                 code: game.away_team.code,
