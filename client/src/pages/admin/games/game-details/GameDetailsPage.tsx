@@ -10,6 +10,7 @@ import useGameRoster from '@/hooks/useGameRoster';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
+import { useAuth } from '@/context/AuthContext';
 import GameLineupsTab from './lineups/GameLineupsTab';
 import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
@@ -34,6 +35,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     id: string;
   }>();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const {
     game,
     loading,
@@ -68,6 +70,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   );
   const [isEditMode, setIsEditMode] = useState(false);
   const isAdminView = mode === 'admin';
+  const isAdminUser = user?.role === 'admin';
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -302,6 +305,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 isEditMode={isEditMode}
                 setIsEditMode={setIsEditMode}
                 editable={isAdminView}
+                showPlayerDataStatus={isAdminUser}
                 busy={busy}
                 leagueId={leagueId}
                 seasonId={seasonId ?? ''}
@@ -345,6 +349,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 game={game}
                 isEditMode={isEditMode}
                 readOnly={!isAdminView}
+                showPlayerDataStatus={isAdminUser}
                 isFinal={isFinal}
                 leagueId={leagueId}
                 seasonId={seasonId}

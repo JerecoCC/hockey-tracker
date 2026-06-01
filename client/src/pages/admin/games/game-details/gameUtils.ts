@@ -25,7 +25,10 @@ export const playerDataComplete = (
   dateOfBirth: string | null,
   startDate: string | null,
   acquisitionType: string | null,
+  isAdmin: boolean,
 ) => {
+  if (!isAdmin) return '';
+
   let emoji: string = '';
   if (dateOfBirth && startDate && acquisitionType) {
     emoji = ' ✅';

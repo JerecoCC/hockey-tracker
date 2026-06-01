@@ -43,6 +43,7 @@ interface Props {
   isEditMode: boolean;
   setIsEditMode: (value: boolean) => void;
   editable?: boolean;
+  showPlayerDataStatus?: boolean;
   busy: string | null;
   leagueId: string;
   seasonId: string;
@@ -90,6 +91,7 @@ const GameSummaryTab = ({
   isEditMode,
   setIsEditMode,
   editable = true,
+  showPlayerDataStatus = false,
   busy,
   leagueId,
   seasonId,
@@ -472,6 +474,7 @@ const GameSummaryTab = ({
                 roster={roster}
                 goalieStats={goalieStats}
                 playerGameStats={playerGameStats}
+                showPlayerDataStatus={showPlayerDataStatus}
                 getPlayerHref={
                   playerHrefBuilder
                     ? (teamId, playerId) => playerHrefBuilder(teamId, playerId)
@@ -524,6 +527,7 @@ const GameSummaryTab = ({
                     }
                   : undefined
               }
+              showPlayerDataStatus={showPlayerDataStatus}
             />
 
             {/* ── Goalie Stats card ── */}
@@ -545,6 +549,7 @@ const GameSummaryTab = ({
                 updateGoalieStint={editable ? updateGoalieStint : undefined}
                 removeGoalieStint={editable ? removeGoalieStint : undefined}
                 removeGoalieStat={editable ? removeGoalieStat : undefined}
+                showPlayerDataStatus={showPlayerDataStatus}
               />
             )}
 

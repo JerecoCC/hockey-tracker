@@ -34,6 +34,7 @@ interface Props {
   onEndGame?: () => void;
   /** When provided, shooter names become navigation links. */
   getPlayerHref?: (playerId: string) => string;
+  showPlayerDataStatus?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -54,6 +55,7 @@ const ShootoutAccordion = ({
   onDeleteAttempt,
   onEndGame,
   getPlayerHref,
+  showPlayerDataStatus = false,
 }: Props) => {
   const isSOActive = !isFinal && game.current_period === 'SO';
   const isSODone = isFinal;
@@ -227,6 +229,7 @@ const ShootoutAccordion = ({
           attempt.shooter_date_of_birth,
           attempt.shooter_start_date,
           attempt.shooter_acquisition_type,
+          showPlayerDataStatus,
         )}
       </Link>
     ) : (
@@ -318,6 +321,7 @@ const ShootoutAccordion = ({
           shootoutWinnerAttempt.shooter_date_of_birth,
           shootoutWinnerAttempt.shooter_start_date,
           shootoutWinnerAttempt.shooter_acquisition_type,
+          showPlayerDataStatus,
         )}
       </Link>
     ) : (

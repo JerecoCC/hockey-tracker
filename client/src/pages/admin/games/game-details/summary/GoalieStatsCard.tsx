@@ -80,6 +80,7 @@ interface Props {
   ) => Promise<GoalieStatRecord[] | null>;
   removeGoalieStint?: (stintId: string) => Promise<boolean>;
   removeGoalieStat?: (goalieId: string) => Promise<boolean>;
+  showPlayerDataStatus?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -96,6 +97,7 @@ const GoalieStatsCard = ({
   updateGoalieStint,
   removeGoalieStint,
   removeGoalieStat,
+  showPlayerDataStatus = false,
 }: Props) => {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
@@ -209,6 +211,7 @@ const GoalieStatsCard = ({
                               goalie.date_of_birth,
                               goalie.start_date,
                               goalie.acquisition_type,
+                              showPlayerDataStatus,
                             )}
                           </span>
                           {windows.map((w, i) => (

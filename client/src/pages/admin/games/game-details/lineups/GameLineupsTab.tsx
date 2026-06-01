@@ -22,6 +22,7 @@ interface Props {
   game: GameRecord;
   isEditMode: boolean;
   readOnly?: boolean;
+  showPlayerDataStatus?: boolean;
   isFinal: boolean;
   leagueId: string;
   seasonId: string | undefined;
@@ -42,6 +43,7 @@ const GameLineupsTab = ({
   game,
   isEditMode,
   readOnly = false,
+  showPlayerDataStatus = false,
   isFinal,
   leagueId,
   seasonId,
@@ -217,7 +219,12 @@ const GameLineupsTab = ({
                 primaryColor={primaryColor}
                 textColor={textColor}
                 subtitle={positionPart}
-                name={`${e.last_name}, ${e.first_name} ${playerDataComplete(e.date_of_birth, e.start_date, e.acquisition_type)}`}
+                name={`${e.last_name}, ${e.first_name} ${playerDataComplete(
+                  e.date_of_birth,
+                  e.start_date,
+                  e.acquisition_type,
+                  showPlayerDataStatus,
+                )}`}
                 placeholder={
                   e.jersey_number != null
                     ? String(e.jersey_number)

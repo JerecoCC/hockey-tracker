@@ -62,6 +62,7 @@ interface Props {
   onGoBackOTPeriod?: (targetNum: number) => void;
   /** When provided, player names in goal rows become navigation links. */
   getPlayerHref?: (playerId: string) => string;
+  showPlayerDataStatus?: boolean;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -93,6 +94,7 @@ const ScoringCard = ({
   onGoBackPeriod,
   onGoBackOTPeriod,
   getPlayerHref,
+  showPlayerDataStatus = false,
 }: Props) => {
   // ── Helpers ────────────────────────────────────────────────────────────────
   const periodTimeToSecs = (t: string | null | undefined): number => {
@@ -177,6 +179,7 @@ const ScoringCard = ({
                         goal.scorer_date_of_birth,
                         goal.scorer_start_date,
                         goal.scorer_acquisition_type,
+                        showPlayerDataStatus,
                       )}
                     </Link>
                   ) : (
@@ -534,6 +537,7 @@ const ScoringCard = ({
             onEditAttempt={onEditAttempt}
             onDeleteAttempt={onDeleteAttempt}
             getPlayerHref={getPlayerHref}
+            showPlayerDataStatus={showPlayerDataStatus}
             onEndGame={
               onOpenShotsModal && !isEditMode
                 ? () => onOpenShotsModal('SO', { type: 'end-game' }, true)
