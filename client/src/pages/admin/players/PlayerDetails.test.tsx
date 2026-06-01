@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import usePlayerDetails, {
   usePlayerCurrentSeasonStats,
@@ -283,5 +283,19 @@ describe('PlayerDetails info tab', () => {
     expect(screen.getByLabelText('Birth City')).toHaveValue('Boston, Massachusetts, USA');
     expect(screen.getByLabelText('Birth Country')).toHaveValue('CAN');
     expect(screen.getByLabelText('Nationality')).toHaveValue('CAN');
+  });
+
+  it('rejects invalid height inches values', async () => {
+    const user = userEvent.setup();
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }));
+
+    const inches = screen.getByPlaceholderText('0');
+    expect(inches).toHaveValue(1);
+
+    fireEvent.change(inches, { target: { value: '12' } });
+
+    expect(inches).toHaveValue(1);
   });
 });

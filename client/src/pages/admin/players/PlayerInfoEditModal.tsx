@@ -1,7 +1,8 @@
 import { useEffect, type FocusEvent } from 'react';
-import { useForm } from 'react-hook-form';
+import { Controller, useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import {
   type CreatePlayerData,
   type PlayerRecord,
@@ -27,6 +28,20 @@ const cmToFtIn = (cm: number) => {
 
 const ftInToCm = (ft: number, inches: number) => Math.round((ft * 12 + inches) * 2.54);
 
+const validateFeet = (value: string) => {
+  if (!value) return true;
+  const feet = Number(value);
+  return (Number.isInteger(feet) && feet >= 0) || 'Feet must be a whole number';
+};
+
+const validateInches = (value: string) => {
+  if (!value) return true;
+  const inches = Number(value);
+  return (Number.isInteger(inches) && inches >= 0 && inches <= 11) || 'Inches must be 0-11';
+};
+
+const isWholeNumberInput = (value: string) => value === '' || /^\d+$/.test(value);
+
 interface FormValues {
   shoots: PlayerShoots | null;
   date_of_birth: string;
@@ -51,6 +66,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     handleSubmit,
     reset,
     getValues,
+    setError,
     setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
@@ -86,6 +102,17 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
 
   const onSubmit = handleSubmit(async (data) => {
     if (!player) return;
+    const feetError = validateFeet(data.height_ft);
+    const inchesError = validateInches(data.height_in);
+    if (feetError !== true) {
+      setError('height_ft', { type: 'validate', message: feetError });
+      return;
+    }
+    if (inchesError !== true) {
+      setError('height_in', { type: 'validate', message: inchesError });
+      return;
+    }
+
     const hasFt = data.height_ft !== '';
     const hasIn = data.height_in !== '';
     const ok = await updatePlayer(player.id, {
@@ -173,15 +200,73 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
           />
         </div>
         <div className={styles.row}>
-          <Field
-            type="select"
-            label={player?.position === 'G' ? 'Catches' : 'Shoots'}
-            control={control}
-            name="shoots"
-            options={SHOOTS_OPTIONS}
-            placeholder="Select side"
-            disabled={isSubmitting}
-          />
+          <div className={styles.heightGroup}>
+            <span className={styles.heightGroupLabel}>Height</span>
+            <div className={styles.heightSegmentedField}>
+              <Controller
+                control={control}
+                name="height_ft"
+                rules={{ validate: validateFeet }}
+                render={({ field, fieldState }) => (
+                  <label
+                    className={[
+                      styles.heightSegment,
+                      fieldState.error ? styles.heightSegmentError : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <input
+                      {...field}
+                      type="number"
+                      min={0}
+                      placeholder="6"
+                      disabled={isSubmitting}
+                      aria-invalid={fieldState.invalid}
+                      onChange={(event) => {
+                        if (isWholeNumberInput(event.target.value)) {
+                          field.onChange(event.target.value);
+                        }
+                      }}
+                    />
+                    <span>FT</span>
+                  </label>
+                )}
+              />
+              <Controller
+                control={control}
+                name="height_in"
+                rules={{ validate: validateInches }}
+                render={({ field, fieldState }) => (
+                  <label
+                    className={[
+                      styles.heightSegment,
+                      fieldState.error ? styles.heightSegmentError : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    <input
+                      {...field}
+                      type="number"
+                      min={0}
+                      max={11}
+                      placeholder="0"
+                      disabled={isSubmitting}
+                      aria-invalid={fieldState.invalid}
+                      onChange={(event) => {
+                        const { value } = event.target;
+                        if (isWholeNumberInput(value) && (!value || Number(value) <= 11)) {
+                          field.onChange(value);
+                        }
+                      }}
+                    />
+                    <span>IN</span>
+                  </label>
+                )}
+              />
+            </div>
+          </div>
           <Field
             type="number"
             label="Weight"
@@ -194,32 +279,22 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
             rules={{ validate: (v) => !v || Number(v) >= 0 }}
           />
         </div>
-        <div className={styles.heightGroup}>
-          <span className={styles.heightGroupLabel}>Height</span>
-          <div className={styles.heightInputs}>
-            <Field
-              type="number"
-              suffix="ft"
+        <div className={styles.fullRow}>
+          <div className={styles.segmentedField}>
+            <span className={styles.heightGroupLabel}>
+              {player?.position === 'G' ? 'Catches' : 'Shoots'}
+            </span>
+            <Controller
               control={control}
-              name="height_ft"
-              placeholder="6"
-              min={0}
-              disabled={isSubmitting}
-              rules={{ validate: (v) => !v || (Number(v) >= 0 && Number.isInteger(Number(v))) }}
-            />
-            <Field
-              type="number"
-              suffix="in"
-              control={control}
-              name="height_in"
-              placeholder="0"
-              min={0}
-              max={11}
-              disabled={isSubmitting}
-              rules={{
-                validate: (v) =>
-                  !v || (Number(v) >= 0 && Number(v) <= 11 && Number.isInteger(Number(v))),
-              }}
+              name="shoots"
+              render={({ field }) => (
+                <SegmentedControl
+                  value={field.value}
+                  onChange={(value) => field.onChange(value as PlayerShoots)}
+                  options={SHOOTS_OPTIONS}
+                  disabled={isSubmitting}
+                />
+              )}
             />
           </div>
         </div>
