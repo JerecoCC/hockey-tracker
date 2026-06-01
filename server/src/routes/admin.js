@@ -1,7 +1,9 @@
 const router = require('express').Router();
+const { list, del } = require('@vercel/blob');
 const { requireAdmin } = require('../middleware/auth');
 const { desc, eq, sql } = require('drizzle-orm');
-const { db, schema } = require('../db');
+const { db, schema, sql: rawSql } = require('../db');
+const { cleanupUnusedBlobs } = require('../lib/blobCleanup');
 
 const { users } = schema;
 
@@ -86,6 +88,27 @@ router.delete('/users/:id', async (req, res) => {
   } catch (err) {
     console.error('admin delete user error:', err);
     return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/blob-cleanup  – dry-run or delete unreferenced upload blobs
+// Body: { dryRun?: boolean }  (defaults to true)
+// ---------------------------------------------------------------------------
+router.post('/blob-cleanup', async (req, res) => {
+  const dryRun = req.body?.dryRun !== false;
+
+  try {
+    const result = await cleanupUnusedBlobs({
+      sql: rawSql,
+      listBlobs: list,
+      deleteBlobs: del,
+      dryRun,
+    });
+    return res.json(result);
+  } catch (err) {
+    console.error('admin blob cleanup error:', err);
+    return res.status(500).json({ error: 'Failed to clean up uploaded images' });
   }
 });
 

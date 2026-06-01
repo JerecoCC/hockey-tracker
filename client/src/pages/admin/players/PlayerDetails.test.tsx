@@ -121,6 +121,7 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  document.title = 'Hockey Tracker';
   mockUseTabState.mockReturnValue([0, jest.fn()]);
   mockUsePlayerDetails.mockReturnValue({
     player: {
@@ -210,6 +211,16 @@ beforeEach(() => {
 });
 
 describe('PlayerDetails info tab', () => {
+  it("sets the browser title to the player's full name", () => {
+    const { unmount } = render(<PlayerDetails />);
+
+    expect(document.title).toBe('John Smith');
+
+    unmount();
+
+    expect(document.title).toBe('Hockey Tracker');
+  });
+
   it('renders the titled player info card and the latest played season stat cards', () => {
     const { container } = render(<PlayerDetails />);
 

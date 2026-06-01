@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -377,6 +377,14 @@ const PlayerDetailsPage = () => {
   const latestStint = stints[0];
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
   const teamHref = `/admin/leagues/${leagueId}/teams/${teamId}`;
+
+  useEffect(() => {
+    if (!player) return;
+    document.title = fullName;
+    return () => {
+      document.title = 'Hockey Tracker';
+    };
+  }, [player, fullName]);
 
   usePageBreadcrumbs(
     loading
