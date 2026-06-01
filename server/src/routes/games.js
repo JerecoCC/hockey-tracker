@@ -38,6 +38,16 @@ const acquisitionTypeSelect = (hasAcquisitionType, alias) => {
   return sql`pt.acquisition_type`;
 };
 
+const validateGoalParticipants = (scorerId, assist1Id, assist2Id) => {
+  if (assist2Id && !assist1Id) return 'assist_1_id is required when assist_2_id is provided';
+  if (assist1Id && scorerId === assist1Id) return 'scorer_id and assist_1_id must be different';
+  if (assist2Id && scorerId === assist2Id) return 'scorer_id and assist_2_id must be different';
+  if (assist1Id && assist2Id && assist1Id === assist2Id) {
+    return 'assist_1_id and assist_2_id must be different';
+  }
+  return null;
+};
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/games
 // Query params: season_id, team_id (home OR away), game_type, status
@@ -1798,6 +1808,18 @@ router.post('/:id/roster', async (req, res) => {
   try {
     for (const player_id of player_ids) {
       await sql`
+        UPDATE player_teams pt
+        SET is_prospect = FALSE
+        FROM games g
+        WHERE g.id = ${id}
+          AND pt.player_id = ${player_id}
+          AND pt.team_id = ${team_id}
+          AND pt.season_id = g.season_id
+          AND pt.is_prospect = TRUE
+          AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      `;
+      await sql`
         INSERT INTO game_rosters (game_id, team_id, player_id)
         VALUES (${id}, ${team_id}, ${player_id})
         ON CONFLICT (game_id, team_id, player_id) DO NOTHING
@@ -2003,6 +2025,9 @@ router.post('/:id/goals', async (req, res) => {
     return res.status(400).json({ error: 'team_id, period, and scorer_id are required' });
   }
 
+  const participantError = validateGoalParticipants(scorer_id, assist_1_id, assist_2_id);
+  if (participantError) return res.status(400).json({ error: participantError });
+
   const storedGoalType =
     goal_type === 'empty-net' || goal_type === 'penalty-shot' ? 'even-strength' : goal_type;
   const storedEmptyNet = !!empty_net || goal_type === 'empty-net';
@@ -2140,6 +2165,9 @@ router.put('/:id/goals/:goalId', async (req, res) => {
   if (!team_id || !period || !scorer_id) {
     return res.status(400).json({ error: 'team_id, period, and scorer_id are required' });
   }
+
+  const participantError = validateGoalParticipants(scorer_id, assist_1_id, assist_2_id);
+  if (participantError) return res.status(400).json({ error: participantError });
 
   const storedGoalType =
     goal_type === 'empty-net' || goal_type === 'penalty-shot' ? 'even-strength' : goal_type;

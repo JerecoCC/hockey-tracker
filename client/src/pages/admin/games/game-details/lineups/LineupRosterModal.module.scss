@@ -65,6 +65,15 @@
   margin: 0;
 }
 
+.prospectNote {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: $font-sm;
+  color: $accent-light;
+  margin: 0;
+}
+
 .searchRow {
   display: flex;
   align-items: center;

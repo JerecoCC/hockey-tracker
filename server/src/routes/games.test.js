@@ -471,6 +471,34 @@ describe('POST /api/admin/games/:id/goals', () => {
     expect(res.body.error).toMatch(/required/i);
   });
 
+  it('returns 400 when the scorer matches the first assist', async () => {
+    const res = await request(app).post('/api/admin/games/game-1/goals')
+      .send({
+        team_id: 'team-1',
+        period: '1',
+        scorer_id: 'player-1',
+        assist_1_id: 'player-1',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/scorer_id and assist_1_id must be different/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when a second assist is provided without a first assist', async () => {
+    const res = await request(app).post('/api/admin/games/game-1/goals')
+      .send({
+        team_id: 'team-1',
+        period: '1',
+        scorer_id: 'player-1',
+        assist_2_id: 'player-3',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/assist_1_id is required/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
   it('returns 404 when game does not exist', async () => {
     sql.mockResolvedValueOnce([]); // game lookup → empty
     const res = await request(app).post('/api/admin/games/nope/goals')
@@ -528,6 +556,36 @@ describe('PUT /api/admin/games/:id/goals/:goalId', () => {
       .send({ team_id: 'team-1', period: '1' }); // missing scorer_id
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/required/i);
+  });
+
+  it('returns 400 when the scorer matches the second assist', async () => {
+    const res = await request(app).put('/api/admin/games/game-1/goals/goal-1')
+      .send({
+        team_id: 'team-1',
+        period: '1',
+        scorer_id: 'player-1',
+        assist_1_id: 'player-2',
+        assist_2_id: 'player-1',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/scorer_id and assist_2_id must be different/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when both assists match', async () => {
+    const res = await request(app).put('/api/admin/games/game-1/goals/goal-1')
+      .send({
+        team_id: 'team-1',
+        period: '1',
+        scorer_id: 'player-1',
+        assist_1_id: 'player-2',
+        assist_2_id: 'player-2',
+      });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/assist_1_id and assist_2_id must be different/i);
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('updates a goal and returns the full goal record', async () => {
@@ -617,6 +675,47 @@ describe('PATCH /api/admin/games/:id/shots', () => {
     const res = await request(app).patch('/api/admin/games/game-1/shots')
       .send({ period: '1', home_shots: 5, away_shots: 5 });
     expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/games/:id/roster
+// ---------------------------------------------------------------------------
+describe('POST /api/admin/games/:id/roster', () => {
+  it('moves prospects to the roster before adding them to the game lineup', async () => {
+    sql
+      .mockResolvedValueOnce([]) // UPDATE player_teams is_prospect
+      .mockResolvedValueOnce([]) // INSERT game_rosters
+      .mockResolvedValueOnce([
+        {
+          id: 'roster-1',
+          game_id: 'game-1',
+          team_id: 'team-1',
+          player_id: 'player-1',
+          first_name: 'Jane',
+          last_name: 'Doe',
+          date_of_birth: null,
+          start_date: null,
+          acquisition_type: null,
+          photo: null,
+          position: 'C',
+          jersey_number: 27,
+        },
+      ]);
+
+    const res = await request(app).post('/api/admin/games/game-1/roster').send({
+      team_id: 'team-1',
+      player_ids: ['player-1'],
+    });
+
+    expect(res.status).toBe(201);
+    expect(res.body[0].player_id).toBe('player-1');
+
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[0]).toMatch(/UPDATE player_teams pt/);
+    expect(queries[0]).toMatch(/SET is_prospect = FALSE/);
+    expect(queries[0]).toMatch(/pt\.season_id = g\.season_id/);
+    expect(queries[1]).toMatch(/INSERT INTO game_rosters/);
   });
 });
 
