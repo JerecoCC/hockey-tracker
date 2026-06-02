@@ -637,9 +637,8 @@ const SeasonDetailsPage = () => {
           backPath: leagueHref,
           backLabel: `Back to ${season?.league_name ?? 'League'}`,
           items: [
-            { label: 'Leagues', path: '/admin/leagues' },
             season
-              ? { label: season.league_name, shortLabel: season.league_code, path: leagueHref }
+              ? { label: season.league_code, path: leagueHref }
               : { label: 'League', path: leagueHref },
             { label: season?.name ?? 'Not Found' },
           ],

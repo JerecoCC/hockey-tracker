@@ -191,16 +191,14 @@ describe('LeagueDetailsPage – main render', () => {
     expect(screen.getByRole('img', { name: 'TL' })).toBeInTheDocument();
   });
 
-  it('renders the Leagues breadcrumb as a button', () => {
+  it('does not render the Leagues breadcrumb on league routes', () => {
     setup({ league: mockLeague });
-    // Breadcrumbs renders navigable items as <button>, not <a>
-    expect(screen.getByRole('button', { name: 'Leagues' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Leagues' })).not.toBeInTheDocument();
   });
 
-  it('renders the league name in the breadcrumbs', () => {
+  it('renders the league code in the breadcrumbs', () => {
     setup({ league: mockLeague });
-    // Appears at minimum as the last breadcrumb span
-    expect(screen.getAllByText('Test League').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText('TL').length).toBeGreaterThanOrEqual(1);
   });
 
   it('navigates back to /admin/leagues when back button is clicked', () => {

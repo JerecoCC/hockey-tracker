@@ -228,7 +228,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     leagueCode: game?.league_code,
     leagueId,
   });
-  const leagueName = game?.league_name ?? 'League';
+  const leagueCrumbLabel = game?.league_code ?? 'League';
   const seasonName = game?.season_name ?? 'Season';
   const gameCrumbLabel = game
     ? [
@@ -247,8 +247,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           backLabel: isAdminView ? `Back to ${seasonName}` : 'Back to Games',
           items: isAdminView
             ? [
-                { label: 'Leagues', path: '/admin/leagues' },
-                { label: leagueName, path: leagueHref },
+                { label: leagueCrumbLabel, path: leagueHref },
                 { label: seasonName, path: seasonHref },
                 { label: gameCrumbLabel },
               ]
@@ -260,7 +259,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       seasonHref,
       seasonName,
       leagueHref,
-      leagueName,
+      leagueCrumbLabel,
       gameCrumbLabel,
     ],
   );

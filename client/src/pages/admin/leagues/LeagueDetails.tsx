@@ -87,9 +87,8 @@ const LeagueDetailsPage = () => {
           backPath: '/admin/leagues',
           backLabel: 'Back to Leagues',
           items: [
-            { label: 'Leagues', path: '/admin/leagues' },
             league
-              ? { label: league.name, shortLabel: league.code }
+              ? { label: league.code }
               : { label: 'Not Found' },
           ],
         },

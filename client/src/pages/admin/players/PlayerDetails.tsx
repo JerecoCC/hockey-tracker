@@ -476,7 +476,7 @@ const PlayerDetailsPage = () => {
           backLabel: hasTeamRoute ? `Back to ${teamDetails?.name ?? 'Team'}` : 'Back to League',
           items: [
             {
-              label: teamDetails?.league_name ?? '...',
+              label: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode ?? '...',
               path: leagueHref,
             },
             ...(hasTeamRoute

@@ -59,16 +59,14 @@ const TeamDetailsPage = () => {
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
   const [activeTab, handleTabChange] = useTabState('tab:team-details');
   const breadcrumbItems = [
-    { label: 'Leagues', path: '/admin/leagues' },
     {
-      label: team?.league_name ?? '…',
-      shortLabel: team?.league_code ?? undefined,
+      label: team?.league_code ?? '...',
       path: buildLeagueDetailsPath({
         leagueCode: team?.league_code,
         leagueId: team?.league_id ?? leagueId,
       }),
     },
-    { label: team?.name ?? '…' },
+    { label: team?.name ?? '...' },
   ];
 
   const backPath = buildLeagueDetailsPath({
@@ -189,3 +187,4 @@ const TeamDetailsPage = () => {
 };
 
 export default TeamDetailsPage;
+
