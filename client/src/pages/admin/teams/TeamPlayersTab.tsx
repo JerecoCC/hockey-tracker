@@ -5,6 +5,7 @@ import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Icon from '@/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
@@ -239,26 +240,22 @@ const TeamPlayersTab = ({ teamId, teamName, leagueId, leagueCode, teamCode }: Pr
             >
               Add Players
             </Button>
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="person_edit"
-              size="sm"
-              disabled={!selectedSeasonId}
-              onClick={() => setCreateModalOpen(true)}
-            >
-              Create Players
-            </Button>
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="swap_horiz"
-              size="sm"
-              disabled={!selectedSeasonId || players.length === 0}
-              onClick={() => setTradeModalOpen(true)}
-            >
-              Trade Players
-            </Button>
+            <MoreActionsMenu
+              items={[
+                {
+                  label: 'Create Players',
+                  icon: 'person_edit',
+                  disabled: !selectedSeasonId,
+                  onClick: () => setCreateModalOpen(true),
+                },
+                {
+                  label: 'Trade Players',
+                  icon: 'swap_horiz',
+                  disabled: !selectedSeasonId || players.length === 0,
+                  onClick: () => setTradeModalOpen(true),
+                },
+              ]}
+            />
           </div>
         }
       >
@@ -297,6 +294,10 @@ const TeamPlayersTab = ({ teamId, teamName, leagueId, leagueCode, teamCode }: Pr
               onChange={setSelectedSeasonId}
             />
           )}
+          <span
+            className={styles.playerToolbarDivider}
+            aria-hidden="true"
+          />
           <SegmentedControl
             className={styles.playerViewSegmentedControl}
             value={playerView}

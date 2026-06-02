@@ -202,12 +202,14 @@
 .playerViewSegmentedControl {
   width: auto;
   min-width: 210px;
-  height: 42px;
   flex-shrink: 0;
+}
 
-  button {
-    padding: 0 $space-md;
-  }
+.playerToolbarDivider {
+  width: 1px;
+  height: 32px;
+  background: $border;
+  flex-shrink: 0;
 }
 
 .rosterSearch {
@@ -227,7 +229,7 @@
 
 .rosterSearchInput {
   width: 100%;
-  height: 42px;
+  min-height: 38px;
   padding: 0 2.25rem 0 2.35rem;
   border: 1px solid $border;
   border-radius: $radius-md;

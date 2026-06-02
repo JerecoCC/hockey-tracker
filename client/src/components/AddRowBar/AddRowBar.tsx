@@ -13,6 +13,7 @@ interface Props {
 
 const AddRowBar = ({ label, onClick, disabled, hint }: Props) => (
   <div className={styles.root}>
+    {hint ? <span className={styles.hint}>{hint}</span> : <span className="filler"></span>}
     <Button
       type="button"
       variant="ghost"
@@ -24,7 +25,6 @@ const AddRowBar = ({ label, onClick, disabled, hint }: Props) => (
     >
       {label}
     </Button>
-    {hint && <span className={styles.hint}>{hint}</span>}
   </div>
 );
 
