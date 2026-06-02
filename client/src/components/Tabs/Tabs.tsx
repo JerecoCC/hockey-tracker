@@ -25,7 +25,8 @@ interface TabsProps {
 const Tabs = (props: TabsProps) => {
   const { tabs, activeIndex, defaultIndex = 0, onTabChange, className, disabled = false } = props;
   const [internal, setInternal] = useState(defaultIndex);
-  const active = activeIndex ?? internal;
+  const requestedActive = activeIndex ?? internal;
+  const active = Math.min(Math.max(requestedActive, 0), Math.max(tabs.length - 1, 0));
   const { setMobileTabs } = useMobileTabs();
 
   // Keep a ref to the latest onTabChange so the context callback never goes stale.

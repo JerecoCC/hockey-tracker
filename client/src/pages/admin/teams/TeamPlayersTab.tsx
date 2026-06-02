@@ -6,6 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Icon from '@/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
@@ -29,7 +30,7 @@ const POSITION_LABELS: Record<string, string> = {
 
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD', 'D1', 'D2']);
 
-const ROSTER_SECTIONS = [
+const PLAYER_SECTIONS = [
   {
     title: 'Forwards',
     matches: (p: TeamPlayerRecord) =>
@@ -45,6 +46,8 @@ const ROSTER_SECTIONS = [
   },
 ];
 
+type PlayerView = 'roster' | 'prospects';
+
 interface Props {
   teamId: string;
   teamName: string;
@@ -53,18 +56,14 @@ interface Props {
   teamCode: string | null;
 }
 
-const TeamRosterTab = ({
-  teamId,
-  teamName,
-  leagueId,
-  leagueCode,
-  teamCode,
-}: Props) => {
+const TeamPlayersTab = ({ teamId, teamName, leagueId, leagueCode, teamCode }: Props) => {
   const navigate = useNavigate();
   const { seasons: leagueSeasons } = useSeasons(leagueId);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [playerView, setPlayerView] = useState<PlayerView>('roster');
   const [query, setQuery] = useState('');
 
+  const isProspectsView = playerView === 'prospects';
   const {
     players,
     loading,
@@ -77,7 +76,9 @@ const TeamRosterTab = ({
     uploadPlayerPhoto,
     createAndRosterPlayers,
     bulkTradePlayers,
-  } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
+  } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
+    prospectsOnly: isProspectsView,
+  });
   const { players: allTeamPlayers } = useTeamPlayers(teamId, selectedSeasonId ?? undefined, {
     includeProspects: true,
   });
@@ -88,9 +89,10 @@ const TeamRosterTab = ({
   const [confirmRemove, setConfirmRemove] = useState<TeamPlayerRecord | null>(null);
   const [isRemoving, setIsRemoving] = useState(false);
 
+  const rosterPlayers = allTeamPlayers.filter((p) => !p.is_prospect);
   const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
-  const rosterPlayerCount = players.length;
-  const rosterGoalieCount = players.filter((p) => p.position === 'G').length;
+  const rosterPlayerCount = rosterPlayers.length;
+  const rosterGoalieCount = rosterPlayers.filter((p) => p.position === 'G').length;
   const normalizedQuery = query.trim().toLowerCase();
   const filteredPlayers = normalizedQuery
     ? players.filter((p) => {
@@ -107,6 +109,9 @@ const TeamRosterTab = ({
 
   const sortPlayers = (items: TeamPlayerRecord[]) =>
     [...items].sort((a, b) => {
+      if (isProspectsView) {
+        return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
+      }
       if (a.jersey_number == null && b.jersey_number == null) {
         return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
       }
@@ -123,85 +128,108 @@ const TeamRosterTab = ({
     if (ok) setConfirmRemove(null);
   };
 
-  const renderPlayer = (p: TeamPlayerRecord) => (
-    <ListItem
-      key={p.id}
-      className={styles.rosterItem}
-      imageNode={
-        <PlayerAvatar
-          photo={p.photo}
-          initials={`${p.first_name?.charAt(0) ?? ''}${p.last_name?.charAt(0) ?? ''}`.trim() || '?'}
-          primaryColor={p.primary_color}
-          textColor={p.text_color}
-          size={48}
-        />
-      }
-      name={`${p.first_name} ${p.last_name}`}
-      placeholder={`${p.first_name[0]}${p.last_name[0]}`}
-      primaryColor={p.primary_color ?? undefined}
-      textColor={p.text_color ?? undefined}
-      jerseyNumber={p.jersey_number}
-      subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
-      rightContent={{
-        type: 'tag',
-        label: p.is_active ? 'Active' : 'Inactive',
-        intent: p.is_active ? 'success' : 'neutral',
-      }}
-      actions={
-        [
-          {
-            icon: 'open_in_new',
-            intent: 'neutral',
-            tooltip: 'View player',
-            onClick: () =>
-              navigate(
-                buildPlayerDetailsPath({
-                  leagueCode,
-                  teamCode,
-                  firstName: p.first_name,
-                  lastName: p.last_name,
-                }),
-              ),
-          },
-          {
-            icon: 'edit',
-            intent: 'neutral',
-            tooltip: 'Edit player',
-            disabled: busy === p.id,
-            onClick: () => setEditTarget(p),
-          },
-          {
-            icon: 'south',
-            intent: 'neutral',
-            tooltip: 'Move to prospects',
-            disabled: busy === p.id,
-            onClick: () => updatePlayerRosterRole(p, true),
-          },
-          {
-            icon: 'person_remove',
-            intent: 'danger',
-            tooltip: 'Remove From Team',
-            disabled: busy === p.id,
-            onClick: () => setConfirmRemove(p),
-          },
-        ] satisfies ListItemAction[]
-      }
-    />
-  );
+  const renderPlayer = (p: TeamPlayerRecord) => {
+    const actions: ListItemAction[] = [
+      {
+        icon: 'open_in_new',
+        intent: 'neutral',
+        tooltip: 'View player',
+        onClick: () =>
+          navigate(
+            buildPlayerDetailsPath({
+              leagueCode,
+              teamCode,
+              firstName: p.first_name,
+              lastName: p.last_name,
+            }),
+          ),
+      },
+    ];
+
+    if (isProspectsView) {
+      actions.push(
+        {
+          icon: 'north',
+          intent: 'neutral',
+          tooltip: 'Move to roster',
+          disabled: busy === p.id,
+          onClick: () => updatePlayerRosterRole(p, false),
+        },
+        {
+          icon: 'person_remove',
+          intent: 'danger',
+          tooltip: 'Remove From Team',
+          disabled: busy === p.id,
+          onClick: () => setConfirmRemove(p),
+        },
+      );
+    } else {
+      actions.push(
+        {
+          icon: 'edit',
+          intent: 'neutral',
+          tooltip: 'Edit player',
+          disabled: busy === p.id,
+          onClick: () => setEditTarget(p),
+        },
+        {
+          icon: 'south',
+          intent: 'neutral',
+          tooltip: 'Move to prospects',
+          disabled: busy === p.id,
+          onClick: () => updatePlayerRosterRole(p, true),
+        },
+        {
+          icon: 'person_remove',
+          intent: 'danger',
+          tooltip: 'Remove From Team',
+          disabled: busy === p.id,
+          onClick: () => setConfirmRemove(p),
+        },
+      );
+    }
+
+    return (
+      <ListItem
+        key={p.id}
+        className={styles.rosterItem}
+        imageNode={
+          <PlayerAvatar
+            photo={p.photo}
+            initials={
+              `${p.first_name?.charAt(0) ?? ''}${p.last_name?.charAt(0) ?? ''}`.trim() || '?'
+            }
+            primaryColor={p.primary_color}
+            textColor={p.text_color}
+            size={48}
+          />
+        }
+        name={`${p.first_name} ${p.last_name}`}
+        placeholder={`${p.first_name[0]}${p.last_name[0]}`}
+        primaryColor={p.primary_color ?? undefined}
+        textColor={p.text_color ?? undefined}
+        jerseyNumber={p.jersey_number}
+        subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+        rightContent={
+          isProspectsView
+            ? { type: 'tag', label: 'Prospect', intent: 'neutral' }
+            : {
+                type: 'tag',
+                label: p.is_active ? 'Active' : 'Inactive',
+                intent: p.is_active ? 'success' : 'neutral',
+              }
+        }
+        actions={actions}
+      />
+    );
+  };
 
   return (
     <>
       <Card
-        title="Roster"
+        title="Players"
         action={
           <div className={styles.rosterActions}>
-            {leagueSeasons.length > 0 && (
-              <SeasonSelect
-                value={selectedSeasonId}
-                seasons={leagueSeasons}
-                onChange={setSelectedSeasonId}
-              />
-            )}
             <Button
               intent="accent"
               icon="group_add"
@@ -244,7 +272,7 @@ const TeamRosterTab = ({
             <input
               className={styles.rosterSearchInput}
               type="text"
-              placeholder="Search players..."
+              placeholder={isProspectsView ? 'Search prospects...' : 'Search players...'}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -262,11 +290,27 @@ const TeamRosterTab = ({
               </button>
             )}
           </div>
+          {leagueSeasons.length > 0 && (
+            <SeasonSelect
+              value={selectedSeasonId}
+              seasons={leagueSeasons}
+              onChange={setSelectedSeasonId}
+            />
+          )}
+          <SegmentedControl
+            className={styles.playerViewSegmentedControl}
+            value={playerView}
+            onChange={(value) => setPlayerView(value as PlayerView)}
+            options={[
+              { value: 'roster', label: 'Roster' },
+              { value: 'prospects', label: 'Prospects' },
+            ]}
+          />
         </div>
       </Card>
 
       <div className={styles.rosterSections}>
-        {ROSTER_SECTIONS.map((section) => {
+        {PLAYER_SECTIONS.map((section) => {
           const sectionPlayers = sortPlayers(filteredPlayers.filter(section.matches));
           return (
             <Card
@@ -280,10 +324,14 @@ const TeamRosterTab = ({
               ) : (
                 <p className={styles.rosterEmpty}>
                   {players.length === 0
-                    ? 'No players on this roster yet.'
+                    ? isProspectsView
+                      ? 'No prospects for this season.'
+                      : 'No players on this roster yet.'
                     : normalizedQuery
                       ? `No ${section.title.toLowerCase()} match "${query}".`
-                      : `No ${section.title.toLowerCase()} on this roster.`}
+                      : isProspectsView
+                        ? `No ${section.title.toLowerCase()} prospects.`
+                        : `No ${section.title.toLowerCase()} on this roster.`}
                 </p>
               )}
             </Card>
@@ -350,8 +398,8 @@ const TeamRosterTab = ({
               Remove{' '}
               <strong>
                 {confirmRemove.first_name} {confirmRemove.last_name}
-              </strong>
-              {' '}from {teamName} for this season?
+              </strong>{' '}
+              from {teamName} for this season?
             </>
           ) : (
             ''
@@ -368,4 +416,4 @@ const TeamRosterTab = ({
   );
 };
 
-export default TeamRosterTab;
+export default TeamPlayersTab;

@@ -15,8 +15,7 @@ import {
 } from '@/lib/routeSlugs';
 import TeamInfoTab from './TeamInfoTab';
 import TeamGamesTab from './TeamGamesTab';
-import TeamRosterTab from './TeamRosterTab';
-import TeamProspectsTab from './TeamProspectsTab';
+import TeamPlayersTab from './TeamPlayersTab';
 import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
 
@@ -155,24 +154,12 @@ const TeamDetailsPage = () => {
             ),
           },
           {
-            label: 'Roster',
+            label: 'Players',
             icon: 'set_lineup',
             content: (
-              <TeamRosterTab
+              <TeamPlayersTab
                 teamId={team.id}
                 teamName={team.name}
-                leagueId={team.league_id ?? ''}
-                leagueCode={team.league_code}
-                teamCode={team.code}
-              />
-            ),
-          },
-          {
-            label: 'Prospects',
-            icon: 'search',
-            content: (
-              <TeamProspectsTab
-                teamId={team.id}
                 leagueId={team.league_id ?? ''}
                 leagueCode={team.league_code}
                 teamCode={team.code}
