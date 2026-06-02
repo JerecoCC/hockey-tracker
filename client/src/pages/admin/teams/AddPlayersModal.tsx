@@ -4,7 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
-import Select, { type SelectOption } from '@/components/Select/Select';
+import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import useSeasons from '@/hooks/useSeasons';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
@@ -27,7 +27,6 @@ interface Props {
   onClose: () => void;
   teamId: string;
   leagueId: string;
-  latestSeasonId: string | null;
   existingPlayerIds: Set<string>;
   addPlayersToRoster: (
     teamId: string,
@@ -41,15 +40,12 @@ const AddPlayersModal = ({
   onClose,
   teamId,
   leagueId,
-  latestSeasonId,
   existingPlayerIds,
   addPlayersToRoster,
 }: Props) => {
-  const { seasons } = useSeasons();
-  const leagueSeasons = seasons.filter((s) => s.league_id === leagueId);
-  const seasonOptions: SelectOption[] = leagueSeasons.map((s) => ({ value: s.id, label: s.name }));
+  const { seasons: leagueSeasons } = useSeasons(leagueId);
 
-  const [seasonId, setSeasonId] = useState<string>(() => latestSeasonId ?? '');
+  const [seasonId, setSeasonId] = useState('');
   const [query, setQuery] = useState('');
   // Map from player_id -> jersey number string (empty = null)
   const [selected, setSelected] = useState<Record<string, string>>({});
@@ -155,9 +151,9 @@ const AddPlayersModal = ({
           />
         </div>
 
-        <Select
+        <SeasonSelect
           value={seasonId || null}
-          options={seasonOptions}
+          seasons={leagueSeasons}
           placeholder="— Select season —"
           onChange={setSeasonId}
         />

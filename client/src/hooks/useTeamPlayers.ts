@@ -490,6 +490,33 @@ const useTeamPlayers = (
     }
   };
 
+  const removePlayerFromTeam = async (player: TeamPlayerRecord): Promise<boolean> => {
+    if (!player.player_team_id) {
+      toast.error('Player team record not found');
+      return false;
+    }
+    setBusy(player.id);
+    try {
+      await axios.delete(`${API}/admin/player-teams/${player.player_team_id}`, {
+        headers: authHeaders(),
+      });
+      toast.success('Player removed from team');
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['player-trade-history', player.id] });
+      await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] });
+      await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
+      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] });
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to remove player from team'));
+      return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const addPlayersToRoster = async (
     teamId: string,
     seasonId: string,
@@ -620,6 +647,7 @@ const useTeamPlayers = (
     updateJerseyNumber,
     updatePlayerTeam,
     updatePlayerRosterRole,
+    removePlayerFromTeam,
     uploadPlayerPhoto,
     deletePlayer,
     bulkTradePlayers,

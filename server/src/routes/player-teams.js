@@ -509,6 +509,26 @@ router.patch('/:id', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// DELETE /api/admin/player-teams/:id
+// Removes a player's association with a team for that season.
+// ---------------------------------------------------------------------------
+router.delete('/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM player_teams
+      WHERE id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Stint not found' });
+    return res.json({ message: 'Player removed from team' });
+  } catch (err) {
+    console.error('player-teams delete/:id error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/bulk-trade
 // Body: { players: [{ player_id, jersey_number?, position? }], season_id, to_team_id, trade_date, acquisition_type? }
 // Closes each player's current active stint and opens a new one on to_team_id.

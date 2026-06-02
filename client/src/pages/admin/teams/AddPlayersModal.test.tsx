@@ -30,7 +30,6 @@ const renderModal = () => {
         onClose={jest.fn()}
         teamId="team-1"
         leagueId="league-1"
-        latestSeasonId="season-1"
         existingPlayerIds={new Set()}
         addPlayersToRoster={jest.fn()}
       />

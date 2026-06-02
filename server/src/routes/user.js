@@ -490,6 +490,9 @@ router.get('/seasons', async (req, res) => {
       SELECT
         s.id,
         s.name,
+        s.start_date::text AS start_date,
+        s.created_at,
+        (l.current_season_id = s.id) AS is_current,
         s.best_of_playoff,
         l.best_of_playoff AS league_best_of_playoff
       FROM seasons s

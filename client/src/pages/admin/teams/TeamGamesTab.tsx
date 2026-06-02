@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import DatePicker from '@/components/DatePicker/DatePicker';
-import Select, { type SelectOption } from '@/components/Select/Select';
+import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
@@ -204,23 +204,10 @@ const TeamGamesTab = ({ teamId, leagueId, leagueCode }: Props) => {
   const [seasonId, setSeasonId] = useState<string>('');
   const [view, setView] = useState<'list' | 'calendar'>('calendar');
 
-  // Auto-select the current season once the list loads (API returns current first).
-  useEffect(() => {
-    if (seasonId === '' && seasons.length > 0) {
-      const current = seasons.find((s) => s.is_current);
-      setSeasonId(current?.id ?? seasons[0].id);
-    }
-  }, [seasons, seasonId]);
-
   const { games, loading: gamesLoading } = useGames({
     teamId,
     seasonId: seasonId || undefined,
   });
-
-  const seasonOptions = useMemo<SelectOption[]>(
-    () => seasons.map((s) => ({ value: s.id, label: s.name })),
-    [seasons],
-  );
 
   const scheduledGames = useMemo(() => games.filter((game) => !!game.scheduled_at), [games]);
 
@@ -292,9 +279,9 @@ const TeamGamesTab = ({ teamId, leagueId, leagueCode }: Props) => {
       action={
         <div className={styles.actionsRow}>
           <div className={styles.seasonSelect}>
-            <Select
+            <SeasonSelect
               value={seasonId}
-              options={seasonOptions}
+              seasons={seasons}
               onChange={setSeasonId}
               placeholder="Select season…"
               disabled={seasonsLoading}

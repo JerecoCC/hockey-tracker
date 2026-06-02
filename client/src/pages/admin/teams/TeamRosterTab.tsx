@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -6,7 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Icon from '@/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Select from '@/components/Select/Select';
+import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
@@ -32,7 +32,8 @@ const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD', 'D1', 'D2']);
 const ROSTER_SECTIONS = [
   {
     title: 'Forwards',
-    matches: (p: TeamPlayerRecord) => p.position !== 'G' && !DEFENSE_POSITIONS.has(p.position ?? ''),
+    matches: (p: TeamPlayerRecord) =>
+      p.position !== 'G' && !DEFENSE_POSITIONS.has(p.position ?? ''),
   },
   {
     title: 'Defense',
@@ -50,21 +51,19 @@ interface Props {
   leagueId: string;
   leagueCode: string | null;
   teamCode: string | null;
-  latestSeasonId: string | null;
 }
 
-const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, latestSeasonId }: Props) => {
+const TeamRosterTab = ({
+  teamId,
+  teamName,
+  leagueId,
+  leagueCode,
+  teamCode,
+}: Props) => {
   const navigate = useNavigate();
   const { seasons: leagueSeasons } = useSeasons(leagueId);
-  const currentSeason = leagueSeasons.find((s) => s.is_current);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-
-  useEffect(() => {
-    if (selectedSeasonId === null && leagueSeasons.length > 0) {
-      setSelectedSeasonId(currentSeason?.id ?? leagueSeasons[0]?.id ?? latestSeasonId);
-    }
-  }, [leagueSeasons.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const {
     players,
@@ -74,8 +73,8 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
     updatePlayer,
     updatePlayerTeam,
     updatePlayerRosterRole,
+    removePlayerFromTeam,
     uploadPlayerPhoto,
-    deletePlayer,
     createAndRosterPlayers,
     bulkTradePlayers,
   } = useTeamPlayers(teamId, selectedSeasonId ?? undefined);
@@ -86,8 +85,8 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [tradeModalOpen, setTradeModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<TeamPlayerRecord | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<TeamPlayerRecord | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState<TeamPlayerRecord | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
   const existingPlayerIds = new Set(allTeamPlayers.map((p) => p.id));
   const rosterPlayerCount = players.length;
@@ -116,12 +115,12 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
       return a.jersey_number - b.jersey_number;
     });
 
-  const handleConfirmDelete = async () => {
-    if (!confirmDelete) return;
-    setIsDeleting(true);
-    await deletePlayer(confirmDelete.id);
-    setIsDeleting(false);
-    setConfirmDelete(null);
+  const handleConfirmRemove = async () => {
+    if (!confirmRemove) return;
+    setIsRemoving(true);
+    const ok = await removePlayerFromTeam(confirmRemove);
+    setIsRemoving(false);
+    if (ok) setConfirmRemove(null);
   };
 
   const renderPlayer = (p: TeamPlayerRecord) => (
@@ -179,11 +178,11 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
             onClick: () => updatePlayerRosterRole(p, true),
           },
           {
-            icon: 'delete',
+            icon: 'person_remove',
             intent: 'danger',
-            tooltip: 'Delete player',
+            tooltip: 'Remove From Team',
             disabled: busy === p.id,
-            onClick: () => setConfirmDelete(p),
+            onClick: () => setConfirmRemove(p),
           },
         ] satisfies ListItemAction[]
       }
@@ -197,12 +196,9 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
         action={
           <div className={styles.rosterActions}>
             {leagueSeasons.length > 0 && (
-              <Select
+              <SeasonSelect
                 value={selectedSeasonId}
-                options={leagueSeasons.map((s) => ({
-                  value: s.id,
-                  label: s.is_current ? `${s.name} *` : s.name,
-                }))}
+                seasons={leagueSeasons}
                 onChange={setSelectedSeasonId}
               />
             )}
@@ -220,7 +216,7 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
               intent="neutral"
               icon="person_edit"
               size="sm"
-              disabled={!selectedSeasonId || rosterPlayerCount >= 23}
+              disabled={!selectedSeasonId}
               onClick={() => setCreateModalOpen(true)}
             >
               Create Players
@@ -321,7 +317,6 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
         onClose={() => setAddModalOpen(false)}
         teamId={teamId}
         leagueId={leagueId}
-        latestSeasonId={latestSeasonId}
         existingPlayerIds={existingPlayerIds}
         addPlayersToRoster={addPlayersToRoster}
       />
@@ -341,32 +336,33 @@ const TeamRosterTab = ({ teamId, teamName, leagueId, leagueCode, teamCode, lates
             last_name: p.last_name,
             jersey_number: p.jersey_number ?? null,
           }))}
+          allowRosterOverflow
           createAndRosterPlayers={createAndRosterPlayers}
         />
       )}
 
       <ConfirmModal
-        open={!!confirmDelete}
-        title="Delete Player"
+        open={!!confirmRemove}
+        title="Remove From Team"
         body={
-          confirmDelete ? (
+          confirmRemove ? (
             <>
-              Are you sure you want to delete{' '}
+              Remove{' '}
               <strong>
-                {confirmDelete.first_name} {confirmDelete.last_name}
+                {confirmRemove.first_name} {confirmRemove.last_name}
               </strong>
-              ? This cannot be undone.
+              {' '}from {teamName} for this season?
             </>
           ) : (
             ''
           )
         }
-        confirmLabel="Delete"
-        confirmIcon="delete"
+        confirmLabel="Remove From Team"
+        confirmIcon="person_remove"
         variant="danger"
-        busy={isDeleting}
-        onConfirm={handleConfirmDelete}
-        onCancel={() => setConfirmDelete(null)}
+        busy={isRemoving}
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setConfirmRemove(null)}
       />
     </>
   );

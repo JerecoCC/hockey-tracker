@@ -1,16 +1,25 @@
-import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import styles from './Select.module.scss';
 
 export type SelectOption =
-  | { value: string; label: string; logo?: string | null; code?: string }
+  | { value: string; label: string; logo?: string | null; code?: string; indicator?: ReactNode }
   | { divider: true };
 
 /** Type guard — true for selectable options, false for dividers. */
 const isOption = (
   o: SelectOption,
-): o is { value: string; label: string; logo?: string | null; code?: string } => !('divider' in o);
+): o is { value: string; label: string; logo?: string | null; code?: string; indicator?: ReactNode } =>
+  !('divider' in o);
 
 interface Props {
   value: string | null;
@@ -232,7 +241,10 @@ const Select = (props: Props) => {
               ) : selected.code ? (
                 <span className={styles.optionNoLogo}>{selected.code.slice(0, 1)}</span>
               ) : null}
-              {selected.label}
+              <span className={styles.optionLabel}>{selected.label}</span>
+              {selected.indicator ? (
+                <span className={styles.optionIndicator}>{selected.indicator}</span>
+              ) : null}
             </span>
           ) : (
             <span className={styles.placeholder}>{placeholder}</span>
@@ -290,7 +302,10 @@ const Select = (props: Props) => {
                     ) : opt.code ? (
                       <span className={styles.optionNoLogo}>{opt.code.slice(0, 1)}</span>
                     ) : null}
-                    {opt.label}
+                    <span className={styles.optionLabel}>{opt.label}</span>
+                    {opt.indicator ? (
+                      <span className={styles.optionIndicator}>{opt.indicator}</span>
+                    ) : null}
                   </button>
                 </li>
               ),

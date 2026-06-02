@@ -9,7 +9,7 @@ import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal'
 import ListItem from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
-import Select from '@/components/Select/Select';
+import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import Tooltip from '@/components/Tooltip/Tooltip';
@@ -625,12 +625,7 @@ const PlayerDetailsPage = () => {
   ];
   const gameLogColumns = buildGameLogColumns(isGoalie);
   const gameLogPageCount = Math.max(1, Math.ceil(gameLogsTotal / GAME_LOG_PAGE_SIZE));
-  const filteredSeasonOptions = [
-    { value: 'all', label: 'All seasons' },
-    ...seasons
-      .filter((season) => !leagueId || season.league_id === leagueId)
-      .map((season) => ({ value: season.id, label: season.name })),
-  ];
+  const gameLogSeasons = seasons.filter((season) => !leagueId || season.league_id === leagueId);
 
   const playerEditTarget: TeamPlayerRecord = {
     ...player,
@@ -726,14 +721,15 @@ const PlayerDetailsPage = () => {
       action={
         <div className={styles.gameLogFilters}>
           <div className={styles.gameLogSeasonSelect}>
-            <Select
+            <SeasonSelect
               value={gameLogSeasonId}
-              options={filteredSeasonOptions}
+              seasons={gameLogSeasons}
               onChange={(value) => {
                 setGameLogSeasonId(value);
                 setGameLogPage(1);
               }}
               placeholder="All seasons"
+              includeAllOption
             />
           </div>
           <SegmentedControl

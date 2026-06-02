@@ -175,10 +175,33 @@
   display: flex;
   align-items: center;
   gap: $space-md;
+  min-width: 0;
   font-size: $font-base;
   font-weight: 400;
   color: $text-body;
   text-transform: none;
+  letter-spacing: 0;
+}
+
+.optionLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionIndicator {
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 2px $space-xs;
+  border: 1px solid rgba($success, 0.38);
+  border-radius: $radius-sm;
+  color: $success-light;
+  background: rgba($success, 0.12);
+  font-size: $font-xs;
+  font-weight: 700;
+  line-height: 1;
+  text-transform: uppercase;
   letter-spacing: 0;
 }
 

@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '@/components/Card/Card';
+import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Icon from '@/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Select from '@/components/Select/Select';
+import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
@@ -43,23 +44,17 @@ interface Props {
   leagueId: string;
   leagueCode: string | null;
   teamCode: string | null;
-  latestSeasonId: string | null;
 }
 
-const TeamProspectsTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeasonId }: Props) => {
+const TeamProspectsTab = ({ teamId, leagueId, leagueCode, teamCode }: Props) => {
   const navigate = useNavigate();
   const { seasons: leagueSeasons } = useSeasons(leagueId);
-  const currentSeason = leagueSeasons.find((s) => s.is_current);
   const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [confirmRemove, setConfirmRemove] = useState<TeamPlayerRecord | null>(null);
+  const [isRemoving, setIsRemoving] = useState(false);
 
-  useEffect(() => {
-    if (selectedSeasonId === null && leagueSeasons.length > 0) {
-      setSelectedSeasonId(currentSeason?.id ?? leagueSeasons[0]?.id ?? latestSeasonId);
-    }
-  }, [currentSeason?.id, latestSeasonId, leagueSeasons.length, selectedSeasonId]);
-
-  const { players, loading, busy, updatePlayerRosterRole } = useTeamPlayers(
+  const { players, loading, busy, updatePlayerRosterRole, removePlayerFromTeam } = useTeamPlayers(
     teamId,
     selectedSeasonId ?? undefined,
     { prospectsOnly: true },
@@ -82,6 +77,14 @@ const TeamProspectsTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeason
     [...items].sort((a, b) =>
       `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`),
     );
+
+  const handleConfirmRemove = async () => {
+    if (!confirmRemove) return;
+    setIsRemoving(true);
+    const ok = await removePlayerFromTeam(confirmRemove);
+    setIsRemoving(false);
+    if (ok) setConfirmRemove(null);
+  };
 
   const renderPlayer = (p: TeamPlayerRecord) => (
     <ListItem
@@ -126,6 +129,13 @@ const TeamProspectsTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeason
             disabled: busy === p.id,
             onClick: () => updatePlayerRosterRole(p, false),
           },
+          {
+            icon: 'person_remove',
+            intent: 'danger',
+            tooltip: 'Remove From Team',
+            disabled: busy === p.id,
+            onClick: () => setConfirmRemove(p),
+          },
         ] satisfies ListItemAction[]
       }
     />
@@ -137,12 +147,9 @@ const TeamProspectsTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeason
         title="Prospects"
         action={
           leagueSeasons.length > 0 ? (
-            <Select
+            <SeasonSelect
               value={selectedSeasonId}
-              options={leagueSeasons.map((s) => ({
-                value: s.id,
-                label: s.is_current ? `${s.name} *` : s.name,
-              }))}
+              seasons={leagueSeasons}
               onChange={setSelectedSeasonId}
             />
           ) : undefined
@@ -204,6 +211,30 @@ const TeamProspectsTab = ({ teamId, leagueId, leagueCode, teamCode, latestSeason
           );
         })}
       </div>
+
+      <ConfirmModal
+        open={!!confirmRemove}
+        title="Remove From Team"
+        body={
+          confirmRemove ? (
+            <>
+              Remove{' '}
+              <strong>
+                {confirmRemove.first_name} {confirmRemove.last_name}
+              </strong>
+              {' '}from this team for this season?
+            </>
+          ) : (
+            ''
+          )
+        }
+        confirmLabel="Remove From Team"
+        confirmIcon="person_remove"
+        variant="danger"
+        busy={isRemoving}
+        onConfirm={handleConfirmRemove}
+        onCancel={() => setConfirmRemove(null)}
+      />
     </>
   );
 };

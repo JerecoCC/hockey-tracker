@@ -164,7 +164,6 @@ const TeamDetailsPage = () => {
                 leagueId={team.league_id ?? ''}
                 leagueCode={team.league_code}
                 teamCode={team.code}
-                latestSeasonId={team.latest_season_id ?? null}
               />
             ),
           },
@@ -177,7 +176,6 @@ const TeamDetailsPage = () => {
                 leagueId={team.league_id ?? ''}
                 leagueCode={team.league_code}
                 teamCode={team.code}
-                latestSeasonId={team.latest_season_id ?? null}
               />
             ),
           },

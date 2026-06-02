@@ -328,6 +328,27 @@ describe('PATCH /api/admin/player-teams/:id', () => {
   });
 });
 
+describe('DELETE /api/admin/player-teams/:id', () => {
+  it('removes the player-team association', async () => {
+    sql.mockResolvedValueOnce([{ id: 'stint-1' }]);
+
+    const res = await request(app).delete('/api/admin/player-teams/stint-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.message).toBe('Player removed from team');
+    expect(sql).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns 404 when the stint is not found', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).delete('/api/admin/player-teams/missing-stint');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/stint not found/i);
+  });
+});
+
 describe('GET /api/admin/player-teams/history/:playerId/jerseys', () => {
   it('returns jersey history rows', async () => {
     sql.mockResolvedValueOnce([

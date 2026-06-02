@@ -14,6 +14,7 @@ import Checkbox from '@/components/Checkbox/Checkbox';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
+import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
@@ -282,6 +283,9 @@ const ScoreImageModal = ({
     {
       id: string;
       name: string;
+      start_date: string | null;
+      created_at: string;
+      is_current: boolean;
       best_of_playoff: number | null;
       league_best_of_playoff: number;
     }[]
@@ -998,10 +1002,6 @@ const ScoreImageModal = ({
                 logo: l.logo,
                 code: l.code,
               }));
-              const seasonOptions: SelectOption[] = formSeasons.map((s) => ({
-                value: s.id,
-                label: s.name,
-              }));
               const teamOptions: SelectOption[] = formTeams.map((t) => ({
                 value: t.id,
                 label: t.name,
@@ -1029,9 +1029,9 @@ const ScoreImageModal = ({
                     </div>
                     <div className={styles.formField}>
                       <label className={styles.formLabel}>Season</label>
-                      <Select
+                      <SeasonSelect
                         value={formSeasonId || null}
-                        options={seasonOptions}
+                        seasons={formSeasons}
                         placeholder="— Select season —"
                         onChange={setFormSeasonId}
                         disabled={!formLeagueId}

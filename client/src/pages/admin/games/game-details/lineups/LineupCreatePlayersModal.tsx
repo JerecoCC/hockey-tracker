@@ -77,6 +77,8 @@ interface Props {
   onPlayersCreated?: (playerIds: string[]) => Promise<void>;
   /** Pre-fill form rows with these jersey numbers when the modal opens */
   initialJerseyNumbers?: number[];
+  /** Allow callers managing team-season rosters to exceed the game roster cap. */
+  allowRosterOverflow?: boolean;
 }
 
 const buildRowWarnings = (rows: RowValues[] = [], existingRoster: ExistingRosterEntry[]) => {
@@ -141,6 +143,7 @@ const LineupCreatePlayersModal = ({
   createAndRosterPlayers,
   onPlayersCreated,
   initialJerseyNumbers,
+  allowRosterOverflow = false,
 }: Props) => {
   const [duplicateErrors, setDuplicateErrors] = useState<string[]>([]);
   const [crossTeamWarnings, setCrossTeamWarnings] = useState<string[]>([]);
@@ -192,8 +195,14 @@ const LineupCreatePlayersModal = ({
         { label: 'Last Name', required: true },
       ]}
       addRowLabel="Add Player"
-      addRowDisabled={({ rowCount }) => rowCount >= MAX_ROSTER - existingCount}
-      addRowHint={({ rowCount }) => `${existingCount + rowCount} / ${MAX_ROSTER} players`}
+      addRowDisabled={
+        allowRosterOverflow ? undefined : ({ rowCount }) => rowCount >= MAX_ROSTER - existingCount
+      }
+      addRowHint={
+        allowRosterOverflow
+          ? ({ rowCount }) => `${existingCount + rowCount} players`
+          : ({ rowCount }) => `${existingCount + rowCount} / ${MAX_ROSTER} players`
+      }
       itemLabel="player"
       getConfirmLabel={(count, isSubmitting) =>
         isSubmitting ? 'Saving…' : `Save ${count} Player${count !== 1 ? 's' : ''}`
