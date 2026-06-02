@@ -122,10 +122,10 @@ export interface PlayerGameLogsResponse {
 
 export interface PlayerRouteLookup {
   player_id: string;
-  team_id: string;
+  team_id: string | null;
   league_id: string;
   league_code: string;
-  team_code: string;
+  team_code: string | null;
   player_slug: string;
 }
 
@@ -145,7 +145,7 @@ export const usePlayerRouteLookup = (
             headers: authHeaders(),
             params: {
               league_code: leagueCode,
-              team_code: teamCode,
+              team_code: teamCode || undefined,
               player_slug: playerSlug,
             },
           },
@@ -156,7 +156,7 @@ export const usePlayerRouteLookup = (
         return null;
       }
     },
-    enabled: enabled && !!leagueCode && !!teamCode && !!playerSlug,
+    enabled: enabled && !!leagueCode && !!playerSlug,
   });
   return { routeLookup, loading };
 };

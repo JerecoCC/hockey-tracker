@@ -845,8 +845,8 @@ router.get('/route-lookup', async (req, res) => {
   const teamCode = String(req.query.team_code || '').trim();
   const playerSlug = String(req.query.player_slug || '').trim().toLowerCase();
 
-  if (!leagueCode || !teamCode || !playerSlug) {
-    return res.status(400).json({ error: 'league_code, team_code, and player_slug are required' });
+  if (!leagueCode || !playerSlug) {
+    return res.status(400).json({ error: 'league_code and player_slug are required' });
   }
 
   try {
@@ -878,7 +878,7 @@ router.get('/route-lookup', async (req, res) => {
         LIMIT 1
       ) ti ON true
       WHERE lower(l.code) = lower(${leagueCode})
-        AND lower(ti.code) = lower(${teamCode})
+        AND (${teamCode || null}::text IS NULL OR lower(ti.code) = lower(${teamCode}))
         AND trim(both '-' from regexp_replace(
           lower(trim(concat_ws(' ', p.first_name, p.last_name))),
           '[^a-z0-9]+',

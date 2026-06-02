@@ -6,7 +6,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Pagination from '@/components/Pagination/Pagination';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import { buildLeagueDetailsPath, buildPlayerDetailsPath } from '@/lib/routeSlugs';
+import { buildLeaguePlayerDetailsPath } from '@/lib/routeSlugs';
 import SearchableList from '@/components/SearchableList/SearchableList';
 import Select from '@/components/Select/Select';
 import { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
@@ -163,16 +163,12 @@ const LeaguePlayersTab = ({
                               tooltip: 'View player',
                               onClick: () =>
                                 navigate(
-                                  p.team_id
-                                    ? buildPlayerDetailsPath({
-                                        leagueCode,
-                                        leagueId,
-                                        teamCode: p.team_code,
-                                        teamId: p.team_id,
-                                        firstName: p.first_name,
-                                        lastName: p.last_name,
-                                      })
-                                    : buildLeagueDetailsPath({ leagueCode, leagueId }),
+                                  buildLeaguePlayerDetailsPath({
+                                    leagueCode,
+                                    leagueId,
+                                    firstName: p.first_name,
+                                    lastName: p.last_name,
+                                  }),
                                 ),
                             },
                             {

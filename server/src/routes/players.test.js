@@ -153,6 +153,25 @@ describe('GET /api/admin/players/route-lookup', () => {
     expect(res.body).toEqual(lookup);
   });
 
+  it('resolves a league-scoped player URL without a team code', async () => {
+    const lookup = {
+      player_id: 'player-1',
+      team_id: null,
+      league_id: 'league-1',
+      league_code: 'NHL',
+      team_code: null,
+      player_slug: 'kyle-masters',
+    };
+    sql.mockResolvedValueOnce([lookup]);
+
+    const res = await request(app).get(
+      '/api/admin/players/route-lookup?league_code=nhl&player_slug=kyle-masters',
+    );
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(lookup);
+  });
+
   it('returns 404 when the pretty player URL cannot be resolved', async () => {
     sql.mockResolvedValueOnce([]);
 

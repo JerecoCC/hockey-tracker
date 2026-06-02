@@ -5,6 +5,7 @@ import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
+import useLeaguePlayers from '@/hooks/useLeaguePlayers';
 import LeagueDetailsPage from './LeagueDetails';
 
 // ── Router ─────────────────────────────────────────────────────────────
@@ -19,6 +20,10 @@ jest.mock('react-router-dom', () => ({
 // ── Hooks ─────────────────────────────────────────────────────────────
 jest.mock('../../../hooks/useLeagueDetails', () => ({ __esModule: true, default: jest.fn() }));
 jest.mock('../../../hooks/useLeagueGroups', () => ({ __esModule: true, default: jest.fn() }));
+jest.mock('../../../hooks/useLeagues', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({ leagues: [], loading: false })),
+}));
 jest.mock('../../../hooks/useLeaguePlayers', () => ({
   __esModule: true,
   default: jest.fn(() => ({
@@ -72,6 +77,18 @@ const baseGroupsHook = {
   setGroupTeams: jest.fn(),
 };
 
+const basePlayersHook = {
+  players: [],
+  total: 0,
+  loading: false,
+  fetching: false,
+  busy: null,
+  addPlayer: jest.fn(),
+  bulkAddPlayers: jest.fn(),
+  updatePlayer: jest.fn(),
+  deletePlayer: jest.fn(),
+};
+
 const mockLeague = {
   id: 'lg1',
   name: 'Test League',
@@ -95,12 +112,18 @@ const BreadcrumbHarness = ({ children }: { children: ReactNode }) => {
   );
 };
 
-const setup = (hookOverrides = {}, groupOverrides = {}, locationState: unknown = null) => {
+const setup = (
+  hookOverrides = {},
+  groupOverrides = {},
+  locationState: unknown = null,
+  playerOverrides = {},
+) => {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   (useParams as jest.Mock).mockReturnValue({ id: 'lg1' });
   (useLocation as jest.Mock).mockReturnValue({ state: locationState });
   (useLeagueDetails as jest.Mock).mockReturnValue({ ...baseHook, ...hookOverrides });
   (useLeagueGroups as jest.Mock).mockReturnValue({ ...baseGroupsHook, ...groupOverrides });
+  (useLeaguePlayers as jest.Mock).mockReturnValue({ ...basePlayersHook, ...playerOverrides });
   return render(
     <BreadcrumbHarness>
       <LeagueDetailsPage />
@@ -327,5 +350,42 @@ describe('LeagueDetailsPage – players tab', () => {
     setup({ league: mockLeague });
     clickPlayersTab();
     expect(screen.getByText(/no players in this league yet/i)).toBeInTheDocument();
+  });
+
+  it('navigates to league-scoped player details from the Players tab', () => {
+    setup(
+      { league: mockLeague },
+      {},
+      null,
+      {
+        players: [
+          {
+            id: 'player-1',
+            first_name: 'John',
+            last_name: 'Smith',
+            photo: null,
+            date_of_birth: null,
+            birth_city: null,
+            birth_country: null,
+            nationality: null,
+            height_cm: null,
+            weight_lbs: null,
+            position: 'C',
+            shoots: 'L',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            team_id: null,
+            team_code: null,
+          },
+        ],
+        total: 1,
+      },
+    );
+    clickPlayersTab();
+
+    const tooltip = screen.getByRole('tooltip', { name: /view player/i });
+    fireEvent.click(tooltip.previousElementSibling as HTMLElement);
+
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/tl/players/john-smith');
   });
 });

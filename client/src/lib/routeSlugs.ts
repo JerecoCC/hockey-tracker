@@ -115,4 +115,20 @@ export const buildPlayerDetailsPath = ({
     lastName,
   )}`;
 
+export const buildLeaguePlayerDetailsPath = ({
+  leagueCode,
+  leagueId,
+  firstName,
+  lastName,
+}: {
+  leagueCode: string | null | undefined;
+  leagueId?: string | null;
+  firstName: string | null | undefined;
+  lastName: string | null | undefined;
+}) =>
+  `${buildLeagueDetailsPath({ leagueCode, leagueId })}/players/${playerRouteSlug(
+    firstName,
+    lastName,
+  )}`;
+
 export type PlayerDetailsPathInput = Parameters<typeof buildPlayerDetailsPath>[0];

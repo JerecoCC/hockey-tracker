@@ -39,6 +39,7 @@ import useTabState from '@/hooks/useTabState';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
+  buildLeaguePlayerDetailsPath,
   buildPlayerDetailsPath,
   buildTeamDetailsPath,
   toRouteSlug,
@@ -268,7 +269,7 @@ const PlayerDetailsPage = () => {
   const navigate = useNavigate();
   const { leagueCode, teamCode: routeTeamCode, playerSlug } = useParams<{
     leagueCode: string;
-    teamCode: string;
+    teamCode?: string;
     playerSlug: string;
   }>();
   const isLegacyIdRoute = !!playerSlug && UUID_PATTERN.test(playerSlug);
@@ -408,29 +409,42 @@ const PlayerDetailsPage = () => {
 
   const latestStint = stints[0];
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
-  const teamHref = buildTeamDetailsPath({
+  const leagueHref = buildLeagueDetailsPath({
     leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
     leagueId,
-    teamCode: teamDetails?.code ?? routeLookup?.team_code ?? routeTeamCode,
-    teamId,
   });
+  const hasTeamRoute = !!(teamId || routeLookup?.team_id || routeTeamCode);
+  const teamHref = hasTeamRoute
+    ? buildTeamDetailsPath({
+        leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
+        leagueId,
+        teamCode: teamDetails?.code ?? routeLookup?.team_code ?? routeTeamCode,
+        teamId,
+      })
+    : leagueHref;
   const canonicalPlayerPath =
     player && routeLookup
-      ? buildPlayerDetailsPath({
-          leagueCode: routeLookup.league_code,
-          teamCode: routeLookup.team_code,
-          firstName: player.first_name,
-          lastName: player.last_name,
-        })
+      ? routeLookup.team_id && routeLookup.team_code
+        ? buildPlayerDetailsPath({
+            leagueCode: routeLookup.league_code,
+            teamCode: routeLookup.team_code,
+            firstName: player.first_name,
+            lastName: player.last_name,
+          })
+        : buildLeaguePlayerDetailsPath({
+            leagueCode: routeLookup.league_code,
+            leagueId: routeLookup.league_id,
+            firstName: player.first_name,
+            lastName: player.last_name,
+          })
       : null;
 
   useEffect(() => {
     if (isLegacyIdRoute || !canonicalPlayerPath) return;
-    if (
-      toRouteSlug(leagueCode) === toRouteSlug(routeLookup?.league_code) &&
-      toRouteSlug(routeTeamCode) === toRouteSlug(routeLookup?.team_code) &&
-      playerSlug === routeLookup?.player_slug
-    ) {
+    const leagueMatches = toRouteSlug(leagueCode) === toRouteSlug(routeLookup?.league_code);
+    const teamMatches =
+      routeLookup?.team_code == null || toRouteSlug(routeTeamCode) === toRouteSlug(routeLookup.team_code);
+    if (leagueMatches && teamMatches && playerSlug === routeLookup?.player_slug) {
       return;
     }
     navigate(canonicalPlayerPath, { replace: true });
@@ -459,19 +473,20 @@ const PlayerDetailsPage = () => {
       ? null
       : {
           backPath: teamHref,
-          backLabel: `Back to ${teamDetails?.name ?? 'Team'}`,
+          backLabel: hasTeamRoute ? `Back to ${teamDetails?.name ?? 'Team'}` : 'Back to League',
           items: [
             {
               label: teamDetails?.league_name ?? '...',
-              path: buildLeagueDetailsPath({
-                leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
-                leagueId,
-              }),
+              path: leagueHref,
             },
-            {
-              label: latestStint?.team.name ?? teamDetails?.name ?? '...',
-              path: teamHref,
-            },
+            ...(hasTeamRoute
+              ? [
+                  {
+                    label: latestStint?.team.name ?? teamDetails?.name ?? '...',
+                    path: teamHref,
+                  },
+                ]
+              : []),
             { label: fullName },
           ],
         },
@@ -482,7 +497,9 @@ const PlayerDetailsPage = () => {
       teamDetails?.league_name,
       latestStint?.team.name,
       fullName,
+      hasTeamRoute,
       leagueId,
+      leagueHref,
     ],
   );
 
