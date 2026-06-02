@@ -29,9 +29,10 @@ export interface LineupEntry {
 
 const useGameLineup = (gameId: string | undefined) => {
   const queryClient = useQueryClient();
+  const queryKey = ['game-lineup', gameId];
 
   const { data: lineup = [], isLoading: loading } = useQuery<LineupEntry[]>({
-    queryKey: ['game-lineup', gameId],
+    queryKey,
     queryFn: async () => {
       try {
         const { data } = await axios.get<LineupEntry[]>(
@@ -52,7 +53,9 @@ const useGameLineup = (gameId: string | undefined) => {
       await axios.delete(`${API}/admin/games/${gameId}/lineup/${teamId}`, {
         headers: authHeaders(),
       });
-      await queryClient.invalidateQueries({ queryKey: ['game-lineup', gameId] });
+      queryClient.setQueryData<LineupEntry[]>(queryKey, (current = []) =>
+        current.filter((entry) => entry.team_id !== teamId),
+      );
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to clear lineup'));
@@ -66,13 +69,16 @@ const useGameLineup = (gameId: string | undefined) => {
     teamName?: string,
   ): Promise<boolean> => {
     try {
-      await axios.put(
+      const { data: teamLineup } = await axios.put<LineupEntry[]>(
         `${API}/admin/games/${gameId}/lineup`,
         { team_id: teamId, slots },
         { headers: authHeaders() },
       );
       toast.success(teamName ? `${teamName} starting lineup saved` : 'Starting lineup saved');
-      await queryClient.invalidateQueries({ queryKey: ['game-lineup', gameId] });
+      queryClient.setQueryData<LineupEntry[]>(queryKey, (current = []) => [
+        ...current.filter((entry) => entry.team_id !== teamId),
+        ...teamLineup,
+      ]);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to save lineup'));

@@ -202,6 +202,54 @@ interface Filters {
   status?:    GameStatus;
 }
 
+const isGameListQuery = (queryKey: readonly unknown[]) =>
+  queryKey[0] === 'games' &&
+  queryKey.length === 2 &&
+  typeof queryKey[1] === 'object' &&
+  queryKey[1] !== null;
+
+const mergeGame = (game: GameRecord | null | undefined, patch: Partial<GameRecord>) =>
+  game ? { ...game, ...patch } : game;
+
+const updateCachedGame = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  id: string,
+  patch: Partial<GameRecord>,
+) => {
+  queryClient.setQueryData<GameRecord | null>(['games', id], (game) => mergeGame(game, patch));
+
+  const gameListQueries = queryClient
+    .getQueryCache()
+    .findAll({ predicate: (query) => isGameListQuery(query.queryKey) });
+
+  for (const query of gameListQueries) {
+    queryClient.setQueryData<GameRecord[]>(query.queryKey, (games) => {
+      if (!Array.isArray(games)) return games;
+      let changed = false;
+      const nextGames = games.map((game) => {
+        if (game.id !== id) return game;
+        changed = true;
+        return { ...game, ...patch };
+      });
+      return changed ? nextGames : games;
+    });
+  }
+};
+
+const removeCachedGame = (queryClient: ReturnType<typeof useQueryClient>, id: string) => {
+  queryClient.removeQueries({ queryKey: ['games', id], exact: true });
+
+  const gameListQueries = queryClient
+    .getQueryCache()
+    .findAll({ predicate: (query) => isGameListQuery(query.queryKey) });
+
+  for (const query of gameListQueries) {
+    queryClient.setQueryData<GameRecord[]>(query.queryKey, (games) =>
+      Array.isArray(games) ? games.filter((game) => game.id !== id) : games,
+    );
+  }
+};
+
 const useGames = (filters: Filters = {}) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
@@ -331,12 +379,12 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('advance-period');
     try {
-      await axios.patch(
+      const { data: game } = await axios.patch<GameRecord>(
         `${API}/admin/games/${id}`,
         { current_period: nextPeriod },
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to advance period'));
@@ -354,14 +402,13 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('in_progress');
     try {
-      await axios.patch(
+      const { data: game } = await axios.patch<GameRecord>(
         `${API}/admin/games/${id}`,
         { status: 'in_progress', time_start },
         { headers: authHeaders() },
       );
       toast.success('Game started!');
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to start game'));
@@ -375,15 +422,18 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy(status);
     try {
-      await axios.patch(`${API}/admin/games/${id}`, { status }, { headers: authHeaders() });
+      const { data: game } = await axios.patch<GameRecord>(
+        `${API}/admin/games/${id}`,
+        { status },
+        { headers: authHeaders() },
+      );
       const label =
         status === 'in_progress' ? 'Game started!'
         : status === 'final'      ? 'Game ended!'
         : status === 'cancelled'  ? 'Game cancelled.'
         : 'Status updated.';
       toast.success(label);
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update game status'));
@@ -401,14 +451,13 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('final');
     try {
-      await axios.patch(
+      const { data: game } = await axios.patch<GameRecord>(
         `${API}/admin/games/${id}`,
         { status: 'final', star_1_id: stars.star1, star_2_id: stars.star2, star_3_id: stars.star3 },
         { headers: authHeaders() },
       );
       toast.success('Game ended!');
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to end game'));
@@ -422,10 +471,13 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('update-info');
     try {
-      await axios.patch(`${API}/admin/games/${id}`, data, { headers: authHeaders() });
+      const { data: game } = await axios.patch<GameRecord>(
+        `${API}/admin/games/${id}`,
+        data,
+        { headers: authHeaders() },
+      );
       toast.success('Game updated!');
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update game'));
@@ -443,14 +495,13 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('update-stars');
     try {
-      await axios.patch(
+      const { data: game } = await axios.patch<GameRecord>(
         `${API}/admin/games/${id}`,
         { star_1_id: stars.star1, star_2_id: stars.star2, star_3_id: stars.star3 },
         { headers: authHeaders() },
       );
       toast.success('Three Stars updated!');
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update stars'));
@@ -468,12 +519,12 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('shots');
     try {
-      await axios.patch(
+      const { data } = await axios.patch<Pick<GameRecord, 'period_shots'>>(
         `${API}/admin/games/${id}/shots`,
         { period, home_shots, away_shots },
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      updateCachedGame(queryClient, id, { period_shots: data.period_shots });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to save shots'));
@@ -489,12 +540,12 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('revert-edit');
     try {
-      await axios.patch(
+      const { data: game } = await axios.patch<GameRecord>(
         `${API}/admin/games/${id}`,
         { current_period: lastPeriod },
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to set current period'));
@@ -510,7 +561,7 @@ export const useGameDetails = (id: string | undefined) => {
     try {
       await axios.delete(`${API}/admin/games/${id}`, { headers: authHeaders() });
       toast.success('Game deleted!');
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      removeCachedGame(queryClient, id);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete game'));
@@ -525,12 +576,12 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('advance-period');
     try {
-      await axios.patch(
+      const { data: game } = await axios.patch<GameRecord>(
         `${API}/admin/games/${id}`,
         { current_period: 'OT', overtime_periods: targetOTPeriods },
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to revert overtime period'));
@@ -545,12 +596,12 @@ export const useGameDetails = (id: string | undefined) => {
     if (!id) return false;
     setBusy('advance-period');
     try {
-      await axios.patch(
+      const { data: game } = await axios.patch<GameRecord>(
         `${API}/admin/games/${id}`,
         { current_period: 'OT', overtime_periods: currentOvertimePeriods + 1 },
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      updateCachedGame(queryClient, id, game);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to advance overtime period'));

@@ -54,9 +54,10 @@ export interface PutAttemptData {
 const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: boolean } = {}) => {
   const queryClient = useQueryClient();
   const { enabled = true } = options;
+  const queryKey = ['shootout-attempts', gameId];
 
   const { data: attempts = [], isLoading: loading } = useQuery<ShootoutAttempt[]>({
-    queryKey: ['shootout-attempts', gameId],
+    queryKey,
     queryFn: async () => {
       try {
         const { data } = await axios.get<ShootoutAttempt[]>(
@@ -80,7 +81,11 @@ const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: bo
         payload,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts', gameId] });
+      queryClient.setQueryData<ShootoutAttempt[]>(queryKey, (current = []) =>
+        [...current.filter((attempt) => attempt.id !== data.id), data].sort(
+          (a, b) => a.attempt_order - b.attempt_order,
+        ),
+      );
       return data;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record shootout attempt'));
@@ -99,7 +104,11 @@ const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: bo
         payload,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts', gameId] });
+      queryClient.setQueryData<ShootoutAttempt[]>(queryKey, (current = []) =>
+        current
+          .map((attempt) => (attempt.id === attemptId ? data : attempt))
+          .sort((a, b) => a.attempt_order - b.attempt_order),
+      );
       return data;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update shootout attempt'));
@@ -114,7 +123,9 @@ const useShootoutAttempts = (gameId: string | undefined, options: { enabled?: bo
         `${API}/admin/games/${gameId}/shootout-attempts/${attemptId}`,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['shootout-attempts', gameId] });
+      queryClient.setQueryData<ShootoutAttempt[]>(queryKey, (current = []) =>
+        current.filter((attempt) => attempt.id !== attemptId),
+      );
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete shootout attempt'));

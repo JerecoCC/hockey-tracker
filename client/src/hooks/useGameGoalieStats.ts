@@ -127,7 +127,10 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         data,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey });
+      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, (current = []) => [
+        ...current.filter((stat) => stat.goalie_id !== row.goalie_id),
+        row,
+      ]);
       return row;
     } catch (err) {
       toast.error(apiError(err, 'Failed to save goalie stats'));
@@ -147,7 +150,7 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         data,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey });
+      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
       return rows;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record goalie switch'));
@@ -169,7 +172,7 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         data,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey });
+      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
       return rows;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update goalie stint'));
@@ -183,11 +186,11 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
     if (!gameId) return false;
     setBusy(stintId);
     try {
-      await axios.delete(
+      const { data: rows } = await axios.delete<GoalieStatRecord[]>(
         `${API}/admin/games/${gameId}/goalie-stints/${stintId}`,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey });
+      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to remove goalie stint'));
@@ -205,7 +208,9 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
         `${API}/admin/games/${gameId}/goalie-stats/${goalieId}`,
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey });
+      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, (current = []) =>
+        current.filter((stat) => stat.goalie_id !== goalieId),
+      );
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to remove goalie stat'));
