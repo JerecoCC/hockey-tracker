@@ -75,6 +75,7 @@ router.get('/', async (req, res) => {
           JOIN teams active_t ON active_t.id = active_pt.team_id
           WHERE active_pt.player_id = p.id
             AND active_t.league_id = ${league_id}
+            AND (${season_id ?? null}::uuid IS NULL OR active_pt.season_id = ${season_id})
             AND active_pt.end_date IS NULL
         )
         AND (

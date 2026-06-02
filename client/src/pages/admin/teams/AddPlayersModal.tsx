@@ -4,9 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
-import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
-import useSeasons from '@/hooks/useSeasons';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
 import styles from './AddPlayersModal.module.scss';
@@ -27,6 +25,7 @@ interface Props {
   onClose: () => void;
   teamId: string;
   leagueId: string;
+  seasonId: string | null;
   existingPlayerIds: Set<string>;
   addPlayersToRoster: (
     teamId: string,
@@ -40,27 +39,25 @@ const AddPlayersModal = ({
   onClose,
   teamId,
   leagueId,
+  seasonId,
   existingPlayerIds,
   addPlayersToRoster,
 }: Props) => {
-  const { seasons: leagueSeasons } = useSeasons(leagueId);
-
-  const [seasonId, setSeasonId] = useState('');
   const [query, setQuery] = useState('');
   // Map from player_id -> jersey number string (empty = null)
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const { data: allPlayers = [] } = useQuery<PlayerRecord[]>({
-    queryKey: ['players', { league_id: leagueId, unassigned: true }],
+    queryKey: ['players', { league_id: leagueId, season_id: seasonId, unassigned: true }],
     queryFn: async () => {
       const { data } = await axios.get<PlayerRecord[]>(`${API}/admin/players`, {
         headers: authHeaders(),
-        params: { league_id: leagueId, unassigned: 'true' },
+        params: { league_id: leagueId, season_id: seasonId, unassigned: 'true' },
       });
       return data;
     },
-    enabled: open && !!leagueId,
+    enabled: open && !!leagueId && !!seasonId,
   });
 
   // The API returns league-scoped unassigned players; this keeps the modal safe
@@ -150,13 +147,6 @@ const AddPlayersModal = ({
             autoFocus
           />
         </div>
-
-        <SeasonSelect
-          value={seasonId || null}
-          seasons={leagueSeasons}
-          placeholder="— Select season —"
-          onChange={setSeasonId}
-        />
       </div>
 
       {filtered.length === 0 ? (

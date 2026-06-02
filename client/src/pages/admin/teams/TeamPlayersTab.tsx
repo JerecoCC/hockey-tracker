@@ -366,6 +366,7 @@ const TeamPlayersTab = ({ teamId, teamName, leagueId, leagueCode, teamCode }: Pr
         onClose={() => setAddModalOpen(false)}
         teamId={teamId}
         leagueId={leagueId}
+        seasonId={selectedSeasonId}
         existingPlayerIds={existingPlayerIds}
         addPlayersToRoster={addPlayersToRoster}
       />

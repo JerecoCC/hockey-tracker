@@ -30,6 +30,7 @@ const renderModal = () => {
         onClose={jest.fn()}
         teamId="team-1"
         leagueId="league-1"
+        seasonId="season-1"
         existingPlayerIds={new Set()}
         addPlayersToRoster={jest.fn()}
       />
@@ -53,7 +54,7 @@ describe('AddPlayersModal', () => {
       expect(mockedAxios.get).toHaveBeenCalledWith(
         expect.stringContaining('/admin/players'),
         expect.objectContaining({
-          params: { league_id: 'league-1', unassigned: 'true' },
+          params: { league_id: 'league-1', season_id: 'season-1', unassigned: 'true' },
         }),
       );
     });
