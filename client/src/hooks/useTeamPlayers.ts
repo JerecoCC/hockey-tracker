@@ -314,6 +314,63 @@ interface UseTeamPlayersOptions {
   prospectsOnly?: boolean;
 }
 
+type PlayersCacheData =
+  | PlayerRecord[]
+  | {
+      players?: PlayerRecord[];
+      [key: string]: unknown;
+    };
+
+const isPlayersQuery = (queryKey: readonly unknown[]) => queryKey[0] === 'players';
+
+const mapPlayersCache = (
+  data: PlayersCacheData | undefined,
+  queryKey: readonly unknown[],
+  mapPlayer: (player: PlayerRecord, queryKey: readonly unknown[]) => PlayerRecord | null,
+) => {
+  if (Array.isArray(data)) {
+    let changed = false;
+    const nextPlayers = data.flatMap((player) => {
+      const next = mapPlayer(player, queryKey);
+      if (next !== player) changed = true;
+      return next ? [next] : [];
+    });
+    return changed ? nextPlayers : data;
+  }
+
+  if (data && Array.isArray(data.players)) {
+    let changed = false;
+    const nextPlayers = data.players.flatMap((player) => {
+      const next = mapPlayer(player, queryKey);
+      if (next !== player) changed = true;
+      return next ? [next] : [];
+    });
+    return changed ? { ...data, players: nextPlayers } : data;
+  }
+
+  return data;
+};
+
+const updatePlayerCaches = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  mapPlayer: (player: PlayerRecord, queryKey: readonly unknown[]) => PlayerRecord | null,
+) => {
+  const playerQueries = queryClient
+    .getQueryCache()
+    .findAll({ predicate: (query) => isPlayersQuery(query.queryKey) });
+
+  for (const query of playerQueries) {
+    queryClient.setQueryData<PlayersCacheData>(query.queryKey, (data) =>
+      mapPlayersCache(data, query.queryKey, mapPlayer),
+    );
+  }
+};
+
+const rosterCacheOptions = (queryKey: readonly unknown[]) =>
+  typeof queryKey[1] === 'object' && queryKey[1] !== null
+    ? (queryKey[1] as UseTeamPlayersOptions & { team_id?: string; season_id?: string })
+    : null;
+
 const useTeamPlayers = (
   teamId: string | undefined,
   seasonId?: string,
@@ -352,7 +409,9 @@ const useTeamPlayers = (
     try {
       await axios.patch(`${API}/admin/players/${playerId}`, payload, { headers: authHeaders() });
       toast.success('Player updated!');
-      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      updatePlayerCaches(queryClient, (player) =>
+        player.id === playerId ? { ...player, ...payload } : player,
+      );
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
@@ -378,7 +437,11 @@ const useTeamPlayers = (
         { headers: authHeaders() },
       );
       toast.success('Jersey number updated!');
-      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      updatePlayerCaches(queryClient, (player) =>
+        player.id === playerId && player.team_id === teamId
+          ? { ...player, jersey_number: jerseyNumber }
+          : player,
+      );
       await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {
@@ -423,7 +486,11 @@ const useTeamPlayers = (
         { player_id: playerId, team_id: tId, season_id: sId, ...payload },
         { headers: authHeaders() },
       );
-      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      updatePlayerCaches(queryClient, (player) =>
+        player.id === playerId && player.team_id === tId
+          ? { ...player, ...payload }
+          : player,
+      );
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
@@ -465,7 +532,17 @@ const useTeamPlayers = (
         );
       }
       toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
-      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      updatePlayerCaches(queryClient, (cachedPlayer, queryKey) => {
+        if (cachedPlayer.id !== player.id || cachedPlayer.team_id !== player.team_id) {
+          return cachedPlayer;
+        }
+        const cacheOptions = rosterCacheOptions(queryKey);
+        if (cacheOptions?.prospectsOnly && !isProspect) return null;
+        if (!cacheOptions?.includeProspects && !cacheOptions?.prospectsOnly && isProspect) {
+          return null;
+        }
+        return { ...cachedPlayer, is_prospect: isProspect };
+      });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });
       return true;
@@ -501,7 +578,11 @@ const useTeamPlayers = (
         headers: authHeaders(),
       });
       toast.success('Player removed from team');
-      await queryClient.invalidateQueries({ queryKey: ['players'] });
+      updatePlayerCaches(queryClient, (cachedPlayer) =>
+        cachedPlayer.id === player.id && cachedPlayer.team_id === player.team_id
+          ? null
+          : cachedPlayer,
+      );
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', player.id] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });

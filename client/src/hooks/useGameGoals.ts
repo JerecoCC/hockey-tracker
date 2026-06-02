@@ -74,14 +74,49 @@ const applyGoalsToGameCache = (
   });
 };
 
-const invalidateGameListQueries = (queryClient: ReturnType<typeof useQueryClient>) =>
-  queryClient.invalidateQueries({
-    predicate: (query) =>
-      query.queryKey[0] === 'games' &&
-      query.queryKey.length === 2 &&
-      typeof query.queryKey[1] === 'object' &&
-      query.queryKey[1] !== null,
-  });
+const applyGoalsToGameListCaches = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  gameId: string,
+  goals: GoalRecord[],
+) => {
+  const gameQueries = queryClient
+    .getQueryCache()
+    .findAll({
+      predicate: (query) =>
+        query.queryKey[0] === 'games' &&
+        query.queryKey.length === 2 &&
+        typeof query.queryKey[1] === 'object' &&
+        query.queryKey[1] !== null,
+    });
+
+  for (const query of gameQueries) {
+    queryClient.setQueryData<GameRecord[]>(query.queryKey, (games) => {
+      if (!Array.isArray(games)) return games;
+      let changed = false;
+      const nextGames = games.map((game) => {
+        if (game.id !== gameId) return game;
+        changed = true;
+        const period_scores = periodScoresFromGoals(goals, game);
+        return {
+          ...game,
+          period_scores,
+          home_score: period_scores.reduce((sum, score) => sum + score.home_goals, 0),
+          away_score: period_scores.reduce((sum, score) => sum + score.away_goals, 0),
+        };
+      });
+      return changed ? nextGames : games;
+    });
+  }
+};
+
+const applyGoalsToGameCaches = (
+  queryClient: ReturnType<typeof useQueryClient>,
+  gameId: string,
+  goals: GoalRecord[],
+) => {
+  applyGoalsToGameCache(queryClient, gameId, goals);
+  applyGoalsToGameListCaches(queryClient, gameId, goals);
+};
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -179,8 +214,7 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         ]);
         return nextGoals;
       });
-      applyGoalsToGameCache(queryClient, gameId, nextGoals);
-      await invalidateGameListQueries(queryClient);
+      applyGoalsToGameCaches(queryClient, gameId, nextGoals);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to record goal'));
@@ -201,8 +235,7 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         nextGoals = sortGoals(current.map((goal) => (goal.id === goalId ? response.data : goal)));
         return nextGoals;
       });
-      applyGoalsToGameCache(queryClient, gameId, nextGoals);
-      await invalidateGameListQueries(queryClient);
+      applyGoalsToGameCaches(queryClient, gameId, nextGoals);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to update goal'));
@@ -222,8 +255,7 @@ const useGameGoals = (gameId: string | undefined, options: { enabled?: boolean }
         nextGoals = current.filter((goal) => goal.id !== goalId);
         return nextGoals;
       });
-      applyGoalsToGameCache(queryClient, gameId, nextGoals);
-      await invalidateGameListQueries(queryClient);
+      applyGoalsToGameCaches(queryClient, gameId, nextGoals);
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to delete goal'));

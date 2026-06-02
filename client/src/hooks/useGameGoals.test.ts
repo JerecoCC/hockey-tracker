@@ -162,10 +162,10 @@ describe('useGameGoals – addGoal', () => {
     );
   });
 
-  it('updates the game detail cache without invalidating the detail query', async () => {
+  it('updates game caches without invalidating game list queries', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     queryClient.setQueryData(['games', 'game-1'], GAME);
-    queryClient.setQueryData(['games', {}], []);
+    queryClient.setQueryData(['games', {}], [GAME]);
     mockedAxios.post.mockResolvedValueOnce({ data: GOAL });
 
     const { result } = renderHook(() => useGameGoals('game-1'), {
@@ -187,7 +187,15 @@ describe('useGameGoals – addGoal', () => {
       { period: '3', home_goals: 0, away_goals: 0 },
     ]);
     expect(queryClient.getQueryState(['games', 'game-1'])?.isInvalidated).toBe(false);
-    expect(queryClient.getQueryState(['games', {}])?.isInvalidated).toBe(true);
+    const cachedGames = queryClient.getQueryData<typeof GAME[]>(['games', {}]);
+    expect(cachedGames?.[0].home_score).toBe(1);
+    expect(cachedGames?.[0].away_score).toBe(0);
+    expect(cachedGames?.[0].period_scores).toEqual([
+      { period: '1', home_goals: 1, away_goals: 0 },
+      { period: '2', home_goals: 0, away_goals: 0 },
+      { period: '3', home_goals: 0, away_goals: 0 },
+    ]);
+    expect(queryClient.getQueryState(['games', {}])?.isInvalidated).toBe(false);
     expect(mockedAxios.get).not.toHaveBeenCalled();
   });
 
