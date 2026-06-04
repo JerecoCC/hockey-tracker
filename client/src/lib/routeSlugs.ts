@@ -29,12 +29,17 @@ export const buildTeamDetailsPath = ({
   leagueId,
   teamCode,
   teamId,
+  seasonId,
 }: {
   leagueCode: string | null | undefined;
   leagueId?: string | null;
   teamCode: string | null | undefined;
   teamId?: string | null;
-}) => `${buildLeagueDetailsPath({ leagueCode, leagueId })}/teams/${slugOrId(teamCode, teamId)}`;
+  seasonId?: string | null;
+}) => {
+  const path = `${buildLeagueDetailsPath({ leagueCode, leagueId })}/teams/${slugOrId(teamCode, teamId)}`;
+  return seasonId ? `${path}?season=${encodeURIComponent(seasonId)}` : path;
+};
 
 export const buildSeasonDetailsPath = ({
   leagueCode,

@@ -196,13 +196,18 @@ interface Props {
   teamId: string;
   leagueId: string;
   leagueCode?: string | null;
+  defaultSeasonId?: string | null;
 }
 
-const TeamGamesTab = ({ teamId, leagueId, leagueCode }: Props) => {
+const TeamGamesTab = ({ teamId, leagueId, leagueCode, defaultSeasonId }: Props) => {
   const navigate = useNavigate();
   const { seasons, loading: seasonsLoading } = useSeasons(leagueId);
-  const [seasonId, setSeasonId] = useState<string>('');
+  const [seasonId, setSeasonId] = useState<string>(defaultSeasonId ?? '');
   const [view, setView] = useState<'list' | 'calendar'>('calendar');
+
+  useEffect(() => {
+    if (!seasonId && defaultSeasonId) setSeasonId(defaultSeasonId);
+  }, [defaultSeasonId, seasonId]);
 
   const { games, loading: gamesLoading } = useGames({
     teamId,

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
@@ -32,6 +32,8 @@ const TeamDetailsPage = () => {
     leagueSlug?: string;
     leagueId?: string;
   }>();
+  const [searchParams] = useSearchParams();
+  const routeSeasonId = searchParams.get('season');
   const teamSlug = routeTeamSlug ?? legacyTeamId;
   const leagueSlug = routeLeagueSlug ?? legacyLeagueId;
   const isLegacyTeamRoute = !!teamSlug && UUID_PATTERN.test(teamSlug);
@@ -100,6 +102,7 @@ const TeamDetailsPage = () => {
       leagueId: team.league_id,
       teamCode: team.code,
       teamId: team.id,
+      seasonId: routeSeasonId,
     });
     if (
       leagueSlug !== toRouteSlug(team.league_code) ||
@@ -107,7 +110,7 @@ const TeamDetailsPage = () => {
     ) {
       navigate(canonicalPath, { replace: true });
     }
-  }, [isLegacyLeagueRoute, isLegacyTeamRoute, leagueSlug, navigate, team, teamSlug]);
+  }, [isLegacyLeagueRoute, isLegacyTeamRoute, leagueSlug, navigate, routeSeasonId, team, teamSlug]);
 
   useEffect(() => {
     if (loading || team) return;
@@ -153,6 +156,7 @@ const TeamDetailsPage = () => {
                 teamId={team.id}
                 leagueId={team.league_id ?? leagueId ?? ''}
                 leagueCode={team.league_code}
+                defaultSeasonId={routeSeasonId}
               />
             ),
           },
@@ -166,6 +170,7 @@ const TeamDetailsPage = () => {
                 leagueId={team.league_id ?? ''}
                 leagueCode={team.league_code}
                 teamCode={team.code}
+                defaultSeasonId={routeSeasonId}
               />
             ),
           },

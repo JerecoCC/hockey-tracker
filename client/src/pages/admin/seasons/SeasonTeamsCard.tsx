@@ -266,6 +266,7 @@ interface GroupNodeProps {
   group: SeasonGroupRecord;
   allGroups: SeasonGroupRecord[];
   leagueCode: string | null | undefined;
+  seasonId: string;
   seasonBusy: string | null;
   groupBusy: string | null;
   isEnded: boolean;
@@ -281,6 +282,7 @@ const GroupNode = ({
   group,
   allGroups,
   leagueCode,
+  seasonId,
   seasonBusy,
   groupBusy,
   isEnded,
@@ -385,6 +387,7 @@ const GroupNode = ({
                   leagueId: group.league_id,
                   teamCode: t.code,
                   teamId: t.id,
+                  seasonId,
                 })}
               />
             ))}
@@ -402,6 +405,7 @@ const GroupNode = ({
                   group={child}
                   allGroups={allGroups}
                   leagueCode={leagueCode}
+                  seasonId={seasonId}
                   seasonBusy={seasonBusy}
                   groupBusy={groupBusy}
                   isEnded={isEnded}
@@ -424,6 +428,7 @@ const GroupNode = ({
 // ── Card ──────────────────────────────────────────────────────────────────────
 
 interface Props {
+  seasonId: string;
   seasonTeams: SeasonTeam[];
   groups: SeasonGroupRecord[];
   leagueTeams: LeagueTeam[];
@@ -447,6 +452,7 @@ interface Props {
 }
 
 const SeasonTeamsCard = ({
+  seasonId,
   seasonTeams,
   groups,
   leagueTeams,
@@ -560,6 +566,7 @@ const SeasonTeamsCard = ({
                         leagueId: autoGroup!.league_id,
                         teamCode: t.code,
                         teamId: t.id,
+                        seasonId,
                       })}
                       actions={
                         [
@@ -574,6 +581,7 @@ const SeasonTeamsCard = ({
                                   leagueId: autoGroup!.league_id,
                                   teamCode: t.code,
                                   teamId: t.id,
+                                  seasonId,
                                 }),
                               ),
                           },
@@ -602,6 +610,7 @@ const SeasonTeamsCard = ({
                       group={g}
                       allGroups={userGroups}
                       leagueCode={leagueCode}
+                      seasonId={seasonId}
                       seasonBusy={busy}
                       groupBusy={groupBusy}
                       isEnded={isEnded}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -55,14 +55,26 @@ interface Props {
   leagueId: string;
   leagueCode: string | null;
   teamCode: string | null;
+  defaultSeasonId?: string | null;
 }
 
-const TeamPlayersTab = ({ teamId, teamName, leagueId, leagueCode, teamCode }: Props) => {
+const TeamPlayersTab = ({
+  teamId,
+  teamName,
+  leagueId,
+  leagueCode,
+  teamCode,
+  defaultSeasonId,
+}: Props) => {
   const navigate = useNavigate();
   const { seasons: leagueSeasons } = useSeasons(leagueId);
-  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(null);
+  const [selectedSeasonId, setSelectedSeasonId] = useState<string | null>(defaultSeasonId ?? null);
   const [playerView, setPlayerView] = useState<PlayerView>('roster');
   const [query, setQuery] = useState('');
+
+  useEffect(() => {
+    if (!selectedSeasonId && defaultSeasonId) setSelectedSeasonId(defaultSeasonId);
+  }, [defaultSeasonId, selectedSeasonId]);
 
   const isProspectsView = playerView === 'prospects';
   const {
