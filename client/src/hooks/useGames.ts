@@ -371,7 +371,12 @@ export const useGameRouteLookup = ({
   gameSlug,
   enabled = true,
 }: GameRouteLookupInput) => {
-  const { data = null, isLoading: loading } = useQuery<GameRouteLookupResponse | null>({
+  const {
+    data = null,
+    isLoading: loading,
+    error,
+    isError,
+  } = useQuery<GameRouteLookupResponse | null, AxiosError<{ error?: string }>>({
     queryKey: ['game-route-lookup', { seasonId, gameDateSlug, gameSlug }],
     enabled: enabled && !!seasonId && !!gameDateSlug && !!gameSlug,
     queryFn: async () => {
@@ -392,36 +397,52 @@ export const useGameRouteLookup = ({
         if ((err as AxiosError).response?.status !== 404) {
           toast.error(apiError(err, 'Failed to resolve game route'));
         }
-        return null;
+        throw err;
       }
     },
   });
 
-  return { gameId: data?.game_id ?? null, loading };
+  const notFound = isError && error?.response?.status === 404;
+  return { gameId: data?.game_id ?? null, loading, notFound, failed: isError && !notFound };
 };
 
 // ── Single-game detail hook ───────────────────────────────────────────────────
 
-export const useGameDetails = (id: string | undefined) => {
+export const useGameDetails = (
+  id: string | undefined,
+  options: { mode?: 'admin' | 'user' } = {},
+) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
+  const mode = options.mode ?? 'admin';
 
-  const { data: game = null, isLoading: loading } = useQuery<GameRecord | null>({
-    queryKey: ['games', id],
+  const {
+    data: game = null,
+    isLoading: loading,
+    error,
+    isError,
+  } = useQuery<GameRecord | null, AxiosError<{ error?: string }>>({
+    queryKey: [mode === 'user' ? 'user-game-details' : 'games', id],
     enabled: !!id,
     queryFn: async () => {
       if (!id) return null;
       try {
-        const { data } = await axios.get<GameRecord>(`${API}/admin/games/${id}`, {
-          headers: authHeaders(),
-        });
+        const { data } = await axios.get<GameRecord>(
+          `${API}/${mode === 'user' ? 'user' : 'admin'}/games/${id}`,
+          {
+            headers: authHeaders(),
+          },
+        );
         return data;
       } catch (err) {
-        toast.error(apiError(err, 'Failed to load game'));
-        return null;
+        if ((err as AxiosError).response?.status !== 404) {
+          toast.error(apiError(err, 'Failed to load game'));
+        }
+        throw err;
       }
     },
   });
+  const notFound = isError && error?.response?.status === 404;
 
   const advancePeriod = async (nextPeriod: CurrentPeriod): Promise<boolean> => {
     if (!id) return false;
@@ -659,7 +680,7 @@ export const useGameDetails = (id: string | undefined) => {
     }
   };
 
-  return { game, loading, busy, startGame, updateStatus, advancePeriod, advanceOTPeriod, revertOTPeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
+  return { game, loading, notFound, failed: isError && !notFound, busy, startGame, updateStatus, advancePeriod, advanceOTPeriod, revertOTPeriod, endGame, updateStars, updateGameInfo, updatePeriodShots, revertToEditMode, deleteGame };
 };
 
 // ── Playoff series hook ────────────────────────────────────────────────────────

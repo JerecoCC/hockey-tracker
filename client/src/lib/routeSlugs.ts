@@ -96,12 +96,13 @@ export const buildGameDetailsPath = ({
   awayTeamCode?: string | null;
   homeTeamCode?: string | null;
   scheduledAt?: string | null;
-}) =>
-  `${buildSeasonDetailsPath({ leagueCode, leagueId, seasonName, seasonId })}/games/${
-    gameDateRouteSlug(scheduledAt)
-      ? `${gameDateRouteSlug(scheduledAt)}/${gameRouteSlug({ awayTeamCode, homeTeamCode }) || gameId}`
-      : gameId
+}) => {
+  const dateSlug = gameDateRouteSlug(scheduledAt);
+  const matchupSlug = gameRouteSlug({ awayTeamCode, homeTeamCode });
+  return `${buildSeasonDetailsPath({ leagueCode, leagueId, seasonName, seasonId })}/games/${
+    dateSlug && matchupSlug ? `${dateSlug}/${matchupSlug}` : gameId
   }`;
+};
 
 export const buildPlayerDetailsPath = ({
   leagueCode,

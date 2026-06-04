@@ -75,12 +75,14 @@ beforeEach(() => {
   mockUseGameDetails.mockReturnValue({
     game,
     loading: false,
+    notFound: false,
+    failed: false,
     busy: null,
     startGame: jest.fn(), updateStatus: jest.fn(), advancePeriod: jest.fn(), advanceOTPeriod: jest.fn(),
     revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
     updatePeriodShots: jest.fn(), revertToEditMode: jest.fn(), deleteGame: jest.fn(),
   });
-  mockUseGameRouteLookup.mockReturnValue({ gameId: null, loading: false });
+  mockUseGameRouteLookup.mockReturnValue({ gameId: null, loading: false, notFound: false, failed: false });
   mockUseLeagueDetails.mockReturnValue({ seasons: [], loading: false });
   mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
   mockUseGameGoalieStats.mockReturnValue({ goalieStats: [], upsertGoalieStat: jest.fn(), switchGoalie: jest.fn(), removeGoalieStat: jest.fn(), updateGoalieStint: jest.fn(), removeGoalieStint: jest.fn() });
@@ -102,6 +104,7 @@ describe('GameDetailsPage', () => {
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(true);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);
     expect(mockUsePageBreadcrumbs.mock.calls[0][0].backPath).toBe('/games');
+    expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'user' });
   });
 
   it('keeps admin navigation and editable props in admin mode', () => {
@@ -146,7 +149,63 @@ describe('GameDetailsPage', () => {
       gameSlug: 'awy-vs-hom',
       enabled: true,
     });
-    expect(mockUseGameDetails).toHaveBeenCalledWith('game-1');
+    expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
+  });
+
+  it('treats no-date admin game routes as direct game id routes', () => {
+    mockUseParams.mockReturnValue({
+      leagueSlug: 'nhl',
+      seasonSlug: '2024-25',
+      gameSlug: 'game-1',
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(mockUseGameRouteLookup).toHaveBeenCalledWith({
+      seasonId: undefined,
+      gameDateSlug: undefined,
+      gameSlug: 'game-1',
+      enabled: false,
+    });
+    expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
+  });
+
+  it('treats dated admin game routes without a matchup slug as direct game id routes', () => {
+    mockUseParams.mockReturnValue({
+      leagueSlug: 'nhl',
+      seasonSlug: '2024-25',
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'game-1',
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(mockUseGameRouteLookup).toHaveBeenCalledWith({
+      seasonId: undefined,
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'game-1',
+      enabled: false,
+    });
+    expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
+  });
+
+  it('does not redirect when the game detail request fails without a 404', () => {
+    mockUseParams.mockReturnValue({ id: 'game-1' });
+    mockUseGameDetails.mockReturnValue({
+      game: null,
+      loading: false,
+      notFound: false,
+      failed: true,
+      busy: null,
+      startGame: jest.fn(), updateStatus: jest.fn(), advancePeriod: jest.fn(), advanceOTPeriod: jest.fn(),
+      revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
+      updatePeriodShots: jest.fn(), revertToEditMode: jest.fn(), deleteGame: jest.fn(),
+    });
+
+    const { getByText } = render(<GameDetailsPage mode="user" />);
+
+    expect(getByText('Failed to load game.')).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalledWith('/games', { replace: true });
   });
 
   it('does not enable goalie stats or shootout fetches before a non-shootout game starts', () => {
@@ -154,6 +213,8 @@ describe('GameDetailsPage', () => {
     mockUseGameDetails.mockReturnValue({
       game: { ...game, status: 'scheduled', shootout: false },
       loading: false,
+      notFound: false,
+      failed: false,
       busy: null,
       startGame: jest.fn(), updateStatus: jest.fn(), advancePeriod: jest.fn(), advanceOTPeriod: jest.fn(),
       revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
@@ -171,6 +232,8 @@ describe('GameDetailsPage', () => {
     mockUseGameDetails.mockReturnValue({
       game: { ...game, status: 'final', shootout: true },
       loading: false,
+      notFound: false,
+      failed: false,
       busy: null,
       startGame: jest.fn(), updateStatus: jest.fn(), advancePeriod: jest.fn(), advanceOTPeriod: jest.fn(),
       revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),

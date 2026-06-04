@@ -197,6 +197,73 @@ const bracketRuleSets = pgTable('bracket_rule_sets', {
   createdAt: createdAt(),
 });
 
+const playoffSeries = pgTable('playoff_series', {
+  id: id(),
+  seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
+  round: smallint('round').notNull(),
+  seriesLetter: text('series_letter'),
+  homeTeamId: uuid('home_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  awayTeamId: uuid('away_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  gamesToWin: smallint('games_to_win').notNull().default(4),
+  homeWins: smallint('home_wins').notNull().default(0),
+  awayWins: smallint('away_wins').notNull().default(0),
+  status: text('status').notNull().default('upcoming'),
+  winnerTeamId: uuid('winner_team_id').references(() => teams.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+});
+
+const games = pgTable('games', {
+  id: id(),
+  seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
+  homeTeamId: uuid('home_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  awayTeamId: uuid('away_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  scheduledAt: timestamp('scheduled_at', { withTimezone: true }),
+  scheduledTime: text('scheduled_time'),
+  venue: text('venue'),
+  gameType: text('game_type').notNull().default('regular'),
+  status: text('status').notNull().default('scheduled'),
+  overtimePeriods: smallint('overtime_periods'),
+  shootout: boolean('shootout').notNull().default(false),
+  shootoutFirstTeamId: uuid('shootout_first_team_id').references(() => teams.id, { onDelete: 'set null' }),
+  playoffSeriesId: uuid('playoff_series_id').references(() => playoffSeries.id, { onDelete: 'set null' }),
+  gameNumberInSeries: smallint('game_number_in_series'),
+  gameNumber: smallint('game_number'),
+  notes: text('notes'),
+  currentPeriod: text('current_period'),
+  periodShots: jsonb('period_shots').notNull().default(sql`'[]'::jsonb`),
+  star1Id: uuid('star_1_id').references(() => players.id, { onDelete: 'set null' }),
+  star2Id: uuid('star_2_id').references(() => players.id, { onDelete: 'set null' }),
+  star3Id: uuid('star_3_id').references(() => players.id, { onDelete: 'set null' }),
+  timeStart: timestamp('time_start', { withTimezone: true }),
+  timeEnd: timestamp('time_end', { withTimezone: true }),
+  createdAt: createdAt(),
+});
+
+const goals = pgTable('goals', {
+  id: id(),
+  gameId: uuid('game_id').notNull().references(() => games.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  period: text('period').notNull(),
+  goalType: text('goal_type').notNull().default('even-strength'),
+  periodTime: text('period_time'),
+  emptyNet: boolean('empty_net').notNull().default(false),
+  penaltyShot: boolean('penalty_shot').notNull().default(false),
+  scorerId: uuid('scorer_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
+  assist1Id: uuid('assist_1_id').references(() => players.id, { onDelete: 'set null' }),
+  assist2Id: uuid('assist_2_id').references(() => players.id, { onDelete: 'set null' }),
+  createdAt: createdAt(),
+});
+
+const shootoutAttempts = pgTable('shootout_attempts', {
+  id: id(),
+  gameId: uuid('game_id').notNull().references(() => games.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  shooterId: uuid('shooter_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
+  scored: boolean('scored').notNull().default(false),
+  attemptOrder: integer('attempt_order').notNull(),
+  createdAt: createdAt(),
+});
+
 const bracketSlotRules = pgTable('bracket_slot_rules', {
   id: id(),
   ruleSetId: uuid('rule_set_id').notNull().references(() => bracketRuleSets.id, { onDelete: 'cascade' }),
@@ -229,5 +296,9 @@ module.exports = {
   playerPhotos,
   jerseyNumberHistory,
   bracketRuleSets,
+  playoffSeries,
+  games,
+  goals,
+  shootoutAttempts,
   bracketSlotRules,
 };

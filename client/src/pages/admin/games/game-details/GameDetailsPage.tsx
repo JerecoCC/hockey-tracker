@@ -57,7 +57,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const gameSlug = routeGameSlug ?? legacyGameId;
   const navigate = useNavigate();
   const isAdminView = mode === 'admin';
-  const isLegacyGameRoute = (!!legacyGameId && !routeGameSlug) || (!!gameSlug && UUID_PATTERN.test(gameSlug));
+  const isDatedGameRoute = !!gameDateSlug && !!routeGameSlug && routeGameSlug.includes('-vs-');
+  const isLegacyGameRoute =
+    (!!legacyGameId && !routeGameSlug) ||
+    (!!gameSlug && !isDatedGameRoute) ||
+    (!!gameSlug && UUID_PATTERN.test(gameSlug));
   const isLegacyLeagueRoute =
     (!!legacyLeagueId && !routeLeagueSlug) || (!!leagueSlug && UUID_PATTERN.test(leagueSlug));
   const isLegacySeasonRoute =
@@ -77,8 +81,13 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
   const routeSeasonId = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
   const shouldResolveGameRoute =
-    isAdminView && !isLegacyGameRoute && !!routeSeasonId && !!gameDateSlug && !!gameSlug;
-  const { gameId: routeGameId, loading: routeGameLookupLoading } = useGameRouteLookup({
+    isAdminView && isDatedGameRoute && !isLegacyGameRoute && !!routeSeasonId && !!gameSlug;
+  const {
+    gameId: routeGameId,
+    loading: routeGameLookupLoading,
+    notFound: routeGameLookupNotFound,
+    failed: routeGameLookupFailed,
+  } = useGameRouteLookup({
     seasonId: routeSeasonId,
     gameDateSlug,
     gameSlug,
@@ -100,7 +109,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     updatePeriodShots,
     revertToEditMode,
     deleteGame,
-  } = useGameDetails(gameId);
+    notFound: gameNotFound,
+    failed: gameLoadFailed,
+  } = useGameDetails(gameId, { mode });
   const loading =
     gameDetailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
@@ -300,8 +311,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   useEffect(() => {
     if (loading || game) return;
+    if (!gameNotFound && !routeGameLookupNotFound) return;
     navigate(fallbackHref, { replace: true });
-  }, [fallbackHref, game, loading, navigate]);
+  }, [fallbackHref, game, gameNotFound, loading, navigate, routeGameLookupNotFound]);
 
   if (loading) {
     return (
@@ -309,6 +321,12 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
         <span className={styles.spinner} />
         <p className={styles.loaderText}>Loading game…</p>
       </div>
+    );
+  }
+
+  if (!game && (gameLoadFailed || routeGameLookupFailed)) {
+    return (
+      <p style={{ color: 'var(--text-dim)' }}>Failed to load game.</p>
     );
   }
 

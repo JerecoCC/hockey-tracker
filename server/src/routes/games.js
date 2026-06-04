@@ -2,10 +2,145 @@
 
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
-const { sql } = require('../db');
+const { sql, db, schema } = require('../db');
+const { and, eq, or, sql: ormSql } = require('drizzle-orm');
+const { alias } = require('drizzle-orm/pg-core');
 const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
 
 router.use(requireAdmin);
+
+const {
+  games: gamesTable,
+  seasons,
+  teams,
+  playoffSeries,
+  bracketRuleSets,
+} = schema;
+const homeTeam = alias(teams, 't_home');
+const awayTeam = alias(teams, 't_away');
+
+const resultRows = (result) => (Array.isArray(result) ? result : result?.rows ?? []);
+
+const teamIdentityJson = (teamIdColumn, teamTable) => ormSql`
+  json_build_object(
+    'id', ${teamIdColumn},
+    'name', (
+      SELECT name FROM team_iterations
+      WHERE team_id = ${teamIdColumn}
+      ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+      LIMIT 1
+    ),
+    'code', (
+      SELECT code FROM team_iterations
+      WHERE team_id = ${teamIdColumn}
+      ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+      LIMIT 1
+    ),
+    'logo', (
+      SELECT logo FROM team_iterations
+      WHERE team_id = ${teamIdColumn}
+      ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+      LIMIT 1
+    ),
+    'primary_color', ${teamTable.primaryColor},
+    'secondary_color', ${teamTable.secondaryColor},
+    'text_color', ${teamTable.textColor}
+  )
+`;
+
+const periodScoresJson = (gameIdColumn, homeTeamIdColumn, awayTeamIdColumn) => ormSql`
+  COALESCE(
+    (
+      SELECT json_agg(
+        json_build_object('period', period, 'home_goals', home_cnt, 'away_goals', away_cnt)
+        ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+      )
+      FROM (
+        SELECT
+          go.period,
+          COUNT(*) FILTER (WHERE go.team_id = ${homeTeamIdColumn}) AS home_cnt,
+          COUNT(*) FILTER (WHERE go.team_id = ${awayTeamIdColumn}) AS away_cnt
+        FROM goals go
+        WHERE go.game_id = ${gameIdColumn}
+        GROUP BY go.period
+      ) ps
+    ),
+    '[]'::json
+  )
+`;
+
+const scoreColumn = (columnName) => ormSql`
+  (
+    SELECT ${ormSql.raw(columnName)}
+    FROM (
+      SELECT
+        resolved.winner_team_id,
+        totals.home_goals
+          + CASE
+              WHEN ${gamesTable.status} = 'final'
+                AND (
+                  ${gamesTable.shootout}
+                  OR COALESCE(${gamesTable.overtimePeriods}, 0) > 0
+                  OR totals.has_ot
+                  OR totals.so_home_goals > 0
+                  OR totals.so_away_goals > 0
+                )
+                AND totals.home_goals = totals.away_goals
+                AND resolved.winner_team_id = ${gamesTable.homeTeamId}
+              THEN 1 ELSE 0
+            END AS home_score,
+        totals.away_goals
+          + CASE
+              WHEN ${gamesTable.status} = 'final'
+                AND (
+                  ${gamesTable.shootout}
+                  OR COALESCE(${gamesTable.overtimePeriods}, 0) > 0
+                  OR totals.has_ot
+                  OR totals.so_home_goals > 0
+                  OR totals.so_away_goals > 0
+                )
+                AND totals.home_goals = totals.away_goals
+                AND resolved.winner_team_id = ${gamesTable.awayTeamId}
+              THEN 1 ELSE 0
+            END AS away_score
+      FROM (
+        SELECT
+          COUNT(*) FILTER (WHERE go.team_id = ${gamesTable.homeTeamId} AND go.period <> 'SO')::int AS home_goals,
+          COUNT(*) FILTER (WHERE go.team_id = ${gamesTable.awayTeamId} AND go.period <> 'SO')::int AS away_goals,
+          COUNT(*) FILTER (WHERE go.team_id = ${gamesTable.homeTeamId} AND go.period = 'SO')::int AS so_home_goals,
+          COUNT(*) FILTER (WHERE go.team_id = ${gamesTable.awayTeamId} AND go.period = 'SO')::int AS so_away_goals,
+          COALESCE(BOOL_OR(go.period = 'OT'), false) AS has_ot
+        FROM goals go
+        WHERE go.game_id = ${gamesTable.id}
+      ) totals
+      LEFT JOIN LATERAL (
+        SELECT
+          CASE
+            WHEN ${gamesTable.shootout} OR totals.so_home_goals > 0 OR totals.so_away_goals > 0 THEN
+              CASE
+                WHEN so.home_goals > so.away_goals THEN ${gamesTable.homeTeamId}
+                WHEN so.away_goals > so.home_goals THEN ${gamesTable.awayTeamId}
+                WHEN totals.so_home_goals > totals.so_away_goals THEN ${gamesTable.homeTeamId}
+                WHEN totals.so_away_goals > totals.so_home_goals THEN ${gamesTable.awayTeamId}
+                WHEN totals.home_goals > totals.away_goals THEN ${gamesTable.homeTeamId}
+                WHEN totals.away_goals > totals.home_goals THEN ${gamesTable.awayTeamId}
+                ELSE NULL
+              END
+            WHEN totals.home_goals > totals.away_goals THEN ${gamesTable.homeTeamId}
+            WHEN totals.away_goals > totals.home_goals THEN ${gamesTable.awayTeamId}
+            ELSE NULL
+          END AS winner_team_id
+        FROM (
+          SELECT
+            COUNT(*) FILTER (WHERE team_id = ${gamesTable.homeTeamId} AND scored)::int AS home_goals,
+            COUNT(*) FILTER (WHERE team_id = ${gamesTable.awayTeamId} AND scored)::int AS away_goals
+          FROM shootout_attempts
+          WHERE game_id = ${gamesTable.id}
+        ) so
+      ) resolved ON true
+    ) score
+  )
+`;
 
 // Resolves current team identity (name, code, logo) from team_iterations.
 // Prefers the base iteration (season_id IS NULL) over season-specific ones.
@@ -81,158 +216,75 @@ router.get('/', async (req, res) => {
   }
 
   try {
-    const games = await sql`
-      SELECT
-        g.id, g.season_id, g.game_type, g.status,
-        g.scheduled_at, g.scheduled_time, g.venue,
-        g.time_start, g.time_end,
-        g.overtime_periods, g.shootout,
-        score.winner_team_id,
-        score.home_score,
-        score.away_score,
-        g.playoff_series_id, g.game_number_in_series, g.game_number,
-        g.notes, g.current_period, g.created_at,
-        g.star_1_id, g.star_2_id, g.star_3_id,
-        ps.round AS playoff_round,
-        brs.round_names AS playoff_round_names,
-        gs.period_scores,
-        g.period_shots,
-        -- Home team
-        json_build_object(
-          'id', g.home_team_id,
-          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
-          'primary_color', t_home.primary_color,
-          'secondary_color', t_home.secondary_color,
-          'text_color', t_home.text_color
-        ) AS home_team,
-        -- Away team
-        json_build_object(
-          'id', g.away_team_id,
-          'name', at.name, 'code', at.code, 'logo', at.logo,
-          'primary_color', t_away.primary_color,
-          'secondary_color', t_away.secondary_color,
-          'text_color', t_away.text_color
-        ) AS away_team
-      FROM games g
-      JOIN seasons s ON s.id = g.season_id
-      JOIN teams t_home ON t_home.id = g.home_team_id
-      JOIN teams t_away ON t_away.id = g.away_team_id
-      LEFT JOIN playoff_series ps ON ps.id = g.playoff_series_id
-      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
-      LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
-        WHERE team_id = g.home_team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-        LIMIT 1
-      ) ht ON true
-      LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
-        WHERE team_id = g.away_team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-        LIMIT 1
-      ) at ON true
-      LEFT JOIN LATERAL (
-        SELECT COALESCE(
-          json_agg(
-            json_build_object('period', period, 'home_goals', home_cnt, 'away_goals', away_cnt)
-            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
-          ),
-          '[]'::json
-        ) AS period_scores
-        FROM (
-          SELECT
-            go.period,
-            COUNT(*) FILTER (WHERE go.team_id = g.home_team_id) AS home_cnt,
-            COUNT(*) FILTER (WHERE go.team_id = g.away_team_id) AS away_cnt
-          FROM goals go
-          WHERE go.game_id = g.id
-          GROUP BY go.period
-        ) ps
-      ) gs ON true
-      LEFT JOIN LATERAL (
-        SELECT
-          resolved.winner_team_id,
-          totals.home_goals
-            + CASE
-                WHEN g.status = 'final'
-                  AND (
-                    g.shootout
-                    OR COALESCE(g.overtime_periods, 0) > 0
-                    OR totals.has_ot
-                    OR totals.so_home_goals > 0
-                    OR totals.so_away_goals > 0
-                  )
-                  AND totals.home_goals = totals.away_goals
-                  AND resolved.winner_team_id = g.home_team_id
-                THEN 1 ELSE 0
-              END AS home_score,
-          totals.away_goals
-            + CASE
-                WHEN g.status = 'final'
-                  AND (
-                    g.shootout
-                    OR COALESCE(g.overtime_periods, 0) > 0
-                    OR totals.has_ot
-                    OR totals.so_home_goals > 0
-                    OR totals.so_away_goals > 0
-                  )
-                  AND totals.home_goals = totals.away_goals
-                  AND resolved.winner_team_id = g.away_team_id
-                THEN 1 ELSE 0
-              END AS away_score
-        FROM (
-          SELECT
-            COUNT(*) FILTER (WHERE go.team_id = g.home_team_id AND go.period <> 'SO')::int AS home_goals,
-            COUNT(*) FILTER (WHERE go.team_id = g.away_team_id AND go.period <> 'SO')::int AS away_goals,
-            COUNT(*) FILTER (WHERE go.team_id = g.home_team_id AND go.period = 'SO')::int AS so_home_goals,
-            COUNT(*) FILTER (WHERE go.team_id = g.away_team_id AND go.period = 'SO')::int AS so_away_goals,
-            COALESCE(BOOL_OR(go.period = 'OT'), false) AS has_ot
-          FROM goals go
-          WHERE go.game_id = g.id
-        ) totals
-        LEFT JOIN LATERAL (
-          SELECT
-            CASE
-              WHEN g.shootout OR totals.so_home_goals > 0 OR totals.so_away_goals > 0 THEN
-                CASE
-                  WHEN so.home_goals > so.away_goals THEN g.home_team_id
-                  WHEN so.away_goals > so.home_goals THEN g.away_team_id
-                  WHEN totals.so_home_goals > totals.so_away_goals THEN g.home_team_id
-                  WHEN totals.so_away_goals > totals.so_home_goals THEN g.away_team_id
-                  WHEN totals.home_goals > totals.away_goals THEN g.home_team_id
-                  WHEN totals.away_goals > totals.home_goals THEN g.away_team_id
-                  ELSE NULL
-                END
-              WHEN totals.home_goals > totals.away_goals THEN g.home_team_id
-              WHEN totals.away_goals > totals.home_goals THEN g.away_team_id
-              ELSE NULL
-            END AS winner_team_id
-          FROM (
-            SELECT
-              COUNT(*) FILTER (WHERE team_id = g.home_team_id AND scored)::int AS home_goals,
-              COUNT(*) FILTER (WHERE team_id = g.away_team_id AND scored)::int AS away_goals
-            FROM shootout_attempts
-            WHERE game_id = g.id
-          ) so
-        ) resolved ON true
-      ) score ON true
-      WHERE
-        (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
-        AND (${team_id   ?? null}::uuid IS NULL OR g.home_team_id = ${team_id ?? null}::uuid
-                                                OR g.away_team_id = ${team_id ?? null}::uuid)
-        AND (${game_type ?? null}::text IS NULL OR g.game_type   = ${game_type ?? null})
-        AND (${status    ?? null}::text IS NULL OR g.status      = ${status    ?? null})
-        AND (${week      ?? null}::date IS NULL OR (
-          g.scheduled_at >= ${week ?? null}::date
-          AND g.scheduled_at < (${week ?? null}::date + INTERVAL '7 days')
-        ))
-      ORDER BY
-        ps.round ASC NULLS LAST,
-        g.game_number_in_series ASC NULLS LAST,
-        g.game_number ASC NULLS LAST,
-        g.scheduled_at ASC NULLS LAST, g.scheduled_time ASC NULLS LAST, g.created_at ASC
-    `;
-    return res.json(games);
+    const where = [];
+    if (season_id) where.push(eq(gamesTable.seasonId, season_id));
+    if (team_id) {
+      where.push(or(eq(gamesTable.homeTeamId, team_id), eq(gamesTable.awayTeamId, team_id)));
+    }
+    if (game_type) where.push(eq(gamesTable.gameType, game_type));
+    if (status) where.push(eq(gamesTable.status, status));
+    if (week) {
+      where.push(ormSql`
+        ${gamesTable.scheduledAt} >= ${week}::date
+        AND ${gamesTable.scheduledAt} < (${week}::date + INTERVAL '7 days')
+      `);
+    }
+
+    let query = db
+      .select({
+        id: gamesTable.id,
+        season_id: gamesTable.seasonId,
+        game_type: gamesTable.gameType,
+        status: gamesTable.status,
+        scheduled_at: gamesTable.scheduledAt,
+        scheduled_time: gamesTable.scheduledTime,
+        venue: gamesTable.venue,
+        time_start: gamesTable.timeStart,
+        time_end: gamesTable.timeEnd,
+        overtime_periods: gamesTable.overtimePeriods,
+        shootout: gamesTable.shootout,
+        winner_team_id: scoreColumn('winner_team_id'),
+        home_score: scoreColumn('home_score'),
+        away_score: scoreColumn('away_score'),
+        playoff_series_id: gamesTable.playoffSeriesId,
+        game_number_in_series: gamesTable.gameNumberInSeries,
+        game_number: gamesTable.gameNumber,
+        notes: gamesTable.notes,
+        current_period: gamesTable.currentPeriod,
+        created_at: gamesTable.createdAt,
+        star_1_id: gamesTable.star1Id,
+        star_2_id: gamesTable.star2Id,
+        star_3_id: gamesTable.star3Id,
+        playoff_round: playoffSeries.round,
+        playoff_round_names: bracketRuleSets.roundNames,
+        period_scores: periodScoresJson(
+          gamesTable.id,
+          gamesTable.homeTeamId,
+          gamesTable.awayTeamId,
+        ),
+        period_shots: gamesTable.periodShots,
+        home_team: teamIdentityJson(gamesTable.homeTeamId, homeTeam),
+        away_team: teamIdentityJson(gamesTable.awayTeamId, awayTeam),
+      })
+      .from(gamesTable)
+      .innerJoin(seasons, eq(seasons.id, gamesTable.seasonId))
+      .innerJoin(homeTeam, eq(homeTeam.id, gamesTable.homeTeamId))
+      .innerJoin(awayTeam, eq(awayTeam.id, gamesTable.awayTeamId))
+      .leftJoin(playoffSeries, eq(playoffSeries.id, gamesTable.playoffSeriesId))
+      .leftJoin(bracketRuleSets, eq(bracketRuleSets.id, seasons.bracketRuleSetId));
+
+    if (where.length > 0) query = query.where(and(...where));
+
+    const rows = await query.orderBy(
+      ormSql`${playoffSeries.round} ASC NULLS LAST`,
+      ormSql`${gamesTable.gameNumberInSeries} ASC NULLS LAST`,
+      ormSql`${gamesTable.gameNumber} ASC NULLS LAST`,
+      ormSql`${gamesTable.scheduledAt} ASC NULLS LAST`,
+      ormSql`${gamesTable.scheduledTime} ASC NULLS LAST`,
+      gamesTable.createdAt,
+    );
+
+    return res.json(rows);
   } catch (err) {
     console.error('games list error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -562,7 +614,7 @@ router.get('/route-lookup', async (req, res) => {
   const gameDate = `${year}-${month}-${day}`;
 
   try {
-    const rows = await sql`
+    const rows = resultRows(await db.execute(ormSql`
       SELECT g.id AS game_id
       FROM games g
       LEFT JOIN LATERAL (
@@ -598,7 +650,7 @@ router.get('/route-lookup', async (req, res) => {
         ) = ${game_slug}
       ORDER BY g.scheduled_at DESC NULLS LAST, g.id DESC
       LIMIT 1
-    `;
+    `));
 
     if (rows.length === 0) return res.status(404).json({ error: 'Game route not found' });
     return res.json(rows[0]);

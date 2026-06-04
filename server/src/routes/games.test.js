@@ -1,18 +1,38 @@
 'use strict';
 
-jest.mock('../db', () => ({ sql: jest.fn() }));
+jest.mock('../db', () => ({
+  sql: jest.fn(),
+  db: { execute: jest.fn(), select: jest.fn() },
+  schema: jest.requireActual('../schema'),
+}));
 jest.mock('../middleware/auth', () => ({
   requireAdmin: (req, res, next) => { req.user = { id: 'admin-1', role: 'admin' }; next(); },
 }));
 
 const request     = require('supertest');
 const express     = require('express');
-const { sql }     = require('../db');
+const { sql, db } = require('../db');
 const gamesRouter = require('./games');
 
 const app = express();
 app.use(express.json());
 app.use('/api/admin/games', gamesRouter);
+
+let selectRows = [];
+let selectError = null;
+
+const makeSelectChain = () => {
+  const chain = {
+    from: jest.fn(() => chain),
+    innerJoin: jest.fn(() => chain),
+    leftJoin: jest.fn(() => chain),
+    where: jest.fn(() => chain),
+    orderBy: jest.fn(() => (
+      selectError ? Promise.reject(selectError) : Promise.resolve(selectRows)
+    )),
+  };
+  return chain;
+};
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -56,6 +76,11 @@ const SERIES = {
 
 beforeEach(() => {
   sql.mockReset();
+  db.execute.mockReset();
+  db.select.mockReset();
+  selectRows = [];
+  selectError = null;
+  db.select.mockImplementation(() => makeSelectChain());
 });
 
 // ---------------------------------------------------------------------------
@@ -63,36 +88,37 @@ beforeEach(() => {
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/games', () => {
   it('returns an array of games', async () => {
-    sql.mockResolvedValueOnce([GAME]);
+    selectRows = [GAME];
     const res = await request(app).get('/api/admin/games');
-    const queryText = sql.mock.calls[0][0].join(' ');
 
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBe('game-1');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
-    expect(queryText).toContain('g.time_start');
-    expect(queryText).toContain('g.time_end');
+    expect(db.select).toHaveBeenCalledTimes(1);
+    expect(db.execute).not.toHaveBeenCalled();
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('accepts season_id, game_type and status query params', async () => {
-    sql.mockResolvedValueOnce([GAME]);
+    selectRows = [GAME];
     const res = await request(app)
       .get('/api/admin/games?season_id=season-1&game_type=regular&status=scheduled');
     expect(res.status).toBe(200);
-    expect(sql).toHaveBeenCalledTimes(1);
+    expect(db.select).toHaveBeenCalledTimes(1);
+    expect(db.execute).not.toHaveBeenCalled();
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('filters games by week start on the backend', async () => {
-    sql.mockResolvedValueOnce([GAME]);
+    selectRows = [GAME];
     const res = await request(app)
       .get('/api/admin/games?season_id=season-1&week=2024-10-14');
-    const queryText = sql.mock.calls[0][0].join(' ');
 
     expect(res.status).toBe(200);
-    expect(queryText).toContain('g.scheduled_at >=');
-    expect(queryText).toContain("INTERVAL '7 days'");
-    expect(sql.mock.calls[0].slice(1)).toContain('2024-10-14');
+    expect(db.select).toHaveBeenCalledTimes(1);
+    expect(db.execute).not.toHaveBeenCalled();
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('rejects invalid week query values', async () => {
@@ -104,7 +130,7 @@ describe('GET /api/admin/games', () => {
   });
 
   it('returns 500 on DB error', async () => {
-    sql.mockRejectedValueOnce(new Error('DB down'));
+    selectError = new Error('DB down');
     const res = await request(app).get('/api/admin/games');
     expect(res.status).toBe(500);
   });
@@ -115,17 +141,25 @@ describe('GET /api/admin/games', () => {
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/games/route-lookup', () => {
   it('resolves a slug game route to a single game id', async () => {
-    sql.mockResolvedValueOnce([{ game_id: 'game-1' }]);
+    db.execute.mockResolvedValueOnce([{ game_id: 'game-1' }]);
 
     const res = await request(app)
       .get('/api/admin/games/route-lookup?season_id=season-1&game_date=10-15-2024&game_slug=lak-vs-sjs');
-    const queryText = sql.mock.calls[0][0].join(' ');
 
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ game_id: 'game-1' });
-    expect(queryText).toContain('g.id AS game_id');
-    expect(queryText).toContain("'-vs-'");
-    expect(queryText).toContain("AT TIME ZONE 'UTC'");
+    expect(db.execute).toHaveBeenCalledTimes(1);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('resolves route lookup results returned in a Drizzle rows wrapper', async () => {
+    db.execute.mockResolvedValueOnce({ rows: [{ game_id: 'game-1' }] });
+
+    const res = await request(app)
+      .get('/api/admin/games/route-lookup?season_id=season-1&game_date=10-15-2024&game_slug=lak-vs-sjs');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ game_id: 'game-1' });
   });
 
   it('requires all route lookup params', async () => {
@@ -137,7 +171,7 @@ describe('GET /api/admin/games/route-lookup', () => {
   });
 
   it('returns 404 when a slug game route cannot be resolved', async () => {
-    sql.mockResolvedValueOnce([]);
+    db.execute.mockResolvedValueOnce([]);
 
     const res = await request(app)
       .get('/api/admin/games/route-lookup?season_id=season-1&game_date=10-15-2024&game_slug=lak-vs-sjs');

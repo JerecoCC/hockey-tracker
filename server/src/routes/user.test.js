@@ -104,6 +104,33 @@ describe('GET /api/user/games', () => {
   });
 });
 
+describe('GET /api/user/games/:id', () => {
+  it('returns a single visible game for the authenticated user', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/user/games/game-1');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe('game-1');
+    expect(res.body).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
+    expect(sql.mock.calls[0].slice(1)).toContain('user-1');
+    expect(sql.mock.calls[0].slice(1)).toContain('game-1');
+    expect(queryText).toContain('user_favorite_teams');
+    expect(queryText).toContain("g.status <> 'cancelled'");
+    expect(queryText).toContain('uwg.skipped_at IS NULL');
+  });
+
+  it('returns 404 when the game is not visible to the authenticated user', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/user/games/nope');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/game not found/i);
+  });
+});
+
 describe('POST /api/user/watched-games/:gameId', () => {
   it('marks a game as watched for the authenticated user', async () => {
     sql

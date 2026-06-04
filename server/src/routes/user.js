@@ -468,6 +468,177 @@ router.get('/games', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/user/games/:id  - read-only game detail for authenticated users
+// Scoped to games involving the user's favourite teams and not skipped.
+// ---------------------------------------------------------------------------
+router.get('/games/:id', async (req, res) => {
+  const userId = req.user.id;
+  const { id } = req.params;
+
+  try {
+    const rows = await sql`
+      SELECT
+        g.id, g.season_id, g.game_type, g.status,
+        g.scheduled_at, g.scheduled_time, g.venue,
+        g.time_start, g.time_end,
+        g.overtime_periods, g.shootout, g.shootout_first_team_id,
+        score.winner_team_id,
+        score.home_score,
+        score.away_score,
+        g.playoff_series_id, g.game_number_in_series, g.game_number,
+        ps.home_team_id AS series_home_team_id,
+        ps.away_team_id AS series_away_team_id,
+        ps.home_wins AS series_home_wins,
+        ps.away_wins AS series_away_wins,
+        NULL::int AS series_home_wins_at_game,
+        NULL::int AS series_away_wins_at_game,
+        ps.games_to_win AS series_games_to_win,
+        g.notes, g.current_period, g.created_at,
+        g.star_1_id, g.star_2_id, g.star_3_id,
+        ps.round AS playoff_round,
+        brs.round_names AS playoff_round_names,
+        gs.period_scores,
+        g.period_shots,
+        json_build_object(
+          'id', g.home_team_id,
+          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'primary_color', t_home.primary_color,
+          'secondary_color', t_home.secondary_color,
+          'text_color', t_home.text_color
+        ) AS home_team,
+        json_build_object(
+          'id', g.away_team_id,
+          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'primary_color', t_away.primary_color,
+          'secondary_color', t_away.secondary_color,
+          'text_color', t_away.text_color
+        ) AS away_team,
+        s.name AS season_name,
+        l.id AS league_id,
+        l.code AS league_code,
+        l.name AS league_name,
+        l.primary_color AS league_primary_color,
+        l.text_color AS league_text_color,
+        COALESCE(s.best_of_shootout, l.best_of_shootout) AS best_of_shootout,
+        COALESCE(uwg.watched_on, uwg.watched_at::date) AS watched_on,
+        uwg.scheduled_for,
+        (uwg.game_id IS NOT NULL AND (uwg.watched_on IS NOT NULL OR uwg.watched_at IS NOT NULL)) AS watched_by_user,
+        '[]'::json AS home_last_five,
+        '[]'::json AS away_last_five,
+        '[]'::json AS previous_meetings
+      FROM games g
+      JOIN seasons s ON s.id = g.season_id
+      JOIN leagues l ON l.id = s.league_id
+      JOIN teams t_home ON t_home.id = g.home_team_id
+      JOIN teams t_away ON t_away.id = g.away_team_id
+      LEFT JOIN playoff_series ps ON ps.id = g.playoff_series_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = g.home_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) ht ON true
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = g.away_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) at ON true
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object('period', period, 'home_goals', home_cnt, 'away_goals', away_cnt)
+            ORDER BY CASE period WHEN '1' THEN 1 WHEN '2' THEN 2 WHEN '3' THEN 3
+                                 WHEN 'OT' THEN 4 WHEN 'SO' THEN 5 ELSE 6 END
+          ), '[]'::json
+        ) AS period_scores
+        FROM (
+          SELECT go.period,
+            COUNT(*) FILTER (WHERE go.team_id = g.home_team_id) AS home_cnt,
+            COUNT(*) FILTER (WHERE go.team_id = g.away_team_id) AS away_cnt
+          FROM goals go WHERE go.game_id = g.id GROUP BY go.period
+        ) ps
+      ) gs ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          resolved.winner_team_id,
+          totals.home_goals
+            + CASE
+                WHEN g.status = 'final'
+                  AND (g.shootout OR COALESCE(g.overtime_periods, 0) > 0 OR totals.has_ot OR totals.so_home_goals > 0 OR totals.so_away_goals > 0)
+                  AND totals.home_goals = totals.away_goals
+                  AND resolved.winner_team_id = g.home_team_id
+                THEN 1 ELSE 0
+              END AS home_score,
+          totals.away_goals
+            + CASE
+                WHEN g.status = 'final'
+                  AND (g.shootout OR COALESCE(g.overtime_periods, 0) > 0 OR totals.has_ot OR totals.so_home_goals > 0 OR totals.so_away_goals > 0)
+                  AND totals.home_goals = totals.away_goals
+                  AND resolved.winner_team_id = g.away_team_id
+                THEN 1 ELSE 0
+              END AS away_score
+        FROM (
+          SELECT
+            COUNT(*) FILTER (WHERE go.team_id = g.home_team_id AND go.period <> 'SO')::int AS home_goals,
+            COUNT(*) FILTER (WHERE go.team_id = g.away_team_id AND go.period <> 'SO')::int AS away_goals,
+            COUNT(*) FILTER (WHERE go.team_id = g.home_team_id AND go.period = 'SO')::int AS so_home_goals,
+            COUNT(*) FILTER (WHERE go.team_id = g.away_team_id AND go.period = 'SO')::int AS so_away_goals,
+            COALESCE(BOOL_OR(go.period = 'OT'), false) AS has_ot
+          FROM goals go
+          WHERE go.game_id = g.id
+        ) totals
+        LEFT JOIN LATERAL (
+          SELECT
+            CASE
+              WHEN g.shootout OR totals.so_home_goals > 0 OR totals.so_away_goals > 0 THEN
+                CASE
+                  WHEN so.home_goals > so.away_goals THEN g.home_team_id
+                  WHEN so.away_goals > so.home_goals THEN g.away_team_id
+                  WHEN totals.so_home_goals > totals.so_away_goals THEN g.home_team_id
+                  WHEN totals.so_away_goals > totals.so_home_goals THEN g.away_team_id
+                  WHEN totals.home_goals > totals.away_goals THEN g.home_team_id
+                  WHEN totals.away_goals > totals.home_goals THEN g.away_team_id
+                  ELSE NULL
+                END
+              WHEN totals.home_goals > totals.away_goals THEN g.home_team_id
+              WHEN totals.away_goals > totals.home_goals THEN g.away_team_id
+              ELSE NULL
+            END AS winner_team_id
+          FROM (
+            SELECT
+              COUNT(*) FILTER (WHERE team_id = g.home_team_id AND scored)::int AS home_goals,
+              COUNT(*) FILTER (WHERE team_id = g.away_team_id AND scored)::int AS away_goals
+            FROM shootout_attempts
+            WHERE game_id = g.id
+          ) so
+        ) resolved ON true
+      ) score ON true
+      LEFT JOIN user_watched_games uwg
+        ON uwg.user_id = ${userId}
+       AND uwg.game_id = g.id
+      WHERE g.id = ${id}
+        AND EXISTS (
+          SELECT 1
+          FROM user_favorite_teams uft
+          WHERE uft.user_id = ${userId}
+            AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+        )
+        AND g.status <> 'cancelled'
+        AND uwg.skipped_at IS NULL
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Game not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('user game detail error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/user/leagues  – list all leagues (for filter picker)
 // ---------------------------------------------------------------------------
 router.get('/leagues', async (req, res) => {
