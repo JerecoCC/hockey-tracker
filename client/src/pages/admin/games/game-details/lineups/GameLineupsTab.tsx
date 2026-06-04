@@ -209,7 +209,10 @@ const GameLineupsTab = ({
           const renderPlayer = (e: GameRosterEntry) => {
             const isStarter = lineupMap.has(e.player_id);
             const isInheritedStarter = !isStarter && inheritedLineupMap.has(e.player_id);
-            const showStarterTag = isStarter || (isFinal && !isEditMode && isInheritedStarter);
+            const showStarterTag =
+              isStarter ||
+              (isFinal && !isEditMode && isInheritedStarter) ||
+              (isInheritedStarter && game.status !== 'scheduled');
             const lineupEntry = lineupMap.get(e.player_id) ?? inheritedLineupMap.get(e.player_id);
             const slot = lineupEntry?.position_slot;
             const positionPart = slot

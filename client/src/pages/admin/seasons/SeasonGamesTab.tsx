@@ -134,7 +134,14 @@ interface Props {
   isEnded: boolean;
 }
 
-const SeasonGamesTab = ({ leagueId, leagueCode, seasonId, seasonName, seasonTeams, isEnded }: Props) => {
+const SeasonGamesTab = ({
+  leagueId,
+  leagueCode,
+  seasonId,
+  seasonName,
+  seasonTeams,
+  isEnded,
+}: Props) => {
   const navigate = useNavigate();
   const { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames } = useGames({
     seasonId,

@@ -2,7 +2,7 @@ import React from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
-import useTeamPlayers, { type TeamPlayerRecord } from './useTeamPlayers';
+import useTeamPlayers, { usePlayerTradeHistory, type TeamPlayerRecord } from './useTeamPlayers';
 
 jest.mock('axios');
 jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
@@ -115,5 +115,24 @@ describe('useTeamPlayers roster updates', () => {
     });
     expect(queryClient.getQueryState(rosterKey)?.isInvalidated).toBe(false);
     expect(mockedAxios.get).not.toHaveBeenCalled();
+  });
+});
+
+describe('usePlayerTradeHistory', () => {
+  it('does not immediately refetch cached history after a remount', async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const wrapper = createWrapper(queryClient);
+
+    const first = renderHook(() => usePlayerTradeHistory('player-1'), { wrapper });
+    await waitFor(() => expect(first.result.current.loading).toBe(false));
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+
+    first.unmount();
+
+    const second = renderHook(() => usePlayerTradeHistory('player-1'), { wrapper });
+    await waitFor(() => expect(second.result.current.loading).toBe(false));
+
+    expect(second.result.current.stints).toEqual([PLAYER]);
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
   });
 });

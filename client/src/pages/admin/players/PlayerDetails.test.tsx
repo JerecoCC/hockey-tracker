@@ -16,7 +16,7 @@ import {
   usePlayerTradeHistory,
   useStintActions,
 } from '@/hooks/useTeamPlayers';
-import PlayerDetails from './PlayerDetails';
+import PlayerDetails, { collapseSameTeamStints } from './PlayerDetails';
 
 const mockNavigate = jest.fn();
 
@@ -326,5 +326,54 @@ describe('PlayerDetails info tab', () => {
     fireEvent.change(inches, { target: { value: '12' } });
 
     expect(inches).toHaveValue(1);
+  });
+});
+
+describe('collapseSameTeamStints', () => {
+  const stint = (id: string, teamId: string, startDate: string | null, endDate: string | null) => ({
+    id,
+    team_id: teamId,
+    season_id: `season-${id}`,
+    team: {
+      id: teamId,
+      name: teamId,
+      code: teamId,
+      logo: null,
+      primary_color: '#000000',
+      text_color: '#ffffff',
+    },
+    jersey_number: null,
+    is_prospect: false,
+    position: 'C',
+    acquisition_type: null,
+    start_date: startDate,
+    end_date: endDate,
+    photo: null,
+    created_at: '2024-01-01T00:00:00Z',
+  });
+
+  it('collapses consecutive same-team season rows into one displayed stint', () => {
+    const result = collapseSameTeamStints([
+      stint('newer', 'team-1', '2025-10-01', null),
+      stint('older', 'team-1', '2024-10-01', '2025-06-01'),
+    ]);
+
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: 'newer',
+      team_id: 'team-1',
+      start_date: '2024-10-01',
+      end_date: null,
+    });
+  });
+
+  it('keeps separate stints when the player returns to a team after another team', () => {
+    const result = collapseSameTeamStints([
+      stint('return', 'team-1', '2026-10-01', null),
+      stint('middle', 'team-2', '2025-10-01', '2026-06-01'),
+      stint('first', 'team-1', '2024-10-01', '2025-06-01'),
+    ]);
+
+    expect(result.map((item) => item.id)).toEqual(['return', 'middle', 'first']);
   });
 });

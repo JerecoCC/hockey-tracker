@@ -187,7 +187,6 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           name="scheduled_date"
           placeholder="Select date…"
           disabled={isSubmitting || disabled}
-          autoFocus
         />
         <Field
           label="Scheduled Time"
@@ -195,6 +194,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
           control={control}
           name="scheduled_time"
           disabled={isSubmitting || disabled}
+          autoFocus
           rules={{
             validate: (value, formValues) =>
               !value || !!formValues.scheduled_date || 'A date is required when time is set',

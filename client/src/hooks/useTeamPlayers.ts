@@ -142,6 +142,7 @@ export const usePlayerTradeHistory = (playerId: string | null, seasonId?: string
       return data;
     },
     enabled: !!playerId,
+    staleTime: PLAYER_HISTORY_STALE_MS,
   });
   return { stints, loading };
 };
@@ -301,6 +302,7 @@ export interface TeamPlayerRecord extends PlayerRecord {
 }
 
 const API = import.meta.env.VITE_API_URL || '/api';
+const PLAYER_HISTORY_STALE_MS = 30_000;
 
 const authHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem('token')}`,

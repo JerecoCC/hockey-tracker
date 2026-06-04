@@ -129,6 +129,30 @@ const formatStintDates = (stint: PlayerStintRecord) => {
   return 'Dates not set';
 };
 
+export const collapseSameTeamStints = (stints: PlayerStintRecord[]): PlayerStintRecord[] => {
+  const groups: PlayerStintRecord[][] = [];
+
+  for (const stint of stints) {
+    const currentGroup = groups[groups.length - 1];
+    if (currentGroup?.[0]?.team_id === stint.team_id) {
+      currentGroup.push(stint);
+    } else {
+      groups.push([stint]);
+    }
+  }
+
+  return groups.map((group) => {
+    const newest = group[0];
+    const oldest = group[group.length - 1];
+
+    return {
+      ...newest,
+      start_date: oldest.start_date ?? newest.start_date,
+      end_date: newest.end_date,
+    };
+  });
+};
+
 const teamCode = (code: string | null, name: string | null) =>
   code ?? (name ? name.slice(0, 3).toUpperCase() : 'TEAM');
 
@@ -408,6 +432,7 @@ const PlayerDetailsPage = () => {
   };
 
   const latestStint = stints[0];
+  const teamHistoryStints = collapseSameTeamStints(stints);
   const fullName = player ? `${player.first_name} ${player.last_name}` : 'Not Found';
   const leagueHref = buildLeagueDetailsPath({
     leagueCode: teamDetails?.league_code ?? routeLookup?.league_code ?? leagueCode,
@@ -949,11 +974,11 @@ const PlayerDetailsPage = () => {
                     </Button>
                   }
                 >
-                  {stints.length === 0 ? (
+                  {teamHistoryStints.length === 0 ? (
                     <p className={styles.placeholder}>No team history yet.</p>
                   ) : (
                     <ul className={styles.stintList}>
-                      {stints.map((s) => (
+                      {teamHistoryStints.map((s) => (
                         <ListItem
                           key={s.id}
                           className={styles.stintItem}
