@@ -107,6 +107,11 @@ const LeagueDetailsPage = () => {
   }, [isLegacyIdRoute, league, leagueSlug, navigate]);
 
   useEffect(() => {
+    if (loading || (!isLegacyIdRoute && leaguesLoading) || league) return;
+    navigate('/admin/leagues', { replace: true });
+  }, [isLegacyIdRoute, league, leaguesLoading, loading, navigate]);
+
+  useEffect(() => {
     if (selectedSeasonId === null && seasons.length > 0) {
       const current = seasons.find((s) => s.is_current);
       setSelectedSeasonId(current?.id ?? seasons[0].id);

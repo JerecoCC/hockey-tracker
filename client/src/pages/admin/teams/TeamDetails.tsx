@@ -109,6 +109,11 @@ const TeamDetailsPage = () => {
     }
   }, [isLegacyLeagueRoute, isLegacyTeamRoute, leagueSlug, navigate, team, teamSlug]);
 
+  useEffect(() => {
+    if (loading || team) return;
+    navigate(backPath, { replace: true });
+  }, [backPath, loading, navigate, team]);
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>

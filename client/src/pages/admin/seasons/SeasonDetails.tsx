@@ -630,6 +630,12 @@ const SeasonDetailsPage = () => {
     seasonHref,
     seasonSlug,
   ]);
+
+  useEffect(() => {
+    if (loading || season) return;
+    navigate(leagueHref, { replace: true });
+  }, [leagueHref, loading, navigate, season]);
+
   usePageBreadcrumbs(
     loading && !season
       ? null

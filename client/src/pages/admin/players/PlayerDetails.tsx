@@ -528,6 +528,11 @@ const PlayerDetailsPage = () => {
     ],
   );
 
+  useEffect(() => {
+    if (loading || player) return;
+    navigate(teamHref, { replace: true });
+  }, [loading, navigate, player, teamHref]);
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>

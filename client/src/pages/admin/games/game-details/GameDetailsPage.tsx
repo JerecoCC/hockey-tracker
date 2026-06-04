@@ -224,6 +224,22 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     seasonName: game?.season_name,
     seasonId,
   });
+  const fallbackHref = (() => {
+    if (!isAdminView) return '/games';
+    if (!isLegacyLeagueRoute && !routeLeague) return '/admin/leagues';
+    if (!isLegacySeasonRoute && !routeSeason) {
+      return buildLeagueDetailsPath({
+        leagueCode: routeLeague?.code ?? game?.league_code,
+        leagueId: routeLeagueId ?? game?.league_id,
+      });
+    }
+    return buildSeasonDetailsPath({
+      leagueCode: routeLeague?.code ?? game?.league_code ?? leagueSlug,
+      leagueId: routeLeagueId ?? game?.league_id ?? leagueId,
+      seasonName: routeSeason?.name ?? game?.season_name ?? seasonSlug,
+      seasonId: routeSeasonId ?? game?.season_id ?? seasonId,
+    });
+  })();
   const leagueHref = buildLeagueDetailsPath({
     leagueCode: game?.league_code,
     leagueId,
@@ -289,6 +305,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       navigate(canonicalPath, { replace: true });
     }
   }, [game, gameDateSlug, gameId, gameSlug, isAdminView, leagueSlug, navigate, seasonSlug]);
+
+  useEffect(() => {
+    if (loading || game) return;
+    navigate(fallbackHref, { replace: true });
+  }, [fallbackHref, game, loading, navigate]);
 
   if (loading) {
     return (
