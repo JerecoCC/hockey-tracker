@@ -33,7 +33,7 @@ const TeamDetailsPage = () => {
     leagueId?: string;
   }>();
   const [searchParams] = useSearchParams();
-  const routeSeasonId = searchParams.get('season');
+  const routeSeasonParam = searchParams.get('season');
   const teamSlug = routeTeamSlug ?? legacyTeamId;
   const leagueSlug = routeLeagueSlug ?? legacyLeagueId;
   const isLegacyTeamRoute = !!teamSlug && UUID_PATTERN.test(teamSlug);
@@ -47,7 +47,7 @@ const TeamDetailsPage = () => {
           toRouteSlug(item.name) === leagueSlug,
       );
   const leagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
-  const { teams: leagueTeams, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
+  const { teams: leagueTeams, seasons: leagueSeasons, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
   const routeTeam = isLegacyTeamRoute
     ? null
     : leagueTeams.find(
@@ -60,6 +60,15 @@ const TeamDetailsPage = () => {
   const loading = teamLoading || (!isLegacyLeagueRoute && leaguesLoading) || (!isLegacyTeamRoute && leagueDetailsLoading);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
   const [activeTab, handleTabChange] = useTabState('tab:team-details');
+  const routeSeason = routeSeasonParam
+    ? leagueSeasons.find(
+        (season) =>
+          season.id === routeSeasonParam ||
+          toRouteSlug(season.name) === toRouteSlug(routeSeasonParam),
+      )
+    : null;
+  const routeSeasonId = routeSeason?.id ?? (routeSeasonParam && UUID_PATTERN.test(routeSeasonParam) ? routeSeasonParam : null);
+  const canonicalSeasonParam = routeSeason ? toRouteSlug(routeSeason.name) : routeSeasonId;
   const breadcrumbItems = [
     {
       label: team?.league_code ?? '...',
@@ -102,15 +111,28 @@ const TeamDetailsPage = () => {
       leagueId: team.league_id,
       teamCode: team.code,
       teamId: team.id,
+      seasonName: routeSeason?.name,
       seasonId: routeSeasonId,
     });
     if (
       leagueSlug !== toRouteSlug(team.league_code) ||
-      teamSlug !== toRouteSlug(team.code)
+      teamSlug !== toRouteSlug(team.code) ||
+      (routeSeasonParam ?? null) !== (canonicalSeasonParam ?? null)
     ) {
       navigate(canonicalPath, { replace: true });
     }
-  }, [isLegacyLeagueRoute, isLegacyTeamRoute, leagueSlug, navigate, routeSeasonId, team, teamSlug]);
+  }, [
+    canonicalSeasonParam,
+    isLegacyLeagueRoute,
+    isLegacyTeamRoute,
+    leagueSlug,
+    navigate,
+    routeSeason?.name,
+    routeSeasonId,
+    routeSeasonParam,
+    team,
+    teamSlug,
+  ]);
 
   useEffect(() => {
     if (loading || team) return;

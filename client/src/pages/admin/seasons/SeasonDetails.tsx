@@ -675,6 +675,7 @@ const SeasonDetailsPage = () => {
         leagueId,
         teamCode: row.team_code,
         teamId: row.team_id,
+        seasonName: season?.name,
         seasonId: id,
       }),
     );
@@ -812,6 +813,7 @@ const SeasonDetailsPage = () => {
             content: (
               <SeasonTeamsCard
                 seasonId={id!}
+                seasonName={season.name}
                 seasonTeams={seasonTeams}
                 groups={groups}
                 leagueTeams={leagueTeams}

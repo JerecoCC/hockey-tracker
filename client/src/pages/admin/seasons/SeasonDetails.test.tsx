@@ -172,7 +172,7 @@ describe('SeasonDetails standings tab', () => {
 
     await user.click(screen.getByText('Toronto Maple Leafs'));
 
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor');
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor?season=2024-25');
   });
 });
 

@@ -267,6 +267,7 @@ interface GroupNodeProps {
   allGroups: SeasonGroupRecord[];
   leagueCode: string | null | undefined;
   seasonId: string;
+  seasonName: string | null | undefined;
   seasonBusy: string | null;
   groupBusy: string | null;
   isEnded: boolean;
@@ -283,6 +284,7 @@ const GroupNode = ({
   allGroups,
   leagueCode,
   seasonId,
+  seasonName,
   seasonBusy,
   groupBusy,
   isEnded,
@@ -387,6 +389,7 @@ const GroupNode = ({
                   leagueId: group.league_id,
                   teamCode: t.code,
                   teamId: t.id,
+                  seasonName,
                   seasonId,
                 })}
               />
@@ -406,6 +409,7 @@ const GroupNode = ({
                   allGroups={allGroups}
                   leagueCode={leagueCode}
                   seasonId={seasonId}
+                  seasonName={seasonName}
                   seasonBusy={seasonBusy}
                   groupBusy={groupBusy}
                   isEnded={isEnded}
@@ -429,6 +433,7 @@ const GroupNode = ({
 
 interface Props {
   seasonId: string;
+  seasonName: string | null | undefined;
   seasonTeams: SeasonTeam[];
   groups: SeasonGroupRecord[];
   leagueTeams: LeagueTeam[];
@@ -453,6 +458,7 @@ interface Props {
 
 const SeasonTeamsCard = ({
   seasonId,
+  seasonName,
   seasonTeams,
   groups,
   leagueTeams,
@@ -566,6 +572,7 @@ const SeasonTeamsCard = ({
                         leagueId: autoGroup!.league_id,
                         teamCode: t.code,
                         teamId: t.id,
+                        seasonName,
                         seasonId,
                       })}
                       actions={
@@ -581,6 +588,7 @@ const SeasonTeamsCard = ({
                                   leagueId: autoGroup!.league_id,
                                   teamCode: t.code,
                                   teamId: t.id,
+                                  seasonName,
                                   seasonId,
                                 }),
                               ),
@@ -611,6 +619,7 @@ const SeasonTeamsCard = ({
                       allGroups={userGroups}
                       leagueCode={leagueCode}
                       seasonId={seasonId}
+                      seasonName={seasonName}
                       seasonBusy={busy}
                       groupBusy={groupBusy}
                       isEnded={isEnded}
