@@ -38,6 +38,24 @@ const formatTime = (hhmm: string, scheduledAt?: string | null): string => {
   return `${hour12}:${min} ${period} ${abbr}`;
 };
 
+const formatTimestampTime = (iso: string): string => {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  return new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    hour: 'numeric',
+    minute: '2-digit',
+    timeZoneName: 'short',
+  }).format(date);
+};
+
+const formatGameTime = (game: GameRecord): string | undefined => {
+  if (game.status === 'final' && game.time_start && game.time_end) {
+    return `${formatTimestampTime(game.time_start)} - ${formatTimestampTime(game.time_end)}`;
+  }
+  return game.scheduled_time ? formatTime(game.scheduled_time, game.scheduled_at) : undefined;
+};
+
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
   in_progress: 'In Progress',
@@ -143,23 +161,6 @@ const SeasonGamesTab = ({
   isEnded,
 }: Props) => {
   const navigate = useNavigate();
-  const { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames } = useGames({
-    seasonId,
-  });
-
-  const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
-    value: t.id,
-    label: t.name,
-    logo: t.logo,
-    code: t.code,
-  }));
-
-  const teamFilterOptions: MultiSelectOption[] = seasonTeams.map((t) => ({
-    value: t.id,
-    label: t.name,
-    logo: t.logo,
-    code: t.code,
-  }));
 
   // ── Week navigation (with sessionStorage persistence) ────────────────────
   const weekKey = `season-games-week:${seasonId}`;
@@ -206,12 +207,31 @@ const SeasonGamesTab = ({
     sessionStorage.setItem(teamKey, JSON.stringify(teamFilter));
   }, [teamKey, teamFilter]);
 
-  /** Games after type/status/team filters, earliest date/time first. */
+  const { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames } = useGames({
+    seasonId,
+    week: dateToISO(weekStart),
+    gameType: gameTypeFilter ? (gameTypeFilter as GameType) : undefined,
+    status: statusFilter ? (statusFilter as GameStatus) : undefined,
+  });
+
+  const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
+    value: t.id,
+    label: t.name,
+    logo: t.logo,
+    code: t.code,
+  }));
+
+  const teamFilterOptions: MultiSelectOption[] = seasonTeams.map((t) => ({
+    value: t.id,
+    label: t.name,
+    logo: t.logo,
+    code: t.code,
+  }));
+
+  /** Games after the remaining multi-team filter, earliest date/time first. */
   const filteredGames = useMemo(() => {
     return [...games]
       .filter((g) => {
-        if (gameTypeFilter && g.game_type !== (gameTypeFilter as GameType)) return false;
-        if (statusFilter && g.status !== (statusFilter as GameStatus)) return false;
         if (
           teamFilter.length > 0 &&
           !teamFilter.includes(g.home_team.id) &&
@@ -230,26 +250,23 @@ const SeasonGamesTab = ({
         if (!b.scheduled_time) return -1;
         return a.scheduled_time < b.scheduled_time ? -1 : 1;
       });
-  }, [games, gameTypeFilter, statusFilter, teamFilter]);
+  }, [games, teamFilter]);
 
   const hasActiveFilters = !!(gameTypeFilter || statusFilter || teamFilter.length > 0);
 
-  /** Filtered games grouped into 7 day-slots for the current week window. */
+  /** Backend returns the week window; the UI only groups it into day slots. */
   const groupedByDate = useMemo(() => {
     const map = new Map<string, GameRecord[]>();
+    for (let i = 0; i < 7; i++) {
+      map.set(dateToISO(addDays(weekStart, i)), []);
+    }
     for (const g of filteredGames) {
       if (!g.scheduled_at) continue;
-      const d = toDay(new Date(g.scheduled_at));
-      if (d < weekStart || d > toDay(weekEnd)) continue;
       const key = toLocalDateKey(g.scheduled_at);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key)!.push(g);
+      map.get(key)?.push(g);
     }
-    return Array.from({ length: 7 }, (_, i) => {
-      const key = dateToISO(addDays(weekStart, i));
-      return [key, map.get(key) ?? []] as [string, GameRecord[]];
-    });
-  }, [filteredGames, weekStart, weekEnd]);
+    return Array.from(map.entries());
+  }, [filteredGames, weekStart]);
 
   const [filtersVisible, setFiltersVisible] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -433,11 +450,7 @@ const SeasonGamesTab = ({
                       statusLabel={formatStatusLabel(game)}
                       statusIntent={STATUS_INTENT[game.status]}
                       gameType={game.game_type}
-                      time={
-                        game.scheduled_time
-                          ? formatTime(game.scheduled_time, game.scheduled_at)
-                          : undefined
-                      }
+                      time={formatGameTime(game)}
                       venue={game.venue ?? undefined}
                       round={game.playoff_round}
                       roundLabel={

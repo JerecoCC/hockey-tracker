@@ -65,10 +65,14 @@ describe('GET /api/admin/games', () => {
   it('returns an array of games', async () => {
     sql.mockResolvedValueOnce([GAME]);
     const res = await request(app).get('/api/admin/games');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBe('game-1');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
+    expect(queryText).toContain('g.time_start');
+    expect(queryText).toContain('g.time_end');
   });
 
   it('accepts season_id, game_type and status query params', async () => {
@@ -77,6 +81,26 @@ describe('GET /api/admin/games', () => {
       .get('/api/admin/games?season_id=season-1&game_type=regular&status=scheduled');
     expect(res.status).toBe(200);
     expect(sql).toHaveBeenCalledTimes(1);
+  });
+
+  it('filters games by week start on the backend', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+    const res = await request(app)
+      .get('/api/admin/games?season_id=season-1&week=2024-10-14');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(queryText).toContain('g.scheduled_at >=');
+    expect(queryText).toContain("INTERVAL '7 days'");
+    expect(sql.mock.calls[0].slice(1)).toContain('2024-10-14');
+  });
+
+  it('rejects invalid week query values', async () => {
+    const res = await request(app).get('/api/admin/games?week=October-14');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/week must be/i);
+    expect(sql).not.toHaveBeenCalled();
   });
 
   it('returns 500 on DB error', async () => {

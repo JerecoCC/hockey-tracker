@@ -71,15 +71,21 @@ const validateLineupPlayers = (slotMap) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games
-// Query params: season_id, team_id (home OR away), game_type, status
+// Query params: season_id, team_id (home OR away), game_type, status, week (YYYY-MM-DD week start)
 // ---------------------------------------------------------------------------
 router.get('/', async (req, res) => {
   const { season_id, team_id, game_type, status } = req.query;
+  const week = req.query.week ?? req.query.week_start ?? null;
+  if (week && !/^\d{4}-\d{2}-\d{2}$/.test(String(week))) {
+    return res.status(400).json({ error: 'week must be a YYYY-MM-DD date' });
+  }
+
   try {
     const games = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
         g.scheduled_at, g.scheduled_time, g.venue,
+        g.time_start, g.time_end,
         g.overtime_periods, g.shootout,
         score.winner_team_id,
         score.home_score,
@@ -216,6 +222,10 @@ router.get('/', async (req, res) => {
                                                 OR g.away_team_id = ${team_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type   = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status      = ${status    ?? null})
+        AND (${week      ?? null}::date IS NULL OR (
+          g.scheduled_at >= ${week ?? null}::date
+          AND g.scheduled_at < (${week ?? null}::date + INTERVAL '7 days')
+        ))
       ORDER BY
         ps.round ASC NULLS LAST,
         g.game_number_in_series ASC NULLS LAST,

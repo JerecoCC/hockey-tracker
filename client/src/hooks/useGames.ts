@@ -200,6 +200,7 @@ interface Filters {
   teamId?:    string;
   gameType?:  GameType;
   status?:    GameStatus;
+  week?:      string;
 }
 
 const isGameListQuery = (queryKey: readonly unknown[]) =>
@@ -259,6 +260,7 @@ const useGames = (filters: Filters = {}) => {
   if (filters.teamId)    params.team_id    = filters.teamId;
   if (filters.gameType)  params.game_type  = filters.gameType;
   if (filters.status)    params.status     = filters.status;
+  if (filters.week)      params.week       = filters.week;
 
   const queryKey = ['games', params];
 
