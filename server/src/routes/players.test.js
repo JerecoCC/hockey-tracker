@@ -71,6 +71,10 @@ describe('GET /api/admin/players', () => {
     expect(res.status).toBe(200);
     expect(sql).toHaveBeenCalledTimes(1);
     expect(res.body).toEqual([PLAYER]);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('best_player_photo');
+    expect(queryText).toContain('latest_ti.logo AS team_logo');
+    expect(queryText).toContain('latest_jnh.jersey_number');
   });
 
   it('requires league_id when requesting unassigned players', async () => {

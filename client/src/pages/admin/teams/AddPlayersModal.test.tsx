@@ -1,5 +1,6 @@
 import React from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import axios from 'axios';
 import AddPlayersModal from './AddPlayersModal';
@@ -64,5 +65,41 @@ describe('AddPlayersModal', () => {
     renderModal();
 
     expect(await screen.findByText('No unassigned players are available for this league.')).toBeInTheDocument();
+  });
+
+  it('defaults the jersey number from the player latest roster context', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'player-24',
+          first_name: 'Sarah',
+          last_name: 'Nurse',
+          photo: 'player.jpg',
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          nationality: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 24,
+          team_name: 'Toronto Sceptres',
+          team_code: 'TOR',
+          team_logo: 'team.png',
+          primary_color: '#003f7f',
+          text_color: '#ffffff',
+        },
+      ],
+    });
+
+    renderModal();
+
+    await userEvent.click(await screen.findByText('Sarah Nurse'));
+
+    expect(screen.getByRole('spinbutton')).toHaveValue(24);
+    expect(screen.getByText('Center · Last: Toronto Sceptres')).toBeInTheDocument();
   });
 });

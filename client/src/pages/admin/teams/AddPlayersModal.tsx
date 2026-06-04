@@ -68,15 +68,22 @@ const AddPlayersModal = ({
     ? available.filter((p) => {
         const q = query.trim().toLowerCase();
         const name = `${p.first_name} ${p.last_name}`.toLowerCase();
-        return name.includes(q) || (p.position ?? '').toLowerCase().includes(q);
+        const jersey = p.jersey_number != null ? String(p.jersey_number) : '';
+        const team = `${p.team_name ?? ''} ${p.team_code ?? ''}`.toLowerCase();
+        return (
+          name.includes(q) ||
+          (p.position ?? '').toLowerCase().includes(q) ||
+          jersey.startsWith(q.replace('#', '')) ||
+          team.includes(q)
+        );
       })
     : available;
 
-  const toggle = (id: string) => {
+  const toggle = (player: PlayerRecord) => {
     setSelected((prev) => {
       const next = { ...prev };
-      if (id in next) delete next[id];
-      else next[id] = '';
+      if (player.id in next) delete next[player.id];
+      else next[player.id] = player.jersey_number != null ? String(player.jersey_number) : '';
       return next;
     });
   };
@@ -117,7 +124,7 @@ const AddPlayersModal = ({
       open={open}
       title="Add Players to Roster"
       onClose={handleClose}
-      size="md"
+      size={available.length > 8 ? 'lg' : 'md'}
       onConfirm={handleSubmit}
       confirmLabel={submitting ? 'Adding…' : 'Add to Roster'}
       confirmIcon="group_add"
@@ -163,14 +170,23 @@ const AddPlayersModal = ({
               <SelectableListItem
                 key={p.id}
                 checked={isChecked}
-                onToggle={() => toggle(p.id)}
+                onToggle={() => toggle(p)}
+                leadingImage={p.team_logo}
+                leadingImagePlaceholder={p.team_code ?? undefined}
+                leadingImagePrimaryColor={p.primary_color}
+                leadingImageTextColor={p.text_color}
                 image={p.photo}
                 imagePlaceholder={`${p.first_name[0]}${p.last_name[0]}`}
                 imageShape="circle"
                 imagePrimaryColor={p.primary_color}
                 imageTextColor={p.text_color}
                 name={`${p.first_name} ${p.last_name}`}
-                subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+                subtitle={[
+                  p.position ? (POSITION_LABELS[p.position] ?? p.position) : null,
+                  p.team_name ? `Last: ${p.team_name}` : null,
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
                 rightContent={
                   isChecked ? (
                     <div

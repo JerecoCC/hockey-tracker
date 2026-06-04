@@ -15,6 +15,12 @@ export interface SelectableListItemAction {
 export interface SelectableListItemProps {
   checked: boolean;
   onToggle: () => void;
+  /** Optional small square image shown to the left of the main image. */
+  leadingImage?: string | null;
+  /** Text shown in the leading placeholder when no leadingImage is available. */
+  leadingImagePlaceholder?: string;
+  leadingImagePrimaryColor?: string | null;
+  leadingImageTextColor?: string | null;
   /** URL for the image. Falls back to imagePlaceholder when absent. */
   image?: string | null;
   /** Text shown in the avatar when no image is available (e.g. initials or code). */
@@ -42,6 +48,10 @@ export interface SelectableListItemProps {
 const SelectableListItem = ({
   checked,
   onToggle,
+  leadingImage,
+  leadingImagePlaceholder,
+  leadingImagePrimaryColor,
+  leadingImageTextColor,
   image,
   imagePlaceholder,
   imageShape = 'square',
@@ -66,6 +76,29 @@ const SelectableListItem = ({
         checked={checked}
         onChange={onToggle}
       />
+
+      {(leadingImage || leadingImagePlaceholder) &&
+        (leadingImage ? (
+          <img
+            src={leadingImage}
+            alt=""
+            className={styles.leadingLogo}
+          />
+        ) : (
+          <span
+            className={styles.leadingLogoPlaceholder}
+            style={
+              leadingImagePrimaryColor
+                ? {
+                    background: leadingImagePrimaryColor,
+                    color: leadingImageTextColor ?? undefined,
+                  }
+                : undefined
+            }
+          >
+            {leadingImagePlaceholder}
+          </span>
+        ))}
 
       {!hideImage && (
         <div
