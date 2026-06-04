@@ -1510,6 +1510,7 @@ router.delete('/:id', async (req, res) => {
 router.get('/:id/lineup', async (req, res) => {
   const { id } = req.params;
   try {
+    const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
     // 1. Resolve the game's two team IDs.
     const gameRows = await sql`SELECT home_team_id, away_team_id FROM games WHERE id = ${id}`;
     if (gameRows.length === 0) return res.status(404).json({ error: 'Game not found' });
@@ -1535,6 +1536,9 @@ router.get('/:id/lineup', async (req, res) => {
         slot.position_slot,
         p.first_name  AS player_first_name,
         p.last_name   AS player_last_name,
+        p.date_of_birth,
+        COALESCE(pts.start_date, pt.start_date) AS start_date,
+        COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
         COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, sl.team_id), NULLIF(p.photo, '')) AS player_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
@@ -1555,6 +1559,18 @@ router.get('/:id/lineup', async (req, res) => {
         AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT start_date, acquisition_type
+        FROM player_team_stints pts
+        WHERE pts.player_id = slot.player_id
+          AND pts.team_id = sl.team_id
+          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+          pts.start_date DESC NULLS LAST,
+          pts.created_at DESC
+        LIMIT 1
+      ) pts ON true
       LEFT JOIN LATERAL (
         SELECT jersey_number FROM jersey_number_history
         WHERE player_teams_id = pt.id
@@ -1582,6 +1598,9 @@ router.get('/:id/lineup', async (req, res) => {
           slot.position_slot,
           p.first_name  AS player_first_name,
           p.last_name   AS player_last_name,
+          p.date_of_birth,
+          COALESCE(pts.start_date, pt.start_date) AS start_date,
+          COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
           COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, sl.team_id), NULLIF(p.photo, '')) AS player_photo,
           COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           true AS inherited
@@ -1602,6 +1621,18 @@ router.get('/:id/lineup', async (req, res) => {
           AND pt.season_id = g.season_id
           AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
           AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        LEFT JOIN LATERAL (
+          SELECT start_date, acquisition_type
+          FROM player_team_stints pts
+          WHERE pts.player_id = slot.player_id
+            AND pts.team_id = sl.team_id
+            AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+            AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+            pts.start_date DESC NULLS LAST,
+            pts.created_at DESC
+          LIMIT 1
+        ) pts ON true
         LEFT JOIN LATERAL (
           SELECT jersey_number FROM jersey_number_history
           WHERE player_teams_id = pt.id
@@ -1645,6 +1676,7 @@ router.put('/:id/lineup', async (req, res) => {
 
     const lineupError = validateLineupPlayers(slotMap);
     if (lineupError) return res.status(400).json({ error: lineupError });
+    const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
 
     const centerId    = slotMap['C']  ?? null;
     const leftWingId  = slotMap['LW'] ?? null;
@@ -1678,6 +1710,9 @@ router.put('/:id/lineup', async (req, res) => {
         slot.position_slot,
         p.first_name  AS player_first_name,
         p.last_name   AS player_last_name,
+        p.date_of_birth,
+        COALESCE(pts.start_date, pt.start_date) AS start_date,
+        COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
         COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, sl.team_id), NULLIF(p.photo, '')) AS player_photo,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_starting_lineup sl
@@ -1697,6 +1732,18 @@ router.put('/:id/lineup', async (req, res) => {
         AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT start_date, acquisition_type
+        FROM player_team_stints pts
+        WHERE pts.player_id = slot.player_id
+          AND pts.team_id = sl.team_id
+          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+          pts.start_date DESC NULLS LAST,
+          pts.created_at DESC
+        LIMIT 1
+      ) pts ON true
       LEFT JOIN LATERAL (
         SELECT jersey_number FROM jersey_number_history
         WHERE player_teams_id = pt.id
@@ -1752,8 +1799,9 @@ router.get('/:id/roster', async (req, res) => {
     const current = await sql`
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.player_id,
-        p.first_name, p.last_name, p.date_of_birth, pt.start_date,
-        ${acquisitionTypeSelect(hasAcquisitionType, 'pt')} AS acquisition_type,
+        p.first_name, p.last_name, p.date_of_birth,
+        COALESCE(pts.start_date, pt.start_date) AS start_date,
+        COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
         COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, gr.team_id), NULLIF(p.photo, '')) AS photo,
         COALESCE(pt.position, p.position) AS position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
         false AS inherited
@@ -1766,6 +1814,18 @@ router.get('/:id/roster', async (req, res) => {
         AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT start_date, acquisition_type
+        FROM player_team_stints pts
+        WHERE pts.player_id = gr.player_id
+          AND pts.team_id = gr.team_id
+          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+          pts.start_date DESC NULLS LAST,
+          pts.created_at DESC
+        LIMIT 1
+      ) pts ON true
       LEFT JOIN LATERAL (
         SELECT jersey_number FROM jersey_number_history
         WHERE player_teams_id = pt.id
@@ -1800,8 +1860,9 @@ router.get('/:id/roster', async (req, res) => {
       const rows = await sql`
         SELECT
           gr.id, ${id}::uuid AS game_id, gr.team_id, gr.player_id,
-          p.first_name, p.last_name, p.date_of_birth, pt.start_date,
-          ${acquisitionTypeSelect(hasAcquisitionType, 'pt')} AS acquisition_type,
+          p.first_name, p.last_name, p.date_of_birth,
+          COALESCE(pts.start_date, pt.start_date) AS start_date,
+          COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
           COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, gr.team_id), NULLIF(p.photo, '')) AS photo,
           COALESCE(pt.position, p.position) AS position, COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number,
           true AS inherited
@@ -1814,6 +1875,18 @@ router.get('/:id/roster', async (req, res) => {
           AND pt.season_id = g.season_id
           AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
           AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        LEFT JOIN LATERAL (
+          SELECT start_date, acquisition_type
+          FROM player_team_stints pts
+          WHERE pts.player_id = gr.player_id
+            AND pts.team_id = gr.team_id
+            AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+            AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+            pts.start_date DESC NULLS LAST,
+            pts.created_at DESC
+          LIMIT 1
+        ) pts ON true
         LEFT JOIN LATERAL (
           SELECT jersey_number FROM jersey_number_history
           WHERE player_teams_id = pt.id
@@ -1868,8 +1941,9 @@ router.post('/:id/roster', async (req, res) => {
     const rows = await sql`
       SELECT
         gr.id, gr.game_id, gr.team_id, gr.player_id,
-        p.first_name, p.last_name, p.date_of_birth, pt.start_date,
-        ${acquisitionTypeSelect(hasAcquisitionType, 'pt')} AS acquisition_type,
+        p.first_name, p.last_name, p.date_of_birth,
+        COALESCE(pts.start_date, pt.start_date) AS start_date,
+        COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS acquisition_type,
         COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, gr.team_id), NULLIF(p.photo, '')) AS photo, COALESCE(pt.position, p.position) AS position,
         COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS jersey_number
       FROM game_rosters gr
@@ -1881,6 +1955,18 @@ router.post('/:id/roster', async (req, res) => {
         AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT start_date, acquisition_type
+        FROM player_team_stints pts
+        WHERE pts.player_id = gr.player_id
+          AND pts.team_id = gr.team_id
+          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+          pts.start_date DESC NULLS LAST,
+          pts.created_at DESC
+        LIMIT 1
+      ) pts ON true
       LEFT JOIN LATERAL (
         SELECT jersey_number FROM jersey_number_history
         WHERE player_teams_id = pt.id
@@ -1946,8 +2032,8 @@ router.get('/:id/goals', async (req, res) => {
         sp.first_name                       AS scorer_first_name,
         sp.last_name                        AS scorer_last_name,
         sp.date_of_birth                    AS scorer_date_of_birth,
-        spt.start_date                      AS scorer_start_date,
-        ${acquisitionTypeSelect(hasAcquisitionType, 'spt')} AS scorer_acquisition_type,
+        COALESCE(spts.start_date, spt.start_date) AS scorer_start_date,
+        COALESCE(spts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'spt')}) AS scorer_acquisition_type,
         COALESCE(NULLIF(spt.photo, ''), best_player_photo(sp.id, g.season_id, go.team_id), NULLIF(sp.photo, '')) AS scorer_photo,
         COALESCE(spt_jnh.jersey_number, spt.jersey_number)   AS scorer_jersey_number,
         -- assist 1
@@ -1999,6 +2085,18 @@ router.get('/:id/goals', async (req, res) => {
         AND spt.season_id = g.season_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT start_date, acquisition_type
+        FROM player_team_stints pts
+        WHERE pts.player_id = go.scorer_id
+          AND pts.team_id = go.team_id
+          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+          pts.start_date DESC NULLS LAST,
+          pts.created_at DESC
+        LIMIT 1
+      ) spts ON true
       LEFT JOIN LATERAL (
         SELECT jersey_number FROM jersey_number_history
         WHERE player_teams_id = spt.id
@@ -2099,8 +2197,9 @@ router.post('/:id/goals', async (req, res) => {
         go.scorer_id, go.assist_1_id, go.assist_2_id, go.created_at,
         ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
         t.primary_color AS team_primary_color, t.text_color AS team_text_color,
-        sp.first_name AS scorer_first_name, sp.last_name AS scorer_last_name,sp.date_of_birth AS scorer_date_of_birth, spt.start_date as scorer_start_date,
-        ${acquisitionTypeSelect(hasAcquisitionType, 'spt')} AS scorer_acquisition_type,
+        sp.first_name AS scorer_first_name, sp.last_name AS scorer_last_name,sp.date_of_birth AS scorer_date_of_birth,
+        COALESCE(spts.start_date, spt.start_date) AS scorer_start_date,
+        COALESCE(spts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'spt')}) AS scorer_acquisition_type,
         COALESCE(NULLIF(spt.photo, ''), best_player_photo(sp.id, g.season_id, go.team_id), NULLIF(sp.photo, '')) AS scorer_photo,
         COALESCE(spt_jnh.jersey_number, spt.jersey_number) AS scorer_jersey_number,
         a1p.first_name AS assist_1_first_name, a1p.last_name AS assist_1_last_name, COALESCE(NULLIF(a1pt.photo, ''), best_player_photo(a1p.id, g.season_id, go.team_id), NULLIF(a1p.photo, '')) AS assist_1_photo,
@@ -2144,6 +2243,18 @@ router.post('/:id/goals', async (req, res) => {
         AND spt.season_id = g.season_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT start_date, acquisition_type
+        FROM player_team_stints pts
+        WHERE pts.player_id = go.scorer_id
+          AND pts.team_id = go.team_id
+          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+          pts.start_date DESC NULLS LAST,
+          pts.created_at DESC
+        LIMIT 1
+      ) spts ON true
       LEFT JOIN LATERAL (
         SELECT jersey_number FROM jersey_number_history
         WHERE player_teams_id = spt.id
@@ -2260,8 +2371,8 @@ router.put('/:id/goals/:goalId', async (req, res) => {
         sp.first_name       AS scorer_first_name,
         sp.last_name        AS scorer_last_name,
         sp.date_of_birth    AS scorer_date_of_birth,
-        spt.start_date      AS scorer_start_date,
-        ${acquisitionTypeSelect(hasAcquisitionType, 'spt')} AS scorer_acquisition_type,
+        COALESCE(spts.start_date, spt.start_date) AS scorer_start_date,
+        COALESCE(spts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'spt')}) AS scorer_acquisition_type,
         COALESCE(NULLIF(spt.photo, ''), best_player_photo(sp.id, g.season_id, go.team_id), NULLIF(sp.photo, '')) AS scorer_photo,
         COALESCE(spt_jnh.jersey_number, spt.jersey_number)      AS scorer_jersey_number,
         a1p.first_name AS assist_1_first_name,
@@ -2309,6 +2420,18 @@ router.put('/:id/goals/:goalId', async (req, res) => {
         AND spt.season_id = g.season_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      LEFT JOIN LATERAL (
+        SELECT start_date, acquisition_type
+        FROM player_team_stints pts
+        WHERE pts.player_id = go.scorer_id
+          AND pts.team_id = go.team_id
+          AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+          AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+          pts.start_date DESC NULLS LAST,
+          pts.created_at DESC
+        LIMIT 1
+      ) spts ON true
       LEFT JOIN LATERAL (
         SELECT jersey_number FROM jersey_number_history
         WHERE player_teams_id = spt.id
@@ -3189,8 +3312,8 @@ const fetchAttempts = async (gameId) => {
       COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, sa.team_id), NULLIF(p.photo, '')) AS shooter_photo,
       COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS shooter_jersey_number,
       p.date_of_birth AS shooter_date_of_birth,
-      pt.start_date as shooter_start_date,
-      ${acquisitionTypeSelect(hasAcquisitionType, 'pt')} AS shooter_acquisition_type,
+      COALESCE(pts.start_date, pt.start_date) AS shooter_start_date,
+      COALESCE(pts.acquisition_type, ${acquisitionTypeSelect(hasAcquisitionType, 'pt')}) AS shooter_acquisition_type,
       ti.name  AS team_name,
       ti.code  AS team_code,
       ti.logo  AS team_logo,
@@ -3206,6 +3329,18 @@ const fetchAttempts = async (gameId) => {
       AND pt.season_id = g.season_id
       AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+    LEFT JOIN LATERAL (
+      SELECT start_date, acquisition_type
+      FROM player_team_stints pts
+      WHERE pts.player_id = sa.shooter_id
+        AND pts.team_id = sa.team_id
+        AND (pts.start_date IS NULL OR pts.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+        AND (pts.end_date IS NULL OR pts.end_date >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
+      ORDER BY CASE WHEN pts.end_date IS NULL THEN 0 ELSE 1 END,
+        pts.start_date DESC NULLS LAST,
+        pts.created_at DESC
+      LIMIT 1
+    ) pts ON true
     LEFT JOIN LATERAL (
       SELECT jersey_number FROM jersey_number_history
       WHERE player_teams_id = pt.id

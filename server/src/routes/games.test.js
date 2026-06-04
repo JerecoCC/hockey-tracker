@@ -740,6 +740,8 @@ describe('POST /api/admin/games/:id/roster', () => {
     expect(queries[0]).toMatch(/SET is_prospect = FALSE/);
     expect(queries[0]).toMatch(/pt\.season_id = g\.season_id/);
     expect(queries[1]).toMatch(/INSERT INTO game_rosters/);
+    expect(queries[2]).toMatch(/player_team_stints/);
+    expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
   });
 });
 
@@ -758,6 +760,10 @@ describe('GET /api/admin/games/:id/lineup', () => {
     expect(res.status).toBe(200);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
     expect(queries[2]).toMatch(/pt\.season_id = g\.season_id/);
+    expect(queries[2]).toMatch(/p\.date_of_birth/);
+    expect(queries[2]).toMatch(/player_team_stints/);
+    expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
+    expect(queries[2]).toMatch(/acquisition_type/);
   });
 });
 
@@ -796,6 +802,10 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     expect(res.status).toBe(200);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
     expect(queries[1]).toMatch(/pt\.season_id = g\.season_id/);
+    expect(queries[1]).toMatch(/p\.date_of_birth/);
+    expect(queries[1]).toMatch(/player_team_stints/);
+    expect(queries[1]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
+    expect(queries[1]).toMatch(/acquisition_type/);
   });
 });
 

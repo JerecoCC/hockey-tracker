@@ -9,7 +9,6 @@ import useGameRoster from '@/hooks/useGameRoster';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
-import { useAuth } from '@/context/AuthContext';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import GameLineupsTab from './lineups/GameLineupsTab';
 import GameSummaryTab from './summary/GameSummaryTab';
@@ -90,7 +89,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           (!gameDateSlug || gameDateRouteSlug(item.scheduled_at) === gameDateSlug),
       );
   const gameId = isLegacyGameRoute ? gameSlug : routeGame?.id;
-  const { user } = useAuth();
   const {
     game,
     loading: gameDetailsLoading,
@@ -133,7 +131,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   );
   const [isEditMode, setIsEditMode] = useState(false);
   const isAdminView = mode === 'admin';
-  const isAdminUser = user?.role === 'admin';
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -442,7 +439,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 isEditMode={isEditMode}
                 setIsEditMode={setIsEditMode}
                 editable={isAdminView}
-                showPlayerDataStatus={isAdminUser}
+                showPlayerDataStatus={isAdminView}
                 busy={busy}
                 leagueId={leagueId}
                 seasonId={seasonId ?? ''}
@@ -486,7 +483,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 game={game}
                 isEditMode={isEditMode}
                 readOnly={!isAdminView}
-                showPlayerDataStatus={isAdminUser}
+                showPlayerDataStatus={isAdminView}
                 isFinal={isFinal}
                 leagueId={leagueId}
                 seasonId={seasonId}

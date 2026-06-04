@@ -509,7 +509,8 @@ async function initSchema() {
         WITH ordered AS (
           SELECT
             pt.*,
-            COALESCE(pt.start_date, s.start_date, pt.created_at::date) AS effective_start,
+            pt.start_date AS explicit_start,
+            COALESCE(pt.start_date, s.start_date, pt.created_at::date) AS sort_start,
             COALESCE(pt.end_date, s.end_date) AS effective_end,
             LAG(pt.team_id) OVER (
               PARTITION BY pt.player_id
@@ -523,7 +524,7 @@ async function initSchema() {
             *,
             SUM(CASE WHEN prev_team_id IS DISTINCT FROM team_id THEN 1 ELSE 0 END) OVER (
               PARTITION BY player_id
-              ORDER BY effective_start, created_at, id
+              ORDER BY sort_start, created_at, id
             ) AS stint_group
           FROM ordered
         ),
@@ -531,13 +532,13 @@ async function initSchema() {
           SELECT
             player_id,
             team_id,
-            MIN(effective_start) AS start_date,
+            MIN(explicit_start) AS start_date,
             CASE
               WHEN BOOL_OR(end_date IS NULL) THEN NULL
               ELSE MAX(effective_end)
             END AS end_date,
-            (ARRAY_AGG(position ORDER BY effective_start DESC NULLS LAST, created_at DESC))[1] AS position,
-            (ARRAY_AGG(acquisition_type ORDER BY effective_start ASC NULLS LAST, created_at ASC))[1] AS acquisition_type,
+            (ARRAY_AGG(position ORDER BY sort_start DESC NULLS LAST, created_at DESC))[1] AS position,
+            (ARRAY_AGG(acquisition_type ORDER BY sort_start ASC NULLS LAST, created_at ASC))[1] AS acquisition_type,
             MIN(created_at) AS created_at
           FROM grouped
           GROUP BY player_id, team_id, stint_group
@@ -559,6 +560,35 @@ async function initSchema() {
   // number became effective. The current jersey_number on player_teams is a
   // denormalised copy of the most-recent entry here.
   // Changing a jersey number never creates a new stint — it appends a row here.
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'clear_synthesized_player_team_stint_start_dates_v1'
+      ) THEN
+        UPDATE player_team_stints pts
+        SET start_date = NULL
+        WHERE pts.start_date IS NOT NULL
+          AND NOT EXISTS (
+            SELECT 1
+            FROM player_teams pt
+            WHERE pt.player_id = pts.player_id
+              AND pt.team_id = pts.team_id
+              AND pt.start_date IS NOT NULL
+          )
+          AND EXISTS (
+            SELECT 1
+            FROM player_teams pt
+            JOIN seasons s ON s.id = pt.season_id
+            WHERE pt.player_id = pts.player_id
+              AND pt.team_id = pts.team_id
+              AND s.start_date = pts.start_date
+          );
+
+        INSERT INTO _migrations (name) VALUES ('clear_synthesized_player_team_stint_start_dates_v1');
+      END IF;
+    END $$;
+  `;
   await sql`
     CREATE TABLE IF NOT EXISTS jersey_number_history (
       id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
