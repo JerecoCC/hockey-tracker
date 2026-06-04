@@ -1542,6 +1542,7 @@ router.get('/:id/lineup', async (req, res) => {
       LEFT JOIN player_teams pt
         ON pt.player_id = slot.player_id
         AND pt.team_id  = sl.team_id
+        AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1588,6 +1589,7 @@ router.get('/:id/lineup', async (req, res) => {
         LEFT JOIN player_teams pt
           ON pt.player_id = slot.player_id
           AND pt.team_id  = sl.team_id
+          AND pt.season_id = g.season_id
           AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
           AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         LEFT JOIN LATERAL (
@@ -1682,6 +1684,7 @@ router.put('/:id/lineup', async (req, res) => {
       LEFT JOIN player_teams pt
         ON pt.player_id = slot.player_id
         AND pt.team_id  = sl.team_id
+        AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1750,6 +1753,7 @@ router.get('/:id/roster', async (req, res) => {
       LEFT JOIN player_teams pt
         ON pt.player_id = gr.player_id
         AND pt.team_id  = gr.team_id
+        AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1797,6 +1801,7 @@ router.get('/:id/roster', async (req, res) => {
         LEFT JOIN player_teams pt
           ON pt.player_id = gr.player_id
           AND pt.team_id  = gr.team_id
+          AND pt.season_id = g.season_id
           AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
           AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         LEFT JOIN LATERAL (
@@ -1863,6 +1868,7 @@ router.post('/:id/roster', async (req, res) => {
       LEFT JOIN player_teams pt
         ON pt.player_id = gr.player_id
         AND pt.team_id  = gr.team_id
+        AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1980,6 +1986,7 @@ router.get('/:id/goals', async (req, res) => {
       JOIN players sp ON sp.id = go.scorer_id
       LEFT JOIN player_teams spt
         ON spt.player_id = go.scorer_id AND spt.team_id = go.team_id
+        AND spt.season_id = g.season_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -1991,6 +1998,7 @@ router.get('/:id/goals', async (req, res) => {
       LEFT JOIN players a1p ON a1p.id = go.assist_1_id
       LEFT JOIN player_teams a1pt
         ON a1pt.player_id = go.assist_1_id AND a1pt.team_id = go.team_id
+        AND a1pt.season_id = g.season_id
         AND (a1pt.start_date IS NULL OR a1pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a1pt.end_date   IS NULL OR a1pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2002,6 +2010,7 @@ router.get('/:id/goals', async (req, res) => {
       LEFT JOIN players a2p ON a2p.id = go.assist_2_id
       LEFT JOIN player_teams a2pt
         ON a2pt.player_id = go.assist_2_id AND a2pt.team_id = go.team_id
+        AND a2pt.season_id = g.season_id
         AND (a2pt.start_date IS NULL OR a2pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a2pt.end_date   IS NULL OR a2pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2122,6 +2131,7 @@ router.post('/:id/goals', async (req, res) => {
       JOIN players sp ON sp.id = go.scorer_id
       LEFT JOIN player_teams spt
         ON spt.player_id = go.scorer_id AND spt.team_id = go.team_id
+        AND spt.season_id = g.season_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2133,6 +2143,7 @@ router.post('/:id/goals', async (req, res) => {
       LEFT JOIN players a1p ON a1p.id = go.assist_1_id
       LEFT JOIN player_teams a1pt
         ON a1pt.player_id = go.assist_1_id AND a1pt.team_id = go.team_id
+        AND a1pt.season_id = g.season_id
         AND (a1pt.start_date IS NULL OR a1pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a1pt.end_date   IS NULL OR a1pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2144,6 +2155,7 @@ router.post('/:id/goals', async (req, res) => {
       LEFT JOIN players a2p ON a2p.id = go.assist_2_id
       LEFT JOIN player_teams a2pt
         ON a2pt.player_id = go.assist_2_id AND a2pt.team_id = go.team_id
+        AND a2pt.season_id = g.season_id
         AND (a2pt.start_date IS NULL OR a2pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a2pt.end_date   IS NULL OR a2pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2284,6 +2296,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
       JOIN players sp ON sp.id = go.scorer_id
       LEFT JOIN player_teams spt
         ON spt.player_id = go.scorer_id AND spt.team_id = go.team_id
+        AND spt.season_id = g.season_id
         AND (spt.start_date IS NULL OR spt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (spt.end_date   IS NULL OR spt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2295,6 +2308,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
       LEFT JOIN players a1p ON a1p.id = go.assist_1_id
       LEFT JOIN player_teams a1pt
         ON a1pt.player_id = go.assist_1_id AND a1pt.team_id = go.team_id
+        AND a1pt.season_id = g.season_id
         AND (a1pt.start_date IS NULL OR a1pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a1pt.end_date   IS NULL OR a1pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2306,6 +2320,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
       LEFT JOIN players a2p ON a2p.id = go.assist_2_id
       LEFT JOIN player_teams a2pt
         ON a2pt.player_id = go.assist_2_id AND a2pt.team_id = go.team_id
+        AND a2pt.season_id = g.season_id
         AND (a2pt.start_date IS NULL OR a2pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (a2pt.end_date   IS NULL OR a2pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2575,6 +2590,7 @@ const fetchGoalieStatsForGame = (gameId) => sql`
   JOIN teams t   ON t.id  = ga.team_id
   LEFT JOIN player_teams pt
     ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
+    AND pt.season_id = g.season_id
     AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
     AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
   LEFT JOIN LATERAL (
@@ -2647,6 +2663,7 @@ router.get('/:id/goalie-stats', async (req, res) => {
       LEFT JOIN player_teams pt
         ON pt.player_id = ga.goalie_id
         AND pt.team_id  = ga.team_id
+        AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2758,6 +2775,7 @@ router.put('/:id/goalie-stats', async (req, res) => {
       JOIN teams t   ON t.id  = ga.team_id
       LEFT JOIN player_teams pt
         ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
+        AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -2850,6 +2868,7 @@ router.post('/:id/goalie-stats/switch', async (req, res) => {
       JOIN teams t   ON t.id  = ga.team_id
       LEFT JOIN player_teams pt
         ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
+        AND pt.season_id = g.season_id
         AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
         AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       LEFT JOIN LATERAL (
@@ -3174,6 +3193,7 @@ const fetchAttempts = async (gameId) => {
     LEFT JOIN player_teams pt
       ON pt.player_id = sa.shooter_id
       AND pt.team_id  = sa.team_id
+      AND pt.season_id = g.season_id
       AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
       AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
     LEFT JOIN LATERAL (

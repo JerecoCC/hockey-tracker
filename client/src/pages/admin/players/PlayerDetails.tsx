@@ -672,7 +672,7 @@ const PlayerDetailsPage = () => {
   const playerEditTarget: TeamPlayerRecord = {
     ...player,
     photo,
-    player_team_id: latestStint?.id ?? null,
+    player_team_id: latestStint?.roster_player_team_id ?? null,
     jersey_number: latestStint?.jersey_number ?? null,
     team_id: latestStint?.team_id ?? null,
     team_name: latestStint?.team.name ?? null,
@@ -1060,7 +1060,11 @@ const PlayerDetailsPage = () => {
       <ChangeJerseyModal
         open={!!changingJerseyStint}
         stint={changingJerseyStint}
-        history={jerseyHistoryByStint[changingJerseyStint?.id ?? ''] ?? []}
+        history={
+          jerseyHistoryByStint[
+            changingJerseyStint?.roster_player_team_id ?? changingJerseyStint?.id ?? ''
+          ] ?? []
+        }
         onClose={() => setChangingJerseyStint(null)}
         changeJerseyNumber={changeJerseyNumber}
       />

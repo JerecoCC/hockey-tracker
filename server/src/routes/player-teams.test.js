@@ -51,7 +51,7 @@ jest.mock('../middleware/auth', () => ({
 
 const request = require('supertest');
 const express = require('express');
-const { sql, db, __mockDbChain } = require('../db');
+const { sql, __mockDbChain } = require('../db');
 const playerTeamsRouter = require('./player-teams');
 
 const app = express();
@@ -62,6 +62,7 @@ const STINT_ROW = {
   id: 'stint-1',
   player_id: 'player-1',
   team_id: 'team-1',
+  roster_player_team_id: 'roster-1',
   season_id: 'season-1',
   jersey_number: 16,
   is_prospect: false,
@@ -100,6 +101,7 @@ describe('POST /api/admin/player-teams/bulk', () => {
   it('creates roster rows and reports skipped duplicates', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'stint-1', player_id: 'player-1' }])
+      .mockResolvedValueOnce([{ id: 'career-stint-1', player_id: 'player-1' }])
       .mockResolvedValueOnce([]);
 
     const res = await request(app)
@@ -116,7 +118,7 @@ describe('POST /api/admin/player-teams/bulk', () => {
     expect(res.status).toBe(201);
     expect(res.body.created).toHaveLength(1);
     expect(res.body.skipped).toBe(1);
-    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql).toHaveBeenCalledTimes(3);
   });
 });
 
@@ -148,7 +150,8 @@ describe('POST /api/admin/player-teams', () => {
         start_date: '2024-10-01',
         end_date: null,
       }])
-      .mockResolvedValueOnce([]);
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'career-stint-1' }]);
 
     const res = await request(app)
       .post('/api/admin/player-teams')
@@ -169,7 +172,7 @@ describe('POST /api/admin/player-teams', () => {
       acquisition_type: 'draft',
       photo: 'https://example.com/player.png',
     });
-    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql).toHaveBeenCalledTimes(3);
   });
 
   it('returns 409 when an active stint already exists', async () => {
@@ -186,20 +189,19 @@ describe('POST /api/admin/player-teams', () => {
 
 describe('GET /api/admin/player-teams/history/:playerId', () => {
   it('returns stints with team data nested under team', async () => {
-    sql.mockResolvedValueOnce([{ exists: true }]);
-    __mockDbChain.orderBy.mockResolvedValueOnce([STINT_ROW]);
+    sql.mockResolvedValueOnce([STINT_ROW]);
 
     const res = await request(app).get('/api/admin/player-teams/history/player-1');
 
     expect(res.status).toBe(200);
-    expect(db.select).toHaveBeenCalledTimes(1);
-    expect(__mockDbChain.from).toHaveBeenCalledTimes(1);
+    expect(sql).toHaveBeenCalledTimes(1);
     expect(res.body).toEqual([
       {
         id: 'stint-1',
         player_id: 'player-1',
         team_id: 'team-1',
         season_id: 'season-1',
+        roster_player_team_id: 'roster-1',
         jersey_number: 16,
         is_prospect: false,
         photo: 'https://example.com/player.png',
@@ -220,9 +222,8 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
     ]);
   });
 
-  it('returns null acquisition_type when the column does not exist yet', async () => {
-    sql.mockResolvedValueOnce([{ exists: false }]);
-    __mockDbChain.orderBy.mockResolvedValueOnce([{ ...STINT_ROW, acquisition_type: null }]);
+  it('returns null acquisition_type when the stint has no acquisition type', async () => {
+    sql.mockResolvedValueOnce([{ ...STINT_ROW, acquisition_type: null }]);
 
     const res = await request(app).get('/api/admin/player-teams/history/player-1');
 
@@ -231,8 +232,7 @@ describe('GET /api/admin/player-teams/history/:playerId', () => {
   });
 
   it('returns 500 when history lookup fails', async () => {
-    sql.mockResolvedValueOnce([{ exists: true }]);
-    __mockDbChain.orderBy.mockRejectedValueOnce(new Error('DB down'));
+    sql.mockRejectedValueOnce(new Error('DB down'));
 
     const res = await request(app).get('/api/admin/player-teams/history/player-1');
 
@@ -302,18 +302,20 @@ describe('PATCH /api/admin/player-teams', () => {
 
 describe('PATCH /api/admin/player-teams/:id', () => {
   it('updates prospect status on a specific stint row', async () => {
-    sql.mockResolvedValueOnce([{
-      id: 'stint-1',
-      player_id: 'player-1',
-      team_id: 'team-1',
-      season_id: 'season-1',
-      jersey_number: 16,
-      is_prospect: true,
-      position: 'C',
-      acquisition_type: 'draft',
-      start_date: '2024-10-01',
-      end_date: '2025-01-15',
-    }]);
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{
+        id: 'stint-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 16,
+        is_prospect: true,
+        position: 'C',
+        acquisition_type: 'draft',
+        start_date: '2024-10-01',
+        end_date: '2025-01-15',
+      }]);
 
     const res = await request(app)
       .patch('/api/admin/player-teams/stint-1')
@@ -324,23 +326,27 @@ describe('PATCH /api/admin/player-teams/:id', () => {
       id: 'stint-1',
       is_prospect: true,
     });
-    expect(sql).toHaveBeenCalledTimes(1);
+    expect(sql).toHaveBeenCalledTimes(2);
   });
 });
 
 describe('DELETE /api/admin/player-teams/:id', () => {
   it('removes the player-team association', async () => {
-    sql.mockResolvedValueOnce([{ id: 'stint-1' }]);
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'stint-1' }]);
 
     const res = await request(app).delete('/api/admin/player-teams/stint-1');
 
     expect(res.status).toBe(200);
     expect(res.body.message).toBe('Player removed from team');
-    expect(sql).toHaveBeenCalledTimes(1);
+    expect(sql).toHaveBeenCalledTimes(2);
   });
 
   it('returns 404 when the stint is not found', async () => {
-    sql.mockResolvedValueOnce([]);
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     const res = await request(app).delete('/api/admin/player-teams/missing-stint');
 

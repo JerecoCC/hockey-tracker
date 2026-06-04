@@ -722,6 +722,21 @@ describe('POST /api/admin/games/:id/roster', () => {
 // ---------------------------------------------------------------------------
 // PUT /api/admin/games/:id/lineup
 // ---------------------------------------------------------------------------
+describe('GET /api/admin/games/:id/lineup', () => {
+  it('joins player_teams by the game season to avoid cross-season duplicate lineup rows', async () => {
+    sql
+      .mockResolvedValueOnce([{ home_team_id: 'home-1', away_team_id: 'away-1' }])
+      .mockResolvedValueOnce([{ team_id: 'home-1' }, { team_id: 'away-1' }])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/admin/games/game-1/lineup');
+
+    expect(res.status).toBe(200);
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[2]).toMatch(/pt\.season_id = g\.season_id/);
+  });
+});
+
 describe('PUT /api/admin/games/:id/lineup', () => {
   it('returns 400 when the same player is used in multiple starting lineup slots', async () => {
     const res = await request(app).put('/api/admin/games/game-1/lineup').send({
@@ -739,6 +754,24 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/center_id and left_wing_id must be different/i);
     expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('joins returned lineup player metadata by the game season', async () => {
+    sql
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).put('/api/admin/games/game-1/lineup').send({
+      team_id: 'team-1',
+      slots: [
+        { position_slot: 'C', player_id: 'player-1' },
+        { position_slot: 'LW', player_id: 'player-2' },
+      ],
+    });
+
+    expect(res.status).toBe(200);
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[1]).toMatch(/pt\.season_id = g\.season_id/);
   });
 });
 

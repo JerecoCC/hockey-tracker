@@ -159,6 +159,17 @@ const playerTeams = pgTable('player_teams', {
   createdAt: createdAt(),
 });
 
+const playerTeamStints = pgTable('player_team_stints', {
+  id: id(),
+  playerId: uuid('player_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  position: text('position'),
+  acquisitionType: text('acquisition_type'),
+  startDate: date('start_date'),
+  endDate: date('end_date'),
+  createdAt: createdAt(),
+});
+
 const playerPhotos = pgTable('player_photos', {
   id: id(),
   playerId: uuid('player_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
@@ -214,6 +225,7 @@ module.exports = {
   teamIterations,
   players,
   playerTeams,
+  playerTeamStints,
   playerPhotos,
   jerseyNumberHistory,
   bracketRuleSets,

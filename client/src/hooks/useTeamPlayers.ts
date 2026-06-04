@@ -12,6 +12,7 @@ export interface PlayerStintRecord {
   player_id: string;
   team_id: string;
   season_id: string;
+  roster_player_team_id?: string | null;
   jersey_number: number | null;
   is_prospect: boolean;
   photo: string | null;
@@ -368,6 +369,14 @@ const updatePlayerCaches = (
   }
 };
 
+const isSameRosterRecord = (cachedPlayer: PlayerRecord, targetPlayer: TeamPlayerRecord) => {
+  const cachedRoster = cachedPlayer as Partial<TeamPlayerRecord>;
+  if (targetPlayer.player_team_id) {
+    return cachedRoster.player_team_id === targetPlayer.player_team_id;
+  }
+  return cachedPlayer.id === targetPlayer.id && cachedRoster.team_id === targetPlayer.team_id;
+};
+
 const rosterCacheOptions = (queryKey: readonly unknown[]) =>
   typeof queryKey[1] === 'object' && queryKey[1] !== null
     ? (queryKey[1] as UseTeamPlayersOptions & { team_id?: string; season_id?: string })
@@ -535,7 +544,7 @@ const useTeamPlayers = (
       }
       toast.success(isProspect ? 'Player moved to prospects' : 'Player moved to roster');
       updatePlayerCaches(queryClient, (cachedPlayer, queryKey) => {
-        if (cachedPlayer.id !== player.id || cachedPlayer.team_id !== player.team_id) {
+        if (!isSameRosterRecord(cachedPlayer, player)) {
           return cachedPlayer;
         }
         const cacheOptions = rosterCacheOptions(queryKey);
@@ -581,7 +590,7 @@ const useTeamPlayers = (
       });
       toast.success('Player removed from team');
       updatePlayerCaches(queryClient, (cachedPlayer) =>
-        cachedPlayer.id === player.id && cachedPlayer.team_id === player.team_id
+        isSameRosterRecord(cachedPlayer, player)
           ? null
           : cachedPlayer,
       );

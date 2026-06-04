@@ -456,6 +456,104 @@ async function initSchema() {
       WHERE end_date IS NULL
   `;
 
+  // Career/team stints are intentionally separate from season roster rows.
+  // player_teams answers "who is on this season roster"; player_team_stints
+  // answers "when was this player associated with this team across their career".
+  await sql`
+    CREATE TABLE IF NOT EXISTS player_team_stints (
+      id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      player_id        UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      team_id          UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      position         TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
+      acquisition_type TEXT CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other')),
+      start_date       DATE,
+      end_date         DATE,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS position TEXT`;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS acquisition_type TEXT`;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS start_date DATE`;
+  await sql`ALTER TABLE player_team_stints ADD COLUMN IF NOT EXISTS end_date DATE`;
+  await sql`ALTER TABLE player_team_stints DROP CONSTRAINT IF EXISTS player_team_stints_position_check`;
+  await sql`
+    ALTER TABLE player_team_stints ADD CONSTRAINT player_team_stints_position_check
+    CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))
+  `;
+  await sql`ALTER TABLE player_team_stints DROP CONSTRAINT IF EXISTS player_team_stints_acquisition_type_check`;
+  await sql`
+    ALTER TABLE player_team_stints ADD CONSTRAINT player_team_stints_acquisition_type_check
+    CHECK (acquisition_type IN ('draft', 'trade', 'free_agency', 'waivers', 'signing', 'expansion_draft', 'team_transfer', 'loan', 'other'))
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS player_team_stints_player_dates
+      ON player_team_stints (player_id, start_date DESC NULLS LAST, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS player_team_stints_active_lookup
+      ON player_team_stints (player_id, team_id)
+      WHERE end_date IS NULL
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      name       TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_player_team_stints_v1'
+      ) THEN
+        WITH ordered AS (
+          SELECT
+            pt.*,
+            COALESCE(pt.start_date, s.start_date, pt.created_at::date) AS effective_start,
+            COALESCE(pt.end_date, s.end_date) AS effective_end,
+            LAG(pt.team_id) OVER (
+              PARTITION BY pt.player_id
+              ORDER BY COALESCE(pt.start_date, s.start_date, pt.created_at::date), pt.created_at, pt.id
+            ) AS prev_team_id
+          FROM player_teams pt
+          LEFT JOIN seasons s ON s.id = pt.season_id
+        ),
+        grouped AS (
+          SELECT
+            *,
+            SUM(CASE WHEN prev_team_id IS DISTINCT FROM team_id THEN 1 ELSE 0 END) OVER (
+              PARTITION BY player_id
+              ORDER BY effective_start, created_at, id
+            ) AS stint_group
+          FROM ordered
+        ),
+        collapsed AS (
+          SELECT
+            player_id,
+            team_id,
+            MIN(effective_start) AS start_date,
+            CASE
+              WHEN BOOL_OR(end_date IS NULL) THEN NULL
+              ELSE MAX(effective_end)
+            END AS end_date,
+            (ARRAY_AGG(position ORDER BY effective_start DESC NULLS LAST, created_at DESC))[1] AS position,
+            (ARRAY_AGG(acquisition_type ORDER BY effective_start ASC NULLS LAST, created_at ASC))[1] AS acquisition_type,
+            MIN(created_at) AS created_at
+          FROM grouped
+          GROUP BY player_id, team_id, stint_group
+        )
+        INSERT INTO player_team_stints (
+          player_id, team_id, position, acquisition_type, start_date, end_date, created_at
+        )
+        SELECT player_id, team_id, position, acquisition_type, start_date, end_date, created_at
+        FROM collapsed
+        ORDER BY created_at;
+
+        INSERT INTO _migrations (name) VALUES ('backfill_player_team_stints_v1');
+      END IF;
+    END $$;
+  `;
+
   // ── Jersey number history ──────────────────────────────────────────────────
   // Tracks every jersey number a player wore within a stint, with the date the
   // number became effective. The current jersey_number on player_teams is a

@@ -468,19 +468,7 @@ router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      WITH player_team_rows AS (
-        SELECT DISTINCT ON (pt.season_id, pt.team_id)
-          pt.season_id,
-          pt.team_id,
-          pt.jersey_number,
-          pt.start_date,
-          pt.end_date,
-          pt.created_at
-        FROM player_teams pt
-        WHERE pt.player_id = ${id}
-        ORDER BY pt.season_id, pt.team_id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
-      ),
-      gp_counts AS (
+      WITH gp_counts AS (
         SELECT ga.season_id, gr.team_id, COUNT(DISTINCT gr.game_id) AS gp
         FROM game_rosters gr
         JOIN games ga ON ga.id = gr.game_id
@@ -502,8 +490,6 @@ router.get('/:id/stats', async (req, res) => {
         GROUP BY ga.season_id, gl.team_id
       ),
       stat_rows AS (
-        SELECT season_id, team_id FROM player_team_rows
-        UNION
         SELECT season_id, team_id FROM gp_counts
         UNION
         SELECT season_id, team_id FROM goal_counts
@@ -525,10 +511,22 @@ router.get('/:id/stats', async (req, res) => {
         t.text_color
       FROM stat_rows sr
       JOIN seasons s ON s.id = sr.season_id
-      LEFT JOIN player_team_rows ptr ON ptr.season_id = sr.season_id AND ptr.team_id = sr.team_id
       LEFT JOIN gp_counts gc ON gc.season_id = sr.season_id AND gc.team_id = sr.team_id
       LEFT JOIN goal_counts gl ON gl.season_id = sr.season_id AND gl.team_id = sr.team_id
       LEFT JOIN assist_counts ac ON ac.season_id = sr.season_id AND ac.team_id = sr.team_id
+      LEFT JOIN LATERAL (
+        SELECT
+          pt.jersey_number,
+          pt.start_date,
+          pt.end_date,
+          pt.created_at
+        FROM player_teams pt
+        WHERE pt.player_id = ${id}
+          AND pt.season_id = sr.season_id
+          AND pt.team_id = sr.team_id
+        ORDER BY pt.end_date DESC NULLS FIRST, pt.created_at DESC
+        LIMIT 1
+      ) ptr ON TRUE
       LEFT JOIN teams t ON t.id = sr.team_id
       LEFT JOIN LATERAL (
         SELECT name, logo FROM team_iterations

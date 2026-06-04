@@ -1,11 +1,8 @@
 const router = require('express').Router();
-const { and, desc, eq, sql: ormSql } = require('drizzle-orm');
 const { requireAdmin } = require('../middleware/auth');
-const { sql, db, schema } = require('../db');
+const { sql } = require('../db');
 
 router.use(requireAdmin);
-
-const { playerTeams, teams } = schema;
 
 const ACQUISITION_TYPES = new Set([
   'draft',
@@ -20,17 +17,84 @@ const ACQUISITION_TYPES = new Set([
 ]);
 const normalizeAcquisitionType = (value) => (value === '' || value == null ? null : value);
 const isValidAcquisitionType = (value) => value == null || ACQUISITION_TYPES.has(value);
-const hasPlayerTeamsAcquisitionType = async () => {
-  const [row] = await sql`
-    SELECT EXISTS (
-      SELECT 1
-      FROM information_schema.columns
-      WHERE table_name = 'player_teams'
-        AND column_name = 'acquisition_type'
-    ) AS exists
-  `;
-  return !!row?.exists;
+
+const upsertCareerStint = async ({
+  player_id,
+  team_id,
+  position = null,
+  acquisition_type = null,
+  start_date = null,
+  end_date = null,
+}) => {
+  const rows = (await sql`
+    WITH existing AS (
+      SELECT id
+      FROM player_team_stints
+      WHERE player_id = ${player_id}
+        AND team_id = ${team_id}
+        AND end_date IS NULL
+      ORDER BY start_date DESC NULLS LAST, created_at DESC
+      LIMIT 1
+    ),
+    updated AS (
+      UPDATE player_team_stints pts
+      SET
+        position = COALESCE(${position}, pts.position),
+        acquisition_type = COALESCE(${acquisition_type}, pts.acquisition_type),
+        start_date = COALESCE(pts.start_date, ${start_date}::date),
+        end_date = CASE WHEN ${end_date}::date IS NULL THEN pts.end_date ELSE ${end_date}::date END
+      FROM existing
+      WHERE pts.id = existing.id
+      RETURNING pts.*
+    ),
+    inserted AS (
+      INSERT INTO player_team_stints (
+        player_id, team_id, position, acquisition_type, start_date, end_date
+      )
+      SELECT
+        ${player_id}, ${team_id}, ${position}, ${acquisition_type},
+        ${start_date}::date, ${end_date}::date
+      WHERE NOT EXISTS (SELECT 1 FROM existing)
+      RETURNING *
+    )
+    SELECT * FROM updated
+    UNION ALL
+    SELECT * FROM inserted
+  `) ?? [];
+  return rows[0] ?? null;
 };
+
+const closeActiveCareerStints = (player_id, end_date) => sql`
+  UPDATE player_team_stints
+  SET end_date = ${end_date}::date
+  WHERE player_id = ${player_id}
+    AND end_date IS NULL
+  RETURNING id, team_id
+`;
+
+const mapHistoryRow = (row) => ({
+  id: row.id,
+  player_id: row.player_id,
+  team_id: row.team_id,
+  season_id: row.season_id,
+  roster_player_team_id: row.roster_player_team_id,
+  jersey_number: row.jersey_number,
+  is_prospect: row.is_prospect ?? false,
+  photo: row.photo,
+  position: row.position,
+  acquisition_type: row.acquisition_type,
+  start_date: row.start_date,
+  end_date: row.end_date,
+  created_at: row.created_at,
+  team: {
+    id: row.team_id,
+    name: row.team_name,
+    code: row.team_code,
+    logo: row.team_logo,
+    primary_color: row.primary_color,
+    text_color: row.text_color,
+  },
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/player-teams/bulk
@@ -60,7 +124,10 @@ router.post('/bulk', async (req, res) => {
         ON CONFLICT (player_id, season_id) WHERE end_date IS NULL DO NOTHING
         RETURNING id, player_id, team_id, season_id, jersey_number, is_prospect
       `;
-      if (rows.length > 0) created.push(rows[0]);
+      if (rows.length > 0) {
+        await upsertCareerStint({ player_id, team_id });
+        created.push(rows[0]);
+      }
     }
     return res.status(201).json({ created, skipped: players.length - created.length });
   } catch (err) {
@@ -108,6 +175,14 @@ router.post('/', async (req, res) => {
         DO UPDATE SET photo = EXCLUDED.photo, created_at = NOW()
       `;
     }
+    await upsertCareerStint({
+      player_id,
+      team_id,
+      position: position ?? null,
+      acquisition_type,
+      start_date: start_date ?? null,
+      end_date: end_date ?? null,
+    });
     rows[0].photo = photo ?? null;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -252,91 +327,68 @@ router.get('/history/:playerId', async (req, res) => {
   const { season_id } = req.query;
 
   try {
-    const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
-    const teamIterationOrder = ormSql`
+    const rows = await sql`
+      SELECT
+        pts.id,
+        pts.player_id,
+        pts.team_id,
+        roster.id AS roster_player_team_id,
+        roster.season_id,
+        roster.jersey_number,
+        roster.is_prospect,
+        best_player_photo(pts.player_id, roster.season_id, pts.team_id) AS photo,
+        COALESCE(pts.position, roster.position) AS position,
+        pts.acquisition_type,
+        pts.start_date::text AS start_date,
+        pts.end_date::text AS end_date,
+        pts.created_at,
+        ti.name AS team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo,
+        t.primary_color,
+        t.text_color
+      FROM player_team_stints pts
+      JOIN teams t ON t.id = pts.team_id
+      LEFT JOIN LATERAL (
+        SELECT pt.*
+        FROM player_teams pt
+        LEFT JOIN seasons s ON s.id = pt.season_id
+        WHERE pt.player_id = pts.player_id
+          AND pt.team_id = pts.team_id
+          AND (${season_id ?? null}::uuid IS NULL OR pt.season_id = ${season_id ?? null}::uuid)
+        ORDER BY
+          CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+          COALESCE(pt.start_date, s.start_date, pt.created_at::date) DESC,
+          pt.created_at DESC
+        LIMIT 1
+      ) roster ON TRUE
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo
+        FROM team_iterations
+        WHERE team_id = pts.team_id
+        ORDER BY
+          CASE
+            WHEN (start_date IS NULL OR start_date <= COALESCE(pts.end_date, CURRENT_DATE))
+             AND (end_date IS NULL OR end_date >= COALESCE(pts.start_date, pts.created_at::date))
+            THEN 0
+            WHEN end_date IS NULL THEN 1
+            ELSE 2
+          END,
+          start_date DESC NULLS LAST,
+          recorded_at DESC
+        LIMIT 1
+      ) ti ON TRUE
+      WHERE pts.player_id = ${playerId}
+        AND (
+          ${season_id ?? null}::uuid IS NULL
+          OR roster.id IS NOT NULL
+        )
       ORDER BY
-        CASE
-          WHEN (ti.start_date IS NULL OR ti.start_date <= COALESCE(${playerTeams.endDate}, s.end_date, CURRENT_DATE))
-           AND (ti.end_date IS NULL OR ti.end_date >= COALESCE(${playerTeams.startDate}, s.start_date, ${playerTeams.createdAt}::date))
-          THEN 0
-          WHEN ti.end_date IS NULL THEN 1
-          ELSE 2
-        END,
-        ti.start_date DESC NULLS LAST,
-        ti.recorded_at DESC
-      LIMIT 1
+        pts.end_date DESC NULLS FIRST,
+        COALESCE(pts.start_date, pts.created_at::date) DESC,
+        pts.created_at DESC
     `;
-    const rows = await db
-      .select({
-        id: playerTeams.id,
-        player_id: playerTeams.playerId,
-        team_id: playerTeams.teamId,
-        season_id: playerTeams.seasonId,
-        jersey_number: playerTeams.jerseyNumber,
-        is_prospect: playerTeams.isProspect,
-        photo: ormSql`best_player_photo(${playerTeams.playerId}, ${playerTeams.seasonId}, ${playerTeams.teamId})`,
-        position: playerTeams.position,
-        acquisition_type: hasAcquisitionType ? playerTeams.acquisitionType : ormSql`NULL::text`,
-        start_date: ormSql`${playerTeams.startDate}::text`,
-        end_date: ormSql`${playerTeams.endDate}::text`,
-        created_at: playerTeams.createdAt,
-        team_name: ormSql`(
-          SELECT ti.name
-          FROM team_iterations ti
-          JOIN seasons s ON s.id = ${playerTeams.seasonId}
-          WHERE ti.team_id = ${playerTeams.teamId}
-          ${teamIterationOrder}
-        )`,
-        team_code: ormSql`(
-          SELECT ti.code
-          FROM team_iterations ti
-          JOIN seasons s ON s.id = ${playerTeams.seasonId}
-          WHERE ti.team_id = ${playerTeams.teamId}
-          ${teamIterationOrder}
-        )`,
-        team_logo: ormSql`(
-          SELECT ti.logo
-          FROM team_iterations ti
-          JOIN seasons s ON s.id = ${playerTeams.seasonId}
-          WHERE ti.team_id = ${playerTeams.teamId}
-          ${teamIterationOrder}
-        )`,
-        primary_color: teams.primaryColor,
-        text_color: teams.textColor,
-      })
-      .from(playerTeams)
-      .innerJoin(teams, eq(teams.id, playerTeams.teamId))
-      .where(and(
-        eq(playerTeams.playerId, playerId),
-        season_id ? eq(playerTeams.seasonId, season_id) : undefined,
-      ))
-      .orderBy(
-        desc(playerTeams.endDate),
-        ormSql`COALESCE(${playerTeams.startDate}, ${playerTeams.createdAt}::date) DESC`,
-        desc(playerTeams.createdAt),
-      );
-    return res.json(rows.map((row) => ({
-      id: row.id,
-      player_id: row.player_id,
-      team_id: row.team_id,
-      season_id: row.season_id,
-      jersey_number: row.jersey_number,
-      is_prospect: row.is_prospect,
-      photo: row.photo,
-      position: row.position,
-      acquisition_type: row.acquisition_type,
-      start_date: row.start_date,
-      end_date: row.end_date,
-      created_at: row.created_at,
-      team: {
-        id: row.team_id,
-        name: row.team_name,
-        code: row.team_code,
-        logo: row.team_logo,
-        primary_color: row.primary_color,
-        text_color: row.text_color,
-      },
-    })));
+    return res.json(rows.map(mapHistoryRow));
   } catch (err) {
     console.error('player-teams history error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -464,6 +516,41 @@ router.patch('/:id', async (req, res) => {
   if (!isValidAcquisitionType(acquisition_type)) return res.status(400).json({ error: 'Invalid acquisition_type' });
 
   try {
+    const stintRows = (await sql`
+      UPDATE player_team_stints
+      SET
+        team_id       = CASE WHEN ${teamInBody}      THEN ${team_id}::uuid                   ELSE team_id       END,
+        position      = CASE WHEN ${positionInBody}  THEN ${position ?? null}                 ELSE position      END,
+        acquisition_type = CASE WHEN ${acquisitionInBody} THEN ${acquisition_type}             ELSE acquisition_type END,
+        start_date    = CASE WHEN ${startDateInBody} THEN ${start_date ?? null}::date         ELSE start_date    END,
+        end_date      = CASE WHEN ${endDateInBody}   THEN ${end_date ?? null}::date           ELSE end_date      END
+      WHERE id = ${id}
+      RETURNING
+        id, player_id, team_id,
+        position, acquisition_type,
+        start_date::text AS start_date,
+        end_date::text AS end_date
+    `) ?? [];
+
+    if (stintRows.length > 0) {
+      const [roster] = (await sql`
+        SELECT id, season_id, jersey_number, is_prospect
+        FROM player_teams
+        WHERE player_id = ${stintRows[0].player_id}
+          AND team_id = ${stintRows[0].team_id}
+        ORDER BY end_date DESC NULLS FIRST, created_at DESC
+        LIMIT 1
+      `) ?? [];
+      return res.json({
+        ...stintRows[0],
+        season_id: roster?.season_id ?? (seasonInBody ? season_id : null),
+        roster_player_team_id: roster?.id ?? null,
+        jersey_number: roster?.jersey_number ?? (jerseyInBody ? jersey_number ?? null : null),
+        is_prospect: roster?.is_prospect ?? (prospectInBody ? !!req.body.is_prospect : false),
+        photo: null,
+      });
+    }
+
     const rows = await sql`
       UPDATE player_teams
       SET
@@ -515,6 +602,15 @@ router.patch('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
+    const stintRows = (await sql`
+      DELETE FROM player_team_stints
+      WHERE id = ${id}
+      RETURNING id
+    `) ?? [];
+    if (stintRows.length > 0) {
+      return res.json({ message: 'Stint deleted' });
+    }
+
     const rows = await sql`
       DELETE FROM player_teams
       WHERE id = ${id}
@@ -565,6 +661,8 @@ router.post('/bulk-trade', async (req, res) => {
         continue;
       }
 
+      await closeActiveCareerStints(player_id, trade_date);
+
       // Open new stint on the destination team
       const created = await sql`
         INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
@@ -572,6 +670,13 @@ router.post('/bulk-trade', async (req, res) => {
         RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                   start_date::text AS start_date, end_date::text AS end_date
       `;
+      await upsertCareerStint({
+        player_id,
+        team_id: to_team_id,
+        position,
+        acquisition_type,
+        start_date: trade_date,
+      });
       traded.push(created[0]);
     }
 
@@ -611,6 +716,8 @@ router.post('/trade', async (req, res) => {
       return res.status(404).json({ error: 'No active stint found for this player in this season' });
     }
 
+    await closeActiveCareerStints(player_id, trade_date);
+
     // 2. Open new stint on the destination team
     const created = await sql`
       INSERT INTO player_teams (player_id, team_id, season_id, start_date, jersey_number, position, acquisition_type)
@@ -618,6 +725,13 @@ router.post('/trade', async (req, res) => {
       RETURNING id, player_id, team_id, season_id, jersey_number, position, acquisition_type,
                 start_date::text AS start_date, end_date::text AS end_date
     `;
+    await upsertCareerStint({
+      player_id,
+      team_id: to_team_id,
+      position,
+      acquisition_type,
+      start_date: trade_date,
+    });
     return res.status(201).json({
       from_team_id: closed[0].team_id,
       new_stint: created[0],
