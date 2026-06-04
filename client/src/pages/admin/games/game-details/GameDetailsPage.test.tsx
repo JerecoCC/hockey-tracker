@@ -1,6 +1,6 @@
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
-import { render, screen } from '@testing-library/react';
-import useGames, { useGameDetails } from '@/hooks/useGames';
+import { render } from '@testing-library/react';
+import { useGameDetails, useGameRouteLookup } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
 import useGameGoalieStats from '@/hooks/useGameGoalieStats';
@@ -23,8 +23,8 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('@/hooks/useGames', () => ({
   __esModule: true,
-  default: jest.fn(),
   useGameDetails: jest.fn(),
+  useGameRouteLookup: jest.fn(),
 }));
 jest.mock('@/hooks/useLeagueDetails', () => jest.fn());
 jest.mock('@/hooks/useLeagues', () => jest.fn());
@@ -48,7 +48,7 @@ jest.mock('./summary/GameSummaryTab', () => (props: any) => mockSummaryTab(props
 jest.mock('./lineups/GameLineupsTab', () => (props: any) => mockLineupsTab(props));
 
 const mockUseGameDetails = useGameDetails as jest.Mock;
-const mockUseGames = useGames as jest.Mock;
+const mockUseGameRouteLookup = useGameRouteLookup as jest.Mock;
 const mockUseLeagueDetails = useLeagueDetails as jest.Mock;
 const mockUseLeagues = useLeagues as jest.Mock;
 const mockUseGameGoalieStats = useGameGoalieStats as jest.Mock;
@@ -80,7 +80,7 @@ beforeEach(() => {
     revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
     updatePeriodShots: jest.fn(), revertToEditMode: jest.fn(), deleteGame: jest.fn(),
   });
-  mockUseGames.mockReturnValue({ games: [], loading: false });
+  mockUseGameRouteLookup.mockReturnValue({ gameId: null, loading: false });
   mockUseLeagueDetails.mockReturnValue({ seasons: [], loading: false });
   mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
   mockUseGameGoalieStats.mockReturnValue({ goalieStats: [], upsertGoalieStat: jest.fn(), switchGoalie: jest.fn(), removeGoalieStat: jest.fn(), updateGoalieStint: jest.fn(), removeGoalieStint: jest.fn() });
@@ -119,6 +119,34 @@ describe('GameDetailsPage', () => {
     );
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
+  });
+
+  it('resolves slug game routes without fetching the season games list', () => {
+    mockUseParams.mockReturnValue({
+      leagueSlug: 'nhl',
+      seasonSlug: '2024-25',
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'awy-vs-hom',
+    });
+    mockUseLeagues.mockReturnValue({
+      leagues: [{ id: 'league-1', code: 'NHL', name: 'National Hockey League' }],
+      loading: false,
+    });
+    mockUseLeagueDetails.mockReturnValue({
+      seasons: [{ id: 'season-1', name: '2024-25' }],
+      loading: false,
+    });
+    mockUseGameRouteLookup.mockReturnValue({ gameId: 'game-1', loading: false });
+
+    render(<GameDetailsPage />);
+
+    expect(mockUseGameRouteLookup).toHaveBeenCalledWith({
+      seasonId: 'season-1',
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'awy-vs-hom',
+      enabled: true,
+    });
+    expect(mockUseGameDetails).toHaveBeenCalledWith('game-1');
   });
 
   it('does not enable goalie stats or shootout fetches before a non-shootout game starts', () => {

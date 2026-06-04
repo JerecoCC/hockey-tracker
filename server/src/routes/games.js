@@ -546,6 +546,69 @@ router.delete('/playoff-series/:seriesId', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/games/route-lookup
+// Resolves /games/<MM-DD-YYYY>/<away-code>-vs-<home-code> to one game id.
+// ---------------------------------------------------------------------------
+router.get('/route-lookup', async (req, res) => {
+  const { season_id, game_date, game_slug } = req.query;
+  if (!season_id || !game_date || !game_slug) {
+    return res.status(400).json({ error: 'season_id, game_date, and game_slug are required' });
+  }
+  if (!/^\d{2}-\d{2}-\d{4}$/.test(String(game_date))) {
+    return res.status(400).json({ error: 'game_date must be MM-DD-YYYY' });
+  }
+
+  const [month, day, year] = String(game_date).split('-');
+  const gameDate = `${year}-${month}-${day}`;
+
+  try {
+    const rows = await sql`
+      SELECT g.id AS game_id
+      FROM games g
+      LEFT JOIN LATERAL (
+        SELECT code
+        FROM team_iterations
+        WHERE team_id = g.away_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) away_identity ON true
+      LEFT JOIN LATERAL (
+        SELECT code
+        FROM team_iterations
+        WHERE team_id = g.home_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) home_identity ON true
+      WHERE g.season_id = ${season_id}::uuid
+        AND (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
+        AND CONCAT(
+          regexp_replace(
+            regexp_replace(lower(COALESCE(away_identity.code, '')), '[^a-z0-9]+', '-', 'g'),
+            '(^-+|-+$)',
+            '',
+            'g'
+          ),
+          '-vs-',
+          regexp_replace(
+            regexp_replace(lower(COALESCE(home_identity.code, '')), '[^a-z0-9]+', '-', 'g'),
+            '(^-+|-+$)',
+            '',
+            'g'
+          )
+        ) = ${game_slug}
+      ORDER BY g.scheduled_at DESC NULLS LAST, g.id DESC
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Game route not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('games route lookup error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/:id  – single game with period breakdown
 // ---------------------------------------------------------------------------
 router.get('/:id', async (req, res) => {

@@ -111,6 +111,43 @@ describe('GET /api/admin/games', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/games/route-lookup
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/games/route-lookup', () => {
+  it('resolves a slug game route to a single game id', async () => {
+    sql.mockResolvedValueOnce([{ game_id: 'game-1' }]);
+
+    const res = await request(app)
+      .get('/api/admin/games/route-lookup?season_id=season-1&game_date=10-15-2024&game_slug=lak-vs-sjs');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ game_id: 'game-1' });
+    expect(queryText).toContain('g.id AS game_id');
+    expect(queryText).toContain("'-vs-'");
+    expect(queryText).toContain("AT TIME ZONE 'UTC'");
+  });
+
+  it('requires all route lookup params', async () => {
+    const res = await request(app).get('/api/admin/games/route-lookup?season_id=season-1');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/required/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when a slug game route cannot be resolved', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .get('/api/admin/games/route-lookup?season_id=season-1&game_date=10-15-2024&game_slug=lak-vs-sjs');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/games/:id
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/games/:id', () => {

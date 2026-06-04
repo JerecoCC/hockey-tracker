@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
-import useGames, { useGameDetails } from '@/hooks/useGames';
+import { useGameDetails, useGameRouteLookup } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
 import useGameLineup from '@/hooks/useGameLineup';
@@ -56,6 +56,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const seasonSlug = routeSeasonSlug ?? legacySeasonId;
   const gameSlug = routeGameSlug ?? legacyGameId;
   const navigate = useNavigate();
+  const isAdminView = mode === 'admin';
   const isLegacyGameRoute = (!!legacyGameId && !routeGameSlug) || (!!gameSlug && UUID_PATTERN.test(gameSlug));
   const isLegacyLeagueRoute =
     (!!legacyLeagueId && !routeLeagueSlug) || (!!leagueSlug && UUID_PATTERN.test(leagueSlug));
@@ -75,20 +76,15 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     ? null
     : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
   const routeSeasonId = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
-  const { games: routeGames, loading: routeGamesLoading } = useGames({
-    seasonId: !isLegacyGameRoute ? routeSeasonId : undefined,
+  const shouldResolveGameRoute =
+    isAdminView && !isLegacyGameRoute && !!routeSeasonId && !!gameDateSlug && !!gameSlug;
+  const { gameId: routeGameId, loading: routeGameLookupLoading } = useGameRouteLookup({
+    seasonId: routeSeasonId,
+    gameDateSlug,
+    gameSlug,
+    enabled: shouldResolveGameRoute,
   });
-  const routeGame = isLegacyGameRoute
-    ? null
-    : routeGames.find(
-        (item) =>
-          gameRouteSlug({
-            awayTeamCode: item.away_team.code,
-            homeTeamCode: item.home_team.code,
-          }) === gameSlug &&
-          (!gameDateSlug || gameDateRouteSlug(item.scheduled_at) === gameDateSlug),
-      );
-  const gameId = isLegacyGameRoute ? gameSlug : routeGame?.id;
+  const gameId = isLegacyGameRoute ? gameSlug : routeGameId ?? undefined;
   const {
     game,
     loading: gameDetailsLoading,
@@ -109,7 +105,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     gameDetailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
     (!isLegacySeasonRoute && leagueDetailsLoading) ||
-    (!isLegacyGameRoute && routeGamesLoading);
+    routeGameLookupLoading;
   const gameHasStarted = !!game && game.status !== 'scheduled';
   const hasShootout = !!game?.shootout;
   const shouldFetchShootoutAttempts =
@@ -130,7 +126,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
   const [isEditMode, setIsEditMode] = useState(false);
-  const isAdminView = mode === 'admin';
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.

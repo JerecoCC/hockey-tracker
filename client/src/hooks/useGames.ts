@@ -203,6 +203,17 @@ interface Filters {
   week?:      string;
 }
 
+interface GameRouteLookupInput {
+  seasonId?: string;
+  gameDateSlug?: string;
+  gameSlug?: string;
+  enabled?: boolean;
+}
+
+interface GameRouteLookupResponse {
+  game_id: string;
+}
+
 const isGameListQuery = (queryKey: readonly unknown[]) =>
   queryKey[0] === 'games' &&
   queryKey.length === 2 &&
@@ -353,6 +364,41 @@ const useGames = (filters: Filters = {}) => {
 };
 
 export default useGames;
+
+export const useGameRouteLookup = ({
+  seasonId,
+  gameDateSlug,
+  gameSlug,
+  enabled = true,
+}: GameRouteLookupInput) => {
+  const { data = null, isLoading: loading } = useQuery<GameRouteLookupResponse | null>({
+    queryKey: ['game-route-lookup', { seasonId, gameDateSlug, gameSlug }],
+    enabled: enabled && !!seasonId && !!gameDateSlug && !!gameSlug,
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<GameRouteLookupResponse>(
+          `${API}/admin/games/route-lookup`,
+          {
+            headers: authHeaders(),
+            params: {
+              season_id: seasonId,
+              game_date: gameDateSlug,
+              game_slug: gameSlug,
+            },
+          },
+        );
+        return data;
+      } catch (err) {
+        if ((err as AxiosError).response?.status !== 404) {
+          toast.error(apiError(err, 'Failed to resolve game route'));
+        }
+        return null;
+      }
+    },
+  });
+
+  return { gameId: data?.game_id ?? null, loading };
+};
 
 // ── Single-game detail hook ───────────────────────────────────────────────────
 
