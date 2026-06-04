@@ -73,6 +73,15 @@ const Select = (props: Props) => {
     setQuery('');
   };
 
+  const openSearchMenu = () => {
+    if (disabled) return;
+    if (!open) {
+      measureMenu();
+      setOpen(true);
+    }
+    searchRef.current?.focus();
+  };
+
   // Defer autoFocus until after layout so getBoundingClientRect() returns correct dimensions.
   useEffect(() => {
     if (!autoFocus || !searchable) return;
@@ -168,13 +177,7 @@ const Select = (props: Props) => {
             disabled && styles.triggerDisabled,
             error && !open && styles.triggerError,
           )}
-          onClick={() => {
-            if (disabled) return;
-            if (!open) {
-              measureMenu();
-              setOpen(true);
-            }
-          }}
+          onClick={openSearchMenu}
         >
           <input
             ref={searchRef}

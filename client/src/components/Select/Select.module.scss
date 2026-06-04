@@ -17,6 +17,7 @@
   border-radius: $radius-md;
   color: $text-body;
   font-size: $font-base;
+  line-height: 1.4;
   height: 42px;
   padding: 0 $space-md 0 $space-lg;
   outline: none;
@@ -61,6 +62,7 @@
   color: $text-body;
   font-size: $font-base;
   font-family: inherit;
+  line-height: 1.4;
   padding: 0;
   cursor: inherit;
 
@@ -76,6 +78,7 @@
 .placeholder {
   color: $text-dim;
   font-size: $font-base;
+  line-height: 1.4;
 }
 
 .caret {
@@ -149,12 +152,13 @@
   gap: $space-md;
   width: 100%;
   min-height: 36px;
-  padding: 0 $space-md;
+  padding: 6px $space-md;
   background: transparent;
   border: none;
   border-radius: $radius-sm;
   color: $text-body;
   font-size: $font-base;
+  line-height: 1.4;
   font-weight: 400;
   text-align: left;
   cursor: pointer;
@@ -177,6 +181,7 @@
   gap: $space-md;
   min-width: 0;
   font-size: $font-base;
+  line-height: 1.4;
   font-weight: 400;
   color: $text-body;
   text-transform: none;
@@ -188,6 +193,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.4;
 }
 
 .optionIndicator {
