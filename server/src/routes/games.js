@@ -695,14 +695,14 @@ router.get('/:id', async (req, res) => {
         g.period_shots,
         json_build_object(
           'id', g.home_team_id,
-          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'name', ht.name, 'team_name', ht.team_name, 'code', ht.code, 'logo', ht.logo,
           'primary_color', t_home.primary_color,
           'secondary_color', t_home.secondary_color,
           'text_color', t_home.text_color
         ) AS home_team,
         json_build_object(
           'id', g.away_team_id,
-          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'name', at.name, 'team_name', at.team_name, 'code', at.code, 'logo', at.logo,
           'primary_color', t_away.primary_color,
           'secondary_color', t_away.secondary_color,
           'text_color', t_away.text_color
@@ -723,13 +723,13 @@ router.get('/:id', async (req, res) => {
       LEFT JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, team_name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, team_name, code, logo FROM team_iterations
         WHERE team_id = g.away_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -959,14 +959,14 @@ router.get('/:id', async (req, res) => {
               'current_home_was_home', (lg.home_team_id = g.home_team_id),
               'home_team', json_build_object(
                 'id', lg.home_team_id,
-                'name', lg_home_ti.name, 'code', lg_home_ti.code, 'logo', lg_home_ti.logo,
+                'name', lg_home_ti.name, 'team_name', lg_home_ti.team_name, 'code', lg_home_ti.code, 'logo', lg_home_ti.logo,
                 'primary_color', lg_home_team.primary_color,
                 'secondary_color', lg_home_team.secondary_color,
                 'text_color', lg_home_team.text_color
               ),
               'away_team', json_build_object(
                 'id', lg.away_team_id,
-                'name', lg_away_ti.name, 'code', lg_away_ti.code, 'logo', lg_away_ti.logo,
+                'name', lg_away_ti.name, 'team_name', lg_away_ti.team_name, 'code', lg_away_ti.code, 'logo', lg_away_ti.logo,
                 'primary_color', lg_away_team.primary_color,
                 'secondary_color', lg_away_team.secondary_color,
                 'text_color', lg_away_team.text_color
@@ -1011,13 +1011,13 @@ router.get('/:id', async (req, res) => {
         JOIN teams lg_home_team ON lg_home_team.id = lg.home_team_id
         JOIN teams lg_away_team ON lg_away_team.id = lg.away_team_id
         LEFT JOIN LATERAL (
-          SELECT name, code, logo FROM team_iterations
+          SELECT name, team_name, code, logo FROM team_iterations
           WHERE team_id = lg.home_team_id
           ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
           LIMIT 1
         ) lg_home_ti ON true
         LEFT JOIN LATERAL (
-          SELECT name, code, logo FROM team_iterations
+          SELECT name, team_name, code, logo FROM team_iterations
           WHERE team_id = lg.away_team_id
           ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
           LIMIT 1
@@ -1082,14 +1082,14 @@ router.post('/', async (req, res) => {
         gs.period_scores,
         json_build_object(
           'id', g.home_team_id,
-          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'name', ht.name, 'team_name', ht.team_name, 'code', ht.code, 'logo', ht.logo,
           'primary_color', t_home.primary_color,
           'secondary_color', t_home.secondary_color,
           'text_color', t_home.text_color
         ) AS home_team,
         json_build_object(
           'id', g.away_team_id,
-          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'name', at.name, 'team_name', at.team_name, 'code', at.code, 'logo', at.logo,
           'primary_color', t_away.primary_color,
           'secondary_color', t_away.secondary_color,
           'text_color', t_away.text_color
@@ -1098,13 +1098,13 @@ router.post('/', async (req, res) => {
       JOIN teams t_home ON t_home.id = g.home_team_id
       JOIN teams t_away ON t_away.id = g.away_team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, team_name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, team_name, code, logo FROM team_iterations
         WHERE team_id = g.away_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -1479,14 +1479,14 @@ router.patch('/:id', async (req, res) => {
         g.period_shots,
         json_build_object(
           'id', g.home_team_id,
-          'name', ht.name, 'code', ht.code, 'logo', ht.logo,
+          'name', ht.name, 'team_name', ht.team_name, 'code', ht.code, 'logo', ht.logo,
           'primary_color', t_home.primary_color,
           'secondary_color', t_home.secondary_color,
           'text_color', t_home.text_color
         ) AS home_team,
         json_build_object(
           'id', g.away_team_id,
-          'name', at.name, 'code', at.code, 'logo', at.logo,
+          'name', at.name, 'team_name', at.team_name, 'code', at.code, 'logo', at.logo,
           'primary_color', t_away.primary_color,
           'secondary_color', t_away.secondary_color,
           'text_color', t_away.text_color
@@ -1498,13 +1498,13 @@ router.patch('/:id', async (req, res) => {
       LEFT JOIN playoff_series ps2 ON ps2.id = g.playoff_series_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, team_name, code, logo FROM team_iterations
         WHERE team_id = g.home_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, team_name, code, logo FROM team_iterations
         WHERE team_id = g.away_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1

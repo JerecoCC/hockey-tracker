@@ -71,6 +71,7 @@ const game = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  document.title = 'Hockey Tracker';
   mockUseTabState.mockReturnValue([0, jest.fn()]);
   mockUseGameDetails.mockReturnValue({
     game,
@@ -122,6 +123,28 @@ describe('GameDetailsPage', () => {
     );
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
+  });
+
+  it('uses nickname-only team names in the document title', () => {
+    mockUseParams.mockReturnValue({ id: 'game-1' });
+    mockUseGameDetails.mockReturnValue({
+      game: {
+        ...game,
+        home_team: { ...game.home_team, name: 'Toronto Maple Leafs', team_name: 'Maple Leafs' },
+        away_team: { ...game.away_team, name: 'Detroit Red Wings', team_name: 'Red Wings' },
+      },
+      loading: false,
+      notFound: false,
+      failed: false,
+      busy: null,
+      startGame: jest.fn(), updateStatus: jest.fn(), advancePeriod: jest.fn(), advanceOTPeriod: jest.fn(),
+      revertOTPeriod: jest.fn(), endGame: jest.fn(), updateStars: jest.fn(), updateGameInfo: jest.fn(),
+      updatePeriodShots: jest.fn(), revertToEditMode: jest.fn(), deleteGame: jest.fn(),
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(document.title).toBe('Red Wings - Maple Leafs · Oct 10, 2024');
   });
 
   it('resolves slug game routes without fetching the season games list', () => {

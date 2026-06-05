@@ -44,6 +44,14 @@ const HEAD_DATE_FMT = new Intl.DateTimeFormat('en-US', {
 const teamTitleName = (team?: { name: string; team_name?: string | null }) =>
   team?.team_name?.trim() || team?.name || '';
 
+const formatHeadDate = (scheduledAt?: string | null) => {
+  if (!scheduledAt) return null;
+  const match = scheduledAt.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return HEAD_DATE_FMT.format(new Date(scheduledAt));
+  const [, year, month, day] = match;
+  return HEAD_DATE_FMT.format(new Date(Number(year), Number(month) - 1, Number(day)));
+};
+
 const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const {
     leagueSlug: routeLeagueSlug,
@@ -130,7 +138,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     const matchup = [teamTitleName(game.away_team), teamTitleName(game.home_team)]
       .filter(Boolean)
       .join(' - ');
-    const date = game.scheduled_at ? HEAD_DATE_FMT.format(new Date(game.scheduled_at)) : null;
+    const date = formatHeadDate(game.scheduled_at);
     document.title = [matchup, date].filter(Boolean).join(' · ');
     return () => {
       document.title = 'Hockey Tracker';
