@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import Icon from '@/components/Icon/Icon';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
@@ -22,7 +24,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
 });
 
 const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
+  month: 'long',
   year: 'numeric',
 });
 
@@ -292,26 +294,25 @@ const TeamGamesTab = ({ teamId, leagueId, leagueCode, defaultSeasonId }: Props) 
               disabled={seasonsLoading}
             />
           </div>
-          <div className={styles.viewToggle}>
-            <Button
-              variant="ghost"
-              intent={view === 'calendar' ? 'accent' : 'neutral'}
-              icon="calendar_month"
-              size="sm"
-              tooltip="Calendar view"
-              aria-label="Calendar view"
-              onClick={() => setView('calendar')}
-            />
-            <Button
-              variant="ghost"
-              intent={view === 'list' ? 'accent' : 'neutral'}
-              icon="view_list"
-              size="sm"
-              tooltip="List view"
-              aria-label="List view"
-              onClick={() => setView('list')}
-            />
-          </div>
+          <SegmentedControl
+            value={view}
+            onChange={(value) => setView(value as 'list' | 'calendar')}
+            className={styles.viewSegmentedControl}
+            options={[
+              {
+                value: 'calendar',
+                label: <Icon name="calendar_month" />,
+                tooltip: 'Calendar view',
+                ariaLabel: 'Calendar view',
+              },
+              {
+                value: 'list',
+                label: <Icon name="view_list" />,
+                tooltip: 'List view',
+                ariaLabel: 'List view',
+              },
+            ]}
+          />
         </div>
       }
     >
@@ -384,15 +385,11 @@ const TeamGamesTab = ({ teamId, leagueId, leagueCode, defaultSeasonId }: Props) 
       ) : (
         <div className={styles.calendarWrap}>
           <div className={styles.calendarToolbar}>
-            <span className={styles.calendarToolbarLabel}>
-              {MONTH_LABEL_FMT.format(calendarMonth)}
-            </span>
             <div className={styles.calendarToolbarControls}>
               <Button
                 variant="outlined"
                 intent="neutral"
                 icon="chevron_left"
-                iconHeight="field"
                 size="sm"
                 tooltip="Previous month"
                 aria-label="Previous month"
@@ -403,13 +400,14 @@ const TeamGamesTab = ({ teamId, leagueId, leagueCode, defaultSeasonId }: Props) 
                   value={toMonthPickerValue(calendarMonth)}
                   onChange={changeCalendarMonth}
                   granularity="month"
+                  triggerLabel={MONTH_LABEL_FMT.format(calendarMonth)}
+                  triggerAriaLabel={`Select month: ${MONTH_LABEL_FMT.format(calendarMonth)}`}
                 />
               </div>
               <Button
                 variant="outlined"
                 intent="neutral"
                 icon="chevron_right"
-                iconHeight="field"
                 size="sm"
                 tooltip="Next month"
                 aria-label="Next month"

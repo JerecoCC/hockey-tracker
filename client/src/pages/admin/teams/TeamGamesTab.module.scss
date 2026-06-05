@@ -13,9 +13,13 @@
   min-width: 180px;
 }
 
-.viewToggle {
-  display: flex;
-  gap: $space-xs;
+.viewSegmentedControl {
+  width: fit-content;
+
+  svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
 }
 
 .calendarWrap {
@@ -27,15 +31,9 @@
 .calendarToolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: $space-sm;
   flex-wrap: wrap;
-}
-
-.calendarToolbarLabel {
-  font-size: $font-lg;
-  font-weight: 700;
-  color: $text-bright;
 }
 
 .calendarToolbarControls {
@@ -45,7 +43,7 @@
 }
 
 .calendarMonthPicker {
-  min-width: 170px;
+  width: fit-content;
 }
 
 .calendarScroll {

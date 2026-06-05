@@ -9,6 +9,7 @@
 }
 
 .wrapperInline {
+  display: inline-flex;
   width: auto;
 }
 
@@ -35,7 +36,9 @@
 }
 
 .buttonTriggerWrap {
-  width: auto;
+  display: inline-flex;
+  width: fit-content;
+  max-width: 100%;
 }
 
 .triggerButton {
@@ -47,7 +50,7 @@
   background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
-  padding: 0 $space-lg;
+  padding: 0 $space-xl 0 $space-lg;
   color: $text-body;
   font: inherit;
   cursor: pointer;

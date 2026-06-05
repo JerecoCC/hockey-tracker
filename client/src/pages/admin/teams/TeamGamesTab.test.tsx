@@ -38,7 +38,7 @@ const mockUseSeasons = useSeasons as jest.Mock;
 
 const currentDate = new Date();
 const monthLabel = (date: Date) =>
-  new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(date);
+  new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
 const currentMonthIso = (day: number) =>
   new Date(
     Date.UTC(currentDate.getFullYear(), currentDate.getMonth(), day, 12, 0, 0),
@@ -330,7 +330,7 @@ describe('TeamGamesTab', () => {
       />,
     );
 
-    await user.click(screen.getByLabelText('List view'));
+    await user.click(screen.getByRole('button', { name: /list/i }));
 
     expect(screen.getByText('SHO 2 - HOM 3 Final/SO')).toBeInTheDocument();
   });

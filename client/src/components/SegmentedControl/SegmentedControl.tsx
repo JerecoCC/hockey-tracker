@@ -5,6 +5,8 @@ import styles from './SegmentedControl.module.scss';
 export interface SegmentedControlOption {
   value: string;
   label: ReactNode;
+  /** Accessible label for icon-only or otherwise non-text labels. */
+  ariaLabel?: string;
   /** When provided, replaces the default `.active` class when this option is selected. */
   activeClassName?: string;
   /** When provided, wraps the button in a Tooltip with this text. */
@@ -53,6 +55,7 @@ const SegmentedControl = ({
             .join(' ')}
           disabled={disabled}
           onClick={() => onChange(opt.value)}
+          aria-label={opt.ariaLabel}
           // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus={autoFocus && i === 0}
         >
