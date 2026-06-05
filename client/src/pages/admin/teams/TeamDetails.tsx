@@ -183,6 +183,7 @@ const TeamDetailsPage = () => {
             content: (
               <TeamGamesTab
                 teamId={team.id}
+                teamName={team.name}
                 leagueId={team.league_id ?? leagueId ?? ''}
                 leagueCode={team.league_code}
                 defaultSeasonId={routeSeasonId}

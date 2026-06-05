@@ -1,5 +1,6 @@
-import { type CSSProperties, useState, useEffect, useMemo } from 'react';
+import { type CSSProperties, useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import DatePicker from '@/components/DatePicker/DatePicker';
@@ -12,6 +13,7 @@ import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import useSeasons from '@/hooks/useSeasons';
 import GameListItem from '@/pages/admin/seasons/GameListItem';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
+import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import seasonStyles from '@/pages/admin/seasons/SeasonGamesTab.module.scss';
 import styles from './TeamGamesTab.module.scss';
 
@@ -181,8 +183,9 @@ const TeamCalendarGame = ({
               code={opponent.logo ? opponent.code : ''}
               primaryColor={opponent.primary_color}
               textColor={opponent.text_color}
-              size={52}
-              shape="circle"
+              size={60}
+              shape={opponent.logo ? 'square' : 'circle'}
+              className={opponent.logo ? styles.calendarGameLogoImage : undefined}
             />
           </div>
           <span className={styles.calendarGameDetail}>{detail}</span>
@@ -196,16 +199,19 @@ const TeamCalendarGame = ({
 
 interface Props {
   teamId: string;
+  teamName: string;
   leagueId: string;
   leagueCode?: string | null;
   defaultSeasonId?: string | null;
 }
 
-const TeamGamesTab = ({ teamId, leagueId, leagueCode, defaultSeasonId }: Props) => {
+const TeamGamesTab = ({ teamId, teamName, leagueId, leagueCode, defaultSeasonId }: Props) => {
   const navigate = useNavigate();
   const { seasons, loading: seasonsLoading } = useSeasons(leagueId);
   const [seasonId, setSeasonId] = useState<string>(defaultSeasonId ?? '');
   const [view, setView] = useState<'list' | 'calendar'>('calendar');
+  const [exportingMonthImage, setExportingMonthImage] = useState(false);
+  const calendarGridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!seasonId && defaultSeasonId) setSeasonId(defaultSeasonId);
@@ -278,6 +284,28 @@ const TeamGamesTab = ({ teamId, leagueId, leagueCode, defaultSeasonId }: Props) 
   const changeCalendarMonth = (value: string) => {
     if (!value) return;
     setCalendarMonth(fromMonthPickerValue(value));
+  };
+  const handleDownloadMonthImage = async () => {
+    const calendarNode = calendarGridRef.current;
+    if (exportingMonthImage || view !== 'calendar' || scheduledGames.length === 0 || !calendarNode)
+      return;
+    setExportingMonthImage(true);
+    try {
+      await downloadMonthScheduleImage({
+        calendarNode,
+        calendarMonth,
+        headerLabel: MONTH_LABEL_FMT.format(calendarMonth),
+        exportWidth: 1120,
+        filename: `${teamName} Game Schedule - ${new Intl.DateTimeFormat('en-US', {
+          month: 'short',
+          year: 'numeric',
+        }).format(calendarMonth)}.png`,
+      });
+    } catch {
+      toast.error('Failed to generate schedule image');
+    } finally {
+      setExportingMonthImage(false);
+    }
   };
 
   return (
@@ -414,9 +442,25 @@ const TeamGamesTab = ({ teamId, leagueId, leagueCode, defaultSeasonId }: Props) 
                 onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
               />
             </div>
+            <Button
+              type="button"
+              variant="outlined"
+              intent="neutral"
+              size="sm"
+              icon="download"
+              iconHeight="field"
+              aria-label="Download month image"
+              tooltip="Download month image"
+              className={styles.calendarExportButton}
+              onClick={() => void handleDownloadMonthImage()}
+              disabled={exportingMonthImage}
+            />
           </div>
           <div className={styles.calendarScroll}>
-            <div className={styles.calendarGrid}>
+            <div
+              ref={calendarGridRef}
+              className={styles.calendarGrid}
+            >
               {DAY_LABELS.map((label) => (
                 <div
                   key={label}

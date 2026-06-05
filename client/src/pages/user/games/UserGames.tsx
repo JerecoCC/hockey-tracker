@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEven
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { toPng } from 'html-to-image';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -15,6 +14,7 @@ import Select, { type SelectOption } from '@/components/Select/Select';
 import TeamLogo, { TeamLogoProps } from '@/components/TeamLogo/TeamLogo';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
+import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import styles from './UserGames.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -484,91 +484,6 @@ const PlayoffSeriesDots = ({ wins, total }: { wins: number; total: number }) => 
     ))}
   </span>
 );
-
-const downloadMonthScheduleImage = async ({
-  calendarNode,
-  calendarMonth,
-}: {
-  calendarNode: HTMLElement;
-  calendarMonth: Date;
-}) => {
-  const backgroundColor = getNearestBackgroundColor(calendarNode);
-  const exportPadding = 28;
-  const calendarExportWidth = 1600;
-  const exportNode = document.createElement('div');
-  const headerNode = document.createElement('div');
-  const clonedCalendar = calendarNode.cloneNode(true) as HTMLElement;
-
-  exportNode.setAttribute('data-calendar-export', 'true');
-  Object.assign(exportNode.style, {
-    position: 'absolute',
-    left: '0',
-    top: '0',
-    zIndex: '-1',
-    width: `${calendarExportWidth + exportPadding * 2}px`,
-    padding: `${exportPadding}px`,
-    boxSizing: 'border-box',
-    background: backgroundColor,
-    pointerEvents: 'none',
-    fontFamily:
-      'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
-  });
-  Object.assign(headerNode.style, {
-    margin: '0 0 20px',
-    color: '#f8fafc',
-    fontSize: '28px',
-    fontWeight: '700',
-    lineHeight: '1.15',
-  });
-  headerNode.textContent = MONTH_LABEL_FMT.format(calendarMonth);
-  Object.assign(clonedCalendar.style, {
-    width: `${calendarExportWidth}px`,
-    minWidth: `${calendarExportWidth}px`,
-    pointerEvents: 'none',
-  });
-
-  exportNode.append(headerNode, clonedCalendar);
-  document.body.appendChild(exportNode);
-  await new Promise((resolve) => requestAnimationFrame(resolve));
-
-  const width = exportNode.scrollWidth;
-  const height = exportNode.scrollHeight;
-  let url: string;
-  try {
-    url = await toPng(exportNode, {
-      cacheBust: true,
-      pixelRatio: 2,
-      backgroundColor,
-      width,
-      height,
-      style: {
-        width: `${width}px`,
-        height: `${height}px`,
-      },
-    });
-  } finally {
-    document.body.removeChild(exportNode);
-  }
-
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `user-games-${MONTH_LABEL_FMT.format(calendarMonth)
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')}.png`;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-const getNearestBackgroundColor = (node: HTMLElement) => {
-  let current: HTMLElement | null = node;
-  while (current) {
-    const color = window.getComputedStyle(current).backgroundColor;
-    if (color && color !== 'transparent' && color !== 'rgba(0, 0, 0, 0)') return color;
-    current = current.parentElement;
-  }
-  return '#0f172a';
-};
 
 const ScheduleWatchModal = ({
   open,
@@ -1284,6 +1199,7 @@ const UserGames = () => {
       await downloadMonthScheduleImage({
         calendarNode,
         calendarMonth,
+        filenamePrefix: 'user-games',
       });
     } catch {
       toast.error('Failed to generate schedule image');
