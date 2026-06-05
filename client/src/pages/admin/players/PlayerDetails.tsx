@@ -51,6 +51,7 @@ import ChangeJerseyModal from './ChangeJerseyModal';
 import ChangePhotoModal from './ChangePhotoModal';
 import PlayerInfoEditModal from './PlayerInfoEditModal';
 import styles from './PlayerDetails.module.scss';
+import useDocumentIcon from '@/hooks/useDocumentIcon';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
@@ -291,7 +292,11 @@ const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord
 // ── Page ────────────────────────────────────────────────────────────────────
 const PlayerDetailsPage = () => {
   const navigate = useNavigate();
-  const { leagueCode, teamCode: routeTeamCode, playerSlug } = useParams<{
+  const {
+    leagueCode,
+    teamCode: routeTeamCode,
+    playerSlug,
+  } = useParams<{
     leagueCode: string;
     teamCode?: string;
     playerSlug: string;
@@ -311,6 +316,7 @@ const PlayerDetailsPage = () => {
   const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
   const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id);
   const { team: teamDetails } = useTeamDetails(teamId);
+  useDocumentIcon(teamDetails?.icon);
   const { stints } = usePlayerTradeHistory(id ?? null);
   const { byStint: jerseyHistoryByStint } = useJerseyHistory(id ?? null);
   const { byTeam: photoHistoryByTeam } = usePlayerPhotoHistory(id ?? null);
@@ -468,7 +474,8 @@ const PlayerDetailsPage = () => {
     if (isLegacyIdRoute || !canonicalPlayerPath) return;
     const leagueMatches = toRouteSlug(leagueCode) === toRouteSlug(routeLookup?.league_code);
     const teamMatches =
-      routeLookup?.team_code == null || toRouteSlug(routeTeamCode) === toRouteSlug(routeLookup.team_code);
+      routeLookup?.team_code == null ||
+      toRouteSlug(routeTeamCode) === toRouteSlug(routeLookup.team_code);
     if (leagueMatches && teamMatches && playerSlug === routeLookup?.player_slug) {
       return;
     }

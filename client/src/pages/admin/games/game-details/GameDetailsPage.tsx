@@ -27,6 +27,7 @@ import {
   UUID_PATTERN,
   toRouteSlug,
 } from '@/lib/routeSlugs';
+import useDocumentIcon from '@/hooks/useDocumentIcon';
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -70,12 +71,15 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const routeLeague = isLegacyLeagueRoute
     ? null
     : allLeagues.find(
-        (item) =>
-          toRouteSlug(item.code) === leagueSlug ||
-          toRouteSlug(item.name) === leagueSlug,
+        (item) => toRouteSlug(item.code) === leagueSlug || toRouteSlug(item.name) === leagueSlug,
       );
   const routeLeagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
-  const { seasons: routeSeasons, loading: leagueDetailsLoading } = useLeagueDetails(routeLeagueId);
+  const {
+    league,
+    seasons: routeSeasons,
+    loading: leagueDetailsLoading,
+  } = useLeagueDetails(routeLeagueId);
+  useDocumentIcon(league?.icon);
   const routeSeason = isLegacySeasonRoute
     ? null
     : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
@@ -93,7 +97,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     gameSlug,
     enabled: shouldResolveGameRoute,
   });
-  const gameId = isLegacyGameRoute ? gameSlug : routeGameId ?? undefined;
+  const gameId = isLegacyGameRoute ? gameSlug : (routeGameId ?? undefined);
   const {
     game,
     loading: gameDetailsLoading,
@@ -272,15 +276,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
               ]
             : [],
         },
-    [
-      loading,
-      isAdminView,
-      seasonHref,
-      seasonName,
-      leagueHref,
-      leagueCrumbLabel,
-      gameCrumbLabel,
-    ],
+    [loading, isAdminView, seasonHref, seasonName, leagueHref, leagueCrumbLabel, gameCrumbLabel],
   );
 
   useEffect(() => {
@@ -325,15 +321,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   }
 
   if (!game && (gameLoadFailed || routeGameLookupFailed)) {
-    return (
-      <p style={{ color: 'var(--text-dim)' }}>Failed to load game.</p>
-    );
+    return <p style={{ color: 'var(--text-dim)' }}>Failed to load game.</p>;
   }
 
   if (!game) {
-    return (
-      <p style={{ color: 'var(--text-dim)' }}>Game not found.</p>
-    );
+    return <p style={{ color: 'var(--text-dim)' }}>Game not found.</p>;
   }
 
   const gameHrefBuilder = (gameId: string) =>
@@ -418,7 +410,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
         : [{ id: PERIOD.OVERTIME, label: PERIOD.OVERTIME, shortLabel: PERIOD.OVERTIME }]
       : []),
     // Shootouts don't exist in playoffs — suppress SO column for playoff games.
-    ...(hasSO ? [{ id: PERIOD.SHOOTOUT, label: PERIOD.SHOOTOUT, shortLabel: PERIOD.SHOOTOUT }] : []),
+    ...(hasSO
+      ? [{ id: PERIOD.SHOOTOUT, label: PERIOD.SHOOTOUT, shortLabel: PERIOD.SHOOTOUT }]
+      : []),
   ];
 
   return (

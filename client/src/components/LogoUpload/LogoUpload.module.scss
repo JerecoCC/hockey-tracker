@@ -77,6 +77,27 @@
   object-position: top;
 }
 
+.filePreview {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-xs;
+  padding: $space-sm;
+  color: $text-body;
+  text-align: center;
+}
+
+.filePreviewLabel {
+  max-width: 100%;
+  overflow: hidden;
+  color: $text-dim;
+  font-size: $font-xs;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .clearBtn {
   position: absolute;
   top: -6px;

@@ -46,8 +46,12 @@ async function initSchema() {
       code        TEXT UNIQUE NOT NULL,
       description TEXT,
       logo        TEXT,
+      icon        TEXT,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+  await sql`
+    ALTER TABLE leagues ADD COLUMN IF NOT EXISTS icon TEXT
   `;
 
   await sql`
@@ -231,6 +235,7 @@ async function initSchema() {
       name        TEXT NOT NULL,
       code        TEXT,
       logo        TEXT,
+      icon        TEXT,
       note        TEXT,
       start_date  DATE,
       end_date    DATE,
@@ -247,6 +252,7 @@ async function initSchema() {
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS end_date DATE`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS code TEXT`;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS icon TEXT`;
   await sql`
     ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
       start_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL

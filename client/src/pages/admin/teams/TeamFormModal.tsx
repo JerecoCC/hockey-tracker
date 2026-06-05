@@ -11,6 +11,7 @@ interface FormValues {
   code: string;
   league_id: string | null;
   logo: File | string | null;
+  icon: File | string | null;
 }
 
 interface Props {
@@ -37,6 +38,7 @@ const TeamFormModal = (props: Props) => {
       code: '',
       league_id: null,
       logo: null,
+      icon: null,
     },
   });
 
@@ -47,6 +49,7 @@ const TeamFormModal = (props: Props) => {
       code: editTarget?.code ?? '',
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       logo: editTarget?.logo ?? null,
+      icon: editTarget?.icon ?? null,
     });
   }, [open, editTarget, lockedLeagueId, reset]);
 
@@ -57,10 +60,17 @@ const TeamFormModal = (props: Props) => {
       if (!url) return;
       logoUrl = url;
     }
+    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
+    if (data.icon instanceof File) {
+      const url = await uploadLogo(data.icon);
+      if (!url) return;
+      iconUrl = url;
+    }
     const payload: CreateTeamData = {
       name: data.name,
       code: data.code,
       logo: logoUrl,
+      icon: iconUrl,
       league_id: data.league_id || null,
     };
     const ok = editTarget ? await updateTeam(editTarget.id, payload) : await addTeam(payload);
@@ -82,12 +92,22 @@ const TeamFormModal = (props: Props) => {
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <LogoUpload
-          control={control}
-          name="logo"
-          label="Team Logo"
-          disabled={isSubmitting}
-        />
+        <div className={styles.assetRow}>
+          <LogoUpload
+            control={control}
+            name="logo"
+            label="Team Logo"
+            disabled={isSubmitting}
+          />
+          <LogoUpload
+            control={control}
+            name="icon"
+            label="Header Icon"
+            accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+            hint="Upload .ico"
+            disabled={isSubmitting}
+          />
+        </div>
         <Field
           label="Name"
           required

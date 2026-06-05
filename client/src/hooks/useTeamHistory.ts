@@ -11,6 +11,7 @@ export interface TeamIteration {
   name: string;
   code: string | null;
   logo: string | null;
+  icon: string | null;
   note: string | null;
   recorded_at: string;
   /** Date this version first applied. */
@@ -23,6 +24,7 @@ export interface AddIterationPayload {
   name: string;
   code?: string | null;
   logo?: string | null;
+  icon?: string | null;
   note?: string | null;
   start_date?: string | null;
   end_date?: string | null;
@@ -32,6 +34,7 @@ export interface UpdateIterationPayload {
   name?: string;
   code?: string | null;
   logo?: string | null;
+  icon?: string | null;
   note?: string | null;
   start_date?: string | null;
   end_date?: string | null;

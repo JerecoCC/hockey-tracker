@@ -27,6 +27,7 @@ interface FormValues {
   name: string;
   code: string;
   logo: File | string | null;
+  icon: File | string | null;
   primary_color: string;
   text_color: string;
   best_of_playoff: string;
@@ -56,6 +57,7 @@ const LeagueFormModal = (props: Props) => {
       name: '',
       code: '',
       logo: null,
+      icon: null,
       primary_color: '#334155',
       text_color: '#ffffff',
       best_of_playoff: '7',
@@ -84,6 +86,7 @@ const LeagueFormModal = (props: Props) => {
       name: editTarget?.name ?? '',
       code: editTarget?.code ?? '',
       logo: editTarget?.logo ?? null,
+      icon: editTarget?.icon ?? null,
       primary_color: editTarget?.primary_color ?? '#334155',
       text_color: editTarget?.text_color ?? '#ffffff',
       best_of_playoff: String(editTarget?.best_of_playoff ?? 7),
@@ -99,10 +102,17 @@ const LeagueFormModal = (props: Props) => {
       if (!url) return;
       logoUrl = url;
     }
+    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
+    if (data.icon instanceof File) {
+      const url = await uploadLogo(data.icon);
+      if (!url) return;
+      iconUrl = url;
+    }
     const payload: CreateLeagueData = {
       name: data.name,
       code: data.code,
       logo: logoUrl,
+      icon: iconUrl,
       primary_color: data.primary_color,
       text_color: data.text_color,
       best_of_playoff: parseInt(data.best_of_playoff, 10),
@@ -128,11 +138,20 @@ const LeagueFormModal = (props: Props) => {
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <LogoUpload
-          control={control}
-          name="logo"
-          label="League Logo"
-        />
+        <div className={styles.assetRow}>
+          <LogoUpload
+            control={control}
+            name="logo"
+            label="League Logo"
+          />
+          <LogoUpload
+            control={control}
+            name="icon"
+            label="Header Icon"
+            accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+            hint="Upload .ico"
+          />
+        </div>
         <Field
           label="Name"
           required

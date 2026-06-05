@@ -10,6 +10,7 @@ jest.mock('@vercel/blob', () => ({ put: jest.fn() }));
 const request     = require('supertest');
 const express     = require('express');
 const { sql }     = require('../db');
+const { put }     = require('@vercel/blob');
 const teamsRouter = require('./teams');
 
 const app = express();
@@ -32,6 +33,30 @@ const ITER = {
 };
 
 afterEach(() => jest.clearAllMocks());
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/teams/upload
+// ---------------------------------------------------------------------------
+describe('POST /api/admin/teams/upload', () => {
+  it('accepts .ico files and stores them with an icon content type', async () => {
+    put.mockResolvedValueOnce({ url: 'https://blob.example.com/teams/icon.ico' });
+
+    const res = await request(app)
+      .post('/api/admin/teams/upload')
+      .attach('logo', Buffer.from('icon'), {
+        filename: 'team.ico',
+        contentType: 'application/octet-stream',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.url).toBe('https://blob.example.com/teams/icon.ico');
+    expect(put).toHaveBeenCalledWith(
+      expect.stringMatching(/^teams\/.+\.ico$/),
+      expect.any(Buffer),
+      expect.objectContaining({ contentType: 'image/x-icon' }),
+    );
+  });
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/teams
@@ -138,6 +163,21 @@ describe('PATCH /api/admin/teams/:id', () => {
       .send({ name: 'Toronto Maple Leafs' });
     expect(res.status).toBe(200);
     expect(res.body.name).toBe('Toronto Maple Leafs');
+  });
+
+  it('returns updated team when updating the team icon', async () => {
+    const icon = 'https://example.com/capitals.ico';
+    sql
+      .mockResolvedValueOnce([{ id: 'team-1' }])                 // exists
+      .mockResolvedValueOnce([{ id: 'iter-1' }])                 // current iter found
+      .mockResolvedValueOnce([])                                  // UPDATE team_iterations
+      .mockResolvedValueOnce([])                                  // UPDATE teams
+      .mockResolvedValueOnce([{ ...TEAM, icon }]);               // SELECT full
+
+    const res = await request(app).patch('/api/admin/teams/team-1').send({ icon });
+
+    expect(res.status).toBe(200);
+    expect(res.body.icon).toBe(icon);
   });
 
   it('returns updated team when updating a non-identity field (city)', async () => {

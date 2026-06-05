@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
+import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useTeamDetails from '@/hooks/useTeamDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import useLeagues from '@/hooks/useLeagues';
@@ -42,22 +43,26 @@ const TeamDetailsPage = () => {
   const routeLeague = isLegacyLeagueRoute
     ? null
     : allLeagues.find(
-        (item) =>
-          toRouteSlug(item.code) === leagueSlug ||
-          toRouteSlug(item.name) === leagueSlug,
+        (item) => toRouteSlug(item.code) === leagueSlug || toRouteSlug(item.name) === leagueSlug,
       );
   const leagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
-  const { teams: leagueTeams, seasons: leagueSeasons, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
+  const {
+    teams: leagueTeams,
+    seasons: leagueSeasons,
+    loading: leagueDetailsLoading,
+  } = useLeagueDetails(leagueId);
   const routeTeam = isLegacyTeamRoute
     ? null
     : leagueTeams.find(
-        (item) =>
-          toRouteSlug(item.code) === teamSlug ||
-          toRouteSlug(item.name) === teamSlug,
+        (item) => toRouteSlug(item.code) === teamSlug || toRouteSlug(item.name) === teamSlug,
       );
   const id = isLegacyTeamRoute ? teamSlug : routeTeam?.id;
   const { team, loading: teamLoading, uploadLogo, updateTeam } = useTeamDetails(id);
-  const loading = teamLoading || (!isLegacyLeagueRoute && leaguesLoading) || (!isLegacyTeamRoute && leagueDetailsLoading);
+  useDocumentIcon(team?.icon);
+  const loading =
+    teamLoading ||
+    (!isLegacyLeagueRoute && leaguesLoading) ||
+    (!isLegacyTeamRoute && leagueDetailsLoading);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
   const [activeTab, handleTabChange] = useTabState('tab:team-details');
   const routeSeason = routeSeasonParam
@@ -67,7 +72,9 @@ const TeamDetailsPage = () => {
           toRouteSlug(season.name) === toRouteSlug(routeSeasonParam),
       )
     : null;
-  const routeSeasonId = routeSeason?.id ?? (routeSeasonParam && UUID_PATTERN.test(routeSeasonParam) ? routeSeasonParam : null);
+  const routeSeasonId =
+    routeSeason?.id ??
+    (routeSeasonParam && UUID_PATTERN.test(routeSeasonParam) ? routeSeasonParam : null);
   const canonicalSeasonParam = routeSeason ? toRouteSlug(routeSeason.name) : routeSeasonId;
   const breadcrumbItems = [
     {
@@ -94,14 +101,7 @@ const TeamDetailsPage = () => {
           backLabel: backTooltip,
           items: breadcrumbItems,
         },
-    [
-      loading,
-      backPath,
-      team?.league_name,
-      team?.league_code,
-      team?.name,
-      leagueId,
-    ],
+    [loading, backPath, team?.league_name, team?.league_code, team?.name, leagueId],
   );
 
   useEffect(() => {
@@ -206,6 +206,7 @@ const TeamDetailsPage = () => {
                 teamName={team.name}
                 teamCode={team.code}
                 teamLogo={team.logo}
+                teamIcon={team.icon}
                 primaryColor={team.primary_color}
                 textColor={team.text_color}
                 uploadLogo={uploadLogo}
@@ -219,4 +220,3 @@ const TeamDetailsPage = () => {
 };
 
 export default TeamDetailsPage;
-

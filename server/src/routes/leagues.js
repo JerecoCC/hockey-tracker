@@ -4,6 +4,7 @@ const multer = require('multer');
 const { put } = require('@vercel/blob');
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
+const { normalizeIcoBuffer } = require('../lib/ico');
 
 // ---------------------------------------------------------------------------
 // Multer – memory storage only (buffer passed to Vercel Blob)
@@ -16,10 +17,23 @@ const upload = multer({
       || /\.(svg)$/i.test(file.originalname)
       || file.mimetype === 'text/xml'
       || file.mimetype === 'application/xml';
-    if (file.mimetype.startsWith('image/') || isSvg) cb(null, true);
+    const isIco = file.mimetype === 'image/x-icon'
+      || file.mimetype === 'image/vnd.microsoft.icon'
+      || /\.(ico)$/i.test(file.originalname);
+    if (file.mimetype.startsWith('image/') || isSvg || isIco) cb(null, true);
     else cb(new Error('Only image files are allowed'));
   },
 });
+
+const uploadContentType = (file) => {
+  if (/\.(ico)$/i.test(file.originalname)) return 'image/x-icon';
+  return file.mimetype;
+};
+
+const uploadBuffer = (file) => {
+  if (/\.(ico)$/i.test(file.originalname)) return normalizeIcoBuffer(file.buffer);
+  return file.buffer;
+};
 
 // All league routes require the admin role
 router.use(requireAdmin);
@@ -32,9 +46,9 @@ router.post('/upload', upload.single('logo'), async (req, res) => {
   try {
     const ext = path.extname(req.file.originalname);
     const filename = `leagues/${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`;
-    const blob = await put(filename, req.file.buffer, {
+    const blob = await put(filename, uploadBuffer(req.file), {
       access: 'public',
-      contentType: req.file.mimetype,
+      contentType: uploadContentType(req.file),
     });
     return res.json({ url: blob.url });
   } catch (err) {
@@ -49,7 +63,7 @@ router.post('/upload', upload.single('logo'), async (req, res) => {
 router.get('/', async (_req, res) => {
   try {
     const leagues = await sql`
-      SELECT id, name, code, logo, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format
+      SELECT id, name, code, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format
       FROM leagues
       ORDER BY name ASC
     `;
@@ -67,7 +81,7 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT id, name, code, description, logo, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
+      SELECT id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
       FROM leagues
       WHERE id = ${id}
     `;
@@ -78,14 +92,20 @@ router.get('/:id', async (req, res) => {
         SELECT
           t.id, t.description, t.location, t.league_id, t.created_at,
           t.primary_color, t.secondary_color, t.text_color,
-          ti.name, ti.code, ti.logo
+          ti.name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
         FROM teams t
         LEFT JOIN LATERAL (
-          SELECT name, code, logo FROM team_iterations
+          SELECT name, code, logo, icon FROM team_iterations
           WHERE team_id = t.id
           ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
           LIMIT 1
         ) ti ON true
+        LEFT JOIN LATERAL (
+          SELECT icon FROM team_iterations
+          WHERE team_id = t.id AND icon IS NOT NULL
+          ORDER BY recorded_at DESC
+          LIMIT 1
+        ) ti_icon ON true
         WHERE t.league_id = ${id}
         ORDER BY ti.name ASC
       `,
@@ -112,7 +132,7 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/leagues  – create a league
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { name, code, description, logo, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
+  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
@@ -123,12 +143,13 @@ router.post('/', async (req, res) => {
 
   try {
     const rows = await sql`
-      INSERT INTO leagues (name, code, description, logo, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format)
+      INSERT INTO leagues (name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format)
       VALUES (
         ${name.trim()},
         ${code.trim().toUpperCase()},
         ${description ?? null},
         ${logo ?? null},
+        ${icon ?? null},
         ${primary_color ?? '#334155'},
         ${text_color ?? '#ffffff'},
         ${best_of_playoff ?? 7},
@@ -136,7 +157,7 @@ router.post('/', async (req, res) => {
         ${scoring_system ?? '2-1-0'},
         ${playoff_format ? JSON.stringify(playoff_format) : null}
       )
-      RETURNING id, name, code, description, logo, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
+      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -153,8 +174,9 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, logo, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
+  const { name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format } = req.body;
   const logoInBody           = 'logo' in req.body;
+  const iconInBody           = 'icon' in req.body;
   const playoffFormatInBody  = 'playoff_format' in req.body;
 
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
@@ -172,6 +194,7 @@ router.patch('/:id', async (req, res) => {
         code          = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
         description   = COALESCE(${description ?? null}, description),
         logo          = CASE WHEN ${logoInBody}          THEN ${logo ?? null}                             ELSE logo           END,
+        icon          = CASE WHEN ${iconInBody}          THEN ${icon ?? null}                             ELSE icon           END,
         primary_color    = COALESCE(${primary_color ?? null}, primary_color),
         text_color       = COALESCE(${text_color ?? null}, text_color),
         best_of_playoff  = COALESCE(${best_of_playoff ?? null}, best_of_playoff),
@@ -179,7 +202,7 @@ router.patch('/:id', async (req, res) => {
         scoring_system   = COALESCE(${scoring_system ?? null}, scoring_system),
         playoff_format   = CASE WHEN ${playoffFormatInBody} THEN ${playoff_format ? JSON.stringify(playoff_format) : null}::jsonb ELSE playoff_format END
       WHERE id = ${id}
-      RETURNING id, name, code, description, logo, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
+      RETURNING id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
     return res.json(rows[0]);

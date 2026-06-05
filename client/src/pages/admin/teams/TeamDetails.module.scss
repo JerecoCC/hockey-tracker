@@ -168,6 +168,12 @@
   gap: $space-lg;
 }
 
+.historyAssetRow {
+  display: flex;
+  justify-content: center;
+  gap: $space-xl;
+}
+
 .historyFormRow {
   display: flex;
   gap: $space-lg;

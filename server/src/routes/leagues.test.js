@@ -10,6 +10,7 @@ jest.mock('@vercel/blob', () => ({ put: jest.fn() }));
 const request       = require('supertest');
 const express       = require('express');
 const { sql }       = require('../db');
+const { put }       = require('@vercel/blob');
 const leaguesRouter = require('./leagues');
 
 const app = express();
@@ -18,12 +19,36 @@ app.use('/api/admin/leagues', leaguesRouter);
 
 const LEAGUE = {
   id: 'league-1', name: 'NHL', code: 'NHL', description: null,
-  logo: null, primary_color: '#334155', text_color: '#ffffff',
+  logo: null, icon: null, primary_color: '#334155', text_color: '#ffffff',
   best_of_playoff: 7, best_of_shootout: 3,
   created_at: new Date().toISOString(),
 };
 
 afterEach(() => jest.clearAllMocks());
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/leagues/upload
+// ---------------------------------------------------------------------------
+describe('POST /api/admin/leagues/upload', () => {
+  it('accepts .ico files and stores them with an icon content type', async () => {
+    put.mockResolvedValueOnce({ url: 'https://blob.example.com/leagues/icon.ico' });
+
+    const res = await request(app)
+      .post('/api/admin/leagues/upload')
+      .attach('logo', Buffer.from('icon'), {
+        filename: 'league.ico',
+        contentType: 'application/octet-stream',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body.url).toBe('https://blob.example.com/leagues/icon.ico');
+    expect(put).toHaveBeenCalledWith(
+      expect.stringMatching(/^leagues\/.+\.ico$/),
+      expect.any(Buffer),
+      expect.objectContaining({ contentType: 'image/x-icon' }),
+    );
+  });
+});
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/leagues

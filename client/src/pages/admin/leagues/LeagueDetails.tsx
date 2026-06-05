@@ -14,6 +14,7 @@ import SeasonFormModal from '../seasons/SeasonFormModal';
 import Tabs from '@/components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails, { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
 import useLeaguePlayers, { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import useLeagues from '@/hooks/useLeagues';
@@ -62,6 +63,7 @@ const LeagueDetailsPage = () => {
     updateSeason,
     deleteSeason,
   } = useLeagueDetails(id);
+  useDocumentIcon(league?.icon);
   const [editModalOpen, setEditModalOpen] = useState(false);
   // Team modal / delete state
   const [teamModalOpen, setTeamModalOpen] = useState(false);

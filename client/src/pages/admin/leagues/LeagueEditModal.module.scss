@@ -7,6 +7,12 @@
   gap: $space-md;
 }
 
+.assetRow {
+  display: flex;
+  justify-content: center;
+  gap: $space-xl;
+}
+
 .colorRow {
   display: flex;
   gap: $space-xl;

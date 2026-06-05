@@ -16,6 +16,7 @@ interface Props {
   teamName: string;
   teamCode: string;
   teamLogo: string | null;
+  teamIcon: string | null;
   primaryColor: string;
   textColor: string;
   uploadLogo: (file: File) => Promise<string | null>;
@@ -25,6 +26,7 @@ interface FormValues {
   name: string;
   code: string;
   logo: File | string | null;
+  icon: File | string | null;
   note: string;
   start_date: string;
   end_date: string;
@@ -35,6 +37,7 @@ const TeamHistoryTab = ({
   teamName,
   teamCode,
   teamLogo,
+  teamIcon,
   primaryColor,
   textColor,
   uploadLogo,
@@ -58,6 +61,7 @@ const TeamHistoryTab = ({
       name: '',
       code: '',
       logo: null,
+      icon: null,
       note: '',
       start_date: '',
       end_date: '',
@@ -86,6 +90,7 @@ const TeamHistoryTab = ({
         name: editTarget.name,
         code: editTarget.code ?? '',
         logo: editTarget.logo,
+        icon: editTarget.icon,
         note: editTarget.note ?? '',
         start_date: editTarget.start_date?.slice(0, 10) ?? '',
         end_date: editTarget.end_date?.slice(0, 10) ?? '',
@@ -95,12 +100,13 @@ const TeamHistoryTab = ({
         name: teamName,
         code: teamCode,
         logo: teamLogo,
+        icon: teamIcon,
         note: '',
         start_date: '',
         end_date: '',
       });
     }
-  }, [modalOpen, editTarget, teamName, teamCode, teamLogo, reset]);
+  }, [modalOpen, editTarget, teamName, teamCode, teamLogo, teamIcon, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -109,10 +115,17 @@ const TeamHistoryTab = ({
       if (!url) return;
       logoUrl = url;
     }
+    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
+    if (data.icon instanceof File) {
+      const url = await uploadLogo(data.icon);
+      if (!url) return;
+      iconUrl = url;
+    }
     const payload = {
       name: data.name,
       code: data.code || null,
       logo: logoUrl,
+      icon: iconUrl,
       note: data.note || null,
       start_date: data.start_date || null,
       end_date: data.end_date || null,
@@ -203,12 +216,22 @@ const TeamHistoryTab = ({
           className={styles.historyForm}
           onSubmit={onSubmit}
         >
-          <LogoUpload
-            control={control}
-            name="logo"
-            label="Logo"
-            disabled={isSubmitting}
-          />
+          <div className={styles.historyAssetRow}>
+            <LogoUpload
+              control={control}
+              name="logo"
+              label="Logo"
+              disabled={isSubmitting}
+            />
+            <LogoUpload
+              control={control}
+              name="icon"
+              label="Header Icon"
+              accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+              hint="Upload .ico"
+              disabled={isSubmitting}
+            />
+          </div>
           <Field
             label="Name"
             required

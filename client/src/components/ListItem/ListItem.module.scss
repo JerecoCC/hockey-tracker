@@ -50,8 +50,8 @@
 
 // ── Image ─────────────────────────────────────────────────────────────────────
 .logo {
-  width: var(--list-item-logo-size, 32px);
-  height: var(--list-item-logo-size, 32px);
+  width: var(--list-item-logo-size, 28px);
+  height: var(--list-item-logo-size, 28px);
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;

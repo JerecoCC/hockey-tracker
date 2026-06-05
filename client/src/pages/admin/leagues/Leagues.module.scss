@@ -72,3 +72,9 @@
   flex-direction: column;
   gap: $space-md;
 }
+
+.assetRow {
+  display: flex;
+  justify-content: center;
+  gap: $space-xl;
+}

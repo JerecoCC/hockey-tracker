@@ -14,6 +14,7 @@ export interface TeamRecord {
   city: string | null;
   home_arena: string | null;
   logo: string | null;
+  icon: string | null;
   league_id: string | null;
   primary_color: string;
   secondary_color: string;
@@ -29,6 +30,7 @@ export interface CreateTeamData {
   city?: string;
   home_arena?: string;
   logo?: string | null;
+  icon?: string | null;
   league_id?: string | null;
   primary_color?: string;
   secondary_color?: string;

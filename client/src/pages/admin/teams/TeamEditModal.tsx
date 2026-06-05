@@ -10,6 +10,7 @@ import styles from './TeamEditModal.module.scss';
 
 interface FormValues {
   logo: File | string | null;
+  icon: File | string | null;
   name: string;
   code: string;
   primary_color: string;
@@ -37,6 +38,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
   } = useForm<FormValues>({
     defaultValues: {
       logo: null,
+      icon: null,
       name: '',
       code: '',
       primary_color: '#334155',
@@ -52,6 +54,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     if (!open) return;
     reset({
       logo: team.logo ?? null,
+      icon: team.icon ?? null,
       name: team.name,
       code: team.code,
       primary_color: team.primary_color,
@@ -70,8 +73,15 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       if (!url) return;
       logoUrl = url;
     }
+    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
+    if (data.icon instanceof File) {
+      const url = await uploadLogo(data.icon);
+      if (!url) return;
+      iconUrl = url;
+    }
     const payload: Partial<CreateTeamData> = {
       logo: logoUrl,
+      icon: iconUrl,
       name: data.name,
       code: data.code,
       primary_color: data.primary_color,
@@ -101,12 +111,22 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <LogoUpload
-          control={control}
-          name="logo"
-          label="Logo"
-          disabled={isSubmitting}
-        />
+        <div className={styles.assetRow}>
+          <LogoUpload
+            control={control}
+            name="logo"
+            label="Logo"
+            disabled={isSubmitting}
+          />
+          <LogoUpload
+            control={control}
+            name="icon"
+            label="Header Icon"
+            accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+            hint="Upload .ico"
+            disabled={isSubmitting}
+          />
+        </div>
         <Field
           label="Name"
           required

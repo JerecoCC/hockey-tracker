@@ -50,7 +50,11 @@ async function getReferencedImageRows(sql) {
   return sql`
     SELECT logo AS url FROM leagues WHERE logo IS NOT NULL
     UNION
+    SELECT icon AS url FROM leagues WHERE icon IS NOT NULL
+    UNION
     SELECT logo AS url FROM team_iterations WHERE logo IS NOT NULL
+    UNION
+    SELECT icon AS url FROM team_iterations WHERE icon IS NOT NULL
     UNION
     SELECT photo AS url FROM players WHERE photo IS NOT NULL
     UNION

@@ -10,6 +10,7 @@ import styles from './LeagueEditModal.module.scss';
 
 interface FormValues {
   logo: File | string | null;
+  icon: File | string | null;
   name: string;
   code: string;
   primary_color: string;
@@ -34,6 +35,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
   } = useForm<FormValues>({
     defaultValues: {
       logo: null,
+      icon: null,
       name: '',
       code: '',
       primary_color: '#334155',
@@ -46,6 +48,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
     if (!open) return;
     reset({
       logo: league.logo ?? null,
+      icon: league.icon ?? null,
       name: league.name,
       code: league.code,
       primary_color: league.primary_color,
@@ -61,8 +64,15 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       if (!url) return;
       logoUrl = url;
     }
+    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
+    if (data.icon instanceof File) {
+      const url = await uploadLogo(data.icon);
+      if (!url) return;
+      iconUrl = url;
+    }
     const payload: Partial<CreateLeagueData> = {
       logo: logoUrl,
+      icon: iconUrl,
       name: data.name,
       code: data.code,
       primary_color: data.primary_color,
@@ -88,12 +98,22 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <LogoUpload
-          control={control}
-          name="logo"
-          label="Logo"
-          disabled={isSubmitting}
-        />
+        <div className={styles.assetRow}>
+          <LogoUpload
+            control={control}
+            name="logo"
+            label="Logo"
+            disabled={isSubmitting}
+          />
+          <LogoUpload
+            control={control}
+            name="icon"
+            label="Header Icon"
+            accept="image/x-icon,image/vnd.microsoft.icon,.ico"
+            hint="Upload .ico"
+            disabled={isSubmitting}
+          />
+        </div>
         <Field
           label="Name"
           required
