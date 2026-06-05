@@ -4,10 +4,13 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import useSeasonAwards, {
   type AwardRecipientRole,
   type AwardRecipientType,
+  type SeasonAwardRecipient,
   type SeasonAwardRecord,
 } from '@/hooks/useSeasonAwards';
 import type { SeasonTeam } from '@/hooks/useSeasonDetails';
@@ -15,29 +18,9 @@ import type { TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import type { GoalieStatRecord, SkaterStatRecord } from '@/hooks/useSeasonStats';
 import styles from './SeasonDetails.module.scss';
 
-const METHOD_OPTIONS = [
-  { value: 'manual', label: 'Manual' },
-  { value: 'voted', label: 'Voted' },
-  { value: 'automatic', label: 'Automatic' },
-  { value: 'playoff', label: 'Playoff' },
-];
-
 const ROLE_OPTIONS = [
   { value: 'winner', label: 'Winner' },
   { value: 'nominee', label: 'Nominee' },
-];
-
-const STAT_OPTIONS = [
-  { value: '', label: 'None' },
-  { value: 'points', label: 'Player Points' },
-  { value: 'goals', label: 'Player Goals' },
-  { value: 'assists', label: 'Player Assists' },
-  { value: 'save_pct', label: 'Goalie Save %' },
-  { value: 'gaa', label: 'Goalie GAA' },
-  { value: 'shutouts', label: 'Goalie Shutouts' },
-  { value: 'standings_points', label: 'Team Points' },
-  { value: 'wins', label: 'Team Wins' },
-  { value: 'playoff_champion', label: 'Playoff Champion' },
 ];
 
 interface RecipientFormValues {
@@ -66,12 +49,6 @@ interface Props {
 
 const playerName = (player: Pick<SkaterStatRecord, 'first_name' | 'last_name'>) =>
   [player.first_name, player.last_name].filter(Boolean).join(' ');
-
-const methodLabel = (method: string) =>
-  METHOD_OPTIONS.find((option) => option.value === method)?.label ?? method;
-
-const statLabel = (statKey: string | null) =>
-  statKey ? (STAT_OPTIONS.find((option) => option.value === statKey)?.label ?? statKey) : null;
 
 const numberOrNull = (value: string) => {
   if (value.trim() === '') return null;
@@ -238,14 +215,18 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
                 >
                   <div className={styles.awardHeader}>
                     <div className={styles.awardTitleBlock}>
-                      <h4>{award.name}</h4>
-                      <div className={styles.awardMeta}>
-                        <span>{award.recipient_type}</span>
-                        <span>{methodLabel(award.selection_method)}</span>
-                        {statLabel(award.stat_key) && <span>{statLabel(award.stat_key)}</span>}
-                        <span>{award.awarded_after_playoffs ? 'After playoffs' : 'Regular season'}</span>
-                      </div>
-                      {award.description && <p>{award.description}</p>}
+                      {award.description ? (
+                        <h4>
+                          <Tooltip
+                            text={award.description}
+                            className={styles.awardTitleTooltip}
+                          >
+                            <span>{award.name}</span>
+                          </Tooltip>
+                        </h4>
+                      ) : (
+                        <h4>{award.name}</h4>
+                      )}
                     </div>
                     <div className={styles.awardActions}>
                       {!award.season_award_id ? (
@@ -270,29 +251,28 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
                               Use {suggestion.label}
                             </Button>
                           )}
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            intent="neutral"
-                            onClick={() => openRecipientModal(award, 'nominee')}
-                          >
-                            Nominee
-                          </Button>
-                          <Button
-                            size="sm"
-                            icon="emoji_events"
-                            onClick={() => openRecipientModal(award, 'winner')}
-                          >
-                            Winner
-                          </Button>
+                          <div className={styles.awardRecipientActions}>
+                            <Button
+                              size="sm"
+                              variant="outlined"
+                              intent="neutral"
+                              icon="person_add"
+                              tooltip="Add nominee"
+                              onClick={() => openRecipientModal(award, 'nominee')}
+                            />
+                            <Button
+                              size="sm"
+                              icon="emoji_events"
+                              tooltip="Record winner"
+                              onClick={() => openRecipientModal(award, 'winner')}
+                            />
+                          </div>
                         </>
                       )}
                     </div>
                   </div>
 
-                  <AwardRecipientList
-                    title="Winners"
-                    empty="No winner recorded."
+                  <AwardWinnerList
                     recipients={winners}
                     seasonAwardId={award.season_award_id}
                     onDelete={deleteRecipient}
@@ -391,6 +371,97 @@ interface RecipientListProps {
   onDelete: (seasonAwardId: string, recipientId: string) => Promise<boolean>;
 }
 
+interface WinnerListProps {
+  recipients: SeasonAwardRecipient[];
+  seasonAwardId: string | null;
+  onDelete: (seasonAwardId: string, recipientId: string) => Promise<boolean>;
+}
+
+const recipientName = (recipient: SeasonAwardRecipient) =>
+  recipient.player_name ?? recipient.team_name ?? 'Unknown';
+
+const recipientInitials = (recipient: SeasonAwardRecipient) => {
+  const name = recipientName(recipient);
+  const parts = name.split(' ').filter(Boolean);
+  return parts.length > 1
+    ? `${parts[0][0]}${parts[parts.length - 1][0]}`
+    : name.slice(0, 2);
+};
+
+const AwardWinnerList = ({ recipients, seasonAwardId, onDelete }: WinnerListProps) => (
+  <div className={styles.awardWinnerSection}>
+    {recipients.length === 0 ? (
+      <span className={styles.awardEmpty}>No winner recorded.</span>
+    ) : (
+      <div className={styles.awardWinnerGrid}>
+        {recipients.map((recipient) => (
+          <div
+            key={recipient.id}
+            className={styles.awardWinnerCard}
+          >
+            <div className={styles.awardWinnerImageWrap}>
+              {recipient.recipient_type === 'team' ? (
+                <TeamLogo
+                  logo={recipient.team_logo}
+                  code={recipient.team_code ?? 'T'}
+                  primaryColor={recipient.team_primary_color}
+                  textColor={recipient.team_text_color}
+                  size={86}
+                  className={styles.awardWinnerTeamLogo}
+                />
+              ) : (
+                <PlayerAvatar
+                  photo={recipient.player_photo}
+                  initials={recipientInitials(recipient)}
+                  primaryColor={recipient.team_primary_color ?? undefined}
+                  textColor={recipient.team_text_color ?? undefined}
+                  ringColor={recipient.team_primary_color ?? undefined}
+                  size={88}
+                />
+              )}
+            </div>
+            <div className={styles.awardWinnerInfo}>
+              <strong>{recipientName(recipient)}</strong>
+              <span>
+                {[
+                  recipient.jersey_number != null ? `#${recipient.jersey_number}` : null,
+                  recipient.position,
+                  recipient.team_code,
+                ]
+                  .filter(Boolean)
+                  .join(' | ')}
+              </span>
+              {(recipient.stat_value || recipient.vote_points != null || recipient.rank) && (
+                <em>
+                  {[
+                    recipient.stat_value,
+                    recipient.vote_points != null ? `${recipient.vote_points} votes` : null,
+                    recipient.rank ? `Rank ${recipient.rank}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(' | ')}
+                </em>
+              )}
+            </div>
+            {seasonAwardId && (
+              <div className={styles.awardWinnerOverlay}>
+                <Button
+                  type="button"
+                  size="sm"
+                  intent="danger"
+                  icon="delete"
+                  tooltip="Remove winner"
+                  onClick={() => onDelete(seasonAwardId, recipient.id)}
+                />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+);
+
 const AwardRecipientList = ({
   title,
   empty,
@@ -425,7 +496,7 @@ const AwardRecipientList = ({
                   recipient.stat_value,
                 ]
                   .filter(Boolean)
-                  .join(' · ')}
+                  .join(' | ')}
               </span>
             </div>
             {seasonAwardId && (

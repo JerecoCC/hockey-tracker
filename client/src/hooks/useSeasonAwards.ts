@@ -23,9 +23,14 @@ export interface SeasonAwardRecipient {
   stat_value: string | null;
   notes: string | null;
   player_name: string | null;
+  player_photo: string | null;
+  position: string | null;
+  jersey_number: number | null;
   team_name: string | null;
   team_code: string | null;
   team_logo: string | null;
+  team_primary_color: string | null;
+  team_text_color: string | null;
 }
 
 export interface SeasonAwardRecord {

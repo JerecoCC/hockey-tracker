@@ -1516,13 +1516,25 @@ router.get('/:id/awards', async (req, res) => {
         sar.notes,
         p.first_name,
         p.last_name,
+        COALESCE(ptr.photo, p.photo) AS player_photo,
+        COALESCE(ptr.position, p.position) AS position,
+        ptr.jersey_number,
         ti.name AS team_name,
         ti.code AS team_code,
-        ti.logo AS team_logo
+        ti.logo AS team_logo,
+        t.primary_color AS team_primary_color,
+        t.text_color AS team_text_color
       FROM season_award_recipients sar
       JOIN season_awards sa ON sa.id = sar.season_award_id
       LEFT JOIN players p ON p.id = sar.player_id
-      LEFT JOIN teams t ON t.id = sar.team_id
+      LEFT JOIN LATERAL (
+        SELECT player_id, team_id, jersey_number, photo, position
+        FROM player_teams
+        WHERE player_id = sar.player_id AND season_id = ${id}
+        ORDER BY end_date DESC NULLS FIRST, start_date DESC NULLS LAST, created_at DESC
+        LIMIT 1
+      ) ptr ON true
+      LEFT JOIN teams t ON t.id = COALESCE(sar.team_id, ptr.team_id)
       LEFT JOIN LATERAL (
         SELECT name, code, logo FROM team_iterations
         WHERE team_id = t.id
@@ -1554,9 +1566,14 @@ router.get('/:id/awards', async (req, res) => {
         player_name: row.player_id
           ? [row.first_name, row.last_name].filter(Boolean).join(' ')
           : null,
+        player_photo: row.player_photo,
+        position: row.position,
+        jersey_number: row.jersey_number,
         team_name: row.team_name,
         team_code: row.team_code,
         team_logo: row.team_logo,
+        team_primary_color: row.team_primary_color,
+        team_text_color: row.team_text_color,
       });
       bySeasonAward.set(row.season_award_id, list);
     }

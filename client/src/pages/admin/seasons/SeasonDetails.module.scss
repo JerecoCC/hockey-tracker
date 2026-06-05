@@ -579,12 +579,14 @@
 
 // Awards tab
 .awardsList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: $space-lg;
+  align-items: stretch;
 }
 
 .awardItem {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: $space-md;
@@ -597,12 +599,8 @@
 .awardHeader {
   display: flex;
   justify-content: space-between;
-  gap: $space-lg;
+  gap: $space-md;
   align-items: flex-start;
-
-  @media (max-width: 860px) {
-    flex-direction: column;
-  }
 }
 
 .awardTitleBlock {
@@ -610,11 +608,15 @@
   flex-direction: column;
   gap: $space-xs;
   min-width: 0;
+  width: 100%;
 
   h4 {
     margin: 0;
     color: $text-bright;
     font-size: $font-lg;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+    white-space: normal;
   }
 
   p {
@@ -625,20 +627,8 @@
   }
 }
 
-.awardMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-xs;
-
-  span {
-    padding: 2px 8px;
-    border-radius: $radius-sm;
-    background: rgba(255, 255, 255, 0.06);
-    color: $text-dim;
-    font-size: $font-xs;
-    line-height: 1.6;
-    text-transform: capitalize;
-  }
+.awardTitleTooltip {
+  display: inline;
 }
 
 .awardActions {
@@ -646,10 +636,13 @@
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: $space-sm;
+}
 
-  @media (max-width: 860px) {
-    justify-content: flex-start;
-  }
+.awardRecipientActions {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-wrap: nowrap;
 }
 
 .awardRecipients {
@@ -677,6 +670,93 @@
   color: $text-muted;
   font-size: $font-sm;
   line-height: 30px;
+}
+
+.awardWinnerSection {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.awardWinnerGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: $space-md;
+}
+
+.awardWinnerCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-sm;
+  min-height: 186px;
+  padding: $space-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-md;
+  background: rgba(0, 0, 0, 0.16);
+  overflow: hidden;
+  text-align: center;
+}
+
+.awardWinnerImageWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 112px;
+}
+
+.awardWinnerTeamLogo {
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+.awardWinnerInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+
+  strong {
+    color: $text-bright;
+    font-size: $font-sm;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span,
+  em {
+    color: $text-dim;
+    font-size: $font-xs;
+    font-style: normal;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.awardWinnerOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.58);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+
+  .awardWinnerCard:hover &,
+  .awardWinnerCard:focus-within & {
+    opacity: 1;
+    pointer-events: auto;
+  }
 }
 
 .awardRecipientList {
