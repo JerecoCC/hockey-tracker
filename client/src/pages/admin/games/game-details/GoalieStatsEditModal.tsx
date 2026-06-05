@@ -182,7 +182,7 @@ const GoalieStatsEditModal = ({
                     code={code}
                     primaryColor={primary}
                     textColor={text}
-                    size={36}
+                    size={30}
                     shape="square"
                   />
                   <PlayerAvatar

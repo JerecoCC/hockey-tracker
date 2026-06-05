@@ -124,7 +124,7 @@ const AddPlayersModal = ({
       open={open}
       title="Add Players to Roster"
       onClose={handleClose}
-      size={available.length > 8 ? 'lg' : 'md'}
+      size="md"
       onConfirm={handleSubmit}
       confirmLabel={submitting ? 'Adding…' : 'Add to Roster'}
       confirmIcon="group_add"
@@ -181,12 +181,7 @@ const AddPlayersModal = ({
                 imagePrimaryColor={p.primary_color}
                 imageTextColor={p.text_color}
                 name={`${p.first_name} ${p.last_name}`}
-                subtitle={[
-                  p.position ? (POSITION_LABELS[p.position] ?? p.position) : null,
-                  p.team_name ? `Last: ${p.team_name}` : null,
-                ]
-                  .filter(Boolean)
-                  .join(' · ')}
+                subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                 rightContent={
                   isChecked ? (
                     <div

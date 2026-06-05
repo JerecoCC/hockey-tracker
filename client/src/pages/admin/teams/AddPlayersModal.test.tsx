@@ -100,6 +100,7 @@ describe('AddPlayersModal', () => {
     await userEvent.click(await screen.findByText('Sarah Nurse'));
 
     expect(screen.getByRole('spinbutton')).toHaveValue(24);
-    expect(screen.getByText('Center · Last: Toronto Sceptres')).toBeInTheDocument();
+    expect(screen.getByText('Center')).toBeInTheDocument();
+    expect(screen.queryByText(/Last:/)).not.toBeInTheDocument();
   });
 });

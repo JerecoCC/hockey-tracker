@@ -201,7 +201,7 @@ const LinescoreCard = ({
                     code={row.teamCode ?? '?'}
                     primaryColor={row.primaryColor}
                     textColor={row.textColor}
-                    size={32}
+                    size={28}
                     shape="square"
                   />
                   <span className={styles.linescoreCode}>{row.teamCode}</span>

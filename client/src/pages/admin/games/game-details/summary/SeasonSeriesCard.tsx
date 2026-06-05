@@ -136,8 +136,8 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
                   code={pm.away_team.code}
                   primaryColor={pm.away_team.primary_color}
                   textColor={pm.away_team.text_color}
-                  size={32}
-                  shape="circle"
+                  size={24}
+                  shape={pm.away_team.logo ? 'square' : 'circle'}
                 />
                 <span className={styles.teamCode}>{pm.away_team.code}</span>
                 <span className={styles.teamScore}>{leftScore}</span>
@@ -152,8 +152,8 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
                   code={pm.home_team.code}
                   primaryColor={pm.home_team.primary_color}
                   textColor={pm.home_team.text_color}
-                  size={32}
-                  shape="circle"
+                  size={24}
+                  shape={pm.home_team.logo ? 'square' : 'circle'}
                 />
                 <span className={styles.teamCode}>{pm.home_team.code}</span>
                 <span className={styles.teamScore}>{rightScore}</span>

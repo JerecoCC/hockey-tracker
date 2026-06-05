@@ -472,8 +472,8 @@ const RecordShotsBody = ({
                   code={row.code}
                   primaryColor={row.primaryColor}
                   textColor={row.textColor}
-                  size={32}
-                  shape="circle"
+                  size={28}
+                  shape={row.logo ? 'square' : 'circle'}
                 />
                 <span className={styles.shotsTeamName}>{row.name}</span>
               </span>
@@ -525,7 +525,7 @@ const RecordShotsBody = ({
                       code={code}
                       primaryColor={primary}
                       textColor={text}
-                      size={20}
+                      size={18}
                       shape="square"
                     />
                     {code}
@@ -572,7 +572,7 @@ const RecordShotsBody = ({
                     code={code}
                     primaryColor={primary}
                     textColor={text}
-                    size={36}
+                    size={30}
                     shape="square"
                   />
                   <PlayerAvatar

@@ -218,8 +218,8 @@ const ScoreboardCard = ({
               code={game.away_team.code}
               primaryColor={game.away_team.primary_color}
               textColor={game.away_team.text_color}
-              size={68}
-              shape="circle"
+              size={60}
+              shape={game.away_team.logo ? 'square' : 'circle'}
               className={styles.teamLogoResponsive}
             />
             <div className={styles.teamInfo}>
@@ -367,8 +367,8 @@ const ScoreboardCard = ({
               code={game.home_team.code}
               primaryColor={game.home_team.primary_color}
               textColor={game.home_team.text_color}
-              size={68}
-              shape="circle"
+              size={60}
+              shape={game.home_team.logo ? 'square' : 'circle'}
               className={styles.teamLogoResponsive}
             />
           </button>

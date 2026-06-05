@@ -197,7 +197,7 @@ const ScoreGoalModal = ({
             code={code}
             primaryColor={primary}
             textColor={text}
-            size={20}
+            size={18}
             shape="square"
           />
           {code}

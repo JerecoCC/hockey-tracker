@@ -199,7 +199,7 @@ const GoalieStatsCard = ({
                           code={teamCode ?? '?'}
                           primaryColor={primaryColor}
                           textColor={textColor}
-                          size={36}
+                          size={30}
                           shape="square"
                         />
                         <PlayerAvatar

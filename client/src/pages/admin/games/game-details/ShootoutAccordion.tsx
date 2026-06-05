@@ -366,7 +366,7 @@ const ShootoutAccordion = ({
             code={team.code ?? '?'}
             primaryColor={team.primary_color}
             textColor={team.text_color}
-            size={36}
+            size={30}
             shape="square"
           />
           <PlayerAvatar
@@ -460,7 +460,7 @@ const ShootoutAccordion = ({
                 code={leftInfo.code}
                 primaryColor={leftInfo.primary}
                 textColor={leftInfo.text}
-                size={20}
+                size={18}
                 shape="square"
               />
               <span>{leftInfo.code}</span>
@@ -471,7 +471,7 @@ const ShootoutAccordion = ({
                 code={rightInfo.code}
                 primaryColor={rightInfo.primary}
                 textColor={rightInfo.text}
-                size={20}
+                size={18}
                 shape="square"
               />
               <span>{rightInfo.code}</span>

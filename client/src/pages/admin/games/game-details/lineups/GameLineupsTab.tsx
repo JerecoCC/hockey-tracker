@@ -136,7 +136,7 @@ const GameLineupsTab = ({
             code={teamCode}
             primaryColor={primaryColor}
             textColor={textColor}
-            size={24}
+            size={20}
             shape="square"
           />
           {teamName}

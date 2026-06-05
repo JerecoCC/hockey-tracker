@@ -154,7 +154,7 @@ const ScoringCard = ({
                 code={goal.team_code ?? '?'}
                 primaryColor={goal.team_primary_color}
                 textColor={goal.team_text_color}
-                size={36}
+                size={30}
                 shape="square"
               />
               <PlayerAvatar
