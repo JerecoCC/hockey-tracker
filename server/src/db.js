@@ -233,6 +233,8 @@ async function initSchema() {
       team_id     UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
       season_id   UUID REFERENCES seasons(id) ON DELETE SET NULL,
       name        TEXT NOT NULL,
+      place_name  TEXT,
+      team_name   TEXT,
       code        TEXT,
       logo        TEXT,
       icon        TEXT,
@@ -253,6 +255,8 @@ async function initSchema() {
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS end_date DATE`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS code TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS icon TEXT`;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS place_name TEXT`;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS team_name TEXT`;
   await sql`
     ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS
       start_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL
@@ -286,6 +290,29 @@ async function initSchema() {
     END $$
   `;
 
+  await sql`
+    UPDATE team_iterations ti
+    SET
+      place_name = CASE
+        WHEN c.place_hint IS NOT NULL AND lower(btrim(ti.name)) LIKE lower(c.place_hint) || ' %' THEN c.place_hint
+        WHEN position(' ' IN btrim(ti.name)) > 0 THEN split_part(btrim(ti.name), ' ', 1)
+        ELSE NULL
+      END,
+      team_name = CASE
+        WHEN c.place_hint IS NOT NULL AND lower(btrim(ti.name)) LIKE lower(c.place_hint) || ' %' THEN btrim(substr(btrim(ti.name), length(c.place_hint) + 2))
+        WHEN position(' ' IN btrim(ti.name)) > 0 THEN btrim(substr(btrim(ti.name), position(' ' IN btrim(ti.name)) + 1))
+        ELSE btrim(ti.name)
+      END
+    FROM teams t
+    CROSS JOIN LATERAL (
+      SELECT COALESCE(NULLIF(btrim(t.city), ''), NULLIF(btrim(t.location), '')) AS place_hint
+    ) c
+    WHERE ti.team_id = t.id
+      AND (ti.place_name IS NULL OR btrim(ti.place_name) = '')
+      AND (ti.team_name IS NULL OR btrim(ti.team_name) = '')
+      AND ti.name IS NOT NULL
+  `;
+
   // Migration: for any existing team that has no base iteration yet,
   // create one from the teams columns (only runs while those columns still exist).
   await sql`
@@ -304,6 +331,29 @@ async function initSchema() {
         );
       END IF;
     END $$
+  `;
+
+  await sql`
+    UPDATE team_iterations ti
+    SET
+      place_name = CASE
+        WHEN c.place_hint IS NOT NULL AND lower(btrim(ti.name)) LIKE lower(c.place_hint) || ' %' THEN c.place_hint
+        WHEN position(' ' IN btrim(ti.name)) > 0 THEN split_part(btrim(ti.name), ' ', 1)
+        ELSE NULL
+      END,
+      team_name = CASE
+        WHEN c.place_hint IS NOT NULL AND lower(btrim(ti.name)) LIKE lower(c.place_hint) || ' %' THEN btrim(substr(btrim(ti.name), length(c.place_hint) + 2))
+        WHEN position(' ' IN btrim(ti.name)) > 0 THEN btrim(substr(btrim(ti.name), position(' ' IN btrim(ti.name)) + 1))
+        ELSE btrim(ti.name)
+      END
+    FROM teams t
+    CROSS JOIN LATERAL (
+      SELECT COALESCE(NULLIF(btrim(t.city), ''), NULLIF(btrim(t.location), '')) AS place_hint
+    ) c
+    WHERE ti.team_id = t.id
+      AND (ti.place_name IS NULL OR btrim(ti.place_name) = '')
+      AND (ti.team_name IS NULL OR btrim(ti.team_name) = '')
+      AND ti.name IS NOT NULL
   `;
 
   // Migration: drop identity columns from teams (code drop also removes the

@@ -13,6 +13,16 @@
   gap: $space-xl;
 }
 
+.nameRow {
+  display: flex;
+  gap: $space-md;
+
+  > * {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
 .colorRow {
   display: flex;
   gap: $space-xl;

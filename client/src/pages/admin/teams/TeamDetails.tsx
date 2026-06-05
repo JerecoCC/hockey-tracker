@@ -204,6 +204,8 @@ const TeamDetailsPage = () => {
                 teamId={team.id}
                 leagueId={team.league_id}
                 teamName={team.name}
+                teamPlaceName={team.place_name}
+                teamNickname={team.team_name}
                 teamCode={team.code}
                 teamLogo={team.logo}
                 teamIcon={team.icon}

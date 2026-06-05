@@ -92,10 +92,10 @@ router.get('/:id', async (req, res) => {
         SELECT
           t.id, t.description, t.location, t.league_id, t.created_at,
           t.primary_color, t.secondary_color, t.text_color,
-          ti.name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
+          ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
         FROM teams t
         LEFT JOIN LATERAL (
-          SELECT name, code, logo, icon FROM team_iterations
+          SELECT name, place_name, team_name, code, logo, icon FROM team_iterations
           WHERE team_id = t.id
           ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
           LIMIT 1

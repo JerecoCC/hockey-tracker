@@ -8,6 +8,8 @@ const API = import.meta.env.VITE_API_URL || '/api';
 export interface TeamRecord {
   id: string;
   name: string;
+  place_name?: string | null;
+  team_name?: string | null;
   code: string;
   description: string | null;
   location: string | null;
@@ -24,6 +26,8 @@ export interface TeamRecord {
 
 export interface CreateTeamData {
   name: string;
+  place_name?: string | null;
+  team_name?: string | null;
   code: string;
   description?: string | null;
   location?: string;

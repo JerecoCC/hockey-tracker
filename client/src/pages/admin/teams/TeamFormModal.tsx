@@ -7,12 +7,33 @@ import { type CreateTeamData, type TeamRecord } from '@/hooks/useTeams';
 import styles from './TeamFormModal.module.scss';
 
 interface FormValues {
-  name: string;
+  place_name: string;
+  team_name: string;
   code: string;
   league_id: string | null;
   logo: File | string | null;
   icon: File | string | null;
 }
+
+const splitTeamName = (name: string | null | undefined, placeHint?: string | null) => {
+  const cleanName = name?.trim() ?? '';
+  const cleanPlaceHint = placeHint?.trim();
+  if (cleanPlaceHint && cleanName.toLowerCase().startsWith(`${cleanPlaceHint.toLowerCase()} `)) {
+    return {
+      placeName: cleanPlaceHint,
+      teamName: cleanName.slice(cleanPlaceHint.length).trim(),
+    };
+  }
+  const firstSpace = cleanName.indexOf(' ');
+  if (firstSpace === -1) return { placeName: '', teamName: cleanName };
+  return {
+    placeName: cleanName.slice(0, firstSpace).trim(),
+    teamName: cleanName.slice(firstSpace + 1).trim(),
+  };
+};
+
+const displayTeamName = (placeName: string, teamName: string) =>
+  [placeName.trim(), teamName.trim()].filter(Boolean).join(' ');
 
 interface Props {
   open: boolean;
@@ -34,7 +55,8 @@ const TeamFormModal = (props: Props) => {
     formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
-      name: '',
+      place_name: '',
+      team_name: '',
       code: '',
       league_id: null,
       logo: null,
@@ -44,8 +66,10 @@ const TeamFormModal = (props: Props) => {
 
   useEffect(() => {
     if (!open) return;
+    const fallbackName = splitTeamName(editTarget?.name, editTarget?.city ?? editTarget?.location);
     reset({
-      name: editTarget?.name ?? '',
+      place_name: editTarget?.place_name ?? fallbackName.placeName,
+      team_name: editTarget?.team_name ?? fallbackName.teamName,
       code: editTarget?.code ?? '',
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       logo: editTarget?.logo ?? null,
@@ -67,7 +91,9 @@ const TeamFormModal = (props: Props) => {
       iconUrl = url;
     }
     const payload: CreateTeamData = {
-      name: data.name,
+      name: displayTeamName(data.place_name, data.team_name),
+      place_name: data.place_name,
+      team_name: data.team_name,
       code: data.code,
       logo: logoUrl,
       icon: iconUrl,
@@ -108,16 +134,25 @@ const TeamFormModal = (props: Props) => {
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          label="Name"
-          required
-          control={control}
-          name="name"
-          rules={{ required: true }}
-          placeholder="e.g. Toronto Maple Leafs"
-          autoFocus
-          disabled={isSubmitting}
-        />
+        <div className={styles.nameRow}>
+          <Field
+            label="Place Name"
+            control={control}
+            name="place_name"
+            placeholder="e.g. Toronto or PWHL"
+            autoFocus
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Team Name"
+            required
+            control={control}
+            name="team_name"
+            rules={{ required: true }}
+            placeholder="e.g. Maple Leafs"
+            disabled={isSubmitting}
+          />
+        </div>
         <Field
           label="Code"
           required

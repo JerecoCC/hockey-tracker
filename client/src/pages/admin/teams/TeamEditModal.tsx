@@ -11,7 +11,8 @@ import styles from './TeamEditModal.module.scss';
 interface FormValues {
   logo: File | string | null;
   icon: File | string | null;
-  name: string;
+  place_name: string;
+  team_name: string;
   code: string;
   primary_color: string;
   secondary_color: string;
@@ -20,6 +21,26 @@ interface FormValues {
   home_arena: string;
   description: string | null;
 }
+
+const splitTeamName = (name: string | null | undefined, placeHint?: string | null) => {
+  const cleanName = name?.trim() ?? '';
+  const cleanPlaceHint = placeHint?.trim();
+  if (cleanPlaceHint && cleanName.toLowerCase().startsWith(`${cleanPlaceHint.toLowerCase()} `)) {
+    return {
+      placeName: cleanPlaceHint,
+      teamName: cleanName.slice(cleanPlaceHint.length).trim(),
+    };
+  }
+  const firstSpace = cleanName.indexOf(' ');
+  if (firstSpace === -1) return { placeName: '', teamName: cleanName };
+  return {
+    placeName: cleanName.slice(0, firstSpace).trim(),
+    teamName: cleanName.slice(firstSpace + 1).trim(),
+  };
+};
+
+const displayTeamName = (placeName: string, teamName: string) =>
+  [placeName.trim(), teamName.trim()].filter(Boolean).join(' ');
 
 interface Props {
   open: boolean;
@@ -39,7 +60,8 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     defaultValues: {
       logo: null,
       icon: null,
-      name: '',
+      place_name: '',
+      team_name: '',
       code: '',
       primary_color: '#334155',
       secondary_color: '#1e293b',
@@ -52,10 +74,12 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
 
   useEffect(() => {
     if (!open) return;
+    const fallbackName = splitTeamName(team.name, team.city ?? team.location);
     reset({
       logo: team.logo ?? null,
       icon: team.icon ?? null,
-      name: team.name,
+      place_name: team.place_name ?? fallbackName.placeName,
+      team_name: team.team_name ?? fallbackName.teamName,
       code: team.code,
       primary_color: team.primary_color,
       secondary_color: team.secondary_color,
@@ -82,7 +106,9 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     const payload: Partial<CreateTeamData> = {
       logo: logoUrl,
       icon: iconUrl,
-      name: data.name,
+      name: displayTeamName(data.place_name, data.team_name),
+      place_name: data.place_name,
+      team_name: data.team_name,
       code: data.code,
       primary_color: data.primary_color,
       secondary_color: data.secondary_color,
@@ -127,16 +153,25 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          label="Name"
-          required
-          control={control}
-          name="name"
-          rules={{ required: true }}
-          placeholder="e.g. Toronto Maple Leafs"
-          autoFocus
-          disabled={isSubmitting}
-        />
+        <div className={styles.nameRow}>
+          <Field
+            label="Place Name"
+            control={control}
+            name="place_name"
+            placeholder="e.g. Toronto or PWHL"
+            autoFocus
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Team Name"
+            required
+            control={control}
+            name="team_name"
+            rules={{ required: true }}
+            placeholder="e.g. Maple Leafs"
+            disabled={isSubmitting}
+          />
+        </div>
         <Field
           label="Code"
           required

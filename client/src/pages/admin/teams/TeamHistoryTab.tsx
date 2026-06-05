@@ -14,6 +14,8 @@ interface Props {
   teamId: string;
   leagueId: string | null;
   teamName: string;
+  teamPlaceName?: string | null;
+  teamNickname?: string | null;
   teamCode: string;
   teamLogo: string | null;
   teamIcon: string | null;
@@ -23,7 +25,8 @@ interface Props {
 }
 
 interface FormValues {
-  name: string;
+  place_name: string;
+  team_name: string;
   code: string;
   logo: File | string | null;
   icon: File | string | null;
@@ -32,9 +35,24 @@ interface FormValues {
   end_date: string;
 }
 
+const splitTeamName = (name: string | null | undefined) => {
+  const cleanName = name?.trim() ?? '';
+  const firstSpace = cleanName.indexOf(' ');
+  if (firstSpace === -1) return { placeName: '', teamName: cleanName };
+  return {
+    placeName: cleanName.slice(0, firstSpace).trim(),
+    teamName: cleanName.slice(firstSpace + 1).trim(),
+  };
+};
+
+const displayTeamName = (placeName: string, teamName: string) =>
+  [placeName.trim(), teamName.trim()].filter(Boolean).join(' ');
+
 const TeamHistoryTab = ({
   teamId,
   teamName,
+  teamPlaceName,
+  teamNickname,
   teamCode,
   teamLogo,
   teamIcon,
@@ -58,7 +76,8 @@ const TeamHistoryTab = ({
     formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
-      name: '',
+      place_name: '',
+      team_name: '',
       code: '',
       logo: null,
       icon: null,
@@ -86,8 +105,10 @@ const TeamHistoryTab = ({
   useEffect(() => {
     if (!modalOpen) return;
     if (editTarget) {
+      const fallbackName = splitTeamName(editTarget.name);
       reset({
-        name: editTarget.name,
+        place_name: editTarget.place_name ?? fallbackName.placeName,
+        team_name: editTarget.team_name ?? fallbackName.teamName,
         code: editTarget.code ?? '',
         logo: editTarget.logo,
         icon: editTarget.icon,
@@ -96,8 +117,10 @@ const TeamHistoryTab = ({
         end_date: editTarget.end_date?.slice(0, 10) ?? '',
       });
     } else {
+      const fallbackName = splitTeamName(teamName);
       reset({
-        name: teamName,
+        place_name: teamPlaceName ?? fallbackName.placeName,
+        team_name: teamNickname ?? fallbackName.teamName,
         code: teamCode,
         logo: teamLogo,
         icon: teamIcon,
@@ -106,7 +129,7 @@ const TeamHistoryTab = ({
         end_date: '',
       });
     }
-  }, [modalOpen, editTarget, teamName, teamCode, teamLogo, teamIcon, reset]);
+  }, [modalOpen, editTarget, teamName, teamPlaceName, teamNickname, teamCode, teamLogo, teamIcon, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -122,7 +145,9 @@ const TeamHistoryTab = ({
       iconUrl = url;
     }
     const payload = {
-      name: data.name,
+      name: displayTeamName(data.place_name, data.team_name),
+      place_name: data.place_name,
+      team_name: data.team_name,
       code: data.code || null,
       logo: logoUrl,
       icon: iconUrl,
@@ -232,14 +257,24 @@ const TeamHistoryTab = ({
               disabled={isSubmitting}
             />
           </div>
-          <Field
-            label="Name"
-            required
-            control={control}
-            name="name"
-            rules={{ required: true }}
-            disabled={isSubmitting}
-          />
+          <div className={styles.historyFormRow}>
+            <Field
+              label="Place Name"
+              control={control}
+              name="place_name"
+              placeholder="e.g. Toronto or PWHL"
+              disabled={isSubmitting}
+            />
+            <Field
+              label="Team Name"
+              required
+              control={control}
+              name="team_name"
+              rules={{ required: true }}
+              placeholder="e.g. Maple Leafs"
+              disabled={isSubmitting}
+            />
+          </div>
           <Field
             label="Code"
             control={control}

@@ -9,6 +9,8 @@ export interface TeamIteration {
   id: string;
   team_id: string;
   name: string;
+  place_name?: string | null;
+  team_name?: string | null;
   code: string | null;
   logo: string | null;
   icon: string | null;
@@ -22,6 +24,8 @@ export interface TeamIteration {
 
 export interface AddIterationPayload {
   name: string;
+  place_name?: string | null;
+  team_name?: string | null;
   code?: string | null;
   logo?: string | null;
   icon?: string | null;
@@ -32,6 +36,8 @@ export interface AddIterationPayload {
 
 export interface UpdateIterationPayload {
   name?: string;
+  place_name?: string | null;
+  team_name?: string | null;
   code?: string | null;
   logo?: string | null;
   icon?: string | null;

@@ -118,6 +118,8 @@ const teamIterations = pgTable('team_iterations', {
   teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
   seasonId: uuid('season_id').references(() => seasons.id, { onDelete: 'set null' }),
   name: text('name').notNull(),
+  placeName: text('place_name'),
+  teamName: text('team_name'),
   code: text('code'),
   logo: text('logo'),
   icon: text('icon'),

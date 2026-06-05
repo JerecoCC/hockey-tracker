@@ -35,6 +35,50 @@ const uploadBuffer = (file) => {
   return file.buffer;
 };
 
+const cleanText = (value) => {
+  if (value === undefined || value === null) return null;
+  const text = String(value).trim();
+  return text === '' ? null : text;
+};
+
+const splitDisplayName = (name) => {
+  const cleanName = cleanText(name);
+  if (!cleanName) return { placeName: null, teamName: null };
+  const firstSpace = cleanName.indexOf(' ');
+  if (firstSpace === -1) return { placeName: null, teamName: cleanName };
+  return {
+    placeName: cleanName.slice(0, firstSpace).trim() || null,
+    teamName: cleanName.slice(firstSpace + 1).trim() || null,
+  };
+};
+
+const resolveTeamIdentity = (body) => {
+  const placeNameInBody = 'place_name' in body;
+  const teamNameInBody = 'team_name' in body;
+  const nameInBody = 'name' in body;
+  const placeName = placeNameInBody ? cleanText(body.place_name) : undefined;
+  const teamName = teamNameInBody ? cleanText(body.team_name) : undefined;
+
+  if (placeNameInBody || teamNameInBody) {
+    const displayName = [placeName, teamName].filter(Boolean).join(' ').trim();
+    return { name: displayName || null, placeName, teamName, hasName: true, hasSplitName: true };
+  }
+
+  if (nameInBody) {
+    const name = cleanText(body.name);
+    const splitName = splitDisplayName(name);
+    return {
+      name,
+      placeName: splitName.placeName,
+      teamName: splitName.teamName,
+      hasName: true,
+      hasSplitName: false,
+    };
+  }
+
+  return { name: undefined, placeName: undefined, teamName: undefined, hasName: false, hasSplitName: false };
+};
+
 // All team routes require the admin role
 router.use(requireAdmin);
 
@@ -67,10 +111,10 @@ router.get('/', async (_req, res) => {
       SELECT
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
-        ti.name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
+        ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, code, logo, icon FROM team_iterations
+        SELECT name, place_name, team_name, code, logo, icon FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -100,7 +144,7 @@ router.get('/:id', async (req, res) => {
       SELECT
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
-        ti.name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon,
+        ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon,
         l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
         l.primary_color AS league_primary_color, l.text_color AS league_text_color,
         t.start_season_id,
@@ -109,7 +153,7 @@ router.get('/:id', async (req, res) => {
         ls.end_date::text   AS latest_season_end_date
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, code, logo, icon FROM team_iterations
+        SELECT name, place_name, team_name, code, logo, icon FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -137,9 +181,13 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/teams  – create a team + auto-create its base iteration
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { name, code, description, location, city, home_arena, logo, icon, league_id, primary_color, secondary_color, text_color } = req.body;
+  const { code, description, location, city, home_arena, logo, icon, league_id, primary_color, secondary_color, text_color } = req.body;
+  const identity = resolveTeamIdentity(req.body);
 
-  if (!name || typeof name !== 'string' || name.trim() === '') {
+  if (identity.hasSplitName && !identity.teamName) {
+    return res.status(400).json({ error: 'team_name is required' });
+  }
+  if (!identity.name) {
     return res.status(400).json({ error: 'name is required' });
   }
   if (!code || typeof code !== 'string' || code.trim() === '') {
@@ -165,8 +213,16 @@ router.post('/', async (req, res) => {
 
     // Auto-create the base iteration (season_id = NULL = current identity)
     await sql`
-      INSERT INTO team_iterations (team_id, name, code, logo, icon)
-      VALUES (${teamId}, ${name.trim()}, ${code.trim().toUpperCase()}, ${logo ?? null}, ${icon ?? null})
+      INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo, icon)
+      VALUES (
+        ${teamId},
+        ${identity.name},
+        ${identity.placeName ?? null},
+        ${identity.teamName ?? null},
+        ${code.trim().toUpperCase()},
+        ${logo ?? null},
+        ${icon ?? null}
+      )
     `;
 
     // Return the full team with resolved identity
@@ -174,10 +230,10 @@ router.post('/', async (req, res) => {
       SELECT
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
-        ti.name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
+        ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, code, logo, icon FROM team_iterations
+        SELECT name, place_name, team_name, code, logo, icon FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -207,7 +263,8 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, code, description, location, city, home_arena, logo, icon, league_id, primary_color, secondary_color, text_color, start_season_id, latest_season_id } = req.body;
+  const { code, description, location, city, home_arena, logo, icon, league_id, primary_color, secondary_color, text_color, start_season_id, latest_season_id } = req.body;
+  const identity = resolveTeamIdentity(req.body);
   const descriptionInBody     = 'description'      in req.body;
   const logoInBody            = 'logo'             in req.body;
   const iconInBody            = 'icon'             in req.body;
@@ -217,7 +274,10 @@ router.patch('/:id', async (req, res) => {
   const startSeasonInBody     = 'start_season_id'  in req.body;
   const latestSeasonInBody    = 'latest_season_id' in req.body;
 
-  if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+  if (identity.hasSplitName && !identity.teamName) {
+    return res.status(400).json({ error: 'team_name cannot be empty' });
+  }
+  if (identity.hasName && !identity.name) {
     return res.status(400).json({ error: 'name cannot be empty' });
   }
   if (code !== undefined && (typeof code !== 'string' || code.trim() === '')) {
@@ -230,7 +290,7 @@ router.patch('/:id', async (req, res) => {
     if (exists.length === 0) return res.status(404).json({ error: 'Team not found' });
 
     // ── Identity fields → base iteration (season_id IS NULL) ───────────────
-    const hasIdentity = name !== undefined || code !== undefined || logoInBody || iconInBody;
+    const hasIdentity = identity.hasName || code !== undefined || logoInBody || iconInBody;
     if (hasIdentity) {
       const baseIter = await sql`
         SELECT id FROM team_iterations
@@ -241,7 +301,9 @@ router.patch('/:id', async (req, res) => {
       if (baseIter.length > 0) {
         await sql`
           UPDATE team_iterations SET
-            name = COALESCE(${name?.trim() ?? null}, name),
+            name = COALESCE(${identity.name ?? null}, name),
+            place_name = CASE WHEN ${identity.hasName} THEN ${identity.placeName ?? null} ELSE place_name END,
+            team_name = CASE WHEN ${identity.hasName} THEN ${identity.teamName ?? null} ELSE team_name END,
             code = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
             logo = CASE WHEN ${logoInBody} THEN ${logo ?? null} ELSE logo END,
             icon = CASE WHEN ${iconInBody} THEN ${icon ?? null} ELSE icon END
@@ -249,10 +311,12 @@ router.patch('/:id', async (req, res) => {
         `;
       } else {
         await sql`
-          INSERT INTO team_iterations (team_id, name, code, logo, icon)
+          INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo, icon)
           VALUES (
             ${id},
-            ${name?.trim() ?? ''},
+            ${identity.name ?? ''},
+            ${identity.placeName ?? null},
+            ${identity.teamName ?? null},
             ${code ? code.trim().toUpperCase() : ''},
             ${logoInBody ? (logo ?? null) : null},
             ${iconInBody ? (icon ?? null) : null}
@@ -282,10 +346,10 @@ router.patch('/:id', async (req, res) => {
       SELECT
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
-        ti.name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
+        ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, COALESCE(ti.icon, ti_icon.icon) AS icon
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, code, logo, icon FROM team_iterations
+        SELECT name, place_name, team_name, code, logo, icon FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -316,7 +380,7 @@ router.get('/:id/iterations', async (req, res) => {
   try {
     const rows = await sql`
       SELECT
-        ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.icon, ti.note, ti.recorded_at,
+        ti.id, ti.team_id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, ti.icon, ti.note, ti.recorded_at,
         ti.start_date::text AS start_date,
         ti.end_date::text AS end_date
       FROM team_iterations ti
@@ -336,9 +400,13 @@ router.get('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/:id/iterations', async (req, res) => {
   const { id } = req.params;
-  const { name, code, logo, icon, note, start_date, end_date } = req.body;
+  const { code, logo, icon, note, start_date, end_date } = req.body;
+  const identity = resolveTeamIdentity(req.body);
 
-  if (!name || typeof name !== 'string' || name.trim() === '') {
+  if (identity.hasSplitName && !identity.teamName) {
+    return res.status(400).json({ error: 'team_name is required' });
+  }
+  if (!identity.name) {
     return res.status(400).json({ error: 'name is required' });
   }
 
@@ -347,10 +415,12 @@ router.post('/:id/iterations', async (req, res) => {
     if (teamRows.length === 0) return res.status(404).json({ error: 'Team not found' });
 
     const rows = await sql`
-      INSERT INTO team_iterations (team_id, name, code, logo, icon, note, start_date, end_date)
+      INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo, icon, note, start_date, end_date)
       VALUES (
         ${id},
-        ${name.trim()},
+        ${identity.name},
+        ${identity.placeName ?? null},
+        ${identity.teamName ?? null},
         ${code ? code.trim().toUpperCase() : null},
         ${logo ?? null},
         ${icon ?? null},
@@ -363,7 +433,7 @@ router.post('/:id/iterations', async (req, res) => {
 
     const full = await sql`
       SELECT
-        ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.icon, ti.note, ti.recorded_at,
+        ti.id, ti.team_id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, ti.icon, ti.note, ti.recorded_at,
         ti.start_date::text AS start_date,
         ti.end_date::text AS end_date
       FROM team_iterations ti
@@ -382,21 +452,27 @@ router.post('/:id/iterations', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id/iterations/:iterationId', async (req, res) => {
   const { id, iterationId } = req.params;
-  const { name, code, logo, icon, note, start_date, end_date } = req.body;
+  const { code, logo, icon, note, start_date, end_date } = req.body;
+  const identity = resolveTeamIdentity(req.body);
   const logoInBody           = 'logo'             in req.body;
   const iconInBody           = 'icon'             in req.body;
   const noteInBody           = 'note'             in req.body;
   const startDateInBody      = 'start_date'        in req.body;
   const endDateInBody        = 'end_date'          in req.body;
 
-  if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+  if (identity.hasSplitName && !identity.teamName) {
+    return res.status(400).json({ error: 'team_name cannot be empty' });
+  }
+  if (identity.hasName && !identity.name) {
     return res.status(400).json({ error: 'name cannot be empty' });
   }
 
   try {
     const rows = await sql`
       UPDATE team_iterations SET
-        name             = COALESCE(${name?.trim() ?? null}, name),
+        name             = COALESCE(${identity.name ?? null}, name),
+        place_name       = CASE WHEN ${identity.hasName} THEN ${identity.placeName ?? null} ELSE place_name END,
+        team_name        = CASE WHEN ${identity.hasName} THEN ${identity.teamName ?? null} ELSE team_name END,
         code             = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
         logo             = CASE WHEN ${logoInBody}          THEN ${logo ?? null}             ELSE logo             END,
         icon             = CASE WHEN ${iconInBody}          THEN ${icon ?? null}             ELSE icon             END,
@@ -410,7 +486,7 @@ router.patch('/:id/iterations/:iterationId', async (req, res) => {
 
     const full = await sql`
       SELECT
-        ti.id, ti.team_id, ti.name, ti.code, ti.logo, ti.icon, ti.note, ti.recorded_at,
+        ti.id, ti.team_id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, ti.icon, ti.note, ti.recorded_at,
         ti.start_date::text AS start_date,
         ti.end_date::text AS end_date
       FROM team_iterations ti
