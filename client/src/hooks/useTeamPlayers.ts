@@ -159,6 +159,7 @@ export const useStintActions = (playerId: string | null) => {
       await axios.patch(`${API}/admin/player-teams/${stintId}`, data, { headers: authHeaders() });
       toast.success('Stint updated!');
       await queryClient.invalidateQueries({ queryKey: ['player-trade-history', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['player-photo-history', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-lineup'] });

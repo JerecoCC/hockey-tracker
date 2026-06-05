@@ -533,21 +533,49 @@ router.patch('/:id', async (req, res) => {
     `) ?? [];
 
     if (stintRows.length > 0) {
-      const [roster] = (await sql`
-        SELECT id, season_id, jersey_number, is_prospect
+      let [roster] = (await sql`
+        SELECT id, team_id, season_id, jersey_number, is_prospect, position
         FROM player_teams
         WHERE player_id = ${stintRows[0].player_id}
           AND team_id = ${stintRows[0].team_id}
         ORDER BY end_date DESC NULLS FIRST, created_at DESC
         LIMIT 1
       `) ?? [];
+      if (roster && (jerseyInBody || prospectInBody || positionInBody)) {
+        [roster] = (await sql`
+          UPDATE player_teams
+          SET
+            jersey_number = CASE WHEN ${jerseyInBody}   THEN ${jersey_number ?? null}  ELSE jersey_number END,
+            is_prospect   = CASE WHEN ${prospectInBody} THEN ${!!req.body.is_prospect} ELSE is_prospect   END,
+            position      = CASE WHEN ${positionInBody} THEN ${position ?? null}       ELSE position      END
+          WHERE id = ${roster.id}
+          RETURNING id, team_id, season_id, jersey_number, is_prospect, position
+        `) ?? [];
+      }
+      const photoSeasonId = roster?.season_id ?? (seasonInBody ? season_id : null);
+      const photoTeamId = roster?.team_id ?? stintRows[0].team_id;
+      if (photoInBody && photoSeasonId) {
+        if (photo) {
+          await sql`
+            INSERT INTO player_photos (player_id, team_id, season_id, photo)
+            VALUES (${stintRows[0].player_id}, ${photoTeamId}, ${photoSeasonId}, ${photo})
+            ON CONFLICT (player_id, team_id, season_id)
+            DO UPDATE SET photo = EXCLUDED.photo, created_at = NOW()
+          `;
+        } else {
+          await sql`
+            DELETE FROM player_photos
+            WHERE player_id = ${stintRows[0].player_id} AND team_id = ${photoTeamId} AND season_id = ${photoSeasonId}
+          `;
+        }
+      }
       return res.json({
         ...stintRows[0],
         season_id: roster?.season_id ?? (seasonInBody ? season_id : null),
         roster_player_team_id: roster?.id ?? null,
         jersey_number: roster?.jersey_number ?? (jerseyInBody ? jersey_number ?? null : null),
         is_prospect: roster?.is_prospect ?? (prospectInBody ? !!req.body.is_prospect : false),
-        photo: null,
+        photo: photoInBody ? (photo ?? null) : null,
       });
     }
 

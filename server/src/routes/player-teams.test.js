@@ -301,6 +301,53 @@ describe('PATCH /api/admin/player-teams', () => {
 });
 
 describe('PATCH /api/admin/player-teams/:id', () => {
+  it('updates the latest roster and season photo when editing a career stint', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        id: 'career-stint-1',
+        player_id: 'player-1',
+        team_id: 'team-1',
+        position: 'C',
+        acquisition_type: 'trade',
+        start_date: '2024-10-01',
+        end_date: null,
+      }])
+      .mockResolvedValueOnce([{
+        id: 'roster-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 16,
+        is_prospect: false,
+        position: 'C',
+      }])
+      .mockResolvedValueOnce([{
+        id: 'roster-1',
+        team_id: 'team-1',
+        season_id: 'season-1',
+        jersey_number: 19,
+        is_prospect: false,
+        position: 'C',
+      }])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .patch('/api/admin/player-teams/career-stint-1')
+      .send({
+        jersey_number: 19,
+        photo: 'https://example.com/new-player.png',
+      });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'career-stint-1',
+      roster_player_team_id: 'roster-1',
+      season_id: 'season-1',
+      jersey_number: 19,
+      photo: 'https://example.com/new-player.png',
+    });
+    expect(sql).toHaveBeenCalledTimes(4);
+  });
+
   it('updates prospect status on a specific stint row', async () => {
     sql
       .mockResolvedValueOnce([])
