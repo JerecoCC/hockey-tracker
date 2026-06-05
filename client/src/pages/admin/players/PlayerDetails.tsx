@@ -12,6 +12,7 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import usePlayerDetails, {
@@ -891,9 +892,21 @@ const PlayerDetailsPage = () => {
           <div className={styles.heroInfo}>
             <h2 className={styles.heroName}>{fullName}</h2>
             <div className={styles.heroMeta}>
-              {positionLabel && <span>{positionLabel}</span>}
+              {latestStint?.team.name && (
+                <span className={styles.heroTeamMeta}>
+                  <TeamLogo
+                    logo={latestStint.team.logo}
+                    code={latestStint.team.code ?? '?'}
+                    primaryColor={latestStint.team.primary_color}
+                    textColor={latestStint.team.text_color}
+                    size={18}
+                    shape="square"
+                  />
+                  {latestStint.team.name}
+                </span>
+              )}
               {jerseyNumber != null && <span>#{jerseyNumber}</span>}
-              {latestStint?.team.name && <span>{latestStint.team.name}</span>}
+              {positionLabel && <span>{positionLabel}</span>}
             </div>
           </div>
           <span

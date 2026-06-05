@@ -18,7 +18,7 @@
 
 .goalieThTeam {
   text-align: left;
-  padding: $space-xs $space-md $space-xs 0;
+  padding: $space-xs $space-md;
   color: $text-dim;
   font-weight: 600;
   font-size: $font-xs;
@@ -49,7 +49,7 @@
 .goalieTdName {
   position: relative;
   text-align: left;
-  padding: $space-sm $space-md $space-sm 0;
+  padding: $space-sm $space-md;
 }
 
 .goalieNameCell {

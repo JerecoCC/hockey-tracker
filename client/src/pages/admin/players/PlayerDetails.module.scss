@@ -82,6 +82,7 @@
 .heroMeta {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: $space-md;
   font-size: $font-sm;
   color: $text-dim;
@@ -94,6 +95,12 @@
 }
 
 // ── Status badge ──────────────────────────────────────────────────────────
+.heroTeamMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
 .statusBadge {
   flex-shrink: 0;
   padding: $space-xs $space-md;
