@@ -69,6 +69,7 @@ export interface LastFiveGame {
 export interface TeamInfo {
   id:              string;
   name:            string;
+  team_name?:      string | null;
   code:            string;
   logo:            string | null;
   primary_color:   string;

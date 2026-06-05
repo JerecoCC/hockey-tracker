@@ -35,6 +35,15 @@ interface Props {
   mode?: 'admin' | 'user';
 }
 
+const HEAD_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: '2-digit',
+  year: 'numeric',
+});
+
+const teamTitleName = (team?: { name: string; team_name?: string | null }) =>
+  team?.team_name?.trim() || team?.name || '';
+
 const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const {
     leagueSlug: routeLeagueSlug,
@@ -116,6 +125,23 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     notFound: gameNotFound,
     failed: gameLoadFailed,
   } = useGameDetails(gameId, { mode });
+  useEffect(() => {
+    if (!game) return;
+    const matchup = [teamTitleName(game.away_team), teamTitleName(game.home_team)]
+      .filter(Boolean)
+      .join(' - ');
+    const date = game.scheduled_at ? HEAD_DATE_FMT.format(new Date(game.scheduled_at)) : null;
+    document.title = [matchup, date].filter(Boolean).join(' · ');
+    return () => {
+      document.title = 'Hockey Tracker';
+    };
+  }, [
+    game?.away_team.name,
+    game?.away_team.team_name,
+    game?.home_team.name,
+    game?.home_team.team_name,
+    game?.scheduled_at,
+  ]);
   const loading =
     gameDetailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||

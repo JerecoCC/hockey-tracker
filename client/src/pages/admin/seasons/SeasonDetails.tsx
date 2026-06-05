@@ -11,6 +11,7 @@ import Table, { type Column } from '@/components/Table/Table';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
 import useGames from '@/hooks/useGames';
@@ -107,7 +108,8 @@ const SeasonDetailsPage = () => {
           toRouteSlug(item.name) === leagueSlug,
       );
   const leagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
-  const { seasons: routeSeasons, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
+  const { league, seasons: routeSeasons, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
+  useDocumentIcon(league?.icon);
   const routeSeason = isLegacySeasonRoute
     ? null
     : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
@@ -138,6 +140,14 @@ const SeasonDetailsPage = () => {
     detailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
     (!isLegacySeasonRoute && leagueDetailsLoading);
+
+  useEffect(() => {
+    if (!season) return;
+    document.title = [season.league_code, season.name].filter(Boolean).join(' · ');
+    return () => {
+      document.title = 'Hockey Tracker';
+    };
+  }, [season?.league_code, season?.name]);
 
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
   const { standings, loading: standingsLoading } = useSeasonStandings(id);

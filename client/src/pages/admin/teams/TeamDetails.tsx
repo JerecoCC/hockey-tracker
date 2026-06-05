@@ -59,6 +59,13 @@ const TeamDetailsPage = () => {
   const id = isLegacyTeamRoute ? teamSlug : routeTeam?.id;
   const { team, loading: teamLoading, uploadLogo, updateTeam } = useTeamDetails(id);
   useDocumentIcon(team?.icon);
+  useEffect(() => {
+    if (!team?.name) return;
+    document.title = team.name;
+    return () => {
+      document.title = 'Hockey Tracker';
+    };
+  }, [team?.name]);
   const loading =
     teamLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||

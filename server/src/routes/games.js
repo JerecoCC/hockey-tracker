@@ -30,6 +30,12 @@ const teamIdentityJson = (teamIdColumn, teamTable) => ormSql`
       ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
       LIMIT 1
     ),
+    'team_name', (
+      SELECT team_name FROM team_iterations
+      WHERE team_id = ${teamIdColumn}
+      ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+      LIMIT 1
+    ),
     'code', (
       SELECT code FROM team_iterations
       WHERE team_id = ${teamIdColumn}

@@ -64,6 +64,13 @@ const LeagueDetailsPage = () => {
     deleteSeason,
   } = useLeagueDetails(id);
   useDocumentIcon(league?.icon);
+  useEffect(() => {
+    if (!league?.code) return;
+    document.title = league.code;
+    return () => {
+      document.title = 'Hockey Tracker';
+    };
+  }, [league?.code]);
   const [editModalOpen, setEditModalOpen] = useState(false);
   // Team modal / delete state
   const [teamModalOpen, setTeamModalOpen] = useState(false);
