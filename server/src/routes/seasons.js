@@ -1473,5 +1473,267 @@ router.get('/:id/stats', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:id/awards
+// League-scoped award definitions with season-specific nominees/winners.
+// ---------------------------------------------------------------------------
+router.get('/:id/awards', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const awards = await sql`
+      SELECT
+        la.id AS award_id,
+        la.league_id,
+        la.name,
+        la.description,
+        la.recipient_type,
+        la.selection_method,
+        la.stat_key,
+        la.awarded_after_playoffs,
+        la.sort_order,
+        sa.id AS season_award_id,
+        sa.awarded_at::text AS awarded_at,
+        sa.notes AS season_notes
+      FROM seasons s
+      JOIN league_awards la ON la.league_id = s.league_id
+      LEFT JOIN season_awards sa ON sa.award_id = la.id AND sa.season_id = s.id
+      WHERE s.id = ${id}
+        AND la.active = true
+      ORDER BY la.sort_order ASC, la.name ASC
+    `;
+
+    const recipients = await sql`
+      SELECT
+        sar.id,
+        sar.season_award_id,
+        sar.recipient_type,
+        sar.player_id,
+        sar.team_id,
+        sar.role,
+        sar.rank,
+        sar.vote_points,
+        sar.stat_value,
+        sar.notes,
+        p.first_name,
+        p.last_name,
+        ti.name AS team_name,
+        ti.code AS team_code,
+        ti.logo AS team_logo
+      FROM season_award_recipients sar
+      JOIN season_awards sa ON sa.id = sar.season_award_id
+      LEFT JOIN players p ON p.id = sar.player_id
+      LEFT JOIN teams t ON t.id = sar.team_id
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      WHERE sa.season_id = ${id}
+      ORDER BY
+        CASE sar.role WHEN 'winner' THEN 0 ELSE 1 END,
+        sar.rank ASC NULLS LAST,
+        sar.vote_points DESC NULLS LAST,
+        p.last_name ASC NULLS LAST,
+        ti.name ASC NULLS LAST
+    `;
+
+    const bySeasonAward = new Map();
+    for (const row of recipients) {
+      const list = bySeasonAward.get(row.season_award_id) ?? [];
+      list.push({
+        id: row.id,
+        recipient_type: row.recipient_type,
+        player_id: row.player_id,
+        team_id: row.team_id,
+        role: row.role,
+        rank: row.rank,
+        vote_points: row.vote_points,
+        stat_value: row.stat_value,
+        notes: row.notes,
+        player_name: row.player_id
+          ? [row.first_name, row.last_name].filter(Boolean).join(' ')
+          : null,
+        team_name: row.team_name,
+        team_code: row.team_code,
+        team_logo: row.team_logo,
+      });
+      bySeasonAward.set(row.season_award_id, list);
+    }
+
+    return res.json(awards.map((award) => ({
+      ...award,
+      recipients: award.season_award_id
+        ? (bySeasonAward.get(award.season_award_id) ?? [])
+        : [],
+    })));
+  } catch (err) {
+    console.error('season awards list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/seasons/:id/awards
+// Attach an existing league award definition to this season.
+// ---------------------------------------------------------------------------
+router.post('/:id/awards', async (req, res) => {
+  const { id } = req.params;
+  const {
+    award_id,
+    awarded_at,
+    notes,
+  } = req.body;
+
+  if (!award_id) {
+    return res.status(400).json({ error: 'award_id is required' });
+  }
+
+  try {
+    const seasons = await sql`SELECT id, league_id FROM seasons WHERE id = ${id}`;
+    if (seasons.length === 0) return res.status(404).json({ error: 'Season not found' });
+    const leagueId = seasons[0].league_id;
+
+    const existingAwards = await sql`
+      SELECT id FROM league_awards
+      WHERE id = ${award_id} AND league_id = ${leagueId} AND active = true
+    `;
+    if (existingAwards.length === 0) {
+      return res.status(400).json({ error: 'award_id does not belong to this league' });
+    }
+
+    const seasonAward = await sql`
+      INSERT INTO season_awards (season_id, award_id, awarded_at, notes)
+      VALUES (${id}, ${award_id}, ${awarded_at || null}::date, ${notes?.trim() || null})
+      ON CONFLICT (season_id, award_id) DO UPDATE SET
+        awarded_at = COALESCE(EXCLUDED.awarded_at, season_awards.awarded_at),
+        notes = COALESCE(EXCLUDED.notes, season_awards.notes)
+      RETURNING id
+    `;
+
+    return res.status(201).json({ season_award_id: seasonAward[0].id, award_id });
+  } catch (err) {
+    console.error('season award create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.patch('/:id/awards/:seasonAwardId', async (req, res) => {
+  const { id, seasonAwardId } = req.params;
+  const { awarded_at, notes } = req.body;
+  const awardedAtInBody = 'awarded_at' in req.body;
+  const notesInBody = 'notes' in req.body;
+  try {
+    const rows = await sql`
+      UPDATE season_awards SET
+        awarded_at = CASE WHEN ${awardedAtInBody} THEN ${awarded_at || null}::date ELSE awarded_at END,
+        notes = CASE WHEN ${notesInBody} THEN ${notes?.trim() || null} ELSE notes END
+      WHERE id = ${seasonAwardId} AND season_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Award not found' });
+    return res.json({ id: rows[0].id });
+  } catch (err) {
+    console.error('season award update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
+  const { id, seasonAwardId } = req.params;
+  const {
+    recipient_type,
+    player_id,
+    team_id,
+    role = 'nominee',
+    rank,
+    vote_points,
+    stat_value,
+    notes,
+  } = req.body;
+
+  if (!['player', 'team'].includes(recipient_type)) {
+    return res.status(400).json({ error: 'recipient_type must be player or team' });
+  }
+  if (!['nominee', 'winner'].includes(role)) {
+    return res.status(400).json({ error: 'role must be nominee or winner' });
+  }
+  if (recipient_type === 'player' && !player_id) {
+    return res.status(400).json({ error: 'player_id is required' });
+  }
+  if (recipient_type === 'team' && !team_id) {
+    return res.status(400).json({ error: 'team_id is required' });
+  }
+
+  try {
+    const rankValue = rank === undefined || rank === null || rank === '' ? null : Number(rank);
+    const votePointsValue =
+      vote_points === undefined || vote_points === null || vote_points === ''
+        ? null
+        : Number(vote_points);
+
+    if (rankValue !== null && !Number.isFinite(rankValue)) {
+      return res.status(400).json({ error: 'rank must be a number' });
+    }
+    if (votePointsValue !== null && !Number.isFinite(votePointsValue)) {
+      return res.status(400).json({ error: 'vote_points must be a number' });
+    }
+
+    const awards = await sql`
+      SELECT sa.id, la.recipient_type
+      FROM season_awards sa
+      JOIN league_awards la ON la.id = sa.award_id
+      WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
+    `;
+    if (awards.length === 0) return res.status(404).json({ error: 'Award not found' });
+    if (awards[0].recipient_type !== recipient_type) {
+      return res.status(400).json({ error: 'recipient_type does not match award' });
+    }
+
+    const rows = await sql`
+      INSERT INTO season_award_recipients (
+        season_award_id, recipient_type, player_id, team_id, role, rank, vote_points, stat_value, notes
+      )
+      VALUES (
+        ${seasonAwardId},
+        ${recipient_type},
+        ${recipient_type === 'player' ? player_id : null},
+        ${recipient_type === 'team' ? team_id : null},
+        ${role},
+        ${rankValue},
+        ${votePointsValue},
+        ${stat_value ?? null},
+        ${notes?.trim() || null}
+      )
+      RETURNING id
+    `;
+    return res.status(201).json({ id: rows[0].id });
+  } catch (err) {
+    if (err.code === '23503') return res.status(400).json({ error: 'Invalid player, team, or award' });
+    console.error('season award recipient create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+router.delete('/:id/awards/:seasonAwardId/recipients/:recipientId', async (req, res) => {
+  const { id, seasonAwardId, recipientId } = req.params;
+  try {
+    const rows = await sql`
+      DELETE FROM season_award_recipients sar
+      USING season_awards sa
+      WHERE sar.id = ${recipientId}
+        AND sar.season_award_id = ${seasonAwardId}
+        AND sa.id = sar.season_award_id
+        AND sa.season_id = ${id}
+      RETURNING sar.id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Recipient not found' });
+    return res.status(204).send();
+  } catch (err) {
+    console.error('season award recipient delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 

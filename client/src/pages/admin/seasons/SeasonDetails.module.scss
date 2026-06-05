@@ -577,6 +577,183 @@
   }
 }
 
+// Awards tab
+.awardsList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.awardItem {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  padding: $space-md;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.awardHeader {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-lg;
+  align-items: flex-start;
+
+  @media (max-width: 860px) {
+    flex-direction: column;
+  }
+}
+
+.awardTitleBlock {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+
+  h4 {
+    margin: 0;
+    color: $text-bright;
+    font-size: $font-lg;
+  }
+
+  p {
+    margin: 0;
+    color: $text-dim;
+    font-size: $font-sm;
+    line-height: 1.45;
+  }
+}
+
+.awardMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-xs;
+
+  span {
+    padding: 2px 8px;
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.06);
+    color: $text-dim;
+    font-size: $font-xs;
+    line-height: 1.6;
+    text-transform: capitalize;
+  }
+}
+
+.awardActions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $space-sm;
+
+  @media (max-width: 860px) {
+    justify-content: flex-start;
+  }
+}
+
+.awardRecipients {
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: $space-md;
+  align-items: start;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+    gap: $space-xs;
+  }
+}
+
+.awardRecipientsTitle {
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 30px;
+  text-transform: uppercase;
+}
+
+.awardEmpty {
+  color: $text-muted;
+  font-size: $font-sm;
+  line-height: 30px;
+}
+
+.awardRecipientList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-sm;
+}
+
+.awardRecipient {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  min-height: 34px;
+  max-width: 100%;
+  padding: 3px 4px 3px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: $radius-md;
+  background: rgba(0, 0, 0, 0.14);
+}
+
+.awardRecipientText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+
+  strong {
+    color: $text-body;
+    font-size: $font-sm;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  span {
+    min-height: 14px;
+    color: $text-muted;
+    font-size: $font-xs;
+    line-height: 1.2;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.awardForm {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.awardFormGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-md;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.awardCheckbox {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-height: 42px;
+  margin-top: 22px;
+  color: $text-body;
+  font-size: $font-sm;
+
+  input {
+    width: 16px;
+    height: 16px;
+    accent-color: $accent;
+  }
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);

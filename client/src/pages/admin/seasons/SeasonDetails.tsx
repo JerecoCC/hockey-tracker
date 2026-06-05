@@ -38,6 +38,7 @@ import useTabState from '@/hooks/useTabState';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import SeasonEndModal from './SeasonEndModal';
+import SeasonAwardsTab from './SeasonAwardsTab';
 import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
 import SeasonPlayoffsTab from './SeasonPlayoffsTab';
@@ -1149,6 +1150,19 @@ const SeasonDetailsPage = () => {
                   return <Card>{renderTable(sortRows(standings), 'No standings data yet.')}</Card>;
                 })()}
               </div>
+            ),
+          },
+          {
+            label: 'Awards',
+            icon: 'emoji_events',
+            content: (
+              <SeasonAwardsTab
+                seasonId={id!}
+                seasonTeams={effectiveSeasonTeams}
+                skaters={skaters}
+                goalies={goalies}
+                standings={standings}
+              />
             ),
           },
           {

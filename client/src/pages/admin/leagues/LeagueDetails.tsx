@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import LeagueAwardsTab from './LeagueAwardsTab';
 import LeagueEditModal from './LeagueEditModal';
 import LeagueInfoCard from './LeagueInfoCard';
 import LeaguePlayersTab from './LeaguePlayersTab';
@@ -286,6 +287,18 @@ const LeagueDetailsPage = () => {
             content: (
               <div className={styles.grid}>
                 <LeaguePlayoffsTab
+                  className={styles.col12}
+                  leagueId={league.id}
+                />
+              </div>
+            ),
+          },
+          {
+            label: 'Awards',
+            icon: 'workspace_premium',
+            content: (
+              <div className={styles.grid}>
+                <LeagueAwardsTab
                   className={styles.col12}
                   leagueId={league.id}
                 />

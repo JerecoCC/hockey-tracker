@@ -113,6 +113,47 @@ const seasonTeams = pgTable('season_teams', {
   pk: primaryKey({ columns: [table.seasonId, table.teamId] }),
 }));
 
+const leagueAwards = pgTable('league_awards', {
+  id: id(),
+  leagueId: uuid('league_id').notNull().references(() => leagues.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  description: text('description'),
+  recipientType: text('recipient_type').notNull().default('player'),
+  selectionMethod: text('selection_method').notNull().default('manual'),
+  statKey: text('stat_key'),
+  awardedAfterPlayoffs: boolean('awarded_after_playoffs').notNull().default(true),
+  active: boolean('active').notNull().default(true),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: createdAt(),
+}, (table) => ({
+  leagueAwardNameUnique: unique().on(table.leagueId, table.name),
+}));
+
+const seasonAwards = pgTable('season_awards', {
+  id: id(),
+  seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
+  awardId: uuid('award_id').notNull().references(() => leagueAwards.id, { onDelete: 'cascade' }),
+  awardedAt: date('awarded_at'),
+  notes: text('notes'),
+  createdAt: createdAt(),
+}, (table) => ({
+  seasonAwardUnique: unique().on(table.seasonId, table.awardId),
+}));
+
+const seasonAwardRecipients = pgTable('season_award_recipients', {
+  id: id(),
+  seasonAwardId: uuid('season_award_id').notNull().references(() => seasonAwards.id, { onDelete: 'cascade' }),
+  recipientType: text('recipient_type').notNull(),
+  playerId: uuid('player_id').references(() => players.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').references(() => teams.id, { onDelete: 'cascade' }),
+  role: text('role').notNull().default('nominee'),
+  rank: smallint('rank'),
+  votePoints: integer('vote_points'),
+  statValue: text('stat_value'),
+  notes: text('notes'),
+  createdAt: createdAt(),
+});
+
 const teamIterations = pgTable('team_iterations', {
   id: id(),
   teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
@@ -293,6 +334,9 @@ module.exports = {
   groupTeams,
   seasonGroupTeams,
   seasonTeams,
+  leagueAwards,
+  seasonAwards,
+  seasonAwardRecipients,
   teamIterations,
   players,
   playerTeams,

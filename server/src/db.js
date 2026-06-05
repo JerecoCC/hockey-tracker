@@ -136,6 +136,44 @@ async function initSchema() {
     )
   `;
 
+  await sql`
+    CREATE TABLE IF NOT EXISTS league_awards (
+      id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id               UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      name                    TEXT NOT NULL,
+      description             TEXT,
+      recipient_type          TEXT NOT NULL DEFAULT 'player',
+      selection_method        TEXT NOT NULL DEFAULT 'manual',
+      stat_key                TEXT,
+      awarded_after_playoffs  BOOLEAN NOT NULL DEFAULT true,
+      active                  BOOLEAN NOT NULL DEFAULT true,
+      sort_order              INT NOT NULL DEFAULT 0,
+      created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (league_id, name)
+    )
+  `;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS description TEXT`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS recipient_type TEXT NOT NULL DEFAULT 'player'`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS selection_method TEXT NOT NULL DEFAULT 'manual'`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS stat_key TEXT`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS awarded_after_playoffs BOOLEAN NOT NULL DEFAULT true`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS season_awards (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      season_id   UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      award_id    UUID NOT NULL REFERENCES league_awards(id) ON DELETE CASCADE,
+      awarded_at  DATE,
+      notes       TEXT,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (season_id, award_id)
+    )
+  `;
+  await sql`ALTER TABLE season_awards ADD COLUMN IF NOT EXISTS awarded_at DATE`;
+  await sql`ALTER TABLE season_awards ADD COLUMN IF NOT EXISTS notes TEXT`;
+
   // Add primary_color and text_color to teams
   await sql`
     ALTER TABLE teams ADD COLUMN IF NOT EXISTS primary_color TEXT NOT NULL DEFAULT '#334155'
@@ -398,6 +436,28 @@ async function initSchema() {
   // Expand position check constraint to include 'F' (generic Forward)
   await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_position_check`;
   await sql`ALTER TABLE players ADD CONSTRAINT players_position_check CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'))`;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS season_award_recipients (
+      id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      season_award_id  UUID NOT NULL REFERENCES season_awards(id) ON DELETE CASCADE,
+      recipient_type   TEXT NOT NULL,
+      player_id        UUID REFERENCES players(id) ON DELETE CASCADE,
+      team_id          UUID REFERENCES teams(id) ON DELETE CASCADE,
+      role             TEXT NOT NULL DEFAULT 'nominee',
+      rank             SMALLINT,
+      vote_points      INT,
+      stat_value       TEXT,
+      notes            TEXT,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS recipient_type TEXT NOT NULL DEFAULT 'player'`;
+  await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS role TEXT NOT NULL DEFAULT 'nominee'`;
+  await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS rank SMALLINT`;
+  await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS vote_points INT`;
+  await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS stat_value TEXT`;
+  await sql`ALTER TABLE season_award_recipients ADD COLUMN IF NOT EXISTS notes TEXT`;
 
   // Player roster stints: one row per player-team-season stint.
   // A mid-season trade is recorded by setting end_date on the current row

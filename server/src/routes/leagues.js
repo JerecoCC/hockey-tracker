@@ -218,6 +218,165 @@ router.patch('/:id', async (req, res) => {
 // ---------------------------------------------------------------------------
 // DELETE /api/admin/leagues/:id  – delete a league
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GET /api/admin/leagues/:id/awards - league-wide award definitions
+// ---------------------------------------------------------------------------
+router.get('/:id/awards', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const awards = await sql`
+      SELECT id, league_id, name, description, recipient_type, selection_method,
+             stat_key, awarded_after_playoffs, active, sort_order, created_at
+      FROM league_awards
+      WHERE league_id = ${id} AND active = true
+      ORDER BY sort_order ASC, name ASC
+    `;
+    return res.json(awards);
+  } catch (err) {
+    console.error('league awards list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/admin/leagues/:id/awards - create a league-wide award definition
+// ---------------------------------------------------------------------------
+router.post('/:id/awards', async (req, res) => {
+  const { id } = req.params;
+  const {
+    name,
+    description,
+    recipient_type = 'player',
+    selection_method = 'manual',
+    stat_key,
+    awarded_after_playoffs = true,
+    sort_order = 0,
+  } = req.body;
+
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return res.status(400).json({ error: 'name is required' });
+  }
+  if (!['player', 'team'].includes(recipient_type)) {
+    return res.status(400).json({ error: 'recipient_type must be player or team' });
+  }
+  if (!['manual', 'voted', 'automatic', 'playoff'].includes(selection_method)) {
+    return res.status(400).json({ error: 'selection_method is invalid' });
+  }
+
+  try {
+    const rows = await sql`
+      INSERT INTO league_awards (
+        league_id, name, description, recipient_type, selection_method, stat_key,
+        awarded_after_playoffs, sort_order, active
+      )
+      VALUES (
+        ${id},
+        ${name.trim()},
+        ${description?.trim() || null},
+        ${recipient_type},
+        ${selection_method},
+        ${stat_key || null},
+        ${!!awarded_after_playoffs},
+        ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0},
+        true
+      )
+      ON CONFLICT (league_id, name) DO UPDATE SET
+        description = EXCLUDED.description,
+        recipient_type = EXCLUDED.recipient_type,
+        selection_method = EXCLUDED.selection_method,
+        stat_key = EXCLUDED.stat_key,
+        awarded_after_playoffs = EXCLUDED.awarded_after_playoffs,
+        sort_order = EXCLUDED.sort_order,
+        active = true
+      RETURNING *
+    `;
+    return res.status(201).json(rows[0]);
+  } catch (err) {
+    if (err.code === '23503') return res.status(404).json({ error: 'League not found' });
+    console.error('league award create error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/leagues/:id/awards/:awardId - update an award definition
+// ---------------------------------------------------------------------------
+router.patch('/:id/awards/:awardId', async (req, res) => {
+  const { id, awardId } = req.params;
+  const {
+    name,
+    description,
+    recipient_type,
+    selection_method,
+    stat_key,
+    awarded_after_playoffs,
+    sort_order,
+  } = req.body;
+
+  if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
+    return res.status(400).json({ error: 'name cannot be empty' });
+  }
+  if (recipient_type !== undefined && !['player', 'team'].includes(recipient_type)) {
+    return res.status(400).json({ error: 'recipient_type must be player or team' });
+  }
+  if (
+    selection_method !== undefined &&
+    !['manual', 'voted', 'automatic', 'playoff'].includes(selection_method)
+  ) {
+    return res.status(400).json({ error: 'selection_method is invalid' });
+  }
+
+  const descriptionInBody = 'description' in req.body;
+  const statKeyInBody = 'stat_key' in req.body;
+  const awardedAfterInBody = 'awarded_after_playoffs' in req.body;
+  const sortOrderInBody = 'sort_order' in req.body;
+
+  try {
+    const rows = await sql`
+      UPDATE league_awards
+      SET
+        name = COALESCE(${name?.trim() ?? null}, name),
+        description = CASE WHEN ${descriptionInBody} THEN ${description?.trim() || null} ELSE description END,
+        recipient_type = COALESCE(${recipient_type ?? null}, recipient_type),
+        selection_method = COALESCE(${selection_method ?? null}, selection_method),
+        stat_key = CASE WHEN ${statKeyInBody} THEN ${stat_key || null} ELSE stat_key END,
+        awarded_after_playoffs = CASE WHEN ${awardedAfterInBody} THEN ${!!awarded_after_playoffs} ELSE awarded_after_playoffs END,
+        sort_order = CASE WHEN ${sortOrderInBody} THEN ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0} ELSE sort_order END,
+        active = true
+      WHERE id = ${awardId} AND league_id = ${id}
+      RETURNING *
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Award not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    if (err.code === '23505') {
+      return res.status(409).json({ error: 'An award with that name already exists' });
+    }
+    console.error('league award update error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/admin/leagues/:id/awards/:awardId - deactivate a definition
+// ---------------------------------------------------------------------------
+router.delete('/:id/awards/:awardId', async (req, res) => {
+  const { id, awardId } = req.params;
+  try {
+    const rows = await sql`
+      UPDATE league_awards
+      SET active = false
+      WHERE id = ${awardId} AND league_id = ${id}
+      RETURNING id
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Award not found' });
+    return res.json({ message: 'Award removed' });
+  } catch (err) {
+    console.error('league award delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
