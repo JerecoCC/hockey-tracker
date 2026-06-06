@@ -9,6 +9,7 @@ import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type {
+  GoalieSwitchData,
   GoalieStatRecord,
   GoalieStintRecord,
   UpdateGoalieStintData,
@@ -84,6 +85,7 @@ interface Props {
     stintId: string,
     data: UpdateGoalieStintData,
   ) => Promise<GoalieStatRecord[] | null>;
+  addGoalieStint?: (data: GoalieSwitchData) => Promise<GoalieStatRecord[] | null>;
   removeGoalieStint?: (stintId: string) => Promise<boolean>;
   removeGoalieStat?: (goalieId: string) => Promise<boolean>;
   showPlayerDataStatus?: boolean;
@@ -101,13 +103,14 @@ const GoalieStatsCard = ({
   isInProgress,
   onSwitchGoalie,
   updateGoalieStint,
+  addGoalieStint,
   removeGoalieStint,
   removeGoalieStat,
   showPlayerDataStatus = false,
 }: Props) => {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
-  const canEdit = !!updateGoalieStint && !!removeGoalieStint && !!removeGoalieStat;
+  const canEdit = !!updateGoalieStint && !!addGoalieStint && !!removeGoalieStint && !!removeGoalieStat;
 
   const goalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
   const goaliesWithStats = goalies.filter((g) =>
@@ -257,6 +260,7 @@ const GoalieStatsCard = ({
           goalieStats={goalieStats}
           onClose={() => setEditOpen(false)}
           updateGoalieStint={updateGoalieStint}
+          addGoalieStint={addGoalieStint}
           removeGoalieStint={removeGoalieStint}
           removeGoalieStat={removeGoalieStat}
         />

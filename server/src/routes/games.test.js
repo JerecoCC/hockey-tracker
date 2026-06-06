@@ -893,6 +893,12 @@ describe('GET /api/admin/games/:id/goalie-stats', () => {
     expect(res.body[0].id).toBe('gs-1');
     expect(res.body[0].shots_against).toBe(30);
     expect(res.body[0].saves).toBe(28);
+
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[0]).toMatch(/own_goal/);
+    expect(queries[0]).toMatch(/goal_type = 'own'/);
+    expect(queries[0]).toMatch(/resolved_save_ga/);
+    expect(queries[1]).toMatch(/total_save_ga/);
   });
 
   it('returns an empty array when no goalie stats exist', async () => {

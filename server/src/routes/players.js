@@ -689,7 +689,7 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
       -- Position windows for every stint this goalie played this season
       stint_ranges AS (
         SELECT
-          st.id, st.game_id, st.team_id, st.stint_ord,
+          st.id, st.game_id, g.season_id, g.scheduled_at, st.team_id, st.stint_ord,
           g.game_type, g.shootout,
           st.shots_against,
           st.goals_against AS goals_against_override,
@@ -757,13 +757,29 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
       ),
       -- Derive GA per stint from goal timestamps (respecting position windows)
       stint_ga_derived AS (
-        SELECT sr.id AS stint_id, COUNT(*)::int AS ga
+        SELECT
+          sr.id AS stint_id,
+          COUNT(*)::int AS ga,
+          COUNT(*) FILTER (WHERE gl.goal_type = 'own' OR own_goal.is_own_goal)::int AS own_goal_ga,
+          COUNT(*) FILTER (
+            WHERE gl.goal_type != 'own' AND own_goal.is_own_goal IS NULL
+          )::int AS save_ga
         FROM stint_ranges sr
         JOIN goals gl
           ON gl.game_id   = sr.game_id
          AND gl.team_id  != sr.team_id
          AND gl.empty_net = false
         JOIN period_vals pv ON pv.p = gl.period
+        LEFT JOIN LATERAL (
+          SELECT true AS is_own_goal
+          FROM player_teams pt
+          WHERE pt.player_id = gl.scorer_id
+            AND pt.team_id = sr.team_id
+            AND pt.season_id = sr.season_id
+            AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+            AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+          LIMIT 1
+        ) own_goal ON true
         WHERE (pv.v * 100000
                + COALESCE(
                    SPLIT_PART(gl.period_time, ':', 1)::int * 60
@@ -783,6 +799,11 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
         SELECT
           sr.game_id, sr.game_type, sr.team_id, sr.shootout,
           COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga,
+          CASE
+            WHEN sr.goals_against_override IS NULL
+              THEN COALESCE(sgd.save_ga, 0)::int
+            ELSE GREATEST(sr.goals_against_override - COALESCE(sgd.own_goal_ga, 0), 0)::int
+          END AS resolved_save_ga,
           sr.shots_against
         FROM stint_ranges sr
         LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
@@ -792,7 +813,8 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
         SELECT
           game_id, game_type, team_id, shootout,
           SUM(shots_against)::int AS shots_against,
-          SUM(resolved_ga)::int   AS goals_against
+          SUM(resolved_ga)::int   AS goals_against,
+          SUM(resolved_save_ga)::int AS save_goals_against
         FROM stints_resolved
         GROUP BY game_id, game_type, team_id, shootout
       ),
@@ -802,6 +824,7 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
           COUNT(*)::int                      AS gp,
           SUM(gg.shots_against)::int         AS shots_against,
           SUM(gg.goals_against)::int         AS goals_against,
+          (SUM(gg.shots_against) - SUM(gg.save_goals_against))::int AS saves,
           COUNT(*) FILTER (
             WHERE gw.winner_team_id = gg.team_id
               AND tgl.goalie_id     = ${id}
@@ -817,7 +840,7 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
         JOIN game_winner gw ON gw.game_id = gg.game_id
         GROUP BY gg.game_type
       )
-      SELECT game_type, gp, shots_against, goals_against, wins, shootout_wins
+      SELECT game_type, gp, shots_against, goals_against, saves, wins, shootout_wins
       FROM goalie_agg
     `;
 
@@ -832,6 +855,7 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
         if (!go) return null;
         const sa = Number(go.shots_against ?? 0);
         const ga = Number(go.goals_against ?? 0);
+        const saves = Number(go.saves ?? (sa - ga));
         return {
           gp:            Number(go.gp ?? 0),
           goals:         0,
@@ -841,12 +865,13 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
           shootout_wins: Number(go.shootout_wins ?? 0),
           goals_against: ga,
           shots_against: sa,
-          save_pct:      sa > 0 ? Math.round((sa - ga) / sa * 1000) / 1000 : null,
+          save_pct:      sa > 0 ? Math.round(saves / sa * 1000) / 1000 : null,
         };
       }
       if (!sk && !go) return null;
       const sa = Number(go?.shots_against ?? 0);
       const ga = Number(go?.goals_against ?? 0);
+      const saves = Number(go?.saves ?? (sa - ga));
       return {
         gp:            Number(sk?.gp       ?? 0),
         goals:         Number(sk?.goals    ?? 0),
@@ -856,7 +881,7 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
         shootout_wins: Number(go?.shootout_wins ?? 0),
         goals_against: ga,
         shots_against: sa,
-        save_pct:      sa > 0 ? Math.round((sa - ga) / sa * 1000) / 1000 : null,
+        save_pct:      sa > 0 ? Math.round(saves / sa * 1000) / 1000 : null,
       };
     };
 
@@ -1015,13 +1040,29 @@ router.get('/:id/last-five-games', async (req, res) => {
           AND (SELECT position FROM player_info) = 'G'
       ),
       goalie_stint_ga AS (
-        SELECT sr.id AS stint_id, COUNT(gl.id)::int AS goals_against
+        SELECT
+          sr.id AS stint_id,
+          COUNT(gl.id)::int AS goals_against,
+          COUNT(*) FILTER (WHERE gl.goal_type = 'own' OR own_goal.is_own_goal)::int AS own_goal_ga,
+          COUNT(*) FILTER (
+            WHERE gl.goal_type != 'own' AND own_goal.is_own_goal IS NULL
+          )::int AS save_goals_against
         FROM goalie_stint_ranges sr
         JOIN goals gl
           ON gl.game_id = sr.game_id
          AND gl.team_id != sr.team_id
          AND gl.empty_net = false
         JOIN period_vals pv ON pv.p = gl.period
+        LEFT JOIN LATERAL (
+          SELECT true AS is_own_goal
+          FROM player_teams pt
+          WHERE pt.player_id = gl.scorer_id
+            AND pt.team_id = sr.team_id
+            AND pt.season_id = sr.season_id
+            AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+            AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+          LIMIT 1
+        ) own_goal ON true
         WHERE (pv.v * 100000
                + COALESCE(
                    SPLIT_PART(gl.period_time, ':', 1)::int * 60
@@ -1054,7 +1095,13 @@ router.get('/:id/last-five-games', async (req, res) => {
           CASE
             WHEN SUM(sr.shots_against) > 0
               THEN ROUND(
-                ((SUM(sr.shots_against) - SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0)))::numeric
+                ((SUM(sr.shots_against) - SUM(
+                  CASE
+                    WHEN sr.goals_against_override IS NULL
+                      THEN COALESCE(sga.save_goals_against, 0)
+                    ELSE GREATEST(sr.goals_against_override - COALESCE(sga.own_goal_ga, 0), 0)
+                  END
+                ))::numeric
                   / SUM(sr.shots_against)),
                 3
               )::float
@@ -1234,13 +1281,29 @@ router.get('/:id/game-logs', async (req, res) => {
           AND (SELECT position FROM player_info) = 'G'
       ),
       goalie_stint_ga AS (
-        SELECT sr.id AS stint_id, COUNT(gl.id)::int AS goals_against
+        SELECT
+          sr.id AS stint_id,
+          COUNT(gl.id)::int AS goals_against,
+          COUNT(*) FILTER (WHERE gl.goal_type = 'own' OR own_goal.is_own_goal)::int AS own_goal_ga,
+          COUNT(*) FILTER (
+            WHERE gl.goal_type != 'own' AND own_goal.is_own_goal IS NULL
+          )::int AS save_goals_against
         FROM goalie_stint_ranges sr
         JOIN goals gl
           ON gl.game_id = sr.game_id
          AND gl.team_id != sr.team_id
          AND gl.empty_net = false
         JOIN period_vals pv ON pv.p = gl.period
+        LEFT JOIN LATERAL (
+          SELECT true AS is_own_goal
+          FROM player_teams pt
+          WHERE pt.player_id = gl.scorer_id
+            AND pt.team_id = sr.team_id
+            AND pt.season_id = sr.season_id
+            AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+            AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+          LIMIT 1
+        ) own_goal ON true
         WHERE (pv.v * 100000
                + COALESCE(
                    SPLIT_PART(gl.period_time, ':', 1)::int * 60
@@ -1274,7 +1337,13 @@ router.get('/:id/game-logs', async (req, res) => {
           CASE
             WHEN SUM(sr.shots_against) > 0
               THEN ROUND(
-                ((SUM(sr.shots_against) - SUM(COALESCE(sr.goals_against_override, sga.goals_against, 0)))::numeric
+                ((SUM(sr.shots_against) - SUM(
+                  CASE
+                    WHEN sr.goals_against_override IS NULL
+                      THEN COALESCE(sga.save_goals_against, 0)
+                    ELSE GREATEST(sr.goals_against_override - COALESCE(sga.own_goal_ga, 0), 0)
+                  END
+                ))::numeric
                   / SUM(sr.shots_against)),
                 3
               )::float

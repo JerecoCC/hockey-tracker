@@ -32,6 +32,10 @@ export interface GoalieSwitchData {
   entered_period: string;
   /** MM:SS timestamp within the entered period when the new goalie entered. */
   entered_time?: string | null;
+  exited_period?: string | null;
+  exited_time?: string | null;
+  shots_against?: number;
+  goals_against?: number | null;
   /**
    * Close the team's currently-open stint before opening the new one.
    * - true → close it at the new entered_period / entered_time.

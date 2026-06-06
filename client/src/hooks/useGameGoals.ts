@@ -116,6 +116,7 @@ const applyGoalsToGameCaches = (
 ) => {
   applyGoalsToGameCache(queryClient, gameId, goals);
   applyGoalsToGameListCaches(queryClient, gameId, goals);
+  queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', gameId] });
 };
 
 // ── Types ────────────────────────────────────────────────────────────────────

@@ -567,6 +567,7 @@ const GameSummaryTab = ({
                 isInProgress={isEditInProgress}
                 onSwitchGoalie={isEditInProgress ? () => setSwitchGoalieOpen(true) : undefined}
                 updateGoalieStint={editable ? updateGoalieStint : undefined}
+                addGoalieStint={editable ? switchGoalie : undefined}
                 removeGoalieStint={editable ? removeGoalieStint : undefined}
                 removeGoalieStat={editable ? removeGoalieStat : undefined}
                 showPlayerDataStatus={showPlayerDataStatus}

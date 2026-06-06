@@ -807,3 +807,192 @@
   letter-spacing: 0.05em;
   color: $text-dim;
 }
+
+.goalieStatsEditor {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.goalieStatsEditorActions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.goalieStatsEditorAddPanel {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(92px, 0.8fr) minmax(150px, 1.4fr) minmax(82px, 0.8fr) 78px minmax(82px, 0.8fr) 78px 72px 108px auto;
+  gap: $space-sm;
+  align-items: end;
+  padding: $space-sm;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: $bg-card;
+
+  label {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    margin-bottom: 0;
+    min-width: 0;
+  }
+
+  label > span {
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
+}
+
+.goalieStatsEditorAddButtons {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  justify-content: flex-end;
+}
+
+.goalieStatsEditorGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding: $space-sm;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: $bg-input;
+}
+
+.goalieStatsEditorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  min-width: 0;
+}
+
+.goalieStatsEditorTotals {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex-shrink: 0;
+
+  b {
+    color: $text-body;
+    font-size: $font-sm;
+  }
+}
+
+.goalieStatsEditorTotalPill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 48px;
+  justify-content: center;
+  padding: 4px $space-sm;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 700;
+}
+
+.goalieStatsEditorTable {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: $bg-card;
+  overflow: hidden;
+}
+
+.goalieStatsEditorHead,
+.goalieStatsEditorStint {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) 72px 108px 56px 56px 32px;
+  gap: $space-sm;
+  align-items: center;
+}
+
+.goalieStatsEditorHead {
+  padding: $space-xs $space-sm;
+  border-bottom: 1px solid $border;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  > span:not(:first-child) {
+    text-align: center;
+  }
+}
+
+.goalieStatsEditorStint {
+  min-height: 48px;
+  padding: $space-xs $space-sm;
+
+  + .goalieStatsEditorStint {
+    border-top: 1px solid $border;
+  }
+
+  label {
+    margin-bottom: 0;
+  }
+
+  .goalieStintInfo {
+    color: $text-body;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  input[type="number"] {
+    width: 100%;
+    min-width: 0;
+    text-align: center;
+    padding-left: $space-xs;
+    padding-right: $space-xs;
+  }
+}
+
+.goalieStatsEditorValue {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: $text-body;
+  font-size: $font-sm;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .goalieStatsEditorHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .goalieStatsEditorTotals {
+    width: 100%;
+
+    .goalieStatsEditorTotalPill {
+      flex: 1;
+    }
+  }
+
+  .goalieStatsEditorTable {
+    overflow-x: auto;
+  }
+
+  .goalieStatsEditorAddPanel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .goalieStatsEditorAddButtons {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+  }
+
+  .goalieStatsEditorHead,
+  .goalieStatsEditorStint {
+    min-width: 540px;
+  }
+}

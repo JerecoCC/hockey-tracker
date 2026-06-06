@@ -2712,7 +2712,7 @@ const goalieStintsCTE = (gameId) => sql`
   ),
   stint_ranges AS (
     SELECT
-      st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
+      st.id, st.game_id, g.season_id, g.scheduled_at, st.team_id, st.goalie_id, st.stint_ord,
       st.entered_period, st.entered_time,
       st.exited_period,  st.exited_time,
       st.shots_against,
@@ -2734,18 +2734,35 @@ const goalieStintsCTE = (gameId) => sql`
             )
       END AS until_pos
     FROM game_goalie_stints st
+    JOIN games g ON g.id = st.game_id
     JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
     LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
     WHERE st.game_id = ${gameId}
   ),
   stint_ga_derived AS (
-    SELECT sr.id AS stint_id, COUNT(*)::int AS ga
+    SELECT
+      sr.id AS stint_id,
+      COUNT(*)::int AS ga,
+      COUNT(*) FILTER (WHERE g.goal_type = 'own' OR own_goal.is_own_goal)::int AS own_goal_ga,
+      COUNT(*) FILTER (
+        WHERE g.goal_type != 'own' AND own_goal.is_own_goal IS NULL
+      )::int AS save_ga
     FROM stint_ranges sr
     JOIN goals g
       ON g.game_id   = sr.game_id
      AND g.team_id  != sr.team_id
      AND g.empty_net = false
     JOIN period_vals pv ON pv.p = g.period
+    LEFT JOIN LATERAL (
+      SELECT true AS is_own_goal
+      FROM player_teams pt
+      WHERE pt.player_id = g.scorer_id
+        AND pt.team_id = sr.team_id
+        AND pt.season_id = sr.season_id
+        AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+        AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
+      LIMIT 1
+    ) own_goal ON true
     WHERE (pv.v * 100000
            + COALESCE(
                SPLIT_PART(g.period_time, ':', 1)::int * 60
@@ -2764,7 +2781,12 @@ const goalieStintsCTE = (gameId) => sql`
   stints_resolved AS (
     SELECT
       sr.*,
-      COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga
+      COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga,
+      CASE
+        WHEN sr.goals_against_override IS NULL
+          THEN COALESCE(sgd.save_ga, 0)::int
+        ELSE GREATEST(sr.goals_against_override - COALESCE(sgd.own_goal_ga, 0), 0)::int
+      END AS resolved_save_ga
     FROM stint_ranges sr
     LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
   ),
@@ -2776,6 +2798,7 @@ const goalieStintsCTE = (gameId) => sql`
       MIN(created_at)            AS first_created_at,
       SUM(shots_against)::int    AS total_sa,
       SUM(resolved_ga)::int      AS total_ga,
+      SUM(resolved_save_ga)::int AS total_save_ga,
       JSONB_AGG(
         JSONB_BUILD_OBJECT(
           'id',                     id,
@@ -2787,7 +2810,7 @@ const goalieStintsCTE = (gameId) => sql`
           'shots_against',          shots_against,
           'goals_against',          resolved_ga,
           'goals_against_override', goals_against_override,
-          'saves',                  shots_against - resolved_ga
+          'saves',                  shots_against - resolved_save_ga
         )
         ORDER BY stint_ord
       ) AS stints
@@ -2816,7 +2839,7 @@ const fetchGoalieStatsForGame = (gameId) => sql`
     ga.game_id, ga.team_id, ga.goalie_id,
     ga.total_sa                             AS shots_against,
     ga.total_ga                             AS goals_against,
-    (ga.total_sa - ga.total_ga)             AS saves,
+    (ga.total_sa - ga.total_save_ga)        AS saves,
     CASE
       WHEN fs.first_stint_ord = 1
        AND fs.first_entered_period = '1'
@@ -2882,7 +2905,7 @@ router.get('/:id/goalie-stats', async (req, res) => {
         ga.goalie_id,
         ga.total_sa                             AS shots_against,
         ga.total_ga                             AS goals_against,
-        (ga.total_sa - ga.total_ga)             AS saves,
+        (ga.total_sa - ga.total_save_ga)        AS saves,
         CASE
           WHEN fs.first_stint_ord = 1
            AND fs.first_entered_period = '1'
@@ -3001,7 +3024,7 @@ router.put('/:id/goalie-stats', async (req, res) => {
         ga.game_id, ga.team_id, ga.goalie_id,
         ga.total_sa                             AS shots_against,
         ga.total_ga                             AS goals_against,
-        (ga.total_sa - ga.total_ga)             AS saves,
+        (ga.total_sa - ga.total_save_ga)        AS saves,
         CASE
           WHEN fs.first_stint_ord = 1
            AND fs.first_entered_period = '1'
@@ -3094,7 +3117,7 @@ router.post('/:id/goalie-stats/switch', async (req, res) => {
         ga.game_id, ga.team_id, ga.goalie_id,
         ga.total_sa                             AS shots_against,
         ga.total_ga                             AS goals_against,
-        (ga.total_sa - ga.total_ga)             AS saves,
+        (ga.total_sa - ga.total_save_ga)        AS saves,
         CASE
           WHEN fs.first_stint_ord = 1
            AND fs.first_entered_period = '1'
