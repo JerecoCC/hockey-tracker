@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
+import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import Select from '@/components/Select/Select';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import TimePicker from '@/components/TimePicker/TimePicker';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
@@ -27,6 +30,8 @@ const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
 
+const PERIOD_OPTIONS = Object.entries(PERIOD_LABEL).map(([value, label]) => ({ value, label }));
+
 const fmtStintPoint = (period: string, time: string | null) =>
   `${PERIOD_LABEL[period] ?? period}${time ? ` ${time}` : ''}`;
 
@@ -43,6 +48,17 @@ const parseNumber = (value: string) => {
   const parsed = parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const defaultStintDraft = (teamId = '', goalieId = ''): AddStintDraft => ({
+  team_id: teamId,
+  goalie_id: goalieId,
+  entered_period: PERIOD.FIRST,
+  entered_time: '',
+  exited_period: '',
+  exited_time: '',
+  shots_against: '0',
+  goals_against: '',
+});
 
 interface StintRow {
   id: string;
@@ -99,6 +115,7 @@ const GoalieStatsEditModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [removing, setRemoving] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
+  const [addingStintFor, setAddingStintFor] = useState<string | null>(null);
   const [rows, setRows] = useState<GoalieEditRow[]>([]);
   const [addDraft, setAddDraft] = useState<AddStintDraft>(() => ({
     team_id: '',
@@ -110,6 +127,7 @@ const GoalieStatsEditModal = ({
     shots_against: '0',
     goals_against: '',
   }));
+  const [stintDraft, setStintDraft] = useState<AddStintDraft>(() => defaultStintDraft());
 
   const rosterByPlayerId = useMemo(() => {
     const map = new Map<string, GameRosterEntry>();
@@ -143,6 +161,7 @@ const GoalieStatsEditModal = ({
 
     setRows(built);
     setAdding(false);
+    setAddingStintFor(null);
     setAddDraft({
       team_id: defaultTeamId,
       goalie_id: '',
@@ -153,6 +172,7 @@ const GoalieStatsEditModal = ({
       shots_against: '0',
       goals_against: '',
     });
+    setStintDraft(defaultStintDraft());
   }, [open, game.away_team.id, goalieStats, rosterByPlayerId]);
 
   const allGoalies = useMemo(
@@ -160,13 +180,55 @@ const GoalieStatsEditModal = ({
     [awayRoster, homeRoster],
   );
 
-  const addGoalieOptions = allGoalies.filter((goalie) => goalie.team_id === addDraft.team_id);
+  const addGoalieOptions = allGoalies.filter(
+    (goalie) =>
+      goalie.team_id === addDraft.team_id &&
+      !rows.some((row) => row.rosterEntry.player_id === goalie.player_id),
+  );
+
+  const teamOptions = [
+    {
+      value: game.away_team.id,
+      label: `${game.away_team.code} (Away)`,
+      logo: game.away_team.logo,
+      code: game.away_team.code,
+    },
+    {
+      value: game.home_team.id,
+      label: `${game.home_team.code} (Home)`,
+      logo: game.home_team.logo,
+      code: game.home_team.code,
+    },
+  ];
+
+  const goalieOptions = addGoalieOptions.map((goalie) => ({
+    value: goalie.player_id,
+    label: `${goalie.first_name} ${goalie.last_name}${
+      goalie.jersey_number != null ? ` (#${goalie.jersey_number})` : ''
+    }`,
+  }));
+
+  const addPreviewGa =
+    stintDraft.goals_against === '' ? 'Auto' : parseNumber(stintDraft.goals_against);
+  const addPreviewSv =
+    stintDraft.goals_against === ''
+      ? '-'
+      : Math.max(0, parseNumber(stintDraft.shots_against) - parseNumber(stintDraft.goals_against));
 
   const setAddDraftField = (field: keyof AddStintDraft, value: string) => {
     setAddDraft((prev) => {
       if (field === 'team_id') {
         return { ...prev, team_id: value, goalie_id: '' };
       }
+      if (field === 'shots_against' || field === 'goals_against') {
+        return { ...prev, [field]: numericString(value) };
+      }
+      return { ...prev, [field]: value };
+    });
+  };
+
+  const setStintDraftField = (field: keyof AddStintDraft, value: string) => {
+    setStintDraft((prev) => {
       if (field === 'shots_against' || field === 'goals_against') {
         return { ...prev, [field]: numericString(value) };
       }
@@ -293,33 +355,74 @@ const GoalieStatsEditModal = ({
     }
   };
 
+  const buildEmptyGoalieRow = (goalie: GameRosterEntry): GoalieEditRow => {
+    const isAway = goalie.team_id === game.away_team.id;
+    const team = isAway ? game.away_team : game.home_team;
+    return {
+      rosterEntry: goalie,
+      stints: [],
+      stat: {
+        id: `pending-${goalie.player_id}`,
+        game_id: game.id,
+        team_id: goalie.team_id,
+        goalie_id: goalie.player_id,
+        shots_against: 0,
+        goals_against: 0,
+        saves: 0,
+        entered_period: null,
+        sub_time: null,
+        created_at: '',
+        stints: [],
+        goalie_first_name: goalie.first_name ?? '',
+        goalie_last_name: goalie.last_name ?? '',
+        goalie_photo: goalie.photo,
+        goalie_jersey_number: goalie.jersey_number,
+        team_name: team.name,
+        team_code: team.code,
+        team_logo: team.logo,
+        team_primary_color: team.primary_color,
+        team_text_color: team.text_color,
+      },
+    };
+  };
+
+  const openAddStintForGoalie = (row: GoalieEditRow) => {
+    setAddingStintFor(row.rosterEntry.player_id);
+    setStintDraft(defaultStintDraft(row.rosterEntry.team_id, row.rosterEntry.player_id));
+  };
+
+  const handleAddGoalie = () => {
+    const goalie = addGoalieOptions.find((entry) => entry.player_id === addDraft.goalie_id);
+    if (!goalie) return;
+    setRows((prev) =>
+      prev.some((row) => row.rosterEntry.player_id === goalie.player_id)
+        ? prev
+        : [...prev, buildEmptyGoalieRow(goalie)],
+    );
+    setAdding(false);
+    setAddingStintFor(goalie.player_id);
+    setStintDraft(defaultStintDraft(goalie.team_id, goalie.player_id));
+    setAddDraft((prev) => ({ ...prev, goalie_id: '' }));
+  };
+
   const handleAddStint = async () => {
-    if (!addDraft.team_id || !addDraft.goalie_id || !addDraft.entered_period) return;
+    if (!stintDraft.team_id || !stintDraft.goalie_id || !stintDraft.entered_period) return;
     setSubmitting(true);
     try {
       const rows = await addGoalieStint({
-        team_id: addDraft.team_id,
-        goalie_id: addDraft.goalie_id,
-        entered_period: addDraft.entered_period,
-        entered_time: addDraft.entered_time || null,
-        exited_period: addDraft.exited_period || null,
-        exited_time: addDraft.exited_time || null,
-        shots_against: parseNumber(addDraft.shots_against),
+        team_id: stintDraft.team_id,
+        goalie_id: stintDraft.goalie_id,
+        entered_period: stintDraft.entered_period,
+        entered_time: stintDraft.entered_time || null,
+        exited_period: stintDraft.exited_period || null,
+        exited_time: stintDraft.exited_time || null,
+        shots_against: parseNumber(stintDraft.shots_against),
         goals_against:
-          addDraft.goals_against === '' ? null : parseNumber(addDraft.goals_against),
+          stintDraft.goals_against === '' ? null : parseNumber(stintDraft.goals_against),
       });
       if (rows) {
-        setAdding(false);
-        setAddDraft((prev) => ({
-          ...prev,
-          goalie_id: '',
-          entered_period: PERIOD.FIRST,
-          entered_time: '',
-          exited_period: '',
-          exited_time: '',
-          shots_against: '0',
-          goals_against: '',
-        }));
+        setAddingStintFor(null);
+        setStintDraft(defaultStintDraft());
       }
     } finally {
       setSubmitting(false);
@@ -340,147 +443,6 @@ const GoalieStatsEditModal = ({
       size="lg"
     >
       <div className={styles.goalieStatsEditor}>
-        <div className={styles.goalieStatsEditorActions}>
-          {adding ? (
-            <div className={styles.goalieStatsEditorAddPanel}>
-              <label>
-                <span>Team</span>
-                <select
-                  className={fieldStyles.field}
-                  value={addDraft.team_id}
-                  disabled={busy}
-                  onChange={(e) => setAddDraftField('team_id', e.target.value)}
-                >
-                  <option value={game.away_team.id}>{game.away_team.code}</option>
-                  <option value={game.home_team.id}>{game.home_team.code}</option>
-                </select>
-              </label>
-              <label>
-                <span>Goalie</span>
-                <select
-                  className={fieldStyles.field}
-                  value={addDraft.goalie_id}
-                  disabled={busy}
-                  onChange={(e) => setAddDraftField('goalie_id', e.target.value)}
-                >
-                  <option value="">Select goalie</option>
-                  {addGoalieOptions.map((goalie) => (
-                    <option
-                      key={goalie.player_id}
-                      value={goalie.player_id}
-                    >
-                      {fmt(goalie.first_name, goalie.last_name)}
-                      {goalie.jersey_number != null ? ` #${goalie.jersey_number}` : ''}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Enter</span>
-                <select
-                  className={fieldStyles.field}
-                  value={addDraft.entered_period}
-                  disabled={busy}
-                  onChange={(e) => setAddDraftField('entered_period', e.target.value)}
-                >
-                  {Object.entries(PERIOD_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Time</span>
-                <input
-                  className={fieldStyles.field}
-                  value={addDraft.entered_time}
-                  placeholder="00:00"
-                  disabled={busy}
-                  onChange={(e) => setAddDraftField('entered_time', e.target.value)}
-                />
-              </label>
-              <label>
-                <span>Exit</span>
-                <select
-                  className={fieldStyles.field}
-                  value={addDraft.exited_period}
-                  disabled={busy}
-                  onChange={(e) => setAddDraftField('exited_period', e.target.value)}
-                >
-                  <option value="">End</option>
-                  {Object.entries(PERIOD_LABEL).map(([value, label]) => (
-                    <option key={value} value={value}>{label}</option>
-                  ))}
-                </select>
-              </label>
-              <label>
-                <span>Time</span>
-                <input
-                  className={fieldStyles.field}
-                  value={addDraft.exited_time}
-                  placeholder="00:00"
-                  disabled={busy || !addDraft.exited_period}
-                  onChange={(e) => setAddDraftField('exited_time', e.target.value)}
-                />
-              </label>
-              <label>
-                <span>SA</span>
-                <input
-                  className={fieldStyles.field}
-                  type="number"
-                  min={0}
-                  value={addDraft.shots_against}
-                  disabled={busy}
-                  onChange={(e) => setAddDraftField('shots_against', e.target.value)}
-                />
-              </label>
-              <label>
-                <span>GA override</span>
-                <input
-                  className={fieldStyles.field}
-                  type="number"
-                  min={0}
-                  placeholder="Auto"
-                  value={addDraft.goals_against}
-                  disabled={busy}
-                  onChange={(e) => setAddDraftField('goals_against', e.target.value)}
-                />
-              </label>
-              <div className={styles.goalieStatsEditorAddButtons}>
-                <Button
-                  variant="filled"
-                  intent="accent"
-                  icon="add"
-                  size="sm"
-                  disabled={busy || !addDraft.goalie_id}
-                  onClick={handleAddStint}
-                >
-                  Add
-                </Button>
-                <Button
-                  variant="ghost"
-                  intent="neutral"
-                  size="sm"
-                  disabled={busy}
-                  onClick={() => setAdding(false)}
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          ) : (
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="add"
-              size="sm"
-              disabled={busy}
-              onClick={() => setAdding(true)}
-            >
-              Add stint
-            </Button>
-          )}
-        </div>
-
         {rows.length === 0 && (
           <p className={styles.noGoalsText}>No goalie stints recorded.</p>
         )}
@@ -542,6 +504,15 @@ const GoalieStatsEditModal = ({
                     <b>{totals.goals}</b>
                     GA
                   </span>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="add"
+                    size="sm"
+                    tooltip="Add stint for this goalie"
+                    disabled={busy}
+                    onClick={() => openAddStintForGoalie(row)}
+                  />
                   {canRemoveGoalie && (
                     <Button
                       variant="outlined"
@@ -574,6 +545,100 @@ const GoalieStatsEditModal = ({
                   <span />
                 </div>
 
+                {addingStintFor === goalie.player_id && (
+                  <div className={styles.goalieStatsEditorStint}>
+                    <div className={styles.goalieStatsEditorWindowFields}>
+                      <div className={styles.goalieStatsEditorWindowRow}>
+                        <div className={styles.goalieStatsEditorAddField}>
+                          <span>Enter</span>
+                          <Select
+                            value={stintDraft.entered_period}
+                            options={PERIOD_OPTIONS}
+                            disabled={busy}
+                            onChange={(value) => setStintDraftField('entered_period', value)}
+                          />
+                        </div>
+                        <div className={styles.goalieStatsEditorAddField}>
+                          <span>Time</span>
+                          <TimePicker
+                            value={stintDraft.entered_time}
+                            placeholder="MM:SS"
+                            mode="duration"
+                            disabled={busy}
+                            onChange={(value) => setStintDraftField('entered_time', value)}
+                          />
+                        </div>
+                      </div>
+                      <div className={styles.goalieStatsEditorWindowRow}>
+                        <div className={styles.goalieStatsEditorAddField}>
+                          <span>Exit</span>
+                          <Select
+                            value={stintDraft.exited_period}
+                            options={[{ value: '', label: 'End' }, ...PERIOD_OPTIONS]}
+                            disabled={busy}
+                            onChange={(value) => setStintDraftField('exited_period', value)}
+                          />
+                        </div>
+                        <div className={styles.goalieStatsEditorAddField}>
+                          <span>Time</span>
+                          <TimePicker
+                            value={stintDraft.exited_time}
+                            placeholder="MM:SS"
+                            mode="duration"
+                            disabled={busy || !stintDraft.exited_period}
+                            onChange={(value) => setStintDraftField('exited_time', value)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                    <label>
+                      <input
+                        className={fieldStyles.field}
+                        type="number"
+                        min={0}
+                        aria-label={`${goalieName} new stint shots against`}
+                        value={stintDraft.shots_against}
+                        disabled={busy}
+                        onChange={(e) => setStintDraftField('shots_against', e.target.value)}
+                      />
+                    </label>
+                    <label className={styles.goalieStatsEditorGaOverrideField}>
+                      <input
+                        className={fieldStyles.field}
+                        type="text"
+                        inputMode="numeric"
+                        placeholder="Auto"
+                        aria-label={`${goalieName} new stint goals against override`}
+                        value={stintDraft.goals_against}
+                        disabled={busy}
+                        onChange={(e) => setStintDraftField('goals_against', e.target.value)}
+                      />
+                    </label>
+                    <span className={styles.goalieStatsEditorValue}>{addPreviewGa}</span>
+                    <span className={styles.goalieStatsEditorValue}>{addPreviewSv}</span>
+                    <div className={styles.goalieStatsEditorAddButtons}>
+                      <Button
+                        variant="filled"
+                        intent="accent"
+                        icon="add"
+                        size="sm"
+                        tooltip="Add stint"
+                        disabled={busy}
+                        onClick={handleAddStint}
+                      />
+                      <Button
+                        variant="ghost"
+                        intent="neutral"
+                        icon="close"
+                        size="sm"
+                        tooltip="Cancel"
+                        disabled={busy}
+                        onClick={() => setAddingStintFor(null)}
+                      />
+                    </div>
+                  </div>
+                )}
+
                 {row.stints.map((stintRow, stintIdx) => {
                   const originalStint = stat.stints?.[stintIdx];
                   const ga = resolvedGa(stintRow, originalStint);
@@ -599,11 +664,11 @@ const GoalieStatsEditModal = ({
                           }
                         />
                       </label>
-                      <label>
+                      <label className={styles.goalieStatsEditorGaOverrideField}>
                         <input
                           className={fieldStyles.field}
-                          type="number"
-                          min={0}
+                          type="text"
+                          inputMode="numeric"
                           placeholder="Auto"
                           aria-label={`${goalieName} goals against override`}
                           value={stintRow.goals_against}
@@ -632,13 +697,68 @@ const GoalieStatsEditModal = ({
                   );
                 })}
 
-                {row.stints.length === 0 && (
+                {row.stints.length === 0 && addingStintFor !== goalie.player_id && (
                   <p className={styles.noGoalsText}>No stints for this goalie.</p>
                 )}
               </div>
             </section>
           );
         })}
+
+        {adding ? (
+          <div className={styles.goalieStatsEditorAddPanel}>
+            <div className={styles.goalieStatsEditorAddHeader}>
+              <div className={styles.goalieStatsEditorAddSelectors}>
+                <div className={styles.goalieStatsEditorAddField}>
+                  <span>Team</span>
+                  <Select
+                    value={addDraft.team_id}
+                    options={teamOptions}
+                    disabled={busy}
+                    onChange={(value) => setAddDraftField('team_id', value)}
+                  />
+                </div>
+                <div className={styles.goalieStatsEditorAddField}>
+                  <span>Goalie</span>
+                  <Select
+                    value={addDraft.goalie_id || null}
+                    options={goalieOptions}
+                    placeholder="Select goalie"
+                    searchable
+                    disabled={busy}
+                    onChange={(value) => setAddDraftField('goalie_id', value)}
+                  />
+                </div>
+              </div>
+              <div className={styles.goalieStatsEditorAddButtons}>
+                <Button
+                  variant="filled"
+                  intent="accent"
+                  icon="add"
+                  size="sm"
+                  tooltip="Add goalie"
+                  disabled={busy || !addDraft.goalie_id}
+                  onClick={handleAddGoalie}
+                />
+                <Button
+                  variant="ghost"
+                  intent="neutral"
+                  icon="close"
+                  size="sm"
+                  tooltip="Cancel"
+                  disabled={busy}
+                  onClick={() => setAdding(false)}
+                />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <AddRowBar
+            label="Add goalie"
+            disabled={busy}
+            onClick={() => setAdding(true)}
+          />
+        )}
       </div>
     </Modal>
   );

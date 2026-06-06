@@ -821,24 +821,39 @@
 
 .goalieStatsEditorAddPanel {
   width: 100%;
-  display: grid;
-  grid-template-columns: minmax(92px, 0.8fr) minmax(150px, 1.4fr) minmax(82px, 0.8fr) 78px minmax(82px, 0.8fr) 78px 72px 108px auto;
+  display: flex;
+  flex-direction: column;
   gap: $space-sm;
-  align-items: end;
   padding: $space-sm;
   border: 1px solid $border;
   border-radius: $radius-sm;
-  background: $bg-card;
+  background: $bg-input;
+}
 
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: $space-xs;
-    margin-bottom: 0;
-    min-width: 0;
-  }
+.goalieStatsEditorAddHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  min-width: 0;
+}
 
-  label > span {
+.goalieStatsEditorAddSelectors {
+  display: grid;
+  grid-template-columns: 168px minmax(200px, 280px);
+  gap: $space-sm;
+  align-items: end;
+  flex: 1;
+  min-width: 0;
+}
+
+.goalieStatsEditorAddField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  > span {
     color: $text-dim;
     font-size: $font-xs;
     font-weight: 700;
@@ -849,8 +864,33 @@
 .goalieStatsEditorAddButtons {
   display: flex;
   align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  justify-self: center;
+}
+
+.goalieStatsEditorWindowFields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.goalieStatsEditorWindowRow {
+  display: grid;
+  grid-template-columns: max-content max-content;
   gap: $space-xs;
-  justify-content: flex-end;
+  align-items: end;
+  min-width: 0;
+
+  .goalieStatsEditorAddField:first-child {
+    width: 88px;
+  }
+
+  .goalieStatsEditorAddField:last-child {
+    width: 116px;
+  }
 }
 
 .goalieStatsEditorGroup {
@@ -909,7 +949,7 @@
 .goalieStatsEditorHead,
 .goalieStatsEditorStint {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 72px 108px 56px 56px 32px;
+  grid-template-columns: minmax(150px, 1fr) 72px 108px 56px 56px 76px;
   gap: $space-sm;
   align-items: center;
 }
@@ -937,15 +977,36 @@
 
   label {
     margin-bottom: 0;
+    justify-self: center;
+    display: flex;
+    justify-content: center;
   }
 
   .goalieStintInfo {
     color: $text-body;
-    font-weight: 600;
+    font-size: $font-xs;
+    font-weight: 400;
     font-variant-numeric: tabular-nums;
   }
 
   input[type="number"] {
+    width: 56px;
+    min-width: 0;
+    text-align: center;
+    padding-left: $space-xs;
+    padding-right: $space-xs;
+  }
+
+  > button {
+    justify-self: center;
+  }
+}
+
+.goalieStatsEditorGaOverrideField {
+  justify-self: center;
+  width: 72px;
+
+  input {
     width: 100%;
     min-width: 0;
     text-align: center;
@@ -983,12 +1044,7 @@
   }
 
   .goalieStatsEditorAddPanel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .goalieStatsEditorAddButtons {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
+    min-width: 540px;
   }
 
   .goalieStatsEditorHead,
