@@ -1025,6 +1025,168 @@
   font-weight: 700;
 }
 
+// NHL API goalie switch checker modal.
+.nhlGoalieChecker {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.nhlGoalieCheckerForm {
+  display: flex;
+  align-items: flex-end;
+  gap: $space-sm;
+}
+
+.nhlGoalieCheckerField {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.nhlGoalieCheckerInput {
+  width: 100%;
+  min-height: 42px;
+  padding: 0 $space-sm;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: $bg-input;
+  color: $text-body;
+  font: inherit;
+  font-size: $font-sm;
+  text-transform: none;
+
+  &:focus {
+    outline: 2px solid rgba($accent, 0.35);
+    outline-offset: 1px;
+  }
+
+  &:disabled {
+    opacity: 0.65;
+  }
+}
+
+.nhlGoalieCheckerStatus {
+  margin: 0;
+  color: $text-dim;
+  font-size: $font-sm;
+}
+
+.nhlGoalieCheckerError {
+  color: $danger;
+}
+
+.nhlGoalieCheckerResults {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.nhlGoalieCheckerSummary {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba($bg-page, 0.4);
+  color: $text-dim;
+  font-size: $font-sm;
+
+  strong {
+    color: $text-body;
+  }
+}
+
+.nhlGoalieCheckerTeams {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.nhlGoalieCheckerTeam {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba($bg-card, 0.62);
+}
+
+.nhlGoalieCheckerTeamHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  font-size: $font-sm;
+  strong {
+    color: white;
+  }
+}
+
+.nhlGoalieCheckerSwitchDetected,
+.nhlGoalieCheckerNoSwitch {
+  padding: 2px 8px;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  font-weight: 700;
+}
+
+.nhlGoalieCheckerSwitchDetected {
+  background: rgba($warning, 0.16);
+  color: $warning;
+}
+
+.nhlGoalieCheckerNoSwitch {
+  background: rgba($success, 0.14);
+  color: $success;
+}
+
+.nhlGoalieCheckerStints {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.nhlGoalieCheckerStint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  padding: $space-xs $space-sm;
+  border-radius: $radius-sm;
+  background: rgba($bg-page, 0.42);
+  color: $text-dim;
+  font-size: $font-xs;
+}
+
+.nhlGoalieCheckerGoalie {
+  min-width: 0;
+  color: $text-body;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.nhlGoalieCheckerToi {
+  color: $text-body;
+  font-variant-numeric: tabular-nums;
+}
+
+.emptyAPIData {
+  color: $text-dim;
+  font-style: italic;
+  font-size: $font-base;
+}
+
 @media (max-width: 720px) {
   .goalieStatsEditorHeader {
     align-items: flex-start;
@@ -1050,5 +1212,16 @@
   .goalieStatsEditorHead,
   .goalieStatsEditorStint {
     min-width: 540px;
+  }
+
+  .nhlGoalieCheckerForm,
+  .nhlGoalieCheckerSummary,
+  .nhlGoalieCheckerTeamHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .nhlGoalieCheckerStint {
+    grid-template-columns: 1fr;
   }
 }

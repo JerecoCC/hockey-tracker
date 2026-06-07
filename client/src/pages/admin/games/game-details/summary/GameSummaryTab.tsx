@@ -12,6 +12,7 @@ import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
 import GoalieStatsCard from './GoalieStatsCard';
 import GoalieSwitchModal from '../GoalieSwitchModal';
+import NhlGoalieSwitchCheckerModal from '../NhlGoalieSwitchCheckerModal';
 import ShotsEditModal from '../ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
 import ScoreImageModal from '../ScoreImageModal';
@@ -33,8 +34,10 @@ import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
 import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
-import { PERIOD, PERIOD_ORDER, otPeriodId } from '../constants';
+import { PERIOD, otPeriodId } from '../constants';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
+import { NhlGoalieSwitchReport } from '../nhlGoalieSwitchChecker';
+import GoalieSwitchReportCard from './GoalieSwitchReportCard';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -140,9 +143,7 @@ const GameSummaryTab = ({
     enabled: gameHasStarted,
   });
   const shouldFetchShootoutAttempts =
-    !!game.shootout ||
-    game.current_period === PERIOD.SHOOTOUT ||
-    !!game.shootout_first_team_id;
+    !!game.shootout || game.current_period === PERIOD.SHOOTOUT || !!game.shootout_first_team_id;
   const { attempts, addAttempt, updateAttempt, deleteAttempt } = useShootoutAttempts(game.id, {
     enabled: shouldFetchShootoutAttempts,
   });
@@ -491,10 +492,10 @@ const GameSummaryTab = ({
                 playerGameStats={playerGameStats}
                 showPlayerDataStatus={showPlayerDataStatus}
                 getPlayerHref={
-                playerHrefBuilder
-                  ? (teamId, playerId, firstName, lastName) =>
-                      playerHrefBuilder(teamId, playerId, firstName, lastName)
-                  : undefined
+                  playerHrefBuilder
+                    ? (teamId, playerId, firstName, lastName) =>
+                        playerHrefBuilder(teamId, playerId, firstName, lastName)
+                    : undefined
                 }
                 onEdit={
                   editable && isEditMode
@@ -558,10 +559,10 @@ const GameSummaryTab = ({
                 goalieStats={goalieStats}
                 lineup={lineup}
                 getPlayerHref={
-                playerHrefBuilder
-                  ? (teamId, playerId, firstName, lastName) =>
-                      playerHrefBuilder(teamId, playerId, firstName, lastName)
-                  : undefined
+                  playerHrefBuilder
+                    ? (teamId, playerId, firstName, lastName) =>
+                        playerHrefBuilder(teamId, playerId, firstName, lastName)
+                    : undefined
                 }
                 isFinal={editable && isFinal && isEditMode}
                 isInProgress={isInProgress}
@@ -592,6 +593,7 @@ const GameSummaryTab = ({
 
           {/* ── Right column: Linescore + Shots + Game Info ── */}
           <div className={styles.summaryRight}>
+            <GoalieSwitchReportCard gameId={game.id} />
             <LinescoreCard
               game={game}
               isFinal={isFinal}

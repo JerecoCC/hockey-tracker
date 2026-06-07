@@ -67,6 +67,7 @@ import {
   faUserPlus,
   faUsers,
   faXmark,
+  faMagnifyingGlassChart,
 } from '@fortawesome/free-solid-svg-icons';
 
 /**
@@ -181,6 +182,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
   more_vert: faEllipsisVertical,
   more_time: faClock,
   schedule: faClock,
+
+  api_search: faMagnifyingGlassChart,
 };
 
 interface IconProps {

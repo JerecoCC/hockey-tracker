@@ -297,6 +297,47 @@ router.get('/', async (req, res) => {
   }
 });
 
+
+
+router.get("/nhl-api", async (req, res) => {
+  try {
+    const { url } = req.query;
+
+    console.log("NHL proxy URL:", url);
+
+    if (!url || typeof url !== "string") {
+      return res.status(400).json({ error: "Missing NHL API URL." });
+    }
+
+    const parsedUrl = new URL(url);
+
+    if (parsedUrl.hostname !== "api-web.nhle.com") {
+      return res.status(400).json({ error: "Invalid NHL API host." });
+    }
+
+    const response = await fetch(parsedUrl.toString());
+
+    console.log("NHL response status:", response.status);
+
+    const text = await response.text();
+
+    if (!response.ok) {
+      return res.status(response.status).json({
+        error: `NHL API returned ${response.status}.`,
+        body: text.slice(0, 500),
+      });
+    }
+
+    return res.json(JSON.parse(text));
+  } catch (error) {
+    console.error("NHL proxy error:", error);
+
+    return res.status(500).json({
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+});
+
 // ---------------------------------------------------------------------------
 // GET /api/admin/games/playoff-series  – list series (filter by season_id)
 // ---------------------------------------------------------------------------
