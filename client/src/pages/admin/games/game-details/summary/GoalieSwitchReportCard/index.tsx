@@ -5,15 +5,16 @@ import NhlGoalieSwitchCheckerModal from '../../NhlGoalieSwitchCheckerModal';
 import { useEffect, useState } from 'react';
 import Button from '@/components/Button/Button';
 import styles from '../../GameDetailsPage.module.scss';
+import { GameRecord } from '@/hooks/useGames';
 
 type Props = {
-  gameId: string;
+  game: GameRecord;
 };
 
-const GoalieSwitchReportCard = ({ gameId }: Props) => {
+const GoalieSwitchReportCard = ({ game }: Props) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [report, setReport] = useState<NhlGoalieSwitchReport | null>(null);
-  const gspCode: string = `${gameId}-gsp`;
+  const gspCode: string = `${game.id}-gsp`;
 
   useEffect(() => {
     const sessionData = sessionStorage.getItem(gspCode);
@@ -31,7 +32,7 @@ const GoalieSwitchReportCard = ({ gameId }: Props) => {
   return (
     <>
       <Card
-        title="API Data"
+        title="Goalie Switch Report"
         action={
           <Button
             variant="outlined"
@@ -51,8 +52,14 @@ const GoalieSwitchReportCard = ({ gameId }: Props) => {
             </div>
 
             <div className={styles.nhlGoalieCheckerTeams}>
-              <TeamResult team={report.away} />
-              <TeamResult team={report.home} />
+              <TeamResult
+                report={report.away}
+                team={game.away_team}
+              />
+              <TeamResult
+                report={report.home}
+                team={game.home_team}
+              />
             </div>
           </div>
         ) : (
@@ -61,6 +68,7 @@ const GoalieSwitchReportCard = ({ gameId }: Props) => {
       </Card>
       <NhlGoalieSwitchCheckerModal
         open={modalOpen}
+        game={game}
         onClose={() => setModalOpen(false)}
         setReportData={handleSetReport}
       />

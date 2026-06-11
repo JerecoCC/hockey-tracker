@@ -1,44 +1,57 @@
 import { NhlGoalieSwitchTeamReport } from '../../nhlGoalieSwitchChecker';
 import styles from '../../GameDetailsPage.module.scss';
 import StintRow from './StintRow';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import { TeamInfo } from '@/hooks/useGames';
 
 type Props = {
-  team: NhlGoalieSwitchTeamReport;
+  report: NhlGoalieSwitchTeamReport;
+  team: TeamInfo;
 };
 
 const TeamResult = (props: Props) => {
-  const { team } = props;
+  const { report, team } = props;
 
   return (
     <section className={styles.nhlGoalieCheckerTeam}>
       <div className={styles.nhlGoalieCheckerTeamHeader}>
-        <strong>{team.abbrev}</strong>
+        <span className={styles.nhlGoalieCheckerTeamInfo}>
+          <TeamLogo
+            logo={team.logo}
+            code={report.abbrev}
+            primaryColor={team.primary_color}
+            textColor={team.text_color}
+            size={24}
+            shape="square"
+          />
+          <strong>{report.abbrev}</strong>
+        </span>
         <span
           className={
-            team.switchDetected
+            report.switchDetected
               ? styles.nhlGoalieCheckerSwitchDetected
               : styles.nhlGoalieCheckerNoSwitch
           }
         >
-          {team.switchDetected ? 'Goalie switch detected' : 'No goalie switch'}
+          {report.switchDetected ? 'Goalie switch detected' : 'No goalie switch'}
         </span>
       </div>
 
-      {team.trueGoalies.length === 0 ? (
+      {report.trueGoalies.length === 0 ? (
         <p className={styles.nhlGoalieCheckerStatus}>No goalie appearances found.</p>
-      ) : team.stints.length === 0 ? (
+      ) : report.stints.length === 0 ? (
         <p className={styles.nhlGoalieCheckerStatus}>
           Exact switch timing unavailable from this response.
         </p>
       ) : (
         <>
-          {team.timingUnavailable && (
+          {report.timingUnavailable && (
             <p className={styles.nhlGoalieCheckerStatus}>
               Exact switch timing unavailable from this response.
             </p>
           )}
           <div className={styles.nhlGoalieCheckerStints}>
-            {team.stints.map((stint) => (
+            {report.stints.map((stint) => (
               <StintRow
                 key={`${stint.teamSide}-${stint.goalieId}-${stint.enteredPeriod}-${stint.enteredTime}`}
                 stint={stint}

@@ -12,7 +12,6 @@ import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
 import GoalieStatsCard from './GoalieStatsCard';
 import GoalieSwitchModal from '../GoalieSwitchModal';
-import NhlGoalieSwitchCheckerModal from '../NhlGoalieSwitchCheckerModal';
 import ShotsEditModal from '../ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
 import ScoreImageModal from '../ScoreImageModal';
@@ -36,7 +35,6 @@ import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
 import { PERIOD, otPeriodId } from '../constants';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
-import { NhlGoalieSwitchReport } from '../nhlGoalieSwitchChecker';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -593,7 +591,7 @@ const GameSummaryTab = ({
 
           {/* ── Right column: Linescore + Shots + Game Info ── */}
           <div className={styles.summaryRight}>
-            <GoalieSwitchReportCard gameId={game.id} />
+            <GoalieSwitchReportCard game={game} />
             <LinescoreCard
               game={game}
               isFinal={isFinal}
@@ -709,7 +707,7 @@ const GameSummaryTab = ({
                               code={row.code ?? '?'}
                               primaryColor={row.primary}
                               textColor={row.text}
-                              size={28}
+                              size={24}
                               shape="square"
                             />
                             <span className={styles.linescoreCode}>{row.code}</span>

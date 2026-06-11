@@ -311,7 +311,7 @@ router.get("/nhl-api", async (req, res) => {
 
     const parsedUrl = new URL(url);
 
-    if (parsedUrl.hostname !== "api-web.nhle.com") {
+    if (!["api-web.nhle.com", "api.nhle.com"].includes(parsedUrl.hostname)) {
       return res.status(400).json({ error: "Invalid NHL API host." });
     }
 
