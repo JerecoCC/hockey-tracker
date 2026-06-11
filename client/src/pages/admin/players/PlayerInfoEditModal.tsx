@@ -47,7 +47,6 @@ interface FormValues {
   date_of_birth: string;
   birth_city: string;
   birth_country: string;
-  nationality: string;
   height_ft: string;
   height_in: string;
   weight_lbs: string;
@@ -75,7 +74,6 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
       date_of_birth: '',
       birth_city: '',
       birth_country: '',
-      nationality: '',
       height_ft: '',
       height_in: '',
       weight_lbs: '',
@@ -93,7 +91,6 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
       date_of_birth: player?.date_of_birth ?? '',
       birth_city: player?.birth_city ?? '',
       birth_country: player?.birth_country ?? '',
-      nationality: player?.nationality ?? '',
       height_ft: ft != null ? String(ft) : '',
       height_in: inches != null ? String(inches) : '',
       weight_lbs: player?.weight_lbs != null ? String(player.weight_lbs) : '',
@@ -120,7 +117,6 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
       date_of_birth: data.date_of_birth || null,
       birth_city: data.birth_city || null,
       birth_country: data.birth_country || null,
-      nationality: data.nationality || null,
       height_cm:
         hasFt || hasIn
           ? ftInToCm(hasFt ? Number(data.height_ft) : 0, hasIn ? Number(data.height_in) : 0)
@@ -141,11 +137,10 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     const city = locationParts.slice(0, -1).join(', ');
     setValue('birth_city', city, { shouldDirty: true, shouldTouch: true });
     setValue('birth_country', country, { shouldDirty: true, shouldTouch: true });
-    setValue('nationality', country, { shouldDirty: true, shouldTouch: true });
   };
 
   const handleBirthCityBlur = (event: FocusEvent<HTMLInputElement>) => {
-    if (getValues('birth_country') || getValues('nationality')) return;
+    if (getValues('birth_country')) return;
     normalizeBirthCity(event.target.value);
   };
 
@@ -164,15 +159,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <div className={styles.row}>
-          <Field
-            type="datepicker"
-            label="Date of Birth"
-            control={control}
-            name="date_of_birth"
-            placeholder="YYYY-MM-DD"
-            disabled={isSubmitting}
-          />
+        <div className={styles.playerInfoBirthRow}>
           <Field
             label="Birth City"
             control={control}
@@ -182,24 +169,25 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
             disabled={isSubmitting}
             onBlur={handleBirthCityBlur}
           />
-        </div>
-        <div className={styles.row}>
           <Field
             label="Birth Country"
             control={control}
             name="birth_country"
-            placeholder="e.g. CAN"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Nationality"
-            control={control}
-            name="nationality"
-            placeholder="e.g. CAN"
+            placeholder="CAN"
             disabled={isSubmitting}
           />
         </div>
-        <div className={styles.row}>
+        <div className={styles.fullRow}>
+          <Field
+            type="datepicker"
+            label="Date of Birth"
+            control={control}
+            name="date_of_birth"
+            placeholder="YYYY-MM-DD"
+            disabled={isSubmitting}
+          />
+        </div>
+        <div className={styles.playerInfoVitalsRow}>
           <div className={styles.heightGroup}>
             <span className={styles.heightGroupLabel}>Height</span>
             <div className={styles.heightSegmentedField}>

@@ -10,7 +10,8 @@
 // Side-by-side pair (e.g. Position / Shoots, Height / Weight)
 .row {
   display: flex;
-  gap: $space-xl;
+  column-gap: 0.75rem;
+  row-gap: $space-md;
 
   > * {
     flex: 1;
@@ -22,7 +23,31 @@
 .nameRowWithJersey {
   display: grid;
   grid-template-columns: 5rem 1fr 1fr;
-  gap: $space-xl;
+  column-gap: 0.75rem;
+  row-gap: $space-md;
+}
+
+.playerInfoVitalsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 0.75rem;
+  row-gap: $space-md;
+  align-items: flex-start;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.playerInfoBirthRow {
+  display: grid;
+  grid-template-columns: minmax(0, 2.5fr) minmax(7.5rem, 1fr);
+  column-gap: 0.75rem;
+  row-gap: $space-md;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 // Height group: shared "Height" label above two compact ft / in inputs
@@ -31,6 +56,7 @@
   display: flex;
   flex-direction: column;
   gap: $space-sm;
+  min-width: 0;
 }
 
 .heightGroupLabel {
@@ -43,7 +69,8 @@
 
 .heightInputs {
   display: flex;
-  gap: $space-md;
+  column-gap: 0.75rem;
+  row-gap: $space-md;
 
   > * {
     flex: 1;
@@ -147,14 +174,16 @@
 .stintDateRow {
   display: grid;
   grid-template-columns: 5rem 1fr 1fr;
-  gap: $space-md;
+  column-gap: 0.75rem;
+  row-gap: $space-md;
 }
 
 // Jersey # (narrow) + single date field on one row
 .jerseyDateRow {
   display: grid;
   grid-template-columns: 5rem 1fr;
-  gap: $space-md;
+  column-gap: 0.75rem;
+  row-gap: $space-md;
 }
 
 // Jersey number history list shown inside ChangeJerseyModal

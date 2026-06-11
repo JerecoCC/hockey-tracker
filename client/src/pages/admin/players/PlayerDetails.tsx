@@ -722,10 +722,6 @@ const PlayerDetailsPage = () => {
           value={player.birth_country}
         />
         <InfoCell
-          label="Nationality"
-          value={player.nationality}
-        />
-        <InfoCell
           label="Height"
           value={formatHeight(player.height_cm)}
         />

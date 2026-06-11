@@ -66,7 +66,7 @@ router.get('/', async (req, res) => {
           p.id, p.first_name, p.last_name,
           COALESCE(best_player_photo(p.id, latest_pt.season_id, latest_pt.team_id), p.photo) AS photo,
           p.date_of_birth::text AS date_of_birth,
-          p.birth_city, p.birth_country, p.nationality,
+          p.birth_city, p.birth_country,
           p.height_cm, p.weight_lbs, COALESCE(latest_pt.position, p.position) AS position, p.shoots,
           p.is_active, p.created_at,
           COALESCE(latest_jnh.jersey_number, latest_pt.jersey_number) AS jersey_number,
@@ -143,7 +143,7 @@ router.get('/', async (req, res) => {
               SELECT
                 id, first_name, last_name, photo,
                 date_of_birth::text AS date_of_birth,
-                birth_city, birth_country, nationality,
+                birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 is_active, created_at,
                 jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
@@ -152,7 +152,7 @@ router.get('/', async (req, res) => {
                   p.id, p.first_name, p.last_name,
                   COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
                   p.date_of_birth,
-                  p.birth_city, p.birth_country, p.nationality,
+                  p.birth_city, p.birth_country,
                   p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
                   p.is_active, p.created_at,
                   pt.jersey_number,
@@ -199,7 +199,7 @@ router.get('/', async (req, res) => {
               SELECT
                 id, first_name, last_name, photo,
                 date_of_birth::text AS date_of_birth,
-                birth_city, birth_country, nationality,
+                birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 is_active, created_at,
                 jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
@@ -208,7 +208,7 @@ router.get('/', async (req, res) => {
                   p.id, p.first_name, p.last_name,
                   COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
                   p.date_of_birth,
-                  p.birth_city, p.birth_country, p.nationality,
+                  p.birth_city, p.birth_country,
                   p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
                   p.is_active, p.created_at,
                   pt.jersey_number,
@@ -315,7 +315,7 @@ router.get('/', async (req, res) => {
           SELECT
             id, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
-            birth_city, birth_country, nationality,
+            birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
@@ -324,7 +324,7 @@ router.get('/', async (req, res) => {
               p.id, p.first_name, p.last_name,
               COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
-              p.birth_city, p.birth_country, p.nationality,
+              p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
@@ -361,7 +361,7 @@ router.get('/', async (req, res) => {
           SELECT
             id, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
-            birth_city, birth_country, nationality,
+            birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
@@ -370,7 +370,7 @@ router.get('/', async (req, res) => {
               p.id, p.first_name, p.last_name,
               COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
-              p.birth_city, p.birth_country, p.nationality,
+              p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
@@ -403,7 +403,7 @@ router.get('/', async (req, res) => {
           SELECT
             id, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
-            birth_city, birth_country, nationality,
+            birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
@@ -412,7 +412,7 @@ router.get('/', async (req, res) => {
               p.id, p.first_name, p.last_name,
               COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
-              p.birth_city, p.birth_country, p.nationality,
+              p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
@@ -446,7 +446,7 @@ router.get('/', async (req, res) => {
           SELECT
             id, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
-            birth_city, birth_country, nationality,
+            birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
@@ -454,7 +454,7 @@ router.get('/', async (req, res) => {
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name, COALESCE(best_player_photo(p.id, pt.season_id, pt.team_id), p.photo) AS photo,
               p.date_of_birth,
-              p.birth_city, p.birth_country, p.nationality,
+              p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
               p.is_active, p.created_at,
               pt.jersey_number,
@@ -484,7 +484,7 @@ router.get('/', async (req, res) => {
           SELECT
             id, first_name, last_name, photo,
             date_of_birth::text AS date_of_birth,
-            birth_city, birth_country, nationality,
+            birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at
           FROM players ORDER BY last_name, first_name
@@ -1452,7 +1452,7 @@ router.get('/:id', async (req, res) => {
       SELECT
         id, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
-        birth_city, birth_country, nationality,
+        birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
         is_active, created_at
       FROM players WHERE id = ${id}
@@ -1471,7 +1471,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
-    date_of_birth, birth_city, birth_country, nationality,
+    date_of_birth, birth_city, birth_country,
     height_cm, weight_lbs, is_active,
   } = req.body;
 
@@ -1486,20 +1486,20 @@ router.post('/', async (req, res) => {
     const rows = await sql`
       INSERT INTO players (
         first_name, last_name, position, shoots,
-        date_of_birth, birth_city, birth_country, nationality,
+        date_of_birth, birth_city, birth_country,
         height_cm, weight_lbs, is_active
       ) VALUES (
         ${first_name.trim()}, ${last_name.trim()},
         ${position ?? null}, ${shoots ?? null},
         ${date_of_birth ?? null}, ${birth_city?.trim() ?? null},
-        ${birth_country?.trim().toUpperCase() ?? null}, ${nationality?.trim().toUpperCase() ?? null},
+        ${birth_country?.trim().toUpperCase() ?? null},
         ${height_cm ?? null}, ${weight_lbs ?? null},
         ${is_active ?? true}
       )
       RETURNING
         id, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
-        birth_city, birth_country, nationality,
+        birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
         is_active, created_at
     `;
@@ -1544,7 +1544,7 @@ router.post('/bulk', async (req, res) => {
         RETURNING
           id, first_name, last_name, photo,
           date_of_birth::text AS date_of_birth,
-          birth_city, birth_country, nationality,
+          birth_city, birth_country,
           height_cm, weight_lbs, position, shoots,
           is_active, created_at
       `;
@@ -1564,7 +1564,7 @@ router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
     first_name, last_name, position, shoots,
-    date_of_birth, birth_city, birth_country, nationality,
+    date_of_birth, birth_city, birth_country,
     height_cm, weight_lbs, is_active,
   } = req.body;
 
@@ -1575,7 +1575,6 @@ router.patch('/:id', async (req, res) => {
   const dobInBody          = 'date_of_birth' in req.body;
   const birthCityInBody    = 'birth_city'    in req.body;
   const birthCountryInBody = 'birth_country' in req.body;
-  const nationalityInBody  = 'nationality'   in req.body;
   const heightInBody       = 'height_cm'     in req.body;
   const weightInBody       = 'weight_lbs'    in req.body;
   const isActiveInBody     = 'is_active'     in req.body;
@@ -1590,7 +1589,6 @@ router.patch('/:id', async (req, res) => {
         date_of_birth = CASE WHEN ${dobInBody}          THEN ${date_of_birth ?? null}                         ELSE date_of_birth END,
         birth_city    = CASE WHEN ${birthCityInBody}    THEN ${birth_city?.trim() ?? null}                    ELSE birth_city    END,
         birth_country = CASE WHEN ${birthCountryInBody} THEN ${birth_country?.trim().toUpperCase() ?? null}   ELSE birth_country END,
-        nationality   = CASE WHEN ${nationalityInBody}  THEN ${nationality?.trim().toUpperCase() ?? null}     ELSE nationality   END,
         height_cm     = CASE WHEN ${heightInBody}       THEN ${height_cm ?? null}                             ELSE height_cm     END,
         weight_lbs    = CASE WHEN ${weightInBody}       THEN ${weight_lbs ?? null}                            ELSE weight_lbs    END,
         is_active     = CASE WHEN ${isActiveInBody}     THEN ${is_active ?? true}                             ELSE is_active     END
@@ -1598,7 +1596,7 @@ router.patch('/:id', async (req, res) => {
       RETURNING
         id, first_name, last_name, photo,
         date_of_birth::text AS date_of_birth,
-        birth_city, birth_country, nationality,
+        birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
         is_active, created_at
     `;
@@ -1626,3 +1624,4 @@ router.delete('/:id', async (req, res) => {
 });
 
 module.exports = router;
+

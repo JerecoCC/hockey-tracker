@@ -180,7 +180,6 @@ const players = pgTable('players', {
   dateOfBirth: date('date_of_birth'),
   birthCity: text('birth_city'),
   birthCountry: text('birth_country'),
-  nationality: text('nationality'),
   heightCm: smallint('height_cm'),
   weightLbs: smallint('weight_lbs'),
   position: text('position'),

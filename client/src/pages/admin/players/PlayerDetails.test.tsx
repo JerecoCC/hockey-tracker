@@ -150,7 +150,6 @@ beforeEach(() => {
       date_of_birth: '1997-01-13',
       birth_city: 'Edmonton',
       birth_country: 'CAN',
-      nationality: 'CAN',
       height_cm: 185,
       weight_lbs: 195,
       position: 'C',
@@ -258,11 +257,11 @@ describe('PlayerDetails info tab', () => {
 
     expect(screen.getByText('Edit Player Info')).toBeInTheDocument();
     expect(screen.getByDisplayValue('Edmonton')).toBeInTheDocument();
-    expect(screen.getAllByDisplayValue('CAN').length).toBe(2);
+    expect(screen.getByDisplayValue('CAN')).toBeInTheDocument();
     expect(screen.getByDisplayValue('195')).toBeInTheDocument();
   });
 
-  it('normalizes birth city country and nationality after birth city blur', async () => {
+  it('normalizes birth city country after birth city blur', async () => {
     const user = userEvent.setup();
     mockUsePlayerDetails.mockReturnValue({
       player: {
@@ -273,7 +272,6 @@ describe('PlayerDetails info tab', () => {
         date_of_birth: '1997-01-13',
         birth_city: '',
         birth_country: '',
-        nationality: '',
         height_cm: 185,
         weight_lbs: 195,
         position: 'C',
@@ -295,10 +293,9 @@ describe('PlayerDetails info tab', () => {
 
     expect(screen.getByLabelText('Birth City')).toHaveValue('Boston, Massachusetts');
     expect(screen.getByLabelText('Birth Country')).toHaveValue('USA');
-    expect(screen.getByLabelText('Nationality')).toHaveValue('USA');
   });
 
-  it('does not normalize birth city when birth country or nationality already has a value', async () => {
+  it('does not normalize birth city when birth country already has a value', async () => {
     const user = userEvent.setup();
     render(<PlayerDetails />);
 
@@ -311,7 +308,6 @@ describe('PlayerDetails info tab', () => {
 
     expect(screen.getByLabelText('Birth City')).toHaveValue('Boston, Massachusetts, USA');
     expect(screen.getByLabelText('Birth Country')).toHaveValue('CAN');
-    expect(screen.getByLabelText('Nationality')).toHaveValue('CAN');
   });
 
   it('rejects invalid height inches values', async () => {

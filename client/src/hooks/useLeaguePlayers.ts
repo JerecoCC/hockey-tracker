@@ -23,7 +23,6 @@ export interface PlayerRecord {
   date_of_birth: string | null;
   birth_city: string | null;
   birth_country: string | null;
-  nationality: string | null;
   height_cm: number | null;
   weight_lbs: number | null;
   position: PlayerPosition | null;
@@ -50,7 +49,6 @@ export interface CreatePlayerData {
   date_of_birth?: string | null;
   birth_city?: string | null;
   birth_country?: string | null;
-  nationality?: string | null;
   height_cm?: number | null;
   weight_lbs?: number | null;
   is_active?: boolean;

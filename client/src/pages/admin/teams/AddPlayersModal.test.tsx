@@ -78,7 +78,6 @@ describe('AddPlayersModal', () => {
           date_of_birth: null,
           birth_city: null,
           birth_country: null,
-          nationality: null,
           height_cm: null,
           weight_lbs: null,
           position: 'C',
@@ -104,3 +103,4 @@ describe('AddPlayersModal', () => {
     expect(screen.queryByText(/Last:/)).not.toBeInTheDocument();
   });
 });
+

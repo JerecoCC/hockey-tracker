@@ -365,7 +365,6 @@ describe('LeagueDetailsPage – players tab', () => {
             date_of_birth: null,
             birth_city: null,
             birth_country: null,
-            nationality: null,
             height_cm: null,
             weight_lbs: null,
             position: 'C',
@@ -387,3 +386,4 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/tl/players/john-smith');
   });
 });
+

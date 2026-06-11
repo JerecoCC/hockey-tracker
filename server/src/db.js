@@ -420,7 +420,6 @@ async function initSchema() {
       date_of_birth  DATE,
       birth_city     TEXT,
       birth_country  TEXT,
-      nationality    TEXT,
       height_cm      SMALLINT,
       weight_lbs     SMALLINT,
       position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
@@ -432,6 +431,7 @@ async function initSchema() {
 
   // Migrations for columns added after the table was first created
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+  await sql`ALTER TABLE players DROP COLUMN IF EXISTS nationality`;
 
   // Expand position check constraint to include 'F' (generic Forward)
   await sql`ALTER TABLE players DROP CONSTRAINT IF EXISTS players_position_check`;

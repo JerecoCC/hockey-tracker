@@ -48,7 +48,6 @@ interface FormValues {
   date_of_birth: string;
   birth_city: string;
   birth_country: string;
-  nationality: string;
   height_ft: string;
   height_in: string;
   weight_lbs: string;
@@ -87,7 +86,6 @@ const PlayerFormModal = ({
       date_of_birth: '',
       birth_city: '',
       birth_country: '',
-      nationality: '',
       height_ft: '',
       height_in: '',
       weight_lbs: '',
@@ -109,7 +107,6 @@ const PlayerFormModal = ({
       date_of_birth: editTarget?.date_of_birth ?? '',
       birth_city: editTarget?.birth_city ?? '',
       birth_country: editTarget?.birth_country ?? '',
-      nationality: editTarget?.nationality ?? '',
       height_ft: ft != null ? String(ft) : '',
       height_in: inches != null ? String(inches) : '',
       weight_lbs: editTarget?.weight_lbs != null ? String(editTarget.weight_lbs) : '',
@@ -132,7 +129,6 @@ const PlayerFormModal = ({
       date_of_birth: data.date_of_birth || null,
       birth_city: data.birth_city || null,
       birth_country: data.birth_country || null,
-      nationality: data.nationality || null,
       height_cm,
       weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
     };
@@ -246,13 +242,6 @@ const PlayerFormModal = ({
             label="Birth Country"
             control={control}
             name="birth_country"
-            placeholder="e.g. CAN"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Nationality"
-            control={control}
-            name="nationality"
             placeholder="e.g. CAN"
             disabled={isSubmitting}
           />

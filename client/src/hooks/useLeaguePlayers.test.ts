@@ -24,7 +24,6 @@ const PLAYER = {
   date_of_birth: '1961-01-26',
   birth_city: 'Brantford',
   birth_country: 'CAN',
-  nationality: 'CAN',
   height_cm: 183,
   weight_lbs: 185,
   position: 'C' as const,
@@ -258,3 +257,4 @@ describe('useLeaguePlayers – deletePlayer', () => {
     expect(toast.error).toHaveBeenCalled();
   });
 });
+

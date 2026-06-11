@@ -18,7 +18,6 @@ const player = (overrides: Record<string, unknown>) => ({
   date_of_birth: null,
   birth_city: null,
   birth_country: null,
-  nationality: null,
   height_cm: null,
   weight_lbs: null,
   position: 'C',
@@ -99,3 +98,4 @@ describe('LineupRosterModal jersey quick-add', () => {
     expect(addToGameRoster).toHaveBeenCalledWith(['player-2']);
   });
 });
+
