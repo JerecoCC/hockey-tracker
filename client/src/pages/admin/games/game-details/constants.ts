@@ -37,6 +37,14 @@ export const PERIODS: { num: number; label: string; periodId: CurrentPeriod }[] 
   { num: 3, label: '3rd Period', periodId: PERIOD.THIRD },
 ];
 
+export const PERIOD_TITLE_LABEL: Record<string, string> = {
+  [PERIOD.FIRST]: '1st Period',
+  [PERIOD.SECOND]: '2nd Period',
+  [PERIOD.THIRD]: '3rd Period',
+  [PERIOD.OVERTIME]: 'Overtime',
+  [PERIOD.SHOOTOUT]: 'Shootout',
+};
+
 // ── Label maps ────────────────────────────────────────────────────────────────
 
 export const GAME_TYPE_LABEL: Record<GameType, string> = {

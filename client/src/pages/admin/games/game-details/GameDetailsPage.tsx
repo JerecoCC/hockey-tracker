@@ -133,6 +133,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     notFound: gameNotFound,
     failed: gameLoadFailed,
   } = useGameDetails(gameId, { mode });
+
   useEffect(() => {
     if (!game) return;
     const matchup = [teamTitleName(game.away_team), teamTitleName(game.home_team)]
@@ -143,13 +144,8 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     return () => {
       document.title = 'Hockey Tracker';
     };
-  }, [
-    game?.away_team.name,
-    game?.away_team.team_name,
-    game?.home_team.name,
-    game?.home_team.team_name,
-    game?.scheduled_at,
-  ]);
+  }, [game]);
+
   const loading =
     gameDetailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||

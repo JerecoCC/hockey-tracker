@@ -19,7 +19,7 @@ import { type GoalieStatRecord, type UpsertGoalieStatData } from '@/hooks/useGam
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import { type LineupEntry } from '@/hooks/useGameLineup';
 import styles from './GameDetailsPage.module.scss';
-import { PERIOD, PERIOD_ORDER } from './constants';
+import { PERIOD, PERIOD_ORDER, PERIOD_TITLE_LABEL } from './constants';
 import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
 
 export type ShotsNextAction =
@@ -40,14 +40,6 @@ const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.THIRD]: '3rd',
   [PERIOD.OVERTIME]: PERIOD.OVERTIME,
   [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
-};
-
-const PERIOD_TITLE_LABEL: Record<string, string> = {
-  [PERIOD.FIRST]: '1st Period',
-  [PERIOD.SECOND]: '2nd Period',
-  [PERIOD.THIRD]: '3rd Period',
-  [PERIOD.OVERTIME]: 'Overtime',
-  [PERIOD.SHOOTOUT]: 'Shootout',
 };
 
 const fmt = (first: string | null, last: string | null) =>

@@ -11,7 +11,7 @@ import { type GameRecord } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GoalRecord, type PostGoalData } from '@/hooks/useGameGoals';
 import styles from './GameDetailsPage.module.scss';
-import { PERIOD } from './constants';
+import { PERIOD, PERIOD_TITLE_LABEL } from './constants';
 
 const GOAL_TYPES = [
   { value: 'even-strength', label: 'Even Strength' },
@@ -237,7 +237,7 @@ const ScoreGoalModal = ({
   return (
     <Modal
       open={open}
-      title={editGoal ? 'Edit Goal' : 'Score Goal'}
+      title={editGoal ? 'Edit Goal' : `Score Goal — ${PERIOD_TITLE_LABEL[period]}`}
       onClose={onClose}
       confirmLabel={submitting ? 'Saving…' : editGoal ? 'Save Changes' : 'Record Goal'}
       confirmDisabled={
@@ -304,9 +304,7 @@ const ScoreGoalModal = ({
                   className={[styles.emptyNetToggle, goalEmptyNet ? styles.emptyNetToggleOn : '']
                     .filter(Boolean)
                     .join(' ')}
-                  onClick={() =>
-                    setValue('goalEmptyNet', !goalEmptyNet, { shouldDirty: true })
-                  }
+                  onClick={() => setValue('goalEmptyNet', !goalEmptyNet, { shouldDirty: true })}
                   disabled={submitting}
                   aria-label="Empty Net"
                 >
