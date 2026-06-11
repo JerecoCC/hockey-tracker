@@ -11,6 +11,7 @@ interface Props {
   game: GameRecord;
   onClose: () => void;
   setReportData: (data: NhlGoalieSwitchReport | null) => void;
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 type FormValues = {
@@ -19,7 +20,13 @@ type FormValues = {
 
 const FORM_ID = 'nhl-goalie-switch-checker-form';
 
-const NhlGoalieSwitchCheckerModal = ({ open, game, onClose, setReportData }: Props) => {
+const NhlGoalieSwitchCheckerModal = ({
+  open,
+  game,
+  onClose,
+  setReportData,
+  onLoadingChange,
+}: Props) => {
   const { control, handleSubmit, watch } = useForm<FormValues>({
     defaultValues: {
       game_number: game.game_number ? String(game.game_number) : '',
@@ -33,6 +40,7 @@ const NhlGoalieSwitchCheckerModal = ({ open, game, onClose, setReportData }: Pro
     setError(null);
     setReportData(null);
     setLoading(true);
+    onLoadingChange?.(true);
 
     try {
       setReportData(
@@ -45,6 +53,7 @@ const NhlGoalieSwitchCheckerModal = ({ open, game, onClose, setReportData }: Pro
       setError(err instanceof Error ? err.message : 'Unable to check NHL goalie switches.');
     } finally {
       setLoading(false);
+      onLoadingChange?.(false);
     }
   });
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Tabs from '@/components/Tabs/Tabs';
 import { useGameDetails, useGameRouteLookup } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
@@ -342,12 +343,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   }, [fallbackHref, game, gameNotFound, loading, navigate, routeGameLookupNotFound]);
 
   if (loading) {
-    return (
-      <div className={styles.loaderWrapper}>
-        <span className={styles.spinner} />
-        <p className={styles.loaderText}>Loading game…</p>
-      </div>
-    );
+    return <LoadingSpinner message="Loading game..." layout="page" size="lg" />;
   }
 
   if (!game && (gameLoadFailed || routeGameLookupFailed)) {

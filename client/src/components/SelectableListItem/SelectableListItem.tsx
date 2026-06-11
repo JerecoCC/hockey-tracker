@@ -43,6 +43,7 @@ export interface SelectableListItemProps {
   rightContent?: ReactNode;
   /** Hover-revealed actions. Button clicks do not toggle the row checkbox. */
   actions?: (SelectableListItemAction | false | null | undefined)[];
+  disabled?: boolean;
 }
 
 const SelectableListItem = ({
@@ -64,17 +65,22 @@ const SelectableListItem = ({
   subtitle,
   rightContent,
   actions,
+  disabled = false,
 }: SelectableListItemProps) => {
   const visibleActions = actions?.filter((a): a is SelectableListItemAction => Boolean(a)) ?? [];
 
   return (
     <li
-      className={[styles.item, checked ? styles.checked : ''].filter(Boolean).join(' ')}
-      onClick={onToggle}
+      className={[styles.item, checked ? styles.checked : '', disabled ? styles.disabled : '']
+        .filter(Boolean)
+        .join(' ')}
+      aria-disabled={disabled}
+      onClick={disabled ? undefined : onToggle}
     >
       <Checkbox
         checked={checked}
         onChange={onToggle}
+        disabled={disabled}
       />
 
       {(leadingImage || leadingImagePlaceholder) &&
@@ -140,9 +146,10 @@ const SelectableListItem = ({
               icon={action.icon}
               size="sm"
               tooltip={action.tooltip}
-              disabled={action.disabled}
+              disabled={disabled || action.disabled}
               onClick={(e) => {
                 e.stopPropagation();
+                if (disabled) return;
                 action.onClick();
               }}
             />

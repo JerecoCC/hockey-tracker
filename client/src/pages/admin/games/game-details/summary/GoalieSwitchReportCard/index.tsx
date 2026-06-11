@@ -1,4 +1,5 @@
 import Card from '@/components/Card/Card';
+import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import TeamResult from './TeamResult';
 import { NhlGoalieSwitchReport } from '../../nhlGoalieSwitchChecker';
 import NhlGoalieSwitchCheckerModal from '../../NhlGoalieSwitchCheckerModal';
@@ -14,6 +15,7 @@ type Props = {
 const GoalieSwitchReportCard = ({ game }: Props) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [report, setReport] = useState<NhlGoalieSwitchReport | null>(null);
+  const [loading, setLoading] = useState(false);
   const gspCode: string = `${game.id}-gsp`;
 
   useEffect(() => {
@@ -25,8 +27,12 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
 
   const handleSetReport = (data: NhlGoalieSwitchReport | null) => {
     setReport(data);
-    sessionStorage.setItem(gspCode, JSON.stringify(data));
-    setModalOpen(false);
+    if (data) {
+      sessionStorage.setItem(gspCode, JSON.stringify(data));
+      setModalOpen(false);
+    } else {
+      sessionStorage.removeItem(gspCode);
+    }
   };
 
   return (
@@ -44,7 +50,9 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
           />
         }
       >
-        {report ? (
+        {loading ? (
+          <LoadingSpinner message="Fetching NHL GameCenter data..." />
+        ) : report ? (
           <div className={styles.nhlGoalieCheckerResults}>
             <div className={styles.nhlGoalieCheckerSummary}>
               <span>Game {report.gameId}</span>
@@ -71,6 +79,7 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
         game={game}
         onClose={() => setModalOpen(false)}
         setReportData={handleSetReport}
+        onLoadingChange={setLoading}
       />
     </>
   );

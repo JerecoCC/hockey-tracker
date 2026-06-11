@@ -6,17 +6,20 @@ interface CheckboxProps {
   /** Called when the checkbox itself is clicked. The parent <li> handles row-level toggling. */
   onChange?: () => void;
   className?: string;
+  disabled?: boolean;
 }
 
-const Checkbox = ({ checked, onChange, className }: CheckboxProps) => (
+const Checkbox = ({ checked, onChange, className, disabled = false }: CheckboxProps) => (
   <span
     className={[styles.checkbox, checked ? styles.checked : '', className]
       .filter(Boolean)
       .join(' ')}
     role="checkbox"
     aria-checked={checked}
+    aria-disabled={disabled}
     onClick={(e) => {
       e.stopPropagation();
+      if (disabled) return;
       onChange?.();
     }}
   >

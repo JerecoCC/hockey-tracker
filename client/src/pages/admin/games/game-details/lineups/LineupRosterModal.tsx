@@ -5,6 +5,7 @@ import { toast } from 'react-toastify';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
+import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@/components/Modal/Modal';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
@@ -72,7 +73,7 @@ const LineupRosterModal = ({
   const [showProspects, setShowProspects] = useState(false);
   const [movingPlayerId, setMovingPlayerId] = useState<string | null>(null);
 
-  const { data: allPlayers = [] } = useQuery<TeamPlayerRecord[]>({
+  const { data: allPlayers = [], isFetching } = useQuery<TeamPlayerRecord[]>({
     queryKey: [
       'players',
       { team_id: teamId, season_id: seasonId, game_date: gameDate, includeProspects: true },
@@ -91,6 +92,8 @@ const LineupRosterModal = ({
     },
     enabled: open,
   });
+  const loadingPlayers = isFetching && allPlayers.length === 0;
+  const controlsDisabled = submitting;
 
   const hasProspects = allPlayers.some((p) => p.is_prospect);
 
@@ -122,6 +125,7 @@ const LineupRosterModal = ({
   const selectedCount = selected.size;
 
   const toggle = (playerId: string) => {
+    if (controlsDisabled) return;
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(playerId)) next.delete(playerId);
@@ -131,6 +135,7 @@ const LineupRosterModal = ({
   };
 
   const handleApplyJerseys = () => {
+    if (controlsDisabled) return;
     const nums = jerseyInput
       .split(/[\s,]+/)
       .map((s) => parseInt(s, 10))
@@ -168,6 +173,7 @@ const LineupRosterModal = ({
   };
 
   const updateProspectStatus = async (player: TeamPlayerRecord, isProspect: boolean) => {
+    if (controlsDisabled) return;
     setMovingPlayerId(player.id);
     try {
       if (player.player_team_id) {
@@ -220,8 +226,12 @@ const LineupRosterModal = ({
     if (selectedCount === 0 && pendingMissing.length === 0) return;
     if (selectedCount > 0) {
       setSubmitting(true);
-      const ok = await addToGameRoster([...selected]);
-      setSubmitting(false);
+      let ok = false;
+      try {
+        ok = await addToGameRoster([...selected]);
+      } finally {
+        setSubmitting(false);
+      }
       if (!ok) return;
     }
     if (pendingMissing.length > 0) {
@@ -261,6 +271,7 @@ const LineupRosterModal = ({
               value={jerseyInput}
               onChange={(e) => setJerseyInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyJerseys()}
+              disabled={controlsDisabled}
               autoFocus
             />
             <Button
@@ -268,7 +279,7 @@ const LineupRosterModal = ({
               variant="outlined"
               intent="info"
               onClick={handleApplyJerseys}
-              disabled={!jerseyInput.trim()}
+              disabled={controlsDisabled || !jerseyInput.trim()}
             >
               Apply
             </Button>
@@ -318,6 +329,7 @@ const LineupRosterModal = ({
                 placeholder="Search players…"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
+                disabled={controlsDisabled}
               />
             </div>
             <ToggleButton
@@ -328,12 +340,14 @@ const LineupRosterModal = ({
               iconHeight="field"
               activeTooltip="Hide prospects"
               inactiveTooltip="Show prospects"
-              disabled={!hasProspects}
+              disabled={controlsDisabled || !hasProspects}
             />
           </div>
         </div>
 
-        {filtered.length === 0 ? (
+        {loadingPlayers ? (
+          <LoadingSpinner message="Loading players..." />
+        ) : filtered.length === 0 ? (
           <p className={styles.empty}>
             {available.length === 0
               ? 'All team players are already in this lineup.'
@@ -357,18 +371,19 @@ const LineupRosterModal = ({
                 subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                 name={`${p.last_name}, ${p.first_name}`}
                 rightContent={p.is_prospect ? <Badge label="Prospect" /> : undefined}
+                disabled={controlsDisabled}
                 actions={[
                   p.is_prospect
                     ? {
                         icon: 'north',
                         tooltip: 'Move to roster',
-                        disabled: movingPlayerId === p.id,
+                        disabled: controlsDisabled || movingPlayerId === p.id,
                         onClick: () => updateProspectStatus(p, false),
                       }
                     : {
                         icon: 'south',
                         tooltip: 'Move to prospects',
-                        disabled: movingPlayerId === p.id,
+                        disabled: controlsDisabled || movingPlayerId === p.id,
                         onClick: () => updateProspectStatus(p, true),
                       },
                 ]}

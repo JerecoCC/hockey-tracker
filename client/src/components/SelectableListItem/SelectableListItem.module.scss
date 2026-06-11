@@ -26,6 +26,20 @@
   }
 }
 
+.disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+
+  &:hover {
+    background: transparent;
+
+    .actions {
+      opacity: 0;
+      pointer-events: none;
+    }
+  }
+}
+
 .leadingLogo {
   width: 34px;
   height: 34px;
