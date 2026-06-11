@@ -44,7 +44,7 @@ export default function LastTeamGamesAccordion({
             code={code}
             primaryColor={primary}
             textColor={text}
-            size={20}
+            size={30}
             shape="square"
           />
           <span>{label}</span>

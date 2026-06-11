@@ -43,7 +43,7 @@ export default function LastGameList({ lg, onNavigate }: Props) {
         <TeamLogo
           logo={lg.opponent_logo}
           code={lg.opponent_code}
-          size={18}
+          size={24}
           shape="square"
         />
       </span>

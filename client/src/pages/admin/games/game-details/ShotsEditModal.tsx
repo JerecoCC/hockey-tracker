@@ -165,7 +165,7 @@ const ShotsEditModal = ({
                     code={row.code}
                     primaryColor={row.primary}
                     textColor={row.text}
-                    size={28}
+                    size={24}
                     shape="square"
                   />
                   <span className={styles.linescoreCode}>{row.code}</span>
