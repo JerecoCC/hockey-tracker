@@ -2760,6 +2760,7 @@ const goalieStintsCTE = (gameId) => sql`
   stint_ranges AS (
     SELECT
       st.id, st.game_id, g.season_id, g.scheduled_at, st.team_id, st.goalie_id, st.stint_ord,
+      g.home_team_id, g.away_team_id, g.period_shots,
       st.entered_period, st.entered_time,
       st.exited_period,  st.exited_time,
       st.shots_against,
@@ -2825,9 +2826,53 @@ const goalieStintsCTE = (gameId) => sql`
                  )) < sr.until_pos)
     GROUP BY sr.id
   ),
+  period_shots_by_game AS (
+    SELECT
+      ps.game_id,
+      COALESCE(SUM((shot->>'away_shots')::int), 0)::int AS away_shots,
+      COALESCE(SUM((shot->>'home_shots')::int), 0)::int AS home_shots
+    FROM (
+      SELECT DISTINCT game_id, period_shots
+      FROM stint_ranges
+    ) ps
+    LEFT JOIN LATERAL jsonb_array_elements(COALESCE(ps.period_shots, '[]'::jsonb)) shot ON true
+    GROUP BY ps.game_id
+  ),
+  empty_net_ga_by_team AS (
+    SELECT
+      sr.game_id,
+      sr.team_id,
+      COUNT(*)::int AS empty_net_ga
+    FROM (
+      SELECT DISTINCT game_id, team_id
+      FROM stint_ranges
+    ) sr
+    JOIN goals g
+      ON g.game_id = sr.game_id
+     AND g.team_id != sr.team_id
+     AND g.empty_net = true
+    GROUP BY sr.game_id, sr.team_id
+  ),
+  team_stint_counts AS (
+    SELECT game_id, team_id, COUNT(*)::int AS stint_count
+    FROM stint_ranges
+    GROUP BY game_id, team_id
+  ),
   stints_resolved AS (
     SELECT
       sr.*,
+      CASE
+        WHEN tsc.stint_count = 1 AND sr.shots_against = 0
+          THEN GREATEST(
+            CASE
+              WHEN sr.team_id = sr.home_team_id THEN COALESCE(psg.away_shots, 0)
+              WHEN sr.team_id = sr.away_team_id THEN COALESCE(psg.home_shots, 0)
+              ELSE sr.shots_against
+            END - COALESCE(enga.empty_net_ga, 0),
+            0
+          )::int
+        ELSE sr.shots_against
+      END AS resolved_sa,
       COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga,
       CASE
         WHEN sr.goals_against_override IS NULL
@@ -2836,6 +2881,9 @@ const goalieStintsCTE = (gameId) => sql`
       END AS resolved_save_ga
     FROM stint_ranges sr
     LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
+    LEFT JOIN period_shots_by_game psg ON psg.game_id = sr.game_id
+    LEFT JOIN empty_net_ga_by_team enga ON enga.game_id = sr.game_id AND enga.team_id = sr.team_id
+    LEFT JOIN team_stint_counts tsc ON tsc.game_id = sr.game_id AND tsc.team_id = sr.team_id
   ),
   goalie_agg AS (
     SELECT
@@ -2843,7 +2891,7 @@ const goalieStintsCTE = (gameId) => sql`
       MIN(from_pos)              AS first_pos,
       MIN(stint_ord)             AS first_stint_ord,
       MIN(created_at)            AS first_created_at,
-      SUM(shots_against)::int    AS total_sa,
+      SUM(resolved_sa)::int      AS total_sa,
       SUM(resolved_ga)::int      AS total_ga,
       SUM(resolved_save_ga)::int AS total_save_ga,
       JSONB_AGG(
@@ -2854,10 +2902,10 @@ const goalieStintsCTE = (gameId) => sql`
           'entered_time',           entered_time,
           'exited_period',          exited_period,
           'exited_time',            exited_time,
-          'shots_against',          shots_against,
+          'shots_against',          resolved_sa,
           'goals_against',          resolved_ga,
           'goals_against_override', goals_against_override,
-          'saves',                  shots_against - resolved_save_ga
+          'saves',                  resolved_sa - resolved_save_ga
         )
         ORDER BY stint_ord
       ) AS stints

@@ -11,7 +11,6 @@ import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
 import GoalieStatsCard from './GoalieStatsCard';
-import GoalieSwitchModal from '../GoalieSwitchModal';
 import ShotsEditModal from '../ShotsEditModal';
 import RecordShotsModal, { type ShotsNextAction } from '../RecordShotsModal';
 import ScoreImageModal from '../ScoreImageModal';
@@ -330,9 +329,6 @@ const GameSummaryTab = ({
     setDeletingAttemptId(null);
   };
 
-  // ── Goalie Switch modal state ────────────────────────────────────────────
-  const [switchGoalieOpen, setSwitchGoalieOpen] = useState(false);
-
   // Treat the game as in-progress for all edit controls when edit mode is on.
   const isEditInProgress = editable && (isInProgress || isEditMode);
 
@@ -380,13 +376,12 @@ const GameSummaryTab = ({
   // ── Record Shots modal state ─────────────────────────────────────────────
   const [shotsPeriod, setShotsPeriod] = useState<string | null>(null);
   const [shotsNextAction, setShotsNextAction] = useState<ShotsNextAction | null>(null);
-  const [shotsShowGoalies, setShotsShowGoalies] = useState(false);
   const [shotsShowShootsFirst, setShotsShowShootsFirst] = useState(false);
 
   const openShotsModal = (
     period: string,
     nextAction: ShotsNextAction,
-    showGoalies: boolean,
+    _showGoalies: boolean,
     showShootsFirst = false,
   ) => {
     if (nextAction.type === 'end-game' && endGameReadyForStars) {
@@ -395,7 +390,6 @@ const GameSummaryTab = ({
       return;
     }
     setShotsNextAction(nextAction);
-    setShotsShowGoalies(showGoalies);
     setShotsShowShootsFirst(showShootsFirst);
     setShotsPeriod(period);
   };
@@ -461,6 +455,7 @@ const GameSummaryTab = ({
   }, [busy, focusCurrentPeriodAction]);
 
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
+  const showGoalieSwitchReport = editable && game.league_code?.toUpperCase() === 'NHL';
 
   // For edit-mode revert: use current_period if set (retained after endGame), else
   // fall back to the highest period that has a score recorded.
@@ -555,7 +550,6 @@ const GameSummaryTab = ({
                 awayRoster={awayRoster}
                 homeRoster={homeRoster}
                 goalieStats={goalieStats}
-                lineup={lineup}
                 getPlayerHref={
                   playerHrefBuilder
                     ? (teamId, playerId, firstName, lastName) =>
@@ -563,8 +557,6 @@ const GameSummaryTab = ({
                     : undefined
                 }
                 isFinal={editable && isFinal && isEditMode}
-                isInProgress={isInProgress}
-                onSwitchGoalie={isInProgress ? () => setSwitchGoalieOpen(true) : undefined}
                 updateGoalieStint={editable ? updateGoalieStint : undefined}
                 addGoalieStint={editable ? switchGoalie : undefined}
                 removeGoalieStint={editable ? removeGoalieStint : undefined}
@@ -737,7 +729,7 @@ const GameSummaryTab = ({
               </Card>
             )}
 
-            <GoalieSwitchReportCard game={game} />
+            {showGoalieSwitchReport && <GoalieSwitchReportCard game={game} />}
 
             {/* ── Game Info card ── */}
             <GameInfoCard
@@ -847,19 +839,10 @@ const GameSummaryTab = ({
           open={shotsPeriod !== null}
           period={shotsPeriod}
           nextAction={shotsNextAction}
-          showGoalies={shotsShowGoalies}
           showShootsFirst={shotsShowShootsFirst}
           game={game}
-          awayRoster={awayRoster}
-          homeRoster={homeRoster}
-          goalieStats={goalieStats}
-          goals={goals}
-          lineup={lineup}
           onClose={() => setShotsPeriod(null)}
           updatePeriodShots={updatePeriodShots}
-          upsertGoalieStat={async (data) => {
-            await upsertGoalieStat(data);
-          }}
           updateGameInfo={updateGameInfo}
           onAdvancePeriod={advancePeriod}
           onNextOTPeriod={() => advanceOTPeriod(game.overtime_periods ?? 1)}
@@ -899,19 +882,6 @@ const GameSummaryTab = ({
           liveHomeScore={liveHomeScore}
           overtimeSuffix={overtimeSuffix}
           onClose={() => setScoreImageOpen(false)}
-        />
-      )}
-
-      {/* ── Goalie Switch modal ── */}
-      {editable && (
-        <GoalieSwitchModal
-          open={switchGoalieOpen}
-          game={game}
-          awayRoster={awayRoster}
-          homeRoster={homeRoster}
-          existingStats={goalieStats}
-          onClose={() => setSwitchGoalieOpen(false)}
-          switchGoalie={switchGoalie}
         />
       )}
 

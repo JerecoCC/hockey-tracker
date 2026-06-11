@@ -14,7 +14,6 @@ import type {
   GoalieStintRecord,
   UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
-import type { LineupEntry } from '@/hooks/useGameLineup';
 import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
@@ -87,7 +86,6 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
-  lineup: LineupEntry[];
   getPlayerHref?: (
     teamId: string,
     playerId: string,
@@ -95,8 +93,6 @@ interface Props {
     lastName: string | null | undefined,
   ) => string;
   isFinal: boolean;
-  isInProgress?: boolean;
-  onSwitchGoalie?: () => void;
   updateGoalieStint?: (
     stintId: string,
     data: UpdateGoalieStintData,
@@ -116,8 +112,6 @@ const GoalieStatsCard = ({
   goalieStats,
   getPlayerHref,
   isFinal,
-  isInProgress,
-  onSwitchGoalie,
   updateGoalieStint,
   addGoalieStint,
   removeGoalieStint,
@@ -144,28 +138,16 @@ const GoalieStatsCard = ({
       <Card
         title="Goalie Stats"
         action={
-          <div style={{ display: 'flex', gap: '8px' }}>
-            {isInProgress && onSwitchGoalie && (
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="swap_horiz"
-                size="sm"
-                tooltip="Switch Goalie"
-                onClick={onSwitchGoalie}
-              />
-            )}
-            {isFinal && canEdit && (
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                size="sm"
-                tooltip="Edit goalie stats"
-                onClick={() => setEditOpen(true)}
-              />
-            )}
-          </div>
+          isFinal && canEdit ? (
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="edit"
+              size="sm"
+              tooltip="Edit goalie stats"
+              onClick={() => setEditOpen(true)}
+            />
+          ) : undefined
         }
       >
         {goaliesWithStats.length === 0 ? (
