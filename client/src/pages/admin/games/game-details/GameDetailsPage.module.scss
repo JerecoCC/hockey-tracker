@@ -877,6 +877,21 @@
   min-width: 0;
 }
 
+.goalieStatsEditorStarterBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 2px 8px;
+  border: 1px solid rgba($info, 0.42);
+  border-radius: $radius-sm;
+  background: rgba($info, 0.08);
+  color: $info;
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
 .goalieStatsEditorWindowRow {
   display: grid;
   grid-template-columns: max-content max-content;
@@ -885,11 +900,11 @@
   min-width: 0;
 
   .goalieStatsEditorAddField:first-child {
-    width: 88px;
+    width: 96px;
   }
 
   .goalieStatsEditorAddField:last-child {
-    width: 116px;
+    width: 128px;
   }
 }
 
@@ -903,12 +918,37 @@
   background: $bg-input;
 }
 
+.goalieStatsEditorGroupMulti {
+  border-color: rgba($info, 0.4);
+  background: rgba($info, 0.07);
+}
+
 .goalieStatsEditorHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: $space-md;
   min-width: 0;
+}
+
+.goalieStatsEditorIdentity {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  flex: 1;
+  min-width: 0;
+}
+
+.goalieStatsEditorNameLine {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.goalieStatsEditorPlayerName {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .goalieStatsEditorTotals {
@@ -949,7 +989,7 @@
 .goalieStatsEditorHead,
 .goalieStatsEditorStint {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 72px 108px 56px 56px 76px;
+  grid-template-columns: minmax(240px, 1fr) 72px 108px 56px 56px 76px;
   gap: $space-sm;
   align-items: center;
 }

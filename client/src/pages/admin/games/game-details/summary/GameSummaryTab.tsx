@@ -591,7 +591,6 @@ const GameSummaryTab = ({
 
           {/* ── Right column: Linescore + Shots + Game Info ── */}
           <div className={styles.summaryRight}>
-            <GoalieSwitchReportCard game={game} />
             <LinescoreCard
               game={game}
               isFinal={isFinal}
@@ -737,6 +736,8 @@ const GameSummaryTab = ({
                 </table>
               </Card>
             )}
+
+            <GoalieSwitchReportCard game={game} />
 
             {/* ── Game Info card ── */}
             <GameInfoCard

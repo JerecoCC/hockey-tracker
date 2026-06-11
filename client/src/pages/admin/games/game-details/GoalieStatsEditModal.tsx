@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -32,22 +31,15 @@ const PERIOD_LABEL: Record<string, string> = {
 
 const PERIOD_OPTIONS = Object.entries(PERIOD_LABEL).map(([value, label]) => ({ value, label }));
 
-const fmtStintPoint = (period: string, time: string | null) =>
-  `${PERIOD_LABEL[period] ?? period}${time ? ` ${time}` : ''}`;
-
-const fmtStintWindow = (stint?: GoalieStintRecord) => {
-  if (!stint) return 'Auto window';
-  const enter = fmtStintPoint(stint.entered_period, stint.entered_time);
-  if (!stint.exited_period) return `${enter} to End`;
-  return `${enter} to ${fmtStintPoint(stint.exited_period, stint.exited_time)}`;
-};
-
 const numericString = (value: string) => value.replace(/[^0-9]/g, '');
 
 const parseNumber = (value: string) => {
   const parsed = parseInt(value, 10);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+
+const isStartingWindow = (period: string, time?: string | null) =>
+  period === PERIOD.FIRST && (!time || time === '00:00');
 
 const defaultStintDraft = (teamId = '', goalieId = ''): AddStintDraft => ({
   team_id: teamId,
@@ -62,6 +54,10 @@ const defaultStintDraft = (teamId = '', goalieId = ''): AddStintDraft => ({
 
 interface StintRow {
   id: string;
+  entered_period: string;
+  entered_time: string;
+  exited_period: string;
+  exited_time: string;
   shots_against: string;
   goals_against: string;
   base_saves: number;
@@ -129,6 +125,11 @@ const GoalieStatsEditModal = ({
   }));
   const [stintDraft, setStintDraft] = useState<AddStintDraft>(() => defaultStintDraft());
 
+  const allGoalies = useMemo(
+    () => [...awayRoster, ...homeRoster].filter((entry) => entry.position === 'G'),
+    [awayRoster, homeRoster],
+  );
+
   const rosterByPlayerId = useMemo(() => {
     const map = new Map<string, GameRosterEntry>();
     [...awayRoster, ...homeRoster].forEach((entry) => map.set(entry.player_id, entry));
@@ -139,6 +140,7 @@ const GoalieStatsEditModal = ({
     if (!open) return;
     const defaultTeamId = game.away_team.id;
 
+    const goalieOrder = new Map(allGoalies.map((goalie, index) => [goalie.player_id, index]));
     const built: GoalieEditRow[] = goalieStats
       .map((stat) => {
         const entry = rosterByPlayerId.get(stat.goalie_id);
@@ -148,6 +150,12 @@ const GoalieStatsEditModal = ({
           rosterEntry: entry,
           stints: (stat.stints ?? []).map((stint) => ({
             id: stint.id,
+            entered_period: stint.entered_period,
+            entered_time: isStartingWindow(stint.entered_period, stint.entered_time)
+              ? '00:00'
+              : (stint.entered_time ?? ''),
+            exited_period: stint.exited_period ?? '',
+            exited_time: stint.exited_time ?? '',
             shots_against: String(stint.shots_against),
             goals_against:
               stint.goals_against_override != null
@@ -157,7 +165,12 @@ const GoalieStatsEditModal = ({
           })),
         };
       })
-      .filter((row): row is GoalieEditRow => row !== null);
+      .filter((row): row is GoalieEditRow => row !== null)
+      .sort(
+        (a, b) =>
+          (goalieOrder.get(a.rosterEntry.player_id) ?? Number.MAX_SAFE_INTEGER) -
+          (goalieOrder.get(b.rosterEntry.player_id) ?? Number.MAX_SAFE_INTEGER),
+      );
 
     setRows(built);
     setAdding(false);
@@ -173,17 +186,15 @@ const GoalieStatsEditModal = ({
       goals_against: '',
     });
     setStintDraft(defaultStintDraft());
-  }, [open, game.away_team.id, goalieStats, rosterByPlayerId]);
-
-  const allGoalies = useMemo(
-    () => [...awayRoster, ...homeRoster].filter((entry) => entry.position === 'G'),
-    [awayRoster, homeRoster],
-  );
+  }, [open, game.away_team.id, goalieStats, rosterByPlayerId, allGoalies]);
 
   const addGoalieOptions = allGoalies.filter(
     (goalie) =>
       goalie.team_id === addDraft.team_id &&
       !rows.some((row) => row.rosterEntry.player_id === goalie.player_id),
+  );
+  const hasAvailableGoalies = allGoalies.some(
+    (goalie) => !rows.some((row) => row.rosterEntry.player_id === goalie.player_id),
   );
 
   const teamOptions = [
@@ -239,7 +250,13 @@ const GoalieStatsEditModal = ({
   const setStintField = (
     goalieIdx: number,
     stintIdx: number,
-    field: 'shots_against' | 'goals_against',
+    field:
+      | 'entered_period'
+      | 'entered_time'
+      | 'exited_period'
+      | 'exited_time'
+      | 'shots_against'
+      | 'goals_against',
     value: string,
   ) => {
     setRows((prev) =>
@@ -249,7 +266,16 @@ const GoalieStatsEditModal = ({
           : {
               ...row,
               stints: row.stints.map((stint, si) =>
-                si === stintIdx ? { ...stint, [field]: numericString(value) } : stint,
+                si === stintIdx
+                  ? {
+                      ...stint,
+                      [field]:
+                        field === 'shots_against' || field === 'goals_against'
+                          ? numericString(value)
+                          : value,
+                      ...(field === 'exited_period' && !value ? { exited_time: '' } : {}),
+                    }
+                  : stint,
               ),
             },
       ),
@@ -298,6 +324,10 @@ const GoalieStatsEditModal = ({
       const override =
         stintRow.goals_against === '' ? null : parseNumber(stintRow.goals_against);
       return (
+        stintRow.entered_period !== originalStint.entered_period ||
+        (stintRow.entered_time || null) !== originalStint.entered_time ||
+        (stintRow.exited_period || null) !== originalStint.exited_period ||
+        (stintRow.exited_time || null) !== originalStint.exited_time ||
         shots !== originalStint.shots_against ||
         override !== originalStint.goals_against_override
       );
@@ -314,6 +344,18 @@ const GoalieStatsEditModal = ({
           if (!originalStint) continue;
 
           const patch: UpdateGoalieStintData = {};
+          if (stintRow.entered_period !== originalStint.entered_period) {
+            patch.entered_period = stintRow.entered_period;
+          }
+          if ((stintRow.entered_time || null) !== originalStint.entered_time) {
+            patch.entered_time = stintRow.entered_time || null;
+          }
+          if ((stintRow.exited_period || null) !== originalStint.exited_period) {
+            patch.exited_period = stintRow.exited_period || null;
+          }
+          if ((stintRow.exited_time || null) !== originalStint.exited_time) {
+            patch.exited_time = stintRow.exited_time || null;
+          }
           const shots = parseNumber(stintRow.shots_against);
           if (shots !== originalStint.shots_against) patch.shots_against = shots;
 
@@ -397,7 +439,13 @@ const GoalieStatsEditModal = ({
     setRows((prev) =>
       prev.some((row) => row.rosterEntry.player_id === goalie.player_id)
         ? prev
-        : [...prev, buildEmptyGoalieRow(goalie)],
+        : allGoalies
+            .map((orderedGoalie) =>
+              orderedGoalie.player_id === goalie.player_id
+                ? buildEmptyGoalieRow(goalie)
+                : prev.find((row) => row.rosterEntry.player_id === orderedGoalie.player_id),
+            )
+            .filter((row): row is GoalieEditRow => !!row),
     );
     setAdding(false);
     setAddingStintFor(goalie.player_id);
@@ -441,6 +489,20 @@ const GoalieStatsEditModal = ({
       confirmDisabled={busy || !hasChanges}
       busy={submitting}
       size="lg"
+      footerStart={
+        hasAvailableGoalies ? (
+          <Button
+            variant="outlined"
+            intent="neutral"
+            icon="add"
+            type="button"
+            disabled={busy || adding}
+            onClick={() => setAdding(true)}
+          >
+            Add goalie
+          </Button>
+        ) : null
+      }
     >
       <div className={styles.goalieStatsEditor}>
         {rows.length === 0 && (
@@ -459,37 +521,51 @@ const GoalieStatsEditModal = ({
           const teamGoalieCount = rows.filter(
             ({ rosterEntry }) => rosterEntry.team_id === goalie.team_id,
           ).length;
-          const canRemoveGoalie = teamGoalieCount > 1;
+          const goalieHasStarterStint = row.stints.some((stint) =>
+            isStartingWindow(stint.entered_period, stint.entered_time),
+          );
+          const canRemoveGoalie = teamGoalieCount > 1 && !goalieHasStarterStint;
 
           return (
             <section
               key={stat.goalie_id}
-              className={styles.goalieStatsEditorGroup}
+              className={`${styles.goalieStatsEditorGroup} ${
+                teamGoalieCount > 1 && !goalieHasStarterStint
+                  ? styles.goalieStatsEditorGroupMulti
+                  : ''
+              }`}
             >
               <div className={styles.goalieStatsEditorHeader}>
-                <span className={styles.goalieNameCell}>
-                  <TeamLogo
-                    logo={logo}
-                    code={code}
-                    primaryColor={primary}
-                    textColor={text}
-                    size={30}
-                    shape="square"
-                  />
-                  <PlayerAvatar
-                    photo={goalie.photo}
-                    initials={goalie.last_name?.charAt(0) ?? '?'}
-                    primaryColor={primary}
-                    textColor={text}
-                    size={34}
-                  />
-                  <div className={styles.goalInfo}>
-                    {goalie.jersey_number != null && (
-                      <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                    )}
-                    <span className={styles.goalScorer}>{goalieName}</span>
-                  </div>
-                </span>
+                <div className={styles.goalieStatsEditorIdentity}>
+                  <span className={styles.goalieNameCell}>
+                    <TeamLogo
+                      logo={logo}
+                      code={code}
+                      primaryColor={primary}
+                      textColor={text}
+                      size={30}
+                      shape="square"
+                    />
+                    <PlayerAvatar
+                      photo={goalie.photo}
+                      initials={goalie.last_name?.charAt(0) ?? '?'}
+                      primaryColor={primary}
+                      textColor={text}
+                      size={34}
+                    />
+                    <div className={styles.goalInfo}>
+                      {goalie.jersey_number != null && (
+                        <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
+                      )}
+                      <span className={`${styles.goalScorer} ${styles.goalieStatsEditorNameLine}`}>
+                        <span className={styles.goalieStatsEditorPlayerName}>{goalieName}</span>
+                      </span>
+                    </div>
+                  </span>
+                  {goalieHasStarterStint && (
+                    <span className={styles.goalieStatsEditorStarterBadge}>Starter</span>
+                  )}
+                </div>
 
                 <div className={styles.goalieStatsEditorTotals}>
                   <span className={styles.goalieStatsEditorTotalPill}>
@@ -642,15 +718,68 @@ const GoalieStatsEditModal = ({
                 {row.stints.map((stintRow, stintIdx) => {
                   const originalStint = stat.stints?.[stintIdx];
                   const ga = resolvedGa(stintRow, originalStint);
+                  const isStarter = isStartingWindow(
+                    stintRow.entered_period,
+                    stintRow.entered_time,
+                  );
 
                   return (
                     <div
                       key={stintRow.id}
                       className={styles.goalieStatsEditorStint}
                     >
-                      <span className={styles.goalieStintInfo}>
-                        {fmtStintWindow(originalStint)}
-                      </span>
+                      <div className={styles.goalieStatsEditorWindowFields}>
+                        <div className={styles.goalieStatsEditorWindowRow}>
+                          <div className={styles.goalieStatsEditorAddField}>
+                            <span>Enter</span>
+                            <Select
+                              value={stintRow.entered_period}
+                              options={PERIOD_OPTIONS}
+                              disabled={busy || isStarter}
+                              onChange={(value) =>
+                                setStintField(goalieIdx, stintIdx, 'entered_period', value)
+                              }
+                            />
+                          </div>
+                          <div className={styles.goalieStatsEditorAddField}>
+                            <span>Time</span>
+                            <TimePicker
+                              value={stintRow.entered_time}
+                              placeholder="MM:SS"
+                              mode="duration"
+                              disabled={busy || isStarter}
+                              onChange={(value) =>
+                                setStintField(goalieIdx, stintIdx, 'entered_time', value)
+                              }
+                            />
+                          </div>
+                        </div>
+                        <div className={styles.goalieStatsEditorWindowRow}>
+                          <div className={styles.goalieStatsEditorAddField}>
+                            <span>Exit</span>
+                            <Select
+                              value={stintRow.exited_period}
+                              options={[{ value: '', label: 'End' }, ...PERIOD_OPTIONS]}
+                              disabled={busy}
+                              onChange={(value) =>
+                                setStintField(goalieIdx, stintIdx, 'exited_period', value)
+                              }
+                            />
+                          </div>
+                          <div className={styles.goalieStatsEditorAddField}>
+                            <span>Time</span>
+                            <TimePicker
+                              value={stintRow.exited_time}
+                              placeholder="MM:SS"
+                              mode="duration"
+                              disabled={busy || !stintRow.exited_period}
+                              onChange={(value) =>
+                                setStintField(goalieIdx, stintIdx, 'exited_time', value)
+                              }
+                            />
+                          </div>
+                        </div>
+                      </div>
                       <label>
                         <input
                           className={fieldStyles.field}
@@ -682,7 +811,7 @@ const GoalieStatsEditModal = ({
                       <span className={styles.goalieStatsEditorValue}>
                         {stintSaves(stintRow, originalStint)}
                       </span>
-                      {row.stints.length > 1 && (
+                      {row.stints.length > 1 && !isStarter && (
                         <Button
                           variant="ghost"
                           intent="danger"
@@ -705,7 +834,7 @@ const GoalieStatsEditModal = ({
           );
         })}
 
-        {adding ? (
+        {adding && (
           <div className={styles.goalieStatsEditorAddPanel}>
             <div className={styles.goalieStatsEditorAddHeader}>
               <div className={styles.goalieStatsEditorAddSelectors}>
@@ -752,12 +881,6 @@ const GoalieStatsEditModal = ({
               </div>
             </div>
           </div>
-        ) : (
-          <AddRowBar
-            label="Add goalie"
-            disabled={busy}
-            onClick={() => setAdding(true)}
-          />
         )}
       </div>
     </Modal>

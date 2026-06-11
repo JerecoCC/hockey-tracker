@@ -178,8 +178,11 @@ const GoalieStatsCard = ({
                 const textColor = isAway ? game.away_team.text_color : game.home_team.text_color;
                 const teamLogo = isAway ? game.away_team.logo : game.home_team.logo;
                 const teamCode = isAway ? game.away_team.code : game.home_team.code;
-                const svPct =
-                  stat.shots_against > 0
+                const hasNoRecordedStats =
+                  stat.shots_against === 0 && stat.saves === 0 && stat.goals_against === 0;
+                const svPct = hasNoRecordedStats
+                  ? '--'
+                  : stat.shots_against > 0
                     ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                     : '1.000';
                 const windows = stintLabels(stat);
