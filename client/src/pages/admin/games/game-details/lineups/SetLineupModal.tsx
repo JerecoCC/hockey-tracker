@@ -126,8 +126,10 @@ const SetLineupModal = ({
     setSavedDraft(next);
   }, [open, lineup, teamId]);
 
-  const set = (slot: LineupPositionSlot, val: string) =>
+  const set = (slot: LineupPositionSlot, val: string) => {
+    if (saving) return;
     setDraft((prev) => ({ ...prev, [slot]: val || null }));
+  };
 
   const handleSave = async () => {
     if (!allFilled) return;
@@ -137,8 +139,12 @@ const SetLineupModal = ({
       position_slot: slot,
       player_id: draft[slot] ?? null,
     }));
-    const ok = await saveTeamLineup(teamId, slots, teamName);
-    setSaving(false);
+    let ok = false;
+    try {
+      ok = await saveTeamLineup(teamId, slots, teamName);
+    } finally {
+      setSaving(false);
+    }
     if (ok) onClose();
   };
 
@@ -147,7 +153,10 @@ const SetLineupModal = ({
   };
 
   const isDraftEmpty = (Object.values(draft) as (string | null)[]).every((v) => v === null);
-  const handleClear = () => setDraft(emptyDraft());
+  const handleClear = () => {
+    if (saving) return;
+    setDraft(emptyDraft());
+  };
 
   const slotSelect = (slot: LineupPositionSlot, label: string) => (
     <div className={styles.slotField}>
@@ -158,6 +167,7 @@ const SetLineupModal = ({
         placeholder="— Required —"
         onChange={(val) => set(slot, val)}
         searchable
+        disabled={saving}
       />
     </div>
   );

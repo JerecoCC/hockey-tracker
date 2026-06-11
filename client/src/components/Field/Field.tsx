@@ -107,6 +107,7 @@ const Field = (props: FieldProps) => {
               rules: _ru,
               type: _t,
               transform,
+              className,
               ...rest
             } = props;
             /* eslint-enable @typescript-eslint/no-unused-vars */
@@ -119,7 +120,12 @@ const Field = (props: FieldProps) => {
             };
             return (
               <textarea
-                className={cn(styles.field, styles.textarea, hasError && styles.fieldError)}
+                className={cn(
+                  styles.field,
+                  styles.textarea,
+                  hasError && styles.fieldError,
+                  className,
+                )}
                 required={required}
                 {...rest}
                 value={(field.value as string) ?? ''}
@@ -208,6 +214,7 @@ const Field = (props: FieldProps) => {
               rules: _ru,
               transform,
               suffix,
+              className,
               ...rest
             } = props;
             /* eslint-enable @typescript-eslint/no-unused-vars */
@@ -226,6 +233,7 @@ const Field = (props: FieldProps) => {
                   styles.field,
                   hasSuffix && styles.fieldWithSuffix,
                   hasError && styles.fieldError,
+                  className,
                 )}
                 required={required}
                 {...rest}

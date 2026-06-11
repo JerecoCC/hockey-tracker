@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import Badge from '@/components/Badge/Badge';
 import Button from '@/components/Button/Button';
+import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Modal from '@/components/Modal/Modal';
@@ -36,6 +38,11 @@ type JerseyNotice = {
   name: string;
 };
 
+type FormValues = {
+  jerseyInput: string;
+  query: string;
+};
+
 interface Props {
   open: boolean;
   onClose: () => void;
@@ -63,10 +70,16 @@ const LineupRosterModal = ({
   onMissingJerseys,
 }: Props) => {
   const queryClient = useQueryClient();
-  const [query, setQuery] = useState('');
+  const { control, watch, setValue, reset } = useForm<FormValues>({
+    defaultValues: {
+      jerseyInput: '',
+      query: '',
+    },
+  });
+  const jerseyInput = watch('jerseyInput');
+  const query = watch('query');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [submitting, setSubmitting] = useState(false);
-  const [jerseyInput, setJerseyInput] = useState('');
   const [pendingMissing, setPendingMissing] = useState<number[]>([]);
   const [alreadyAdded, setAlreadyAdded] = useState<JerseyNotice[]>([]);
   const [prospectMatches, setProspectMatches] = useState<JerseyNotice[]>([]);
@@ -169,7 +182,7 @@ const LineupRosterModal = ({
     setPendingMissing(missing);
     setAlreadyAdded(inLineup);
     setProspectMatches(prospects);
-    setJerseyInput('');
+    setValue('jerseyInput', '');
   };
 
   const updateProspectStatus = async (player: TeamPlayerRecord, isProspect: boolean) => {
@@ -211,9 +224,8 @@ const LineupRosterModal = ({
   };
 
   const handleClose = () => {
-    setQuery('');
+    reset();
     setSelected(new Set());
-    setJerseyInput('');
     setPendingMissing([]);
     setAlreadyAdded([]);
     setProspectMatches([]);
@@ -264,12 +276,12 @@ const LineupRosterModal = ({
       <div className={styles.content}>
         <div className={styles.controls}>
           <div className={styles.quickAddWrap}>
-            <input
-              className={styles.quickAddInput}
+            <Field
+              control={control}
+              name="jerseyInput"
               type="text"
+              className={styles.quickAddField}
               placeholder="Jersey numbers (e.g. 7 11 25)…"
-              value={jerseyInput}
-              onChange={(e) => setJerseyInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleApplyJerseys()}
               disabled={controlsDisabled}
               autoFocus
@@ -317,21 +329,14 @@ const LineupRosterModal = ({
             </p>
           )}
           <div className={styles.searchRow}>
-            <div className={styles.searchWrap}>
-              <Icon
-                name="search"
-                size="1em"
-                className={styles.searchIcon}
-              />
-              <input
-                className={styles.searchInput}
-                type="text"
-                placeholder="Search players…"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                disabled={controlsDisabled}
-              />
-            </div>
+            <Field
+              control={control}
+              name="query"
+              type="search"
+              className={styles.searchField}
+              placeholder="Search players…"
+              disabled={controlsDisabled}
+            />
             <ToggleButton
               active={showProspects}
               onClick={() => setShowProspects((v) => !v)}
