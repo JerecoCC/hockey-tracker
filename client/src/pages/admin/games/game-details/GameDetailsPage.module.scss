@@ -846,21 +846,6 @@
   min-width: 0;
 }
 
-.goalieStatsEditorStarterBadge {
-  display: inline-flex;
-  align-items: center;
-  min-height: 20px;
-  padding: 2px 8px;
-  border: 1px solid rgba($info, 0.42);
-  border-radius: $radius-sm;
-  background: rgba($info, 0.08);
-  color: $info;
-  font-size: $font-xs;
-  font-weight: 700;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
 .goalieStatsEditorWindowRow {
   display: grid;
   grid-template-columns: max-content max-content;

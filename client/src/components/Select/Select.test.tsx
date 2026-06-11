@@ -81,4 +81,51 @@ describe('Select', () => {
     expect(screen.queryByRole('button', { name: 'Player One' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Player Two' })).toBeInTheDocument();
   });
+
+  it('portals and flips the menu above the trigger near the viewport bottom', async () => {
+    const user = userEvent.setup();
+    const originalInnerHeight = window.innerHeight;
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      writable: true,
+      value: 500,
+    });
+
+    render(
+      <Select
+        value={null}
+        options={[
+          { value: '1', label: 'First' },
+          { value: '2', label: 'Second' },
+        ]}
+        onChange={() => {}}
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox');
+    jest.spyOn(trigger, 'getBoundingClientRect').mockReturnValue({
+      x: 12,
+      y: 450,
+      top: 450,
+      bottom: 492,
+      left: 12,
+      right: 212,
+      width: 200,
+      height: 42,
+      toJSON: () => ({}),
+    });
+
+    await user.click(trigger);
+
+    const listbox = screen.getByRole('listbox');
+    expect(listbox.parentElement).toBe(document.body);
+    expect(listbox).toHaveStyle({ bottom: '54px', width: '200px' });
+    expect(listbox.style.top).toBe('');
+
+    Object.defineProperty(window, 'innerHeight', {
+      configurable: true,
+      writable: true,
+      value: originalInnerHeight,
+    });
+  });
 });

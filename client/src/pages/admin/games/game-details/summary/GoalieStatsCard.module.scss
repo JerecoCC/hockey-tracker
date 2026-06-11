@@ -46,6 +46,27 @@
   }
 }
 
+.goalieRowStarterSwitch {
+  box-shadow: inset 3px 0 0 $info;
+
+  .goalieTdName,
+  .goalieTd {
+    border-top: 1px solid rgba($info, 0.42);
+    border-bottom: 1px solid rgba($info, 0.42);
+    background: rgba($info, 0.06);
+  }
+
+  .goalieTdName {
+    border-left: 1px solid rgba($info, 0.42);
+    border-radius: $radius-sm 0 0 $radius-sm;
+  }
+
+  .goalieTd:last-child {
+    border-right: 1px solid rgba($info, 0.42);
+    border-radius: 0 $radius-sm $radius-sm 0;
+  }
+}
+
 .goalieTdName {
   position: relative;
   text-align: left;

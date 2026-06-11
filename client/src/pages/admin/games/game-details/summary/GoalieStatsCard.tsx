@@ -19,6 +19,11 @@ import { formatPlayerName } from '../formatUtils';
 import styles from './GoalieStatsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
 import { PERIOD } from '../constants';
+import {
+  compareGoalieStats,
+  gameHasGoalieSwitch,
+  goalieStatIsStarter,
+} from '../goalieStatsOrdering';
 
 const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.FIRST]: 'P1',
@@ -124,9 +129,15 @@ const GoalieStatsCard = ({
   const canEdit = !!updateGoalieStint && !!addGoalieStint && !!removeGoalieStint && !!removeGoalieStat;
 
   const goalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
-  const goaliesWithStats = goalies.filter((g) =>
-    goalieStats.some((gs) => gs.goalie_id === g.player_id),
-  );
+  const goaliesWithStats = goalies
+    .filter((g) => goalieStats.some((gs) => gs.goalie_id === g.player_id))
+    .sort((a, b) => {
+      const aStat = goalieStats.find((gs) => gs.goalie_id === a.player_id);
+      const bStat = goalieStats.find((gs) => gs.goalie_id === b.player_id);
+      if (!aStat || !bStat) return 0;
+      return compareGoalieStats(aStat, a, bStat, b, game.away_team.id);
+    });
+  const gameSwitchedGoalies = gameHasGoalieSwitch(goalieStats);
 
   return (
     <>
@@ -197,6 +208,7 @@ const GoalieStatsCard = ({
                     ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                     : '1.000';
                 const windows = stintLabels(stat);
+                const isStarter = goalieStatIsStarter(stat);
                 const playerHref = getPlayerHref?.(
                   goalie.team_id,
                   goalie.player_id,
@@ -206,7 +218,9 @@ const GoalieStatsCard = ({
                 return (
                   <tr
                     key={goalie.player_id}
-                    className={styles.goalieRow}
+                    className={`${styles.goalieRow} ${
+                      isStarter && gameSwitchedGoalies ? styles.goalieRowStarterSwitch : ''
+                    }`}
                     onClick={playerHref ? () => navigate(playerHref) : undefined}
                   >
                     <td className={styles.goalieTdName}>

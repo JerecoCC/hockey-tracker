@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import styles from './Select.module.scss';
@@ -65,7 +66,31 @@ const Select = (props: Props) => {
     const target = searchable ? ref.current : triggerRef.current;
     if (!target) return;
     const r = target.getBoundingClientRect();
-    setMenuStyle({ top: r.bottom + 4, left: r.left, width: r.width });
+    const gap = 4;
+    const maxMenuHeight = 220;
+    const minMenuHeight = 120;
+    const viewportHeight =
+      typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
+    const availableBelow = viewportHeight - r.bottom - gap;
+    const availableAbove = r.top - gap;
+    const openAbove = availableBelow < minMenuHeight && availableAbove > availableBelow;
+
+    if (openAbove) {
+      setMenuStyle({
+        bottom: viewportHeight - r.top + gap,
+        left: r.left,
+        width: r.width,
+        maxHeight: Math.max(minMenuHeight, Math.min(maxMenuHeight, availableAbove)),
+      });
+      return;
+    }
+
+    setMenuStyle({
+      top: r.bottom + gap,
+      left: r.left,
+      width: r.width,
+      maxHeight: Math.max(minMenuHeight, Math.min(maxMenuHeight, availableBelow)),
+    });
   };
 
   const closeMenu = () => {
@@ -95,7 +120,11 @@ const Select = (props: Props) => {
   useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (
+        ref.current &&
+        !ref.current.contains(e.target as Node) &&
+        !menuRef.current?.contains(e.target as Node)
+      ) {
         setOpen(false);
         setQuery('');
       }
@@ -103,6 +132,17 @@ const Select = (props: Props) => {
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handleLayoutChange = () => measureMenu();
+    window.addEventListener('resize', handleLayoutChange);
+    window.addEventListener('scroll', handleLayoutChange, true);
+    return () => {
+      window.removeEventListener('resize', handleLayoutChange);
+      window.removeEventListener('scroll', handleLayoutChange, true);
+    };
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll the active option into view when the value changes while the menu
   // is open (arrow-key navigation) or when the menu first opens.
@@ -162,7 +202,10 @@ const Select = (props: Props) => {
       ref={ref}
       onKeyDown={handleKeyDown}
       onBlur={(e) => {
-        if (!ref.current?.contains(e.relatedTarget as Node)) {
+        if (
+          !ref.current?.contains(e.relatedTarget as Node) &&
+          !menuRef.current?.contains(e.relatedTarget as Node)
+        ) {
           closeMenu();
         }
       }}
@@ -260,7 +303,9 @@ const Select = (props: Props) => {
         </button>
       )}
 
-      {open && (
+      {open &&
+        typeof document !== 'undefined' &&
+        createPortal(
         <ul
           ref={menuRef}
           id={menuId}
@@ -314,7 +359,8 @@ const Select = (props: Props) => {
               ),
             )
           )}
-        </ul>
+        </ul>,
+        document.body,
       )}
     </div>
   );

@@ -17,6 +17,7 @@ import {
 import fieldStyles from '@/components/Field/Field.module.scss';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD } from './constants';
+import { compareGoalieStats } from './goalieStatsOrdering';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
@@ -140,7 +141,6 @@ const GoalieStatsEditModal = ({
     if (!open) return;
     const defaultTeamId = game.away_team.id;
 
-    const goalieOrder = new Map(allGoalies.map((goalie, index) => [goalie.player_id, index]));
     const built: GoalieEditRow[] = goalieStats
       .map((stat) => {
         const entry = rosterByPlayerId.get(stat.goalie_id);
@@ -168,8 +168,13 @@ const GoalieStatsEditModal = ({
       .filter((row): row is GoalieEditRow => row !== null)
       .sort(
         (a, b) =>
-          (goalieOrder.get(a.rosterEntry.player_id) ?? Number.MAX_SAFE_INTEGER) -
-          (goalieOrder.get(b.rosterEntry.player_id) ?? Number.MAX_SAFE_INTEGER),
+          compareGoalieStats(
+            a.stat,
+            a.rosterEntry,
+            b.stat,
+            b.rosterEntry,
+            game.away_team.id,
+          ),
       );
 
     setRows(built);
@@ -439,13 +444,15 @@ const GoalieStatsEditModal = ({
     setRows((prev) =>
       prev.some((row) => row.rosterEntry.player_id === goalie.player_id)
         ? prev
-        : allGoalies
-            .map((orderedGoalie) =>
-              orderedGoalie.player_id === goalie.player_id
-                ? buildEmptyGoalieRow(goalie)
-                : prev.find((row) => row.rosterEntry.player_id === orderedGoalie.player_id),
-            )
-            .filter((row): row is GoalieEditRow => !!row),
+        : [...prev, buildEmptyGoalieRow(goalie)].sort((a, b) =>
+            compareGoalieStats(
+              a.stat,
+              a.rosterEntry,
+              b.stat,
+              b.rosterEntry,
+              game.away_team.id,
+            ),
+          ),
     );
     setAdding(false);
     setAddingStintFor(goalie.player_id);
@@ -530,7 +537,7 @@ const GoalieStatsEditModal = ({
             <section
               key={stat.goalie_id}
               className={`${styles.goalieStatsEditorGroup} ${
-                teamGoalieCount > 1 && !goalieHasStarterStint
+                teamGoalieCount > 1 && goalieHasStarterStint
                   ? styles.goalieStatsEditorGroupMulti
                   : ''
               }`}
@@ -562,9 +569,6 @@ const GoalieStatsEditModal = ({
                       </span>
                     </div>
                   </span>
-                  {goalieHasStarterStint && (
-                    <span className={styles.goalieStatsEditorStarterBadge}>Starter</span>
-                  )}
                 </div>
 
                 <div className={styles.goalieStatsEditorTotals}>
