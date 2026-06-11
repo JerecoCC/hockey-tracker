@@ -455,26 +455,32 @@ const ShootoutAccordion = ({
           {/* Header row — away always left, home always right */}
           <div className={styles.soAttemptHeaderRow}>
             <div className={styles.soAttemptColHeader}>
-              <TeamLogo
-                logo={leftInfo.logo}
-                code={leftInfo.code}
-                primaryColor={leftInfo.primary}
-                textColor={leftInfo.text}
-                size={18}
-                shape="square"
-              />
-              <span>{leftInfo.code}</span>
+              <span className={styles.soAttemptColTeam}>
+                <TeamLogo
+                  logo={leftInfo.logo}
+                  code={leftInfo.code}
+                  primaryColor={leftInfo.primary}
+                  textColor={leftInfo.text}
+                  size={18}
+                  shape="square"
+                />
+                <span>{leftInfo.code}</span>
+              </span>
+              <span className={styles.soAttemptHeaderGoalCount}>{awayShootoutGoals}</span>
             </div>
             <div className={[styles.soAttemptColHeader, styles.soAttemptColHeaderAway].join(' ')}>
-              <TeamLogo
-                logo={rightInfo.logo}
-                code={rightInfo.code}
-                primaryColor={rightInfo.primary}
-                textColor={rightInfo.text}
-                size={18}
-                shape="square"
-              />
-              <span>{rightInfo.code}</span>
+              <span className={styles.soAttemptColTeam}>
+                <TeamLogo
+                  logo={rightInfo.logo}
+                  code={rightInfo.code}
+                  primaryColor={rightInfo.primary}
+                  textColor={rightInfo.text}
+                  size={18}
+                  shape="square"
+                />
+                <span>{rightInfo.code}</span>
+              </span>
+              <span className={styles.soAttemptHeaderGoalCount}>{homeShootoutGoals}</span>
             </div>
           </div>
           {Array.from({ length: visibleAttemptRowCount }, (_, index) =>

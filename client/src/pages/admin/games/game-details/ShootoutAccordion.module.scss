@@ -19,24 +19,44 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   align-items: center;
-  padding: $space-xs $space-md;
+  padding: 0;
   border-bottom: 1px solid $border;
-  gap: $space-sm;
+  gap: 0;
 }
 
 .soAttemptColHeader {
+  flex: 1 1 0;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: $space-xs;
+  padding: $space-xs $space-md;
   font-size: $font-xs;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: $text-dim;
+
+  &:first-child {
+    border-right: 1px solid #334155;
+  }
+}
+
+.soAttemptColTeam {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.soAttemptHeaderGoalCount {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-weight: 700;
 }
 
 .soAttemptColHeaderAway {
-  justify-content: flex-end;
+  flex-direction: row-reverse;
+  justify-content: space-between;
 }
 
 .soAttemptColLogo {

@@ -2862,7 +2862,7 @@ const goalieStintsCTE = (gameId) => sql`
     SELECT
       sr.*,
       CASE
-        WHEN tsc.stint_count = 1 AND sr.shots_against = 0
+        WHEN tsc.stint_count = 1
           THEN GREATEST(
             CASE
               WHEN sr.team_id = sr.home_team_id THEN COALESCE(psg.away_shots, 0)

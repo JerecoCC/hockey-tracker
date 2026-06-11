@@ -595,6 +595,7 @@ export const useGameDetails = (
         { headers: authHeaders() },
       );
       updateCachedGame(queryClient, id, { period_shots: data.period_shots });
+      await queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', id] });
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to save shots'));
