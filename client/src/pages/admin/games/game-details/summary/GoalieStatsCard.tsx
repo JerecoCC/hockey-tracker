@@ -28,29 +28,40 @@ const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
 
+const isGameStart = (period: string | null | undefined, time: string | null | undefined) =>
+  period === PERIOD.FIRST && (!time || time === '00:00');
+
+const fmtStintPoint = (period: string, time: string | null) => {
+  const periodLabel = PERIOD_LABEL[period] ?? period;
+  const timeLabel = isGameStart(period, time) ? '00:00' : time;
+  return timeLabel ? `${periodLabel} ${timeLabel}` : periodLabel;
+};
+
 /** Format a single stint's entry→exit window for display. */
 const fmtStintWindow = (stint: GoalieStintRecord) => {
-  const label = (p: string, t: string | null) => `${PERIOD_LABEL[p] ?? p}${t ? ` ${t}` : ''}`;
-  const enter = label(stint.entered_period, stint.entered_time);
-  const exit = stint.exited_period ? label(stint.exited_period, stint.exited_time) : null;
-  return exit ? `${enter} → ${exit}` : enter;
+  const enter = fmtStintPoint(stint.entered_period, stint.entered_time);
+  const exit = stint.exited_period
+    ? fmtStintPoint(stint.exited_period, stint.exited_time)
+    : 'end of game';
+  return `${enter} \u2192 ${exit}`;
 };
 
 /**
  * Returns the stint-window lines to show under a goalie's name:
- * - Single game-start stint (P1, no entered_time) → nothing (starter, no extra info needed)
- * - Single mid-game stint → one "Px @ time → Py" line (backup)
- * - Multiple stints → one line per stint (starter who re-entered, etc.)
+ * - Single uninterrupted game-start stint -> nothing.
+ * - Any switch stint -> one "Px time -> Py time/end of game" line.
+ * - Multiple stints -> one line per stint.
  * Falls back to the legacy entered_period / sub_time fields for old data that
  * has no stints array.
  */
 const stintLabels = (stat: GoalieStatRecord): string[] => {
   if (stat.stints && stat.stints.length > 0) {
-    // Pure game-start starter with one uninterrupted stint — nothing to annotate
+    // Pure game-start starter with one uninterrupted stint: nothing to annotate.
+    const onlyStint = stat.stints[0];
     if (
       stat.stints.length === 1 &&
-      stat.stints[0].entered_period === PERIOD.FIRST &&
-      !stat.stints[0].entered_time
+      isGameStart(onlyStint.entered_period, onlyStint.entered_time) &&
+      !onlyStint.exited_period
     ) {
       return [];
     }
@@ -58,8 +69,8 @@ const stintLabels = (stat: GoalieStatRecord): string[] => {
   }
   // Legacy fallback: no stints data, use the top-level entered_period / sub_time
   if (stat.entered_period) {
-    const p = PERIOD_LABEL[stat.entered_period] ?? stat.entered_period;
-    return [`entered ${p}${stat.sub_time ? ` @ ${stat.sub_time}` : ''}`];
+    if (isGameStart(stat.entered_period, stat.sub_time)) return [];
+    return [`${fmtStintPoint(stat.entered_period, stat.sub_time)} → end of game`];
   }
   return [];
 };

@@ -311,7 +311,7 @@ router.get("/nhl-api", async (req, res) => {
 
     const parsedUrl = new URL(url);
 
-    if (!["api-web.nhle.com", "api.nhle.com"].includes(parsedUrl.hostname)) {
+    if (!["api-web.nhle.com", "api.nhle.com", "www.nhl.com"].includes(parsedUrl.hostname)) {
       return res.status(400).json({ error: "Invalid NHL API host." });
     }
 
@@ -326,6 +326,12 @@ router.get("/nhl-api", async (req, res) => {
         error: `NHL API returned ${response.status}.`,
         body: text.slice(0, 500),
       });
+    }
+
+    const contentType = response.headers.get("content-type") || "";
+    if (contentType.includes("text/html") || parsedUrl.pathname.includes("/htmlreports/")) {
+      res.type("html");
+      return res.send(text);
     }
 
     return res.json(JSON.parse(text));

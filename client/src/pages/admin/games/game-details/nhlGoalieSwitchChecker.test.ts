@@ -1,5 +1,6 @@
 import {
   buildGoalieStintsFromShiftChart,
+  buildGoalieStintsFromToiHtml,
   buildNhlGamecenterGameId,
   buildGoalieStints,
   detectGoalieSwitch,
@@ -291,20 +292,9 @@ describe('NHL goalie switch checker helpers', () => {
         goalieName: 'Home Starter',
         enteredPeriod: 'P1',
         enteredTime: '00:00',
-        exitedPeriod: 'P1',
-        exitedTime: '20:00',
-        toi: '20:00',
-      },
-      {
-        teamSide: 'home',
-        teamAbbrev: 'HOM',
-        goalieId: 100,
-        goalieName: 'Home Starter',
-        enteredPeriod: 'P2',
-        enteredTime: '00:00',
         exitedPeriod: 'P2',
         exitedTime: '10:30',
-        toi: '10:30',
+        toi: '30:30',
       },
       {
         teamSide: 'home',
@@ -316,6 +306,219 @@ describe('NHL goalie switch checker helpers', () => {
         exitedPeriod: 'P2',
         exitedTime: '20:00',
         toi: '09:30',
+      },
+    ]);
+  });
+
+  it('preserves goalie switches at period boundaries from the NHL shift chart', () => {
+    const stints = buildGoalieStintsFromShiftChart(
+      {
+        data: [
+          {
+            playerId: 8477967,
+            period: 1,
+            startTime: '00:00',
+            endTime: '20:00',
+            duration: '20:00',
+            teamAbbrev: 'VAN',
+          },
+          {
+            playerId: 8478048,
+            period: 2,
+            startTime: '00:00',
+            endTime: '20:00',
+            duration: '20:00',
+            teamAbbrev: 'VAN',
+          },
+        ],
+      },
+      {
+        away: [{ playerId: 200, name: 'Away Starter', teamAbbrev: 'WPG', toi: '40:00' }],
+        home: [
+          { playerId: 8477967, name: 'Thatcher Demko', teamAbbrev: 'VAN', toi: '20:00' },
+          { playerId: 8478048, name: 'Kevin Lankinen', teamAbbrev: 'VAN', toi: '20:00' },
+        ],
+      },
+    );
+
+    expect(stints.filter((stint) => stint.teamSide === 'home')).toEqual([
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8477967,
+        goalieName: 'Thatcher Demko',
+        enteredPeriod: 'P1',
+        enteredTime: '00:00',
+        exitedPeriod: 'P1',
+        exitedTime: '20:00',
+        toi: '20:00',
+      },
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8478048,
+        goalieName: 'Kevin Lankinen',
+        enteredPeriod: 'P2',
+        enteredTime: '00:00',
+        exitedPeriod: 'P2',
+        exitedTime: '20:00',
+        toi: '20:00',
+      },
+    ]);
+  });
+
+  it('prefers NHL HTML TOI goalie shifts for period-boundary switches', () => {
+    const stints = buildGoalieStintsFromToiHtml(
+      `
+        <html><body>
+          35 DEMKO, THATCHER
+          Shift # Per Start of Shift
+          Elapsed / Game End of Shift
+          Elapsed / Game Duration Event
+          1 1 0:00 / 20:00 20:00 / 0:00 20:00 GP
+          Per SHF AVG TOI EV TOT PP TOT SH TOT
+          1 1 20:00 20:00 18:38 00:36 00:46
+          TOT 1 20:00 20:00 18:38 00:36 00:46
+          32 LANKINEN, KEVIN
+          Shift # Per Start of Shift
+          Elapsed / Game End of Shift
+          Elapsed / Game Duration Event
+          1 2 0:00 / 20:00 20:00 / 0:00 20:00 GP
+          Per SHF AVG TOI EV TOT PP TOT SH TOT
+          2 1 20:00 20:00 20:00 00:00 00:00
+          TOT 1 20:00 20:00 20:00 00:00 00:00
+        </body></html>
+      `,
+      {
+        away: [{ playerId: 200, name: 'Away Starter', teamAbbrev: 'WPG', toi: '40:00' }],
+        home: [
+          { playerId: 8477967, name: 'Thatcher Demko', teamAbbrev: 'VAN', toi: '20:00' },
+          { playerId: 8478048, name: 'Kevin Lankinen', teamAbbrev: 'VAN', toi: '20:00' },
+        ],
+      },
+    );
+
+    expect(stints.filter((stint) => stint.teamSide === 'home')).toEqual([
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8477967,
+        goalieName: 'Thatcher Demko',
+        enteredPeriod: 'P1',
+        enteredTime: '00:00',
+        exitedPeriod: 'P1',
+        exitedTime: '20:00',
+        toi: '20:00',
+      },
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8478048,
+        goalieName: 'Kevin Lankinen',
+        enteredPeriod: 'P2',
+        enteredTime: '00:00',
+        exitedPeriod: 'P2',
+        exitedTime: '20:00',
+        toi: '20:00',
+      },
+    ]);
+  });
+
+  it('infers a missing played goalie from an official HTML intermission exit', () => {
+    const stints = buildGoalieStintsFromToiHtml(
+      `
+        <html><body>
+          35 DEMKO, THATCHER
+          Shift # Per Start of Shift
+          Elapsed / Game End of Shift
+          Elapsed / Game Duration Event
+          1 1 0:00 / 20:00 20:00 / 0:00 20:00 GP
+          Per SHF AVG TOI EV TOT PP TOT SH TOT
+          1 1 20:00 20:00 18:38 00:36 00:46
+          TOT 1 20:00 20:00 18:38 00:36 00:46
+        </body></html>
+      `,
+      {
+        away: [{ playerId: 200, name: 'Away Starter', teamAbbrev: 'WPG', toi: '40:00' }],
+        home: [
+          { playerId: 8477967, name: 'T. Demko', teamAbbrev: 'VAN', toi: '20:00' },
+          { playerId: 8478048, name: 'Kevin Lankinen', teamAbbrev: 'VAN', toi: '20:00' },
+        ],
+      },
+    );
+
+    expect(stints.filter((stint) => stint.teamSide === 'home')).toEqual([
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8477967,
+        goalieName: 'T. Demko',
+        enteredPeriod: 'P1',
+        enteredTime: '00:00',
+        exitedPeriod: 'P1',
+        exitedTime: '20:00',
+        toi: '20:00',
+      },
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8478048,
+        goalieName: 'Kevin Lankinen',
+        enteredPeriod: 'P2',
+        enteredTime: '00:00',
+        exitedPeriod: null,
+        exitedTime: null,
+        toi: '20:00',
+      },
+    ]);
+  });
+
+  it('parses NHL HTML table cells without relying on browser textContent spacing', () => {
+    const stints = buildGoalieStintsFromToiHtml(
+      `
+        <html><body>
+          <table>
+            <tr><td>35</td><td>DEMKO, THATCHER</td></tr>
+            <tr><td>Shift #</td><td>Per</td><td>Start of Shift</td></tr>
+            <tr>
+              <td>1</td><td>1</td><td>0:00 / 20:00</td>
+              <td>20:00 / 0:00</td><td>20:00</td><td>GP</td>
+            </tr>
+            <tr><td>Per</td><td>SHF</td><td>AVG</td><td>TOI</td></tr>
+          </table>
+        </body></html>
+      `,
+      {
+        away: [{ playerId: 200, name: 'Away Starter', teamAbbrev: 'WPG', toi: '60:00' }],
+        home: [
+          { playerId: 8477967, name: 'T. Demko', teamAbbrev: 'VAN', toi: '20:00' },
+          { playerId: 8478048, name: 'Kevin Lankinen', teamAbbrev: 'VAN', toi: '40:00' },
+        ],
+      },
+    );
+
+    expect(stints.filter((stint) => stint.teamSide === 'home')).toEqual([
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8477967,
+        goalieName: 'T. Demko',
+        enteredPeriod: 'P1',
+        enteredTime: '00:00',
+        exitedPeriod: 'P1',
+        exitedTime: '20:00',
+        toi: '20:00',
+      },
+      {
+        teamSide: 'home',
+        teamAbbrev: 'VAN',
+        goalieId: 8478048,
+        goalieName: 'Kevin Lankinen',
+        enteredPeriod: 'P2',
+        enteredTime: '00:00',
+        exitedPeriod: null,
+        exitedTime: null,
+        toi: '40:00',
       },
     ]);
   });

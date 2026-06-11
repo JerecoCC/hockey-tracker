@@ -72,6 +72,15 @@ interface NhlShiftChartRow {
   duration?: string;
 }
 
+interface HtmlGoalieShift {
+  goalie: Goalie;
+  teamSide: TeamSide;
+  period: number;
+  startTime: string;
+  endTime: string;
+  duration?: string;
+}
+
 export interface NhlGameIdContext {
   seasonName?: string | null;
   scheduledAt?: string | null;
@@ -182,10 +191,7 @@ export async function fetchNhlGoalieSwitchReport(
   }
 
   const base = `https://api-web.nhle.com/v1/gamecenter/${gameId}`;
-  const [landing, playByPlay] = await Promise.all([
-    fetchJson(`${base}/landing`),
-    fetchJson(`${base}/play-by-play`),
-  ]);
+  const landing = await fetchJson(`${base}/landing`);
 
   let goaliesByTeam = getGoaliesFromLanding(landing);
 
@@ -196,18 +202,19 @@ export async function fetchNhlGoalieSwitchReport(
     goaliesByTeam = getGoaliesFromLanding(boxscore);
   }
 
-  const shiftChart = await fetchShiftChart(gameId);
-  const shiftStints = buildGoalieStintsFromShiftChart(shiftChart, goaliesByTeam);
-  const stints =
-    shiftStints.length > 0 ? shiftStints : buildGoalieStints(playByPlay, goaliesByTeam);
+  const hasGoalieSwitch =
+    detectGoalieSwitch(goaliesByTeam.away) || detectGoalieSwitch(goaliesByTeam.home);
+  const htmlStints = hasGoalieSwitch
+    ? buildGoalieStintsFromToiHtml(await fetchToiHtmlReports(gameId), goaliesByTeam)
+    : [];
   const awayMeta = getTeamMeta(landing, 'away');
   const homeMeta = getTeamMeta(landing, 'home');
 
   return {
     gameId,
     scheduledStart: landing?.startTimeUTC ? formatEasternStartTime(landing.startTimeUTC) : null,
-    away: buildTeamReport('away', awayMeta.abbrev, goaliesByTeam.away, stints),
-    home: buildTeamReport('home', homeMeta.abbrev, goaliesByTeam.home, stints),
+    away: buildTeamReport('away', awayMeta.abbrev, goaliesByTeam.away, htmlStints),
+    home: buildTeamReport('home', homeMeta.abbrev, goaliesByTeam.home, htmlStints),
   };
 }
 
@@ -239,6 +246,34 @@ async function fetchShiftChart(gameId: string) {
   );
 }
 
+async function fetchToiHtmlReports(gameId: string) {
+  const urls = buildToiHtmlReportUrls(gameId);
+  const reports = await Promise.all(urls.map((url) => fetchOptionalText(url)));
+  return reports.filter((report): report is string => typeof report === 'string' && !!report);
+}
+
+async function fetchOptionalText(url: string): Promise<string | null> {
+  try {
+    const { data } = await axios.get(
+      `${API}/admin/games/nhl-api?url=${encodeURIComponent(url)}`,
+      { headers: authHeaders(), responseType: 'text' },
+    );
+    return typeof data === 'string' ? data : null;
+  } catch {
+    return null;
+  }
+}
+
+function buildToiHtmlReportUrls(gameId: string): string[] {
+  const seasonStart = gameId.slice(0, 4);
+  const seasonEnd = String(Number(seasonStart) + 1);
+  const gameTypeAndNumber = gameId.slice(4);
+  return ['TV', 'TH'].map(
+    (prefix) =>
+      `https://www.nhl.com/scores/htmlreports/${seasonStart}${seasonEnd}/${prefix}${gameTypeAndNumber}.HTM`,
+  );
+}
+
 function buildTeamReport(
   side: TeamSide,
   abbrev: string,
@@ -247,14 +282,18 @@ function buildTeamReport(
 ): NhlGoalieSwitchTeamReport {
   const trueGoalies = goalies.filter(goalieActuallyPlayed);
   const stints = allStints.filter((stint) => stint.teamSide === side);
+  const stintGoalieIds = new Set(stints.map((stint) => stint.goalieId));
+  const switchDetected = detectGoalieSwitch(goalies);
 
   return {
     side,
     abbrev,
-    switchDetected: detectGoalieSwitch(goalies),
+    switchDetected,
     trueGoalies,
     stints,
-    timingUnavailable: stints.some((stint) => stint.timingUnavailable),
+    timingUnavailable:
+      stints.some((stint) => stint.timingUnavailable) ||
+      (switchDetected && trueGoalies.some((goalie) => !stintGoalieIds.has(goalie.playerId))),
   };
 }
 
@@ -345,6 +384,94 @@ function extractOnIceGoalieObservations(
   );
 }
 
+export function buildGoalieStintsFromToiHtml(
+  reports: string | string[] | null | undefined,
+  goaliesByTeam: GoaliesByTeam,
+): GoalieStint[] {
+  const htmlReports = Array.isArray(reports) ? reports : reports ? [reports] : [];
+  if (htmlReports.length === 0) return [];
+
+  const teamGoalies = {
+    away: playableGoalies(goaliesByTeam.away),
+    home: playableGoalies(goaliesByTeam.home),
+  } satisfies GoaliesByTeam;
+
+  const shifts = htmlReports.flatMap((html) => extractHtmlGoalieShifts(html, teamGoalies));
+  const rawStints = shifts
+    .map(({ goalie, teamSide, period, startTime, endTime, duration }) => ({
+      teamSide,
+      teamAbbrev: goalie.teamAbbrev ?? teamSide.toUpperCase(),
+      goalieId: goalie.playerId,
+      goalieName: goalie.name,
+      enteredPeriod: periodLabel(period),
+      enteredTime: normalizeClock(startTime),
+      exitedPeriod: periodLabel(period),
+      exitedTime: normalizeClock(endTime),
+      toi: goalie.toi ?? duration,
+    }))
+    .sort(
+      (a, b) =>
+        stintSortValue(a.enteredPeriod, a.enteredTime) -
+        stintSortValue(b.enteredPeriod, b.enteredTime),
+    );
+
+  return completeMissingGoalieStintsFromToiHtml(
+    mergeAdjacentGoalieShiftStints(rawStints),
+    teamGoalies,
+  );
+}
+
+function extractHtmlGoalieShifts(html: string, goaliesByTeam: GoaliesByTeam): HtmlGoalieShift[] {
+  const text = htmlToText(html);
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+  const goalieEntries = (['away', 'home'] as const).flatMap((teamSide) =>
+    goaliesByTeam[teamSide].map((goalie) => ({
+      teamSide,
+      goalie,
+      reportName: toHtmlReportName(goalie.name),
+      reportLastName: toHtmlReportLastName(goalie.name),
+    })),
+  );
+  const shifts: HtmlGoalieShift[] = [];
+  let active: { teamSide: TeamSide; goalie: Goalie } | null = null;
+
+  for (const line of lines) {
+    const matchedGoalie = goalieEntries.find(
+      ({ reportName, reportLastName }) =>
+        new RegExp(`^\\d+\\s+${escapeRegExp(reportName)}\\b`, 'i').test(line) ||
+        new RegExp(`^\\d+\\s+${escapeRegExp(reportLastName)},(?:\\s|$)`, 'i').test(line),
+    );
+    if (matchedGoalie) {
+      active = { teamSide: matchedGoalie.teamSide, goalie: matchedGoalie.goalie };
+      continue;
+    }
+
+    if (!active) continue;
+    if (/^Per SHF\b/i.test(line) || /^TOT\b/i.test(line)) {
+      active = null;
+      continue;
+    }
+
+    const shift = line.match(
+      /^\d+\s+(\d+)\s+(\d{1,2}:\d{2})\s*\/\s*\d{1,2}:\d{2}\s+(\d{1,2}:\d{2})\s*\/\s*\d{1,2}:\d{2}\s+(\d{1,2}:\d{2})\b/,
+    );
+    if (!shift) continue;
+
+    shifts.push({
+      ...active,
+      period: Number(shift[1]),
+      startTime: normalizeClock(shift[2]),
+      endTime: normalizeClock(shift[3]),
+      duration: normalizeClock(shift[4]),
+    });
+  }
+
+  return shifts;
+}
+
 export function buildGoalieStintsFromShiftChart(
   shiftChart: any,
   goaliesByTeam: GoaliesByTeam,
@@ -358,7 +485,7 @@ export function buildGoalieStintsFromShiftChart(
   } satisfies GoaliesByTeam;
   const goalieTeamById = buildGoalieTeamMap(teamGoalies);
 
-  return rows
+  const rawStints = rows
     .map((row: NhlShiftChartRow) => {
       const playerId = toOptionalNumber(row?.playerId);
       if (playerId == null) return null;
@@ -380,7 +507,7 @@ export function buildGoalieStintsFromShiftChart(
         enteredTime: startTime,
         exitedPeriod: endTime ? periodLabel(period) : null,
         exitedTime: endTime,
-        toi: typeof row?.duration === 'string' ? row.duration : goalie.toi,
+        toi: goalie.toi ?? (typeof row?.duration === 'string' ? row.duration : undefined),
       } satisfies GoalieStint;
     })
     .filter((stint): stint is GoalieStint => !!stint)
@@ -389,6 +516,90 @@ export function buildGoalieStintsFromShiftChart(
         stintSortValue(a.enteredPeriod, a.enteredTime) -
         stintSortValue(b.enteredPeriod, b.enteredTime),
     );
+
+  return mergeAdjacentGoalieShiftStints(rawStints);
+}
+
+function mergeAdjacentGoalieShiftStints(stints: GoalieStint[]): GoalieStint[] {
+  const lastIndexBySide = new Map<TeamSide, number>();
+
+  return stints.reduce<GoalieStint[]>((merged, stint) => {
+    const previousIndex = lastIndexBySide.get(stint.teamSide);
+    const previous = previousIndex == null ? undefined : merged[previousIndex];
+    if (previous && previous.goalieId === stint.goalieId) {
+      previous.exitedPeriod = stint.exitedPeriod;
+      previous.exitedTime = stint.exitedTime;
+      previous.toi = previous.toi === stint.toi ? previous.toi : (previous.toi ?? stint.toi);
+      return merged;
+    }
+
+    merged.push({ ...stint });
+    lastIndexBySide.set(stint.teamSide, merged.length - 1);
+    return merged;
+  }, []);
+}
+
+function completeMissingGoalieStintsFromToiHtml(
+  stints: GoalieStint[],
+  goaliesByTeam: GoaliesByTeam,
+): GoalieStint[] {
+  const completed = [...stints];
+
+  for (const side of ['away', 'home'] as const) {
+    const playedGoalies = goaliesByTeam[side].filter(goalieActuallyPlayed);
+    const sideStints = completed
+      .filter((stint) => stint.teamSide === side)
+      .sort(
+        (a, b) =>
+          stintSortValue(a.enteredPeriod, a.enteredTime) -
+          stintSortValue(b.enteredPeriod, b.enteredTime),
+      );
+    if (playedGoalies.length <= sideStints.length || sideStints.length === 0) continue;
+
+    const stintGoalieIds = new Set(sideStints.map((stint) => stint.goalieId));
+    let previousStint = sideStints[sideStints.length - 1]!;
+
+    for (const goalie of playedGoalies.filter((playedGoalie) => !stintGoalieIds.has(playedGoalie.playerId))) {
+      const entry = nextGoalieEntryAfterStint(previousStint);
+      if (!entry) continue;
+
+      const inferredStint: GoalieStint = {
+        teamSide: side,
+        teamAbbrev: goalie.teamAbbrev ?? side.toUpperCase(),
+        goalieId: goalie.playerId,
+        goalieName: goalie.name,
+        enteredPeriod: entry.period,
+        enteredTime: entry.time,
+        exitedPeriod: null,
+        exitedTime: null,
+        toi: goalie.toi,
+      };
+
+      completed.push(inferredStint);
+      stintGoalieIds.add(goalie.playerId);
+      previousStint = inferredStint;
+    }
+  }
+
+  return completed.sort(
+    (a, b) =>
+      stintSortValue(a.enteredPeriod, a.enteredTime) -
+      stintSortValue(b.enteredPeriod, b.enteredTime),
+  );
+}
+
+function nextGoalieEntryAfterStint(stint: GoalieStint): { period: string; time: string } | null {
+  if (!stint.exitedPeriod || !stint.exitedTime) return null;
+
+  const periodNumber = parsePeriodNumber(stint.exitedPeriod);
+  if (periodNumber == null) return { period: stint.exitedPeriod, time: normalizeClock(stint.exitedTime) };
+
+  const exitSeconds = parseClockSeconds(stint.exitedTime);
+  if (exitSeconds >= 20 * 60) {
+    return { period: periodLabel(periodNumber + 1), time: '00:00' };
+  }
+
+  return { period: stint.exitedPeriod, time: normalizeClock(stint.exitedTime) };
 }
 
 function getPlays(playByPlay: any): any[] {
@@ -560,6 +771,48 @@ function fallbackStint(side: TeamSide, goalie: Goalie, timingUnavailable: boolea
 
 function periodLabel(period: number): string {
   return `P${period}`;
+}
+
+function parsePeriodNumber(period: string): number | null {
+  const number = Number(period.replace(/^P/i, ''));
+  return Number.isFinite(number) ? number : null;
+}
+
+function htmlToText(html: string): string {
+  const normalized = html
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&#160;/g, ' ')
+    .replace(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi, (_row, cells: string) => {
+      const rowText = String(cells).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+      return rowText ? `${rowText}\n` : '\n';
+    });
+
+  return normalized
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(tr|div|p|table|tbody|thead|h[1-6])>/gi, '\n')
+    .replace(/<[^>]*>/g, ' ');
+}
+
+function toHtmlReportName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  if (parts.length < 2) return name.toUpperCase();
+  const first = parts[0]!;
+  const last = parts.slice(1).join(' ');
+  return `${last}, ${first}`.toUpperCase();
+}
+
+function toHtmlReportLastName(name: string): string {
+  const parts = name.trim().split(/\s+/);
+  return (parts.length < 2 ? name : parts.slice(1).join(' ')).toUpperCase();
+}
+
+function normalizeClock(clock: string): string {
+  const [minutes, seconds] = String(clock).split(':');
+  return `${String(Number(minutes)).padStart(2, '0')}:${String(seconds ?? '00').padStart(2, '0')}`;
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 function parseClockSeconds(clock: string): number {

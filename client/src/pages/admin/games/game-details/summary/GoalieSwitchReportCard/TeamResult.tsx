@@ -38,16 +38,18 @@ const TeamResult = (props: Props) => {
       </div>
 
       {report.trueGoalies.length === 0 ? (
-        <p className={styles.nhlGoalieCheckerStatus}>No goalie appearances found.</p>
-      ) : report.stints.length === 0 ? (
         <p className={styles.nhlGoalieCheckerStatus}>
-          Exact switch timing unavailable from this response.
+          Unable to determine from NHL goalie appearances.
         </p>
-      ) : (
+      ) : report.switchDetected && report.stints.length === 0 ? (
+        <p className={styles.nhlGoalieCheckerStatus}>
+          Goalie switch detected, but exact timing was not found in the HTML TOI reports.
+        </p>
+      ) : report.switchDetected ? (
         <>
           {report.timingUnavailable && (
             <p className={styles.nhlGoalieCheckerStatus}>
-              Exact switch timing unavailable from this response.
+              Some switch timing was not found in the HTML TOI reports.
             </p>
           )}
           <div className={styles.nhlGoalieCheckerStints}>
@@ -59,7 +61,7 @@ const TeamResult = (props: Props) => {
             ))}
           </div>
         </>
-      )}
+      ) : null}
     </section>
   );
 };

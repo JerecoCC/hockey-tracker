@@ -3,7 +3,7 @@ import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import TeamResult from './TeamResult';
 import { NhlGoalieSwitchReport } from '../../nhlGoalieSwitchChecker';
 import NhlGoalieSwitchCheckerModal from '../../NhlGoalieSwitchCheckerModal';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Button from '@/components/Button/Button';
 import styles from '../../GameDetailsPage.module.scss';
 import { GameRecord } from '@/hooks/useGames';
@@ -16,22 +16,11 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [report, setReport] = useState<NhlGoalieSwitchReport | null>(null);
   const [loading, setLoading] = useState(false);
-  const gspCode: string = `${game.id}-gsp`;
-
-  useEffect(() => {
-    const sessionData = sessionStorage.getItem(gspCode);
-    if (sessionData) {
-      setReport(JSON.parse(sessionData));
-    }
-  }, [gspCode]);
 
   const handleSetReport = (data: NhlGoalieSwitchReport | null) => {
     setReport(data);
     if (data) {
-      sessionStorage.setItem(gspCode, JSON.stringify(data));
       setModalOpen(false);
-    } else {
-      sessionStorage.removeItem(gspCode);
     }
   };
 
