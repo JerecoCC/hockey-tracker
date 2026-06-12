@@ -10,5 +10,6 @@
 .dateRow {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $space-xl;
+  column-gap: $space-md;
+  row-gap: $space-xl;
 }

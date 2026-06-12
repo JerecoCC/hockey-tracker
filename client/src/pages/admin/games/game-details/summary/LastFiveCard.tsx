@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import Icon from '@/components/Icon/Icon';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import type { GameRecord } from '@/hooks/useGames';
 import LastTeamGamesAccordion from './LastTeamGamesAccordion';
 import styles from './LastFiveCard.module.scss';
@@ -30,24 +31,25 @@ export default function LastFiveCard({ game, gameHrefBuilder }: Props) {
     <Card
       title="Last 5 Games"
       action={
-        <div className={styles.lastFiveViewToggle}>
-          <Button
-            variant="ghost"
-            intent={view === 'list' ? 'accent' : 'neutral'}
-            icon="view_list"
-            size="sm"
-            tooltip="List view"
-            onClick={() => setView('list')}
-          />
-          <Button
-            variant="ghost"
-            intent={view === 'square' ? 'accent' : 'neutral'}
-            icon="grid_view"
-            size="sm"
-            tooltip="Grid view"
-            onClick={() => setView('square')}
-          />
-        </div>
+        <SegmentedControl
+          value={view}
+          onChange={(value) => setView(value as 'list' | 'square')}
+          className={styles.lastFiveViewToggle}
+          options={[
+            {
+              value: 'list',
+              label: <Icon name="view_list" />,
+              tooltip: 'List view',
+              ariaLabel: 'List view',
+            },
+            {
+              value: 'square',
+              label: <Icon name="grid_view" />,
+              tooltip: 'Grid view',
+              ariaLabel: 'Grid view',
+            },
+          ]}
+        />
       }
     >
       <div className={styles.lastFiveList}>

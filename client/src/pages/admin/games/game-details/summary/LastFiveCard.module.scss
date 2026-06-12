@@ -24,17 +24,12 @@
   text-transform: uppercase;
 }
 
-.linescoreTeam {
+.lastFiveTeamHeader {
   display: flex;
   align-items: center;
   gap: $space-sm;
-}
-
-.linescoreLogo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  flex-shrink: 0;
+  font-size: inherit;
+  font-weight: inherit;
 }
 
 // ── Last 5 Games card ─────────────────────────────────────────────────────────
@@ -59,10 +54,14 @@
   width: 100%;
 }
 
-// View toggle buttons in card header
+// View toggle in card header
 .lastFiveViewToggle {
-  display: flex;
-  gap: $space-xs;
+  width: fit-content;
+
+  svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
 }
 
 // ── List view ─────────────────────────────────────────────────────────────────

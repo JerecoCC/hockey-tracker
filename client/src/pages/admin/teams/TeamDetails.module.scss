@@ -171,12 +171,14 @@
 .historyAssetRow {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
-  gap: $space-lg;
+  column-gap: $space-md;
+  row-gap: $space-lg;
 }
 
 .historyFormRow {
   display: flex;
-  gap: $space-lg;
+  column-gap: $space-md;
+  row-gap: $space-lg;
 
   > * {
     flex: 1;

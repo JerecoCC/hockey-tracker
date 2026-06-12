@@ -10,12 +10,14 @@
 .assetRow {
   display: flex;
   justify-content: center;
-  gap: $space-xl;
+  column-gap: $space-md;
+  row-gap: $space-xl;
 }
 
 .colorRow {
   display: flex;
-  gap: $space-xl;
+  column-gap: $space-md;
+  row-gap: $space-xl;
 
   > * {
     flex: 1;

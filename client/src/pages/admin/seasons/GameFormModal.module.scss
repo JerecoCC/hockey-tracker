@@ -10,7 +10,8 @@
 // Away @ Home team pickers
 .teamRow {
   display: flex;
-  gap: $space-xl;
+  column-gap: $space-md;
+  row-gap: $space-xl;
 
   > * {
     flex: 1;
@@ -21,7 +22,8 @@
 // Date | Time — equal halves
 .dateTimeRow {
   display: flex;
-  gap: $space-xl;
+  column-gap: $space-md;
+  row-gap: $space-xl;
 
   > * {
     flex: 1;

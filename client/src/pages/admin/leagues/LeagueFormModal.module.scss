@@ -9,7 +9,8 @@
 
 .colorRow {
   display: flex;
-  gap: $space-xl;
+  column-gap: $space-md;
+  row-gap: $space-xl;
 
   > * {
     flex: 1;

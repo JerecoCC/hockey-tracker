@@ -38,13 +38,13 @@ export default function LastTeamGamesAccordion({
     <Accordion
       variant="static"
       label={
-        <span className={styles.linescoreTeam}>
+        <span className={styles.lastFiveTeamHeader}>
           <TeamLogo
             logo={logo}
             code={code}
             primaryColor={primary}
             textColor={text}
-            size={30}
+            size={20}
             shape="square"
           />
           <span>{label}</span>
