@@ -212,7 +212,7 @@ const GameLineupsTab = ({
             const showStarterTag =
               isStarter ||
               (isFinal && !isEditMode && isInheritedStarter) ||
-              (isInheritedStarter && game.status !== 'scheduled');
+              (isInheritedStarter && game.status !== 'scheduled' && !(isFinal && isEditMode));
             const lineupEntry = lineupMap.get(e.player_id) ?? inheritedLineupMap.get(e.player_id);
             const slot = lineupEntry?.position_slot;
             const positionPart = slot

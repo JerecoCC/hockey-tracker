@@ -19,6 +19,7 @@ interface TeamCalendarGameCardProps {
   topLabelAlign?: 'start' | 'center';
   topLabelWeight?: 'normal' | 'bold';
   homePrimaryColor?: string | null;
+  logoSize?: number;
   live?: boolean;
   fillContainer?: boolean;
   flush?: boolean;
@@ -34,6 +35,7 @@ const TeamCalendarGameCard = ({
   topLabelAlign = 'start',
   topLabelWeight = 'bold',
   homePrimaryColor,
+  logoSize = 54,
   live = false,
   fillContainer = false,
   flush = false,
@@ -93,7 +95,7 @@ const TeamCalendarGameCard = ({
               code={logo ? opponent.code : ''}
               primaryColor={opponent.primaryColor}
               textColor={opponent.textColor}
-              size={60}
+              size={logoSize}
               shape={logo ? 'square' : 'circle'}
               className={logo ? styles.logoImage : undefined}
             />
