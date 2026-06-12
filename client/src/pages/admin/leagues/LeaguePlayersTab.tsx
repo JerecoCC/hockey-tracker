@@ -9,8 +9,8 @@ import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import { buildLeaguePlayerDetailsPath } from '@/lib/routeSlugs';
 import SearchableList from '@/components/SearchableList/SearchableList';
 import Select from '@/components/Select/Select';
-import { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
+import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
@@ -22,50 +22,32 @@ const POSITION_LABELS: Record<string, string> = {
 };
 
 interface Props {
-  leagueId: string;
-  leagueCode: string | null | undefined;
-  players: PlayerRecord[];
-  total: number;
-  page: number;
-  pageSize: number;
-  search: string;
-  seasons: LeagueSeasonRecord[];
-  selectedSeasonId: string | null;
-  onPageChange: (page: number) => void;
-  onSearchChange: (query: string) => void;
-  onSeasonChange: (id: string) => void;
-  loading: boolean;
-  fetching: boolean;
-  busy: string | null;
-  onAdd: () => void;
-  onBulkAdd: () => void;
-  onEdit: (player: PlayerRecord) => void;
-  onDelete: (playerId: string) => Promise<void>;
   className?: string;
 }
 
 const LeaguePlayersTab = ({
-  leagueId,
-  leagueCode,
-  players,
-  total,
-  page,
-  pageSize,
-  search,
-  seasons,
-  selectedSeasonId,
-  onPageChange,
-  onSearchChange,
-  onSeasonChange,
-  loading,
-  fetching,
-  busy,
-  onAdd,
-  onBulkAdd,
-  onEdit,
-  onDelete,
   className,
 }: Props) => {
+  const { league, players: playersContext } = useLeagueDetailsContext();
+  const {
+    players,
+    total,
+    page,
+    pageSize,
+    search,
+    seasons,
+    selectedSeasonId,
+    onPageChange,
+    onSearchChange,
+    onSeasonChange,
+    loading,
+    fetching,
+    busy,
+    onAdd,
+    onBulkAdd,
+    onEdit,
+    onDelete,
+  } = playersContext;
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -123,8 +105,8 @@ const LeaguePlayersTab = ({
                   {filtered.map((p) => {
                     const initials = `${p.first_name[0] ?? ''}${p.last_name[0] ?? ''}` || '?';
                     const playerHref = buildLeaguePlayerDetailsPath({
-                      leagueCode,
-                      leagueId,
+                      leagueCode: league.code,
+                      leagueId: league.id,
                       firstName: p.first_name,
                       lastName: p.last_name,
                     });

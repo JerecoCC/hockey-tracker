@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import LeagueAwardsTab from './LeagueAwardsTab';
@@ -28,6 +28,7 @@ import {
   buildSeasonDetailsPath,
   toRouteSlug,
 } from '@/lib/routeSlugs';
+import { LeagueDetailsProvider } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 
 const LeagueDetailsPage = () => {
@@ -42,9 +43,7 @@ const LeagueDetailsPage = () => {
   const routeLeague = isLegacyIdRoute
     ? null
     : allLeagues.find(
-        (item) =>
-          toRouteSlug(item.code) === leagueSlug ||
-          toRouteSlug(item.name) === leagueSlug,
+        (item) => toRouteSlug(item.code) === leagueSlug || toRouteSlug(item.name) === leagueSlug,
       );
   const id = isLegacyIdRoute ? leagueSlug : routeLeague?.id;
   const [activeTab, handleTabChange] = useTabState('tab:league-details');
@@ -96,11 +95,7 @@ const LeagueDetailsPage = () => {
       : {
           backPath: '/admin/leagues',
           backLabel: 'Back to Leagues',
-          items: [
-            league
-              ? { label: league.code }
-              : { label: 'Not Found' },
-          ],
+          items: [league ? { label: league.code } : { label: 'Not Found' }],
         },
     [loading, leaguesLoading, isLegacyIdRoute, league?.name, league?.code],
   );
@@ -143,6 +138,103 @@ const LeagueDetailsPage = () => {
     pageSize: 20,
     search: playersSearch,
   });
+  const leagueContextValue = useMemo(
+    () =>
+      league
+        ? {
+            league,
+            teams,
+            seasons,
+            loading,
+            busy,
+            players: {
+              players,
+              total: playersTotal,
+              page: playersPage,
+              pageSize: 20,
+              search: playersSearch,
+              seasons,
+              selectedSeasonId,
+              loading: playersLoading,
+              fetching: playersFetching,
+              busy: playerBusy,
+              onPageChange: setPlayersPage,
+              onSearchChange: (query: string) => {
+                setPlayersPage(1);
+                setPlayersSearch(query);
+              },
+              onSeasonChange: (seasonId: string) => {
+                setPlayersPage(1);
+                setSelectedSeasonId(seasonId);
+              },
+              onAdd: () => {
+                setEditTargetPlayer(null);
+                setPlayerModalOpen(true);
+              },
+              onBulkAdd: () => setBulkAddOpen(true),
+              onEdit: (p: PlayerRecord) => {
+                setEditTargetPlayer(p);
+                setPlayerModalOpen(true);
+              },
+              onDelete: deletePlayer,
+            },
+            onAddTeam: () => {
+              setEditTargetTeam(null);
+              setTeamModalOpen(true);
+            },
+            onEditTeam: (t: TeamRecord) => {
+              setEditTargetTeam(t);
+              setTeamModalOpen(true);
+            },
+            onDeleteTeam: (t: TeamRecord) => setConfirmDeleteTeam(t),
+            onAddSeason: () => {
+              setEditTargetSeason(null);
+              setSeasonModalOpen(true);
+            },
+            onEditSeason: (s: LeagueSeasonRecord) => {
+              setEditTargetSeason(s);
+              setSeasonModalOpen(true);
+            },
+            onDeleteSeason: (s: LeagueSeasonRecord) => {
+              setConfirmDeleteSeason(s);
+              setConfirmDeleteSeasonOpen(true);
+            },
+            onViewSeason: (s: LeagueSeasonRecord) =>
+              navigate(
+                buildSeasonDetailsPath({
+                  leagueCode: league.code,
+                  leagueId: league.id,
+                  seasonName: s.name,
+                  seasonId: s.id,
+                }),
+              ),
+            getSeasonHref: (s: LeagueSeasonRecord) =>
+              buildSeasonDetailsPath({
+                leagueCode: league.code,
+                leagueId: league.id,
+                seasonName: s.name,
+                seasonId: s.id,
+              }),
+          }
+        : null,
+    [
+      busy,
+      deletePlayer,
+      league,
+      loading,
+      navigate,
+      playerBusy,
+      players,
+      playersFetching,
+      playersLoading,
+      playersPage,
+      playersSearch,
+      playersTotal,
+      seasons,
+      selectedSeasonId,
+      teams,
+    ],
+  );
 
   if (loading || (!isLegacyIdRoute && leaguesLoading)) {
     return (
@@ -154,167 +246,87 @@ const LeagueDetailsPage = () => {
   }
 
   if (!league) {
-    return (
-      <p style={{ color: 'var(--text-dim)' }}>League not found.</p>
-    );
+    return <p style={{ color: 'var(--text-dim)' }}>League not found.</p>;
+  }
+
+  if (!leagueContextValue) {
+    return null;
   }
 
   return (
     <>
-      <Tabs
-        activeIndex={activeTab}
-        onTabChange={handleTabChange}
-        tabs={[
-          {
-            label: 'Info',
-            icon: 'info',
-            content: (
-              <div className={styles.grid}>
-                <LeagueInfoCard
-                  className={styles.col12}
-                  league={league}
-                  onEdit={() => setEditModalOpen(true)}
-                />
-              </div>
-            ),
-          },
-          {
-            label: 'Seasons',
-            icon: 'calendar_month',
-            content: (
-              <div className={styles.grid}>
-                <LeagueSeasonsCard
-                  className={styles.col12}
-                  seasons={seasons}
-                  loading={loading}
-                  busy={busy}
-                  onAdd={() => {
-                    setEditTargetSeason(null);
-                    setSeasonModalOpen(true);
-                  }}
-                  onEdit={(s) => {
-                    setEditTargetSeason(s);
-                    setSeasonModalOpen(true);
-                  }}
-                  onDelete={(s) => {
-                    setConfirmDeleteSeason(s);
-                    setConfirmDeleteSeasonOpen(true);
-                  }}
-                  onView={(s) =>
-                    navigate(
-                      buildSeasonDetailsPath({
-                        leagueCode: league.code,
-                        leagueId: league.id,
-                        seasonName: s.name,
-                        seasonId: s.id,
-                      }),
-                    )
-                  }
-                  getSeasonHref={(s) =>
-                    buildSeasonDetailsPath({
-                      leagueCode: league.code,
-                      leagueId: league.id,
-                      seasonName: s.name,
-                      seasonId: s.id,
-                    })
-                  }
-                />
-              </div>
-            ),
-          },
-          {
-            label: 'Teams',
-            icon: 'group',
-            content: (
-              <div className={styles.grid}>
-                <LeagueTeamsTab
-                  className={styles.col12}
-                  leagueId={league.id}
-                  leagueCode={league.code}
-                  teams={teams}
-                  loading={loading}
-                  busy={busy}
-                  onAdd={() => {
-                    setEditTargetTeam(null);
-                    setTeamModalOpen(true);
-                  }}
-                  onEdit={(t) => {
-                    setEditTargetTeam(t);
-                    setTeamModalOpen(true);
-                  }}
-                  onDelete={(t) => setConfirmDeleteTeam(t)}
-                />
-              </div>
-            ),
-          },
-          {
-            label: 'Players',
-            icon: 'groups',
-            content: (
-              <div className={styles.grid}>
-                <LeaguePlayersTab
-                  className={styles.col12}
-                  leagueId={league.id}
-                  leagueCode={league?.code}
-                  players={players}
-                  total={playersTotal}
-                  page={playersPage}
-                  pageSize={20}
-                  search={playersSearch}
-                  seasons={seasons}
-                  selectedSeasonId={selectedSeasonId}
-                  onPageChange={setPlayersPage}
-                  onSearchChange={(query) => {
-                    setPlayersPage(1);
-                    setPlayersSearch(query);
-                  }}
-                  onSeasonChange={(seasonId) => {
-                    setPlayersPage(1);
-                    setSelectedSeasonId(seasonId);
-                  }}
-                  loading={playersLoading}
-                  fetching={playersFetching}
-                  busy={playerBusy}
-                  onAdd={() => {
-                    setEditTargetPlayer(null);
-                    setPlayerModalOpen(true);
-                  }}
-                  onBulkAdd={() => setBulkAddOpen(true)}
-                  onEdit={(p) => {
-                    setEditTargetPlayer(p);
-                    setPlayerModalOpen(true);
-                  }}
-                  onDelete={deletePlayer}
-                />
-              </div>
-            ),
-          },
-          {
-            label: 'Playoffs',
-            icon: 'emoji_events',
-            content: (
-              <div className={styles.grid}>
-                <LeaguePlayoffsTab
-                  className={styles.col12}
-                  leagueId={league.id}
-                />
-              </div>
-            ),
-          },
-          {
-            label: 'Awards',
-            icon: 'workspace_premium',
-            content: (
-              <div className={styles.grid}>
-                <LeagueAwardsTab
-                  className={styles.col12}
-                  leagueId={league.id}
-                />
-              </div>
-            ),
-          },
-        ]}
-      />
+      <LeagueDetailsProvider value={leagueContextValue}>
+        <Tabs
+          activeIndex={activeTab}
+          onTabChange={handleTabChange}
+          tabs={[
+            {
+              label: 'Info',
+              icon: 'info',
+              content: (
+                <div className={styles.grid}>
+                  <LeagueInfoCard
+                    className={styles.col12}
+                    league={league}
+                    onEdit={() => setEditModalOpen(true)}
+                  />
+                </div>
+              ),
+            },
+            {
+              label: 'Seasons',
+              icon: 'calendar_month',
+              content: (
+                <div className={styles.grid}>
+                  <LeagueSeasonsCard className={styles.col12} />
+                </div>
+              ),
+            },
+            {
+              label: 'Teams',
+              icon: 'group',
+              content: (
+                <div className={styles.grid}>
+                  <LeagueTeamsTab className={styles.col12} />
+                </div>
+              ),
+            },
+            {
+              label: 'Players',
+              icon: 'groups',
+              content: (
+                <div className={styles.grid}>
+                  <LeaguePlayersTab className={styles.col12} />
+                </div>
+              ),
+            },
+            {
+              label: 'Playoffs',
+              icon: 'emoji_events',
+              content: (
+                <div className={styles.grid}>
+                  <LeaguePlayoffsTab
+                    className={styles.col12}
+                    leagueId={league.id}
+                  />
+                </div>
+              ),
+            },
+            {
+              label: 'Awards',
+              icon: 'workspace_premium',
+              content: (
+                <div className={styles.grid}>
+                  <LeagueAwardsTab
+                    className={styles.col12}
+                    leagueId={league.id}
+                  />
+                </div>
+              ),
+            },
+          ]}
+        />
+      </LeagueDetailsProvider>
 
       <ConfirmModal
         open={confirmDeleteTeam !== null}

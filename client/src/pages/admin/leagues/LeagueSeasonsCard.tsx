@@ -1,18 +1,10 @@
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
-import { type LeagueSeasonRecord } from '@/hooks/useLeagueDetails';
+import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
-  seasons: LeagueSeasonRecord[];
-  loading: boolean;
-  busy: string | null;
-  onAdd: () => void;
-  onEdit: (season: LeagueSeasonRecord) => void;
-  onDelete: (season: LeagueSeasonRecord) => void;
-  onView: (season: LeagueSeasonRecord) => void;
-  getSeasonHref: (season: LeagueSeasonRecord) => string;
   className?: string;
 }
 
@@ -30,8 +22,17 @@ const formatEndDate = (d: string | null, isCurrent: boolean) =>
   d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : '?';
 
 const LeagueSeasonsCard = (props: Props) => {
-  const { seasons, loading, busy, onAdd, onEdit, onDelete, onView, getSeasonHref, className } =
-    props;
+  const { className } = props;
+  const {
+    seasons,
+    loading,
+    busy,
+    onAddSeason,
+    onEditSeason,
+    onDeleteSeason,
+    onViewSeason,
+    getSeasonHref,
+  } = useLeagueDetailsContext();
   return (
     <Card
       className={className}
@@ -40,7 +41,7 @@ const LeagueSeasonsCard = (props: Props) => {
         <Button
           icon="add"
           size="sm"
-          onClick={onAdd}
+          onClick={onAddSeason}
         >
           Create Season
         </Button>
@@ -74,21 +75,21 @@ const LeagueSeasonsCard = (props: Props) => {
                     icon: 'open_in_new',
                     intent: 'neutral',
                     tooltip: 'View season',
-                    onClick: () => onView(s),
+                    onClick: () => onViewSeason(s),
                   },
                   {
                     icon: 'edit',
                     intent: 'accent',
                     tooltip: 'Edit',
                     disabled: busy === s.id,
-                    onClick: () => onEdit(s),
+                    onClick: () => onEditSeason(s),
                   },
                   {
                     icon: 'delete',
                     intent: 'danger',
                     tooltip: 'Delete',
                     disabled: busy === s.id,
-                    onClick: () => onDelete(s),
+                    onClick: () => onDeleteSeason(s),
                   },
                 ] satisfies ListItemAction[]
               }

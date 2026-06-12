@@ -3,24 +3,25 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import SearchableList from '@/components/SearchableList/SearchableList';
-import { type TeamRecord } from '@/hooks/useTeams';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
+import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
-  leagueId: string;
-  leagueCode: string;
-  teams: TeamRecord[];
-  loading: boolean;
-  busy: string | null;
-  onAdd: () => void;
-  onEdit: (team: TeamRecord) => void;
-  onDelete: (team: TeamRecord) => void;
   className?: string;
 }
 
 const LeagueTeamsTab = (props: Props) => {
-  const { leagueId, leagueCode, teams, loading, busy, onAdd, onEdit, onDelete, className } = props;
+  const { className } = props;
+  const {
+    league,
+    teams,
+    loading,
+    busy,
+    onAddTeam,
+    onEditTeam,
+    onDeleteTeam,
+  } = useLeagueDetailsContext();
   const navigate = useNavigate();
 
   return (
@@ -31,7 +32,7 @@ const LeagueTeamsTab = (props: Props) => {
         <Button
           icon="add"
           size="sm"
-          onClick={onAdd}
+          onClick={onAddTeam}
         >
           Create Team
         </Button>
@@ -47,8 +48,8 @@ const LeagueTeamsTab = (props: Props) => {
           <ul className={styles.teamList}>
             {filtered.map((t) => {
               const teamHref = buildTeamDetailsPath({
-                leagueCode,
-                leagueId,
+                leagueCode: league.code,
+                leagueId: league.id,
                 teamCode: t.code,
                 teamId: t.id,
               });
@@ -75,14 +76,14 @@ const LeagueTeamsTab = (props: Props) => {
                         intent: 'neutral',
                         tooltip: 'Edit',
                         disabled: busy === t.id,
-                        onClick: () => onEdit(t),
+                        onClick: () => onEditTeam(t),
                       },
                       {
                         icon: 'delete',
                         intent: 'danger',
                         tooltip: 'Delete',
                         disabled: busy === t.id,
-                        onClick: () => onDelete(t),
+                        onClick: () => onDeleteTeam(t),
                       },
                     ] satisfies ListItemAction[]
                   }
