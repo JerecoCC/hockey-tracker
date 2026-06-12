@@ -363,7 +363,7 @@ router.get('/history/:playerId', async (req, res) => {
         LIMIT 1
       ) roster ON TRUE
       LEFT JOIN LATERAL (
-        SELECT name, code, logo
+        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo
         FROM team_iterations
         WHERE team_id = pts.team_id
         ORDER BY

@@ -17,6 +17,8 @@ export interface TeamDetailRecord {
   city: string | null;
   home_arena: string | null;
   logo: string | null;
+  logo_dark: string | null;
+  logo_light: string | null;
   icon: string | null;
   league_id: string | null;
   primary_color: string;

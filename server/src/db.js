@@ -275,6 +275,8 @@ async function initSchema() {
       team_name   TEXT,
       code        TEXT,
       logo        TEXT,
+      logo_dark   TEXT,
+      logo_light  TEXT,
       icon        TEXT,
       note        TEXT,
       start_date  DATE,
@@ -292,6 +294,8 @@ async function initSchema() {
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS start_date DATE`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS end_date DATE`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS code TEXT`;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS logo_dark TEXT`;
+  await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS logo_light TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS icon TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS place_name TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS team_name TEXT`;
@@ -349,6 +353,34 @@ async function initSchema() {
       AND (ti.place_name IS NULL OR btrim(ti.place_name) = '')
       AND (ti.team_name IS NULL OR btrim(ti.team_name) = '')
       AND ti.name IS NOT NULL
+  `;
+
+  await sql`
+    CREATE OR REPLACE FUNCTION team_logo_default(logo text, logo_dark text, logo_light text)
+    RETURNS text
+    LANGUAGE sql
+    IMMUTABLE
+    AS $$
+      SELECT COALESCE(NULLIF(logo, ''), NULLIF(logo_dark, ''), NULLIF(logo_light, ''))
+    $$
+  `;
+  await sql`
+    CREATE OR REPLACE FUNCTION team_logo_dark(logo text, logo_dark text, logo_light text)
+    RETURNS text
+    LANGUAGE sql
+    IMMUTABLE
+    AS $$
+      SELECT COALESCE(NULLIF(logo_dark, ''), NULLIF(logo, ''), NULLIF(logo_light, ''))
+    $$
+  `;
+  await sql`
+    CREATE OR REPLACE FUNCTION team_logo_light(logo text, logo_dark text, logo_light text)
+    RETURNS text
+    LANGUAGE sql
+    IMMUTABLE
+    AS $$
+      SELECT COALESCE(NULLIF(logo_light, ''), NULLIF(logo, ''), NULLIF(logo_dark, ''))
+    $$
   `;
 
   // Migration: for any existing team that has no base iteration yet,

@@ -23,7 +23,8 @@ router.get('/', async (req, res) => {
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at, g.is_auto, g.role,
         COALESCE(
           json_agg(
-            json_build_object('id', t.id, 'name', ti.name, 'code', ti.code, 'logo', ti.logo,
+            json_build_object('id', t.id, 'name', ti.name, 'code', ti.code,
+                              'logo', ti.logo, 'logo_dark', ti.logo_dark, 'logo_light', ti.logo_light,
                               'primary_color', t.primary_color, 'text_color', t.text_color)
             ORDER BY ti.name
           ) FILTER (WHERE t.id IS NOT NULL),
@@ -33,7 +34,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN group_teams gt ON gt.group_id = g.id
       LEFT JOIN teams t ON t.id = gt.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -184,11 +185,11 @@ router.put('/:id/teams', async (req, res) => {
     }
 
     const teams = await sql`
-      SELECT t.id, ti.name, ti.code, ti.logo
+      SELECT t.id, ti.name, ti.code, ti.logo, ti.logo_dark, ti.logo_light
       FROM group_teams gt
       JOIN teams t ON t.id = gt.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1

@@ -40,6 +40,8 @@ export interface LeagueTeam {
   name: string;
   code: string;
   logo: string | null;
+  logo_dark?: string | null;
+  logo_light?: string | null;
   primary_color: string;
   text_color: string;
 }

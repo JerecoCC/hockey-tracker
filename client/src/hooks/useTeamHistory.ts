@@ -13,6 +13,8 @@ export interface TeamIteration {
   team_name?: string | null;
   code: string | null;
   logo: string | null;
+  logo_dark: string | null;
+  logo_light: string | null;
   icon: string | null;
   note: string | null;
   recorded_at: string;
@@ -28,6 +30,8 @@ export interface AddIterationPayload {
   team_name?: string | null;
   code?: string | null;
   logo?: string | null;
+  logo_dark?: string | null;
+  logo_light?: string | null;
   icon?: string | null;
   note?: string | null;
   start_date?: string | null;
@@ -40,6 +44,8 @@ export interface UpdateIterationPayload {
   team_name?: string | null;
   code?: string | null;
   logo?: string | null;
+  logo_dark?: string | null;
+  logo_light?: string | null;
   icon?: string | null;
   note?: string | null;
   start_date?: string | null;

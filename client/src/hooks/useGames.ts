@@ -64,6 +64,8 @@ export interface LastFiveGame {
   opponent_name:    string;
   opponent_code:    string;
   opponent_logo:    string | null;
+  opponent_logo_dark?: string | null;
+  opponent_logo_light?: string | null;
 }
 
 export interface TeamInfo {
@@ -72,6 +74,8 @@ export interface TeamInfo {
   team_name?:      string | null;
   code:            string;
   logo:            string | null;
+  logo_dark?:      string | null;
+  logo_light?:     string | null;
   primary_color:   string;
   secondary_color: string;
   text_color:      string;
@@ -162,11 +166,15 @@ export interface PlayoffSeriesRecord {
   home_team_name: string | null;
   home_team_code: string | null;
   home_team_logo: string | null;
+  home_team_logo_dark?: string | null;
+  home_team_logo_light?: string | null;
   /** Null when the team has not yet been determined (partial series shell). */
   away_team_id:   string | null;
   away_team_name: string | null;
   away_team_code: string | null;
   away_team_logo: string | null;
+  away_team_logo_dark?: string | null;
+  away_team_logo_light?: string | null;
   games_to_win:   number;
   home_wins:      number;
   away_wins:      number;

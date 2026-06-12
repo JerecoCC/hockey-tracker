@@ -455,7 +455,7 @@ router.get('/:seasonId/teams', async (req, res) => {
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+        (SELECT ti.name, ti.code, team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           LEFT JOIN seasons ss ON ss.id = ti.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
           WHERE ti.team_id = t.id
@@ -464,7 +464,7 @@ router.get('/:seasonId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+        (SELECT ti.name, ti.code, team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) iter ON true
@@ -493,7 +493,7 @@ router.get('/:seasonId/teams', async (req, res) => {
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+        (SELECT ti.name, ti.code, team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           LEFT JOIN seasons ss ON ss.id = ti.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
           WHERE ti.team_id = t.id
@@ -502,7 +502,7 @@ router.get('/:seasonId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+        (SELECT ti.name, ti.code, team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) iter ON true
@@ -617,7 +617,7 @@ router.put('/:seasonId/teams', async (req, res) => {
       FROM group_teams gt
       JOIN teams t ON t.id = gt.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo, ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           LEFT JOIN seasons ss ON ss.id = ti2.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti2.latest_season_id
           WHERE ti2.team_id = t.id
@@ -626,7 +626,7 @@ router.put('/:seasonId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti2.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo, ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           WHERE ti2.team_id = t.id ORDER BY ti2.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) ti ON true
@@ -743,13 +743,21 @@ router.get('/:seasonId/groups', async (req, res) => {
             iter.name,
             iter.code,
             iter.logo,
+            iter.logo_dark,
+            iter.logo_light,
             t.primary_color,
             t.text_color,
             t.home_arena
           FROM resolved r
           JOIN teams t ON t.id = r.team_id
           LEFT JOIN LATERAL (
-            (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+            (SELECT
+                ti.name,
+                ti.code,
+                team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
+                team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
+                team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light
+              FROM team_iterations ti
               LEFT JOIN seasons ss ON ss.id = ti.start_season_id
               LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
               WHERE ti.team_id = t.id
@@ -758,7 +766,13 @@ router.get('/:seasonId/groups', async (req, res) => {
               ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
               LIMIT 1)
             UNION ALL
-            (SELECT ti.name, ti.code, ti.logo FROM team_iterations ti
+            (SELECT
+                ti.name,
+                ti.code,
+                team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
+                team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
+                team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light
+              FROM team_iterations ti
               WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
             LIMIT 1
           ) iter ON true
@@ -768,7 +782,8 @@ router.get('/:seasonId/groups', async (req, res) => {
         g.is_auto, g.role,
         COALESCE(
           json_agg(
-            json_build_object('id', v.team_id, 'name', v.name, 'code', v.code, 'logo', v.logo,
+            json_build_object('id', v.team_id, 'name', v.name, 'code', v.code,
+                              'logo', v.logo, 'logo_dark', v.logo_dark, 'logo_light', v.logo_light,
                               'primary_color', v.primary_color, 'text_color', v.text_color,
                               'home_arena', v.home_arena)
             ORDER BY v.name
@@ -837,7 +852,7 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
       FROM season_group_teams sgt
       JOIN teams t ON t.id = sgt.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo, ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           LEFT JOIN seasons ss ON ss.id = ti2.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti2.latest_season_id
           WHERE ti2.team_id = t.id
@@ -846,7 +861,7 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti2.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti2.name, ti2.code, ti2.logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo, ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           WHERE ti2.team_id = t.id ORDER BY ti2.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) ti ON true
@@ -975,7 +990,7 @@ router.get('/:id/standings', async (req, res) => {
       FROM aggregated a
       JOIN teams t ON t.id = a.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = a.team_id
         ORDER BY CASE WHEN season_id = ${id} THEN 0 ELSE 1 END,
                  CASE WHEN season_id IS NULL  THEN 0 ELSE 1 END,
@@ -1060,7 +1075,7 @@ router.get('/:id/stats', async (req, res) => {
           LEFT JOIN player_team        ptr ON ptr.player_id = p.id
           LEFT JOIN teams              t   ON t.id          = ptr.team_id
           LEFT JOIN LATERAL (
-            SELECT name, code, logo FROM team_iterations
+            SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
             WHERE team_id = ptr.team_id
             ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
             LIMIT 1
@@ -1243,7 +1258,7 @@ router.get('/:id/stats', async (req, res) => {
           LEFT JOIN player_team ptr ON ptr.player_id = agg.goalie_id
           LEFT JOIN teams       t   ON t.id          = agg.team_id
           LEFT JOIN LATERAL (
-            SELECT name, code, logo FROM team_iterations
+            SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
             WHERE team_id = agg.team_id
             ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
             LIMIT 1
@@ -1332,7 +1347,7 @@ router.get('/:id/stats', async (req, res) => {
       LEFT JOIN player_team        ptr ON ptr.player_id = p.id
       LEFT JOIN teams              t   ON t.id          = ptr.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = ptr.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -1502,7 +1517,7 @@ router.get('/:id/stats', async (req, res) => {
       LEFT JOIN player_team ptr ON ptr.player_id = agg.goalie_id
       LEFT JOIN teams       t   ON t.id          = agg.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = agg.team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -1580,7 +1595,7 @@ router.get('/:id/awards', async (req, res) => {
       ) ptr ON true
       LEFT JOIN teams t ON t.id = COALESCE(sar.team_id, ptr.team_id)
       LEFT JOIN LATERAL (
-        SELECT name, code, logo FROM team_iterations
+        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
