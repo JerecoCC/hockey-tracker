@@ -294,9 +294,12 @@ describe('TeamGamesTab', () => {
       />,
     );
 
-    expect(container.querySelectorAll('.calendarGameHome')).toHaveLength(2);
-    expect(container.querySelectorAll('.calendarGameAway')).toHaveLength(1);
-    expect(container.querySelector('.calendarGameHome')).toHaveStyle('--calendar-primary: #123456');
+    const gameButtons = screen.getAllByRole('button', { name: /^Open game / });
+    expect(gameButtons.filter((button) => button.classList.contains('home'))).toHaveLength(2);
+    expect(gameButtons.filter((button) => button.classList.contains('away'))).toHaveLength(1);
+    expect(gameButtons.find((button) => button.classList.contains('home'))).toHaveStyle(
+      '--calendar-primary: #123456',
+    );
     expect(
       screen.getByText(monthLabel(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))),
     ).toBeInTheDocument();

@@ -33,6 +33,8 @@ export default function LastGameSquare({ lg, teamPrimary, teamText, onNavigate }
         name: opponentName,
         code: lg.opponent_code,
         logo: lg.opponent_logo,
+        logoDark: lg.opponent_logo_dark,
+        logoLight: lg.opponent_logo_light,
         primaryColor: teamPrimary,
         textColor: teamText,
       }}

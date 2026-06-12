@@ -148,6 +148,8 @@ const TeamCalendarGame = ({
         name: opponent.name,
         code: opponent.code,
         logo: opponent.logo,
+        logoDark: opponent.logo_dark,
+        logoLight: opponent.logo_light,
         primaryColor: opponent.primary_color,
         textColor: opponent.text_color,
       }}

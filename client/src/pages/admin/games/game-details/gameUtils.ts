@@ -21,6 +21,18 @@ export const buildFormRecord = (games: LastFiveGame[]) => {
   return { w, otw, otl, l };
 };
 
+export const lastFiveOpponentLogo = (
+  game: Pick<
+    LastFiveGame,
+    'is_home' | 'opponent_logo' | 'opponent_logo_dark' | 'opponent_logo_light'
+  >,
+) => {
+  if (!game.is_home) {
+    return game.opponent_logo_light ?? game.opponent_logo ?? game.opponent_logo_dark ?? null;
+  }
+  return game.opponent_logo ?? game.opponent_logo_dark ?? game.opponent_logo_light ?? null;
+};
+
 export const playerDataComplete = (
   dateOfBirth: string | null,
   startDate: string | null,

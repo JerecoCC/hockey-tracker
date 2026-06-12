@@ -9,6 +9,8 @@ interface TeamCalendarGameCardProps {
     name: string;
     code: string;
     logo?: string | null;
+    logoDark?: string | null;
+    logoLight?: string | null;
     primaryColor?: string | null;
     textColor?: string | null;
   };
@@ -39,6 +41,9 @@ const TeamCalendarGameCard = ({
   onOpen,
 }: TeamCalendarGameCardProps) => {
   const isHome = variant === 'home';
+  const logo = isHome
+    ? (opponent.logo ?? opponent.logoDark ?? opponent.logoLight ?? null)
+    : (opponent.logoLight ?? opponent.logo ?? opponent.logoDark ?? null);
 
   return (
     <Tooltip
@@ -84,13 +89,13 @@ const TeamCalendarGameCard = ({
         <div className={styles.body}>
           <div className={styles.logoWrap}>
             <TeamLogo
-              logo={opponent.logo}
-              code={opponent.logo ? opponent.code : ''}
+              logo={logo}
+              code={logo ? opponent.code : ''}
               primaryColor={opponent.primaryColor}
               textColor={opponent.textColor}
               size={60}
-              shape={opponent.logo ? 'square' : 'circle'}
-              className={opponent.logo ? styles.logoImage : undefined}
+              shape={logo ? 'square' : 'circle'}
+              className={logo ? styles.logoImage : undefined}
             />
           </div>
           <span className={styles.detail}>{detail}</span>
