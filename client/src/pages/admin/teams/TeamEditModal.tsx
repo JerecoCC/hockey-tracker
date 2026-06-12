@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
@@ -60,32 +60,9 @@ interface Props {
 }
 
 const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) => {
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<FormValues>({
-    defaultValues: {
-      logo_dark: null,
-      logo_light: null,
-      icon: null,
-      place_name: '',
-      team_name: '',
-      code: '',
-      primary_color: '#334155',
-      secondary_color: '#1e293b',
-      text_color: '#ffffff',
-      city: '',
-      home_arena: '',
-      description: null,
-    },
-  });
-
-  useEffect(() => {
-    if (!open) return;
+  const formValues = useMemo<FormValues>(() => {
     const fallbackName = splitTeamName(team.name, team.city ?? team.location);
-    reset({
+    return {
       logo_dark: team.logo_dark ?? null,
       logo_light: team.logo_light ?? null,
       icon: team.icon ?? null,
@@ -98,8 +75,25 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       city: team.city ?? '',
       home_arena: team.home_arena ?? '',
       description: descriptionHtmlToTextarea(team.description),
-    });
-  }, [open, team, reset]);
+    };
+  }, [team]);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<FormValues>({
+    defaultValues: formValues,
+  });
+
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
@@ -128,14 +122,14 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       description: textareaToDescriptionHtml(data.description),
     };
     const ok = await updateTeam(team.id, payload);
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title="Edit Team"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="team-edit-form"
       confirmDisabled={isSubmitting}
@@ -150,22 +144,19 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
           <LogoUpload
             control={control}
             name="logo_dark"
-            label="Dark Mode Logo"
-            align="start"
+            label="Logo (Dark)"
             disabled={isSubmitting}
           />
           <LogoUpload
             control={control}
             name="logo_light"
-            label="Light Mode Logo"
-            align="start"
+            label="Logo (Light)"
             disabled={isSubmitting}
           />
           <LogoUpload
             control={control}
             name="icon"
             label="Header Icon"
-            align="start"
             accept="image/x-icon,image/vnd.microsoft.icon,.ico"
             hint="Upload .ico"
             disabled={isSubmitting}

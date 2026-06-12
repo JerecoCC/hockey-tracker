@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
@@ -52,31 +52,33 @@ const TeamPlayerEditModal = ({
   updatePlayerTeam,
   uploadPlayerPhoto,
 }: Props) => {
+  const formValues = useMemo<FormValues>(
+    () => ({
+      photo: editTarget?.photo ?? null,
+      jersey_number: editTarget?.jersey_number != null ? String(editTarget.jersey_number) : '',
+      first_name: editTarget?.first_name ?? '',
+      last_name: editTarget?.last_name ?? '',
+      position: editTarget?.position ?? null,
+    }),
+    [editTarget],
+  );
   const {
     control,
     handleSubmit,
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: {
-      photo: null,
-      jersey_number: '',
-      first_name: '',
-      last_name: '',
-      position: null,
-    },
+    defaultValues: formValues,
   });
 
-  useEffect(() => {
-    if (!open || !editTarget) return;
-    reset({
-      photo: editTarget.photo ?? null,
-      jersey_number: editTarget.jersey_number != null ? String(editTarget.jersey_number) : '',
-      first_name: editTarget.first_name,
-      last_name: editTarget.last_name,
-      position: editTarget.position ?? null,
-    });
-  }, [open, editTarget, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!editTarget) return;
@@ -107,14 +109,14 @@ const TeamPlayerEditModal = ({
       if (!teamOk) return;
     }
 
-    onClose();
+    handleClose();
   });
 
   return (
     <Modal
       open={open}
       title="Edit Player"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="team-player-edit-form"
       confirmDisabled={isSubmitting}

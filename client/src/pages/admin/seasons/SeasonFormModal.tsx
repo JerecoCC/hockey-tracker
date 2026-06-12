@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -28,32 +28,34 @@ interface Props {
 const SeasonFormModal = (props: Props) => {
   const { open, editTarget, leagueOptions, onClose, addSeason, updateSeason, lockedLeagueId } =
     props;
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<FormValues>({
-    defaultValues: {
-      league_id: null,
-      name: '',
-      start_date: '',
-      end_date: '',
-      games_per_season: '',
-    },
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    reset({
+  const formValues = useMemo<FormValues>(
+    () => ({
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
       name: editTarget?.name ?? '',
       start_date: editTarget?.start_date?.slice(0, 10) ?? '',
       end_date: editTarget?.end_date?.slice(0, 10) ?? '',
       games_per_season:
         editTarget?.games_per_season != null ? String(editTarget.games_per_season) : '',
-    });
-  }, [open, editTarget, reset]);
+    }),
+    [editTarget, lockedLeagueId],
+  );
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<FormValues>({
+    defaultValues: formValues,
+  });
+
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     const payload: CreateSeasonData = {
@@ -64,14 +66,14 @@ const SeasonFormModal = (props: Props) => {
       games_per_season: data.games_per_season ? parseInt(data.games_per_season, 10) : null,
     };
     const ok = editTarget ? await updateSeason(editTarget.id, payload) : await addSeason(payload);
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title={editTarget ? 'Edit Season' : 'Create Season'}
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Season'}
       confirmForm="season-form"
       confirmDisabled={isSubmitting}

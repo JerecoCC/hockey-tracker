@@ -84,6 +84,39 @@ describe('GET /api/admin/leagues/:id', () => {
     expect(res.body.seasons).toEqual([]);
   });
 
+  it('selects raw team logo variants for edit forms', async () => {
+    sql
+      .mockResolvedValueOnce([LEAGUE])
+      .mockResolvedValueOnce([
+        {
+          id: 'team-1',
+          name: 'Toronto Maple Leafs',
+          place_name: 'Toronto',
+          team_name: 'Maple Leafs',
+          code: 'TOR',
+          logo: 'https://cdn.example.com/tor-dark.svg',
+          logo_dark: 'https://cdn.example.com/tor-dark.svg',
+          logo_light: null,
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/admin/leagues/league-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body.teams[0]).toMatchObject({
+      logo: 'https://cdn.example.com/tor-dark.svg',
+      logo_dark: 'https://cdn.example.com/tor-dark.svg',
+      logo_light: null,
+    });
+
+    const teamQuery = sql.mock.calls[1][0].join('');
+    expect(teamQuery).toContain('team_logo_default(logo_dark, logo_light) AS logo');
+    expect(teamQuery).toContain('logo_dark, logo_light, icon');
+    expect(teamQuery).not.toContain('team_logo_dark(logo_dark, logo_light) AS logo_dark');
+    expect(teamQuery).not.toContain('team_logo_light(logo_dark, logo_light) AS logo_light');
+  });
+
   it('returns 404 when not found', async () => {
     sql.mockResolvedValueOnce([]);
     const res = await request(app).get('/api/admin/leagues/nope');

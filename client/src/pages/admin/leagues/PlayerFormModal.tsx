@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -72,34 +72,12 @@ const PlayerFormModal = ({
   updatePlayer,
   updateJerseyNumber,
 }: Props) => {
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<FormValues>({
-    defaultValues: {
-      first_name: '',
-      last_name: '',
-      position: null,
-      shoots: null,
-      date_of_birth: '',
-      birth_city: '',
-      birth_country: '',
-      height_ft: '',
-      height_in: '',
-      weight_lbs: '',
-      jersey_number: '',
-    },
-  });
-
-  useEffect(() => {
-    if (!open) return;
+  const formValues = useMemo<FormValues>(() => {
     const { ft, inches } =
       editTarget?.height_cm != null
         ? cmToFtIn(editTarget.height_cm)
         : { ft: null as null, inches: null as null };
-    reset({
+    return {
       first_name: editTarget?.first_name ?? '',
       last_name: editTarget?.last_name ?? '',
       position: editTarget?.position ?? null,
@@ -111,8 +89,25 @@ const PlayerFormModal = ({
       height_in: inches != null ? String(inches) : '',
       weight_lbs: editTarget?.weight_lbs != null ? String(editTarget.weight_lbs) : '',
       jersey_number: editTarget?.jersey_number != null ? String(editTarget.jersey_number) : '',
-    });
-  }, [open, editTarget, reset]);
+    };
+  }, [editTarget]);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<FormValues>({
+    defaultValues: formValues,
+  });
+
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     const hasFt = data.height_ft !== '';
@@ -144,14 +139,14 @@ const PlayerFormModal = ({
       await updateJerseyNumber(newJersey);
     }
 
-    onClose();
+    handleClose();
   });
 
   return (
     <Modal
       open={open}
       title={editTarget ? 'Edit Player' : 'Create Player'}
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Player'}
       confirmForm="player-form"
       confirmDisabled={isSubmitting}

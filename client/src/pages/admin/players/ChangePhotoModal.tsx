@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
@@ -38,6 +38,16 @@ const ChangePhotoModal = ({
   uploadPhoto,
   changePlayerPhoto,
 }: Props) => {
+  const formValues = useMemo<FormValues>(
+    () => ({
+      season_id: stint?.season_id ?? '',
+      photo:
+        history.find(
+          (entry) => entry.team_id === stint?.team_id && entry.season_id === stint?.season_id,
+        )?.photo ?? null,
+    }),
+    [history, stint],
+  );
   const {
     control,
     handleSubmit,
@@ -45,7 +55,7 @@ const ChangePhotoModal = ({
     setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { season_id: '', photo: null },
+    defaultValues: formValues,
   });
 
   const selectedSeasonId = useWatch({ control, name: 'season_id' });
@@ -58,15 +68,14 @@ const ChangePhotoModal = ({
   const inheritedPhoto = !explicitPhoto ? (inheritedSeasonPhoto?.photo ?? stint?.photo ?? null) : null;
   const inheritedTeamName = inheritedSeasonPhoto?.team_name ?? 'another team';
 
-  useEffect(() => {
-    if (!open) return;
-    reset({
-      season_id: stint?.season_id ?? '',
-      photo: history.find(
-        (entry) => entry.team_id === stint?.team_id && entry.season_id === stint?.season_id,
-      )?.photo ?? null,
-    });
-  }, [open, stint, history, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   useEffect(() => {
     if (!open || !selectedSeasonId) return;
@@ -83,14 +92,14 @@ const ChangePhotoModal = ({
     }
     if (!photoUrl) return;
     const ok = await changePlayerPhoto(stint, data.season_id, photoUrl);
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title="Change Season Photo"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}
       confirmForm="change-photo-form"
       confirmDisabled={isSubmitting}

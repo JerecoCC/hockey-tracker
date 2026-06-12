@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
@@ -57,27 +57,9 @@ interface Props {
 
 const TeamFormModal = (props: Props) => {
   const { open, editTarget, onClose, addTeam, updateTeam, uploadLogo, lockedLeagueId } = props;
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<FormValues>({
-    defaultValues: {
-      place_name: '',
-      team_name: '',
-      code: '',
-      league_id: null,
-      logo_dark: null,
-      logo_light: null,
-      icon: null,
-    },
-  });
-
-  useEffect(() => {
-    if (!open) return;
+  const formValues = useMemo<FormValues>(() => {
     const fallbackName = splitTeamName(editTarget?.name, editTarget?.city ?? editTarget?.location);
-    reset({
+    return {
       place_name: editTarget?.place_name ?? fallbackName.placeName,
       team_name: editTarget?.team_name ?? fallbackName.teamName,
       code: editTarget?.code ?? '',
@@ -85,8 +67,25 @@ const TeamFormModal = (props: Props) => {
       logo_dark: editTarget?.logo_dark ?? null,
       logo_light: editTarget?.logo_light ?? null,
       icon: editTarget?.icon ?? null,
-    });
-  }, [open, editTarget, lockedLeagueId, reset]);
+    };
+  }, [editTarget, lockedLeagueId]);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<FormValues>({
+    defaultValues: formValues,
+  });
+
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
@@ -110,14 +109,14 @@ const TeamFormModal = (props: Props) => {
       league_id: data.league_id || null,
     };
     const ok = editTarget ? await updateTeam(editTarget.id, payload) : await addTeam(payload);
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title={editTarget ? 'Edit Team' : 'Create Team'}
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Team'}
       confirmForm="team-form"
       confirmDisabled={isSubmitting}
@@ -132,28 +131,35 @@ const TeamFormModal = (props: Props) => {
           <LogoUpload
             control={control}
             name="logo_dark"
-            label="Dark Mode Logo"
-            align="start"
+            label="Logo (Dark)"
             disabled={isSubmitting}
           />
           <LogoUpload
             control={control}
             name="logo_light"
-            label="Light Mode Logo"
-            align="start"
+            label="Logo (Light)"
             disabled={isSubmitting}
           />
           <LogoUpload
             control={control}
             name="icon"
             label="Header Icon"
-            align="start"
             accept="image/x-icon,image/vnd.microsoft.icon,.ico"
             hint="Upload .ico"
             disabled={isSubmitting}
           />
         </div>
-        <div className={styles.nameRow}>
+        <div className={styles.identityRow}>
+          <Field
+            label="Code"
+            required
+            control={control}
+            name="code"
+            rules={{ required: true }}
+            transform={(v) => v.toUpperCase()}
+            placeholder="TOR"
+            disabled={isSubmitting}
+          />
           <Field
             label="Place Name"
             control={control}
@@ -172,16 +178,6 @@ const TeamFormModal = (props: Props) => {
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          label="Code"
-          required
-          control={control}
-          name="code"
-          rules={{ required: true }}
-          transform={(v) => v.toUpperCase()}
-          placeholder="e.g. TOR"
-          disabled={isSubmitting}
-        />
       </form>
     </Modal>
   );

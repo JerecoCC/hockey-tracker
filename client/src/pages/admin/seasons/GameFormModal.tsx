@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -52,39 +52,9 @@ const GameFormModal = ({
   onClose,
   defaultDate,
 }: Props) => {
-  const {
-    control,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { isDirty, isSubmitting },
-  } = useForm<FormValues>({
-    defaultValues: {
-      home_team_id: null,
-      away_team_id: null,
-      game_type: 'regular',
-      status: 'scheduled',
-      scheduled_date: '',
-      scheduled_time: '',
-      venue: '',
-      overtime_periods: '',
-      shootout: 'false',
-      notes: '',
-    },
-  });
-
-  // Fields are locked once the game has started — only venue and time remain editable
-  const isStarted = editTarget?.status === 'in_progress' || editTarget?.status === 'final';
-
-  const handleHomeTeamChange = (teamId: string | null) => {
-    const team = seasonTeams.find((t) => t.id === teamId);
-    setValue('venue', team?.home_arena ?? '');
-  };
-
-  useEffect(() => {
-    if (!open) return;
+  const formValues = useMemo<FormValues>(() => {
     if (editTarget) {
-      reset({
+      return {
         home_team_id: editTarget.home_team.id,
         away_team_id: editTarget.away_team.id,
         game_type: editTarget.game_type,
@@ -96,22 +66,47 @@ const GameFormModal = ({
           editTarget.overtime_periods != null ? String(editTarget.overtime_periods) : '',
         shootout: editTarget.shootout ? 'true' : 'false',
         notes: editTarget.notes ?? '',
-      });
-    } else {
-      reset({
-        home_team_id: null,
-        away_team_id: null,
-        game_type: 'regular',
-        status: 'scheduled',
-        scheduled_date: defaultDate ?? '',
-        scheduled_time: '',
-        venue: '',
-        overtime_periods: '',
-        shootout: 'false',
-        notes: '',
-      });
+      };
     }
-  }, [open, editTarget, defaultDate, reset]);
+    return {
+      home_team_id: null,
+      away_team_id: null,
+      game_type: 'regular',
+      status: 'scheduled',
+      scheduled_date: defaultDate ?? '',
+      scheduled_time: '',
+      venue: '',
+      overtime_periods: '',
+      shootout: 'false',
+      notes: '',
+    };
+  }, [defaultDate, editTarget]);
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    formState: { isDirty, isSubmitting },
+  } = useForm<FormValues>({
+    defaultValues: formValues,
+  });
+
+  // Fields are locked once the game has started — only venue and time remain editable
+  const isStarted = editTarget?.status === 'in_progress' || editTarget?.status === 'final';
+
+  const handleHomeTeamChange = (teamId: string | null) => {
+    const team = seasonTeams.find((t) => t.id === teamId);
+    setValue('venue', team?.home_arena ?? '');
+  };
+
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const teamOptions: SelectOption[] = seasonTeams.map((t) => ({
     value: t.id,
@@ -137,7 +132,7 @@ const GameFormModal = ({
     const ok = editTarget
       ? await updateGame(editTarget.id, payload)
       : (await createGame(payload)) !== null;
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
@@ -151,7 +146,7 @@ const GameFormModal = ({
             : 'Create Game'
       }
       size="md"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Game'}
       confirmForm="game-form"
       confirmDisabled={isSubmitting || !isDirty}

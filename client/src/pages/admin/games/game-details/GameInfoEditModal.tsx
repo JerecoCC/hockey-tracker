@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -39,6 +39,20 @@ interface Props {
 }
 
 const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: Props) => {
+  const formValues = useMemo<FormValues>(
+    () => ({
+      venue: game.venue ?? '',
+      scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
+      scheduled_time: game.scheduled_time ?? '',
+      game_type: game.game_type,
+      playoff_round: game.playoff_round != null ? String(game.playoff_round) : '',
+      game_number_in_series:
+        game.game_number_in_series != null ? String(game.game_number_in_series) : '',
+      time_start: game.time_start ? isoToETHHMM(game.time_start) : '',
+      time_end: game.time_end ? isoToETHHMM(game.time_end) : '',
+    }),
+    [game],
+  );
   const {
     control,
     handleSubmit,
@@ -46,35 +60,19 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
     formState: { isSubmitting, isDirty },
     watch,
   } = useForm<FormValues>({
-    defaultValues: {
-      venue: '',
-      scheduled_date: '',
-      scheduled_time: '',
-      game_type: 'regular',
-      playoff_round: '',
-      game_number_in_series: '',
-      time_start: '',
-      time_end: '',
-    },
+    defaultValues: formValues,
   });
 
   const gameType = watch('game_type');
 
-  useEffect(() => {
-    if (open) {
-      reset({
-        venue: game.venue ?? '',
-        scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
-        scheduled_time: game.scheduled_time ?? '',
-        game_type: game.game_type,
-        playoff_round: game.playoff_round != null ? String(game.playoff_round) : '',
-        game_number_in_series:
-          game.game_number_in_series != null ? String(game.game_number_in_series) : '',
-        time_start: game.time_start ? isoToETHHMM(game.time_start) : '',
-        time_end: game.time_end ? isoToETHHMM(game.time_end) : '',
-      });
-    }
-  }, [open, game, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     // Anchor all times to the game's scheduled ET date so edits made on a
@@ -117,14 +115,14 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       time_start: startISO,
       time_end: endISO,
     });
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title="Edit Game Info"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting || isSaving ? 'Saving…' : 'Save'}
       confirmForm="game-info-edit-form"
       confirmDisabled={isSubmitting || disabled || !isDirty}

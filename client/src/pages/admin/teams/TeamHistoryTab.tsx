@@ -269,13 +269,13 @@ const TeamHistoryTab = ({
             <LogoUpload
               control={control}
               name="logo_dark"
-              label="Dark Mode Logo"
+              label="Logo (Dark)"
               disabled={isSubmitting}
             />
             <LogoUpload
               control={control}
               name="logo_light"
-              label="Light Mode Logo"
+              label="Logo (Light)"
               disabled={isSubmitting}
             />
             <LogoUpload

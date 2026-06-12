@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -68,6 +68,27 @@ const StintEditModal = ({
   updateStint,
 }: Props) => {
   const mode = stint ? 'edit' : 'create';
+  const formValues = useMemo<FormValues>(
+    () =>
+      stint
+        ? {
+            team_id: stint.team_id,
+            position: stint.position ?? '',
+            roster_status: stint.is_prospect ? 'prospect' : 'roster',
+            acquisition_type: stint.acquisition_type ?? '',
+            start_date: stint.start_date?.slice(0, 10) ?? '',
+            end_date: stint.end_date?.slice(0, 10) ?? '',
+          }
+        : {
+            team_id: '',
+            position: '',
+            roster_status: 'roster',
+            acquisition_type: '',
+            start_date: '',
+            end_date: '',
+          },
+    [stint],
+  );
 
   const {
     control,
@@ -75,14 +96,7 @@ const StintEditModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: {
-      team_id: '',
-      position: '',
-      roster_status: 'roster',
-      acquisition_type: '',
-      start_date: '',
-      end_date: '',
-    },
+    defaultValues: formValues,
   });
 
   const inferSeasonId = (teamId: string, startDate: string, endDate: string) => {
@@ -102,28 +116,14 @@ const StintEditModal = ({
     return leagueSeasons.find((s) => s.is_current)?.id ?? leagueSeasons[0]?.id ?? null;
   };
 
-  useEffect(() => {
-    if (!open) return;
-    if (stint) {
-      reset({
-        team_id: stint.team_id,
-        position: stint.position ?? '',
-        roster_status: stint.is_prospect ? 'prospect' : 'roster',
-        acquisition_type: stint.acquisition_type ?? '',
-        start_date: stint.start_date?.slice(0, 10) ?? '',
-        end_date: stint.end_date?.slice(0, 10) ?? '',
-      });
-    } else {
-      reset({
-        team_id: '',
-        position: '',
-        roster_status: 'roster',
-        acquisition_type: '',
-        start_date: '',
-        end_date: '',
-      });
-    }
-  }, [open, stint, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (mode === 'create') {
@@ -138,7 +138,7 @@ const StintEditModal = ({
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       });
-      if (ok) onClose();
+      if (ok) handleClose();
     } else {
       if (!stint) return;
       const seasonId = inferSeasonId(data.team_id, data.start_date, data.end_date);
@@ -151,7 +151,7 @@ const StintEditModal = ({
         start_date: data.start_date || null,
         end_date: data.end_date || null,
       });
-      if (ok) onClose();
+      if (ok) handleClose();
     }
   });
 
@@ -167,7 +167,7 @@ const StintEditModal = ({
     <Modal
       open={open}
       title={title}
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={confirmLabel}
       confirmForm="stint-form"
       confirmDisabled={isSubmitting}

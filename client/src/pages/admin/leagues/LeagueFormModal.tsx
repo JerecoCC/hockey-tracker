@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
@@ -46,6 +46,20 @@ interface Props {
 
 const LeagueFormModal = (props: Props) => {
   const { open, editTarget, onClose, addLeague, updateLeague, uploadLogo } = props;
+  const formValues = useMemo<FormValues>(
+    () => ({
+      name: editTarget?.name ?? '',
+      code: editTarget?.code ?? '',
+      logo: editTarget?.logo ?? null,
+      icon: editTarget?.icon ?? null,
+      primary_color: editTarget?.primary_color ?? '#334155',
+      text_color: editTarget?.text_color ?? '#ffffff',
+      best_of_playoff: String(editTarget?.best_of_playoff ?? 7),
+      best_of_shootout: String(editTarget?.best_of_shootout ?? 3),
+      scoring_system: editTarget?.scoring_system ?? '2-1-0',
+    }),
+    [editTarget],
+  );
   const {
     control,
     handleSubmit,
@@ -53,17 +67,7 @@ const LeagueFormModal = (props: Props) => {
     setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: {
-      name: '',
-      code: '',
-      logo: null,
-      icon: null,
-      primary_color: '#334155',
-      text_color: '#ffffff',
-      best_of_playoff: '7',
-      best_of_shootout: '3',
-      scoring_system: '2-1-0',
-    },
+    defaultValues: formValues,
   });
 
   const nameValue = useWatch({ control, name: 'name' });
@@ -80,20 +84,14 @@ const LeagueFormModal = (props: Props) => {
     setValue('code', auto);
   }, [nameValue, setValue]);
 
-  useEffect(() => {
-    if (!open) return;
-    reset({
-      name: editTarget?.name ?? '',
-      code: editTarget?.code ?? '',
-      logo: editTarget?.logo ?? null,
-      icon: editTarget?.icon ?? null,
-      primary_color: editTarget?.primary_color ?? '#334155',
-      text_color: editTarget?.text_color ?? '#ffffff',
-      best_of_playoff: String(editTarget?.best_of_playoff ?? 7),
-      best_of_shootout: String(editTarget?.best_of_shootout ?? 3),
-      scoring_system: editTarget?.scoring_system ?? '2-1-0',
-    });
-  }, [open, editTarget, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -120,14 +118,14 @@ const LeagueFormModal = (props: Props) => {
       scoring_system: data.scoring_system,
     };
     const ok = editTarget ? await updateLeague(editTarget.id, payload) : await addLeague(payload);
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title={editTarget ? 'Edit League' : 'Create League'}
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
       confirmForm="league-form"
       confirmDisabled={isSubmitting}

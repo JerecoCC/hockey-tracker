@@ -1,4 +1,4 @@
-import { useEffect, type FocusEvent } from 'react';
+import { useCallback, useLayoutEffect, useMemo, type FocusEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -60,6 +60,21 @@ interface Props {
 }
 
 const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => {
+  const formValues = useMemo<FormValues>(() => {
+    const { ft, inches } =
+      player?.height_cm != null
+        ? cmToFtIn(player.height_cm)
+        : { ft: null as null, inches: null as null };
+    return {
+      shoots: player?.shoots ?? null,
+      date_of_birth: player?.date_of_birth ?? '',
+      birth_city: player?.birth_city ?? '',
+      birth_country: player?.birth_country ?? '',
+      height_ft: ft != null ? String(ft) : '',
+      height_in: inches != null ? String(inches) : '',
+      weight_lbs: player?.weight_lbs != null ? String(player.weight_lbs) : '',
+    };
+  }, [player]);
   const {
     control,
     handleSubmit,
@@ -69,33 +84,17 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     setValue,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: {
-      shoots: null,
-      date_of_birth: '',
-      birth_city: '',
-      birth_country: '',
-      height_ft: '',
-      height_in: '',
-      weight_lbs: '',
-    },
+    defaultValues: formValues,
   });
 
-  useEffect(() => {
-    if (!open) return;
-    const { ft, inches } =
-      player?.height_cm != null
-        ? cmToFtIn(player.height_cm)
-        : { ft: null as null, inches: null as null };
-    reset({
-      shoots: player?.shoots ?? null,
-      date_of_birth: player?.date_of_birth ?? '',
-      birth_city: player?.birth_city ?? '',
-      birth_country: player?.birth_country ?? '',
-      height_ft: ft != null ? String(ft) : '',
-      height_in: inches != null ? String(inches) : '',
-      weight_lbs: player?.weight_lbs != null ? String(player.weight_lbs) : '',
-    });
-  }, [open, player, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!player) return;
@@ -123,7 +122,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
           : null,
       weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
     });
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   const normalizeBirthCity = (value: string) => {
@@ -148,7 +147,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     <Modal
       open={open}
       title="Edit Player Info"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="player-info-form"
       confirmDisabled={isSubmitting}

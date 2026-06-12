@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -32,22 +32,30 @@ const dayBefore = (dateStr: string): string => {
 };
 
 const ChangeJerseyModal = ({ open, stint, history, onClose, changeJerseyNumber }: Props) => {
+  const formValues = useMemo<FormValues>(
+    () => ({
+      jersey_number: stint?.jersey_number != null ? String(stint.jersey_number) : '',
+      effective_date: '',
+    }),
+    [stint],
+  );
   const {
     control,
     handleSubmit,
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { jersey_number: '', effective_date: '' },
+    defaultValues: formValues,
   });
 
-  useEffect(() => {
-    if (!open) return;
-    reset({
-      jersey_number: stint?.jersey_number != null ? String(stint.jersey_number) : '',
-      effective_date: '',
-    });
-  }, [open, stint, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!stint) return;
@@ -56,14 +64,14 @@ const ChangeJerseyModal = ({ open, stint, history, onClose, changeJerseyNumber }
       Number(data.jersey_number),
       data.effective_date || null,
     );
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title="Change Jersey Number"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save'}
       confirmForm="change-jersey-form"
       confirmDisabled={isSubmitting}

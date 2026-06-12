@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -66,6 +66,16 @@ const MovePlayerModal = ({
   onClose,
   movePlayer,
 }: Props) => {
+  const formValues = useMemo<FormValues>(
+    () => ({
+      to_team_id: null,
+      trade_date: '',
+      jersey_number: '',
+      position: '',
+      acquisition_type: 'trade',
+    }),
+    [],
+  );
   const { teams } = useTeams();
 
   const teamOptions = teams
@@ -80,25 +90,17 @@ const MovePlayerModal = ({
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: {
-      to_team_id: null,
-      trade_date: '',
-      jersey_number: '',
-      position: '',
-      acquisition_type: 'trade',
-    },
+    defaultValues: formValues,
   });
 
-  useEffect(() => {
-    if (!open) return;
-    reset({
-      to_team_id: null,
-      trade_date: '',
-      jersey_number: '',
-      position: '',
-      acquisition_type: 'trade',
-    });
-  }, [open, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     if (!player || !data.to_team_id) return;
@@ -113,14 +115,14 @@ const MovePlayerModal = ({
       position,
       data.acquisition_type || 'trade',
     );
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title={player ? `Move ${player.first_name} ${player.last_name}` : 'Move Player'}
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Moving...' : 'Move Player'}
       confirmIcon="swap_horiz"
       confirmForm="move-player-form"

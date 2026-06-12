@@ -8,18 +8,20 @@
 }
 
 .assetRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
   column-gap: $space-md;
   row-gap: $space-lg;
 }
 
-.nameRow {
-  display: flex;
+.identityRow {
+  display: grid;
+  grid-template-columns: minmax(5.75rem, 1fr) minmax(0, 3fr) minmax(0, 3fr);
   gap: $space-md;
 
   > * {
-    flex: 1;
     min-width: 0;
   }
 }

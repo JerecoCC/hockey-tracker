@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
@@ -27,26 +27,8 @@ interface Props {
 }
 
 const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Props) => {
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting },
-  } = useForm<FormValues>({
-    defaultValues: {
-      logo: null,
-      icon: null,
-      name: '',
-      code: '',
-      primary_color: '#334155',
-      text_color: '#ffffff',
-      description: null,
-    },
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    reset({
+  const formValues = useMemo<FormValues>(
+    () => ({
       logo: league.logo ?? null,
       icon: league.icon ?? null,
       name: league.name,
@@ -54,8 +36,26 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       primary_color: league.primary_color,
       text_color: league.text_color,
       description: descriptionHtmlToTextarea(league.description),
-    });
-  }, [open, league, reset]);
+    }),
+    [league],
+  );
+  const {
+    control,
+    handleSubmit,
+    reset,
+    formState: { isSubmitting },
+  } = useForm<FormValues>({
+    defaultValues: formValues,
+  });
+
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
@@ -80,14 +80,14 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       description: textareaToDescriptionHtml(data.description) ?? undefined,
     };
     const ok = await updateLeague(league.id, payload);
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title="Edit League"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="league-edit-form"
       confirmDisabled={isSubmitting}

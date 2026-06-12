@@ -169,8 +169,10 @@
 }
 
 .historyAssetRow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
   column-gap: $space-md;
   row-gap: $space-lg;
 }

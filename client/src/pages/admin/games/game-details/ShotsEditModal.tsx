@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -46,25 +46,31 @@ const ShotsEditModal = ({
   upsertGoalieStat,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
+  const formValues = useMemo<ShotsEditFormValues>(
+    () => ({
+      periods: periods.map((p) => {
+        const ps = game.period_shots.find((s) => s.period === p.id);
+        return {
+          away_shots: ps ? String(ps.away_shots) : '',
+          home_shots: ps ? String(ps.home_shots) : '',
+        };
+      }),
+    }),
+    [game.period_shots, periods],
+  );
   const { control, reset, getValues } = useForm<ShotsEditFormValues>({
-    defaultValues: { periods: [] },
+    defaultValues: formValues,
   });
   const { fields } = useFieldArray({ control, name: 'periods' });
 
-  useEffect(() => {
-    if (open) {
-      reset({
-        periods: periods.map((p) => {
-          const ps = game.period_shots.find((s) => s.period === p.id);
-          return {
-            away_shots: ps ? String(ps.away_shots) : '',
-            home_shots: ps ? String(ps.home_shots) : '',
-          };
-        }),
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const handleConfirm = async () => {
     const { periods: rows } = getValues();
@@ -109,7 +115,7 @@ const ShotsEditModal = ({
     }
 
     setSubmitting(false);
-    onClose();
+    handleClose();
   };
 
   const teamRows = [
@@ -135,7 +141,7 @@ const ShotsEditModal = ({
     <Modal
       open={open}
       title="Edit Shots"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={submitting ? 'Saving…' : 'Save'}
       onConfirm={handleConfirm}
       confirmDisabled={submitting}

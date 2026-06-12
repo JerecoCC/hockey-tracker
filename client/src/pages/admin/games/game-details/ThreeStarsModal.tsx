@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -53,19 +53,26 @@ const ThreeStarsModal = ({
   onSave,
   onEndGame,
 }: Props) => {
+  const formValues = useMemo<FormValues>(
+    () => ({
+      star1: editMode && initialStars ? initialStars.star1 : '',
+      star2: editMode && initialStars ? initialStars.star2 : '',
+      star3: editMode && initialStars ? initialStars.star3 : '',
+    }),
+    [editMode, initialStars],
+  );
   const { control, handleSubmit, reset, watch } = useForm<FormValues>({
-    defaultValues: { star1: '', star2: '', star3: '' },
+    defaultValues: formValues,
   });
 
-  useEffect(() => {
-    if (open) {
-      reset({
-        star1: editMode && initialStars ? initialStars.star1 : '',
-        star2: editMode && initialStars ? initialStars.star2 : '',
-        star3: editMode && initialStars ? initialStars.star3 : '',
-      });
-    }
-  }, [open, editMode, initialStars, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const [star1, star2, star3] = watch(['star1', 'star2', 'star3']);
   const canConfirm = !!star1 && !!star2 && !!star3;
@@ -92,10 +99,10 @@ const ThreeStarsModal = ({
     const payload: StarPayload = { star1: data.star1, star2: data.star2, star3: data.star3 };
     if (editMode) {
       const ok = await onSave(payload);
-      if (ok) onClose();
+      if (ok) handleClose();
     } else {
       const ok = await onEndGame(payload);
-      if (ok) onClose();
+      if (ok) handleClose();
     }
   });
 
@@ -103,7 +110,7 @@ const ThreeStarsModal = ({
     <Modal
       open={open}
       title={editMode ? 'Edit Three Stars' : 'End Game — 3 Stars'}
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={editMode ? (busy ? 'Saving…' : 'Save') : 'End Game'}
       confirmIcon={editMode ? 'save' : undefined}
       confirmDisabled={!canConfirm || busy}

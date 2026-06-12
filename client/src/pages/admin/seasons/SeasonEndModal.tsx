@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
@@ -17,30 +17,38 @@ interface Props {
 }
 
 const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Props) => {
+  const formValues = useMemo<FormValues>(
+    () => ({ end_date: currentEndDate?.slice(0, 10) ?? '' }),
+    [currentEndDate],
+  );
   const {
     control,
     handleSubmit,
     reset,
     formState: { isSubmitting },
   } = useForm<FormValues>({
-    defaultValues: { end_date: '' },
+    defaultValues: formValues,
   });
 
-  useEffect(() => {
-    if (!open) return;
-    reset({ end_date: currentEndDate?.slice(0, 10) ?? '' });
-  }, [open, currentEndDate, reset]);
+  useLayoutEffect(() => {
+    reset(formValues);
+  }, [formValues, reset]);
+
+  const handleClose = useCallback(() => {
+    reset(formValues);
+    onClose();
+  }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     const ok = await onConfirm(data.end_date);
-    if (ok) onClose();
+    if (ok) handleClose();
   });
 
   return (
     <Modal
       open={open}
       title="End Season"
-      onClose={onClose}
+      onClose={handleClose}
       confirmLabel={isSubmitting || busy ? 'Saving…' : 'End Season'}
       confirmForm="season-end-form"
       confirmIntent="danger"
