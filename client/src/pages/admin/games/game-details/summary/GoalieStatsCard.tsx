@@ -35,18 +35,24 @@ const PERIOD_LABEL: Record<string, string> = {
 const isGameStart = (period: string | null | undefined, time: string | null | undefined) =>
   period === PERIOD.FIRST && (!time || time === '00:00');
 
-const fmtStintPoint = (period: string, time: string | null) => {
+const fmtStintPoint = (period: string, time: string | null, isEnter?: boolean) => {
   const periodLabel = PERIOD_LABEL[period] ?? period;
-  const timeLabel = isGameStart(period, time) ? '00:00' : time;
+  const timeLabel = isEnter
+    ? ''
+    : isGameStart(period, time)
+      ? '00:00'
+      : time === '20:00'
+        ? ''
+        : time;
   return timeLabel ? `${periodLabel} ${timeLabel}` : periodLabel;
 };
 
 /** Format a single stint's entry→exit window for display. */
 const fmtStintWindow = (stint: GoalieStintRecord) => {
-  const enter = fmtStintPoint(stint.entered_period, stint.entered_time);
+  const enter = fmtStintPoint(stint.entered_period, stint.entered_time, true);
   const exit = stint.exited_period
     ? fmtStintPoint(stint.exited_period, stint.exited_time)
-    : 'end of game';
+    : 'End of game';
   return `${enter} \u2192 ${exit}`;
 };
 
@@ -74,7 +80,7 @@ const stintLabels = (stat: GoalieStatRecord): string[] => {
   // Legacy fallback: no stints data, use the top-level entered_period / sub_time
   if (stat.entered_period) {
     if (isGameStart(stat.entered_period, stat.sub_time)) return [];
-    return [`${fmtStintPoint(stat.entered_period, stat.sub_time)} → end of game`];
+    return [`${fmtStintPoint(stat.entered_period, stat.sub_time)} → End of game`];
   }
   return [];
 };
@@ -120,7 +126,8 @@ const GoalieStatsCard = ({
 }: Props) => {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
-  const canEdit = !!updateGoalieStint && !!addGoalieStint && !!removeGoalieStint && !!removeGoalieStat;
+  const canEdit =
+    !!updateGoalieStint && !!addGoalieStint && !!removeGoalieStint && !!removeGoalieStat;
 
   const goalies = [...awayRoster, ...homeRoster].filter((e) => e.position === 'G');
   const goaliesWithStats = goalies

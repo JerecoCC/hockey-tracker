@@ -82,8 +82,9 @@ const NhlGoalieSwitchCheckerModal = ({
             min={1}
             step={1}
             inputMode="numeric"
-            placeholder="257"
+            placeholder="Put game number here"
             disabled={loading}
+            autoFocus
             required
           />
         </form>

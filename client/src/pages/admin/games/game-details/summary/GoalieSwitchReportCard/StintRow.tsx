@@ -11,7 +11,7 @@ const StintRow = (props: Props) => {
   const exitLabel =
     stint.exitedPeriod && stint.exitedTime
       ? `${stint.exitedPeriod} ${stint.exitedTime}`
-      : 'end of game';
+      : 'End of game';
 
   return (
     <div className={styles.nhlGoalieCheckerStint}>
