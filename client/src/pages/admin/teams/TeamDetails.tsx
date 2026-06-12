@@ -215,7 +215,8 @@ const TeamDetailsPage = () => {
                 teamPlaceName={team.place_name}
                 teamNickname={team.team_name}
                 teamCode={team.code}
-                teamLogo={team.logo}
+                teamLogoDark={team.logo_dark}
+                teamLogoLight={team.logo_light}
                 teamIcon={team.icon}
                 primaryColor={team.primary_color}
                 textColor={team.text_color}

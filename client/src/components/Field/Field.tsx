@@ -175,7 +175,12 @@ const Field = (props: FieldProps) => {
           } else if (props.type === 'color') {
             const color = (field.value as string) ?? '#000000';
             return (
-              <div className={styles.colorInputWrapper}>
+              <div
+                className={cn(
+                  styles.colorInputWrapper,
+                  props.disabled && styles.colorInputWrapperDisabled,
+                )}
+              >
                 <button
                   type="button"
                   className={styles.colorSwatch}

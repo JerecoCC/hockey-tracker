@@ -29,7 +29,6 @@ export interface AddIterationPayload {
   place_name?: string | null;
   team_name?: string | null;
   code?: string | null;
-  logo?: string | null;
   logo_dark?: string | null;
   logo_light?: string | null;
   icon?: string | null;
@@ -43,7 +42,6 @@ export interface UpdateIterationPayload {
   place_name?: string | null;
   team_name?: string | null;
   code?: string | null;
-  logo?: string | null;
   logo_dark?: string | null;
   logo_light?: string | null;
   icon?: string | null;

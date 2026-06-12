@@ -52,7 +52,9 @@ async function getReferencedImageRows(sql) {
     UNION
     SELECT icon AS url FROM leagues WHERE icon IS NOT NULL
     UNION
-    SELECT logo AS url FROM team_iterations WHERE logo IS NOT NULL
+    SELECT logo_dark AS url FROM team_iterations WHERE logo_dark IS NOT NULL
+    UNION
+    SELECT logo_light AS url FROM team_iterations WHERE logo_light IS NOT NULL
     UNION
     SELECT icon AS url FROM team_iterations WHERE icon IS NOT NULL
     UNION

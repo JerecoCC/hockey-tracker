@@ -112,13 +112,17 @@ router.get('/', async (_req, res) => {
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
         ti.name, ti.place_name, ti.team_name, ti.code,
-        team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
-        team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
-        team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
         COALESCE(ti.icon, ti_icon.icon) AS icon
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, place_name, team_name, code, logo, logo_dark, logo_light, icon FROM team_iterations
+        SELECT
+          name, place_name, team_name, code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          logo_dark, logo_light, icon
+        FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -149,9 +153,9 @@ router.get('/:id', async (req, res) => {
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
         ti.name, ti.place_name, ti.team_name, ti.code,
-        team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
-        team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
-        team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
         COALESCE(ti.icon, ti_icon.icon) AS icon,
         l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
         l.primary_color AS league_primary_color, l.text_color AS league_text_color,
@@ -161,7 +165,11 @@ router.get('/:id', async (req, res) => {
         ls.end_date::text   AS latest_season_end_date
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, place_name, team_name, code, logo, logo_dark, logo_light, icon FROM team_iterations
+        SELECT
+          name, place_name, team_name, code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          logo_dark, logo_light, icon
+        FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -191,7 +199,7 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const {
     code, description, location, city, home_arena,
-    logo, logo_dark, logo_light, icon,
+    logo_dark, logo_light, icon,
     league_id, primary_color, secondary_color, text_color,
   } = req.body;
   const identity = resolveTeamIdentity(req.body);
@@ -225,14 +233,13 @@ router.post('/', async (req, res) => {
 
     // Auto-create the base iteration (season_id = NULL = current identity)
     await sql`
-      INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo, logo_dark, logo_light, icon)
+      INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo_dark, logo_light, icon)
       VALUES (
         ${teamId},
         ${identity.name},
         ${identity.placeName ?? null},
         ${identity.teamName ?? null},
         ${code.trim().toUpperCase()},
-        ${logo ?? null},
         ${logo_dark ?? null},
         ${logo_light ?? null},
         ${icon ?? null}
@@ -245,13 +252,17 @@ router.post('/', async (req, res) => {
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
         ti.name, ti.place_name, ti.team_name, ti.code,
-        team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
-        team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
-        team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
         COALESCE(ti.icon, ti_icon.icon) AS icon
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, place_name, team_name, code, logo, logo_dark, logo_light, icon FROM team_iterations
+        SELECT
+          name, place_name, team_name, code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          logo_dark, logo_light, icon
+        FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -283,13 +294,12 @@ router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
     code, description, location, city, home_arena,
-    logo, logo_dark, logo_light, icon,
+    logo_dark, logo_light, icon,
     league_id, primary_color, secondary_color, text_color,
     start_season_id, latest_season_id,
   } = req.body;
   const identity = resolveTeamIdentity(req.body);
   const descriptionInBody     = 'description'      in req.body;
-  const logoInBody            = 'logo'             in req.body;
   const logoDarkInBody        = 'logo_dark'        in req.body;
   const logoLightInBody       = 'logo_light'       in req.body;
   const iconInBody            = 'icon'             in req.body;
@@ -315,7 +325,7 @@ router.patch('/:id', async (req, res) => {
     if (exists.length === 0) return res.status(404).json({ error: 'Team not found' });
 
     // ── Identity fields → base iteration (season_id IS NULL) ───────────────
-    const hasIdentity = identity.hasName || code !== undefined || logoInBody || logoDarkInBody || logoLightInBody || iconInBody;
+    const hasIdentity = identity.hasName || code !== undefined || logoDarkInBody || logoLightInBody || iconInBody;
     if (hasIdentity) {
       const baseIter = await sql`
         SELECT id FROM team_iterations
@@ -330,7 +340,6 @@ router.patch('/:id', async (req, res) => {
             place_name = CASE WHEN ${identity.hasName} THEN ${identity.placeName ?? null} ELSE place_name END,
             team_name = CASE WHEN ${identity.hasName} THEN ${identity.teamName ?? null} ELSE team_name END,
             code = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
-            logo = CASE WHEN ${logoInBody} THEN ${logo ?? null} ELSE logo END,
             logo_dark = CASE WHEN ${logoDarkInBody} THEN ${logo_dark ?? null} ELSE logo_dark END,
             logo_light = CASE WHEN ${logoLightInBody} THEN ${logo_light ?? null} ELSE logo_light END,
             icon = CASE WHEN ${iconInBody} THEN ${icon ?? null} ELSE icon END
@@ -338,14 +347,13 @@ router.patch('/:id', async (req, res) => {
         `;
       } else {
         await sql`
-          INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo, logo_dark, logo_light, icon)
+          INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo_dark, logo_light, icon)
           VALUES (
             ${id},
             ${identity.name ?? ''},
             ${identity.placeName ?? null},
             ${identity.teamName ?? null},
             ${code ? code.trim().toUpperCase() : ''},
-            ${logoInBody ? (logo ?? null) : null},
             ${logoDarkInBody ? (logo_dark ?? null) : null},
             ${logoLightInBody ? (logo_light ?? null) : null},
             ${iconInBody ? (icon ?? null) : null}
@@ -376,13 +384,17 @@ router.patch('/:id', async (req, res) => {
         t.id, t.description, t.location, t.city, t.home_arena,
         t.league_id, t.primary_color, t.secondary_color, t.text_color, t.created_at,
         ti.name, ti.place_name, ti.team_name, ti.code,
-        team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
-        team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
-        team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
         COALESCE(ti.icon, ti_icon.icon) AS icon
       FROM teams t
       LEFT JOIN LATERAL (
-        SELECT name, place_name, team_name, code, logo, logo_dark, logo_light, icon FROM team_iterations
+        SELECT
+          name, place_name, team_name, code,
+          team_logo_default(logo_dark, logo_light) AS logo,
+          logo_dark, logo_light, icon
+        FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
         LIMIT 1
@@ -414,9 +426,9 @@ router.get('/:id/iterations', async (req, res) => {
     const rows = await sql`
       SELECT
         ti.id, ti.team_id, ti.name, ti.place_name, ti.team_name, ti.code,
-        team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
-        team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
-        team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
         ti.icon, ti.note, ti.recorded_at,
         ti.start_date::text AS start_date,
         ti.end_date::text AS end_date
@@ -433,11 +445,11 @@ router.get('/:id/iterations', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/teams/:id/iterations  – record a new identity snapshot
-// Body: { name, code?, logo?, season_id?, note? }
+// Body: { name, code?, logo_dark?, logo_light?, note? }
 // ---------------------------------------------------------------------------
 router.post('/:id/iterations', async (req, res) => {
   const { id } = req.params;
-  const { code, logo, logo_dark, logo_light, icon, note, start_date, end_date } = req.body;
+  const { code, logo_dark, logo_light, icon, note, start_date, end_date } = req.body;
   const identity = resolveTeamIdentity(req.body);
 
   if (identity.hasSplitName && !identity.teamName) {
@@ -452,14 +464,13 @@ router.post('/:id/iterations', async (req, res) => {
     if (teamRows.length === 0) return res.status(404).json({ error: 'Team not found' });
 
     const rows = await sql`
-      INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo, logo_dark, logo_light, icon, note, start_date, end_date)
+      INSERT INTO team_iterations (team_id, name, place_name, team_name, code, logo_dark, logo_light, icon, note, start_date, end_date)
       VALUES (
         ${id},
         ${identity.name},
         ${identity.placeName ?? null},
         ${identity.teamName ?? null},
         ${code ? code.trim().toUpperCase() : null},
-        ${logo ?? null},
         ${logo_dark ?? null},
         ${logo_light ?? null},
         ${icon ?? null},
@@ -473,9 +484,9 @@ router.post('/:id/iterations', async (req, res) => {
     const full = await sql`
       SELECT
         ti.id, ti.team_id, ti.name, ti.place_name, ti.team_name, ti.code,
-        team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
-        team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
-        team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
         ti.icon, ti.note, ti.recorded_at,
         ti.start_date::text AS start_date,
         ti.end_date::text AS end_date
@@ -491,13 +502,12 @@ router.post('/:id/iterations', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/teams/:id/iterations/:iterationId  – update a snapshot
-// Body: { name?, code?, logo?, season_id?, note? }
+// Body: { name?, code?, logo_dark?, logo_light?, note? }
 // ---------------------------------------------------------------------------
 router.patch('/:id/iterations/:iterationId', async (req, res) => {
   const { id, iterationId } = req.params;
-  const { code, logo, logo_dark, logo_light, icon, note, start_date, end_date } = req.body;
+  const { code, logo_dark, logo_light, icon, note, start_date, end_date } = req.body;
   const identity = resolveTeamIdentity(req.body);
-  const logoInBody           = 'logo'             in req.body;
   const logoDarkInBody       = 'logo_dark'        in req.body;
   const logoLightInBody      = 'logo_light'       in req.body;
   const iconInBody           = 'icon'             in req.body;
@@ -519,7 +529,6 @@ router.patch('/:id/iterations/:iterationId', async (req, res) => {
         place_name       = CASE WHEN ${identity.hasName} THEN ${identity.placeName ?? null} ELSE place_name END,
         team_name        = CASE WHEN ${identity.hasName} THEN ${identity.teamName ?? null} ELSE team_name END,
         code             = COALESCE(${code ? code.trim().toUpperCase() : null}, code),
-        logo             = CASE WHEN ${logoInBody}          THEN ${logo ?? null}             ELSE logo             END,
         logo_dark        = CASE WHEN ${logoDarkInBody}      THEN ${logo_dark ?? null}        ELSE logo_dark        END,
         logo_light       = CASE WHEN ${logoLightInBody}     THEN ${logo_light ?? null}       ELSE logo_light       END,
         icon             = CASE WHEN ${iconInBody}          THEN ${icon ?? null}             ELSE icon             END,
@@ -534,9 +543,9 @@ router.patch('/:id/iterations/:iterationId', async (req, res) => {
     const full = await sql`
       SELECT
         ti.id, ti.team_id, ti.name, ti.place_name, ti.team_name, ti.code,
-        team_logo_default(ti.logo, ti.logo_dark, ti.logo_light) AS logo,
-        team_logo_dark(ti.logo, ti.logo_dark, ti.logo_light) AS logo_dark,
-        team_logo_light(ti.logo, ti.logo_dark, ti.logo_light) AS logo_light,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+        ti.logo_dark,
+        ti.logo_light,
         ti.icon, ti.note, ti.recorded_at,
         ti.start_date::text AS start_date,
         ti.end_date::text AS end_date

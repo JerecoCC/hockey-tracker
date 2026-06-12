@@ -35,7 +35,6 @@ export interface CreateTeamData {
   location?: string;
   city?: string;
   home_arena?: string;
-  logo?: string | null;
   logo_dark?: string | null;
   logo_light?: string | null;
   icon?: string | null;

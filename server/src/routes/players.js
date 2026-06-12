@@ -94,7 +94,7 @@ router.get('/', async (req, res) => {
         ) latest_pt ON TRUE
         LEFT JOIN teams latest_t ON latest_t.id = latest_pt.team_id
         LEFT JOIN LATERAL (
-          SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo
+          SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
           FROM team_iterations
           WHERE team_id = latest_pt.team_id
           ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
@@ -173,7 +173,7 @@ router.get('/', async (req, res) => {
                                     AND t.league_id   = ${league_id}
                 JOIN seasons      s  ON s.id          = pt.season_id
                 LEFT JOIN LATERAL (
-                  SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+                  SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
                   WHERE team_id = t.id
                     AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
                     AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
@@ -227,7 +227,7 @@ router.get('/', async (req, res) => {
                 JOIN teams        t  ON t.id          = pt.team_id
                                     AND t.league_id   = ${league_id}
                 LEFT JOIN LATERAL (
-                  SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+                  SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
                   WHERE team_id = t.id
                   ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
                   LIMIT 1
@@ -345,7 +345,7 @@ router.get('/', async (req, res) => {
                                 AND t.league_id   = ${league_id}
             JOIN seasons      s  ON s.id          = pt.season_id
             LEFT JOIN LATERAL (
-              SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+              SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
               WHERE team_id = t.id
                 AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
                 AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
@@ -389,7 +389,7 @@ router.get('/', async (req, res) => {
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
             LEFT JOIN LATERAL (
-              SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+              SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
               WHERE team_id = t.id
               ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
               LIMIT 1
@@ -567,7 +567,7 @@ router.get('/:id/stats', async (req, res) => {
       ) ptr ON TRUE
       LEFT JOIN teams t ON t.id = sr.team_id
       LEFT JOIN LATERAL (
-        SELECT name, team_logo_default(logo, logo_dark, logo_light) AS logo FROM team_iterations
+        SELECT name, team_logo_default(logo_dark, logo_light) AS logo FROM team_iterations
         WHERE team_id = sr.team_id
         ORDER BY
           CASE
@@ -1150,7 +1150,7 @@ router.get('/:id/last-five-games', async (req, res) => {
       FROM recent_games rg
       LEFT JOIN teams t ON t.id = rg.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
         FROM team_iterations
         WHERE team_id = rg.team_id
         ORDER BY
@@ -1167,7 +1167,7 @@ router.get('/:id/last-five-games', async (req, res) => {
       ) ti ON TRUE
       LEFT JOIN teams ot ON ot.id = rg.opponent_team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
         FROM team_iterations
         WHERE team_id = rg.opponent_team_id
         ORDER BY
@@ -1399,7 +1399,7 @@ router.get('/:id/game-logs', async (req, res) => {
       FROM page_games pg
       LEFT JOIN teams t ON t.id = pg.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
         FROM team_iterations
         WHERE team_id = pg.team_id
         ORDER BY
@@ -1416,7 +1416,7 @@ router.get('/:id/game-logs', async (req, res) => {
       ) ti ON TRUE
       LEFT JOIN teams ot ON ot.id = pg.opponent_team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo
         FROM team_iterations
         WHERE team_id = pg.opponent_team_id
         ORDER BY

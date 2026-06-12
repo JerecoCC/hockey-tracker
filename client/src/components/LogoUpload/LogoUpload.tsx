@@ -122,6 +122,7 @@ const LogoUpload = (props: Props) => {
 
   return (
     <div className={styles.logoSection}>
+      {label && <span className={styles.labelText}>{label}</span>}
       {displayUrl ? (
         <div className={styles.previewWrapper}>
           {previewFailed || displayIsIcon ? (
@@ -168,7 +169,7 @@ const LogoUpload = (props: Props) => {
             name="upload"
             size="1.5em"
           />
-          {label}
+          Upload
           <span className={styles.fileLabelHint}>{hint}</span>
           <input
             ref={fileInputRef}

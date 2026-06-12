@@ -290,13 +290,13 @@ router.get('/games', async (req, res) => {
       LEFT JOIN playoff_series    ps  ON ps.id  = g.playoff_series_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.home_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.away_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -540,13 +540,13 @@ router.get('/games/:id', async (req, res) => {
       LEFT JOIN playoff_series ps ON ps.id = g.playoff_series_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.home_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo, logo_dark, logo_light) AS logo, team_logo_dark(logo, logo_dark, logo_light) AS logo_dark, team_logo_light(logo, logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.away_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1

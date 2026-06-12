@@ -176,12 +176,14 @@ const LeagueFormModal = (props: Props) => {
             label="Primary Color"
             control={control}
             name="primary_color"
+            disabled={isSubmitting}
           />
           <Field
             type="color"
             label="Text Color"
             control={control}
             name="text_color"
+            disabled={isSubmitting}
           />
         </div>
         <Field

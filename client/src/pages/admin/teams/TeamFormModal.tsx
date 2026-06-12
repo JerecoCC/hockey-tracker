@@ -11,7 +11,8 @@ interface FormValues {
   team_name: string;
   code: string;
   league_id: string | null;
-  logo: File | string | null;
+  logo_dark: File | string | null;
+  logo_light: File | string | null;
   icon: File | string | null;
 }
 
@@ -34,6 +35,14 @@ const splitTeamName = (name: string | null | undefined, placeHint?: string | nul
 
 const displayTeamName = (placeName: string, teamName: string) =>
   [placeName.trim(), teamName.trim()].filter(Boolean).join(' ');
+
+const resolveUploadedAsset = async (
+  value: File | string | null,
+  uploadLogo: (file: File) => Promise<string | null>,
+) => {
+  if (value instanceof File) return uploadLogo(value);
+  return typeof value === 'string' ? value : null;
+};
 
 interface Props {
   open: boolean;
@@ -59,7 +68,8 @@ const TeamFormModal = (props: Props) => {
       team_name: '',
       code: '',
       league_id: null,
-      logo: null,
+      logo_dark: null,
+      logo_light: null,
       icon: null,
     },
   });
@@ -72,30 +82,30 @@ const TeamFormModal = (props: Props) => {
       team_name: editTarget?.team_name ?? fallbackName.teamName,
       code: editTarget?.code ?? '',
       league_id: lockedLeagueId ?? editTarget?.league_id ?? null,
-      logo: editTarget?.logo ?? null,
+      logo_dark: editTarget?.logo_dark ?? null,
+      logo_light: editTarget?.logo_light ?? null,
       icon: editTarget?.icon ?? null,
     });
   }, [open, editTarget, lockedLeagueId, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
-    let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
-    if (data.logo instanceof File) {
-      const url = await uploadLogo(data.logo);
-      if (!url) return;
-      logoUrl = url;
-    }
-    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
-    if (data.icon instanceof File) {
-      const url = await uploadLogo(data.icon);
-      if (!url) return;
-      iconUrl = url;
+    const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
+    const logoLightUrl = await resolveUploadedAsset(data.logo_light, uploadLogo);
+    const iconUrl = await resolveUploadedAsset(data.icon, uploadLogo);
+    if (
+      (data.logo_dark instanceof File && !logoDarkUrl) ||
+      (data.logo_light instanceof File && !logoLightUrl) ||
+      (data.icon instanceof File && !iconUrl)
+    ) {
+      return;
     }
     const payload: CreateTeamData = {
       name: displayTeamName(data.place_name, data.team_name),
       place_name: data.place_name,
       team_name: data.team_name,
       code: data.code,
-      logo: logoUrl,
+      logo_dark: logoDarkUrl,
+      logo_light: logoLightUrl,
       icon: iconUrl,
       league_id: data.league_id || null,
     };
@@ -121,8 +131,14 @@ const TeamFormModal = (props: Props) => {
         <div className={styles.assetRow}>
           <LogoUpload
             control={control}
-            name="logo"
-            label="Team Logo"
+            name="logo_dark"
+            label="Dark Mode Logo"
+            disabled={isSubmitting}
+          />
+          <LogoUpload
+            control={control}
+            name="logo_light"
+            label="Light Mode Logo"
             disabled={isSubmitting}
           />
           <LogoUpload

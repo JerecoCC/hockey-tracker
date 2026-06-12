@@ -274,7 +274,6 @@ async function initSchema() {
       place_name  TEXT,
       team_name   TEXT,
       code        TEXT,
-      logo        TEXT,
       logo_dark   TEXT,
       logo_light  TEXT,
       icon        TEXT,
@@ -296,6 +295,21 @@ async function initSchema() {
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS code TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS logo_dark TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS logo_light TEXT`;
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.columns
+        WHERE table_name = 'team_iterations' AND column_name = 'logo'
+      ) THEN
+        UPDATE team_iterations
+        SET logo_dark = logo
+        WHERE NULLIF(logo_dark, '') IS NULL
+          AND NULLIF(logo, '') IS NOT NULL;
+      END IF;
+    END $$
+  `;
+  await sql`ALTER TABLE team_iterations DROP COLUMN IF EXISTS logo`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS icon TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS place_name TEXT`;
   await sql`ALTER TABLE team_iterations ADD COLUMN IF NOT EXISTS team_name TEXT`;
@@ -355,31 +369,35 @@ async function initSchema() {
       AND ti.name IS NOT NULL
   `;
 
+  await sql`DROP FUNCTION IF EXISTS team_logo_default(text, text, text)`;
+  await sql`DROP FUNCTION IF EXISTS team_logo_dark(text, text, text)`;
+  await sql`DROP FUNCTION IF EXISTS team_logo_light(text, text, text)`;
+
   await sql`
-    CREATE OR REPLACE FUNCTION team_logo_default(logo text, logo_dark text, logo_light text)
+    CREATE OR REPLACE FUNCTION team_logo_default(logo_dark text, logo_light text)
     RETURNS text
     LANGUAGE sql
     IMMUTABLE
     AS $$
-      SELECT COALESCE(NULLIF(logo, ''), NULLIF(logo_dark, ''), NULLIF(logo_light, ''))
+      SELECT COALESCE(NULLIF(logo_dark, ''), NULLIF(logo_light, ''))
     $$
   `;
   await sql`
-    CREATE OR REPLACE FUNCTION team_logo_dark(logo text, logo_dark text, logo_light text)
+    CREATE OR REPLACE FUNCTION team_logo_dark(logo_dark text, logo_light text)
     RETURNS text
     LANGUAGE sql
     IMMUTABLE
     AS $$
-      SELECT COALESCE(NULLIF(logo_dark, ''), NULLIF(logo, ''), NULLIF(logo_light, ''))
+      SELECT COALESCE(NULLIF(logo_dark, ''), NULLIF(logo_light, ''))
     $$
   `;
   await sql`
-    CREATE OR REPLACE FUNCTION team_logo_light(logo text, logo_dark text, logo_light text)
+    CREATE OR REPLACE FUNCTION team_logo_light(logo_dark text, logo_light text)
     RETURNS text
     LANGUAGE sql
     IMMUTABLE
     AS $$
-      SELECT COALESCE(NULLIF(logo_light, ''), NULLIF(logo, ''), NULLIF(logo_dark, ''))
+      SELECT COALESCE(NULLIF(logo_light, ''), NULLIF(logo_dark, ''))
     $$
   `;
 
@@ -392,7 +410,7 @@ async function initSchema() {
         SELECT 1 FROM information_schema.columns
         WHERE table_name = 'teams' AND column_name = 'name'
       ) THEN
-        INSERT INTO team_iterations (team_id, name, code, logo, recorded_at)
+        INSERT INTO team_iterations (team_id, name, code, logo_dark, recorded_at)
         SELECT t.id, t.name, t.code, t.logo, NOW()
         FROM teams t
         WHERE NOT EXISTS (

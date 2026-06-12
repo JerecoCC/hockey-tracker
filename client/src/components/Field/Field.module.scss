@@ -151,6 +151,15 @@
   }
 }
 
+.colorInputWrapperDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+
+  &:focus-within {
+    border-color: $border;
+  }
+}
+
 .colorSwatch {
   width: 24px;
   height: 24px;
@@ -163,6 +172,11 @@
 
   &:hover {
     transform: scale(1.1);
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    transform: none;
   }
 }
 
@@ -187,4 +201,8 @@
   letter-spacing: 0.03em;
   text-transform: uppercase;
   min-width: 0;
+
+  &:disabled {
+    cursor: not-allowed;
+  }
 }

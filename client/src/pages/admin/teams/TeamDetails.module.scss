@@ -169,9 +169,9 @@
 }
 
 .historyAssetRow {
-  display: flex;
-  justify-content: center;
-  gap: $space-xl;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: $space-lg;
 }
 
 .historyFormRow {

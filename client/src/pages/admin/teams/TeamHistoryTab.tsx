@@ -17,7 +17,8 @@ interface Props {
   teamPlaceName?: string | null;
   teamNickname?: string | null;
   teamCode: string;
-  teamLogo: string | null;
+  teamLogoDark: string | null;
+  teamLogoLight: string | null;
   teamIcon: string | null;
   primaryColor: string;
   textColor: string;
@@ -28,7 +29,8 @@ interface FormValues {
   place_name: string;
   team_name: string;
   code: string;
-  logo: File | string | null;
+  logo_dark: File | string | null;
+  logo_light: File | string | null;
   icon: File | string | null;
   note: string;
   start_date: string;
@@ -48,13 +50,22 @@ const splitTeamName = (name: string | null | undefined) => {
 const displayTeamName = (placeName: string, teamName: string) =>
   [placeName.trim(), teamName.trim()].filter(Boolean).join(' ');
 
+const resolveUploadedAsset = async (
+  value: File | string | null,
+  uploadLogo: (file: File) => Promise<string | null>,
+) => {
+  if (value instanceof File) return uploadLogo(value);
+  return typeof value === 'string' ? value : null;
+};
+
 const TeamHistoryTab = ({
   teamId,
   teamName,
   teamPlaceName,
   teamNickname,
   teamCode,
-  teamLogo,
+  teamLogoDark,
+  teamLogoLight,
   teamIcon,
   primaryColor,
   textColor,
@@ -79,7 +90,8 @@ const TeamHistoryTab = ({
       place_name: '',
       team_name: '',
       code: '',
-      logo: null,
+      logo_dark: null,
+      logo_light: null,
       icon: null,
       note: '',
       start_date: '',
@@ -110,7 +122,8 @@ const TeamHistoryTab = ({
         place_name: editTarget.place_name ?? fallbackName.placeName,
         team_name: editTarget.team_name ?? fallbackName.teamName,
         code: editTarget.code ?? '',
-        logo: editTarget.logo,
+        logo_dark: editTarget.logo_dark,
+        logo_light: editTarget.logo_light,
         icon: editTarget.icon,
         note: editTarget.note ?? '',
         start_date: editTarget.start_date?.slice(0, 10) ?? '',
@@ -122,34 +135,45 @@ const TeamHistoryTab = ({
         place_name: teamPlaceName ?? fallbackName.placeName,
         team_name: teamNickname ?? fallbackName.teamName,
         code: teamCode,
-        logo: teamLogo,
+        logo_dark: teamLogoDark,
+        logo_light: teamLogoLight,
         icon: teamIcon,
         note: '',
         start_date: '',
         end_date: '',
       });
     }
-  }, [modalOpen, editTarget, teamName, teamPlaceName, teamNickname, teamCode, teamLogo, teamIcon, reset]);
+  }, [
+    modalOpen,
+    editTarget,
+    teamName,
+    teamPlaceName,
+    teamNickname,
+    teamCode,
+    teamLogoDark,
+    teamLogoLight,
+    teamIcon,
+    reset,
+  ]);
 
   const onSubmit = handleSubmit(async (data) => {
-    let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
-    if (data.logo instanceof File) {
-      const url = await uploadLogo(data.logo);
-      if (!url) return;
-      logoUrl = url;
-    }
-    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
-    if (data.icon instanceof File) {
-      const url = await uploadLogo(data.icon);
-      if (!url) return;
-      iconUrl = url;
+    const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
+    const logoLightUrl = await resolveUploadedAsset(data.logo_light, uploadLogo);
+    const iconUrl = await resolveUploadedAsset(data.icon, uploadLogo);
+    if (
+      (data.logo_dark instanceof File && !logoDarkUrl) ||
+      (data.logo_light instanceof File && !logoLightUrl) ||
+      (data.icon instanceof File && !iconUrl)
+    ) {
+      return;
     }
     const payload = {
       name: displayTeamName(data.place_name, data.team_name),
       place_name: data.place_name,
       team_name: data.team_name,
       code: data.code || null,
-      logo: logoUrl,
+      logo_dark: logoDarkUrl,
+      logo_light: logoLightUrl,
       icon: iconUrl,
       note: data.note || null,
       start_date: data.start_date || null,
@@ -244,8 +268,14 @@ const TeamHistoryTab = ({
           <div className={styles.historyAssetRow}>
             <LogoUpload
               control={control}
-              name="logo"
-              label="Logo"
+              name="logo_dark"
+              label="Dark Mode Logo"
+              disabled={isSubmitting}
+            />
+            <LogoUpload
+              control={control}
+              name="logo_light"
+              label="Light Mode Logo"
               disabled={isSubmitting}
             />
             <LogoUpload

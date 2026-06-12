@@ -162,7 +162,6 @@ const teamIterations = pgTable('team_iterations', {
   placeName: text('place_name'),
   teamName: text('team_name'),
   code: text('code'),
-  logo: text('logo'),
   logoDark: text('logo_dark'),
   logoLight: text('logo_light'),
   icon: text('icon'),

@@ -9,7 +9,8 @@ import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/desc
 import styles from './TeamEditModal.module.scss';
 
 interface FormValues {
-  logo: File | string | null;
+  logo_dark: File | string | null;
+  logo_light: File | string | null;
   icon: File | string | null;
   place_name: string;
   team_name: string;
@@ -42,6 +43,14 @@ const splitTeamName = (name: string | null | undefined, placeHint?: string | nul
 const displayTeamName = (placeName: string, teamName: string) =>
   [placeName.trim(), teamName.trim()].filter(Boolean).join(' ');
 
+const resolveUploadedAsset = async (
+  value: File | string | null,
+  uploadLogo: (file: File) => Promise<string | null>,
+) => {
+  if (value instanceof File) return uploadLogo(value);
+  return typeof value === 'string' ? value : null;
+};
+
 interface Props {
   open: boolean;
   team: TeamDetailRecord;
@@ -58,7 +67,8 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     formState: { isSubmitting },
   } = useForm<FormValues>({
     defaultValues: {
-      logo: null,
+      logo_dark: null,
+      logo_light: null,
       icon: null,
       place_name: '',
       team_name: '',
@@ -76,7 +86,8 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     if (!open) return;
     const fallbackName = splitTeamName(team.name, team.city ?? team.location);
     reset({
-      logo: team.logo ?? null,
+      logo_dark: team.logo_dark ?? null,
+      logo_light: team.logo_light ?? null,
       icon: team.icon ?? null,
       place_name: team.place_name ?? fallbackName.placeName,
       team_name: team.team_name ?? fallbackName.teamName,
@@ -91,20 +102,19 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
   }, [open, team, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
-    let logoUrl: string | null = typeof data.logo === 'string' ? data.logo : null;
-    if (data.logo instanceof File) {
-      const url = await uploadLogo(data.logo);
-      if (!url) return;
-      logoUrl = url;
-    }
-    let iconUrl: string | null = typeof data.icon === 'string' ? data.icon : null;
-    if (data.icon instanceof File) {
-      const url = await uploadLogo(data.icon);
-      if (!url) return;
-      iconUrl = url;
+    const logoDarkUrl = await resolveUploadedAsset(data.logo_dark, uploadLogo);
+    const logoLightUrl = await resolveUploadedAsset(data.logo_light, uploadLogo);
+    const iconUrl = await resolveUploadedAsset(data.icon, uploadLogo);
+    if (
+      (data.logo_dark instanceof File && !logoDarkUrl) ||
+      (data.logo_light instanceof File && !logoLightUrl) ||
+      (data.icon instanceof File && !iconUrl)
+    ) {
+      return;
     }
     const payload: Partial<CreateTeamData> = {
-      logo: logoUrl,
+      logo_dark: logoDarkUrl,
+      logo_light: logoLightUrl,
       icon: iconUrl,
       name: displayTeamName(data.place_name, data.team_name),
       place_name: data.place_name,
@@ -125,7 +135,6 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     <Modal
       open={open}
       title="Edit Team"
-      size="lg"
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="team-edit-form"
@@ -140,8 +149,14 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
         <div className={styles.assetRow}>
           <LogoUpload
             control={control}
-            name="logo"
-            label="Logo"
+            name="logo_dark"
+            label="Dark Mode Logo"
+            disabled={isSubmitting}
+          />
+          <LogoUpload
+            control={control}
+            name="logo_light"
+            label="Light Mode Logo"
             disabled={isSubmitting}
           />
           <LogoUpload
@@ -153,7 +168,17 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             disabled={isSubmitting}
           />
         </div>
-        <div className={styles.nameRow}>
+        <div className={styles.identityRow}>
+          <Field
+            label="Code"
+            required
+            control={control}
+            name="code"
+            rules={{ required: true }}
+            transform={(v) => v.toUpperCase()}
+            placeholder="TOR"
+            disabled={isSubmitting}
+          />
           <Field
             label="Place Name"
             control={control}
@@ -172,16 +197,6 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
             disabled={isSubmitting}
           />
         </div>
-        <Field
-          label="Code"
-          required
-          control={control}
-          name="code"
-          rules={{ required: true }}
-          transform={(v) => v.toUpperCase()}
-          placeholder="e.g. TOR"
-          disabled={isSubmitting}
-        />
         <div className={styles.colorRow}>
           <Field
             label="Primary Color"
