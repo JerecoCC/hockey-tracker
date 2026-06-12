@@ -45,49 +45,50 @@ const LeagueTeamsTab = (props: Props) => {
         }
         renderItems={(filtered) => (
           <ul className={styles.teamList}>
-            {filtered.map((t) => (
-              <ListItem
-                key={t.id}
-                image={t.logo}
-                eyebrow={t.place_name || ''}
-                name={t.team_name || ''}
-                rightContent={{ type: 'code', value: t.code }}
-                primaryColor={t.primary_color}
-                textColor={t.text_color}
-                actions={
-                  [
-                    {
-                      icon: 'open_in_new',
-                      intent: 'accent',
-                      tooltip: 'View team',
-                      onClick: () =>
-                        navigate(
-                          buildTeamDetailsPath({
-                            leagueCode,
-                            leagueId,
-                            teamCode: t.code,
-                            teamId: t.id,
-                          }),
-                        ),
-                    },
-                    {
-                      icon: 'edit',
-                      intent: 'neutral',
-                      tooltip: 'Edit',
-                      disabled: busy === t.id,
-                      onClick: () => onEdit(t),
-                    },
-                    {
-                      icon: 'delete',
-                      intent: 'danger',
-                      tooltip: 'Delete',
-                      disabled: busy === t.id,
-                      onClick: () => onDelete(t),
-                    },
-                  ] satisfies ListItemAction[]
-                }
-              />
-            ))}
+            {filtered.map((t) => {
+              const teamHref = buildTeamDetailsPath({
+                leagueCode,
+                leagueId,
+                teamCode: t.code,
+                teamId: t.id,
+              });
+              return (
+                <ListItem
+                  key={t.id}
+                  image={t.logo}
+                  eyebrow={t.place_name || ''}
+                  name={t.team_name || ''}
+                  rightContent={{ type: 'code', value: t.code }}
+                  primaryColor={t.primary_color}
+                  textColor={t.text_color}
+                  href={teamHref}
+                  actions={
+                    [
+                      {
+                        icon: 'open_in_new',
+                        intent: 'accent',
+                        tooltip: 'View team',
+                        onClick: () => navigate(teamHref),
+                      },
+                      {
+                        icon: 'edit',
+                        intent: 'neutral',
+                        tooltip: 'Edit',
+                        disabled: busy === t.id,
+                        onClick: () => onEdit(t),
+                      },
+                      {
+                        icon: 'delete',
+                        intent: 'danger',
+                        tooltip: 'Delete',
+                        disabled: busy === t.id,
+                        onClick: () => onDelete(t),
+                      },
+                    ] satisfies ListItemAction[]
+                  }
+                />
+              );
+            })}
           </ul>
         )}
         placeholder="Search teams…"

@@ -122,6 +122,12 @@ const LeaguePlayersTab = ({
                 <ul className={styles.rosterList}>
                   {filtered.map((p) => {
                     const initials = `${p.first_name[0] ?? ''}${p.last_name[0] ?? ''}` || '?';
+                    const playerHref = buildLeaguePlayerDetailsPath({
+                      leagueCode,
+                      leagueId,
+                      firstName: p.first_name,
+                      lastName: p.last_name,
+                    });
 
                     return (
                       <ListItem
@@ -145,6 +151,7 @@ const LeaguePlayersTab = ({
                         placeholder={`${p.first_name[0]}${p.last_name[0]}`}
                         primaryColor={p.primary_color ?? undefined}
                         textColor={p.text_color ?? undefined}
+                        href={playerHref}
                         jerseyNumber={p.jersey_number}
                         subtitle={
                           p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined
@@ -160,15 +167,7 @@ const LeaguePlayersTab = ({
                               icon: 'open_in_new',
                               intent: 'neutral',
                               tooltip: 'View player',
-                              onClick: () =>
-                                navigate(
-                                  buildLeaguePlayerDetailsPath({
-                                    leagueCode,
-                                    leagueId,
-                                    firstName: p.first_name,
-                                    lastName: p.last_name,
-                                  }),
-                                ),
+                              onClick: () => navigate(playerHref),
                             },
                             {
                               icon: 'edit',

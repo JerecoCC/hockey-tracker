@@ -12,6 +12,7 @@ interface Props {
   onEdit: (season: LeagueSeasonRecord) => void;
   onDelete: (season: LeagueSeasonRecord) => void;
   onView: (season: LeagueSeasonRecord) => void;
+  getSeasonHref: (season: LeagueSeasonRecord) => string;
   className?: string;
 }
 
@@ -29,7 +30,8 @@ const formatEndDate = (d: string | null, isCurrent: boolean) =>
   d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : '?';
 
 const LeagueSeasonsCard = (props: Props) => {
-  const { seasons, loading, busy, onAdd, onEdit, onDelete, onView, className } = props;
+  const { seasons, loading, busy, onAdd, onEdit, onDelete, onView, getSeasonHref, className } =
+    props;
   return (
     <Card
       className={className}
@@ -57,6 +59,7 @@ const LeagueSeasonsCard = (props: Props) => {
               key={s.id}
               hideImage
               name={s.name}
+              href={getSeasonHref(s)}
               subtitle={
                 s.start_date || s.end_date
                   ? `${formatDate(s.start_date)} – ${formatEndDate(s.end_date, s.is_current)}`

@@ -210,6 +210,14 @@ const LeagueDetailsPage = () => {
                       }),
                     )
                   }
+                  getSeasonHref={(s) =>
+                    buildSeasonDetailsPath({
+                      leagueCode: league.code,
+                      leagueId: league.id,
+                      seasonName: s.name,
+                      seasonId: s.id,
+                    })
+                  }
                 />
               </div>
             ),

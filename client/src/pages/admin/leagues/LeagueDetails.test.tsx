@@ -11,6 +11,14 @@ import LeagueDetailsPage from './LeagueDetails';
 // ── Router ─────────────────────────────────────────────────────────────
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
+  Link: ({ to, children, ...props }: { to: string; children?: ReactNode }) => (
+    <a
+      href={to}
+      {...props}
+    >
+      {children}
+    </a>
+  ),
   useNavigate: jest.fn(),
   useParams: jest.fn(),
   useLocation: jest.fn(),
@@ -301,6 +309,28 @@ describe('LeagueDetailsPage – seasons card', () => {
     clickSeasonsTab();
     expect(screen.getByText('Winter 2024')).toBeInTheDocument();
   });
+
+  it('renders season rows as links to season details', () => {
+    const seasons = [
+      {
+        id: 's1',
+        name: 'Winter 2024',
+        league_id: 'lg1',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+        is_current: false,
+        is_ended: true,
+        created_at: '',
+      },
+    ];
+    setup({ league: mockLeague, seasons });
+    clickSeasonsTab();
+    const row = screen.getByText('Winter 2024').closest('li');
+    expect(row?.querySelector('a')).toHaveAttribute(
+      'href',
+      '/admin/leagues/tl/seasons/winter-2024',
+    );
+  });
 });
 
 // ── Teams tab ──────────────────────────────────────────────────────────
@@ -320,13 +350,50 @@ describe('LeagueDetailsPage – teams tab', () => {
 
   it('renders team rows on the Teams tab', () => {
     const teams = [
-      { id: 't1', name: 'Team Alpha', code: 'TA', logo: '', league_id: 'lg1', created_at: '' },
-      { id: 't2', name: 'Team Beta', code: 'TB', logo: '', league_id: 'lg1', created_at: '' },
+      {
+        id: 't1',
+        name: 'Team Alpha',
+        place_name: 'Team',
+        team_name: 'Alpha',
+        code: 'TA',
+        logo: '',
+        league_id: 'lg1',
+        created_at: '',
+      },
+      {
+        id: 't2',
+        name: 'Team Beta',
+        place_name: 'Team',
+        team_name: 'Beta',
+        code: 'TB',
+        logo: '',
+        league_id: 'lg1',
+        created_at: '',
+      },
     ];
     setup({ league: mockLeague, teams });
     clickTeamsTab();
-    expect(screen.getByText('Team Alpha')).toBeInTheDocument();
-    expect(screen.getByText('Team Beta')).toBeInTheDocument();
+    expect(screen.getByText('Alpha')).toBeInTheDocument();
+    expect(screen.getByText('Beta')).toBeInTheDocument();
+  });
+
+  it('renders team rows as links to team details', () => {
+    const teams = [
+      {
+        id: 't1',
+        name: 'Team Alpha',
+        place_name: 'Team',
+        team_name: 'Alpha',
+        code: 'TA',
+        logo: '',
+        league_id: 'lg1',
+        created_at: '',
+      },
+    ];
+    setup({ league: mockLeague, teams });
+    clickTeamsTab();
+    const row = screen.getByText('Alpha').closest('li');
+    expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/teams/ta');
   });
 });
 
@@ -384,6 +451,40 @@ describe('LeagueDetailsPage – players tab', () => {
     fireEvent.click(tooltip.previousElementSibling as HTMLElement);
 
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/tl/players/john-smith');
+  });
+
+  it('renders player rows as links to player details', () => {
+    setup(
+      { league: mockLeague },
+      {},
+      null,
+      {
+        players: [
+          {
+            id: 'player-1',
+            first_name: 'John',
+            last_name: 'Smith',
+            photo: null,
+            date_of_birth: null,
+            birth_city: null,
+            birth_country: null,
+            height_cm: null,
+            weight_lbs: null,
+            position: 'C',
+            shoots: 'L',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            team_id: null,
+            team_code: null,
+          },
+        ],
+        total: 1,
+      },
+    );
+    clickPlayersTab();
+
+    const row = screen.getByText('John Smith').closest('li');
+    expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
   });
 });
 
