@@ -1,4 +1,5 @@
-import { render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DatePicker from './DatePicker';
 
@@ -13,6 +14,17 @@ const currentEtMonth = () => {
   const month = parts.find((p) => p.type === 'month')?.value;
 
   return `${year}-${month}`;
+};
+
+const ControlledDatePicker = ({ initialValue = '2026-05-15' }: { initialValue?: string }) => {
+  const [value, setValue] = useState(initialValue);
+
+  return (
+    <DatePicker
+      value={value}
+      onChange={setValue}
+    />
+  );
 };
 
 describe('DatePicker', () => {
@@ -76,5 +88,24 @@ describe('DatePicker', () => {
     await user.click(screen.getByRole('button', { name: '10' }));
 
     expect(onChange).toHaveBeenCalledWith('2026-05-10');
+  });
+
+  it('keeps segment editing active after a controlled value update', () => {
+    render(<ControlledDatePicker />);
+
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    input.focus();
+    input.setSelectionRange(0, 2);
+    fireEvent.click(input);
+
+    fireEvent.keyDown(input, { key: '1' });
+    fireEvent.keyDown(input, { key: '2' });
+
+    expect(input).toHaveValue('12/15/2026');
+
+    fireEvent.keyDown(input, { key: '2' });
+    fireEvent.keyDown(input, { key: '5' });
+
+    expect(input).toHaveValue('12/25/2026');
   });
 });

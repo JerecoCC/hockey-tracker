@@ -129,6 +129,7 @@ const TimePicker = ({
   const segmentOrder: Segment[] = mode === 'duration' ? ['hour', 'minute'] : SEGMENT_ORDER;
 
   useEffect(() => {
+    const isEditing = inputRef.current === document.activeElement;
     const p = parseTime(value);
     if (p) {
       if (mode === 'duration') {
@@ -146,8 +147,10 @@ const TimePicker = ({
       setCMinute(null);
       setCAmPm(null);
     }
-    setActiveSeg(null);
-    setBuf('');
+    if (!isEditing) {
+      setActiveSeg(null);
+      setBuf('');
+    }
   }, [value, mode]);
 
   useEffect(() => {

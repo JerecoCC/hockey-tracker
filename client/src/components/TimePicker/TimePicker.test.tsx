@@ -1,4 +1,5 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { useState } from 'react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import TimePicker from './TimePicker';
 
 // ── Test helpers ──────────────────────────────────────────────────────────────
@@ -24,6 +25,17 @@ const renderPicker = (value: string, onChange = jest.fn()) => {
     />,
   );
   return { onChange };
+};
+
+const ControlledTimePicker = ({ initialValue = '07:30' }: { initialValue?: string }) => {
+  const [value, setValue] = useState(initialValue);
+
+  return (
+    <TimePicker
+      value={value}
+      onChange={setValue}
+    />
+  );
 };
 
 const getInput = () => screen.getByRole('textbox');
@@ -248,6 +260,29 @@ describe('TimePicker – onChange', () => {
     fireEvent.keyDown(input, { key: '0' }); // minute=00 → moves to ampm
     fireEvent.keyDown(input, { key: 'p' }); // PM → emits "12:00"
     expect(onChange).toHaveBeenCalledWith('12:00');
+  });
+
+  it('keeps segment editing active after a controlled value update', async () => {
+    render(<ControlledTimePicker />);
+
+    const input = getInput() as HTMLInputElement;
+    input.focus();
+    fireEvent.focus(input);
+
+    fireEvent.keyDown(input, { key: '1' });
+    fireEvent.keyDown(input, { key: '0' });
+
+    expect(input).toHaveValue('10:30 AM');
+    await waitFor(() => {
+      expect(input.selectionStart).toBe(3);
+      expect(input.selectionEnd).toBe(5);
+    });
+
+    const updatedInput = getInput();
+    fireEvent.keyDown(updatedInput, { key: '4' });
+    fireEvent.keyDown(updatedInput, { key: '5' });
+
+    expect(updatedInput).toHaveValue('10:45 AM');
   });
 });
 

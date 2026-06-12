@@ -211,6 +211,7 @@ const DatePicker = (props: Props) => {
 
   // Sync segment state when value changes externally (calendar pick, reset, etc.)
   useEffect(() => {
+    const isEditing = inputRef.current === document.activeElement;
     const p = parseISO(value);
     if (p) {
       setCYear(p.y);
@@ -224,8 +225,10 @@ const DatePicker = (props: Props) => {
       setCMonth(null);
       setCDay(null);
     }
-    setActiveSeg(null);
-    setBuf('');
+    if (!isEditing) {
+      setActiveSeg(null);
+      setBuf('');
+    }
   }, [granularity, value]);
 
   // Auto-focus the text input on mount when requested
