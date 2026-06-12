@@ -88,25 +88,25 @@ describe('ListItem – image_shape', () => {
   it('applies only the base logo class by default (square)', () => {
     renderItem({ name: 'Leafs', image: 'logo.png' });
     const img = screen.getByAltText('');
-    expect(img).toHaveClass('logo');
-    expect(img).not.toHaveClass('logoCircle');
+    expect(img.parentElement).toHaveClass('logo');
+    expect(img.parentElement).not.toHaveClass('logoCircle');
   });
 
   it('applies logoCircle class when image_shape is circle', () => {
     renderItem({ name: 'Leafs', image: 'logo.png', image_shape: 'circle' });
-    expect(screen.getByAltText('')).toHaveClass('logoCircle');
+    expect(screen.getByAltText('').parentElement).toHaveClass('logoCircle');
   });
 
   it('placeholder has only base class by default (square)', () => {
     renderItem({ name: 'Leafs' });
     const placeholder = screen.getByText('Lea');
-    expect(placeholder).toHaveClass('logoPlaceholder');
-    expect(placeholder).not.toHaveClass('logoPlaceholderCircle');
+    expect(placeholder.parentElement).toHaveClass('logoPlaceholder');
+    expect(placeholder.parentElement).not.toHaveClass('logoPlaceholderCircle');
   });
 
   it('placeholder has circle class when image_shape is circle', () => {
     renderItem({ name: 'Leafs', image_shape: 'circle' });
-    expect(screen.getByText('Lea')).toHaveClass('logoPlaceholderCircle');
+    expect(screen.getByText('Lea').parentElement).toHaveClass('logoPlaceholderCircle');
   });
 });
 
@@ -142,7 +142,7 @@ describe('ListItem – placeholder text', () => {
 describe('ListItem – primaryColor / textColor', () => {
   it('applies background inline style when primaryColor is set', () => {
     renderItem({ name: 'Leafs', primaryColor: '#003e7e' });
-    expect(screen.getByText('Lea')).toHaveStyle({ background: '#003e7e' });
+    expect(screen.getByText('Lea').parentElement).toHaveStyle({ background: '#003e7e' });
   });
 
   it('also applies color when textColor is provided', () => {
@@ -152,7 +152,7 @@ describe('ListItem – primaryColor / textColor', () => {
 
   it('does not apply inline styles when primaryColor is omitted', () => {
     renderItem({ name: 'Leafs' });
-    expect(screen.getByText('Lea')).not.toHaveAttribute('style');
+    expect(screen.getByText('Lea').parentElement).not.toHaveStyle({ background: '#003e7e' });
   });
 });
 

@@ -106,7 +106,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
+  gap: $space-md;
 }
 
 .rosterList {
@@ -116,15 +116,6 @@
   display: flex;
   flex-direction: column;
   gap: $space-md;
-}
-
-.rosterItem {
-  --list-item-logo-size: 48px;
-  --list-item-jersey-size: 32px;
-
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid $border;
-  border-radius: $radius-md;
 }
 
 .listSpinner {
@@ -179,7 +170,7 @@
 
 // Applied only when teams.length > 5 — caps height and enables scrolling
 .teamListLimited {
-  max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-xs});
+  max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-md});
   overflow-y: auto;
   scrollbar-gutter: stable;
 
@@ -245,12 +236,12 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
+  gap: $space-md;
 }
 
 // Applied only when seasons.length > 5 — caps height and enables scrolling
 .seasonListLimited {
-  max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$space-xs});
+  max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$space-md});
   overflow-y: auto;
   scrollbar-gutter: stable;
 

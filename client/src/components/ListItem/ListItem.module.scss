@@ -3,14 +3,21 @@
 
 // ── Row ──────────────────────────────────────────────────────────────────────
 .item {
+  --list-item-logo-size: 48px;
+  --list-item-jersey-size: 32px;
+
   position: relative;
   list-style: none;
   display: flex;
   align-items: center;
   gap: $space-md;
-  padding: $space-sm $space-md;
+  padding: $space-md;
+  border: 1px solid $border;
   border-radius: $radius-md;
-  transition: background $transition-fast;
+  background: rgba(255, 255, 255, 0.02);
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
 
   &:hover {
     background: rgba(255, 255, 255, 0.04);

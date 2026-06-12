@@ -205,7 +205,6 @@ const TeamPlayersTab = ({
     return (
       <ListItem
         key={p.id}
-        className={styles.rosterItem}
         imageNode={
           <PlayerAvatar
             photo={p.photo}

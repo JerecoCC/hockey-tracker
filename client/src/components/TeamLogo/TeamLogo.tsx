@@ -6,6 +6,8 @@ export interface TeamLogoProps {
   logo?: string | null;
   /** Short team code — shown as fallback text when there is no logo. */
   code: string;
+  /** Overrides the image alt text. Defaults to the team code. */
+  alt?: string;
   primaryColor?: string | null;
   textColor?: string | null;
   /** Width AND height in pixels. */
@@ -23,6 +25,7 @@ export interface TeamLogoProps {
 const TeamLogo = ({
   logo,
   code,
+  alt,
   primaryColor,
   textColor,
   size,
@@ -41,7 +44,7 @@ const TeamLogo = ({
       {logo ? (
         <img
           src={logo}
-          alt={code}
+          alt={alt ?? code}
           className={styles.img}
         />
       ) : (

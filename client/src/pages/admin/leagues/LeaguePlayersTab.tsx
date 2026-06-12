@@ -126,7 +126,6 @@ const LeaguePlayersTab = ({
                     return (
                       <ListItem
                         key={p.id}
-                        className={styles.rosterItem}
                         leadingImage={p.team_logo}
                         leadingImagePlaceholder={
                           (p.team_code ?? (p.team_name ?? '').slice(0, 3)) || undefined

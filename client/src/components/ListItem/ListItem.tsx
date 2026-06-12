@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Badge, { type BadgeIntent } from '../Badge/Badge';
 import Button, { type ButtonIntent } from '../Button/Button';
+import PlayerAvatar from '../PlayerAvatar/PlayerAvatar';
+import TeamLogo from '../TeamLogo/TeamLogo';
 import styles from './ListItem.module.scss';
 
 export interface ListItemAction {
@@ -101,6 +103,33 @@ const ListItem = ({
   const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
   const isCircle = image_shape === 'circle';
   const codeValue = rightContent?.type === 'code' ? rightContent.value : null;
+  const imageLabel = placeholder ?? (codeValue ?? name ?? '').slice(0, 3);
+  const imageSize = 48;
+  const imageClassName = image
+    ? [styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')
+    : [styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
+        .filter(Boolean)
+        .join(' ');
+  const defaultImageNode = isCircle ? (
+    <PlayerAvatar
+      photo={image}
+      initials={imageLabel}
+      primaryColor={primaryColor}
+      textColor={textColor}
+      size={imageSize}
+      className={imageClassName}
+    />
+  ) : (
+    <TeamLogo
+      logo={image}
+      code={imageLabel}
+      alt=""
+      primaryColor={primaryColor}
+      textColor={textColor}
+      size={imageSize}
+      className={imageClassName}
+    />
+  );
 
   return (
     <li
@@ -133,28 +162,7 @@ const ListItem = ({
         ))}
 
       {/* Image or color-branded placeholder */}
-      {!hideImage &&
-        (imageNode ??
-          (image ? (
-            <img
-              src={image}
-              alt=""
-              className={[styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')}
-            />
-          ) : (
-            <span
-              className={[styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
-                .filter(Boolean)
-                .join(' ')}
-              style={
-                primaryColor
-                  ? { background: primaryColor, color: textColor ?? undefined }
-                  : undefined
-              }
-            >
-              {placeholder ?? (codeValue ?? name ?? '').slice(0, 3)}
-            </span>
-          )))}
+      {!hideImage && (imageNode ?? defaultImageNode)}
 
       {/* Jersey number chip */}
       {jerseyNumber != null && (
