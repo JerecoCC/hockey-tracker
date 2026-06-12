@@ -1,4 +1,4 @@
-import { type CSSProperties, useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
@@ -7,8 +7,7 @@ import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import Tooltip from '@/components/Tooltip/Tooltip';
+import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import useSeasons from '@/hooks/useSeasons';
 import GameListItem from '@/pages/admin/seasons/GameListItem';
@@ -103,13 +102,11 @@ const TeamCalendarGame = ({
   game,
   teamId,
   onOpen,
-  fillDay = false,
   dayNumber,
 }: {
   game: GameRecord;
   teamId: string;
   onOpen: (game: GameRecord) => void;
-  fillDay?: boolean;
   dayNumber?: number;
 }) => {
   const isHomeGame = game.home_team.id === teamId;
@@ -145,53 +142,24 @@ const TeamCalendarGame = ({
           : STATUS_LABEL[game.status];
 
   return (
-    <Tooltip
-      text={opponent.name}
-      className={styles.calendarGameTooltip}
-    >
-      <div
-        className={[
-          styles.calendarGame,
-          isHomeGame ? styles.calendarGameHome : styles.calendarGameAway,
-          game.status === 'in_progress' ? styles.calendarGameLive : '',
-          fillDay ? styles.calendarGameFillDay : '',
-        ]
-          .filter(Boolean)
-          .join(' ')}
-        style={
-          isHomeGame
-            ? ({
-                '--calendar-primary': team.primary_color,
-              } as CSSProperties)
-            : undefined
-        }
-        role="button"
-        tabIndex={0}
-        aria-label={`Open game ${isHomeGame ? 'vs' : 'at'} ${opponent.name}`}
-        onClick={() => onOpen(game)}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') onOpen(game);
-        }}
-      >
-        {fillDay && dayNumber ? (
-          <span className={styles.calendarGameDayNumber}>{dayNumber}</span>
-        ) : null}
-        <div className={styles.calendarGameBody}>
-          <div className={styles.calendarGameLogoWrap}>
-            <TeamLogo
-              logo={opponent.logo}
-              code={opponent.logo ? opponent.code : ''}
-              primaryColor={opponent.primary_color}
-              textColor={opponent.text_color}
-              size={60}
-              shape={opponent.logo ? 'square' : 'circle'}
-              className={opponent.logo ? styles.calendarGameLogoImage : undefined}
-            />
-          </div>
-          <span className={styles.calendarGameDetail}>{detail}</span>
-        </div>
-      </div>
-    </Tooltip>
+    <TeamCalendarGameCard
+      variant={isHomeGame ? 'home' : 'away'}
+      opponent={{
+        name: opponent.name,
+        code: opponent.code,
+        logo: opponent.logo,
+        primaryColor: opponent.primary_color,
+        textColor: opponent.text_color,
+      }}
+      detail={detail}
+      topLabel={dayNumber}
+      homePrimaryColor={team.primary_color}
+      live={game.status === 'in_progress'}
+      fillContainer
+      flush
+      ariaLabel={`Open game ${isHomeGame ? 'vs' : 'at'} ${opponent.name}`}
+      onOpen={() => onOpen(game)}
+    />
   );
 };
 
@@ -481,8 +449,6 @@ const TeamGamesTab = ({ teamId, teamName, leagueId, leagueCode, defaultSeasonId 
 
                 const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayGame = gamesByDate.get(dateKey);
-                const fillDay = !!dayGame;
-
                 return (
                   <div
                     key={dateKey}
@@ -495,7 +461,6 @@ const TeamGamesTab = ({ teamId, teamName, leagueId, leagueCode, defaultSeasonId 
                           game={dayGame}
                           teamId={teamId}
                           onOpen={openGame}
-                          fillDay={fillDay}
                           dayNumber={day}
                         />
                       </div>

@@ -1,9 +1,7 @@
-import { type CSSProperties } from 'react';
-import Tooltip from '@/components/Tooltip/Tooltip';
+import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
 import type { LastFiveGame } from '@/hooks/useGames';
 import { DATE_FMT_SHORT } from '../formatUtils';
 import { PERIOD_PAREN_SUFFIX } from '../constants';
-import styles from './LastFiveCard.module.scss';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -25,49 +23,27 @@ export default function LastGameSquare({ lg, teamPrimary, teamText, onNavigate }
       ? PERIOD_PAREN_SUFFIX.OVERTIME
       : null;
 
+  const detail = `${lg.result} ${lg.away_score} - ${lg.home_score}${suffix ? ` ${suffix}` : ''}`;
+  const opponentName = lg.opponent_name ?? lg.opponent_code;
+
   return (
-    <div
-      className={[styles.lastFiveSquare, lg.is_home ? styles.lastFiveSquareHome : '']
-        .filter(Boolean)
-        .join(' ')}
-      style={lg.is_home ? ({ '--square-primary': teamPrimary } as CSSProperties) : undefined}
-      role="button"
-      tabIndex={0}
-      onClick={() => onNavigate(lg.game_id)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') onNavigate(lg.game_id);
+    <TeamCalendarGameCard
+      variant={lg.is_home ? 'home' : 'away'}
+      opponent={{
+        name: opponentName,
+        code: lg.opponent_code,
+        logo: lg.opponent_logo,
+        primaryColor: teamPrimary,
+        textColor: teamText,
       }}
-    >
-      {lg.scheduled_at && (
-        <span className={styles.lastFiveDate}>
-          {DATE_FMT_SHORT.format(new Date(lg.scheduled_at))}
-        </span>
-      )}
-      <Tooltip text={lg.opponent_name ?? lg.opponent_code}>
-        <span
-          className={`${styles.lastFiveLogoCircle} ${lg.is_home ? styles.lastFiveLogoCircleHome : styles.lastFiveLogoCircleAway}`}
-          style={lg.is_home ? ({ '--circle-text': teamText } as CSSProperties) : undefined}
-        >
-          {lg.opponent_logo ? (
-            <img
-              src={lg.opponent_logo}
-              alt={lg.opponent_code}
-              className={styles.lastFiveOpponentLogo}
-            />
-          ) : (
-            <span className={styles.lastFiveOpponentPlaceholder}>
-              {lg.opponent_code?.slice(0, 3)}
-            </span>
-          )}
-        </span>
-      </Tooltip>
-      <div className={styles.lastFiveScore}>
-        <span className={styles.lastFiveResult}>{lg.result}</span>
-        <span className={styles.lastFiveScoreText}>
-          {lg.away_score}-{lg.home_score}
-        </span>
-        {suffix && <span className={styles.lastFiveOT}>{suffix}</span>}
-      </div>
-    </div>
+      detail={detail}
+      topLabel={lg.scheduled_at ? DATE_FMT_SHORT.format(new Date(lg.scheduled_at)) : undefined}
+      topLabelAlign="center"
+      topLabelWeight="normal"
+      homePrimaryColor={teamPrimary}
+      fillContainer
+      ariaLabel={`Open game ${lg.is_home ? 'vs' : 'at'} ${opponentName}`}
+      onOpen={() => onNavigate(lg.game_id)}
+    />
   );
 }

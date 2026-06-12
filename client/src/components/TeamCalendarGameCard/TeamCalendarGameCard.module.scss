@@ -1,0 +1,125 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.tooltip {
+  width: 100%;
+  height: 100%;
+}
+
+.card {
+  width: 84px;
+  min-height: 108px;
+  border-radius: $radius-sm;
+  border: 1px solid $border;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-xs;
+  padding: $space-sm $space-xs;
+  cursor: pointer;
+  transition:
+    transform $transition-fast,
+    opacity $transition-fast;
+  text-align: center;
+
+  &:hover {
+    transform: translateY(-1px);
+    opacity: 0.9;
+  }
+}
+
+.fill {
+  width: 100%;
+  min-height: 160px;
+  padding: $space-sm;
+  justify-content: flex-start;
+}
+
+.flush {
+  min-height: 100%;
+  border: 0;
+  border-radius: inherit;
+}
+
+.away {
+  background: #ffffff;
+  border-color: color-mix(in srgb, #{$border}, black 20%);
+  color: #14181f;
+}
+
+.home {
+  background: var(--calendar-primary);
+  border-color: var(--calendar-primary);
+  color: #ffffff;
+}
+
+.live {
+  box-shadow: 0 0 0 1px rgba($warning, 0.55);
+}
+
+.topLabel {
+  align-self: flex-start;
+  font-size: $font-sm;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.topLabelCenter {
+  align-self: center;
+  width: 100%;
+  text-align: center;
+}
+
+.topLabelNormal {
+  font-weight: 400;
+}
+
+.body {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-md;
+}
+
+.logoWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 76px;
+  height: 76px;
+  min-height: 76px;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.home .logoWrap {
+  background: rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+}
+
+.logoImage {
+  box-sizing: border-box;
+  border-radius: 0;
+  overflow: visible;
+}
+
+.away .logoWrap {
+  background:
+    radial-gradient(circle, rgba(15, 23, 42, 0.12) 0 42%, rgba(15, 23, 42, 0.05) 64%, rgba(15, 23, 42, 0.02) 100%);
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: inset 0 0 14px rgba(15, 23, 42, 0.06);
+}
+
+.away .logoWrap img {
+  filter: drop-shadow(0 1px 4px rgba(15, 23, 42, 0.28));
+}
+
+.detail {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.2;
+}
