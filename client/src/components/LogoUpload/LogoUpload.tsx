@@ -14,6 +14,7 @@ interface Props {
   autoFocus?: boolean;
   /** `'square'` (default) for logos; `'circle'` for player photos. */
   shape?: 'square' | 'circle';
+  align?: 'center' | 'start';
   accept?: string;
   hint?: string;
 }
@@ -27,6 +28,7 @@ const LogoUpload = (props: Props) => {
     disabled,
     autoFocus,
     shape = 'square',
+    align = 'center',
     accept = 'image/*,image/svg+xml,.svg',
     hint = 'Click to browse · or paste from clipboard',
   } = props;
@@ -58,10 +60,12 @@ const LogoUpload = (props: Props) => {
       : typeof field.value === 'string'
         ? (field.value.split('/').pop()?.split('?')[0] ?? label)
         : label;
-  const displayIsIcon =
-    accept.includes('.ico') ||
-    displayName.toLowerCase().endsWith('.ico') ||
-    displayUrl.toLowerCase().split('?')[0].endsWith('.ico');
+  const displayNameLower = displayName.toLowerCase();
+  const displayUrlPath = displayUrl.split('?')[0].toLowerCase();
+  const displayIsIco =
+    displayNameLower.endsWith('.ico') ||
+    displayUrlPath.endsWith('.ico') ||
+    (field.value instanceof File && ['image/x-icon', 'image/vnd.microsoft.icon'].includes(field.value.type));
 
   useEffect(() => {
     setPreviewFailed(false);
@@ -121,11 +125,11 @@ const LogoUpload = (props: Props) => {
   }, [disabled]);
 
   return (
-    <div className={styles.logoSection}>
+    <div className={`${styles.logoSection} ${align === 'start' ? styles.logoSectionStart : ''}`}>
       {label && <span className={styles.labelText}>{label}</span>}
       {displayUrl ? (
-        <div className={styles.previewWrapper}>
-          {previewFailed || displayIsIcon ? (
+        <div className={`${styles.previewWrapper} ${isCircle ? styles.previewWrapperCircle : ''}`}>
+          {previewFailed ? (
             <div className={`${styles.logoPreview} ${styles.filePreview}`}>
               <Icon
                 name="image"
@@ -137,7 +141,7 @@ const LogoUpload = (props: Props) => {
             <img
               src={displayUrl}
               alt="Preview"
-              className={`${styles.logoPreview} ${isCircle ? styles.logoPreviewCircle : ''}`}
+              className={`${styles.logoPreview} ${isCircle ? styles.logoPreviewCircle : ''} ${displayIsIco ? styles.logoPreviewIco : ''}`}
               onError={() => setPreviewFailed(true)}
             />
           )}
@@ -146,9 +150,10 @@ const LogoUpload = (props: Props) => {
               type="button"
               variant="ghost"
               intent="neutral"
-              icon="close"
-              iconSize="0.9em"
+              icon="delete"
+              iconSize="1.5rem"
               className={styles.clearBtn}
+              aria-label="Remove image"
               onClick={handleClear}
             />
           )}

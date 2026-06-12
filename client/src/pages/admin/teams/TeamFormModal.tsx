@@ -133,18 +133,21 @@ const TeamFormModal = (props: Props) => {
             control={control}
             name="logo_dark"
             label="Dark Mode Logo"
+            align="start"
             disabled={isSubmitting}
           />
           <LogoUpload
             control={control}
             name="logo_light"
             label="Light Mode Logo"
+            align="start"
             disabled={isSubmitting}
           />
           <LogoUpload
             control={control}
             name="icon"
             label="Header Icon"
+            align="start"
             accept="image/x-icon,image/vnd.microsoft.icon,.ico"
             hint="Upload .ico"
             disabled={isSubmitting}
