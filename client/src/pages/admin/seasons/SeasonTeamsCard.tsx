@@ -10,6 +10,7 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
+import SearchField from '@/components/SearchField/SearchField';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type LeagueTeam, type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
@@ -79,32 +80,12 @@ const ManageTeamsModal = ({
         </p>
       ) : (
         <>
-          <div className={styles.teamSearch}>
-            <Icon
-              name="search"
-              size="1em"
-              className={styles.teamSearchIcon}
-            />
-            <input
-              className={styles.teamSearchInput}
-              type="text"
-              placeholder="Search teams…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            {query && (
-              <button
-                className={styles.teamSearchClear}
-                onClick={() => setQuery('')}
-                aria-label="Clear search"
-              >
-                <Icon
-                  name="close"
-                  size="0.8em"
-                />
-              </button>
-            )}
-          </div>
+          <SearchField
+            className={styles.teamSearch}
+            placeholder="Search teams…"
+            value={query}
+            onChange={setQuery}
+          />
           <ul className={styles.teamSelectList}>
             {leagueTeams
               .filter((t) => {

@@ -1,5 +1,5 @@
 import { ReactNode, useState } from 'react';
-import Icon from '../Icon/Icon';
+import SearchField from '../SearchField/SearchField';
 import styles from './SearchableList.module.scss';
 
 interface Props<T> {
@@ -46,9 +46,8 @@ function SearchableList<T>({
     onQueryChange?.(value);
   };
   const trimmed = query.trim();
-  const filtered = trimmed && !disableClientFilter
-    ? items.filter((item) => filterFn(item, trimmed))
-    : items;
+  const filtered =
+    trimmed && !disableClientFilter ? items.filter((item) => filterFn(item, trimmed)) : items;
 
   const resolveNoResults = noResultsMessage
     ? noResultsMessage(query)
@@ -57,36 +56,11 @@ function SearchableList<T>({
   return (
     <div className={className}>
       <div className={styles.toolbar}>
-        <div className={styles.search}>
-          <Icon
-            name="search"
-            size="1em"
-            className={styles.searchIcon}
-          />
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder={placeholder}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-            }}
-          />
-          {query && (
-            <button
-              className={styles.searchClear}
-              onClick={() => {
-                setQuery('');
-              }}
-              aria-label="Clear search"
-            >
-              <Icon
-                name="close"
-                size="0.8em"
-              />
-            </button>
-          )}
-        </div>
+        <SearchField
+          placeholder={placeholder}
+          value={query}
+          onChange={setQuery}
+        />
         {actions}
       </div>
 

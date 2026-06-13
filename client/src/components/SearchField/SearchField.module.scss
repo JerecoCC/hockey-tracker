@@ -1,0 +1,84 @@
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
+
+.searchField {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  padding: 0 $space-md;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  transition:
+    border-color $transition-fast,
+    opacity $transition-fast;
+
+  &:focus-within {
+    border-color: $accent;
+  }
+}
+
+.disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+
+  .input {
+    cursor: not-allowed;
+  }
+}
+
+.error {
+  border-color: $danger-light;
+}
+
+.icon {
+  flex-shrink: 0;
+  color: $text-dim;
+  pointer-events: none;
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: $font-base;
+  font-family: inherit;
+  color: $text-body;
+
+  &::placeholder {
+    color: $text-dim;
+  }
+
+  &::-webkit-search-cancel-button {
+    display: none;
+  }
+}
+
+.clear {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: $radius-sm;
+  padding: 0;
+  background: transparent;
+  color: $text-dim;
+  cursor: pointer;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+
+  &:hover {
+    color: $text-body;
+    background: rgba(255, 255, 255, 0.08);
+  }
+}

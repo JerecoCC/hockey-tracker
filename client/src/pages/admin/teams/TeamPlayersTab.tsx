@@ -3,10 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Icon from '@/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import SearchField from '@/components/SearchField/SearchField';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import useSeasons from '@/hooks/useSeasons';
@@ -271,33 +271,12 @@ const TeamPlayersTab = ({
         }
       >
         <div className={styles.rosterToolbar}>
-          <div className={styles.rosterSearch}>
-            <Icon
-              name="search"
-              size="1em"
-              className={styles.rosterSearchIcon}
-            />
-            <input
-              className={styles.rosterSearchInput}
-              type="text"
-              placeholder={isProspectsView ? 'Search prospects...' : 'Search players...'}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            {query && (
-              <button
-                type="button"
-                className={styles.rosterSearchClear}
-                onClick={() => setQuery('')}
-                aria-label="Clear search"
-              >
-                <Icon
-                  name="close"
-                  size="0.8em"
-                />
-              </button>
-            )}
-          </div>
+          <SearchField
+            className={styles.rosterSearch}
+            placeholder={isProspectsView ? 'Search prospects...' : 'Search players...'}
+            value={query}
+            onChange={setQuery}
+          />
           {leagueSeasons.length > 0 && (
             <SeasonSelect
               value={selectedSeasonId}

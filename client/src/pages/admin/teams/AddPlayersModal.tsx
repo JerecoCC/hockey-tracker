@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
-import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
+import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
@@ -139,21 +139,13 @@ const AddPlayersModal = ({
       }
     >
       <div className={styles.controls}>
-        <div className={styles.searchWrap}>
-          <Icon
-            name="search"
-            size="1em"
-            className={styles.searchIcon}
-          />
-          <input
-            className={styles.searchInput}
-            type="text"
-            placeholder="Search players…"
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            autoFocus
-          />
-        </div>
+        <SearchField
+          className={styles.searchWrap}
+          placeholder="Search players…"
+          value={query}
+          onChange={setQuery}
+          autoFocus
+        />
       </div>
 
       {filtered.length === 0 ? (

@@ -13,6 +13,7 @@ import cn from 'classnames';
 import DatePicker from '../DatePicker/DatePicker';
 import TimePicker from '../TimePicker/TimePicker';
 import Select, { SelectOption } from '../Select/Select';
+import SearchField from '../SearchField/SearchField';
 import styles from './Field.module.scss';
 
 type BaseProps = {
@@ -217,6 +218,7 @@ const Field = (props: FieldProps) => {
               control: _c,
               name: _n,
               rules: _ru,
+              type: _t,
               transform,
               suffix,
               className,
@@ -230,6 +232,21 @@ const Field = (props: FieldProps) => {
               field.onBlur();
               rest.onBlur?.(e);
             };
+            if (props.type === 'search') {
+              return (
+                <SearchField
+                  className={className}
+                  error={hasError}
+                  required={required}
+                  {...rest}
+                  value={(field.value as string) ?? ''}
+                  onChange={(value) => {
+                    field.onChange(transform ? transform(value) : value);
+                  }}
+                  onBlur={onBlur}
+                />
+              );
+            }
             const isPassword = props.type === 'password';
             const hasSuffix = !isPassword && !!suffix;
             const input = (
@@ -242,7 +259,7 @@ const Field = (props: FieldProps) => {
                 )}
                 required={required}
                 {...rest}
-                type={isPassword ? (showPassword ? 'text' : 'password') : rest.type}
+                type={isPassword ? (showPassword ? 'text' : 'password') : props.type}
                 value={(field.value as string) ?? ''}
                 onChange={onChange}
                 onBlur={onBlur}
