@@ -108,7 +108,7 @@
   justify-content: center;
   border: 1px solid $border;
   border-radius: $radius-sm;
-  font-size: var(--list-item-jersey-font-size, #{$font-xs});
+  font-size: var(--list-item-jersey-font-size, 1rem);
   font-weight: 700;
   color: $text-body;
   background: rgba(255, 255, 255, 0.04);

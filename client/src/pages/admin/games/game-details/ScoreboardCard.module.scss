@@ -1,49 +1,51 @@
 @use 'styles/colors' as *;
 @use 'styles/mixins' as *;
 
+$scoreboard-stripe-width: 64px;
+$scoreboard-stripe-gap: $space-md;
+$scoreboard-logo-delay: 0.12s;
+$scoreboard-logo-duration: 0.36s;
+$scoreboard-stripe-duration: 0.42s;
+$scoreboard-stripe-overlap: 8px;
+
 // ── Scoreboard card ────────────────────────────────────────────────────────────
 // Default: normal in-place card appearance.
 .scoreboardCard {
+  --scoreboard-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
+  --scoreboard-main-inline-padding-offset: var(
+    --main-inline-padding-offset,
+    -#{$space-4xl}
+  );
+
+  position: sticky;
+  top: 52px;
+  z-index: 4;
+  width: 100%;
   overflow: hidden;
+  margin-inline: 0;
   margin-bottom: $space-lg;
-}
+  transition:
+    border-color $transition-layout ease,
+    border-radius $transition-layout ease,
+    box-shadow $transition-layout ease,
+    margin-inline $transition-layout ease,
+    width $transition-layout ease;
 
-// Entrance animation: card slides down from just above its final position and
-// fades in. Fires automatically on mount since the card is re-portaled each
-// time it becomes stuck.
-@keyframes scoreboardSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-40%);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-// Team-colour backgrounds fade in separately so they don't flash on mount.
-@keyframes scoreboardBgFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+  @media (max-width: $bp-tablet) {
+    position: static;
+    top: auto;
+    z-index: auto;
   }
 }
 
-// Stuck: card is portaled to the layout slot (outside <main>), so it is
-// full-width. Apply edge-to-edge styling only in this state.
 .scoreboardCardStuck {
+  width: calc(
+    100% + var(--scoreboard-main-inline-padding) + var(--scoreboard-main-inline-padding)
+  );
+  margin-inline: var(--scoreboard-main-inline-padding-offset);
   border-radius: 0 !important;
-  border-left: none !important;
-  border-right: none !important;
-  border-top: none !important;
-  margin-bottom: 0;
-  // Shadow separates the pinned card from content scrolling beneath it
+  border-color: transparent !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-  // Slide + fade entrance
-  animation: scoreboardSlideIn 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
 }
 
 .scoreboard {
@@ -62,15 +64,33 @@
 
 // ── Team sides (away = left, home = right) ─────────────────────────────────────
 .teamSide {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   gap: $space-md;
   flex: 1;
   min-width: 0;
   padding: $space-lg 0;
+  overflow: hidden;
+  transition: opacity $transition-fast ease;
+
+  > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  &::before {
+    content: '';
+    display: none;
+    position: absolute;
+    inset: 0 calc(100% - #{$scoreboard-stripe-overlap}) 0 0;
+    z-index: 0;
+    background-color: var(--team-primary);
+    transition: right $scoreboard-stripe-duration ease;
+  }
 
   @media (max-width: 900px) {
-    position: relative;
     order: 0;
     padding: $space-md calc(#{$space-md} + 52px) $space-md $space-lg;
     width: 100%;
@@ -98,34 +118,57 @@
   }
 }
 
-// On desktop, when the card is stuck (portaled full-width), apply team colour
-// backgrounds and stretch the logo buttons edge-to-edge.
+// On desktop, when the card is stuck, apply team colour backgrounds and stretch
+// the logo buttons edge-to-edge.
 @media (min-width: 901px) {
-  .scoreboardCardStuck .teamSide {
-    background: var(--team-primary);
+  .teamSide::before {
+    display: block;
+  }
+
+  .scoreboardCardStuck .teamSide::before {
+    right: calc(#{$scoreboard-stripe-width} - #{$scoreboard-stripe-overlap});
     // Slant the inner edge of the background to match the stripe's diagonal.
     // Away panel: right edge tapers from (100% - 20px) at the top to 100% at
     // the bottom — same angular direction as the away stripe clip-path.
-    clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 100%, 0 100%);
-    // Stagger the colour fill slightly behind the slide so it feels like the
-    // card "opens up" rather than flashing colour on entry.
-    animation: scoreboardBgFadeIn 0.3s 0.08s cubic-bezier(0.25, 0.46, 0.45, 0.94) both;
   }
 
   // Home panel: left edge tapers from 20px at the top to 0% at the bottom —
   // mirror of the away slant, matching the home stripe's diagonal direction.
-  .scoreboardCardStuck .teamSideHome {
-    clip-path: polygon(20px 0, 100% 0, 100% 100%, 0 100%);
+  .teamSideHome::before {
+    inset: 0 0 0 calc(100% - #{$scoreboard-stripe-overlap});
+    transition: left $scoreboard-stripe-duration ease;
+  }
+
+  .scoreboardCardStuck .teamSideHome::before {
+    right: 0;
+    left: calc(#{$scoreboard-stripe-width} - #{$scoreboard-stripe-overlap});
   }
 
   .scoreboardCardStuck .teamLogoBtn {
-    flex: 1;
+    flex-grow: 1;
+    margin-left: 0;
+    margin-right: calc(#{$scoreboard-stripe-width} + #{$scoreboard-stripe-gap});
+    transition:
+      margin-left $scoreboard-logo-duration ease $scoreboard-logo-delay,
+      margin-right $scoreboard-logo-duration ease $scoreboard-logo-delay,
+      flex-grow $scoreboard-logo-duration ease $scoreboard-logo-delay,
+      opacity $transition-fast ease;
+  }
+
+  .scoreboardCardStuck .teamLogoBtnHome {
+    margin-left: calc(#{$scoreboard-stripe-width} + #{$scoreboard-stripe-gap});
+    margin-right: 0;
   }
 
   // When stuck, move the primary stripe to the inner edge of each panel
   // (right of away, left of home) so it sits adjacent to the score center.
   .scoreboardCardStuck .teamStripe {
-    order: 1;
+    left: calc(100% - #{$scoreboard-stripe-width});
+  }
+
+  .scoreboardCardStuck .teamSideHome > .teamStripeHome {
+    right: calc(100% - #{$scoreboard-stripe-width});
+    left: auto;
   }
 }
 
@@ -134,10 +177,25 @@
   position: relative;
   align-self: stretch;
   flex-shrink: 0;
-  width: 64px;
+  width: $scoreboard-stripe-width;
   clip-path: polygon(0 0, 70% 0, 100% 100%, 0 100%);
-  opacity: 0.9;
+  opacity: 1;
   margin: -$space-lg 0;
+  transition:
+    clip-path $transition-layout ease,
+    left $scoreboard-stripe-duration ease,
+    margin $transition-layout ease,
+    opacity $transition-fast ease,
+    right $scoreboard-stripe-duration ease;
+
+  @media (min-width: 901px) {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 2;
+    margin: 0;
+  }
 
   @media (max-width: 900px) {
     clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
@@ -156,6 +214,11 @@
 
 .teamStripeHome {
   clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+  @media (min-width: 901px) {
+    right: 0;
+    left: auto;
+  }
 
   .teamStripeSecondary {
     clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
@@ -228,12 +291,19 @@
   padding: 0;
   cursor: pointer;
   border-radius: $radius-md;
+  flex: 0 1 auto;
   flex-shrink: 1;
   min-width: 0;
   display: flex;
   align-items: center;
   gap: $space-md;
-  transition: opacity 0.15s ease;
+  margin-left: calc(#{$scoreboard-stripe-width} + #{$scoreboard-stripe-gap});
+  margin-right: 0;
+  transition:
+    margin-left $scoreboard-logo-duration ease,
+    margin-right $scoreboard-logo-duration ease,
+    flex-grow $scoreboard-logo-duration ease,
+    opacity $transition-fast ease;
 
   &:hover {
     opacity: 0.75;
@@ -246,12 +316,19 @@
   @media (max-width: 900px) {
     flex: 1;
     min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
   }
 }
 
 .teamLogoBtnHome {
+  margin-left: 0;
+  margin-right: calc(#{$scoreboard-stripe-width} + #{$scoreboard-stripe-gap});
+
   @media (max-width: 900px) {
     flex-direction: row-reverse;
+    margin-left: 0;
+    margin-right: 0;
   }
 }
 
@@ -282,11 +359,17 @@
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition:
+    color $transition-layout ease,
+    text-shadow $transition-layout ease;
 }
 
 .teamPlaceName {
   font-size: $font-sm;
   color: $text-dim;
+  transition:
+    color $transition-layout ease,
+    text-shadow $transition-layout ease;
 }
 
 .teamMobileCode {

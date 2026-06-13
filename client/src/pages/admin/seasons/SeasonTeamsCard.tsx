@@ -363,6 +363,7 @@ const GroupNode = ({
             {group.teams.map((t) => (
               <ListItem
                 key={t.id}
+                className={styles.teamListItemHover}
                 image={t.logo}
                 eyebrow={t.place_name || ''}
                 name={t.team_name || t.name}
@@ -548,6 +549,7 @@ const SeasonTeamsCard = ({
                   {autoTeams.map((t) => (
                     <ListItem
                       key={t.id}
+                      className={styles.teamListItemHover}
                       image={t.logo}
                       eyebrow={t.place_name || ''}
                       name={t.team_name || t.name}

@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { Outlet } from 'react-router-dom';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
 import TitleRowContext from '@/context/TitleRowContext';
-import ScoreboardPortalContext from '@/context/ScoreboardPortalContext';
 import MobileTabsContext, { type MobileTabsState } from '@/context/MobileTabsContext';
 import BreadcrumbTitleRow from '../Breadcrumbs/BreadcrumbTitleRow';
 import Icon from '../Icon/Icon';
@@ -13,13 +12,12 @@ import styles from './UserLayout.module.scss';
 const UserLayout = () => {
   const [collapsed, setCollapsed] = useState(true);
   const [mobileOpen, setMobileOpen] = useState(false);
-  // State ref-callbacks: trigger a re-render once the div mounts so the portal
-  // target is available to all child instances.
+  // State ref-callbacks: trigger a re-render once the div mounts so portal
+  // targets are available to all child instances.
   const [titleRowContainer, setTitleRowContainer] = useState<HTMLDivElement | null>(null);
   const [mobileTitleLeftContainer, setMobileTitleLeftContainer] = useState<HTMLDivElement | null>(
     null,
   );
-  const [scoreboardContainer, setScoreboardContainer] = useState<HTMLDivElement | null>(null);
   const [mobileTabs, setMobileTabs] = useState<MobileTabsState | null>(null);
   const [breadcrumbConfig, setBreadcrumbs] = useState<BreadcrumbConfig | null>(null);
   const mobileTabsCtx = useMemo(() => ({ mobileTabs, setMobileTabs }), [mobileTabs]);
@@ -35,7 +33,6 @@ const UserLayout = () => {
   return (
     <BreadcrumbContext.Provider value={breadcrumbCtx}>
       <MobileTabsContext.Provider value={mobileTabsCtx}>
-      <ScoreboardPortalContext.Provider value={scoreboardContainer}>
         <TitleRowContext.Provider value={titleRowCtx}>
           <div className={styles.page}>
             {/* Mobile backdrop */}
@@ -73,15 +70,8 @@ const UserLayout = () => {
                 onMenuToggle={() => setMobileOpen((o) => !o)}
                 mobileTitleLeftRef={setMobileTitleLeftContainer}
               />
-              {/* Scoreboard portal slot — ScoreboardCard from game pages portals here.
-                Sits outside <main> so it is never constrained by main's max-width/padding.
-                The slot div itself is sticky so the card inherits that behaviour. */}
-              <div
-                ref={setScoreboardContainer}
-                className={styles.scoreboardSlot}
-              />
               <main className={styles.main}>
-                {/* Portal target — TitleRow from any child page renders here */}
+                {/* Portal target - TitleRow from any child page renders here */}
                 <div ref={setTitleRowContainer} />
                 <BreadcrumbTitleRow />
                 <Outlet />
@@ -89,7 +79,6 @@ const UserLayout = () => {
             </div>
           </div>
         </TitleRowContext.Provider>
-      </ScoreboardPortalContext.Provider>
       </MobileTabsContext.Provider>
     </BreadcrumbContext.Provider>
   );

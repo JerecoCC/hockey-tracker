@@ -18,7 +18,6 @@ $bg-page: #0f172a;
 .sidebarToggle {
   position: absolute;
   right: -13px;
-  // nav top-padding + half brand-row height − half button height
   top: calc(#{$space-2xl} + #{$space-3xl} / 2 - 13px);
   z-index: 20;
   width: 26px;
@@ -49,7 +48,6 @@ $bg-page: #0f172a;
   flex-direction: column;
 }
 
-// ── Mobile overlay backdrop ────────────────────────────────────────────
 .overlay {
   position: fixed;
   inset: 0;
@@ -57,9 +55,6 @@ $bg-page: #0f172a;
   background: rgba(0, 0, 0, 0.55);
 }
 
-// ── Mobile responsive ─────────────────────────────────────────────────
-// Don't use display:none — that hides position:fixed children too.
-// Instead collapse the wrapper to zero width and hide the desktop toggle.
 @media (max-width: 768px) {
   .sidebarWrapper {
     width: 0;
@@ -70,19 +65,10 @@ $bg-page: #0f172a;
   }
 }
 
-// ── Scoreboard portal slot ─────────────────────────────────────────────
-.scoreboardSlot {
-  flex-shrink: 0;
-  position: sticky;
-  top: 52px;
-  z-index: 4;
-
-  @media (max-width: 768px) {
-    top: 88px;
-  }
-}
-
 .main {
+  --main-inline-padding: #{$space-4xl};
+  --main-inline-padding-offset: -#{$space-4xl};
+
   width: 100%;
   max-width: $max-content-width;
   margin: 0 auto;
@@ -90,6 +76,9 @@ $bg-page: #0f172a;
   flex: 1;
 
   @media (max-width: 768px) {
+    --main-inline-padding: #{$space-lg};
+    --main-inline-padding-offset: -#{$space-lg};
+
     padding: $space-2xl $space-lg;
   }
 }
