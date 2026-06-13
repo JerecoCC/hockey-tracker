@@ -37,6 +37,22 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   font-style: italic;
 }
 
+.periodBody {
+  position: relative;
+  min-height: 2.75rem;
+}
+
+.periodLoadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba($bg-card, 0.88);
+  backdrop-filter: blur(1px);
+}
+
 // ── Goal list (inside period accordion) ──────────────────────────────────────
 
 .goalList {

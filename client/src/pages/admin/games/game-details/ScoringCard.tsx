@@ -7,6 +7,7 @@ import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, CurrentPeriod } from '@/hooks/useGames';
 import type { GoalRecord } from '@/hooks/useGameGoals';
@@ -35,6 +36,7 @@ interface Props {
   isInProgress: boolean;
   isEditMode?: boolean;
   busy: string | null;
+  goalSavingPeriod?: string | null;
   liveAwayScore: number;
   liveHomeScore: number;
   tallyByGoalId: Map<string, GoalTally>;
@@ -74,6 +76,7 @@ const ScoringCard = ({
   isInProgress,
   isEditMode = false,
   busy,
+  goalSavingPeriod = null,
   liveAwayScore,
   liveHomeScore,
   tallyByGoalId,
@@ -105,6 +108,24 @@ const ScoringCard = ({
 
   const sortedByTime = (gs: GoalRecord[]) =>
     [...gs].sort((a, b) => periodTimeToSecs(a.period_time) - periodTimeToSecs(b.period_time));
+
+  const renderPeriodBody = (content: React.ReactNode, showSavingOverlay: boolean) => (
+    <div
+      className={styles.periodBody}
+      aria-busy={showSavingOverlay || undefined}
+    >
+      {content}
+      {showSavingOverlay && (
+        <div className={styles.periodLoadingOverlay}>
+          <LoadingSpinner
+            message="Saving goal..."
+            layout="inline"
+            size="sm"
+          />
+        </div>
+      )}
+    </div>
+  );
 
   let awayScore: number = 0;
   let homeScore: number = 0;
@@ -276,6 +297,14 @@ const ScoringCard = ({
           const isDone = isFinal || isPostRegulation || currentIdx > idx;
           const periodGoals = sortedByTime(goals.filter((g) => g.period === periodId));
           if (isFinal && !isEditMode && periodGoals.length === 0) return null;
+          const periodContent =
+            periodGoals.length === 0 ? (
+              isActive || isDone ? (
+                <p className={styles.noGoalsText}>No goals scored.</p>
+              ) : null
+            ) : (
+              renderGoalList(periodGoals)
+            );
           return (
             <Accordion
               key={num}
@@ -351,13 +380,9 @@ const ScoringCard = ({
                   : undefined
               }
             >
-              {periodGoals.length === 0 ? (
-                isActive || isDone ? (
-                  <p className={styles.noGoalsText}>No goals scored.</p>
-                ) : null
-              ) : (
-                renderGoalList(periodGoals)
-              )}
+              {periodContent
+                ? renderPeriodBody(periodContent, goalSavingPeriod === periodId)
+                : null}
             </Accordion>
           );
         })}
@@ -385,6 +410,14 @@ const ScoringCard = ({
                 const isThisDone = isOTDone || !isLast;
                 const periodGoals = isLast ? otGoals : [];
                 if (isFinal && !isEditMode && periodGoals.length === 0) return null;
+                const periodContent =
+                  periodGoals.length === 0 ? (
+                    isThisActive || isThisDone ? (
+                      <p className={styles.noGoalsText}>No goals scored.</p>
+                    ) : null
+                  ) : (
+                    renderGoalList(periodGoals)
+                  );
                 return (
                   <Accordion
                     key={otPeriodId(otNum)}
@@ -441,13 +474,12 @@ const ScoringCard = ({
                         : undefined
                     }
                   >
-                    {periodGoals.length === 0 ? (
-                      isThisActive || isThisDone ? (
-                        <p className={styles.noGoalsText}>No goals scored.</p>
-                      ) : null
-                    ) : (
-                      renderGoalList(periodGoals)
-                    )}
+                    {periodContent
+                      ? renderPeriodBody(
+                          periodContent,
+                          isLast && goalSavingPeriod === PERIOD.OVERTIME,
+                        )
+                      : null}
                   </Accordion>
                 );
               });
@@ -455,6 +487,14 @@ const ScoringCard = ({
 
             // Regular season: single OT accordion.
             if (isFinal && !isEditMode && otGoals.length === 0) return null;
+            const otContent =
+              otGoals.length === 0 ? (
+                isOTActive || isOTDone ? (
+                  <p className={styles.noGoalsText}>No goals scored.</p>
+                ) : null
+              ) : (
+                renderGoalList(otGoals)
+              );
             return (
               <Accordion
                 ref={setAccordionRef ? setAccordionRef(PERIOD.OVERTIME) : undefined}
@@ -515,13 +555,9 @@ const ScoringCard = ({
                     : undefined
                 }
               >
-                {otGoals.length === 0 ? (
-                  isOTActive || isOTDone ? (
-                    <p className={styles.noGoalsText}>No goals scored.</p>
-                  ) : null
-                ) : (
-                  renderGoalList(otGoals)
-                )}
+                {otContent
+                  ? renderPeriodBody(otContent, goalSavingPeriod === PERIOD.OVERTIME)
+                  : null}
               </Accordion>
             );
           })()}

@@ -143,7 +143,7 @@ const RecordShotsModal = ({
     reset,
     getValues,
     watch,
-    formState: { isDirty, isValid },
+    formState: { isValid },
   } = useForm<ShotsFormValues>({
     defaultValues: { away_shots: '', home_shots: '', end_time: '' },
     mode: 'onChange',
@@ -239,7 +239,7 @@ const RecordShotsModal = ({
       confirmLabel={confirmLabel}
       confirmIcon={isEndGame ? 'star' : 'flag'}
       confirmForm="record-shots-form"
-      confirmDisabled={submitting || !isDirty || !isValid || !endTimeValid || !shootsFirstValid}
+      confirmDisabled={submitting || !isValid || !endTimeValid || !shootsFirstValid}
       busy={submitting}
     >
       <form

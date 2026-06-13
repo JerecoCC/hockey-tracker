@@ -17,7 +17,7 @@ import ScoreImageModal from '../ScoreImageModal';
 import ScoringCard from '../ScoringCard';
 import ThreeStarsCard from './ThreeStarsCard';
 import type { GameRecord, CurrentPeriod, GameStatus, UpdateGameInfoData } from '@/hooks/useGames';
-import type { GoalRecord } from '@/hooks/useGameGoals';
+import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type {
   GoalieStatRecord,
   GoalieSwitchData,
@@ -265,6 +265,7 @@ const GameSummaryTab = ({
   // ── Goal modal state ─────────────────────────────────────────────────────
   const [goalPeriod, setGoalPeriod] = useState<string | null>(null);
   const [editGoal, setEditGoal] = useState<GoalRecord | null>(null);
+  const [goalSavingPeriod, setGoalSavingPeriod] = useState<string | null>(null);
   const lastRecordedGoalId = useMemo(() => {
     const periodRank = (period: string) => {
       if (period === PERIOD.FIRST) return 1;
@@ -419,6 +420,30 @@ const GameSummaryTab = ({
     setEditGoal(null);
   };
 
+  const handleAddGoal = useCallback(
+    async (data: PostGoalData) => {
+      setGoalSavingPeriod(data.period);
+      try {
+        return await addGoal(data);
+      } finally {
+        setGoalSavingPeriod(null);
+      }
+    },
+    [addGoal],
+  );
+
+  const handleUpdateGoal = useCallback(
+    async (goalId: string, data: PostGoalData) => {
+      setGoalSavingPeriod(data.period);
+      try {
+        return await updateGoal(goalId, data);
+      } finally {
+        setGoalSavingPeriod(null);
+      }
+    },
+    [updateGoal],
+  );
+
   const focusCurrentPeriodAction = useCallback(() => {
     if (!game?.current_period) return;
     const accordionEl = periodAccordionRefs.current.get(game.current_period);
@@ -508,6 +533,7 @@ const GameSummaryTab = ({
               isInProgress={isEditInProgress}
               isEditMode={isEditMode}
               busy={busy}
+              goalSavingPeriod={goalSavingPeriod}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}
               tallyByGoalId={tallyByGoalId}
@@ -753,11 +779,11 @@ const GameSummaryTab = ({
           goals={goals}
           awayRoster={awayRoster}
           homeRoster={homeRoster}
-          busy={!!busy}
+          busy={!!busy || !!goalSavingPeriod}
           lockTimingFields={lockGoalTimingFields}
           onClose={closeGoalModal}
-          onAdd={addGoal}
-          onUpdate={updateGoal}
+          onAdd={handleAddGoal}
+          onUpdate={handleUpdateGoal}
         />
       )}
 
