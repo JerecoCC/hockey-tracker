@@ -231,6 +231,7 @@ const GameLineupsTab = ({
                 className={styles.lineupPlayerItem}
                 image={e.photo}
                 image_shape="circle"
+                hideImage
                 primaryColor={primaryColor}
                 textColor={textColor}
                 jerseyNumber={e.jersey_number ?? null}

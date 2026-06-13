@@ -383,6 +383,7 @@
 .lineupPlayerItem {
   --list-item-logo-size: 32px;
   --list-item-jersey-size: 32px;
+  --list-item-jersey-font-size: #{$font-base};
 
   padding: $space-sm $space-md;
   border: 0;
