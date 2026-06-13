@@ -147,6 +147,37 @@ const GameLineupsTab = ({
         readOnly || (isFinal && !isEditMode)
           ? []
           : [
+              ...(rosterEntries.length < 23
+                ? [
+                    {
+                      icon: 'person_edit',
+                      tooltip: 'Create Player',
+                      intent: 'neutral' as const,
+                      onClick: () => setLineupCreateTeam(side),
+                    },
+                  ]
+                : []),
+              ...(rosterEntries.length > 0
+                ? [
+                    {
+                      icon: 'set_lineup',
+                      tooltip: 'Set Starting Lineup',
+                      intent: 'accent' as const,
+                      onClick: () => setLineupSetTeam(side),
+                    },
+                  ]
+                : []),
+              ...(rosterEntries.length < 23
+                ? [
+                    {
+                      icon: 'group_add',
+                      tooltip: 'Add from Season Roster',
+                      variant: 'filled' as const,
+                      intent: 'accent' as const,
+                      onClick: () => setLineupAddTeam(side),
+                    },
+                  ]
+                : []),
               ...(inheritedEntries.length > 0 && rosterEntries.length === 0
                 ? [
                     {
@@ -163,32 +194,6 @@ const GameLineupsTab = ({
                         );
                         setAutoFillBusy((prev) => ({ ...prev, [side]: false }));
                       },
-                    },
-                  ]
-                : []),
-              ...(rosterEntries.length > 0
-                ? [
-                    {
-                      icon: 'set_lineup',
-                      tooltip: 'Set Starting Lineup',
-                      intent: 'info' as const,
-                      onClick: () => setLineupSetTeam(side),
-                    },
-                  ]
-                : []),
-              ...(rosterEntries.length < 23
-                ? [
-                    {
-                      icon: 'group_add',
-                      tooltip: 'Add from Season Roster',
-                      intent: 'neutral' as const,
-                      onClick: () => setLineupAddTeam(side),
-                    },
-                    {
-                      icon: 'person_edit',
-                      tooltip: 'Create Player',
-                      intent: 'neutral' as const,
-                      onClick: () => setLineupCreateTeam(side),
                     },
                   ]
                 : []),
@@ -223,9 +228,12 @@ const GameLineupsTab = ({
             return (
               <ListItem
                 key={e.id}
-                image_shape="square"
+                className={styles.lineupPlayerItem}
+                image={e.photo}
+                image_shape="circle"
                 primaryColor={primaryColor}
                 textColor={textColor}
+                jerseyNumber={e.jersey_number ?? null}
                 subtitle={positionPart}
                 name={`${e.last_name}, ${e.first_name} ${playerDataComplete(
                   e.date_of_birth,
@@ -233,11 +241,7 @@ const GameLineupsTab = ({
                   e.acquisition_type,
                   showPlayerDataStatus,
                 )}`}
-                placeholder={
-                  e.jersey_number != null
-                    ? String(e.jersey_number)
-                    : `${e.first_name[0]}${e.last_name[0]}`
-                }
+                placeholder={`${e.first_name[0]}${e.last_name[0]}`}
                 href={playerHrefBuilder?.(e.team_id, e.player_id, e.first_name, e.last_name)}
                 rightContent={
                   showStarterTag

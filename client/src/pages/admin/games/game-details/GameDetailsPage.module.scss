@@ -377,7 +377,20 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: 0;
+}
+
+.lineupPlayerItem {
+  --list-item-logo-size: 32px;
+  --list-item-jersey-size: 32px;
+
+  padding: $space-sm $space-md;
+  border: 0;
+  background: transparent;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
 }
 
 // ── Starting lineup slot grid ──────────────────────────────────────────────────
