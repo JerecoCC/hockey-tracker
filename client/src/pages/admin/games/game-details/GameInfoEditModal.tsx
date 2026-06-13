@@ -206,12 +206,14 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
               type="timepicker"
               control={control}
               name="time_start"
+              disabled={isSubmitting || disabled}
             />
             <Field
               label="End Time"
               type="timepicker"
               control={control}
               name="time_end"
+              disabled={isSubmitting || disabled}
             />
           </>
         )}

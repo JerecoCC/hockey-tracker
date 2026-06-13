@@ -1,5 +1,6 @@
 import { useEffect } from 'react';
 import Button from '../Button/Button';
+import { lockBackgroundScroll, unlockBackgroundScroll } from '../Modal/backgroundScrollLock';
 import styles from './ImagePreviewModal.module.scss';
 
 interface Props {
@@ -19,6 +20,12 @@ const ImagePreviewModal = ({ open, src, alt = '', onClose }: Props) => {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
+
+  useEffect(() => {
+    if (!open || !src) return;
+    lockBackgroundScroll();
+    return () => unlockBackgroundScroll();
+  }, [open, src]);
 
   if (!open || !src) return null;
 

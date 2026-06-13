@@ -8,6 +8,13 @@ const defaultProps = {
   onClose: jest.fn(),
 };
 
+beforeAll(() => {
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  });
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 describe('ImagePreviewModal', () => {
@@ -46,6 +53,26 @@ describe('ImagePreviewModal', () => {
     const img = screen.getByAltText('Test photo') as HTMLImageElement;
     expect(img).toBeInTheDocument();
     expect(img.src).toBe('https://example.com/photo.jpg');
+  });
+
+  it('locks page scroll while open', () => {
+    const scrollTarget = document.createElement('div');
+    scrollTarget.dataset.appScrollLockTarget = 'true';
+    scrollTarget.style.overflow = 'auto';
+    document.body.appendChild(scrollTarget);
+
+    const { unmount } = render(<ImagePreviewModal {...defaultProps} />);
+
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(document.body.style.position).toBe('fixed');
+    expect(scrollTarget.style.overflow).toBe('hidden');
+
+    unmount();
+
+    expect(document.documentElement.style.overflow).toBe('');
+    expect(document.body.style.position).toBe('');
+    expect(scrollTarget.style.overflow).toBe('auto');
+    scrollTarget.remove();
   });
 
   it('uses an empty alt by default', () => {

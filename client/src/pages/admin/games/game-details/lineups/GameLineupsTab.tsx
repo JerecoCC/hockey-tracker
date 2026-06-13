@@ -147,6 +147,25 @@ const GameLineupsTab = ({
         readOnly || (isFinal && !isEditMode)
           ? []
           : [
+              ...(inheritedEntries.length > 0 && rosterEntries.length === 0
+                ? [
+                    {
+                      icon: 'clone',
+                      tooltip: 'Auto-fill from Last Game',
+                      intent: 'neutral' as const,
+                      disabled: autoFillBusy[side],
+                      onClick: async () => {
+                        const teamId = side === 'away' ? game.away_team.id : game.home_team.id;
+                        setAutoFillBusy((prev) => ({ ...prev, [side]: true }));
+                        await addToRoster(
+                          teamId,
+                          inheritedEntries.map((e) => e.player_id),
+                        );
+                        setAutoFillBusy((prev) => ({ ...prev, [side]: false }));
+                      },
+                    },
+                  ]
+                : []),
               ...(rosterEntries.length < 23
                 ? [
                     {
@@ -175,25 +194,6 @@ const GameLineupsTab = ({
                       variant: 'filled' as const,
                       intent: 'accent' as const,
                       onClick: () => setLineupAddTeam(side),
-                    },
-                  ]
-                : []),
-              ...(inheritedEntries.length > 0 && rosterEntries.length === 0
-                ? [
-                    {
-                      icon: 'clone',
-                      tooltip: 'Auto-fill from Last Game',
-                      intent: 'accent' as const,
-                      disabled: autoFillBusy[side],
-                      onClick: async () => {
-                        const teamId = side === 'away' ? game.away_team.id : game.home_team.id;
-                        setAutoFillBusy((prev) => ({ ...prev, [side]: true }));
-                        await addToRoster(
-                          teamId,
-                          inheritedEntries.map((e) => e.player_id),
-                        );
-                        setAutoFillBusy((prev) => ({ ...prev, [side]: false }));
-                      },
                     },
                   ]
                 : []),

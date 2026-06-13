@@ -22,6 +22,10 @@ beforeAll(() => {
       dispatchEvent: jest.fn(),
     })),
   });
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  });
 });
 
 beforeEach(() => jest.clearAllMocks());
@@ -46,6 +50,59 @@ describe('Modal', () => {
   it('renders children when open is true', () => {
     render(<Modal {...defaultProps} />);
     expect(screen.getByText('Modal body content')).toBeInTheDocument();
+  });
+
+  it('locks page and app scroll targets while open', () => {
+    const scrollTarget = document.createElement('div');
+    scrollTarget.dataset.appScrollLockTarget = 'true';
+    scrollTarget.style.overflow = 'auto';
+    scrollTarget.style.touchAction = 'pan-y';
+    scrollTarget.style.overscrollBehavior = 'contain';
+    document.body.appendChild(scrollTarget);
+
+    const { unmount } = render(<Modal {...defaultProps} />);
+
+    expect(document.documentElement.style.overflow).toBe('hidden');
+    expect(document.documentElement.style.overscrollBehavior).toBe('none');
+    expect(document.body.style.position).toBe('fixed');
+    expect(document.body.style.overflow).toBe('hidden');
+    expect(scrollTarget.style.overflow).toBe('hidden');
+    expect(scrollTarget.style.touchAction).toBe('none');
+    expect(scrollTarget.style.overscrollBehavior).toBe('none');
+
+    unmount();
+
+    expect(document.documentElement.style.overflow).toBe('');
+    expect(document.documentElement.style.overscrollBehavior).toBe('');
+    expect(document.body.style.position).toBe('');
+    expect(document.body.style.overflow).toBe('');
+    expect(scrollTarget.style.overflow).toBe('auto');
+    expect(scrollTarget.style.touchAction).toBe('pan-y');
+    expect(scrollTarget.style.overscrollBehavior).toBe('contain');
+    scrollTarget.remove();
+  });
+
+  it('keeps the background locked until every open modal unmounts', () => {
+    const firstModal = render(
+      <Modal
+        {...defaultProps}
+        title="First Modal"
+      />,
+    );
+    const secondModal = render(
+      <Modal
+        {...defaultProps}
+        title="Second Modal"
+      />,
+    );
+
+    expect(document.body.style.position).toBe('fixed');
+
+    firstModal.unmount();
+    expect(document.body.style.position).toBe('fixed');
+
+    secondModal.unmount();
+    expect(document.body.style.position).toBe('');
   });
 
   it('calls onClose when the overlay backdrop is clicked', () => {

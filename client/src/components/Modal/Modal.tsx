@@ -1,77 +1,11 @@
 import { ReactNode, useEffect, useState } from 'react';
 import Button from '../Button/Button';
 import type { ButtonIntent } from '../Button/Button';
+import { lockBackgroundScroll, unlockBackgroundScroll } from './backgroundScrollLock';
 import styles from './Modal.module.scss';
 
 // Must match the CSS animation duration for slideDownSheet
 const SHEET_DURATION_MS = 220;
-
-let mobileScrollLockCount = 0;
-let lockedScrollY = 0;
-const scrollLockTargets = new WeakMap<
-  HTMLElement,
-  { overflow: string; touchAction: string; overscrollBehavior: string }
->();
-
-const getAppScrollLockTargets = () =>
-  Array.from(document.querySelectorAll<HTMLElement>('[data-app-scroll-lock-target="true"]'));
-
-const lockMobileBackgroundScroll = () => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  if (mobileScrollLockCount === 0) {
-    lockedScrollY = window.scrollY;
-    document.documentElement.style.overflow = 'hidden';
-    document.documentElement.style.overscrollBehavior = 'none';
-    document.body.style.position = 'fixed';
-    document.body.style.top = `-${lockedScrollY}px`;
-    document.body.style.left = '0';
-    document.body.style.right = '0';
-    document.body.style.width = '100%';
-    document.body.style.overflow = 'hidden';
-    document.body.style.touchAction = 'none';
-    document.body.style.overscrollBehavior = 'none';
-
-    for (const el of getAppScrollLockTargets()) {
-      scrollLockTargets.set(el, {
-        overflow: el.style.overflow,
-        touchAction: el.style.touchAction,
-        overscrollBehavior: el.style.overscrollBehavior,
-      });
-      el.style.overflow = 'hidden';
-      el.style.touchAction = 'none';
-      el.style.overscrollBehavior = 'none';
-    }
-  }
-  mobileScrollLockCount += 1;
-};
-
-const unlockMobileBackgroundScroll = () => {
-  if (typeof window === 'undefined' || typeof document === 'undefined') return;
-  if (mobileScrollLockCount === 0) return;
-  mobileScrollLockCount -= 1;
-  if (mobileScrollLockCount === 0) {
-    document.documentElement.style.overflow = '';
-    document.documentElement.style.overscrollBehavior = '';
-    document.body.style.position = '';
-    document.body.style.top = '';
-    document.body.style.left = '';
-    document.body.style.right = '';
-    document.body.style.width = '';
-    document.body.style.overflow = '';
-    document.body.style.touchAction = '';
-    document.body.style.overscrollBehavior = '';
-
-    for (const el of getAppScrollLockTargets()) {
-      const prev = scrollLockTargets.get(el);
-      el.style.overflow = prev?.overflow ?? '';
-      el.style.touchAction = prev?.touchAction ?? '';
-      el.style.overscrollBehavior = prev?.overscrollBehavior ?? '';
-      scrollLockTargets.delete(el);
-    }
-
-    window.scrollTo(0, lockedScrollY);
-  }
-};
 
 interface Props {
   open: boolean;
@@ -135,14 +69,10 @@ const Modal = (props: Props) => {
   const [isClosing, setIsClosing] = useState(false);
 
   useEffect(() => {
-    const isMobile =
-      typeof window !== 'undefined' &&
-      typeof window.matchMedia === 'function' &&
-      window.matchMedia('(max-width: 768px)').matches;
-    const shouldLock = (open || isClosing) && isMobile;
+    const shouldLock = open || isClosing;
     if (!shouldLock) return;
-    lockMobileBackgroundScroll();
-    return () => unlockMobileBackgroundScroll();
+    lockBackgroundScroll();
+    return () => unlockBackgroundScroll();
   }, [open, isClosing]);
 
   if (!open && !isClosing) return null;
