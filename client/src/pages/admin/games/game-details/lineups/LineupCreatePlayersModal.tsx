@@ -194,6 +194,7 @@ const LineupCreatePlayersModal = ({
         { label: 'First Name', required: true },
         { label: 'Last Name', required: true },
       ]}
+      requiredRowFields={['position', 'first_name', 'last_name']}
       addRowLabel="Add Player"
       addRowDisabled={
         allowRosterOverflow ? undefined : ({ rowCount }) => rowCount >= MAX_ROSTER - existingCount

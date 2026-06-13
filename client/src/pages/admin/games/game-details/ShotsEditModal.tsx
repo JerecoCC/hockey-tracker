@@ -58,8 +58,14 @@ const ShotsEditModal = ({
     }),
     [game.period_shots, periods],
   );
-  const { control, reset, getValues } = useForm<ShotsEditFormValues>({
+  const {
+    control,
+    reset,
+    getValues,
+    formState: { isDirty, isValid },
+  } = useForm<ShotsEditFormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
   const { fields } = useFieldArray({ control, name: 'periods' });
 
@@ -144,7 +150,7 @@ const ShotsEditModal = ({
       onClose={handleClose}
       confirmLabel={submitting ? 'Saving…' : 'Save'}
       onConfirm={handleConfirm}
-      confirmDisabled={submitting}
+      confirmDisabled={submitting || !isDirty || !isValid}
       busy={submitting}
     >
       <table className={`${styles.periodsTable} ${styles.shotsEditTable}`}>

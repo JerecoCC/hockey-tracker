@@ -25,9 +25,10 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -52,7 +53,7 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
       confirmLabel={isSubmitting || busy ? 'Saving…' : 'End Season'}
       confirmForm="season-end-form"
       confirmIntent="danger"
-      confirmDisabled={isSubmitting || busy}
+      confirmDisabled={isSubmitting || busy || !isDirty || !isValid}
       busy={isSubmitting || busy}
     >
       <form
@@ -67,6 +68,7 @@ const SeasonEndModal = ({ open, currentEndDate, busy, onClose, onConfirm }: Prop
           name="end_date"
           rules={{ required: 'End date is required' }}
           placeholder="Select end date…"
+          required
           autoFocus
         />
       </form>

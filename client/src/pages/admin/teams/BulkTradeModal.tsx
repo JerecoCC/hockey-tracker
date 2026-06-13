@@ -129,6 +129,8 @@ const BulkTradeModal = ({
       createRow={() => ({ ...EMPTY_ROW })}
       columnsTemplate="6rem 1fr"
       headerCells={[{ label: 'Jersey #' }, { label: 'Player', required: true }]}
+      requiredRowFields={['player_id']}
+      requiredFormFields={['to_team_id', 'trade_date']}
       addRowLabel="Add Player"
       addRowDisabled={({ rowCount }) => players.length === 0 || rowCount >= players.length}
       itemLabel="player"

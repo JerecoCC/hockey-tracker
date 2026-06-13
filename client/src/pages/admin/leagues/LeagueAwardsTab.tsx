@@ -83,7 +83,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [editTarget, setEditTarget] = useState<LeagueAwardRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LeagueAwardRecord | null>(null);
-  const form = useForm<FormValues>({ defaultValues: emptyValues });
+  const form = useForm<FormValues>({ defaultValues: emptyValues, mode: 'onChange' });
 
   const openCreate = () => {
     setEditTarget(null);
@@ -186,8 +186,14 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
         title={editTarget ? 'Edit Award Definition' : 'New Award Definition'}
         onClose={closeModal}
         confirmForm="league-award-form"
-        confirmLabel={editTarget ? 'Save Changes' : 'Create Award'}
+        confirmLabel={
+          form.formState.isSubmitting ? 'Savingâ€¦' : editTarget ? 'Save Changes' : 'Create Award'
+        }
         confirmIcon="save"
+        confirmDisabled={
+          form.formState.isSubmitting || !form.formState.isDirty || !form.formState.isValid
+        }
+        busy={form.formState.isSubmitting}
       >
         <form
           id="league-award-form"
@@ -244,7 +250,12 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             <input
               type="checkbox"
               checked={form.watch('awarded_after_playoffs')}
-              onChange={(e) => form.setValue('awarded_after_playoffs', e.target.checked)}
+              onChange={(e) =>
+                form.setValue('awarded_after_playoffs', e.target.checked, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
             />
             <span>Awarded after playoffs</span>
           </label>

@@ -43,9 +43,10 @@ const ChangeJerseyModal = ({ open, stint, history, onClose, changeJerseyNumber }
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -74,7 +75,7 @@ const ChangeJerseyModal = ({ open, stint, history, onClose, changeJerseyNumber }
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save'}
       confirmForm="change-jersey-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

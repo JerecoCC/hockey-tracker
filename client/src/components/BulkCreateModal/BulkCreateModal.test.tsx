@@ -35,6 +35,7 @@ const renderModal = (overrides?: {
       formId="bulk-create-test-form"
       columnsTemplate="1fr"
       headerCells={[{ label: 'Name', required: true }]}
+      requiredRowFields={['name']}
       addRowLabel="Add Row"
       itemLabel="row"
       getConfirmLabel={(count, isSubmitting) =>
@@ -125,6 +126,7 @@ describe('BulkCreateModal', () => {
           formId="bulk-create-test-form"
           columnsTemplate="1fr"
           headerCells={[{ label: 'Name', required: true }]}
+          requiredRowFields={['name']}
           addRowLabel="Add Row"
           itemLabel="row"
           getConfirmLabel={(count, isSubmitting) =>

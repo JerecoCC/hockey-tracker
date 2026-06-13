@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select from '@/components/Select/Select';
@@ -26,6 +27,12 @@ interface Props {
   onUpdate: (id: string, payload: PutAttemptData) => Promise<unknown>;
 }
 
+type FormValues = {
+  team: 'away' | 'home';
+  shooterId: string;
+  scored: '' | 'goal' | 'miss';
+};
+
 const ShootoutAttemptModal = ({
   mode,
   initialTeam,
@@ -40,18 +47,31 @@ const ShootoutAttemptModal = ({
   onUpdate,
 }: Props) => {
   const isEditMode = mode !== null && mode !== 'add';
-  const [team, setTeam] = useState<'away' | 'home'>(initialTeam);
-  const [shooterId, setShooterId] = useState(initialShooterId);
-  const [scored, setScored] = useState<boolean | null>(initialScored);
-  const [submitting, setSubmitting] = useState(false);
+  const formValues = useMemo<FormValues>(
+    () => ({
+      team: initialTeam,
+      shooterId: initialShooterId,
+      scored: initialScored == null ? '' : initialScored ? 'goal' : 'miss',
+    }),
+    [initialTeam, initialShooterId, initialScored],
+  );
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { isSubmitting, isDirty, isValid },
+  } = useForm<FormValues>({
+    defaultValues: formValues,
+    mode: 'onChange',
+  });
 
   useEffect(() => {
-    if (mode !== null) {
-      setTeam(initialTeam);
-      setShooterId(initialShooterId);
-      setScored(initialScored);
-    }
-  }, [mode, initialTeam, initialShooterId, initialScored]);
+    if (mode !== null) reset(formValues);
+  }, [mode, formValues, reset]);
+
+  const team = watch('team');
 
   const attemptRoster = (team === 'away' ? awayRoster : homeRoster).filter(
     (e) => e.position !== 'G',
@@ -111,70 +131,87 @@ const ShootoutAttemptModal = ({
     },
   ];
 
-  const handleConfirm = async () => {
-    const teamId = team === 'away' ? game.away_team.id : game.home_team.id;
-    setSubmitting(true);
-    try {
-      if (isEditMode) {
-        await onUpdate(mode as string, {
-          team_id: teamId,
-          shooter_id: shooterId,
-          scored: scored ?? false,
-        });
-      } else {
-        await onAdd({ team_id: teamId, shooter_id: shooterId, scored: scored ?? false });
-      }
-      onClose();
-    } finally {
-      setSubmitting(false);
+  const handleConfirm = handleSubmit(async (values) => {
+    const teamId = values.team === 'away' ? game.away_team.id : game.home_team.id;
+    const payload = {
+      team_id: teamId,
+      shooter_id: values.shooterId,
+      scored: values.scored === 'goal',
+    };
+    if (isEditMode) {
+      await onUpdate(mode as string, payload);
+    } else {
+      await onAdd(payload);
     }
-  };
+    onClose();
+  });
 
   return (
     <Modal
       open={mode !== null}
       title={isEditMode ? 'Edit Attempt' : `Add Attempt — ${attemptTeamName}`}
       onClose={onClose}
-      confirmLabel={submitting ? 'Saving…' : isEditMode ? 'Save Changes' : 'Record Attempt'}
-      confirmDisabled={busy || submitting || !shooterId || scored === null}
-      busy={submitting}
+      confirmLabel={isSubmitting ? 'Saving…' : isEditMode ? 'Save Changes' : 'Record Attempt'}
+      confirmDisabled={busy || isSubmitting || !isDirty || !isValid}
+      busy={isSubmitting}
       onConfirm={handleConfirm}
     >
       <div className={styles.goalForm}>
         {isEditMode && (
-          <SegmentedControl
-            value={team}
-            onChange={(v) => {
-              setTeam(v as 'away' | 'home');
-              setShooterId('');
-            }}
-            options={teamOptions}
-            disabled={submitting}
+          <Controller
+            control={control}
+            name="team"
+            rules={{ required: 'Team is required' }}
+            render={({ field }) => (
+              <SegmentedControl
+                value={field.value}
+                onChange={(v) => {
+                  field.onChange(v as 'away' | 'home');
+                  setValue('shooterId', '', { shouldDirty: true, shouldValidate: true });
+                }}
+                options={teamOptions}
+                disabled={isSubmitting}
+              />
+            )}
           />
         )}
         <div className={styles.goalFormField}>
           <label className={styles.goalFormLabel}>
             Shooter <span className={styles.required}>*</span>
           </label>
-          <Select
-            options={shooterOptions}
-            value={shooterId}
-            onChange={setShooterId}
-            placeholder="Select shooter…"
-            searchable
-            autoFocus
-            disabled={submitting}
+          <Controller
+            control={control}
+            name="shooterId"
+            rules={{ required: 'Shooter is required' }}
+            render={({ field }) => (
+              <Select
+                options={shooterOptions}
+                value={field.value || null}
+                onChange={(value) => field.onChange(value ?? '')}
+                placeholder="Select shooter…"
+                searchable
+                autoFocus
+                disabled={isSubmitting}
+              />
+            )}
           />
         </div>
         <div className={styles.goalFormField}>
           <label className={styles.goalFormLabel}>
             Result <span className={styles.required}>*</span>
           </label>
-          <SegmentedControl
-            value={scored === null ? null : scored ? 'goal' : 'miss'}
-            onChange={(v) => setScored(v === 'goal')}
-            options={resultOptions}
-            disabled={submitting}
+          <Controller
+            control={control}
+            name="scored"
+            rules={{ required: 'Result is required' }}
+            render={({ field }) => (
+              <SegmentedControl
+                value={field.value || null}
+                onChange={(v) => field.onChange(v as FormValues['scored'])}
+                options={resultOptions}
+                disabled={isSubmitting}
+              />
+            )}
           />
         </div>
       </div>

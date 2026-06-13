@@ -63,6 +63,8 @@ interface Props<FormValues extends FieldValues, RowValues extends FieldValues> {
   disableBackdropClose?: boolean;
   confirmIcon?: string;
   confirmDisabled?: boolean | ((ctx: BulkCreateModalContext<FormValues, RowValues>) => boolean);
+  requiredRowFields?: Array<keyof RowValues>;
+  requiredFormFields?: string[];
   addRowDisabled?: boolean | ((ctx: BulkCreateModalContext<FormValues, RowValues>) => boolean);
   addRowHint?: ReactNode | ((ctx: BulkCreateModalContext<FormValues, RowValues>) => ReactNode);
 }
@@ -90,6 +92,8 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
   disableBackdropClose = false,
   confirmIcon,
   confirmDisabled = false,
+  requiredRowFields,
+  requiredFormFields,
   addRowDisabled = false,
   addRowHint,
 }: Props<FormValues, RowValues>) => {
@@ -100,9 +104,11 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
 
   const { control, handleSubmit, reset, setValue, formState } = useForm<FormValues>({
     defaultValues: createDefaultValues(),
+    mode: 'onChange',
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: rowArrayName as never });
+  const watchedValues = useWatch({ control }) as FormValues | undefined;
   const watchedRows =
     (useWatch({ control, name: rowArrayName as never }) as RowValues[] | undefined) ?? [];
 
@@ -159,6 +165,24 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
   const resolvedAddRowDisabled =
     typeof addRowDisabled === 'function' ? addRowDisabled(context) : addRowDisabled;
   const resolvedAddRowHint = typeof addRowHint === 'function' ? addRowHint(context) : addRowHint;
+  const hasValue = (value: unknown) => value != null && String(value).trim() !== '';
+  const getPathValue = (source: unknown, path: string) =>
+    path.split('.').reduce<unknown>((current, key) => {
+      if (current == null || typeof current !== 'object') return undefined;
+      return (current as Record<string, unknown>)[key];
+    }, source);
+  const requiredRowsValid =
+    !requiredRowFields ||
+    watchedRows.every((row) =>
+      requiredRowFields.every((field) => hasValue(row[field as keyof RowValues])),
+    );
+  const requiredFormValid =
+    !requiredFormFields ||
+    requiredFormFields.every((field) => hasValue(getPathValue(watchedValues, field)));
+  const hasConfiguredRequiredFields = !!requiredRowFields || !!requiredFormFields;
+  const formValid = hasConfiguredRequiredFields
+    ? requiredRowsValid && requiredFormValid && Object.keys(formState.errors).length === 0
+    : formState.isValid;
 
   return (
     <>
@@ -171,7 +195,9 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
         confirmForm={formId}
         confirmIcon={confirmIcon}
         confirmLabel={getConfirmLabel(fields.length, isSubmitting)}
-        confirmDisabled={isSubmitting || resolvedConfirmDisabled}
+        confirmDisabled={
+          isSubmitting || !formState.isDirty || !formValid || resolvedConfirmDisabled
+        }
         busy={isSubmitting}
       >
         <form

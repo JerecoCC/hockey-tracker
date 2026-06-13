@@ -57,10 +57,11 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting, isDirty },
+    formState: { isSubmitting, isDirty, isValid },
     watch,
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   const gameType = watch('game_type');
@@ -125,7 +126,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
       onClose={handleClose}
       confirmLabel={isSubmitting || isSaving ? 'Saving…' : 'Save'}
       confirmForm="game-info-edit-form"
-      confirmDisabled={isSubmitting || disabled || !isDirty}
+      confirmDisabled={isSubmitting || disabled || !isDirty || !isValid}
       busy={isSubmitting || isSaving}
     >
       <form

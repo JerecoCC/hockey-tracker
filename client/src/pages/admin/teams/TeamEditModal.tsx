@@ -81,9 +81,10 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -132,7 +133,7 @@ const TeamEditModal = ({ open, team, uploadLogo, updateTeam, onClose }: Props) =
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="team-edit-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

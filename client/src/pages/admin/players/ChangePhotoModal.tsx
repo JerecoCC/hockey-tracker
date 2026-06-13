@@ -53,9 +53,10 @@ const ChangePhotoModal = ({
     handleSubmit,
     reset,
     setValue,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   const selectedSeasonId = useWatch({ control, name: 'season_id' });
@@ -79,7 +80,7 @@ const ChangePhotoModal = ({
 
   useEffect(() => {
     if (!open || !selectedSeasonId) return;
-    setValue('photo', explicitPhoto?.photo ?? null);
+    setValue('photo', explicitPhoto?.photo ?? null, { shouldValidate: true });
   }, [open, selectedSeasonId, explicitPhoto, setValue]);
 
   const onSubmit = handleSubmit(async (data) => {
@@ -102,7 +103,7 @@ const ChangePhotoModal = ({
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving...' : 'Save'}
       confirmForm="change-photo-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

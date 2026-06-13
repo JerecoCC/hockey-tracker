@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent } from 'react';
+import { Controller, useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -502,6 +503,25 @@ const ScheduleWatchModal = ({
   onClose: () => void;
   onSave: () => void;
 }) => {
+  const {
+    control,
+    handleSubmit,
+    reset,
+    setValue,
+    watch,
+    formState: { isDirty, isValid },
+  } = useForm<{ scheduled_for: string }>({
+    defaultValues: { scheduled_for: value },
+    mode: 'onChange',
+  });
+  const scheduledFor = watch('scheduled_for');
+
+  useEffect(() => {
+    if (open) reset({ scheduled_for: value });
+  }, [open, reset, value]);
+
+  const submit = handleSubmit(() => onSave());
+
   if (!game) return null;
 
   return (
@@ -509,17 +529,20 @@ const ScheduleWatchModal = ({
       open={open}
       title="Schedule Watch"
       onClose={onClose}
-      onConfirm={onSave}
+      onConfirm={submit}
       confirmLabel={busy ? 'Saving…' : 'Save Schedule'}
-      confirmDisabled={busy}
+      confirmDisabled={busy || !isDirty || !isValid}
       busy={busy}
       footerStart={
-        value ? (
+        scheduledFor ? (
           <Button
             type="button"
             variant="ghost"
             intent="neutral"
-            onClick={() => onChange('')}
+            onClick={() => {
+              setValue('scheduled_for', '', { shouldDirty: true, shouldValidate: true });
+              onChange('');
+            }}
             disabled={busy}
           >
             Clear Date
@@ -532,10 +555,19 @@ const ScheduleWatchModal = ({
           Choose when you plan to watch {game.away_team.code} @ {game.home_team.code}. Scheduled
           dates are saved in your local timezone.
         </p>
-        <DatePicker
-          value={value}
-          onChange={onChange}
-          placeholder="Watch date"
+        <Controller
+          control={control}
+          name="scheduled_for"
+          render={({ field }) => (
+            <DatePicker
+              value={field.value}
+              onChange={(next) => {
+                field.onChange(next);
+                onChange(next ?? '');
+              }}
+              placeholder="Watch date"
+            />
+          )}
         />
       </div>
     </Modal>

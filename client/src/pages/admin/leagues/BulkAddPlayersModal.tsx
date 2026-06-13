@@ -111,6 +111,7 @@ const BulkAddPlayersModal = ({ open, onClose, bulkAddPlayers }: Props) => {
         { label: 'Last Name', required: true },
         { label: 'Shoots', required: true },
       ]}
+      requiredRowFields={['position', 'first_name', 'last_name', 'shoots']}
       addRowLabel="Create Player"
       itemLabel="player"
       getConfirmLabel={(count, isSubmitting) =>

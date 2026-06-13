@@ -228,7 +228,9 @@ describe('BulkAddPlayersModal – submit', () => {
     });
     fireEvent.change(screen.getByRole('combobox', { name: /shoots/i }), { target: { value: 'L' } });
 
-    fireEvent.click(screen.getByRole('button', { name: /save 1 player\b/i }));
+    const submitButton = screen.getByRole('button', { name: /save 1 player\b/i });
+    await waitFor(() => expect(submitButton).toBeEnabled());
+    fireEvent.click(submitButton);
 
     await waitFor(() => expect(mockBulkAddPlayers).toHaveBeenCalledTimes(1));
     expect(mockBulkAddPlayers).toHaveBeenCalledWith(

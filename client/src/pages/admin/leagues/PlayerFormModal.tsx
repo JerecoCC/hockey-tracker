@@ -95,9 +95,10 @@ const PlayerFormModal = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -149,7 +150,7 @@ const PlayerFormModal = ({
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Player'}
       confirmForm="player-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form
@@ -223,6 +224,7 @@ const PlayerFormModal = ({
             control={control}
             name="date_of_birth"
             placeholder="YYYY-MM-DD"
+            disabled={isSubmitting}
           />
           <Field
             label="Birth City"

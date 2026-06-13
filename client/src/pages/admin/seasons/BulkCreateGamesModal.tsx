@@ -158,6 +158,7 @@ const BulkCreateGamesModal = ({
         { label: 'Home Team', required: true },
         { label: 'Venue' },
       ]}
+      requiredRowFields={['scheduled_date', 'away_team_id', 'home_team_id']}
       addRowLabel="Add Game"
       itemLabel="game"
       getConfirmLabel={(count, isSubmitting) =>

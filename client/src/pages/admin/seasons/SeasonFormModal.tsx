@@ -43,9 +43,10 @@ const SeasonFormModal = (props: Props) => {
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -76,7 +77,7 @@ const SeasonFormModal = (props: Props) => {
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Season'}
       confirmForm="season-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

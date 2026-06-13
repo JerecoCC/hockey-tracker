@@ -88,9 +88,10 @@ const MovePlayerModal = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -126,7 +127,7 @@ const MovePlayerModal = ({
       confirmLabel={isSubmitting ? 'Moving...' : 'Move Player'}
       confirmIcon="swap_horiz"
       confirmForm="move-player-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <div className={styles.layout}>
@@ -153,6 +154,8 @@ const MovePlayerModal = ({
               label="Move Date"
               control={control}
               name="trade_date"
+              required
+              rules={{ required: 'Move date is required' }}
               disabled={isSubmitting}
             />
             <Field

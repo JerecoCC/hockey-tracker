@@ -141,9 +141,10 @@ const GameSettingsModal = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<GameSettingsFormValues>({
     defaultValues: { best_of_playoff: '', best_of_shootout: '', scoring_system: '' },
+    mode: 'onChange',
   });
 
   useEffect(() => {
@@ -171,7 +172,7 @@ const GameSettingsModal = ({
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="game-settings-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form
@@ -235,9 +236,10 @@ const PlayoffFormatModal = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<PlayoffFormatFormValues>({
     defaultValues: { rules: [] },
+    mode: 'onChange',
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: 'rules' });
@@ -263,7 +265,7 @@ const PlayoffFormatModal = ({
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Rules'}
       confirmForm="playoff-format-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form
@@ -306,6 +308,11 @@ const PlayoffFormatModal = ({
                 min={1}
                 max={32}
                 disabled={isSubmitting}
+                rules={{
+                  required: 'Count is required',
+                  min: { value: 1, message: 'Count must be at least 1' },
+                  max: { value: 32, message: 'Count must be 32 or less' },
+                }}
               />
               <button
                 type="button"

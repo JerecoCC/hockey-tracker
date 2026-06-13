@@ -94,9 +94,10 @@ const StintEditModal = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   const inferSeasonId = (teamId: string, startDate: string, endDate: string) => {
@@ -170,7 +171,7 @@ const StintEditModal = ({
       onClose={handleClose}
       confirmLabel={confirmLabel}
       confirmForm="stint-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

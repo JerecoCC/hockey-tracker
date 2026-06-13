@@ -138,8 +138,15 @@ const RecordShotsModal = ({
   const [submitting, setSubmitting] = useState(false);
   const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>('home');
 
-  const { control, reset, getValues, watch } = useForm<ShotsFormValues>({
+  const {
+    control,
+    reset,
+    getValues,
+    watch,
+    formState: { isDirty, isValid },
+  } = useForm<ShotsFormValues>({
     defaultValues: { away_shots: '', home_shots: '', end_time: '' },
+    mode: 'onChange',
   });
 
   useEffect(() => {
@@ -232,7 +239,7 @@ const RecordShotsModal = ({
       confirmLabel={confirmLabel}
       confirmIcon={isEndGame ? 'star' : 'flag'}
       confirmForm="record-shots-form"
-      confirmDisabled={submitting || !endTimeValid || !shootsFirstValid}
+      confirmDisabled={submitting || !isDirty || !isValid || !endTimeValid || !shootsFirstValid}
       busy={submitting}
     >
       <form
@@ -346,6 +353,7 @@ const RecordShotsBody = ({
           control={control}
           name="end_time"
           disabled={submitting}
+          rules={{ required: 'End time is required' }}
         />
       )}
       {showShootsFirst && (

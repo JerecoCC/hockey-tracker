@@ -82,9 +82,10 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
     getValues,
     setError,
     setValue,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -150,7 +151,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="player-info-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

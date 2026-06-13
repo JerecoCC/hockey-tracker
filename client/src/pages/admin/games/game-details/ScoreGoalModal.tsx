@@ -67,7 +67,7 @@ const ScoreGoalModal = ({
     reset,
     setValue,
     watch,
-    formState: { isDirty },
+    formState: { isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: {
       goalTeam: null,
@@ -79,6 +79,7 @@ const ScoreGoalModal = ({
       goalAssist1Id: '',
       goalAssist2Id: '',
     },
+    mode: 'onChange',
   });
 
   const goalTeam = watch('goalTeam');
@@ -208,6 +209,7 @@ const ScoreGoalModal = ({
 
   const handleConfirm = handleSubmit(async (values) => {
     if (!values.goalTeam) return;
+    if (!values.goalPeriodTime) return;
     if (goalParticipantError) return;
     const teamId = values.goalTeam === 'away' ? game.away_team.id : game.home_team.id;
     const payload: PostGoalData = {
@@ -216,7 +218,7 @@ const ScoreGoalModal = ({
       goal_type: values.goalType,
       empty_net: values.goalEmptyNet,
       penalty_shot: values.goalPenaltyShot,
-      period_time: values.goalPeriodTime || '00:00',
+      period_time: values.goalPeriodTime,
       scorer_id: values.goalScorerId,
       assist_1_id: values.goalAssist1Id || null,
       assist_2_id: values.goalAssist2Id || null,
@@ -244,18 +246,22 @@ const ScoreGoalModal = ({
         busy ||
         submitting ||
         !goalTeam ||
+        !goalPeriodTime ||
         !goalScorerId ||
+        !isDirty ||
+        !isValid ||
         otGoalExists ||
         !!periodTimeError ||
-        !!goalParticipantError ||
-        (!!editGoal && !isDirty)
+        !!goalParticipantError
       }
       busy={submitting}
       onConfirm={handleConfirm}
     >
       <div className={styles.goalForm}>
         <div className={styles.goalFormField}>
-          <label className={styles.goalFormLabel}>Scoring Team</label>
+          <label className={styles.goalFormLabel}>
+            Scoring Team <span className={styles.required}>*</span>
+          </label>
           <SegmentedControl
             value={goalTeam}
             onChange={(v) => handleTeamChange(v as 'away' | 'home')}

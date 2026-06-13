@@ -43,9 +43,10 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -90,7 +91,7 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
       confirmForm="league-edit-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

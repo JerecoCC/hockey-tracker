@@ -86,9 +86,10 @@ const GameFormModal = ({
     handleSubmit,
     reset,
     setValue,
-    formState: { isDirty, isSubmitting },
+    formState: { isDirty, isSubmitting, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   // Fields are locked once the game has started — only venue and time remain editable
@@ -149,7 +150,7 @@ const GameFormModal = ({
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create Game'}
       confirmForm="game-form"
-      confirmDisabled={isSubmitting || !isDirty}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form

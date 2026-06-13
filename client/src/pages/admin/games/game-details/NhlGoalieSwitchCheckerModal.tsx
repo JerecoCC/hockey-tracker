@@ -27,10 +27,16 @@ const NhlGoalieSwitchCheckerModal = ({
   setReportData,
   onLoadingChange,
 }: Props) => {
-  const { control, handleSubmit, watch } = useForm<FormValues>({
+  const {
+    control,
+    handleSubmit,
+    watch,
+    formState: { isValid },
+  } = useForm<FormValues>({
     defaultValues: {
       game_number: game.game_number ? String(game.game_number) : '',
     },
+    mode: 'onChange',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +71,7 @@ const NhlGoalieSwitchCheckerModal = ({
       confirmLabel={loading ? 'Checking...' : 'Check'}
       confirmIcon="search"
       confirmForm={FORM_ID}
-      confirmDisabled={loading || !String(gameNumber ?? '').trim()}
+      confirmDisabled={loading || !isValid || !String(gameNumber ?? '').trim()}
       busy={loading}
     >
       <div className={styles.nhlGoalieChecker}>
@@ -86,6 +92,7 @@ const NhlGoalieSwitchCheckerModal = ({
             disabled={loading}
             autoFocus
             required
+            rules={{ required: 'NHL game number is required' }}
           />
         </form>
 

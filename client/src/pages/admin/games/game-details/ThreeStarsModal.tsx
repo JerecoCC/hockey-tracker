@@ -61,8 +61,15 @@ const ThreeStarsModal = ({
     }),
     [editMode, initialStars],
   );
-  const { control, handleSubmit, reset, watch } = useForm<FormValues>({
+  const {
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { isDirty, isValid },
+  } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   useLayoutEffect(() => {
@@ -113,7 +120,7 @@ const ThreeStarsModal = ({
       onClose={handleClose}
       confirmLabel={editMode ? (busy ? 'Saving…' : 'Save') : 'End Game'}
       confirmIcon={editMode ? 'save' : undefined}
-      confirmDisabled={!canConfirm || busy}
+      confirmDisabled={!canConfirm || busy || !isDirty || !isValid}
       confirmForm="three-stars-form"
     >
       <form
@@ -130,6 +137,8 @@ const ThreeStarsModal = ({
           placeholder="— Select player —"
           searchable
           disabled={busy}
+          required
+          rules={{ required: '1st star is required' }}
         />
         <Field
           label="2nd Star"
@@ -140,6 +149,8 @@ const ThreeStarsModal = ({
           placeholder="— Select player —"
           searchable
           disabled={busy}
+          required
+          rules={{ required: '2nd star is required' }}
         />
         <Field
           label="3rd Star"
@@ -150,6 +161,8 @@ const ThreeStarsModal = ({
           placeholder="— Select player —"
           searchable
           disabled={busy}
+          required
+          rules={{ required: '3rd star is required' }}
         />
       </form>
     </Modal>

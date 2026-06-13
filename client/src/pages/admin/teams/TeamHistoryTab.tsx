@@ -84,7 +84,7 @@ const TeamHistoryTab = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: {
       place_name: '',
@@ -97,6 +97,7 @@ const TeamHistoryTab = ({
       start_date: '',
       end_date: '',
     },
+    mode: 'onChange',
   });
 
   const closeModal = () => {
@@ -257,7 +258,7 @@ const TeamHistoryTab = ({
         confirmLabel={isSubmitting ? 'Saving…' : isEditing ? 'Save Changes' : 'Record Version'}
         confirmIcon={isEditing ? 'edit' : 'history'}
         confirmForm="team-history-form"
-        confirmDisabled={isSubmitting}
+        confirmDisabled={isSubmitting || !isDirty || !isValid}
         busy={isSubmitting}
       >
         <form

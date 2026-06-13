@@ -65,9 +65,10 @@ const LeagueFormModal = (props: Props) => {
     handleSubmit,
     reset,
     setValue,
-    formState: { isSubmitting },
+    formState: { isSubmitting, isDirty, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
+    mode: 'onChange',
   });
 
   const nameValue = useWatch({ control, name: 'name' });
@@ -81,7 +82,7 @@ const LeagueFormModal = (props: Props) => {
       .map((w) => w[0])
       .join('')
       .toUpperCase();
-    setValue('code', auto);
+    setValue('code', auto, { shouldValidate: true });
   }, [nameValue, setValue]);
 
   useLayoutEffect(() => {
@@ -128,7 +129,7 @@ const LeagueFormModal = (props: Props) => {
       onClose={handleClose}
       confirmLabel={isSubmitting ? 'Saving…' : editTarget ? 'Save Changes' : 'Create League'}
       confirmForm="league-form"
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form
@@ -141,6 +142,7 @@ const LeagueFormModal = (props: Props) => {
             control={control}
             name="logo"
             label="League Logo"
+            disabled={isSubmitting}
           />
           <LogoUpload
             control={control}
@@ -148,6 +150,7 @@ const LeagueFormModal = (props: Props) => {
             label="Header Icon"
             accept="image/x-icon,image/vnd.microsoft.icon,.ico"
             hint="Upload .ico"
+            disabled={isSubmitting}
           />
         </div>
         <Field

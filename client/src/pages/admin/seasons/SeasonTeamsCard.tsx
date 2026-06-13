@@ -187,8 +187,11 @@ const GroupFormModal = ({
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
-  } = useForm<GroupFormValues>({ defaultValues: { name: '', role: 'none' } });
+    formState: { isSubmitting, isDirty, isValid },
+  } = useForm<GroupFormValues>({
+    defaultValues: { name: '', role: 'none' },
+    mode: 'onChange',
+  });
 
   useEffect(() => {
     if (open) {
@@ -213,7 +216,7 @@ const GroupFormModal = ({
       title={isEdit ? 'Edit Group' : 'Create Group'}
       onClose={onClose}
       confirmLabel={isSubmitting || busy ? 'Saving…' : isEdit ? 'Save Changes' : 'Create'}
-      confirmDisabled={isSubmitting || busy}
+      confirmDisabled={isSubmitting || busy || !isDirty || !isValid}
       busy={isSubmitting || busy}
       onConfirm={onSubmit}
     >

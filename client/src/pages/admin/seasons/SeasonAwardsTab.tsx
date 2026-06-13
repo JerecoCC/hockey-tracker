@@ -70,6 +70,7 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
       stat_value: '',
       notes: '',
     },
+    mode: 'onChange',
   });
 
   const players = useMemo(() => {
@@ -300,8 +301,14 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
         }`}
         onClose={closeRecipientModal}
         confirmForm="season-award-recipient-form"
-        confirmLabel="Save"
+        confirmLabel={recipientForm.formState.isSubmitting ? 'Savingâ€¦' : 'Save'}
         confirmIcon="save"
+        confirmDisabled={
+          recipientForm.formState.isSubmitting ||
+          !recipientForm.formState.isDirty ||
+          !recipientForm.formState.isValid
+        }
+        busy={recipientForm.formState.isSubmitting}
       >
         {recipientAward && (
           <form
@@ -326,6 +333,8 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
                 type="select"
                 label="Role"
                 options={ROLE_OPTIONS}
+                required
+                rules={{ required: 'Role is required' }}
               />
               <Field
                 control={recipientForm.control}

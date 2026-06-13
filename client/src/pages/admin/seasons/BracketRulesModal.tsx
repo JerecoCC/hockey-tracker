@@ -496,8 +496,11 @@ const BracketRulesModal = ({
     setValue,
     reset,
     handleSubmit,
-    formState: { isSubmitting },
-  } = useForm<BracketRulesFormValues>({ defaultValues: { name: '', slots: [], roundNames: {} } });
+    formState: { isSubmitting, isDirty, isValid },
+  } = useForm<BracketRulesFormValues>({
+    defaultValues: { name: '', slots: [], roundNames: {} },
+    mode: 'onChange',
+  });
 
   // Effect 1: Fetch rule set data when modal opens or ruleSetId changes.
   // Separating the fetch from the form reset avoids a race where setSelectedSize and
@@ -607,7 +610,7 @@ const BracketRulesModal = ({
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save'}
       onConfirm={onSubmit}
-      confirmDisabled={isSubmitting}
+      confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <div className={styles.bracketRulesStack}>

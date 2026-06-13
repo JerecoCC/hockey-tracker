@@ -20,8 +20,11 @@ const StartGameModal = ({ open, scheduledAt, isStarting, disabled, onClose, onSt
     control,
     handleSubmit,
     reset,
-    formState: { isSubmitting },
-  } = useForm<{ start_time: string }>({ defaultValues: { start_time: '' } });
+    formState: { isSubmitting, isDirty, isValid },
+  } = useForm<{ start_time: string }>({
+    defaultValues: { start_time: '' },
+    mode: 'onChange',
+  });
 
   const handleClose = () => {
     reset({ start_time: '' });
@@ -42,7 +45,7 @@ const StartGameModal = ({ open, scheduledAt, isStarting, disabled, onClose, onSt
       confirmIcon="play_arrow"
       confirmIntent="success"
       confirmForm="start-game-form"
-      confirmDisabled={isSubmitting || disabled}
+      confirmDisabled={isSubmitting || disabled || !isDirty || !isValid}
       busy={isSubmitting || isStarting}
     >
       <form
@@ -57,6 +60,8 @@ const StartGameModal = ({ open, scheduledAt, isStarting, disabled, onClose, onSt
           name="start_time"
           disabled={isStarting}
           placeholder="Select time…"
+          rules={{ required: 'Start time is required' }}
+          required
           autoFocus
         />
       </form>
