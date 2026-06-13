@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 import {
   type Control,
   type FieldValues,
@@ -9,8 +9,8 @@ import {
   useWatch,
 } from 'react-hook-form';
 import AddRowBar from '@/components/AddRowBar/AddRowBar';
+import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import styles from './BulkCreateModal.module.scss';
 
@@ -96,6 +96,7 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
   const [confirmRemoveIndex, setConfirmRemoveIndex] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [autoFocusIndex, setAutoFocusIndex] = useState(0);
+  const createDefaultValuesRef = useRef(createDefaultValues);
 
   const { control, handleSubmit, reset, setValue, formState } = useForm<FormValues>({
     defaultValues: createDefaultValues(),
@@ -106,14 +107,18 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
     (useWatch({ control, name: rowArrayName as never }) as RowValues[] | undefined) ?? [];
 
   useEffect(() => {
+    createDefaultValuesRef.current = createDefaultValues;
+  }, [createDefaultValues]);
+
+  useEffect(() => {
     if (!open) return;
-    reset(createDefaultValues());
+    reset(createDefaultValuesRef.current());
     setAutoFocusIndex(0);
     setConfirmRemoveIndex(null);
-  }, [open, createDefaultValues, reset]);
+  }, [open, reset]);
 
   const handleClose = () => {
-    reset(createDefaultValues());
+    reset(createDefaultValuesRef.current());
     setAutoFocusIndex(0);
     setConfirmRemoveIndex(null);
     onClose();
@@ -204,18 +209,18 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
                   autoFocus: index === autoFocusIndex,
                   deleteButton:
                     fields.length > 1 ? (
-                      <button
+                      <Button
                         type="button"
+                        variant="outlined"
+                        intent="danger"
+                        icon="close"
+                        size="sm"
+                        tooltip={`Remove ${itemLabel}`}
                         className={styles.deleteBtn}
                         onClick={() => handleDeleteClick(index)}
                         disabled={isSubmitting}
                         aria-label={`Remove ${itemLabel}`}
-                      >
-                        <Icon
-                          name="delete"
-                          size="1em"
-                        />
-                      </button>
+                      />
                     ) : (
                       <span />
                     ),

@@ -204,8 +204,9 @@ const LineupCreatePlayersModal = ({
           : ({ rowCount }) => `${existingCount + rowCount} / ${MAX_ROSTER} players`
       }
       itemLabel="player"
+      confirmIcon="person_edit"
       getConfirmLabel={(count, isSubmitting) =>
-        isSubmitting ? 'Saving…' : `Save ${count} Player${count !== 1 ? 's' : ''}`
+        isSubmitting ? 'Creating…' : `Create ${count} Player${count !== 1 ? 's' : ''}`
       }
       shouldConfirmRemove={(row) => !!(row.first_name || row.last_name || row.position)}
       getRemoveConfirmBody={() => 'This row has data. Are you sure you want to remove it?'}

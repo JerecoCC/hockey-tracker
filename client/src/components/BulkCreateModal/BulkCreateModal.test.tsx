@@ -1,4 +1,5 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { useState } from 'react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import Field from '@/components/Field/Field';
 import BulkCreateModal from './BulkCreateModal';
@@ -6,6 +7,14 @@ import BulkCreateModal from './BulkCreateModal';
 interface TestRow {
   name: string;
 }
+
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((res) => {
+    resolve = res;
+  });
+  return { promise, resolve };
+};
 
 const renderModal = (overrides?: {
   onSubmitForm?: jest.Mock<Promise<boolean>, [{ rows: TestRow[] }]>;
@@ -90,6 +99,67 @@ describe('BulkCreateModal', () => {
 
     await waitFor(() => {
       expect(screen.getAllByPlaceholderText('Name')).toHaveLength(1);
+    });
+  });
+
+  it('keeps row values while a parent rerenders during submit', async () => {
+    const user = userEvent.setup();
+    const deferred = createDeferred<boolean>();
+    const onSubmitForm = jest.fn(() => deferred.promise);
+
+    const Wrapper = () => {
+      const [, setRenderCount] = useState(0);
+
+      return (
+        <BulkCreateModal<{ rows: TestRow[] }, TestRow>
+          open
+          title="Bulk Create Test"
+          onClose={() => {}}
+          onSubmitForm={(data) => {
+            setRenderCount((count) => count + 1);
+            return onSubmitForm(data);
+          }}
+          createDefaultValues={() => ({ rows: [{ name: '' }] })}
+          rowArrayName="rows"
+          createRow={() => ({ name: '' })}
+          formId="bulk-create-test-form"
+          columnsTemplate="1fr"
+          headerCells={[{ label: 'Name', required: true }]}
+          addRowLabel="Add Row"
+          itemLabel="row"
+          getConfirmLabel={(count, isSubmitting) =>
+            isSubmitting ? 'Saving…' : `Save ${count} Row${count !== 1 ? 's' : ''}`
+          }
+          renderRow={({ index, control, isSubmitting, autoFocus, deleteButton }) => (
+            <>
+              <Field
+                control={control}
+                name={`rows.${index}.name`}
+                placeholder="Name"
+                disabled={isSubmitting}
+                autoFocus={autoFocus}
+                rules={{ required: true }}
+              />
+              {deleteButton}
+            </>
+          )}
+        />
+      );
+    };
+
+    render(<Wrapper />);
+
+    await user.type(screen.getByPlaceholderText('Name'), 'Alice');
+    await user.click(screen.getByRole('button', { name: 'Save 1 Row' }));
+
+    await waitFor(() => {
+      expect(onSubmitForm).toHaveBeenCalledWith({ rows: [{ name: 'Alice' }] });
+    });
+    expect(screen.getByDisplayValue('Alice')).toBeInTheDocument();
+
+    await act(async () => {
+      deferred.resolve(true);
+      await deferred.promise;
     });
   });
 });

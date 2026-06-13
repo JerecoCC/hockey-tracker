@@ -3,7 +3,7 @@ import Button from '../Button/Button';
 import styles from './AddRowBar.module.scss';
 
 interface Props {
-  /** Label for the ghost "add" button. */
+  /** Label for the add button. */
   label: string;
   onClick: () => void;
   disabled?: boolean;
@@ -16,8 +16,8 @@ const AddRowBar = ({ label, onClick, disabled, hint }: Props) => (
     {hint ? <span className={styles.hint}>{hint}</span> : <span className="filler"></span>}
     <Button
       type="button"
-      variant="ghost"
-      intent="neutral"
+      variant="outlined"
+      intent="accent"
       icon="add"
       size="sm"
       disabled={disabled}
