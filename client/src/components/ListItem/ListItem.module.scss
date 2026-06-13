@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 // ── Row ──────────────────────────────────────────────────────────────────────
 .item {
@@ -27,6 +27,16 @@
       opacity: 1;
       pointer-events: auto;
     }
+  }
+}
+
+.itemPlain {
+  border-color: transparent;
+  background: transparent;
+
+  &:hover {
+    border-color: transparent;
+    background: transparent;
   }
 }
 

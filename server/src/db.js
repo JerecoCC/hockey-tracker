@@ -53,6 +53,12 @@ async function initSchema() {
   await sql`
     ALTER TABLE leagues ADD COLUMN IF NOT EXISTS icon TEXT
   `;
+  await sql`
+    ALTER TABLE leagues ADD COLUMN IF NOT EXISTS primary_color TEXT NOT NULL DEFAULT '#334155'
+  `;
+  await sql`
+    ALTER TABLE leagues ADD COLUMN IF NOT EXISTS text_color TEXT NOT NULL DEFAULT '#ffffff'
+  `;
 
   await sql`
     CREATE TABLE IF NOT EXISTS teams (

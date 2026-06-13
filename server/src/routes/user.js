@@ -253,6 +253,8 @@ router.get('/games', async (req, res) => {
         json_build_object(
           'id',              g.home_team_id,
           'name',            ht.name,
+          'place_name',      ht.place_name,
+          'team_name',       ht.team_name,
           'code',            ht.code,
           'logo',            ht.logo,
           'logo_dark',       ht.logo_dark,
@@ -265,6 +267,8 @@ router.get('/games', async (req, res) => {
         json_build_object(
           'id',              g.away_team_id,
           'name',            at.name,
+          'place_name',      at.place_name,
+          'team_name',       at.team_name,
           'code',            at.code,
           'logo',            at.logo,
           'logo_dark',       at.logo_dark,
@@ -290,13 +294,13 @@ router.get('/games', async (req, res) => {
       LEFT JOIN playoff_series    ps  ON ps.id  = g.playoff_series_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.home_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.away_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -505,7 +509,7 @@ router.get('/games/:id', async (req, res) => {
         g.period_shots,
         json_build_object(
           'id', g.home_team_id,
-          'name', ht.name, 'code', ht.code,
+          'name', ht.name, 'place_name', ht.place_name, 'team_name', ht.team_name, 'code', ht.code,
           'logo', ht.logo, 'logo_dark', ht.logo_dark, 'logo_light', ht.logo_light,
           'primary_color', t_home.primary_color,
           'secondary_color', t_home.secondary_color,
@@ -513,7 +517,7 @@ router.get('/games/:id', async (req, res) => {
         ) AS home_team,
         json_build_object(
           'id', g.away_team_id,
-          'name', at.name, 'code', at.code,
+          'name', at.name, 'place_name', at.place_name, 'team_name', at.team_name, 'code', at.code,
           'logo', at.logo, 'logo_dark', at.logo_dark, 'logo_light', at.logo_light,
           'primary_color', t_away.primary_color,
           'secondary_color', t_away.secondary_color,
@@ -540,13 +544,13 @@ router.get('/games/:id', async (req, res) => {
       LEFT JOIN playoff_series ps ON ps.id = g.playoff_series_id
       LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.home_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = g.away_team_id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1

@@ -82,6 +82,10 @@ function teamTextShadow(textHex: string, bgHex: string, threshold = 3): string {
   return contrastRatio(textHex, bgHex) < threshold ? 'rgba(0,0,0,0.75)' : 'transparent';
 }
 
+const teamPlaceLabel = (team: GameRecord['home_team']) => team.place_name?.trim() || '';
+const teamNameLabel = (team: GameRecord['home_team']) =>
+  team.team_name?.trim() || team.name?.trim() || team.code;
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 // Walk up the DOM to find the nearest scrollable ancestor.
@@ -223,8 +227,11 @@ const ScoreboardCard = ({
               className={styles.teamLogoResponsive}
             />
             <div className={styles.teamInfo}>
-              <span className={styles.teamFullName}>{game.away_team.name}</span>
-              <span className={styles.teamSubInfo}>{game.away_team.code}</span>
+              {teamPlaceLabel(game.away_team) && (
+                <span className={styles.teamPlaceName}>{teamPlaceLabel(game.away_team)}</span>
+              )}
+              <span className={styles.teamFullName}>{teamNameLabel(game.away_team)}</span>
+              <span className={styles.teamMobileCode}>{game.away_team.code}</span>
             </div>
           </button>
           {/* Right stripe — stacked mode only */}
@@ -359,8 +366,11 @@ const ScoreboardCard = ({
             }
           >
             <div className={`${styles.teamInfo} ${styles.teamInfoHome}`}>
-              <span className={styles.teamFullName}>{game.home_team.name}</span>
-              <span className={styles.teamSubInfo}>{game.home_team.code}</span>
+              {teamPlaceLabel(game.home_team) && (
+                <span className={styles.teamPlaceName}>{teamPlaceLabel(game.home_team)}</span>
+              )}
+              <span className={styles.teamFullName}>{teamNameLabel(game.home_team)}</span>
+              <span className={styles.teamMobileCode}>{game.home_team.code}</span>
             </div>
             <TeamLogo
               logo={game.home_team.logo}

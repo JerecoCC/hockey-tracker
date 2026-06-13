@@ -1,7 +1,9 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
 const { sql } = require('../db');
-const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
+const {
+  normalizeSeasonBracketSlotKeys,
+} = require('../lib/playoffBracketSlots');
 
 // All season routes require the admin role
 router.use(requireAdmin);
@@ -71,7 +73,8 @@ router.get('/:id', async (req, res) => {
       JOIN leagues l ON l.id = s.league_id
       WHERE s.id = ${id}
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     return res.json(rows[0]);
   } catch (err) {
     console.error('seasons get error:', err);
@@ -85,12 +88,16 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   const { league_id, name, start_date, end_date, games_per_season } = req.body;
 
-  if (!league_id) return res.status(400).json({ error: 'league_id is required' });
-  if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
+  if (!league_id)
+    return res.status(400).json({ error: 'league_id is required' });
+  if (!name || !name.trim())
+    return res.status(400).json({ error: 'name is required' });
 
   try {
-    const leagueRows = await sql`SELECT id FROM leagues WHERE id = ${league_id}`;
-    if (leagueRows.length === 0) return res.status(400).json({ error: 'League not found' });
+    const leagueRows =
+      await sql`SELECT id FROM leagues WHERE id = ${league_id}`;
+    if (leagueRows.length === 0)
+      return res.status(400).json({ error: 'League not found' });
 
     const rows = await sql`
       INSERT INTO seasons (name, league_id, start_date, end_date, games_per_season)
@@ -114,8 +121,16 @@ router.post('/', async (req, res) => {
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
   const {
-    league_id, name, start_date, end_date, games_per_season, playoff_format,
-    best_of_playoff, best_of_shootout, scoring_system, bracket_rule_set_id,
+    league_id,
+    name,
+    start_date,
+    end_date,
+    games_per_season,
+    playoff_format,
+    best_of_playoff,
+    best_of_shootout,
+    scoring_system,
+    bracket_rule_set_id,
   } = req.body;
 
   try {
@@ -129,29 +144,54 @@ router.patch('/:id', async (req, res) => {
              bracket_rule_set_id
       FROM seasons WHERE id = ${id}
     `;
-    if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (existing.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     const cur = existing[0];
 
-    const mergedName            = name              !== undefined ? name.trim()                : cur.name;
-    const mergedLeagueId        = league_id         !== undefined ? league_id                  : cur.league_id;
-    const mergedStartDate       = start_date        !== undefined ? (start_date  || null)      : cur.start_date;
-    const mergedEndDate         = end_date          !== undefined ? (end_date    || null)      : cur.end_date;
-    const mergedGamesPerSeason  = games_per_season  !== undefined ? (games_per_season || null) : cur.games_per_season;
-    const mergedPlayoffFormat   = playoff_format    !== undefined
-      ? (playoff_format ? JSON.stringify(playoff_format) : null)
-      : (cur.playoff_format ? JSON.stringify(cur.playoff_format) : null);
-    const mergedBestOfPlayoff   = best_of_playoff   !== undefined ? (best_of_playoff   || null) : cur.best_of_playoff;
-    const mergedBestOfShootout  = best_of_shootout  !== undefined ? (best_of_shootout  || null) : cur.best_of_shootout;
-    const mergedScoringSystem      = scoring_system       !== undefined ? (scoring_system       || null) : cur.scoring_system;
-    const mergedBracketRuleSetId   = bracket_rule_set_id  !== undefined ? (bracket_rule_set_id  || null) : cur.bracket_rule_set_id;
+    const mergedName = name !== undefined ? name.trim() : cur.name;
+    const mergedLeagueId = league_id !== undefined ? league_id : cur.league_id;
+    const mergedStartDate =
+      start_date !== undefined ? start_date || null : cur.start_date;
+    const mergedEndDate =
+      end_date !== undefined ? end_date || null : cur.end_date;
+    const mergedGamesPerSeason =
+      games_per_season !== undefined
+        ? games_per_season || null
+        : cur.games_per_season;
+    const mergedPlayoffFormat =
+      playoff_format !== undefined
+        ? playoff_format
+          ? JSON.stringify(playoff_format)
+          : null
+        : cur.playoff_format
+          ? JSON.stringify(cur.playoff_format)
+          : null;
+    const mergedBestOfPlayoff =
+      best_of_playoff !== undefined
+        ? best_of_playoff || null
+        : cur.best_of_playoff;
+    const mergedBestOfShootout =
+      best_of_shootout !== undefined
+        ? best_of_shootout || null
+        : cur.best_of_shootout;
+    const mergedScoringSystem =
+      scoring_system !== undefined
+        ? scoring_system || null
+        : cur.scoring_system;
+    const mergedBracketRuleSetId =
+      bracket_rule_set_id !== undefined
+        ? bracket_rule_set_id || null
+        : cur.bracket_rule_set_id;
     // Auto-set is_ended when an end_date is provided; never auto-clear it.
-    const mergedIsEnded         = mergedEndDate ? true : cur.is_ended;
+    const mergedIsEnded = mergedEndDate ? true : cur.is_ended;
 
     if (!mergedName) return res.status(400).json({ error: 'name is required' });
 
     if (mergedLeagueId !== cur.league_id) {
-      const leagueRows = await sql`SELECT id FROM leagues WHERE id = ${mergedLeagueId}`;
-      if (leagueRows.length === 0) return res.status(400).json({ error: 'League not found' });
+      const leagueRows =
+        await sql`SELECT id FROM leagues WHERE id = ${mergedLeagueId}`;
+      if (leagueRows.length === 0)
+        return res.status(400).json({ error: 'League not found' });
     }
 
     await sql`
@@ -222,7 +262,8 @@ router.patch('/:id/current', async (req, res) => {
     const existing = await sql`
       SELECT id, league_id FROM seasons WHERE id = ${id}
     `;
-    if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (existing.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
 
     const { league_id } = existing[0];
 
@@ -269,7 +310,8 @@ router.patch('/:id/playoffs', async (req, res) => {
 
   try {
     const existing = await sql`SELECT id FROM seasons WHERE id = ${id}`;
-    if (existing.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (existing.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
 
     await sql`
       UPDATE seasons SET playoffs_started = TRUE WHERE id = ${id}
@@ -315,10 +357,13 @@ router.post('/:id/advance-bracket', async (req, res) => {
     const seasonRows = await sql`
       SELECT bracket_rule_set_id FROM seasons WHERE id = ${seasonId}
     `;
-    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (seasonRows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     const bracketRuleSetId = seasonRows[0]?.bracket_rule_set_id;
     if (!bracketRuleSetId) {
-      return res.status(400).json({ error: 'No bracket rule set configured for this season' });
+      return res
+        .status(400)
+        .json({ error: 'No bracket rule set configured for this season' });
     }
 
     await normalizeSeasonBracketSlotKeys(sql, seasonId, bracketRuleSetId);
@@ -356,8 +401,12 @@ router.post('/:id/advance-bracket', async (req, res) => {
             AND slot_key LIKE ${nextMatchupKey + '%'}
             AND rule_type = 'winner'
         `;
-        const team1Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team1`);
-        const team2Slot = nextSlots.find((s) => s.slot_key === `${nextMatchupKey}team2`);
+        const team1Slot = nextSlots.find(
+          (s) => s.slot_key === `${nextMatchupKey}team1`,
+        );
+        const team2Slot = nextSlots.find(
+          (s) => s.slot_key === `${nextMatchupKey}team2`,
+        );
         if (!team1Slot?.matchup_ref || !team2Slot?.matchup_ref) continue;
 
         // Resolve winner from each feeder matchup
@@ -371,9 +420,12 @@ router.post('/:id/advance-bracket', async (req, res) => {
         `;
 
         if (
-          t1Series?.status !== 'complete' || !t1Series?.winner_team_id ||
-          t2Series?.status !== 'complete' || !t2Series?.winner_team_id
-        ) continue;
+          t1Series?.status !== 'complete' ||
+          !t1Series?.winner_team_id ||
+          t2Series?.status !== 'complete' ||
+          !t2Series?.winner_team_id
+        )
+          continue;
 
         // Skip if next-round series already exists
         const [existing] = await sql`
@@ -421,7 +473,8 @@ router.delete('/:id', async (req, res) => {
     const rows = await sql`
       DELETE FROM seasons WHERE id = ${id} RETURNING id
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     return res.json({ message: 'Season deleted' });
   } catch (err) {
     console.error('seasons delete error:', err);
@@ -438,8 +491,10 @@ router.delete('/:id', async (req, res) => {
 router.get('/:seasonId/teams', async (req, res) => {
   const { seasonId } = req.params;
   try {
-    const seasonRows = await sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`;
-    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    const seasonRows =
+      await sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`;
+    if (seasonRows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     const { league_id, start_date: seasonStartDate } = seasonRows[0];
 
     // 1. Try the current season's explicit roster.
@@ -449,13 +504,13 @@ router.get('/:seasonId/teams', async (req, res) => {
     //    The matching iteration is the one whose range covers this season's start_date.
     const current = await sql`
       SELECT
-        t.id, iter.name, iter.code, iter.logo,
+        t.id, iter.name, iter.place_name, iter.team_name, iter.code, iter.logo,
         t.primary_color, t.text_color, t.secondary_color, t.home_arena,
         false AS inherited
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti.name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
+        (SELECT ti.name, ti.place_name, ti.team_name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           LEFT JOIN seasons ss ON ss.id = ti.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
           WHERE ti.team_id = t.id
@@ -464,7 +519,7 @@ router.get('/:seasonId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti.name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
+        (SELECT ti.name, ti.place_name, ti.team_name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) iter ON true
@@ -487,13 +542,13 @@ router.get('/:seasonId/teams', async (req, res) => {
     const prevSeasonStartDate = prevRows[0].prev_start_date;
     const inherited = await sql`
       SELECT
-        t.id, iter.name, iter.code, iter.logo,
+        t.id, iter.name, iter.place_name, iter.team_name, iter.code, iter.logo,
         t.primary_color, t.text_color, t.secondary_color, t.home_arena,
         true AS inherited
       FROM season_teams st
       JOIN teams t ON t.id = st.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti.name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
+        (SELECT ti.name, ti.place_name, ti.team_name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           LEFT JOIN seasons ss ON ss.id = ti.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
           WHERE ti.team_id = t.id
@@ -502,7 +557,7 @@ router.get('/:seasonId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti.name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
+        (SELECT ti.name, ti.place_name, ti.team_name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
           WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) iter ON true
@@ -546,7 +601,8 @@ router.put('/:seasonId/teams', async (req, res) => {
       SELECT id, league_id, start_date::text, end_date::text
       FROM seasons WHERE id = ${seasonId}
     `;
-    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    if (seasonRows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     const { league_id, start_date, end_date } = seasonRows[0];
 
     // ── 1. Find or create the auto group for this season ────────────────────
@@ -612,12 +668,12 @@ router.put('/:seasonId/teams', async (req, res) => {
 
     const teams = await sql`
       SELECT
-        t.id, ti.name, ti.code, ti.logo,
+        t.id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo,
         t.primary_color, t.text_color, t.secondary_color
       FROM group_teams gt
       JOIN teams t ON t.id = gt.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.place_name, ti2.team_name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           LEFT JOIN seasons ss ON ss.id = ti2.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti2.latest_season_id
           WHERE ti2.team_id = t.id
@@ -626,7 +682,7 @@ router.put('/:seasonId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti2.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.place_name, ti2.team_name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           WHERE ti2.team_id = t.id ORDER BY ti2.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) ti ON true
@@ -635,7 +691,8 @@ router.put('/:seasonId/teams', async (req, res) => {
     `;
     return res.json({ season_id: seasonId, auto_group_id: autoGroupId, teams });
   } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'One or more teams not found' });
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'One or more teams not found' });
     console.error('season teams update error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -655,8 +712,10 @@ router.put('/:seasonId/teams', async (req, res) => {
 router.get('/:seasonId/groups', async (req, res) => {
   const { seasonId } = req.params;
   try {
-    const seasonRows = await sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`;
-    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
+    const seasonRows =
+      await sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`;
+    if (seasonRows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     const { league_id, start_date: seasonStartDate } = seasonRows[0];
 
     const groups = await sql`
@@ -741,6 +800,8 @@ router.get('/:seasonId/groups', async (req, res) => {
             r.team_id,
             r.src,
             iter.name,
+            iter.place_name,
+            iter.team_name,
             iter.code,
             iter.logo,
             iter.logo_dark,
@@ -753,6 +814,8 @@ router.get('/:seasonId/groups', async (req, res) => {
           LEFT JOIN LATERAL (
             (SELECT
                 ti.name,
+                ti.place_name,
+                ti.team_name,
                 ti.code,
                 team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
                 team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -768,6 +831,8 @@ router.get('/:seasonId/groups', async (req, res) => {
             UNION ALL
             (SELECT
                 ti.name,
+                ti.place_name,
+                ti.team_name,
                 ti.code,
                 team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
                 team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
@@ -782,7 +847,8 @@ router.get('/:seasonId/groups', async (req, res) => {
         g.is_auto, g.role,
         COALESCE(
           json_agg(
-            json_build_object('id', v.team_id, 'name', v.name, 'code', v.code,
+            json_build_object('id', v.team_id, 'name', v.name, 'place_name', v.place_name,
+                              'team_name', v.team_name, 'code', v.code,
                               'logo', v.logo, 'logo_dark', v.logo_dark, 'logo_light', v.logo_light,
                               'primary_color', v.primary_color, 'text_color', v.text_color,
                               'home_arena', v.home_arena)
@@ -831,10 +897,14 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
       sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`,
       sql`SELECT id, league_id FROM groups  WHERE id = ${groupId}`,
     ]);
-    if (seasonRows.length === 0) return res.status(404).json({ error: 'Season not found' });
-    if (groupRows.length === 0)  return res.status(404).json({ error: 'Group not found' });
+    if (seasonRows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
+    if (groupRows.length === 0)
+      return res.status(404).json({ error: 'Group not found' });
     if (seasonRows[0].league_id !== groupRows[0].league_id) {
-      return res.status(400).json({ error: 'Season and group must belong to the same league' });
+      return res
+        .status(400)
+        .json({ error: 'Season and group must belong to the same league' });
     }
 
     await sql`DELETE FROM season_group_teams WHERE season_id = ${seasonId} AND group_id = ${groupId}`;
@@ -848,11 +918,11 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
 
     const { start_date: seasonStartDate } = seasonRows[0];
     const teams = await sql`
-      SELECT t.id, ti.name, ti.code, ti.logo, t.primary_color, t.text_color
+      SELECT t.id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, t.primary_color, t.text_color
       FROM season_group_teams sgt
       JOIN teams t ON t.id = sgt.team_id
       LEFT JOIN LATERAL (
-        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.place_name, ti2.team_name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           LEFT JOIN seasons ss ON ss.id = ti2.start_season_id
           LEFT JOIN seasons ls ON ls.id = ti2.latest_season_id
           WHERE ti2.team_id = t.id
@@ -861,7 +931,7 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
           ORDER BY ss.start_date DESC NULLS LAST, ti2.recorded_at DESC
           LIMIT 1)
         UNION ALL
-        (SELECT ti2.name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
+        (SELECT ti2.name, ti2.place_name, ti2.team_name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
           WHERE ti2.team_id = t.id ORDER BY ti2.recorded_at ASC LIMIT 1)
         LIMIT 1
       ) ti ON true
@@ -870,7 +940,8 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
     `;
     return res.json({ season_id: seasonId, group_id: groupId, teams });
   } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'One or more teams not found' });
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'One or more teams not found' });
     console.error('season group teams update error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -886,7 +957,9 @@ router.delete('/:seasonId/groups/:groupId/teams', async (req, res) => {
     await sql`
       DELETE FROM season_group_teams WHERE season_id = ${seasonId} AND group_id = ${groupId}
     `;
-    return res.json({ message: 'Season override removed; group reverts to defaults' });
+    return res.json({
+      message: 'Season override removed; group reverts to defaults',
+    });
   } catch (err) {
     console.error('season group teams reset error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -1010,14 +1083,21 @@ router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
   const group = req.query.group;
   const page = Math.max(1, Number.parseInt(req.query.page ?? '1', 10) || 1);
-  const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query.page_size ?? '10', 10) || 10));
+  const pageSize = Math.min(
+    100,
+    Math.max(1, Number.parseInt(req.query.page_size ?? '10', 10) || 10),
+  );
   const offset = (page - 1) * pageSize;
-  const sortKey = String(req.query.sort_key ?? (group === 'goalies' ? 'save_pct' : 'points'));
-  const sortDir = String(req.query.sort_dir ?? 'desc') === 'asc' ? 'asc' : 'desc';
+  const sortKey = String(
+    req.query.sort_key ?? (group === 'goalies' ? 'save_pct' : 'points'),
+  );
+  const sortDir =
+    String(req.query.sort_dir ?? 'desc') === 'asc' ? 'asc' : 'desc';
 
   try {
     if (group === 'forwards' || group === 'defense') {
-      const positions = group === 'forwards' ? ['C', 'LW', 'RW'] : ['D', 'LD', 'RD'];
+      const positions =
+        group === 'forwards' ? ['C', 'LW', 'RW'] : ['D', 'LD', 'RD'];
       const rows = await sql`
         WITH season_games AS (
           SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
@@ -1637,12 +1717,14 @@ router.get('/:id/awards', async (req, res) => {
       bySeasonAward.set(row.season_award_id, list);
     }
 
-    return res.json(awards.map((award) => ({
-      ...award,
-      recipients: award.season_award_id
-        ? (bySeasonAward.get(award.season_award_id) ?? [])
-        : [],
-    })));
+    return res.json(
+      awards.map((award) => ({
+        ...award,
+        recipients: award.season_award_id
+          ? (bySeasonAward.get(award.season_award_id) ?? [])
+          : [],
+      })),
+    );
   } catch (err) {
     console.error('season awards list error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -1655,19 +1737,17 @@ router.get('/:id/awards', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.post('/:id/awards', async (req, res) => {
   const { id } = req.params;
-  const {
-    award_id,
-    awarded_at,
-    notes,
-  } = req.body;
+  const { award_id, awarded_at, notes } = req.body;
 
   if (!award_id) {
     return res.status(400).json({ error: 'award_id is required' });
   }
 
   try {
-    const seasons = await sql`SELECT id, league_id FROM seasons WHERE id = ${id}`;
-    if (seasons.length === 0) return res.status(404).json({ error: 'Season not found' });
+    const seasons =
+      await sql`SELECT id, league_id FROM seasons WHERE id = ${id}`;
+    if (seasons.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
     const leagueId = seasons[0].league_id;
 
     const existingAwards = await sql`
@@ -1675,7 +1755,9 @@ router.post('/:id/awards', async (req, res) => {
       WHERE id = ${award_id} AND league_id = ${leagueId} AND active = true
     `;
     if (existingAwards.length === 0) {
-      return res.status(400).json({ error: 'award_id does not belong to this league' });
+      return res
+        .status(400)
+        .json({ error: 'award_id does not belong to this league' });
     }
 
     const seasonAward = await sql`
@@ -1687,7 +1769,9 @@ router.post('/:id/awards', async (req, res) => {
       RETURNING id
     `;
 
-    return res.status(201).json({ season_award_id: seasonAward[0].id, award_id });
+    return res
+      .status(201)
+      .json({ season_award_id: seasonAward[0].id, award_id });
   } catch (err) {
     console.error('season award create error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -1707,7 +1791,8 @@ router.patch('/:id/awards/:seasonAwardId', async (req, res) => {
       WHERE id = ${seasonAwardId} AND season_id = ${id}
       RETURNING id
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Award not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: 'Award not found' });
     return res.json({ id: rows[0].id });
   } catch (err) {
     console.error('season award update error:', err);
@@ -1729,7 +1814,9 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
   } = req.body;
 
   if (!['player', 'team'].includes(recipient_type)) {
-    return res.status(400).json({ error: 'recipient_type must be player or team' });
+    return res
+      .status(400)
+      .json({ error: 'recipient_type must be player or team' });
   }
   if (!['nominee', 'winner'].includes(role)) {
     return res.status(400).json({ error: 'role must be nominee or winner' });
@@ -1742,7 +1829,8 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
   }
 
   try {
-    const rankValue = rank === undefined || rank === null || rank === '' ? null : Number(rank);
+    const rankValue =
+      rank === undefined || rank === null || rank === '' ? null : Number(rank);
     const votePointsValue =
       vote_points === undefined || vote_points === null || vote_points === ''
         ? null
@@ -1761,9 +1849,12 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
       JOIN league_awards la ON la.id = sa.award_id
       WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
     `;
-    if (awards.length === 0) return res.status(404).json({ error: 'Award not found' });
+    if (awards.length === 0)
+      return res.status(404).json({ error: 'Award not found' });
     if (awards[0].recipient_type !== recipient_type) {
-      return res.status(400).json({ error: 'recipient_type does not match award' });
+      return res
+        .status(400)
+        .json({ error: 'recipient_type does not match award' });
     }
 
     const rows = await sql`
@@ -1785,16 +1876,19 @@ router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
     `;
     return res.status(201).json({ id: rows[0].id });
   } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'Invalid player, team, or award' });
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'Invalid player, team, or award' });
     console.error('season award recipient create error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-router.delete('/:id/awards/:seasonAwardId/recipients/:recipientId', async (req, res) => {
-  const { id, seasonAwardId, recipientId } = req.params;
-  try {
-    const rows = await sql`
+router.delete(
+  '/:id/awards/:seasonAwardId/recipients/:recipientId',
+  async (req, res) => {
+    const { id, seasonAwardId, recipientId } = req.params;
+    try {
+      const rows = await sql`
       DELETE FROM season_award_recipients sar
       USING season_awards sa
       WHERE sar.id = ${recipientId}
@@ -1803,13 +1897,14 @@ router.delete('/:id/awards/:seasonAwardId/recipients/:recipientId', async (req, 
         AND sa.season_id = ${id}
       RETURNING sar.id
     `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Recipient not found' });
-    return res.status(204).send();
-  } catch (err) {
-    console.error('season award recipient delete error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
+      if (rows.length === 0)
+        return res.status(404).json({ error: 'Recipient not found' });
+      return res.status(204).send();
+    } catch (err) {
+      console.error('season award recipient delete error:', err);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 module.exports = router;
-

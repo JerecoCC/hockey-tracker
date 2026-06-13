@@ -66,6 +66,8 @@ interface Props {
   nameItalic?: boolean;
   /** When true, suppresses the image and placeholder entirely. */
   hideImage?: boolean;
+  /** Visual treatment. 'plain' removes the static row frame/background. */
+  variant?: 'framed' | 'plain';
   /**
    * Hover-revealed action buttons. Pass an array of action descriptors; falsy
    * entries (false | null | undefined) are ignored, enabling conditional buttons.
@@ -85,6 +87,7 @@ const ListItem = ({
   imageNode,
   image_shape = 'square',
   hideImage = false,
+  variant = 'framed',
   name,
   nameItalic = false,
   placeholder,
@@ -107,9 +110,7 @@ const ListItem = ({
   const imageSize = 48;
   const imageClassName = image
     ? [styles.logo, isCircle && styles.logoCircle].filter(Boolean).join(' ')
-    : [styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle]
-        .filter(Boolean)
-        .join(' ');
+    : [styles.logoPlaceholder, isCircle && styles.logoPlaceholderCircle].filter(Boolean).join(' ');
   const defaultImageNode = isCircle ? (
     <PlayerAvatar
       photo={image}
@@ -133,7 +134,12 @@ const ListItem = ({
 
   return (
     <li
-      className={[styles.item, href ? styles.itemClickable : '', className]
+      className={[
+        styles.item,
+        variant === 'plain' ? styles.itemPlain : '',
+        href ? styles.itemClickable : '',
+        className,
+      ]
         .filter(Boolean)
         .join(' ')}
     >

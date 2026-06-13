@@ -364,7 +364,9 @@ const GroupNode = ({
               <ListItem
                 key={t.id}
                 image={t.logo}
-                name={t.name}
+                eyebrow={t.place_name || ''}
+                name={t.team_name || t.name}
+                variant="plain"
                 rightContent={{ type: 'code', value: t.code }}
                 primaryColor={t.primary_color}
                 textColor={t.text_color}
@@ -547,7 +549,9 @@ const SeasonTeamsCard = ({
                     <ListItem
                       key={t.id}
                       image={t.logo}
-                      name={t.name}
+                      eyebrow={t.place_name || ''}
+                      name={t.team_name || t.name}
+                      variant="plain"
                       rightContent={{ type: 'code', value: t.code }}
                       primaryColor={t.primary_color}
                       textColor={t.text_color}

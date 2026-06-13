@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 // ── Scoreboard card ────────────────────────────────────────────────────────────
 // Default: normal in-place card appearance.
@@ -274,7 +274,8 @@
   min-width: 0;
 }
 
-.teamFullName {
+.teamFullName,
+.teamMobileCode {
   font-size: $font-base;
   font-weight: 700;
   color: $text-bright;
@@ -283,23 +284,38 @@
   text-overflow: ellipsis;
 }
 
-.teamSubInfo {
+.teamPlaceName {
   font-size: $font-sm;
   color: $text-dim;
 }
 
-// The team code (teamSubInfo) also switches to the team's own text colour.
+.teamMobileCode {
+  display: none;
+
+  @media (max-width: 900px) {
+    display: inline;
+  }
+}
+
+@media (max-width: 900px) {
+  .teamFullName {
+    display: none;
+  }
+}
+
+// The place name also switches to the team's own text colour.
 // A shadow is applied only when the JS-computed contrast ratio is too low
 // (--team-text-shadow is 'transparent' when contrast is sufficient).
 .scoreboardCardStuck {
   .teamInfo {
-    .teamSubInfo {
+    .teamPlaceName {
       color: var(--team-text);
       font-weight: 500;
     }
 
     .teamFullName,
-    .teamSubInfo {
+    .teamMobileCode,
+    .teamPlaceName {
       text-shadow: 0 1px 4px var(--team-text-shadow);
     }
   }

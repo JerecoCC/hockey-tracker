@@ -71,6 +71,7 @@ export interface LastFiveGame {
 export interface TeamInfo {
   id:              string;
   name:            string;
+  place_name?:     string | null;
   team_name?:      string | null;
   code:            string;
   logo:            string | null;

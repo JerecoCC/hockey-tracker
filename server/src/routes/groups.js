@@ -15,7 +15,9 @@ router.use(requireAdmin);
 router.get('/', async (req, res) => {
   const { league_id } = req.query;
   if (!league_id) {
-    return res.status(400).json({ error: 'league_id query parameter is required' });
+    return res
+      .status(400)
+      .json({ error: 'league_id query parameter is required' });
   }
   try {
     const groups = await sql`
@@ -23,7 +25,8 @@ router.get('/', async (req, res) => {
         g.id, g.league_id, g.parent_id, g.name, g.sort_order, g.created_at, g.is_auto, g.role,
         COALESCE(
           json_agg(
-            json_build_object('id', t.id, 'name', ti.name, 'code', ti.code,
+            json_build_object('id', t.id, 'name', ti.name, 'place_name', ti.place_name,
+                              'team_name', ti.team_name, 'code', ti.code,
                               'logo', ti.logo, 'logo_dark', ti.logo_dark, 'logo_light', ti.logo_light,
                               'primary_color', t.primary_color, 'text_color', t.text_color)
             ORDER BY ti.name
@@ -34,7 +37,7 @@ router.get('/', async (req, res) => {
       LEFT JOIN group_teams gt ON gt.group_id = g.id
       LEFT JOIN teams t ON t.id = gt.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -56,12 +59,19 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { league_id, name, parent_id, sort_order, role } = req.body;
 
-  if (!league_id) return res.status(400).json({ error: 'league_id is required' });
+  if (!league_id)
+    return res.status(400).json({ error: 'league_id is required' });
   if (!name || typeof name !== 'string' || name.trim() === '') {
     return res.status(400).json({ error: 'name is required' });
   }
-  if (role !== undefined && role !== null && !['conference', 'division'].includes(role)) {
-    return res.status(400).json({ error: 'role must be conference, division, or null' });
+  if (
+    role !== undefined &&
+    role !== null &&
+    !['conference', 'division'].includes(role)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'role must be conference, division, or null' });
   }
 
   // Validate parent belongs to the same league
@@ -71,7 +81,9 @@ router.post('/', async (req, res) => {
         SELECT id FROM groups WHERE id = ${parent_id} AND league_id = ${league_id}
       `;
       if (parentRows.length === 0) {
-        return res.status(400).json({ error: 'parent group not found in this league' });
+        return res
+          .status(400)
+          .json({ error: 'parent group not found in this league' });
       }
     } catch (err) {
       console.error('groups parent check error:', err);
@@ -87,7 +99,8 @@ router.post('/', async (req, res) => {
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'League not found' });
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'League not found' });
     console.error('groups create error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
@@ -103,29 +116,41 @@ router.patch('/:id', async (req, res) => {
   if (name !== undefined && (typeof name !== 'string' || name.trim() === '')) {
     return res.status(400).json({ error: 'name cannot be empty' });
   }
-  if (role !== undefined && role !== null && !['conference', 'division'].includes(role)) {
-    return res.status(400).json({ error: 'role must be conference, division, or null' });
+  if (
+    role !== undefined &&
+    role !== null &&
+    !['conference', 'division'].includes(role)
+  ) {
+    return res
+      .status(400)
+      .json({ error: 'role must be conference, division, or null' });
   }
 
   try {
-    const existing = await sql`SELECT id, league_id FROM groups WHERE id = ${id}`;
-    if (existing.length === 0) return res.status(404).json({ error: 'Group not found' });
+    const existing =
+      await sql`SELECT id, league_id FROM groups WHERE id = ${id}`;
+    if (existing.length === 0)
+      return res.status(404).json({ error: 'Group not found' });
 
     if (parent_id !== undefined && parent_id !== null) {
       if (parent_id === id) {
-        return res.status(400).json({ error: 'A group cannot be its own parent' });
+        return res
+          .status(400)
+          .json({ error: 'A group cannot be its own parent' });
       }
       const parentRows = await sql`
         SELECT id FROM groups WHERE id = ${parent_id} AND league_id = ${existing[0].league_id}
       `;
       if (parentRows.length === 0) {
-        return res.status(400).json({ error: 'parent group not found in this league' });
+        return res
+          .status(400)
+          .json({ error: 'parent group not found in this league' });
       }
     }
 
     const parentInBody = 'parent_id' in req.body;
-    const sortInBody   = 'sort_order' in req.body;
-    const roleInBody   = 'role' in req.body;
+    const sortInBody = 'sort_order' in req.body;
+    const roleInBody = 'role' in req.body;
 
     const rows = await sql`
       UPDATE groups SET
@@ -143,7 +168,6 @@ router.patch('/:id', async (req, res) => {
   }
 });
 
-
 // ---------------------------------------------------------------------------
 // DELETE /api/admin/groups/:id  – delete a group (cascades subgroups + memberships)
 // ---------------------------------------------------------------------------
@@ -151,7 +175,8 @@ router.delete('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`DELETE FROM groups WHERE id = ${id} RETURNING id`;
-    if (rows.length === 0) return res.status(404).json({ error: 'Group not found' });
+    if (rows.length === 0)
+      return res.status(404).json({ error: 'Group not found' });
     return res.json({ message: 'Group deleted' });
   } catch (err) {
     console.error('groups delete error:', err);
@@ -173,7 +198,8 @@ router.put('/:id/teams', async (req, res) => {
 
   try {
     const groupRows = await sql`SELECT id FROM groups WHERE id = ${id}`;
-    if (groupRows.length === 0) return res.status(404).json({ error: 'Group not found' });
+    if (groupRows.length === 0)
+      return res.status(404).json({ error: 'Group not found' });
 
     // Clear existing then re-insert
     await sql`DELETE FROM group_teams WHERE group_id = ${id}`;
@@ -185,11 +211,12 @@ router.put('/:id/teams', async (req, res) => {
     }
 
     const teams = await sql`
-      SELECT t.id, ti.name, ti.code, ti.logo, ti.logo_dark, ti.logo_light
+      SELECT t.id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, ti.logo_dark, ti.logo_light,
+             t.primary_color, t.text_color
       FROM group_teams gt
       JOIN teams t ON t.id = gt.team_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+        SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
         WHERE team_id = t.id
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
@@ -199,7 +226,8 @@ router.put('/:id/teams', async (req, res) => {
     `;
     return res.json({ group_id: id, teams });
   } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'One or more teams not found' });
+    if (err.code === '23503')
+      return res.status(400).json({ error: 'One or more teams not found' });
     console.error('groups set teams error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

@@ -17,6 +17,8 @@ const apiError = (err: unknown, fallback: string): string =>
 export interface GroupTeamRecord {
   id: string;
   name: string;
+  place_name?: string | null;
+  team_name?: string | null;
   code: string;
   logo: string | null;
   logo_dark?: string | null;
@@ -57,10 +59,10 @@ const useLeagueGroups = (leagueId: string | undefined) => {
     queryKey: ['groups', leagueId],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<GroupRecord[]>(
-          `${API}/admin/groups`,
-          { params: { league_id: leagueId }, headers: authHeaders() },
-        );
+        const { data } = await axios.get<GroupRecord[]>(`${API}/admin/groups`, {
+          params: { league_id: leagueId },
+          headers: authHeaders(),
+        });
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load groups'));

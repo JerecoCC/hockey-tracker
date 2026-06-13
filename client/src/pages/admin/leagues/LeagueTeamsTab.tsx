@@ -13,15 +13,8 @@ interface Props {
 
 const LeagueTeamsTab = (props: Props) => {
   const { className } = props;
-  const {
-    league,
-    teams,
-    loading,
-    busy,
-    onAddTeam,
-    onEditTeam,
-    onDeleteTeam,
-  } = useLeagueDetailsContext();
+  const { league, teams, loading, busy, onAddTeam, onEditTeam, onDeleteTeam } =
+    useLeagueDetailsContext();
   const navigate = useNavigate();
 
   return (
@@ -59,6 +52,7 @@ const LeagueTeamsTab = (props: Props) => {
                   image={t.logo}
                   eyebrow={t.place_name || ''}
                   name={t.team_name || ''}
+                  variant="plain"
                   rightContent={{ type: 'code', value: t.code }}
                   primaryColor={t.primary_color}
                   textColor={t.text_color}
