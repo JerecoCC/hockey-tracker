@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -19,6 +19,11 @@ import TeamGamesTab from './TeamGamesTab';
 import TeamPlayersTab from './TeamPlayersTab';
 import TeamHistoryTab from './TeamHistoryTab';
 import styles from './TeamDetails.module.scss';
+
+const getCurrentMonthStart = () => {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+};
 
 const TeamDetailsPage = () => {
   const navigate = useNavigate();
@@ -72,6 +77,8 @@ const TeamDetailsPage = () => {
     (!isLegacyTeamRoute && leagueDetailsLoading);
   const { groups } = useLeagueGroups(team?.league_id ?? undefined);
   const [activeTab, handleTabChange] = useTabState('tab:team-details');
+  const [teamGamesCalendarMonth, setTeamGamesCalendarMonth] =
+    useState<Date>(getCurrentMonthStart);
   const routeSeason = routeSeasonParam
     ? leagueSeasons.find(
         (season) =>
@@ -146,6 +153,10 @@ const TeamDetailsPage = () => {
     navigate(backPath, { replace: true });
   }, [backPath, loading, navigate, team]);
 
+  useEffect(() => {
+    setTeamGamesCalendarMonth(getCurrentMonthStart());
+  }, [team?.id]);
+
   if (loading) {
     return (
       <div className={styles.loaderWrapper}>
@@ -187,6 +198,9 @@ const TeamDetailsPage = () => {
                 leagueId={team.league_id ?? leagueId ?? ''}
                 leagueCode={team.league_code}
                 defaultSeasonId={routeSeasonId}
+                calendarMonth={teamGamesCalendarMonth}
+                onCalendarMonthChange={setTeamGamesCalendarMonth}
+                seasonTeams={leagueTeams}
               />
             ),
           },

@@ -13,6 +13,7 @@ const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 
 const POSITION_LABELS: Record<string, string> = {
+  F: 'Forward',
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',

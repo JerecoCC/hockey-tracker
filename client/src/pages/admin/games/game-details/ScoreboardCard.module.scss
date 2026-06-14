@@ -12,10 +12,7 @@ $scoreboard-stripe-overlap: 8px;
 // Default: normal in-place card appearance.
 .scoreboardCard {
   --scoreboard-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
-  --scoreboard-main-inline-padding-offset: var(
-    --main-inline-padding-offset,
-    -#{$space-4xl}
-  );
+  --scoreboard-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
 
   position: sticky;
   top: 52px;
@@ -39,11 +36,9 @@ $scoreboard-stripe-overlap: 8px;
 }
 
 .scoreboardCardStuck {
-  width: calc(
-    100% + var(--scoreboard-main-inline-padding) + var(--scoreboard-main-inline-padding)
-  );
+  width: calc(100% + var(--scoreboard-main-inline-padding) + var(--scoreboard-main-inline-padding));
   margin-inline: var(--scoreboard-main-inline-padding-offset);
-  border-radius: 0 !important;
+  border-radius: 0 0 $radius-lg $radius-lg !important;
   border-color: transparent !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }

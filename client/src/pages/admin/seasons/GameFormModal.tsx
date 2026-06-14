@@ -2,6 +2,7 @@ import { useCallback, useLayoutEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import type { SelectOption } from '@/components/Select/Select';
 import useGames, {
   type CreateGameData,
@@ -9,12 +10,21 @@ import useGames, {
   type GameStatus,
   type GameType,
 } from '@/hooks/useGames';
-import { type SeasonTeam } from '@/hooks/useSeasonDetails';
 import styles from './GameFormModal.module.scss';
+
+export interface GameFormTeam {
+  id: string;
+  name: string;
+  code: string;
+  logo: string | null;
+  home_arena: string | null;
+}
 
 interface FormValues {
   home_team_id: string | null;
   away_team_id: string | null;
+  team_side: 'home' | 'away';
+  opponent_team_id: string | null;
   game_type: GameType;
   status: GameStatus;
   scheduled_date: string;
@@ -29,12 +39,14 @@ interface Props {
   open: boolean;
   seasonId: string;
   editTarget: GameRecord | null;
-  seasonTeams: SeasonTeam[];
+  seasonTeams: GameFormTeam[];
   createGame: ReturnType<typeof useGames>['createGame'];
   updateGame: ReturnType<typeof useGames>['updateGame'];
   onClose: () => void;
   /** When provided (create mode only), pre-fills and locks the date field. */
   defaultDate?: string;
+  /** Team Details create flow: current team is fixed, user picks home/away plus opponent. */
+  teamContext?: { teamId: string };
 }
 
 const fmtModalDate = (iso: string) => {
@@ -51,12 +63,22 @@ const GameFormModal = ({
   updateGame,
   onClose,
   defaultDate,
+  teamContext,
 }: Props) => {
+  const isTeamContextCreate = !!teamContext && !editTarget;
   const formValues = useMemo<FormValues>(() => {
     if (editTarget) {
+      const teamSide =
+        teamContext?.teamId && editTarget.away_team.id === teamContext.teamId ? 'away' : 'home';
+      const opponentTeamId =
+        teamContext?.teamId && editTarget.away_team.id === teamContext.teamId
+          ? editTarget.home_team.id
+          : editTarget.away_team.id;
       return {
         home_team_id: editTarget.home_team.id,
         away_team_id: editTarget.away_team.id,
+        team_side: teamSide,
+        opponent_team_id: opponentTeamId,
         game_type: editTarget.game_type,
         status: editTarget.status,
         scheduled_date: editTarget.scheduled_at ? editTarget.scheduled_at.slice(0, 10) : '',
@@ -69,8 +91,10 @@ const GameFormModal = ({
       };
     }
     return {
-      home_team_id: null,
+      home_team_id: teamContext?.teamId ?? null,
       away_team_id: null,
+      team_side: 'home',
+      opponent_team_id: null,
       game_type: 'regular',
       status: 'scheduled',
       scheduled_date: defaultDate ?? '',
@@ -80,12 +104,13 @@ const GameFormModal = ({
       shootout: 'false',
       notes: '',
     };
-  }, [defaultDate, editTarget]);
+  }, [defaultDate, editTarget, teamContext?.teamId]);
   const {
     control,
     handleSubmit,
     reset,
     setValue,
+    watch,
     formState: { isDirty, isSubmitting, isValid },
   } = useForm<FormValues>({
     defaultValues: formValues,
@@ -98,6 +123,39 @@ const GameFormModal = ({
   const handleHomeTeamChange = (teamId: string | null) => {
     const team = seasonTeams.find((t) => t.id === teamId);
     setValue('venue', team?.home_arena ?? '');
+  };
+
+  const applyTeamContextTeams = useCallback(
+    (side: 'home' | 'away', nextOpponentTeamId: string | null) => {
+      if (!teamContext) return;
+      const currentTeamId = teamContext.teamId;
+      const homeTeamId = side === 'home' ? currentTeamId : nextOpponentTeamId;
+      const awayTeamId = side === 'home' ? nextOpponentTeamId : currentTeamId;
+      const venueTeamId = side === 'home' ? currentTeamId : nextOpponentTeamId;
+      const venueTeam = seasonTeams.find((team) => team.id === venueTeamId);
+
+      setValue('home_team_id', homeTeamId, { shouldDirty: true, shouldValidate: true });
+      setValue('away_team_id', awayTeamId, { shouldDirty: true, shouldValidate: true });
+      setValue('venue', venueTeam?.home_arena ?? '', { shouldDirty: true });
+    },
+    [seasonTeams, setValue, teamContext],
+  );
+
+  const teamSide = watch('team_side');
+  const opponentTeamId = watch('opponent_team_id');
+
+  const handleTeamSideChange = (side: string) => {
+    const nextSide = side as 'home' | 'away';
+    setValue('team_side', nextSide, { shouldDirty: true, shouldValidate: true });
+    applyTeamContextTeams(nextSide, opponentTeamId);
+  };
+
+  const handleOpponentTeamChange = (nextOpponentTeamId: string | null) => {
+    setValue('opponent_team_id', nextOpponentTeamId, {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+    applyTeamContextTeams(teamSide, nextOpponentTeamId);
   };
 
   useLayoutEffect(() => {
@@ -115,12 +173,27 @@ const GameFormModal = ({
     logo: t.logo,
     code: t.code,
   }));
+  const opponentOptions = teamContext
+    ? teamOptions.filter((option) => 'value' in option && option.value !== teamContext.teamId)
+    : teamOptions;
 
   const onSubmit = handleSubmit(async (data) => {
+    const homeTeamId =
+      isTeamContextCreate && teamContext
+        ? data.team_side === 'home'
+          ? teamContext.teamId
+          : data.opponent_team_id!
+        : data.home_team_id!;
+    const awayTeamId =
+      isTeamContextCreate && teamContext
+        ? data.team_side === 'home'
+          ? data.opponent_team_id!
+          : teamContext.teamId
+        : data.away_team_id!;
     const payload: CreateGameData = {
       season_id: seasonId,
-      home_team_id: data.home_team_id!,
-      away_team_id: data.away_team_id!,
+      home_team_id: homeTeamId,
+      away_team_id: awayTeamId,
       game_type: data.game_type,
       status: data.status,
       scheduled_at: data.scheduled_date || null,
@@ -179,34 +252,69 @@ const GameFormModal = ({
           />
         </div>
 
-        {/* Row 2: Away team | Home team */}
-        <div className={styles.teamRow}>
-          <Field
-            label="Away Team"
-            type="select"
-            required
-            control={control}
-            name="away_team_id"
-            rules={{ required: true }}
-            options={teamOptions}
-            placeholder="— Select away team —"
-            disabled={isStarted || isSubmitting}
-            searchable
-          />
-          <Field
-            label="Home Team"
-            type="select"
-            required
-            control={control}
-            name="home_team_id"
-            rules={{ required: true }}
-            options={teamOptions}
-            placeholder="— Select home team —"
-            disabled={isStarted || isSubmitting}
-            searchable
-            onChange={!isStarted ? handleHomeTeamChange : undefined}
-          />
-        </div>
+        {/* Row 2: Team choices */}
+        {isTeamContextCreate ? (
+          <div className={styles.teamRow}>
+            <Field
+              label="Current Team"
+              type="custom"
+              control={control}
+              name="team_side"
+            >
+              <SegmentedControl
+                value={teamSide}
+                onChange={handleTeamSideChange}
+                disabled={isSubmitting}
+                className={styles.teamSideControl}
+                options={[
+                  { value: 'away', label: 'Away' },
+                  { value: 'home', label: 'Home' },
+                ]}
+              />
+            </Field>
+            <Field
+              label="Opponent Team"
+              type="select"
+              required
+              control={control}
+              name="opponent_team_id"
+              rules={{ required: true }}
+              options={opponentOptions}
+              placeholder="Select opponent"
+              disabled={isSubmitting}
+              searchable
+              onChange={handleOpponentTeamChange}
+            />
+          </div>
+        ) : (
+          <div className={styles.teamRow}>
+            <Field
+              label="Away Team"
+              type="select"
+              required
+              control={control}
+              name="away_team_id"
+              rules={{ required: true }}
+              options={teamOptions}
+              placeholder="— Select away team —"
+              disabled={isStarted || isSubmitting}
+              searchable
+            />
+            <Field
+              label="Home Team"
+              type="select"
+              required
+              control={control}
+              name="home_team_id"
+              rules={{ required: true }}
+              options={teamOptions}
+              placeholder="— Select home team —"
+              disabled={isStarted || isSubmitting}
+              searchable
+              onChange={!isStarted ? handleHomeTeamChange : undefined}
+            />
+          </div>
+        )}
 
         {/* Row 3: Venue — full width */}
         <Field

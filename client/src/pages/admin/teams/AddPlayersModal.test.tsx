@@ -102,5 +102,39 @@ describe('AddPlayersModal', () => {
     expect(screen.getByText('Center')).toBeInTheDocument();
     expect(screen.queryByText(/Last:/)).not.toBeInTheDocument();
   });
+
+  it('displays generic forward positions as Forward', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: [
+        {
+          id: 'player-forward',
+          first_name: 'Hilary',
+          last_name: 'Knight',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'F',
+          shoots: null,
+          is_active: true,
+          created_at: '2026-01-01T00:00:00.000Z',
+          jersey_number: 21,
+          team_name: null,
+          team_code: null,
+          team_logo: null,
+          primary_color: null,
+          text_color: null,
+        },
+      ],
+    });
+
+    renderModal();
+
+    expect(await screen.findByText('Hilary Knight')).toBeInTheDocument();
+    expect(screen.getByText('Forward')).toBeInTheDocument();
+    expect(screen.queryByText('F')).not.toBeInTheDocument();
+  });
 });
 
