@@ -1,19 +1,24 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useQuery } from '@tanstack/react-query';
+import { toPng } from 'html-to-image';
+import type { GameRecord } from '@/hooks/useGames';
 import useLeagues from '@/hooks/useLeagues';
 import useTeams from '@/hooks/useTeams';
 import ScoreImageModal from './ScoreImageModal';
 
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn() }));
+jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
 jest.mock('@/hooks/useLeagues', () => jest.fn());
 jest.mock('@/hooks/useTeams', () => jest.fn());
 
 const mockUseQuery = useQuery as jest.Mock;
+const mockToPng = toPng as jest.Mock;
 const mockUseLeagues = useLeagues as jest.Mock;
 const mockUseTeams = useTeams as jest.Mock;
 
 beforeAll(() => {
+  window.scrollTo = jest.fn();
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: jest.fn().mockImplementation((query: string) => ({
@@ -27,6 +32,10 @@ beforeAll(() => {
       dispatchEvent: jest.fn(),
     })),
   });
+  Object.defineProperty(HTMLImageElement.prototype, 'complete', {
+    configurable: true,
+    get: () => true,
+  });
 });
 
 beforeEach(() => {
@@ -34,6 +43,7 @@ beforeEach(() => {
   mockUseQuery.mockReturnValue({ data: [] });
   mockUseLeagues.mockReturnValue({ leagues: [] });
   mockUseTeams.mockReturnValue({ teams: [] });
+  mockToPng.mockResolvedValue('data:image/png;base64,test');
 });
 
 describe('ScoreImageModal', () => {
@@ -64,41 +74,26 @@ describe('ScoreImageModal', () => {
 
   it('downloads using away vs home and game date in the filename', async () => {
     const user = userEvent.setup();
-    const mockContext = {
-      fillStyle: '',
-      strokeStyle: '',
-      lineWidth: 1,
-      font: '',
-      textAlign: 'left',
-      textBaseline: 'alphabetic',
-      globalAlpha: 1,
-      beginPath: jest.fn(),
-      closePath: jest.fn(),
-      clip: jest.fn(),
-      rect: jest.fn(),
-      drawImage: jest.fn(),
-      fill: jest.fn(),
-      stroke: jest.fn(),
-      fillRect: jest.fn(),
-      strokeRect: jest.fn(),
-      fillText: jest.fn(),
-      save: jest.fn(),
-      restore: jest.fn(),
-      arc: jest.fn(),
-      moveTo: jest.fn(),
-      lineTo: jest.fn(),
-      createLinearGradient: jest.fn(() => ({ addColorStop: jest.fn() })),
-      measureText: jest.fn(() => ({ width: 120 })),
-    } as unknown as CanvasRenderingContext2D;
-
-    jest.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockContext);
-    jest
-      .spyOn(HTMLCanvasElement.prototype, 'toDataURL')
-      .mockReturnValue('data:image/png;base64,test');
-
     const originalCreateElement = document.createElement.bind(document);
     const clickMock = jest.fn();
     let createdAnchor: HTMLAnchorElement | null = null;
+    mockUseLeagues.mockReturnValue({
+      leagues: [
+        {
+          id: 'league-1',
+          name: 'Hockey League',
+          code: 'HL',
+          logo: 'https://example.com/league.png',
+          icon: null,
+          primary_color: '#111111',
+          text_color: '#ffffff',
+          best_of_playoff: 7,
+          best_of_shootout: 3,
+          scoring_system: '2-1-0',
+          playoff_format: null,
+        },
+      ],
+    });
     jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
       const element = originalCreateElement(tagName);
       if (String(tagName).toLowerCase() === 'a') {
@@ -116,7 +111,9 @@ describe('ScoreImageModal', () => {
           {
             away_team: {
               id: 'team-away',
-              name: 'Away',
+              name: 'Away Bears',
+              place_name: 'Away',
+              team_name: 'Bears',
               code: 'AWY',
               logo: null,
               primary_color: '#111111',
@@ -125,7 +122,9 @@ describe('ScoreImageModal', () => {
             },
             home_team: {
               id: 'team-home',
-              name: 'Home',
+              name: 'Home Wolves',
+              place_name: 'Home',
+              team_name: 'Wolves',
               code: 'HOM',
               logo: null,
               primary_color: '#333333',
@@ -133,6 +132,10 @@ describe('ScoreImageModal', () => {
               text_color: '#ffffff',
             },
             scheduled_at: '2026-03-05T19:00:00Z',
+            league_code: 'HL',
+            league_name: 'Hockey League',
+            season_name: '2026 Season',
+            league_id: 'league-1',
             game_type: 'regular',
             series_games_to_win: null,
             series_home_wins: null,
@@ -141,7 +144,7 @@ describe('ScoreImageModal', () => {
             game_number_in_series: null,
             playoff_round: null,
             playoff_round_names: null,
-          } as any
+          } as Partial<GameRecord> as GameRecord
         }
         liveAwayScore={1}
         liveHomeScore={2}
@@ -151,6 +154,22 @@ describe('ScoreImageModal', () => {
     await user.click(screen.getByRole('button', { name: 'Download Image' }));
 
     await waitFor(() => expect(clickMock).toHaveBeenCalled());
+    expect(screen.getByText('REGULAR SEASON')).toBeInTheDocument();
+    expect(screen.getByText('Home')).toBeInTheDocument();
+    expect(screen.getByText('Wolves')).toBeInTheDocument();
+    expect(screen.getByText('Winner')).toBeInTheDocument();
+    expect(screen.getByAltText('HL logo')).toHaveAttribute(
+      'src',
+      'https://example.com/league.png',
+    );
+    expect(mockToPng).toHaveBeenCalledWith(
+      expect.any(HTMLDivElement),
+      expect.objectContaining({
+        width: 1440,
+        height: 2560,
+        backgroundColor: '#f8fafc',
+      }),
+    );
     expect(createdAnchor?.download).toBe('AWY vs HOM - 2026-03-05.png');
   });
 });

@@ -1,5 +1,6 @@
 import {
   type ChangeEvent,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   useEffect,
   useMemo,
@@ -9,6 +10,8 @@ import {
 import { Controller, type Control, useForm } from 'react-hook-form';
 import { useQuery } from '@tanstack/react-query';
 import axios from 'axios';
+import { toPng } from 'html-to-image';
+import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Checkbox from '@/components/Checkbox/Checkbox';
 import DatePicker from '@/components/DatePicker/DatePicker';
@@ -26,12 +29,9 @@ const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('toke
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
-// Instagram Stories – Samsung S25 Ultra: 1440 × 2560  (9:16)
-// Scale factor 4/3 vs original 1080 × 1920 layout
+// Instagram Stories / vertical social format.
 const W = 1440;
 const H = 2560;
-
-// Section Y boundaries
 const HERO_H = 1307;
 const SEP_Y = HERO_H;
 const SEP_H = 123;
@@ -75,6 +75,38 @@ async function loadLocalImage(file: File): Promise<HTMLImageElement | null> {
     };
     img.src = url;
   });
+}
+
+function readFileAsDataUrl(file: File): Promise<string | null> {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : null);
+    reader.onerror = () => resolve(null);
+    reader.readAsDataURL(file);
+  });
+}
+
+async function waitForImages(node: HTMLElement) {
+  const images = Array.from(node.querySelectorAll('img'));
+  await Promise.all(
+    images.map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete) {
+            resolve();
+            return;
+          }
+
+          const timeout = window.setTimeout(() => resolve(), 3000);
+          const done = () => {
+            window.clearTimeout(timeout);
+            resolve();
+          };
+          img.addEventListener('load', done, { once: true });
+          img.addEventListener('error', done, { once: true });
+        }),
+    ),
+  );
 }
 
 function getFileDateLabel(scheduledAt?: string | null) {
@@ -136,6 +168,8 @@ function drawLogo(
 interface DrawTeam {
   id: string;
   name: string;
+  place_name?: string | null;
+  team_name?: string | null;
   code: string;
   logo: string | null;
   primary_color: string;
@@ -146,7 +180,10 @@ interface DrawTeam {
 interface DrawGameType {
   away_team: DrawTeam;
   home_team: DrawTeam;
+  league_id?: string | null;
+  league_code?: string | null;
   league_name?: string | null;
+  league_logo?: string | null;
   season_name?: string | null;
   game_type?: string | null;
   series_games_to_win?: number | null;
@@ -222,6 +259,44 @@ const ScoreCardNumberField = ({ control, name, label, min, max }: ScoreCardNumbe
   );
 };
 
+const ScoreCardTeamLogo = ({ team }: { team: DrawTeam | null }) => {
+  if (!team) {
+    return <div className={styles.scoreCardLogoPlaceholder}>TBD</div>;
+  }
+
+  if (team.logo) {
+    return (
+      <img
+        src={team.logo}
+        alt=""
+        className={styles.scoreCardLogoImg}
+        crossOrigin="anonymous"
+      />
+    );
+  }
+
+  return (
+    <div
+      className={styles.scoreCardLogoPlaceholder}
+      style={{ background: team.primary_color, color: team.text_color }}
+    >
+      {team.code.slice(0, 3)}
+    </div>
+  );
+};
+
+const ScoreCardTeamName = ({ team }: { team: DrawTeam | null }) => {
+  const placeName = team?.place_name?.trim() ?? '';
+  const teamName = team?.team_name?.trim() || team?.name || team?.code || 'TBD';
+
+  return (
+    <span className={styles.scoreCardTeamName}>
+      {placeName && <span>{placeName}</span>}
+      <strong>{teamName}</strong>
+    </span>
+  );
+};
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const ScoreImageModal = ({
@@ -234,11 +309,13 @@ const ScoreImageModal = ({
   showForm = false,
 }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const scoreCardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
+  const [heroExportUrl, setHeroExportUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
 
   // Crop state — position 0-100 (%), zoom 1-3×
@@ -328,6 +405,8 @@ const ScoreImageModal = ({
       away_team: {
         id: formAwayTeam.id,
         name: formAwayTeam.name,
+        place_name: formAwayTeam.place_name,
+        team_name: formAwayTeam.team_name,
         code: formAwayTeam.code,
         logo: formAwayTeam.logo,
         primary_color: formAwayTeam.primary_color,
@@ -337,13 +416,18 @@ const ScoreImageModal = ({
       home_team: {
         id: formHomeTeam.id,
         name: formHomeTeam.name,
+        place_name: formHomeTeam.place_name,
+        team_name: formHomeTeam.team_name,
         code: formHomeTeam.code,
         logo: formHomeTeam.logo,
         primary_color: formHomeTeam.primary_color,
         secondary_color: formHomeTeam.secondary_color,
         text_color: formHomeTeam.text_color,
       },
+      league_id: formLeague?.id ?? null,
+      league_code: formLeague?.code ?? null,
       league_name: formLeague?.name ?? null,
+      league_logo: formLeague?.logo ?? null,
       season_name: formSeason?.name ?? null,
       game_type: formIsPlayoff ? 'playoff' : 'regular',
       series_games_to_win: formIsPlayoff ? formGamesToWin : null,
@@ -394,6 +478,7 @@ const ScoreImageModal = ({
         if (prev) URL.revokeObjectURL(prev);
         return null;
       });
+      setHeroExportUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       resetCrop();
       setHeadline('');
@@ -415,18 +500,20 @@ const ScoreImageModal = ({
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
     if (!file) return;
-    applyImageFile(file);
+    void applyImageFile(file);
   };
 
   // ── Clipboard paste support ───────────────────────────────────────────────────
 
-  const applyImageFile = (file: File) => {
+  const applyImageFile = async (file: File) => {
     setHeroPreviewUrl((prev) => {
       if (prev) URL.revokeObjectURL(prev);
       return URL.createObjectURL(file);
     });
+    setHeroExportUrl(null);
     setHeroFile(file);
     resetCrop();
+    setHeroExportUrl(await readFileAsDataUrl(file));
   };
 
   useEffect(() => {
@@ -438,7 +525,7 @@ const ScoreImageModal = ({
         if (item.type.startsWith('image/')) {
           const file = item.getAsFile();
           if (file) {
-            applyImageFile(file);
+            void applyImageFile(file);
             e.preventDefault();
           }
           break;
@@ -455,6 +542,7 @@ const ScoreImageModal = ({
       return null;
     });
     setHeroFile(null);
+    setHeroExportUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     resetCrop();
   };
@@ -490,7 +578,109 @@ const ScoreImageModal = ({
     setIsDragging(false);
   };
 
+  const drawGame = (game ?? synthGame) as DrawGameType | null;
+  const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
+  const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
+  const drawOvertimeSuffix = overtimeSuffix ?? '';
+  const awayWon = drawAwayScore > drawHomeScore;
+  const homeWon = drawHomeScore > drawAwayScore;
+  const awayPrimary = drawGame?.away_team.primary_color ?? '#ba0c2f';
+  const homePrimary = drawGame?.home_team.primary_color ?? '#003087';
+  const winnerPrimary = awayWon ? awayPrimary : homeWon ? homePrimary : '#67d6ff';
+  const winnerTextColor = awayWon
+    ? (drawGame?.away_team.text_color ?? '#fff')
+    : homeWon
+      ? (drawGame?.home_team.text_color ?? '#fff')
+      : '#111827';
+  const winnerCode = awayWon
+    ? (drawGame?.away_team.code ?? 'AWY')
+    : homeWon
+      ? (drawGame?.home_team.code ?? 'HOM')
+      : 'TIE';
+  const scoreBadgeLabel = drawOvertimeSuffix ? drawOvertimeSuffix.replace('/', '') : '';
+  const scoreBadgeTitle = drawOvertimeSuffix
+    ? `Final in ${scoreBadgeLabel}`
+    : awayWon || homeWon
+      ? `${winnerCode} wins`
+      : 'Final tied';
+  const leagueLine = drawGame
+    ? [drawGame.league_name, drawGame.season_name].filter(Boolean).join(' · ')
+    : '';
+  const topLeagueCode = drawGame?.league_code ?? drawGame?.league_name ?? 'HOCKEY';
+  const topSeasonName = drawGame?.season_name ?? '';
+  const topTitle =
+    drawGame?.game_type === 'playoff'
+      ? drawGame.playoff_round != null
+        ? (drawGame.playoff_round_names?.[drawGame.playoff_round] ??
+          `ROUND ${drawGame.playoff_round}`)
+        : 'PLAYOFF'
+      : 'FINAL';
+  const finalLabel = 'FINAL SCORE';
+  const scoreCardPhaseLabel =
+    drawGame?.game_type === 'playoff'
+      ? topTitle
+      : drawGame?.game_type === 'preseason'
+        ? 'PRE-SEASON'
+        : 'REGULAR SEASON';
+  const footerLeague =
+    (allLeagues as LeagueRecord[]).find((league) => league.id === drawGame?.league_id) ??
+    (allLeagues as LeagueRecord[]).find((league) => league.code === drawGame?.league_code) ??
+    formLeague;
+  const footerLeagueLogo = drawGame?.league_logo ?? footerLeague?.logo ?? null;
+  const footerLeagueCode = drawGame?.league_code ?? footerLeague?.code ?? topLeagueCode;
+  const isPlayoffScoreCard =
+    drawGame?.game_type === 'playoff' &&
+    drawGame.series_games_to_win != null &&
+    drawGame.series_home_wins != null &&
+    drawGame.series_away_wins != null;
+  const seriesTotal = isPlayoffScoreCard ? drawGame.series_games_to_win! : 0;
+  const awayIsSeriesHome =
+    isPlayoffScoreCard && drawGame.away_team.id === drawGame.series_home_team_id;
+  const awaySeriesWins = isPlayoffScoreCard
+    ? awayIsSeriesHome
+      ? drawGame.series_home_wins!
+      : drawGame.series_away_wins!
+    : 0;
+  const homeSeriesWins = isPlayoffScoreCard
+    ? awayIsSeriesHome
+      ? drawGame.series_away_wins!
+      : drawGame.series_home_wins!
+    : 0;
+  const seriesStatusLine = scoreCardPhaseLabel;
+
   const handleDownload = async () => {
+    const scoreCardNode = scoreCardRef.current;
+    if (scoreCardNode) {
+      setGenerating(true);
+      try {
+        await waitForImages(scoreCardNode);
+        const url = await toPng(scoreCardNode, {
+          cacheBust: true,
+          pixelRatio: 1,
+          backgroundColor: '#f8fafc',
+          width: W,
+          height: H,
+          style: {
+            width: `${W}px`,
+            height: `${H}px`,
+          },
+        });
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = getDownloadFilename(drawGame);
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (err) {
+        console.error('Failed to generate score card image', err);
+        toast.error('Failed to generate score card image');
+      } finally {
+        setGenerating(false);
+      }
+      return;
+    }
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -1144,6 +1334,137 @@ const ScoreImageModal = ({
             })()}
         </div>
       )}
+
+      <div className={styles.scoreCardExportShell}>
+        <div
+          ref={scoreCardRef}
+          className={styles.scoreCardExport}
+          style={
+            {
+              width: W,
+              height: H,
+              '--away-primary': awayPrimary,
+              '--home-primary': homePrimary,
+              '--winner-primary': winnerPrimary,
+              '--winner-text': winnerTextColor,
+              '--hero-x': `${cropX}%`,
+              '--hero-y': `${cropY}%`,
+              '--hero-zoom': cropZoom,
+            } as CSSProperties
+          }
+        >
+          <header className={styles.scoreCardTopBar}>
+            <div className={styles.scoreCardTopLine} />
+            <div className={styles.scoreCardEvent}>
+              <span className={styles.scoreCardEventMuted}>{topLeagueCode}</span>
+              {topSeasonName && <span className={styles.scoreCardEventMain}>{topSeasonName}</span>}
+            </div>
+            <div className={styles.scoreCardTopLine} />
+          </header>
+
+          <section className={styles.scoreCardHero}>
+            {heroExportUrl ? (
+              <img
+                src={heroExportUrl}
+                alt=""
+                className={styles.scoreCardHeroImg}
+              />
+            ) : (
+              <div className={styles.scoreCardHeroFallback}>
+                <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
+                <span>VS</span>
+                <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
+              </div>
+            )}
+            <div className={styles.scoreCardHeroShade} />
+            {(headline || caption) && (
+              <div className={styles.scoreCardHeroText}>
+                {headline && <strong>{headline}</strong>}
+                {caption && <span>{caption}</span>}
+              </div>
+            )}
+          </section>
+
+          <div className={styles.scoreCardScoreRibbon}>
+            <span />
+            <strong>{finalLabel}</strong>
+            <span />
+          </div>
+
+          <section className={styles.scoreCardScoreGrid}>
+            <div className={`${styles.scoreCardTeamPanel} ${styles.scoreCardTeamPanelAway}`}>
+              <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
+              <ScoreCardTeamName team={drawGame?.away_team ?? null} />
+            </div>
+
+            <div className={styles.scoreCardScorePanel}>
+              <div className={styles.scoreCardScoreBlock}>
+                {awayWon && <span className={styles.scoreCardWinnerMarker}>Winner</span>}
+                <strong className={awayWon ? styles.scoreCardWinnerScore : undefined}>
+                  {drawAwayScore}
+                </strong>
+              </div>
+
+              <span
+                className={styles.scoreCardResultBadge}
+                title={scoreBadgeTitle}
+              >
+                {scoreBadgeLabel && <span>{scoreBadgeLabel}</span>}
+              </span>
+              <div className={styles.scoreCardScoreBlock}>
+                {homeWon && <span className={styles.scoreCardWinnerMarker}>Winner</span>}
+                <strong className={homeWon ? styles.scoreCardWinnerScore : undefined}>
+                  {drawHomeScore}
+                </strong>
+              </div>
+            </div>
+
+            <div className={`${styles.scoreCardTeamPanel} ${styles.scoreCardTeamPanelHome}`}>
+              <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
+              <ScoreCardTeamName team={drawGame?.home_team ?? null} />
+            </div>
+          </section>
+
+          <section className={styles.scoreCardSeriesBar}>
+            <div className={styles.scoreCardSeriesDots}>
+              {isPlayoffScoreCard &&
+                Array.from({ length: seriesTotal }, (_, index) => (
+                  <span
+                    key={`away-dot-${index}`}
+                    className={index < awaySeriesWins ? styles.scoreCardSeriesDotFilled : undefined}
+                  />
+                ))}
+            </div>
+            <strong>{seriesStatusLine || leagueLine || 'FINAL'}</strong>
+            <div className={styles.scoreCardSeriesDots}>
+              {isPlayoffScoreCard &&
+                Array.from({ length: seriesTotal }, (_, index) => (
+                  <span
+                    key={`home-dot-${index}`}
+                    className={index < homeSeriesWins ? styles.scoreCardSeriesDotFilled : undefined}
+                  />
+                ))}
+            </div>
+          </section>
+
+          <footer className={styles.scoreCardFooter}>
+            {footerLeagueLogo ? (
+              <img
+                src={footerLeagueLogo}
+                alt={`${footerLeagueCode} logo`}
+                className={styles.scoreCardFooterLeagueLogo}
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <strong className={styles.scoreCardFooterLeagueCode}>{footerLeagueCode}</strong>
+            )}
+            {showDate && drawGame?.scheduled_at && (
+              <span>{DATE_FMT.format(new Date(drawGame.scheduled_at))}</span>
+            )}
+            {showLeagueSeason && leagueLine && <span>{leagueLine}</span>}
+          </footer>
+        </div>
+      </div>
 
       {/* Canvas is rendered off-screen; only used to produce the PNG */}
       <canvas
