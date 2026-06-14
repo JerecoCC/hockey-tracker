@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   type Control,
   type FieldValues,
@@ -101,6 +101,8 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [autoFocusIndex, setAutoFocusIndex] = useState(0);
   const createDefaultValuesRef = useRef(createDefaultValues);
+  const rowListRef = useRef<HTMLDivElement | null>(null);
+  const shouldScrollToBottomRef = useRef(false);
 
   const { control, handleSubmit, reset, setValue, formState } = useForm<FormValues>({
     defaultValues: createDefaultValues(),
@@ -121,12 +123,29 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
     reset(createDefaultValuesRef.current());
     setAutoFocusIndex(0);
     setConfirmRemoveIndex(null);
+    shouldScrollToBottomRef.current = false;
   }, [open, reset]);
+
+  useLayoutEffect(() => {
+    if (!shouldScrollToBottomRef.current) return;
+    shouldScrollToBottomRef.current = false;
+    const rowList = rowListRef.current;
+    if (!rowList) return;
+
+    requestAnimationFrame(() => {
+      if (typeof rowList.scrollTo === 'function') {
+        rowList.scrollTo({ top: rowList.scrollHeight, behavior: 'smooth' });
+      } else {
+        rowList.scrollTop = rowList.scrollHeight;
+      }
+    });
+  }, [fields.length]);
 
   const handleClose = () => {
     reset(createDefaultValuesRef.current());
     setAutoFocusIndex(0);
     setConfirmRemoveIndex(null);
+    shouldScrollToBottomRef.current = false;
     onClose();
   };
 
@@ -190,6 +209,8 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
         open={open}
         title={title}
         size={size}
+        className={styles.modal}
+        bodyClassName={styles.body}
         disableBackdropClose={disableBackdropClose}
         onClose={handleClose}
         confirmForm={formId}
@@ -202,6 +223,7 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
       >
         <form
           id={formId}
+          className={styles.form}
           onSubmit={onSubmit}
         >
           {renderBeforeRows?.(context)}
@@ -222,7 +244,10 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
             <span />
           </div>
 
-          <div className={styles.rowList}>
+          <div
+            ref={rowListRef}
+            className={styles.rowList}
+          >
             {fields.map((field, index) => (
               <div
                 key={field.id}
@@ -261,6 +286,7 @@ const BulkCreateModal = <FormValues extends FieldValues, RowValues extends Field
             hint={resolvedAddRowHint}
             onClick={() => {
               setAutoFocusIndex(fields.length);
+              shouldScrollToBottomRef.current = true;
               append(createRow());
             }}
           />

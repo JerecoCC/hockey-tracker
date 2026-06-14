@@ -13,6 +13,8 @@ interface Props {
   onClose: () => void;
   children: ReactNode;
   size?: 'md' | 'lg' | 'xl';
+  className?: string;
+  bodyClassName?: string;
   /** When true, clicking the backdrop overlay does not close the modal. */
   disableBackdropClose?: boolean;
 
@@ -50,6 +52,8 @@ const Modal = (props: Props) => {
     onClose,
     children,
     size = 'md',
+    className,
+    bodyClassName,
     disableBackdropClose = false,
     onConfirm,
     confirmLabel = 'Save',
@@ -134,7 +138,9 @@ const Modal = (props: Props) => {
       onClick={disableBackdropClose ? undefined : handleClose}
     >
       <div
-        className={`${styles.modal}${modalSizeClass} ${isClosing ? styles.closing : ''}`}
+        className={`${styles.modal}${modalSizeClass} ${className ?? ''} ${
+          isClosing ? styles.closing : ''
+        }`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.header}>
@@ -149,7 +155,7 @@ const Modal = (props: Props) => {
             className={styles.closeBtn}
           />
         </div>
-        <div className={styles.body}>{children}</div>
+        <div className={`${styles.body} ${bodyClassName ?? ''}`}>{children}</div>
         {!hideFooter && <div className={styles.footer}>{footer ?? builtInFooter}</div>}
       </div>
     </div>

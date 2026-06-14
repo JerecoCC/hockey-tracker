@@ -13,7 +13,6 @@ interface RowValues {
   away_team_id: string | null;
   home_team_id: string | null;
   scheduled_date: string;
-  scheduled_time: string;
   venue: string;
 }
 
@@ -21,7 +20,6 @@ const EMPTY_ROW: RowValues = {
   away_team_id: null,
   home_team_id: null,
   scheduled_date: '',
-  scheduled_time: '',
   venue: '',
 };
 
@@ -29,6 +27,8 @@ const fmtModalDate = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
 };
+
+const hasRowValue = (value: unknown) => value != null && String(value).trim() !== '';
 
 // ── Per-row sub-component ─────────────────────────────────────────────────────
 
@@ -71,13 +71,6 @@ const GameRow = ({
         placeholder="Date…"
         disabled={isSubmitting || dateDisabled}
         autoFocus={autoFocus && !dateDisabled}
-      />
-      <Field
-        type="timepicker"
-        control={control}
-        name={`rows.${index}.scheduled_time`}
-        disabled={isSubmitting}
-        autoFocus={autoFocus && !!dateDisabled}
       />
       <Field
         type="select"
@@ -139,6 +132,16 @@ const BulkCreateGamesModal = ({
     () => ({ ...EMPTY_ROW, scheduled_date: defaultDate ?? '' }),
     [defaultDate],
   );
+  const shouldConfirmRemove = useCallback(
+    (row: RowValues) => {
+      const fieldsToCheck = defaultDate
+        ? [row.away_team_id, row.home_team_id, row.venue]
+        : [row.scheduled_date, row.away_team_id, row.home_team_id, row.venue];
+
+      return fieldsToCheck.some(hasRowValue);
+    },
+    [defaultDate],
+  );
 
   return (
     <BulkCreateModal<{ rows: RowValues[] }, RowValues>
@@ -150,10 +153,9 @@ const BulkCreateGamesModal = ({
       onClose={onClose}
       formId="bulk-create-games-form"
       createRow={createRow}
-      columnsTemplate="0.9fr 0.8fr 1.1fr 1.1fr 1.2fr"
+      columnsTemplate="0.9fr 1.1fr 1.1fr 1.2fr"
       headerCells={[
         { label: 'Date', required: true },
-        { label: 'Time' },
         { label: 'Away Team', required: true },
         { label: 'Home Team', required: true },
         { label: 'Venue' },
@@ -164,7 +166,7 @@ const BulkCreateGamesModal = ({
       getConfirmLabel={(count, isSubmitting) =>
         isSubmitting ? 'Creating…' : `Create ${count} Game${count !== 1 ? 's' : ''}`
       }
-      shouldConfirmRemove={() => true}
+      shouldConfirmRemove={shouldConfirmRemove}
       getRemoveConfirmBody={() => 'Remove this game from the list?'}
       onSubmitForm={async (data) => {
         const payload: CreateGameData[] = data.rows.map((row) => ({
@@ -174,7 +176,7 @@ const BulkCreateGamesModal = ({
           game_type: 'regular',
           status: 'scheduled',
           scheduled_at: row.scheduled_date || null,
-          scheduled_time: row.scheduled_time || null,
+          scheduled_time: null,
           venue: row.venue || null,
         }));
         return bulkCreateGames(payload);

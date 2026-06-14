@@ -247,7 +247,7 @@ const GameFormModal = ({
             type="timepicker"
             control={control}
             name="scheduled_time"
-            disabled={isStarted || isSubmitting || (!editTarget && !!defaultDate)}
+            disabled={isStarted || isSubmitting}
             autoFocus={!editTarget && !!defaultDate}
           />
         </div>

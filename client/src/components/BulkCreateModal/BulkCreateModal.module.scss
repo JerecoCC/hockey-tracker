@@ -1,6 +1,24 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+.modal {
+  max-height: calc(100dvh - #{$space-xl});
+}
+
+.body {
+  overflow: hidden;
+}
+
+.form {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+
+  > :not(.rowList) {
+    flex-shrink: 0;
+  }
+}
+
 .headerRow {
   display: grid;
   gap: $space-md;
@@ -24,9 +42,10 @@
 
 .rowList {
   display: flex;
+  min-height: 0;
   flex-direction: column;
   gap: $space-xs;
-  max-height: 420px;
+  max-height: calc(100dvh - 17rem);
   overflow-y: auto;
   scrollbar-width: thin;
   scrollbar-color: transparent transparent;
@@ -51,4 +70,10 @@
 
 .deleteBtn {
   margin-top: $space-xs;
+}
+
+@media (max-width: 768px) {
+  .modal {
+    max-height: 100dvh;
+  }
 }
