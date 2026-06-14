@@ -156,6 +156,16 @@ const fmtWeekRange = (start: Date, end: Date) => {
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
+const getScrollParent = (el: HTMLElement): HTMLElement => {
+  let parent = el.parentElement;
+  while (parent) {
+    const { overflowY } = getComputedStyle(parent);
+    if (overflowY === 'auto' || overflowY === 'scroll') return parent;
+    parent = parent.parentElement;
+  }
+  return document.documentElement;
+};
+
 interface Props {
   leagueId: string;
   leagueCode: string | null | undefined;
@@ -307,6 +317,52 @@ const SeasonGamesTab = ({
     setActiveSummaryDay(dateKey);
     dayRefs.current[dateKey]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
+
+  useEffect(() => {
+    if (loading || groupedByDate.length === 0) return;
+    const firstDayRef = dayRefs.current[groupedByDate[0][0]];
+    if (!firstDayRef) return;
+
+    const scrollEl = getScrollParent(firstDayRef);
+    let frame = 0;
+
+    const updateActiveDay = () => {
+      const summaryCard = document.querySelector<HTMLElement>(`.${styles.weekSummaryCard}`);
+      const marker = (summaryCard?.getBoundingClientRect().bottom ?? 0) + 1;
+      let nextActive = groupedByDate[0][0];
+
+      for (const [dateKey] of groupedByDate) {
+        const dayNode = dayRefs.current[dateKey];
+        if (!dayNode) continue;
+        const rect = dayNode.getBoundingClientRect();
+        if (rect.top <= marker) {
+          nextActive = dateKey;
+          continue;
+        }
+        if (rect.bottom > marker) break;
+      }
+
+      setActiveSummaryDay((current) => (current === nextActive ? current : nextActive));
+    };
+
+    const scheduleUpdate = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => {
+        frame = 0;
+        updateActiveDay();
+      });
+    };
+
+    scrollEl.addEventListener('scroll', scheduleUpdate, { passive: true });
+    window.addEventListener('resize', scheduleUpdate, { passive: true });
+    updateActiveDay();
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      scrollEl.removeEventListener('scroll', scheduleUpdate);
+      window.removeEventListener('resize', scheduleUpdate);
+    };
+  }, [groupedByDate, loading]);
 
   const handleAdd = (date?: string) => {
     setEditTarget(null);
