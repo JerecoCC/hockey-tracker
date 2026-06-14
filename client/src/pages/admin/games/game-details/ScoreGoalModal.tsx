@@ -255,6 +255,7 @@ const ScoreGoalModal = ({
         !!goalParticipantError
       }
       busy={submitting}
+      confirmIcon="sports_hockey"
       onConfirm={handleConfirm}
     >
       <div className={styles.goalForm}>
@@ -313,10 +314,11 @@ const ScoreGoalModal = ({
                   onClick={() => setValue('goalEmptyNet', !goalEmptyNet, { shouldDirty: true })}
                   disabled={submitting}
                   aria-label="Empty Net"
+                  aria-pressed={goalEmptyNet}
                 >
                   <Icon
-                    name={goalEmptyNet ? 'check_box' : 'check_box_outline_blank'}
-                    size="1.25rem"
+                    name="empty_net"
+                    size="1.1rem"
                   />
                 </button>
               </Tooltip>
@@ -337,10 +339,11 @@ const ScoreGoalModal = ({
                   }}
                   disabled={submitting}
                   aria-label="Penalty Shot"
+                  aria-pressed={goalPenaltyShot}
                 >
                   <Icon
-                    name={goalPenaltyShot ? 'check_box' : 'check_box_outline_blank'}
-                    size="1.25rem"
+                    name="penalty_shot"
+                    size="1.1rem"
                   />
                 </button>
               </Tooltip>

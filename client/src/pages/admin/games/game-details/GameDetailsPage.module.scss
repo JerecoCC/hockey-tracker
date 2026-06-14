@@ -194,7 +194,7 @@
   }
 }
 
-// Square 42 × 42 icon button that toggles Empty Net — sits inline with Goal Type select
+// Square 42 × 42 icon toggle — sits inline with Goal Type select
 .emptyNetToggle {
   width: 42px;
   height: 42px;
@@ -210,11 +210,13 @@
   transition:
     border-color 0.15s,
     color 0.15s,
-    background 0.15s;
+    background 0.15s,
+    box-shadow 0.15s;
 
   &:hover:not(:disabled) {
     border-color: $accent;
-    color: $text-body;
+    color: $accent;
+    background: rgba($accent, 0.06);
   }
 
   &:disabled {
@@ -227,6 +229,7 @@
   border-color: $accent;
   color: $accent;
   background: rgba($accent, 0.08);
+  box-shadow: inset 0 0 0 1px rgba($accent, 0.24);
 }
 
 // ── Tab content wrapper ────────────────────────────────────────────────────────

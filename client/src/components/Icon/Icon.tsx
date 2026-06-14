@@ -9,6 +9,7 @@ import {
   faArrowRotateRight,
   faArrowUp,
   faBackwardFast,
+  faBullseye,
   faChartLine,
   faArrowUpRightFromSquare,
   faBars,
@@ -65,6 +66,7 @@ import {
   faUserMinus,
   faUserPen,
   faUserPlus,
+  faUserSlash,
   faUsers,
   faXmark,
   faMagnifyingGlassChart,
@@ -176,6 +178,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // decorative
   sports_hockey: faHockeyPuck,
+  empty_net: faUserSlash,
+  penalty_shot: faBullseye,
   celebration: faStar,
   stars: faStar,
   flag: faFlag,
