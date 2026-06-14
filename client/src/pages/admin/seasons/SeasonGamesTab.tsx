@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
@@ -14,6 +14,7 @@ import type { SelectOption } from '@/components/Select/Select';
 import BulkCreateGamesModal from './BulkCreateGamesModal';
 import GameFormModal from './GameFormModal';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
+import Icon from '@/components/Icon/Icon';
 import styles from './SeasonGamesTab.module.scss';
 
 // ── Display helpers ───────────────────────────────────────────────────────────
@@ -124,6 +125,18 @@ const fmtDayHeading = (key: string) => {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+  });
+};
+
+const fmtDaySummaryDate = (key: string) => {
+  const [, mo, d] = key.split('-').map(Number);
+  return `${mo}/${d}`;
+};
+
+const fmtDaySummaryWeekday = (key: string) => {
+  const [y, mo, d] = key.split('-').map(Number);
+  return new Date(y, mo - 1, d).toLocaleDateString('en-US', {
+    weekday: 'short',
   });
 };
 
@@ -274,6 +287,26 @@ const SeasonGamesTab = ({
   const [bulkDate, setBulkDate] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<GameRecord | null>(null);
+  const todayKey = dateToISO(toDay(new Date()));
+  const initialSummaryDay = groupedByDate.some(([dateKey]) => dateKey === todayKey)
+    ? todayKey
+    : groupedByDate[0]?.[0];
+  const [activeSummaryDay, setActiveSummaryDay] = useState<string | undefined>(initialSummaryDay);
+  const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  useEffect(() => {
+    setActiveSummaryDay((current) => {
+      if (current && groupedByDate.some(([dateKey]) => dateKey === current)) return current;
+      return groupedByDate.some(([dateKey]) => dateKey === todayKey)
+        ? todayKey
+        : groupedByDate[0]?.[0];
+    });
+  }, [groupedByDate, todayKey]);
+
+  const scrollToDay = (dateKey: string) => {
+    setActiveSummaryDay(dateKey);
+    dayRefs.current[dateKey]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
 
   const handleAdd = (date?: string) => {
     setEditTarget(null);
@@ -383,124 +416,165 @@ const SeasonGamesTab = ({
       </Card>
 
       {/* ── Day cards ── */}
+      {!loading && (
+        <Card
+          className={styles.weekSummaryCard}
+          noHeaderMargin
+        >
+          <div className={styles.weekSummaryGrid}>
+            {groupedByDate.map(([dateKey, dayGames]) => {
+              const isActive = activeSummaryDay === dateKey;
+              return (
+                <button
+                  key={dateKey}
+                  type="button"
+                  className={`${styles.weekSummaryDay}${isActive ? ` ${styles.weekSummaryDayActive}` : ''}`}
+                  onClick={() => scrollToDay(dateKey)}
+                  aria-label={`Jump to ${fmtDayHeading(dateKey)}: ${dayGames.length} games`}
+                >
+                  <span className={styles.weekSummaryDate}>{fmtDaySummaryDate(dateKey)}</span>
+                  <span className={styles.weekSummaryWeekday}>{fmtDaySummaryWeekday(dateKey)}</span>
+                  <span className={styles.weekSummaryCount}>
+                    {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
+                  </span>
+                  {isActive && (
+                    <Icon
+                      name="calendar_today"
+                      className={styles.weekSummaryIcon}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </Card>
+      )}
+
       {loading ? (
         <p className={styles.empty}>Loading…</p>
       ) : (
         <div className={styles.dayList}>
           {groupedByDate.map(([dateKey, dayGames]) => (
-            <Card
+            <div
               key={dateKey}
-              title={fmtDayHeading(dateKey)}
-              action={
-                !isEnded && (
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <Button
-                      variant="outlined"
-                      intent="accent"
-                      icon="playlist_add"
-                      size="sm"
-                      tooltip="Bulk Create"
-                      onClick={() => setBulkDate(dateKey)}
-                    />
-                    <Button
-                      icon="add"
-                      size="sm"
-                      tooltip="Create Game"
-                      onClick={() => handleAdd(dateKey)}
-                    />
-                  </div>
-                )
-              }
+              ref={(node) => {
+                dayRefs.current[dateKey] = node;
+              }}
+              className={styles.dayCardAnchor}
             >
-              {dayGames.length === 0 ? (
-                <p className={styles.dayEmpty}>
-                  {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
-                </p>
-              ) : (
-                <ul className={styles.list}>
-                  {dayGames.map((game) => (
-                    <GameListItem
-                      key={game.id}
-                      href={buildGameDetailsPath({
-                        leagueCode,
-                        leagueId,
-                        seasonName,
-                        seasonId,
-                        gameId: game.id,
-                        awayTeamCode: game.away_team.code,
-                        homeTeamCode: game.home_team.code,
-                        scheduledAt: game.scheduled_at,
-                      })}
-                      awayTeam={{
-                        logo: game.away_team.logo,
-                        code: game.away_team.code,
-                        primaryColor: game.away_team.primary_color,
-                        textColor: game.away_team.text_color,
-                      }}
-                      homeTeam={{
-                        logo: game.home_team.logo,
-                        code: game.home_team.code,
-                        primaryColor: game.home_team.primary_color,
-                        textColor: game.home_team.text_color,
-                      }}
-                      awayScore={game.away_score}
-                      homeScore={game.home_score}
-                      showScore={game.status === 'final' || game.status === 'in_progress'}
-                      isFinal={game.status === 'final'}
-                      statusLabel={formatStatusLabel(game)}
-                      statusIntent={STATUS_INTENT[game.status]}
-                      gameType={game.game_type}
-                      time={formatGameTime(game)}
-                      venue={game.venue ?? undefined}
-                      round={game.playoff_round}
-                      roundLabel={
-                        game.playoff_round != null
-                          ? (game.playoff_round_names?.[game.playoff_round] ?? null)
-                          : null
-                      }
-                      gameNumberInSeries={game.game_number_in_series}
-                      gameNumber={game.game_number}
-                      actions={[
-                        {
-                          icon: 'open_in_new',
-                          intent: 'neutral',
-                          tooltip: 'View game',
-                          onClick: () =>
-                            navigate(
-                              buildGameDetailsPath({
-                                leagueCode,
-                                leagueId,
-                                seasonName,
-                                seasonId,
-                                gameId: game.id,
-                                awayTeamCode: game.away_team.code,
-                                homeTeamCode: game.home_team.code,
-                                scheduledAt: game.scheduled_at,
-                              }),
-                            ),
-                        },
-                        ...(!isEnded
-                          ? [
-                              {
-                                icon: 'edit',
-                                intent: 'neutral' as const,
-                                tooltip: 'Edit game',
-                                onClick: () => handleEdit(game),
-                              },
-                              game.status === 'scheduled' && {
-                                icon: 'delete',
-                                intent: 'danger' as const,
-                                tooltip: 'Delete game',
-                                onClick: () => setConfirmDelete(game),
-                              },
-                            ]
-                          : []),
-                      ]}
-                    />
-                  ))}
-                </ul>
-              )}
-            </Card>
+              <Card
+                title={fmtDayHeading(dateKey)}
+                action={
+                  !isEnded && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <Button
+                        variant="outlined"
+                        intent="accent"
+                        icon="playlist_add"
+                        size="sm"
+                        tooltip="Bulk Create"
+                        onClick={() => setBulkDate(dateKey)}
+                      />
+                      <Button
+                        icon="add"
+                        size="sm"
+                        tooltip="Create Game"
+                        onClick={() => handleAdd(dateKey)}
+                      />
+                    </div>
+                  )
+                }
+              >
+                {dayGames.length === 0 ? (
+                  <p className={styles.dayEmpty}>
+                    {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
+                  </p>
+                ) : (
+                  <ul className={styles.list}>
+                    {dayGames.map((game) => (
+                      <GameListItem
+                        key={game.id}
+                        href={buildGameDetailsPath({
+                          leagueCode,
+                          leagueId,
+                          seasonName,
+                          seasonId,
+                          gameId: game.id,
+                          awayTeamCode: game.away_team.code,
+                          homeTeamCode: game.home_team.code,
+                          scheduledAt: game.scheduled_at,
+                        })}
+                        awayTeam={{
+                          logo: game.away_team.logo,
+                          code: game.away_team.code,
+                          primaryColor: game.away_team.primary_color,
+                          textColor: game.away_team.text_color,
+                        }}
+                        homeTeam={{
+                          logo: game.home_team.logo,
+                          code: game.home_team.code,
+                          primaryColor: game.home_team.primary_color,
+                          textColor: game.home_team.text_color,
+                        }}
+                        awayScore={game.away_score}
+                        homeScore={game.home_score}
+                        showScore={game.status === 'final' || game.status === 'in_progress'}
+                        isFinal={game.status === 'final'}
+                        statusLabel={formatStatusLabel(game)}
+                        statusIntent={STATUS_INTENT[game.status]}
+                        gameType={game.game_type}
+                        time={formatGameTime(game)}
+                        venue={game.venue ?? undefined}
+                        round={game.playoff_round}
+                        roundLabel={
+                          game.playoff_round != null
+                            ? (game.playoff_round_names?.[game.playoff_round] ?? null)
+                            : null
+                        }
+                        gameNumberInSeries={game.game_number_in_series}
+                        gameNumber={game.game_number}
+                        actions={[
+                          {
+                            icon: 'open_in_new',
+                            intent: 'neutral',
+                            tooltip: 'View game',
+                            onClick: () =>
+                              navigate(
+                                buildGameDetailsPath({
+                                  leagueCode,
+                                  leagueId,
+                                  seasonName,
+                                  seasonId,
+                                  gameId: game.id,
+                                  awayTeamCode: game.away_team.code,
+                                  homeTeamCode: game.home_team.code,
+                                  scheduledAt: game.scheduled_at,
+                                }),
+                              ),
+                          },
+                          ...(!isEnded
+                            ? [
+                                {
+                                  icon: 'edit',
+                                  intent: 'neutral' as const,
+                                  tooltip: 'Edit game',
+                                  onClick: () => handleEdit(game),
+                                },
+                                game.status === 'scheduled' && {
+                                  icon: 'delete',
+                                  intent: 'danger' as const,
+                                  tooltip: 'Delete game',
+                                  onClick: () => setConfirmDelete(game),
+                                },
+                              ]
+                            : []),
+                        ]}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </Card>
+            </div>
           ))}
         </div>
       )}
