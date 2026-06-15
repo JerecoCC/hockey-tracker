@@ -137,6 +137,7 @@ describe('ScoreImageModal', () => {
             league_name: 'Hockey League',
             season_name: '2026 Season',
             league_id: 'league-1',
+            league_primary_color: '#0055aa',
             game_type: 'regular',
             series_games_to_win: null,
             series_home_wins: null,
@@ -165,7 +166,7 @@ describe('ScoreImageModal', () => {
     expect(screen.getByText('REGULAR SEASON')).toBeInTheDocument();
     expect(screen.getByText('Home')).toBeInTheDocument();
     expect(screen.getByText('Wolves')).toBeInTheDocument();
-    expect(screen.getByText('Winner')).toBeInTheDocument();
+    expect(screen.queryByText('Winner')).not.toBeInTheDocument();
     expect(screen.getByAltText('HL logo')).toHaveAttribute(
       'src',
       'https://example.com/league.png',
@@ -178,6 +179,55 @@ describe('ScoreImageModal', () => {
         backgroundColor: '#f8fafc',
       }),
     );
+    expect(mockToPng.mock.calls[0][0]).toHaveStyle('--league-band: #003d7a');
     expect(createdAnchor?.download).toBe('AWY vs HOM - 2026-03-05.png');
+  });
+
+  it('uses league code, playoffs, and game year in the top title for playoff games', () => {
+    render(
+      <ScoreImageModal
+        open
+        onClose={jest.fn()}
+        game={
+          {
+            away_team: {
+              id: 'team-away',
+              name: 'Away Bears',
+              code: 'AWY',
+              logo: null,
+              primary_color: '#111111',
+              secondary_color: '#222222',
+              text_color: '#ffffff',
+            },
+            home_team: {
+              id: 'team-home',
+              name: 'Home Wolves',
+              code: 'HOM',
+              logo: null,
+              primary_color: '#333333',
+              secondary_color: '#444444',
+              text_color: '#ffffff',
+            },
+            scheduled_at: '2026-06-18T19:00:00Z',
+            league_code: 'HL',
+            league_name: 'Hockey League',
+            season_name: '2026 Season',
+            game_type: 'playoff',
+            series_games_to_win: 4,
+            series_home_wins: 2,
+            series_away_wins: 1,
+            series_home_team_id: 'team-home',
+            game_number_in_series: 4,
+            playoff_round: 1,
+            playoff_round_names: { 1: 'Finals' },
+          } as Partial<GameRecord> as GameRecord
+        }
+        liveAwayScore={1}
+        liveHomeScore={2}
+      />,
+    );
+
+    expect(screen.getAllByText('HL').length).toBeGreaterThan(0);
+    expect(screen.getByText('Playoffs 2026')).toBeInTheDocument();
   });
 });

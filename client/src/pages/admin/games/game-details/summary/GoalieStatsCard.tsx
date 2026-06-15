@@ -38,7 +38,9 @@ const isGameStart = (period: string | null | undefined, time: string | null | un
 const fmtStintPoint = (period: string, time: string | null, isEnter?: boolean) => {
   const periodLabel = PERIOD_LABEL[period] ?? period;
   const timeLabel = isEnter
-    ? ''
+    ? time === '00:00'
+      ? ''
+      : time
     : isGameStart(period, time)
       ? '00:00'
       : time === '20:00'
@@ -80,7 +82,7 @@ const stintLabels = (stat: GoalieStatRecord): string[] => {
   // Legacy fallback: no stints data, use the top-level entered_period / sub_time
   if (stat.entered_period) {
     if (isGameStart(stat.entered_period, stat.sub_time)) return [];
-    return [`${fmtStintPoint(stat.entered_period, stat.sub_time)} → End of game`];
+    return [`${fmtStintPoint(stat.entered_period, stat.sub_time, true)} → End of game`];
   }
   return [];
 };

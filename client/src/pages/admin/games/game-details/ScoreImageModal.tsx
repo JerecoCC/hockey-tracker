@@ -16,6 +16,7 @@ import Button from '@/components/Button/Button';
 import Checkbox from '@/components/Checkbox/Checkbox';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
+import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import Modal from '@/components/Modal/Modal';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import Select, { type SelectOption } from '@/components/Select/Select';
@@ -133,6 +134,16 @@ function hexToRgba(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function darkenHexColor(hex: string, amount = 0.28): string {
+  const h = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(h)) return hex;
+  const darken = (part: string) =>
+    Math.max(0, Math.round(parseInt(part, 16) * (1 - amount)))
+      .toString(16)
+      .padStart(2, '0');
+  return `#${darken(h.slice(0, 2))}${darken(h.slice(2, 4))}${darken(h.slice(4, 6))}`;
+}
+
 /** Draw a logo image or a colored circle-placeholder fallback. */
 function drawLogo(
   ctx: CanvasRenderingContext2D,
@@ -184,6 +195,7 @@ interface DrawGameType {
   league_code?: string | null;
   league_name?: string | null;
   league_logo?: string | null;
+  league_primary_color?: string | null;
   season_name?: string | null;
   game_type?: string | null;
   series_games_to_win?: number | null;
@@ -433,6 +445,7 @@ const ScoreImageModal = ({
       league_code: formLeague?.code ?? null,
       league_name: formLeague?.name ?? null,
       league_logo: formLeague?.logo ?? null,
+      league_primary_color: formLeague?.primary_color ?? null,
       season_name: formSeason?.name ?? null,
       game_type: formIsPlayoff ? 'playoff' : 'regular',
       series_games_to_win: formIsPlayoff ? formGamesToWin : null,
@@ -594,18 +607,13 @@ const ScoreImageModal = ({
   const homeWon = drawHomeScore > drawAwayScore;
   const awayPrimary = drawGame?.away_team.primary_color ?? '#ba0c2f';
   const homePrimary = drawGame?.home_team.primary_color ?? '#003087';
-  const winnerPrimary = awayWon ? awayPrimary : homeWon ? homePrimary : '#67d6ff';
-  const winnerTextColor = awayWon
-    ? (drawGame?.away_team.text_color ?? '#fff')
-    : homeWon
-      ? (drawGame?.home_team.text_color ?? '#fff')
-      : '#111827';
   const winnerCode = awayWon
     ? (drawGame?.away_team.code ?? 'AWY')
     : homeWon
       ? (drawGame?.home_team.code ?? 'HOM')
       : 'TIE';
-  const scoreBadgeLabel = drawOvertimeSuffix ? drawOvertimeSuffix.replace('/', '') : '';
+  const hasOvertimeBadge = !!drawOvertimeSuffix;
+  const scoreBadgeLabel = hasOvertimeBadge ? drawOvertimeSuffix.replace('/', '') : '';
   const scoreBadgeTitle = drawOvertimeSuffix
     ? `Final in ${scoreBadgeLabel}`
     : awayWon || homeWon
@@ -615,7 +623,13 @@ const ScoreImageModal = ({
     ? [drawGame.league_name, drawGame.season_name].filter(Boolean).join(' · ')
     : '';
   const topLeagueCode = drawGame?.league_code ?? drawGame?.league_name ?? 'HOCKEY';
-  const topSeasonName = drawGame?.season_name ?? '';
+  const gameYear = drawGame?.scheduled_at
+    ? String(new Date(drawGame.scheduled_at).getFullYear())
+    : '';
+  const topSeasonName =
+    drawGame?.game_type === 'playoff'
+      ? ['Playoffs', gameYear].filter(Boolean).join(' ')
+      : (drawGame?.season_name ?? '');
   const topTitle =
     drawGame?.game_type === 'playoff'
       ? drawGame.playoff_round != null
@@ -636,6 +650,8 @@ const ScoreImageModal = ({
     formLeague;
   const footerLeagueLogo = drawGame?.league_logo ?? footerLeague?.logo ?? null;
   const footerLeagueCode = drawGame?.league_code ?? footerLeague?.code ?? topLeagueCode;
+  const leaguePrimary = drawGame?.league_primary_color ?? footerLeague?.primary_color ?? '#111214';
+  const leagueBand = darkenHexColor(leaguePrimary);
   const isPlayoffScoreCard =
     drawGame?.game_type === 'playoff' &&
     drawGame.series_games_to_win != null &&
@@ -1109,7 +1125,8 @@ const ScoreImageModal = ({
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       open={open}
       title="Generate Score Card"
       onClose={onClose}
@@ -1146,16 +1163,7 @@ const ScoreImageModal = ({
           </Button>
         </div>
       }
-    >
-      {canPreview && previewUrl && (
-        <div className={styles.generatedPreview}>
-          <img
-            src={previewUrl}
-            alt="Generated score card preview"
-          />
-        </div>
-      )}
-
+      >
       {/* Hero image upload zone */}
       <div className={styles.uploadAreaWrap}>
         <div className={`${styles.uploadArea}${!showForm ? ` ${styles.uploadAreaLarge}` : ''}`}>
@@ -1394,8 +1402,7 @@ const ScoreImageModal = ({
               height: H,
               '--away-primary': awayPrimary,
               '--home-primary': homePrimary,
-              '--winner-primary': winnerPrimary,
-              '--winner-text': winnerTextColor,
+              '--league-band': leagueBand,
               '--hero-x': `${cropX}%`,
               '--hero-y': `${cropY}%`,
               '--hero-zoom': cropZoom,
@@ -1448,20 +1455,47 @@ const ScoreImageModal = ({
 
             <div className={styles.scoreCardScorePanel}>
               <div className={styles.scoreCardScoreBlock}>
-                {awayWon && <span className={styles.scoreCardWinnerMarker}>Winner</span>}
+                {awayWon && (
+                  <span
+                    className={styles.scoreCardWinnerMarker}
+                    aria-hidden="true"
+                  />
+                )}
                 <strong className={awayWon ? styles.scoreCardWinnerScore : undefined}>
                   {drawAwayScore}
                 </strong>
               </div>
 
               <span
-                className={styles.scoreCardResultBadge}
+                className={`${styles.scoreCardResultBadge}${
+                  hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
+                }`}
                 title={scoreBadgeTitle}
               >
-                {scoreBadgeLabel && <span>{scoreBadgeLabel}</span>}
+                {scoreBadgeLabel && (
+                  <span className={styles.scoreCardResultLabel}>
+                    {hasOvertimeBadge
+                      ? scoreBadgeLabel.split('').map((letter, index) => (
+                          <span
+                            key={`${letter}-${index}`}
+                            className={`${styles.scoreCardResultLetter}${
+                              letter === 'S' ? ` ${styles.scoreCardResultLetterWide}` : ''
+                            }`}
+                          >
+                            {letter}
+                          </span>
+                        ))
+                      : scoreBadgeLabel}
+                  </span>
+                )}
               </span>
               <div className={styles.scoreCardScoreBlock}>
-                {homeWon && <span className={styles.scoreCardWinnerMarker}>Winner</span>}
+                {homeWon && (
+                  <span
+                    className={styles.scoreCardWinnerMarker}
+                    aria-hidden="true"
+                  />
+                )}
                 <strong className={homeWon ? styles.scoreCardWinnerScore : undefined}>
                   {drawHomeScore}
                 </strong>
@@ -1522,7 +1556,15 @@ const ScoreImageModal = ({
         height={synthGame || game ? H : HERO_H}
         className={styles.canvas}
       />
-    </Modal>
+      </Modal>
+
+      <ImagePreviewModal
+        open={canPreview && !!previewUrl}
+        src={previewUrl}
+        alt="Generated score card preview"
+        onClose={() => setPreviewUrl(null)}
+      />
+    </>
   );
 };
 
