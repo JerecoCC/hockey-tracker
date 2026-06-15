@@ -261,8 +261,8 @@
   height: 1250px;
   overflow: hidden;
   background:
-    radial-gradient(circle at 24% 36%, var(--away-primary), transparent 35%),
-    radial-gradient(circle at 76% 42%, var(--home-primary), transparent 35%), #0f172a;
+    radial-gradient(ellipse 78% 106% at 4% 50%, var(--away-primary), transparent 76%),
+    radial-gradient(ellipse 78% 106% at 96% 50%, var(--home-primary), transparent 76%), #0f172a;
 }
 
 .scoreCardHeroImg {
@@ -283,14 +283,53 @@
 }
 
 .scoreCardHeroFallback {
+  position: relative;
+  isolation: isolate;
   height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 72px;
+  overflow: hidden;
   color: rgba(248, 250, 252, 0.28);
   font-size: 140px;
   font-weight: 950;
+
+  > span {
+    position: relative;
+    z-index: 2;
+    color: rgba(248, 250, 252, 0.34);
+    text-shadow: 0 18px 52px rgba(0, 0, 0, 0.42);
+  }
+
+  > .scoreCardLogoImg,
+  > .scoreCardLogoPlaceholder {
+    position: absolute;
+    top: 50%;
+    z-index: 0;
+    width: auto;
+    height: 100%;
+    max-width: none;
+    opacity: 0.22;
+    filter: saturate(0.85) contrast(1.08) drop-shadow(0 34px 54px rgba(0, 0, 0, 0.28));
+    mix-blend-mode: screen;
+    transform: translateY(-50%);
+  }
+
+  > .scoreCardLogoPlaceholder {
+    width: auto;
+    aspect-ratio: 1;
+    font-size: 220px;
+  }
+
+  > :first-child {
+    left: 0;
+    transform: translate(-50%, -50%);
+  }
+
+  > :last-child {
+    right: 0;
+    transform: translate(50%, -50%);
+  }
 }
 
 .scoreCardHeroText {
@@ -660,8 +699,8 @@
 }
 
 .scoreCardFooterLeagueLogo {
-  width: 172px;
-  height: 110px;
+  width: 196px;
+  height: 126px;
   object-fit: contain;
   filter: drop-shadow(0 12px 12px rgba(15, 23, 42, 0.16));
 }
