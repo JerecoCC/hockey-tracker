@@ -59,6 +59,7 @@ describe('ScoreImageModal', () => {
     );
 
     expect(screen.queryByPlaceholderText('e.g. Quarterfinals')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Preview Image' })).not.toBeInTheDocument();
 
     await user.click(screen.getByText('Playoff Game'));
 
@@ -148,7 +149,14 @@ describe('ScoreImageModal', () => {
         }
         liveAwayScore={1}
         liveHomeScore={2}
+        allowPreview
       />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Preview Image' }));
+    expect(await screen.findByAltText('Generated score card preview')).toHaveAttribute(
+      'src',
+      'data:image/png;base64,test',
     );
 
     await user.click(screen.getByRole('button', { name: 'Download Image' }));

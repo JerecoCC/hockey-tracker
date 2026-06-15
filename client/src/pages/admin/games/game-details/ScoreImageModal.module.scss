@@ -8,6 +8,22 @@
   justify-content: center;
 }
 
+.generatedPreview {
+  display: flex;
+  justify-content: center;
+  margin-bottom: $space-lg;
+
+  img {
+    width: min(260px, 100%);
+    max-height: 42vh;
+    object-fit: contain;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: #f8fafc;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.24);
+  }
+}
+
 .uploadArea {
   // Height drives the size; width is derived from the hero aspect ratio (1440 × 1307).
   // Default (with form): 36vh keeps total modal height reasonable.

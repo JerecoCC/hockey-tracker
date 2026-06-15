@@ -208,6 +208,8 @@ interface Props {
   onClose: () => void;
   /** When true, renders the headline/caption/toggle form below the upload area. */
   showForm?: boolean;
+  /** Admin-only affordance for previewing the generated image before download. */
+  allowPreview?: boolean;
 }
 
 type ScoreCardFormValues = {
@@ -307,6 +309,7 @@ const ScoreImageModal = ({
   overtimeSuffix,
   onClose,
   showForm = false,
+  allowPreview = false,
 }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const scoreCardRef = useRef<HTMLDivElement>(null);
@@ -317,6 +320,8 @@ const ScoreImageModal = ({
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
   const [heroExportUrl, setHeroExportUrl] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   // Crop state — position 0-100 (%), zoom 1-3×
   const [cropX, setCropX] = useState(50);
@@ -479,6 +484,7 @@ const ScoreImageModal = ({
         return null;
       });
       setHeroExportUrl(null);
+      setPreviewUrl(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
       resetCrop();
       setHeadline('');
@@ -511,6 +517,7 @@ const ScoreImageModal = ({
       return URL.createObjectURL(file);
     });
     setHeroExportUrl(null);
+    setPreviewUrl(null);
     setHeroFile(file);
     resetCrop();
     setHeroExportUrl(await readFileAsDataUrl(file));
@@ -543,6 +550,7 @@ const ScoreImageModal = ({
     });
     setHeroFile(null);
     setHeroExportUrl(null);
+    setPreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = '';
     resetCrop();
   };
@@ -647,31 +655,39 @@ const ScoreImageModal = ({
       : drawGame.series_home_wins!
     : 0;
   const seriesStatusLine = scoreCardPhaseLabel;
+  const canPreview = allowPreview && !!game;
+
+  const renderScoreCardImage = async () => {
+    const scoreCardNode = scoreCardRef.current;
+    if (!scoreCardNode) return null;
+
+    await waitForImages(scoreCardNode);
+    return toPng(scoreCardNode, {
+      cacheBust: true,
+      pixelRatio: 1,
+      backgroundColor: '#f8fafc',
+      width: W,
+      height: H,
+      style: {
+        width: `${W}px`,
+        height: `${H}px`,
+      },
+    });
+  };
 
   const handleDownload = async () => {
-    const scoreCardNode = scoreCardRef.current;
-    if (scoreCardNode) {
+    if (scoreCardRef.current) {
       setGenerating(true);
       try {
-        await waitForImages(scoreCardNode);
-        const url = await toPng(scoreCardNode, {
-          cacheBust: true,
-          pixelRatio: 1,
-          backgroundColor: '#f8fafc',
-          width: W,
-          height: H,
-          style: {
-            width: `${W}px`,
-            height: `${H}px`,
-          },
-        });
-
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = getDownloadFilename(drawGame);
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        const url = await renderScoreCardImage();
+        if (url) {
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = getDownloadFilename(drawGame);
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        }
       } catch (err) {
         console.error('Failed to generate score card image', err);
         toast.error('Failed to generate score card image');
@@ -1079,6 +1095,19 @@ const ScoreImageModal = ({
     }
   };
 
+  const handlePreview = async () => {
+    setPreviewing(true);
+    try {
+      const url = await renderScoreCardImage();
+      if (url) setPreviewUrl(url);
+    } catch (err) {
+      console.error('Failed to preview score card image', err);
+      toast.error('Failed to preview score card image');
+    } finally {
+      setPreviewing(false);
+    }
+  };
+
   return (
     <Modal
       open={open}
@@ -1095,6 +1124,17 @@ const ScoreImageModal = ({
           >
             Close
           </Button>
+          {canPreview && (
+            <Button
+              variant="outlined"
+              intent="neutral"
+              icon="visibility"
+              onClick={handlePreview}
+              disabled={generating || previewing}
+            >
+              {previewing ? 'Generating Preview…' : 'Preview Image'}
+            </Button>
+          )}
           <Button
             variant="filled"
             intent="accent"
@@ -1107,6 +1147,15 @@ const ScoreImageModal = ({
         </div>
       }
     >
+      {canPreview && previewUrl && (
+        <div className={styles.generatedPreview}>
+          <img
+            src={previewUrl}
+            alt="Generated score card preview"
+          />
+        </div>
+      )}
+
       {/* Hero image upload zone */}
       <div className={styles.uploadAreaWrap}>
         <div className={`${styles.uploadArea}${!showForm ? ` ${styles.uploadAreaLarge}` : ''}`}>
