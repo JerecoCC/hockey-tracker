@@ -98,11 +98,14 @@ describe('GameDetailsPage', () => {
     render(<GameDetailsPage mode="user" />);
 
     expect(mockScoreboardCard.mock.calls[0][0].leagueId).toBeUndefined();
+    expect(mockScoreboardCard.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].editable).toBe(false);
+    expect(mockSummaryTab.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe('/games/game-2');
     expect(mockSummaryTab.mock.calls[0][0].playerHrefBuilder).toBeUndefined();
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(true);
+    expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);
     expect(mockUsePageBreadcrumbs.mock.calls[0][0].backPath).toBe('/games');
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'user' });
@@ -113,7 +116,9 @@ describe('GameDetailsPage', () => {
     render(<GameDetailsPage />);
 
     expect(mockScoreboardCard.mock.calls[0][0].leagueId).toBe('league-1');
+    expect(mockScoreboardCard.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockSummaryTab.mock.calls[0][0].editable).toBe(true);
+    expect(mockSummaryTab.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockSummaryTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe(
       '/admin/leagues/nhl/seasons/2024-25/games/game-2',
@@ -122,6 +127,7 @@ describe('GameDetailsPage', () => {
       '/admin/leagues/nhl/teams/hom/players/john-smith',
     );
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
+    expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
   });
 

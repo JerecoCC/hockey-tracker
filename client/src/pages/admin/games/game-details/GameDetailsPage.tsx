@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Tabs from '@/components/Tabs/Tabs';
@@ -128,7 +128,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     updateStars,
     updateGameInfo,
     updatePeriodShots,
-    revertToEditMode,
     deleteGame,
     notFound: gameNotFound,
     failed: gameLoadFailed,
@@ -170,7 +169,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
-  const [isEditMode, setIsEditMode] = useState(false);
+  const isEditMode = isAdminView;
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -476,7 +475,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 isFinal={isFinal}
                 isInProgress={isInProgress}
                 isEditMode={isEditMode}
-                setIsEditMode={setIsEditMode}
                 editable={isAdminView}
                 showPlayerDataStatus={isAdminView}
                 busy={busy}
@@ -509,7 +507,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                 updateStars={updateStars}
                 updateGameInfo={updateGameInfo}
                 updatePeriodShots={updatePeriodShots}
-                revertToEditMode={revertToEditMode}
                 deleteGame={deleteGame}
               />
             ),

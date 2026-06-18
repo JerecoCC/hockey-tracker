@@ -57,6 +57,7 @@ const TeamResult = (props: Props) => {
               <StintRow
                 key={`${stint.teamSide}-${stint.goalieId}-${stint.enteredPeriod}-${stint.enteredTime}`}
                 stint={stint}
+                goalie={report.trueGoalies.find((goalie) => goalie.playerId === stint.goalieId)}
               />
             ))}
           </div>

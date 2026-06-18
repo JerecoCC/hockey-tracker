@@ -1152,11 +1152,34 @@
   font-size: $font-xs;
 }
 
+.nhlGoalieCheckerStintInfo {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
 .nhlGoalieCheckerGoalie {
   min-width: 0;
   color: $text-body;
   font-weight: 700;
   overflow-wrap: anywhere;
+}
+
+.nhlGoalieCheckerStats {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-shrink: 0;
+  color: $text-body;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+
+  span {
+    padding: 2px 6px;
+    border-radius: $radius-sm;
+    background: rgba($bg-card, 0.7);
+  }
 }
 
 .nhlGoalieCheckerToi {
@@ -1205,6 +1228,11 @@
   }
 
   .nhlGoalieCheckerStint {
-    grid-template-columns: 1fr;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .nhlGoalieCheckerStats {
+    flex-wrap: wrap;
   }
 }

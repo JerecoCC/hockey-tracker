@@ -43,7 +43,6 @@ interface Props {
   isFinal: boolean;
   isInProgress: boolean;
   isEditMode: boolean;
-  setIsEditMode: (value: boolean) => void;
   editable?: boolean;
   showPlayerDataStatus?: boolean;
   busy: string | null;
@@ -85,7 +84,6 @@ interface Props {
   updateStars: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
-  revertToEditMode: (lastPeriod: CurrentPeriod) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
 }
 
@@ -96,7 +94,6 @@ const GameSummaryTab = ({
   isFinal,
   isInProgress,
   isEditMode,
-  setIsEditMode,
   editable = true,
   showPlayerDataStatus = false,
   busy,
@@ -129,7 +126,6 @@ const GameSummaryTab = ({
   updateStars,
   updateGameInfo,
   updatePeriodShots,
-  revertToEditMode,
   deleteGame,
 }: Props) => {
   const navigate = useNavigate();
@@ -651,18 +647,7 @@ const GameSummaryTab = ({
                     }
                   : undefined
               }
-              onFinishEditing={editable ? () => setIsEditMode(false) : undefined}
               onDownloadScoreCard={() => setScoreImageOpen(true)}
-              onEnterEditMode={
-                editable
-                  ? () => {
-                      setIsEditMode(true);
-                      setEndGameReadyForStars(false);
-                      if (!game.current_period) revertToEditMode(lastPlayedPeriod);
-                    }
-                  : undefined
-              }
-              onExitEditMode={editable ? () => setIsEditMode(false) : undefined}
             />
 
             {/* ── Shots breakdown card ── */}
@@ -852,7 +837,6 @@ const GameSummaryTab = ({
             const ok = await endGame(payload);
             if (ok) {
               setEndGameReadyForStars(false);
-              setIsEditMode(false);
             }
             return ok;
           }}

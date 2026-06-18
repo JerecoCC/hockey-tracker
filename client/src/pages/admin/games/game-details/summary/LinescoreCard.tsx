@@ -32,10 +32,7 @@ interface Props {
   onCancel?: () => void;
   onDelete?: () => void;
   onEndGame?: () => void;
-  onFinishEditing?: () => void;
   onDownloadScoreCard: () => void;
-  onEnterEditMode?: () => void;
-  onExitEditMode?: () => void;
 }
 
 const LinescoreCard = ({
@@ -55,10 +52,7 @@ const LinescoreCard = ({
   onCancel,
   onDelete,
   onEndGame,
-  onFinishEditing,
   onDownloadScoreCard,
-  onEnterEditMode,
-  onExitEditMode,
 }: Props) => {
   const currentPeriodIdx = PERIOD_IDS.indexOf(game.current_period as '1' | '2' | '3');
   // When the game is in OT or SO, all regular periods are complete.
@@ -130,17 +124,7 @@ const LinescoreCard = ({
               onClick={onEndGame}
             />
           )}
-          {isFinal && isEditMode && onFinishEditing && (
-            <Button
-              variant="filled"
-              intent="accent"
-              icon="save"
-              size="sm"
-              tooltip="Finish editing"
-              onClick={onFinishEditing}
-            />
-          )}
-          {isFinal && !isEditMode && (
+          {isFinal && (
             <Button
               variant="outlined"
               intent="neutral"
@@ -150,26 +134,16 @@ const LinescoreCard = ({
               onClick={onDownloadScoreCard}
             />
           )}
-          {game.status !== 'scheduled' && (onEnterEditMode || onExitEditMode || onDelete) && (
+          {game.status !== 'scheduled' && onDelete && (
             <MoreActionsMenu
               disabled={!!busy}
               items={[
-                ...(isFinal && !isEditMode && onEnterEditMode
-                  ? [{ label: 'Edit Mode', icon: 'edit', onClick: onEnterEditMode }]
-                  : []),
-                ...(isEditMode && onExitEditMode
-                  ? [{ label: 'Exit Edit Mode', icon: 'close', onClick: onExitEditMode }]
-                  : []),
-                ...(onDelete
-                  ? [
-                      {
-                        label: 'Delete Game',
-                        icon: 'delete',
-                        intent: 'danger' as const,
-                        onClick: onDelete,
-                      },
-                    ]
-                  : []),
+                {
+                  label: 'Delete Game',
+                  icon: 'delete',
+                  intent: 'danger' as const,
+                  onClick: onDelete,
+                },
               ]}
             />
           )}

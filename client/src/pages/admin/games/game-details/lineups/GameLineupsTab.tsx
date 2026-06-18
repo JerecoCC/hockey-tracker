@@ -339,7 +339,7 @@ const GameLineupsTab = ({
                       : undefined
                 }
                 actions={
-                  readOnly || isFinal
+                  readOnly || (isFinal && !isEditMode)
                     ? []
                     : [
                         !isStarter && {
