@@ -1,6 +1,6 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
-@use 'sass:color';
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+@use "sass:color";
 
 // ── Section title ──────────────────────────────────────────────────────
 // ── Page loader ────────────────────────────────────────────────────────
@@ -60,12 +60,7 @@
   opacity: 0.55;
 
   .skeletonBone {
-    background: linear-gradient(
-      90deg,
-      $border 25%,
-      color.adjust($border, $lightness: 6%) 50%,
-      $border 75%
-    );
+    background: linear-gradient(90deg, $border 25%, color.adjust($border, $lightness: 6%) 50%, $border 75%);
     background-size: 800px 100%;
     animation: shimmer 1.4s ease-in-out infinite;
     border-radius: $radius-sm;
@@ -111,7 +106,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
+  gap: $space-xs;
 }
 
 .rosterList {
@@ -120,7 +115,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: $space-xs;
 }
 
 .listSpinner {

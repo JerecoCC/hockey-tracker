@@ -843,9 +843,9 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     const res = await request(app).put('/api/admin/games/game-1/lineup').send({
       team_id: 'team-1',
       slots: [
-        { position_slot: 'C', player_id: 'player-1' },
-        { position_slot: 'LW', player_id: 'player-1' },
-        { position_slot: 'RW', player_id: 'player-2' },
+        { position_slot: 'F1', player_id: 'player-1' },
+        { position_slot: 'F2', player_id: 'player-1' },
+        { position_slot: 'F3', player_id: 'player-2' },
         { position_slot: 'D1', player_id: 'player-3' },
         { position_slot: 'D2', player_id: 'player-4' },
         { position_slot: 'G', player_id: 'player-5' },
@@ -853,7 +853,7 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     });
 
     expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/center_id and left_wing_id must be different/i);
+    expect(res.body.error).toMatch(/forward_1_id and forward_2_id must be different/i);
     expect(sql).not.toHaveBeenCalled();
   });
 
@@ -865,8 +865,8 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     const res = await request(app).put('/api/admin/games/game-1/lineup').send({
       team_id: 'team-1',
       slots: [
-        { position_slot: 'C', player_id: 'player-1' },
-        { position_slot: 'LW', player_id: 'player-2' },
+        { position_slot: 'F1', player_id: 'player-1' },
+        { position_slot: 'F2', player_id: 'player-2' },
       ],
     });
 

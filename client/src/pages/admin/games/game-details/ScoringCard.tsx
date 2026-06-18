@@ -373,7 +373,8 @@ const ScoringCard = ({
                             tooltip: 'End Game',
                             intent: 'danger' as const,
                             disabled: !!busy,
-                            onClick: () => onOpenShotsModal(PERIOD.THIRD, { type: 'end-game' }, true),
+                            onClick: () =>
+                              onOpenShotsModal(PERIOD.THIRD, { type: 'end-game' }, true),
                           }
                         : null,
                     ].filter(Boolean) as AccordionAction[])

@@ -65,7 +65,7 @@ const awayRoster: GameRosterEntry[] = [
     last_name: 'Smith',
     photo: null,
     jersey_number: 19,
-    position: 'C',
+    position: 'F',
     inherited: false,
   },
 ] as GameRosterEntry[];
@@ -76,7 +76,7 @@ const inheritedLineup: LineupEntry[] = [
     game_id: 'game-1',
     team_id: 'team-away',
     player_id: 'player-1',
-    position_slot: 'C',
+    position_slot: 'F1',
     inherited: true,
   },
 ] as LineupEntry[];

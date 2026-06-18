@@ -11,7 +11,7 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
-export type LineupPositionSlot = 'C' | 'LW' | 'RW' | 'D1' | 'D2' | 'G';
+export type LineupPositionSlot = 'F1' | 'F2' | 'F3' | 'D1' | 'D2' | 'G';
 
 export interface LineupEntry {
   id: string;

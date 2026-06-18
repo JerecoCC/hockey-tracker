@@ -90,11 +90,11 @@ const ROSTER_ENTRY: GameRosterEntry = {
 };
 
 const LINEUP_ENTRY: LineupEntry = {
-  id: 'lineup-1-C',
+  id: 'lineup-1-F1',
   game_id: 'game-1',
   team_id: 'team-1',
   player_id: 'player-1',
-  position_slot: 'C',
+  position_slot: 'F1',
   player_first_name: 'John',
   player_last_name: 'Smith',
   player_photo: null,
@@ -205,7 +205,7 @@ describe('game details mutation cache updates', () => {
   it('updates lineup cache after saving team lineup without refetching', async () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     const lineupKey = ['game-lineup', 'game-1'];
-    const nextEntry = { ...LINEUP_ENTRY, position_slot: 'LW' as const };
+    const nextEntry = { ...LINEUP_ENTRY, position_slot: 'F2' as const };
     queryClient.setQueryData(lineupKey, [LINEUP_ENTRY]);
     mockedAxios.get.mockResolvedValue({ data: [LINEUP_ENTRY] });
     mockedAxios.put.mockResolvedValueOnce({ data: [nextEntry] });
@@ -217,7 +217,7 @@ describe('game details mutation cache updates', () => {
     mockedAxios.get.mockClear();
 
     await act(async () => {
-      await result.current.saveTeamLineup('team-1', [{ position_slot: 'LW', player_id: 'player-1' }]);
+      await result.current.saveTeamLineup('team-1', [{ position_slot: 'F2', player_id: 'player-1' }]);
     });
 
     expect(queryClient.getQueryData<LineupEntry[]>(lineupKey)).toEqual([nextEntry]);

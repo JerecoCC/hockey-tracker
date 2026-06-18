@@ -24,7 +24,7 @@ interface Props {
 
 type Draft = Record<LineupPositionSlot, string | null>;
 
-const emptyDraft = (): Draft => ({ C: null, LW: null, RW: null, D1: null, D2: null, G: null });
+const emptyDraft = (): Draft => ({ F1: null, F2: null, F3: null, D1: null, D2: null, G: null });
 
 const toOption = (p: TeamPlayerRecord): SelectOption => ({
   value: p.id,
@@ -38,22 +38,20 @@ const toOption = (p: TeamPlayerRecord): SelectOption => ({
  * Builds the option list for a position slot.
  *
  * For G: only goalies.
- * For C/LW/RW: exact-position matches come first, then generic 'F' (forward) players,
- * then a divider, then all remaining non-goalies.
- * For D1/D2: 'D' players come first, then a divider, then the rest (includes F players).
+ * For F1/F2/F3: forwards come first, then a divider, then all remaining non-goalies.
+ * For D1/D2: defense players come first, then a divider, then the rest.
  */
 const buildOptions = (slot: LineupPositionSlot, players: TeamPlayerRecord[]): SelectOption[] => {
   if (slot === 'G') return players.filter((p) => (p.position ?? '') === 'G').map(toOption);
 
-  const isForwardSlot = slot === 'C' || slot === 'LW' || slot === 'RW';
+  const isForwardSlot = slot === 'F1' || slot === 'F2' || slot === 'F3';
   const nonGoalies = players.filter((p) => (p.position ?? '') !== 'G');
 
   const primary = nonGoalies.filter((p) => {
     const pos = p.position ?? '';
-    if (isForwardSlot) return pos === slot || pos === 'F';
+    if (isForwardSlot) return pos === 'F' || pos === 'C' || pos === 'LW' || pos === 'RW';
     // D1 → LD + D, D2 → RD + D; either specific side also fits the other D slot
-    if (slot === 'D1') return pos === 'LD' || pos === 'D' || pos === 'RD';
-    if (slot === 'D2') return pos === 'RD' || pos === 'D' || pos === 'LD';
+    if (slot === 'D1' || slot === 'D2') return pos === 'D' || pos === 'LD' || pos === 'RD';
     return false;
   });
   const rest = nonGoalies.filter((p) => !primary.includes(p));
@@ -65,11 +63,11 @@ const buildOptions = (slot: LineupPositionSlot, players: TeamPlayerRecord[]): Se
 };
 
 const SLOT_LABEL: Record<LineupPositionSlot, string> = {
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  D1: 'Left Defense',
-  D2: 'Right Defense',
+  F1: 'Forward 1',
+  F2: 'Forward 2',
+  F3: 'Forward 3',
+  D1: 'Defense 1',
+  D2: 'Defense 2',
   G: 'Goalie',
 };
 
@@ -160,11 +158,10 @@ const SetLineupModal = ({
 
   const slotSelect = (slot: LineupPositionSlot, label: string) => (
     <div className={styles.slotField}>
-      <span className={styles.slotLabel}>{label}</span>
       <Select
         value={draft[slot] ?? ''}
         options={buildOptions(slot, players)}
-        placeholder="— Required —"
+        placeholder={label}
         onChange={(val) => set(slot, val)}
         searchable
         disabled={saving}
@@ -214,20 +211,30 @@ const SetLineupModal = ({
         </div>
       }
     >
-      <div className={styles.grid}>
-        {/* Center — spans both columns */}
-        <div className={styles.spanFull}>{slotSelect('C', SLOT_LABEL.C)}</div>
+      <div className={styles.lineupSlotList}>
+        <div className={styles.lineupSlotGroup}>
+          <span className={styles.slotGroupLabel}>
+            Forwards <span className={styles.required}>*</span>
+          </span>
+          {slotSelect('F1', SLOT_LABEL.F1)}
+          {slotSelect('F2', SLOT_LABEL.F2)}
+          {slotSelect('F3', SLOT_LABEL.F3)}
+        </div>
 
-        {/* Left Wing + Right Wing — one column each */}
-        {slotSelect('LW', SLOT_LABEL.LW)}
-        {slotSelect('RW', SLOT_LABEL.RW)}
+        <div className={styles.lineupSlotGroup}>
+          <span className={styles.slotGroupLabel}>
+            Defense <span className={styles.required}>*</span>
+          </span>
+          {slotSelect('D1', SLOT_LABEL.D1)}
+          {slotSelect('D2', SLOT_LABEL.D2)}
+        </div>
 
-        {/* Left Defense + Right Defense — one column each */}
-        {slotSelect('D1', SLOT_LABEL.D1)}
-        {slotSelect('D2', SLOT_LABEL.D2)}
-
-        {/* Goalie — spans both columns */}
-        <div className={styles.spanFull}>{slotSelect('G', SLOT_LABEL.G)}</div>
+        <div className={styles.lineupSlotGroup}>
+          <span className={styles.slotGroupLabel}>
+            Goalie <span className={styles.required}>*</span>
+          </span>
+          {slotSelect('G', SLOT_LABEL.G)}
+        </div>
       </div>
       {duplicateError && <p className={styles.error}>{duplicateError}</p>}
     </Modal>
@@ -235,3 +242,4 @@ const SetLineupModal = ({
 };
 
 export default SetLineupModal;
+

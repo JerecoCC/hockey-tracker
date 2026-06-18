@@ -481,7 +481,7 @@
 .summaryGrid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: $space-xl;
+  gap: $space-lg;
   align-items: start;
 
   @container (max-width: #{$bp-tablet}) {

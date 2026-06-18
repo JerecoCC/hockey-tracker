@@ -58,11 +58,14 @@ export const POSITION_LABEL: Record<string, string> = {
   LW: 'Left Wing',
   RW: 'Right Wing',
   F: 'Forward',
+  F1: 'Forward',
+  F2: 'Forward',
+  F3: 'Forward',
   D: 'Defense',
   LD: 'Left Defense',
   RD: 'Right Defense',
-  D1: 'Left Defense',
-  D2: 'Right Defense',
+  D1: 'Defense',
+  D2: 'Defense',
   G: 'Goalie',
 };
 
@@ -81,5 +84,5 @@ export const GOAL_TYPE_BADGE: Record<
   'empty-net': { label: 'EN', tooltip: 'Empty Net', intent: 'neutral' },
   'penalty-shot': { label: 'PS', tooltip: 'Penalty Shot', intent: 'success' },
   'awarded': { label: 'AWD', tooltip: 'Awarded Goal', intent: 'success' },
-  own: { label: 'OG', tooltip: 'Own Goal', intent: 'danger' },
+  own: { label: 'OWN', tooltip: 'Own Goal', intent: 'danger' },
 };

@@ -448,9 +448,13 @@
   z-index: 1;
   margin: 0 -1px;
   background:
-    linear-gradient(90deg, transparent calc(50% - 3px), rgba(239, 68, 68, 0.88) calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)),
+    linear-gradient(
+      90deg,
+      transparent calc(50% - 3px),
+      rgba(239, 68, 68, 0.88) calc(50% - 3px) calc(50% + 3px),
+      transparent calc(50% + 3px)
+    ),
     radial-gradient(circle at center, rgba(56, 189, 248, 0.1), transparent 24%), #f8fafc;
-
 }
 
 .scoreCardScoreBlock {
@@ -498,7 +502,7 @@
   justify-content: center;
   justify-self: center;
   box-sizing: border-box;
-  border: 6px solid #1769a8;
+  border: 6px solid #0d78c0;
   border-radius: 50%;
   background: transparent;
   color: #111827;
@@ -532,7 +536,7 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    background: #1769a8;
+    background: #0d78c0;
     transform: translate(-50%, -50%);
   }
 
@@ -660,8 +664,8 @@
 }
 
 .scoreCardFooterLeagueLogo {
-  width: 172px;
-  height: 110px;
+  width: 196px;
+  height: 150px;
   object-fit: contain;
   filter: drop-shadow(0 12px 12px rgba(15, 23, 42, 0.16));
 }

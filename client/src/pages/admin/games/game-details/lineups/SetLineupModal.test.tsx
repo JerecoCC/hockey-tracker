@@ -87,9 +87,9 @@ const defaultProps = {
 };
 
 const filledLineup: LineupEntry[] = [
-  { id: 'le1', game_id: 'g1', team_id: 't1', player_id: 'c1', position_slot: 'C' },
-  { id: 'le2', game_id: 'g1', team_id: 't1', player_id: 'lw1', position_slot: 'LW' },
-  { id: 'le3', game_id: 'g1', team_id: 't1', player_id: 'rw1', position_slot: 'RW' },
+  { id: 'le1', game_id: 'g1', team_id: 't1', player_id: 'c1', position_slot: 'F1' },
+  { id: 'le2', game_id: 'g1', team_id: 't1', player_id: 'lw1', position_slot: 'F2' },
+  { id: 'le3', game_id: 'g1', team_id: 't1', player_id: 'rw1', position_slot: 'F3' },
   { id: 'le4', game_id: 'g1', team_id: 't1', player_id: 'd1', position_slot: 'D1' },
   { id: 'le5', game_id: 'g1', team_id: 't1', player_id: 'd2', position_slot: 'D2' },
   { id: 'le6', game_id: 'g1', team_id: 't1', player_id: 'g1', position_slot: 'G' },
@@ -114,15 +114,18 @@ describe('SetLineupModal – visibility', () => {
     expect(screen.getByText(/Set Starting Lineup — Test Team/i)).toBeInTheDocument();
   });
 
-  it('renders all position slot labels', () => {
+  it('renders group labels and slot placeholders', () => {
     render(<SetLineupModal {...defaultProps} />);
-    expect(screen.getByText('Center')).toBeInTheDocument();
-    expect(screen.getByText('Left Wing')).toBeInTheDocument();
-    expect(screen.getByText('Right Wing')).toBeInTheDocument();
-    // Defence slots are labelled "Left Defense" and "Right Defense"
-    expect(screen.getByText('Left Defense')).toBeInTheDocument();
-    expect(screen.getByText('Right Defense')).toBeInTheDocument();
-    expect(screen.getByText('Goalie')).toBeInTheDocument();
+    expect(screen.getByText(/Forwards/, { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText(/Defense/, { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getByText(/Goalie/, { selector: 'span' })).toBeInTheDocument();
+    expect(screen.getAllByText('*')).toHaveLength(3);
+    expect(screen.getByRole('combobox', { name: 'Forward 1' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Forward 2' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Forward 3' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Defense 1' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Defense 2' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Goalie' })).toBeInTheDocument();
   });
 });
 
@@ -195,7 +198,7 @@ describe('SetLineupModal – Save button', () => {
     // The simplest path: start from empty and fill all slots via the mocked selects
     render(<SetLineupModal {...defaultProps} />);
     const selects = screen.getAllByRole('combobox');
-    // selects order: C, LW, RW, D1, D2, G
+    // selects order: F1, F2, F3, D1, D2, G
     fireEvent.change(selects[0], { target: { value: 'c1' } });
     fireEvent.change(selects[1], { target: { value: 'lw1' } });
     fireEvent.change(selects[2], { target: { value: 'rw1' } });
@@ -216,7 +219,7 @@ describe('SetLineupModal – Save button', () => {
     fireEvent.change(selects[5], { target: { value: 'g1' } });
 
     expect(screen.getByText(/cannot be used in multiple/i)).toHaveTextContent(
-      'A player cannot be used in multiple starting lineup slots (Center, Left Wing)',
+      'A player cannot be used in multiple starting lineup slots (Forward 1, Forward 2)',
     );
     expect(screen.getByRole('button', { name: /save lineup/i })).toBeDisabled();
 
@@ -241,9 +244,9 @@ describe('SetLineupModal – Save button', () => {
     expect(defaultProps.saveTeamLineup).toHaveBeenCalledWith(
       't1',
       expect.arrayContaining([
-        { position_slot: 'C', player_id: 'c1' },
-        { position_slot: 'LW', player_id: 'lw1' },
-        { position_slot: 'RW', player_id: 'rw1' },
+        { position_slot: 'F1', player_id: 'c1' },
+        { position_slot: 'F2', player_id: 'lw1' },
+        { position_slot: 'F3', player_id: 'rw1' },
         { position_slot: 'D1', player_id: 'd1' },
         { position_slot: 'D2', player_id: 'd2' },
         { position_slot: 'G', player_id: 'g1' },
@@ -288,7 +291,7 @@ describe('SetLineupModal – lineup sync', () => {
 
   it('ignores lineup entries for a different team', () => {
     const otherTeamLineup: LineupEntry[] = [
-      { id: 'le1', game_id: 'g1', team_id: 'other', player_id: 'c1', position_slot: 'C' },
+      { id: 'le1', game_id: 'g1', team_id: 'other', player_id: 'c1', position_slot: 'F1' },
     ];
     render(
       <SetLineupModal
@@ -319,32 +322,31 @@ describe('SetLineupModal – option ordering', () => {
       .slice(1) // skip the placeholder option
       .map((o) => o.value);
 
-  it('C select lists the center player first, then other non-goalies', () => {
+  it('F1 select lists forwards first, then other non-goalies', () => {
     render(<SetLineupModal {...defaultProps} />);
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
-    const opts = getOptionsFor(selects[0]); // C slot
-    expect(opts[0]).toBe('c1'); // Alice (C) is first
-    expect(opts).toContain('lw1');
-    expect(opts).toContain('rw1');
-    expect(opts).toContain('d1');
+    const opts = getOptionsFor(selects[0]); // F1 slot
+    const forwardIds = opts.slice(0, 3);
+    expect(forwardIds).toEqual(expect.arrayContaining(['c1', 'lw1', 'rw1']));
+    expect(opts.indexOf('d1')).toBeGreaterThan(2);
     expect(opts).not.toContain('g1'); // goalies excluded
   });
 
-  it('LW select lists the left-wing player first, then other non-goalies', () => {
+  it('F2 select lists forwards first, then other non-goalies', () => {
     render(<SetLineupModal {...defaultProps} />);
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
-    const opts = getOptionsFor(selects[1]); // LW slot
-    expect(opts[0]).toBe('lw1'); // Bob (LW) is first
-    expect(opts).toContain('c1');
+    const opts = getOptionsFor(selects[1]); // F2 slot
+    const forwardIds = opts.slice(0, 3);
+    expect(forwardIds).toEqual(expect.arrayContaining(['c1', 'lw1', 'rw1']));
     expect(opts).not.toContain('g1');
   });
 
-  it('RW select lists the right-wing player first, then other non-goalies', () => {
+  it('F3 select lists forwards first, then other non-goalies', () => {
     render(<SetLineupModal {...defaultProps} />);
     const selects = screen.getAllByRole('combobox') as HTMLSelectElement[];
-    const opts = getOptionsFor(selects[2]); // RW slot
-    expect(opts[0]).toBe('rw1'); // Carol (RW) is first
-    expect(opts).toContain('c1');
+    const opts = getOptionsFor(selects[2]); // F3 slot
+    const forwardIds = opts.slice(0, 3);
+    expect(forwardIds).toEqual(expect.arrayContaining(['c1', 'lw1', 'rw1']));
     expect(opts).not.toContain('g1');
   });
 

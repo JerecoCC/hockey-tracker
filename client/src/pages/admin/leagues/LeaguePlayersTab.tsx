@@ -25,9 +25,7 @@ interface Props {
   className?: string;
 }
 
-const LeaguePlayersTab = ({
-  className,
-}: Props) => {
+const LeaguePlayersTab = ({ className }: Props) => {
   const { league, players: playersContext } = useLeagueDetailsContext();
   const {
     players,
@@ -135,6 +133,7 @@ const LeaguePlayersTab = ({
                         textColor={p.text_color ?? undefined}
                         href={playerHref}
                         jerseyNumber={p.jersey_number}
+                        variant="plain"
                         subtitle={
                           p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined
                         }

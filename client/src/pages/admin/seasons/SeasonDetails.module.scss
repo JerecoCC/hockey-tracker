@@ -1,5 +1,5 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Page loader ────────────────────────────────────────────────────────────────
 .loaderWrapper {
@@ -121,7 +121,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
+  gap: $space-xs;
 }
 
 .teamListItemHover.teamListItemHover:hover {
@@ -231,7 +231,7 @@
   transition: background $transition-fast;
 
   &:hover,
-  &[data-selected='true'] {
+  &[data-selected="true"] {
     background: rgba(255, 255, 255, 0.05);
   }
 }
@@ -250,7 +250,7 @@
     background $transition-fast,
     border-color $transition-fast;
 
-  &[data-checked='true'] {
+  &[data-checked="true"] {
     background: $text-bright;
     border-color: $text-bright;
   }

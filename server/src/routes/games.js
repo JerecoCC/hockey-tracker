@@ -207,23 +207,31 @@ const validateGoalParticipants = (scorerId, assist1Id, assist2Id) => {
   return null;
 };
 
+const LINEUP_SLOT_LABEL = {
+  F1: 'forward_1_id',
+  F2: 'forward_2_id',
+  F3: 'forward_3_id',
+  D1: 'defense_1_id',
+  D2: 'defense_2_id',
+  G: 'goalie_id',
+};
+
+const normalizeLineupSlot = (slot) =>
+  ({
+    C: 'F1',
+    LW: 'F2',
+    RW: 'F3',
+  })[slot] ?? slot;
+
 const validateLineupPlayers = (slotMap) => {
-  const slotLabel = {
-    C: 'center_id',
-    LW: 'left_wing_id',
-    RW: 'right_wing_id',
-    D1: 'defense_1_id',
-    D2: 'defense_2_id',
-    G: 'goalie_id',
-  };
   const seen = new Map();
-  for (const slot of Object.keys(slotLabel)) {
+  for (const slot of Object.keys(LINEUP_SLOT_LABEL)) {
     const playerId = slotMap[slot];
     if (!playerId) continue;
     if (seen.has(playerId)) {
-      return `${seen.get(playerId)} and ${slotLabel[slot]} must be different`;
+      return `${seen.get(playerId)} and ${LINEUP_SLOT_LABEL[slot]} must be different`;
     }
-    seen.set(playerId, slotLabel[slot]);
+    seen.set(playerId, LINEUP_SLOT_LABEL[slot]);
   }
   return null;
 };
@@ -1745,9 +1753,9 @@ router.get('/:id/lineup', async (req, res) => {
       FROM game_starting_lineup sl
       JOIN games g ON g.id = sl.game_id
       CROSS JOIN LATERAL (VALUES
-        ('C',  sl.center_id),
-        ('LW', sl.left_wing_id),
-        ('RW', sl.right_wing_id),
+        ('F1', sl.forward_1_id),
+        ('F2', sl.forward_2_id),
+        ('F3', sl.forward_3_id),
         ('D1', sl.defense_1_id),
         ('D2', sl.defense_2_id),
         ('G',  sl.goalie_id)
@@ -1807,9 +1815,9 @@ router.get('/:id/lineup', async (req, res) => {
         FROM games g
         JOIN game_starting_lineup sl ON sl.game_id = g.id AND sl.team_id = ${teamId}
         CROSS JOIN LATERAL (VALUES
-          ('C',  sl.center_id),
-          ('LW', sl.left_wing_id),
-          ('RW', sl.right_wing_id),
+          ('F1', sl.forward_1_id),
+          ('F2', sl.forward_2_id),
+          ('F3', sl.forward_3_id),
           ('D1', sl.defense_1_id),
           ('D2', sl.defense_2_id),
           ('G',  sl.goalie_id)
@@ -1871,16 +1879,19 @@ router.put('/:id/lineup', async (req, res) => {
     // Build a map from position_slot → player_id (null = clear that slot).
     const slotMap = {};
     for (const { position_slot, player_id } of slots) {
-      slotMap[position_slot] = player_id || null;
+      const normalizedSlot = normalizeLineupSlot(position_slot);
+      if (LINEUP_SLOT_LABEL[normalizedSlot]) {
+        slotMap[normalizedSlot] = player_id || null;
+      }
     }
 
     const lineupError = validateLineupPlayers(slotMap);
     if (lineupError) return res.status(400).json({ error: lineupError });
     const hasAcquisitionType = await hasPlayerTeamsAcquisitionType();
 
-    const centerId    = slotMap['C']  ?? null;
-    const leftWingId  = slotMap['LW'] ?? null;
-    const rightWingId = slotMap['RW'] ?? null;
+    const forward1Id  = slotMap['F1'] ?? null;
+    const forward2Id  = slotMap['F2'] ?? null;
+    const forward3Id  = slotMap['F3'] ?? null;
     const defense1Id  = slotMap['D1'] ?? null;
     const defense2Id  = slotMap['D2'] ?? null;
     const goalieId    = slotMap['G']  ?? null;
@@ -1888,13 +1899,13 @@ router.put('/:id/lineup', async (req, res) => {
     // Single UPSERT — one row per (game, team).
     await sql`
       INSERT INTO game_starting_lineup
-        (game_id, team_id, center_id, left_wing_id, right_wing_id, defense_1_id, defense_2_id, goalie_id)
+        (game_id, team_id, forward_1_id, forward_2_id, forward_3_id, defense_1_id, defense_2_id, goalie_id)
       VALUES
-        (${id}, ${team_id}, ${centerId}, ${leftWingId}, ${rightWingId}, ${defense1Id}, ${defense2Id}, ${goalieId})
+        (${id}, ${team_id}, ${forward1Id}, ${forward2Id}, ${forward3Id}, ${defense1Id}, ${defense2Id}, ${goalieId})
       ON CONFLICT (game_id, team_id) DO UPDATE SET
-        center_id     = EXCLUDED.center_id,
-        left_wing_id  = EXCLUDED.left_wing_id,
-        right_wing_id = EXCLUDED.right_wing_id,
+        forward_1_id  = EXCLUDED.forward_1_id,
+        forward_2_id  = EXCLUDED.forward_2_id,
+        forward_3_id  = EXCLUDED.forward_3_id,
         defense_1_id  = EXCLUDED.defense_1_id,
         defense_2_id  = EXCLUDED.defense_2_id,
         goalie_id     = EXCLUDED.goalie_id
@@ -1918,9 +1929,9 @@ router.put('/:id/lineup', async (req, res) => {
       FROM game_starting_lineup sl
       JOIN games g ON g.id = sl.game_id
       CROSS JOIN LATERAL (VALUES
-        ('C',  sl.center_id),
-        ('LW', sl.left_wing_id),
-        ('RW', sl.right_wing_id),
+        ('F1', sl.forward_1_id),
+        ('F2', sl.forward_2_id),
+        ('F3', sl.forward_3_id),
         ('D1', sl.defense_1_id),
         ('D2', sl.defense_2_id),
         ('G',  sl.goalie_id)
