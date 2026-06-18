@@ -249,6 +249,60 @@ const lineupColumnValues = (slotMap) => ({
   goalieId: slotMap.G ?? null,
 });
 
+const sortIds = (ids) => ids.filter(Boolean).sort();
+
+const canonicalLineup = (lineup) => ({
+  forwards: sortIds([lineup.forward1Id, lineup.forward2Id, lineup.forward3Id]),
+  defense: sortIds([lineup.defense1Id, lineup.defense2Id]),
+  goalie: lineup.goalieId ?? null,
+});
+
+const canonicalSavedLineup = (lineup) => ({
+  forward1Id: lineup?.forward_1_id ?? null,
+  forward2Id: lineup?.forward_2_id ?? null,
+  forward3Id: lineup?.forward_3_id ?? null,
+  defense1Id: lineup?.defense_1_id ?? null,
+  defense2Id: lineup?.defense_2_id ?? null,
+  goalieId: lineup?.goalie_id ?? null,
+});
+
+const sameIds = (left, right) =>
+  left.length === right.length && left.every((value, index) => value === right[index]);
+
+const lineupsEquivalent = (left, right) => {
+  if (!right) return false;
+  const a = canonicalLineup(left);
+  const b = canonicalLineup(canonicalSavedLineup(right));
+  return sameIds(a.forwards, b.forwards) && sameIds(a.defense, b.defense) && a.goalie === b.goalie;
+};
+
+const selectPreviousSavedLineupRow = (gameId, teamId) => sql`
+  SELECT
+    sl.forward_1_id,
+    sl.forward_2_id,
+    sl.forward_3_id,
+    sl.defense_1_id,
+    sl.defense_2_id,
+    sl.goalie_id
+  FROM games target
+  JOIN games g
+    ON (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
+  JOIN game_starting_lineup sl
+    ON sl.game_id = g.id
+    AND sl.team_id = ${teamId}
+  WHERE target.id = ${gameId}
+    AND g.status = 'final'
+    AND g.id <> ${gameId}
+    AND (
+      target.scheduled_at IS NULL
+      OR g.scheduled_at IS NULL
+      OR g.scheduled_at < target.scheduled_at
+      OR (g.scheduled_at = target.scheduled_at AND g.created_at < target.created_at)
+    )
+  ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC
+  LIMIT 1
+`;
+
 const selectSavedLineupRows = (gameId, hasAcquisitionType, teamId = null) => {
   if (teamId) {
     return sql`
@@ -365,13 +419,28 @@ const selectSavedLineupRows = (gameId, hasAcquisitionType, teamId = null) => {
 };
 
 const selectInheritedLineupRows = (gameId, teamId, hasAcquisitionType) => sql`
-  WITH source_lineup AS (
+  WITH target_game AS (
+    SELECT id, scheduled_at, created_at
+    FROM games
+    WHERE id = ${gameId}
+  ),
+  source_lineup AS (
     SELECT sl.*
-    FROM games g
-    JOIN game_starting_lineup sl ON sl.game_id = g.id AND sl.team_id = ${teamId}
+    FROM target_game target
+    JOIN games g
+      ON (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
+    JOIN game_starting_lineup sl
+      ON sl.game_id = g.id
+      AND sl.team_id = ${teamId}
     WHERE (g.home_team_id = ${teamId} OR g.away_team_id = ${teamId})
       AND g.status = 'final'
       AND g.id <> ${gameId}
+      AND (
+        target.scheduled_at IS NULL
+        OR g.scheduled_at IS NULL
+        OR g.scheduled_at < target.scheduled_at
+        OR (g.scheduled_at = target.scheduled_at AND g.created_at < target.created_at)
+      )
     ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC
     LIMIT 1
   )
@@ -1980,6 +2049,25 @@ router.put('/:id/lineup', async (req, res) => {
       defense2Id,
       goalieId,
     } = lineupColumnValues(slotMap);
+    const incomingLineup = {
+      forward1Id,
+      forward2Id,
+      forward3Id,
+      defense1Id,
+      defense2Id,
+      goalieId,
+    };
+    const [previousLineup] = await selectPreviousSavedLineupRow(id, team_id);
+
+    if (lineupsEquivalent(incomingLineup, previousLineup)) {
+      await sql`
+        DELETE FROM game_starting_lineup
+        WHERE game_id = ${id}
+          AND team_id = ${team_id}
+      `;
+      const rows = await selectInheritedLineupRows(id, team_id, hasAcquisitionType);
+      return res.json(rows);
+    }
 
     // Single UPSERT — one row per (game, team).
     await sql`

@@ -853,7 +853,8 @@ describe('GET /api/admin/games/:id/lineup', () => {
       { id: 'away-lineup-F1', team_id: 'away-1', inherited: true },
     ]);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[3]).toMatch(/WITH source_lineup AS/);
+    expect(queries[3]).toMatch(/target_game AS/);
+    expect(queries[3]).toMatch(/source_lineup AS/);
     expect(queries[3]).toMatch(/LIMIT 1/);
     expect(queries[3]).toMatch(/CROSS JOIN LATERAL \(VALUES/);
     expect(queries[3]).not.toMatch(/LIMIT 6/);
@@ -882,6 +883,7 @@ describe('PUT /api/admin/games/:id/lineup', () => {
   it('joins returned lineup player metadata by the game season', async () => {
     sql
       .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
       .mockResolvedValueOnce([]);
 
     const res = await request(app).put('/api/admin/games/game-1/lineup').send({
@@ -894,11 +896,43 @@ describe('PUT /api/admin/games/:id/lineup', () => {
 
     expect(res.status).toBe(200);
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
-    expect(queries[1]).toMatch(/pt\.season_id = g\.season_id/);
-    expect(queries[1]).toMatch(/p\.date_of_birth/);
-    expect(queries[1]).toMatch(/player_team_stints/);
-    expect(queries[1]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
-    expect(queries[1]).toMatch(/acquisition_type/);
+    expect(queries[2]).toMatch(/pt\.season_id = g\.season_id/);
+    expect(queries[2]).toMatch(/p\.date_of_birth/);
+    expect(queries[2]).toMatch(/player_team_stints/);
+    expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
+    expect(queries[2]).toMatch(/acquisition_type/);
+  });
+
+  it('does not save a consecutive unchanged starting lineup', async () => {
+    sql
+      .mockResolvedValueOnce([{
+        forward_1_id: 'forward-2',
+        forward_2_id: 'forward-1',
+        forward_3_id: 'forward-3',
+        defense_1_id: 'defense-2',
+        defense_2_id: 'defense-1',
+        goalie_id: 'goalie-1',
+      }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'lineup-previous-F1', inherited: true }]);
+
+    const res = await request(app).put('/api/admin/games/game-1/lineup').send({
+      team_id: 'team-1',
+      slots: [
+        { position_slot: 'F1', player_id: 'forward-1' },
+        { position_slot: 'F2', player_id: 'forward-2' },
+        { position_slot: 'F3', player_id: 'forward-3' },
+        { position_slot: 'D1', player_id: 'defense-1' },
+        { position_slot: 'D2', player_id: 'defense-2' },
+        { position_slot: 'G', player_id: 'goalie-1' },
+      ],
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([{ id: 'lineup-previous-F1', inherited: true }]);
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[1]).toMatch(/DELETE FROM game_starting_lineup/);
+    expect(queries.join(' ')).not.toMatch(/INSERT INTO game_starting_lineup/);
   });
 });
 

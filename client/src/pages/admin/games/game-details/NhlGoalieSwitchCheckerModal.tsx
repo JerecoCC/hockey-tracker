@@ -1,8 +1,15 @@
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
+import { toast } from 'react-toastify';
+import Button from '@/components/Button/Button';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { fetchNhlGoalieSwitchReport, type NhlGoalieSwitchReport } from './nhlGoalieSwitchChecker';
+import {
+  autofillGameFromNhlGamecenter,
+  nhlAutofillApiError,
+} from './nhlGameAutofill';
 import type { GameRecord } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
 
@@ -27,6 +34,7 @@ const NhlGoalieSwitchCheckerModal = ({
   setReportData,
   onLoadingChange,
 }: Props) => {
+  const queryClient = useQueryClient();
   const {
     control,
     handleSubmit,
@@ -38,14 +46,17 @@ const NhlGoalieSwitchCheckerModal = ({
     },
     mode: 'onChange',
   });
-  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(false);
+  const [filling, setFilling] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const gameNumber = watch('game_number');
+  const busy = checking || filling;
+  const canUseGameNumber = isValid && !!String(gameNumber ?? '').trim();
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
     setReportData(null);
-    setLoading(true);
+    setChecking(true);
     onLoadingChange?.(true);
 
     try {
@@ -59,21 +70,64 @@ const NhlGoalieSwitchCheckerModal = ({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to check NHL goalie switches.');
     } finally {
-      setLoading(false);
+      setChecking(false);
       onLoadingChange?.(false);
     }
   });
+
+  const handleAutofill = async () => {
+    const input = String(gameNumber ?? '').trim();
+    if (!input) return;
+    setError(null);
+    setFilling(true);
+    onLoadingChange?.(true);
+
+    try {
+      const result = await autofillGameFromNhlGamecenter(game, input);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['games', game.id] }),
+        queryClient.invalidateQueries({ queryKey: ['games'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goals', game.id] }),
+        queryClient.invalidateQueries({ queryKey: ['game-roster', game.id] }),
+        queryClient.invalidateQueries({ queryKey: ['game-lineup', game.id] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', game.id] }),
+      ]);
+      toast.success(
+        `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`,
+      );
+      if (result.warnings.length > 0) {
+        setError(result.warnings.join(' '));
+      }
+    } catch (err) {
+      setError(nhlAutofillApiError(err, 'Unable to auto-fill game from NHL data.'));
+    } finally {
+      setFilling(false);
+      onLoadingChange?.(false);
+    }
+  };
 
   return (
     <Modal
       open={open}
       title="Check NHL Goalie Switches"
       onClose={onClose}
-      confirmLabel={loading ? 'Checking...' : 'Check'}
+      confirmLabel={checking ? 'Checking...' : 'Check'}
       confirmIcon="search"
       confirmForm={FORM_ID}
-      confirmDisabled={loading || !isValid || !String(gameNumber ?? '').trim()}
-      busy={loading}
+      confirmDisabled={busy || !canUseGameNumber}
+      busy={busy}
+      footerStart={
+        <Button
+          variant="outlined"
+          intent="info"
+          icon="sports_hockey"
+          onClick={handleAutofill}
+          disabled={busy || !canUseGameNumber}
+          type="button"
+        >
+          {filling ? 'Filling...' : 'Auto-fill Game'}
+        </Button>
+      }
     >
       <div className={styles.nhlGoalieChecker}>
         <form
@@ -90,15 +144,17 @@ const NhlGoalieSwitchCheckerModal = ({
             step={1}
             inputMode="numeric"
             placeholder="Put game number here"
-            disabled={loading}
+            disabled={busy}
             autoFocus
             required
             rules={{ required: 'NHL game number is required' }}
           />
         </form>
 
-        {loading && (
-          <p className={styles.nhlGoalieCheckerStatus}>Fetching NHL GameCenter data...</p>
+        {busy && (
+          <p className={styles.nhlGoalieCheckerStatus}>
+            {filling ? 'Filling game from NHL GameCenter data...' : 'Fetching NHL GameCenter data...'}
+          </p>
         )}
 
         {error && (
