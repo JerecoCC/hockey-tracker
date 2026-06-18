@@ -1,6 +1,7 @@
 import {
   buildGoalieStintsFromShiftChart,
   buildGoalieStintsFromToiHtml,
+  buildNhlGamecenterEndpoint,
   buildNhlGamecenterGameId,
   buildGoalieStints,
   detectGoalieSwitch,
@@ -29,6 +30,7 @@ describe('NHL goalie switch checker helpers', () => {
       buildNhlGamecenterGameId('257', {
         seasonName: '2025-26',
         scheduledAt: '2026-01-15T00:00:00Z',
+        gameType: 'regular',
       }),
     ).toBe('2025020257');
     expect(
@@ -41,6 +43,27 @@ describe('NHL goalie switch checker helpers', () => {
         'https://api-web.nhle.com/v1/gamecenter/2025020237/boxscore',
       ),
     ).toBe('2025020237');
+  });
+
+  it('uses the NHL game type segment when building GameCenter ids', () => {
+    expect(
+      buildNhlGamecenterGameId('7', {
+        seasonName: '2025-26',
+        gameType: 'preseason',
+      }),
+    ).toBe('2025010007');
+    expect(
+      buildNhlGamecenterGameId('4', {
+        seasonName: '2025-26',
+        gameType: 'playoff',
+      }),
+    ).toBe('2025030004');
+    expect(
+      buildNhlGamecenterEndpoint('4', {
+        seasonName: '2025-26',
+        gameType: 'playoff',
+      }),
+    ).toBe('https://api-web.nhle.com/v1/gamecenter/2025030004');
   });
 
   it('formats scheduled starts in Eastern Time', () => {

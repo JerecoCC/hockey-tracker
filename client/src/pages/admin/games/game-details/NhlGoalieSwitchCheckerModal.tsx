@@ -53,6 +53,7 @@ const NhlGoalieSwitchCheckerModal = ({
         await fetchNhlGoalieSwitchReport(String(values.game_number ?? '').trim(), {
           seasonName: game.season_name,
           scheduledAt: game.scheduled_at,
+          gameType: game.game_type,
         }),
       );
     } catch (err) {
