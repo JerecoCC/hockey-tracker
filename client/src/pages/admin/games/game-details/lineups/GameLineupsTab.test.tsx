@@ -1,24 +1,85 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type { ReactNode } from 'react';
+import type { ListItemAction } from '@/components/ListItem/ListItem';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { LineupEntry } from '@/hooks/useGameLineup';
 import GameLineupsTab from './GameLineupsTab';
 
 jest.mock('@/hooks/useTeamPlayers', () => () => ({ createAndRosterPlayers: jest.fn() }));
-jest.mock('@/components/Accordion/Accordion', () => ({ label, children }: any) => <div><div>{label}</div>{children}</div>);
-jest.mock('@/components/Card/Card', () => ({ children, title }: any) => <div><div>{title}</div>{children}</div>);
-jest.mock('@/components/SegmentedControl/SegmentedControl', () => () => null);
-jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
-jest.mock('./LineupRosterModal', () => () => null);
-jest.mock('./LineupCreatePlayersModal', () => () => null);
-jest.mock('./SetLineupModal', () => () => null);
-jest.mock('./RemoveFromLineupModal', () => () => null);
-jest.mock('@/components/ListItem/ListItem', () => ({ name, rightContent }: any) => (
-  <div>
-    <span>{name}</span>
-    {rightContent?.type === 'tag' && <span>{rightContent.label}</span>}
-  </div>
-));
+jest.mock('@/components/Accordion/Accordion', () =>
+  function MockAccordion({ label, children }: { label: ReactNode; children: ReactNode }) {
+    return <div><div>{label}</div>{children}</div>;
+  },
+);
+jest.mock('@/components/Card/Card', () =>
+  function MockCard({ children, title }: { children: ReactNode; title: ReactNode }) {
+    return <div><div>{title}</div>{children}</div>;
+  },
+);
+jest.mock('@/components/SegmentedControl/SegmentedControl', () =>
+  function MockSegmentedControl() {
+    return null;
+  },
+);
+jest.mock('@/components/TeamLogo/TeamLogo', () =>
+  function MockTeamLogo() {
+    return <span>logo</span>;
+  },
+);
+jest.mock('./LineupRosterModal', () =>
+  function MockLineupRosterModal() {
+    return null;
+  },
+);
+jest.mock('./LineupCreatePlayersModal', () =>
+  function MockLineupCreatePlayersModal() {
+    return null;
+  },
+);
+jest.mock('./SetLineupModal', () =>
+  function MockSetLineupModal() {
+    return null;
+  },
+);
+jest.mock('./RemoveFromLineupModal', () =>
+  function MockRemoveFromLineupModal() {
+    return null;
+  },
+);
+jest.mock('@/components/ListItem/ListItem', () =>
+  function MockListItem({
+    name,
+    rightContent,
+    subtitle,
+    actions,
+  }: {
+    name: ReactNode;
+    rightContent?: { type?: string; label?: ReactNode };
+    subtitle?: ReactNode;
+    actions?: (ListItemAction | false | null | undefined)[];
+  }) {
+    const visibleActions = actions?.filter((action): action is ListItemAction => Boolean(action)) ?? [];
+
+    return (
+      <div>
+        <span>{name}</span>
+        {subtitle && <span>{subtitle}</span>}
+        {rightContent?.type === 'tag' && <span>{rightContent.label}</span>}
+        {visibleActions.map((action) => (
+          <button
+            key={action.tooltip ?? action.icon}
+            type="button"
+            disabled={action.disabled}
+            onClick={action.onClick}
+          >
+            {action.tooltip ?? action.icon}
+          </button>
+        ))}
+      </div>
+    );
+  },
+);
 
 const game = {
   id: 'game-1',
@@ -81,7 +142,10 @@ const inheritedLineup: LineupEntry[] = [
   },
 ] as LineupEntry[];
 
-const renderTab = (isEditMode: boolean) =>
+const renderTab = (
+  isEditMode: boolean,
+  overrides: Partial<Parameters<typeof GameLineupsTab>[0]> = {},
+) =>
   render(
     <GameLineupsTab
       game={game}
@@ -97,6 +161,7 @@ const renderTab = (isEditMode: boolean) =>
       saveTeamLineup={jest.fn()}
       addToRoster={jest.fn()}
       removeFromRoster={jest.fn()}
+      {...overrides}
     />,
   );
 
@@ -105,6 +170,7 @@ describe('GameLineupsTab starter tags', () => {
     renderTab(false);
 
     expect(screen.getByText('Starter')).toBeInTheDocument();
+    expect(screen.getByText('Forward')).toBeInTheDocument();
     expect(screen.queryByText('Last Starter')).not.toBeInTheDocument();
   });
 
@@ -113,5 +179,132 @@ describe('GameLineupsTab starter tags', () => {
 
     expect(screen.getByText('Last Starter')).toBeInTheDocument();
     expect(screen.queryByText('Starter')).not.toBeInTheDocument();
+  });
+
+  it('adds a roster player to the first matching empty starting lineup slot', async () => {
+    const saveTeamLineup = jest.fn().mockResolvedValue(true);
+
+    renderTab(false, {
+      game: { ...game, status: 'scheduled' },
+      isFinal: false,
+      lineup: [],
+      saveTeamLineup,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to starting lineup' }));
+
+    await waitFor(() =>
+      expect(saveTeamLineup).toHaveBeenCalledWith(
+        'team-away',
+        [
+          { position_slot: 'F1', player_id: 'player-1' },
+          { position_slot: 'F2', player_id: null },
+          { position_slot: 'F3', player_id: null },
+          { position_slot: 'D1', player_id: null },
+          { position_slot: 'D2', player_id: null },
+          { position_slot: 'G', player_id: null },
+        ],
+        'Away Team',
+      ),
+    );
+  });
+
+  it('overrides an inherited starter without persisting the rest of the inherited lineup', async () => {
+    const saveTeamLineup = jest.fn().mockResolvedValue(true);
+    const rosterWithReplacement = [
+      awayRoster[0],
+      {
+        id: 'entry-2',
+        game_id: 'game-1',
+        team_id: 'team-away',
+        player_id: 'player-2',
+        first_name: 'Jane',
+        last_name: 'Doe',
+        photo: null,
+        jersey_number: 20,
+        position: 'F',
+        inherited: false,
+      },
+    ] as GameRosterEntry[];
+    const fullInheritedForwards = [
+      { ...inheritedLineup[0], position_slot: 'F1' as const, player_id: 'player-1' },
+      { ...inheritedLineup[0], id: 'lineup-2', position_slot: 'F2' as const, player_id: 'player-3' },
+      { ...inheritedLineup[0], id: 'lineup-3', position_slot: 'F3' as const, player_id: 'player-4' },
+    ];
+
+    renderTab(false, {
+      game: { ...game, status: 'scheduled' },
+      isFinal: false,
+      awayRoster: rosterWithReplacement,
+      lineup: fullInheritedForwards,
+      saveTeamLineup,
+    });
+
+    fireEvent.click(screen.getAllByRole('button', { name: 'Add to starting lineup' })[1]);
+
+    await waitFor(() =>
+      expect(saveTeamLineup).toHaveBeenCalledWith(
+        'team-away',
+        [
+          { position_slot: 'F1', player_id: 'player-2' },
+          { position_slot: 'F2', player_id: null },
+          { position_slot: 'F3', player_id: null },
+          { position_slot: 'D1', player_id: null },
+          { position_slot: 'D2', player_id: null },
+          { position_slot: 'G', player_id: null },
+        ],
+        'Away Team',
+      ),
+    );
+  });
+
+  it('keeps existing saved starters when adding another starter', async () => {
+    const saveTeamLineup = jest.fn().mockResolvedValue(true);
+    const rosterWithReplacement = [
+      awayRoster[0],
+      {
+        id: 'entry-2',
+        game_id: 'game-1',
+        team_id: 'team-away',
+        player_id: 'player-2',
+        first_name: 'Jane',
+        last_name: 'Doe',
+        photo: null,
+        jersey_number: 20,
+        position: 'F',
+        inherited: false,
+      },
+    ] as GameRosterEntry[];
+    const savedLineup = [
+      {
+        ...inheritedLineup[0],
+        inherited: false,
+      },
+    ];
+
+    renderTab(false, {
+      game: { ...game, status: 'scheduled' },
+      isFinal: false,
+      awayRoster: rosterWithReplacement,
+      lineup: savedLineup,
+      saveTeamLineup,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add to starting lineup' }));
+
+    await waitFor(() =>
+      expect(saveTeamLineup).toHaveBeenCalledWith(
+        'team-away',
+        [
+          { position_slot: 'F1', player_id: 'player-1' },
+          { position_slot: 'F2', player_id: 'player-2' },
+          { position_slot: 'F3', player_id: null },
+          { position_slot: 'D1', player_id: null },
+          { position_slot: 'D2', player_id: null },
+          { position_slot: 'G', player_id: null },
+        ],
+        'Away Team',
+      ),
+    );
   });
 });

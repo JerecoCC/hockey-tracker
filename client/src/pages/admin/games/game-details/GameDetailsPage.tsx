@@ -15,7 +15,6 @@ import GameLineupsTab from './lineups/GameLineupsTab';
 import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
 
-import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
 import { DATE_FMT_SHORT } from './formatUtils';
 import {
@@ -239,11 +238,12 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   // Both teams must have at least one persisted (non-inherited) roster entry.
   const rosterReady = awayRoster.length > 0 && homeRoster.length > 0;
 
-  // Both teams must have all 6 position slots covered (saved or inherited) AND every
-  // player in those slots must be on the current game's roster.
+  // Both teams must have all 6 starter slots covered (saved or inherited) — 3 forwards,
+  // 2 defense, and 1 goalie — AND every player in those slots must be on the current
+  // game's roster.
   const lineupsReady = (() => {
     if (!game) return false;
-    const SLOTS = ['C', 'LW', 'RW', 'D1', 'D2', 'G'] as const;
+    const SLOTS = ['F1', 'F2', 'F3', 'D1', 'D2', 'G'] as const;
     const rosterIds = new Set(roster.map((e) => e.player_id));
     const hasAll = (teamId: string) => {
       const entries = lineup.filter((e) => e.team_id === teamId);
@@ -343,7 +343,13 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   }, [fallbackHref, game, gameNotFound, loading, navigate, routeGameLookupNotFound]);
 
   if (loading) {
-    return <LoadingSpinner message="Loading game..." layout="page" size="lg" />;
+    return (
+      <LoadingSpinner
+        message="Loading game..."
+        layout="page"
+        size="lg"
+      />
+    );
   }
 
   if (!game && (gameLoadFailed || routeGameLookupFailed)) {

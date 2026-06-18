@@ -5,7 +5,7 @@ import ListItem from '@/components/ListItem/ListItem';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import useTeamPlayers from '@/hooks/useTeamPlayers';
-import useGameLineup, { type LineupEntry } from '@/hooks/useGameLineup';
+import useGameLineup, { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import { type GameRecord } from '@/hooks/useGames';
 import { POSITION_LABEL } from '../constants';
@@ -17,6 +17,57 @@ import styles from '../GameDetailsPage.module.scss';
 import { playerDataComplete } from '../gameUtils';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
+
+const STARTER_SLOTS: LineupPositionSlot[] = ['F1', 'F2', 'F3', 'D1', 'D2', 'G'];
+const FORWARD_SLOTS: LineupPositionSlot[] = ['F1', 'F2', 'F3'];
+const DEFENSE_SLOTS: LineupPositionSlot[] = ['D1', 'D2'];
+
+type StarterDraft = Record<LineupPositionSlot, string | null>;
+interface StarterDraftState {
+  draft: StarterDraft;
+  inheritedDraft: StarterDraft;
+  hasSavedLineup: boolean;
+}
+
+const emptyStarterDraft = (): StarterDraft => ({
+  F1: null,
+  F2: null,
+  F3: null,
+  D1: null,
+  D2: null,
+  G: null,
+});
+
+const starterSlotsForPosition = (position: string | null | undefined): LineupPositionSlot[] => {
+  if (position === 'G') return ['G'];
+  if (position === 'D' || position === 'LD' || position === 'RD') return DEFENSE_SLOTS;
+  return FORWARD_SLOTS;
+};
+
+const findQuickAddStarterSlot = (
+  player: GameRosterEntry,
+  { draft, inheritedDraft, hasSavedLineup }: StarterDraftState,
+): LineupPositionSlot | null => {
+  const allowedSlots = starterSlotsForPosition(player.position);
+  const existingSlot = allowedSlots.find((slot) => draft[slot] === player.player_id);
+  if (existingSlot) return existingSlot;
+
+  if (!hasSavedLineup) {
+    const inheritedPlayerSlot = allowedSlots.find(
+      (slot) => inheritedDraft[slot] === player.player_id,
+    );
+    if (inheritedPlayerSlot) return inheritedPlayerSlot;
+
+    const inheritedEmptySlot = allowedSlots.find((slot) => !inheritedDraft[slot]);
+    if (inheritedEmptySlot) return inheritedEmptySlot;
+
+    return allowedSlots.find((slot) => inheritedDraft[slot]) ?? null;
+  }
+
+  const emptySlot = allowedSlots.find((slot) => !draft[slot]);
+  if (emptySlot) return emptySlot;
+  return null;
+};
 
 interface Props {
   game: GameRecord;
@@ -75,6 +126,7 @@ const GameLineupsTab = ({
   const [lineupSetTeam, setLineupSetTeam] = useState<'away' | 'home' | null>(null);
   const [confirmRemove, setConfirmRemove] = useState<{ entry: GameRosterEntry } | null>(null);
   const [removingFromRoster, setRemovingFromRoster] = useState(false);
+  const [addingStarterPlayerId, setAddingStarterPlayerId] = useState<string | null>(null);
   const [visibleTeam, setVisibleTeam] = useState<'away' | 'home'>('away');
 
   const { createAndRosterPlayers: createAndRosterAway } = useTeamPlayers(
@@ -113,6 +165,45 @@ const GameLineupsTab = ({
     await removeFromRoster(confirmRemove.entry.id);
     setRemovingFromRoster(false);
     setConfirmRemove(null);
+  };
+
+  const buildStarterDraft = (teamId: string) => {
+    const draft = emptyStarterDraft();
+    const inheritedDraft = emptyStarterDraft();
+    let hasSavedLineup = false;
+    lineup
+      .filter((entry) => entry.team_id === teamId)
+      .forEach((entry) => {
+        if (entry.inherited) {
+          inheritedDraft[entry.position_slot] = entry.player_id;
+          return;
+        }
+
+        draft[entry.position_slot] = entry.player_id;
+        hasSavedLineup = true;
+      });
+    return { draft, inheritedDraft, hasSavedLineup };
+  };
+
+  const handleQuickAddStarter = async (player: GameRosterEntry, teamName: string) => {
+    const starterState = buildStarterDraft(player.team_id);
+    const slot = findQuickAddStarterSlot(player, starterState);
+    if (!slot) return;
+
+    const draft = { ...starterState.draft, [slot]: player.player_id };
+    setAddingStarterPlayerId(player.player_id);
+    try {
+      await saveTeamLineup(
+        player.team_id,
+        STARTER_SLOTS.map((positionSlot) => ({
+          position_slot: positionSlot,
+          player_id: draft[positionSlot],
+        })),
+        teamName,
+      );
+    } finally {
+      setAddingStarterPlayerId(null);
+    }
   };
 
   const renderTeamAccordion = (
@@ -218,13 +309,9 @@ const GameLineupsTab = ({
               isStarter ||
               (isFinal && !isEditMode && isInheritedStarter) ||
               (isInheritedStarter && game.status !== 'scheduled' && !(isFinal && isEditMode));
-            const lineupEntry = lineupMap.get(e.player_id) ?? inheritedLineupMap.get(e.player_id);
-            const slot = lineupEntry?.position_slot;
-            const positionPart = slot
-              ? (POSITION_LABEL[slot] ?? slot)
-              : e.position
-                ? (POSITION_LABEL[e.position] ?? e.position)
-                : undefined;
+            const positionPart = e.position ? (POSITION_LABEL[e.position] ?? e.position) : undefined;
+            const starterState = buildStarterDraft(e.team_id);
+            const quickAddSlot = isStarter ? null : findQuickAddStarterSlot(e, starterState);
             return (
               <ListItem
                 key={e.id}
@@ -255,6 +342,15 @@ const GameLineupsTab = ({
                   readOnly || isFinal
                     ? []
                     : [
+                        !isStarter && {
+                          icon: 'playlist_add',
+                          intent: 'accent',
+                          tooltip: quickAddSlot
+                            ? 'Add to starting lineup'
+                            : 'Matching starter slots are full',
+                          disabled: !quickAddSlot || addingStarterPlayerId !== null,
+                          onClick: () => handleQuickAddStarter(e, teamName),
+                        },
                         {
                           icon: 'person_remove',
                           intent: 'danger',
