@@ -4,8 +4,14 @@ import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalRecord, PostGoalData } from '@/hooks/useGameGoals';
 import type { GoalieStatRecord, UpsertGoalieStatData } from '@/hooks/useGameGoalieStats';
 import type { LineupPositionSlot } from '@/hooks/useGameLineup';
+import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import {
+  buildGoalieStints,
+  buildGoalieStintsFromToiHtml,
   buildNhlGamecenterGameId,
+  getGoaliesFromLanding,
+  type GoalieStint,
+  type GoaliesByTeam,
   type NhlGameIdContext,
 } from './nhlGoalieSwitchChecker';
 
@@ -85,6 +91,22 @@ interface NhlShootoutAttempt {
   scored: boolean;
 }
 
+interface GoalieStintPayload {
+  goalie_id: string;
+  team_id: string;
+  entered_period: string;
+  entered_time?: string | null;
+  exited_period?: string | null;
+  exited_time?: string | null;
+  shots_against?: number;
+  goals_against?: number | null;
+}
+
+interface ExistingGoalieStint extends GoalieStintPayload {
+  id: string;
+  stint_ord: number;
+}
+
 interface NhlReportClock {
   clock: string;
   zone: string;
@@ -120,6 +142,8 @@ export interface NhlAutofillResult {
   warnings: string[];
 }
 
+type ShootoutAttemptPayload = Pick<ShootoutAttempt, 'team_id' | 'shooter_id' | 'scored'>;
+
 export async function autofillGameFromNhlGamecenter(
   game: GameRecord,
   input: string,
@@ -138,12 +162,14 @@ export async function autofillGameFromNhlGamecenter(
   const rosterReportUrl = buildRosterReportUrl(gamecenterId);
   const gameSummaryReportUrl = buildGameSummaryReportUrl(gamecenterId);
   const shootoutReportUrl = buildShootoutReportUrl(gamecenterId);
-  const [boxscore, playByPlay, rosterReport, gameSummaryReport, shootoutReport] = await Promise.all([
+  const goalieToiReportUrls = buildGoalieToiReportUrls(gamecenterId);
+  const [boxscore, playByPlay, rosterReport, gameSummaryReport, shootoutReport, goalieToiReports] = await Promise.all([
     fetchNhlJson(`${base}/boxscore`),
     fetchNhlJson(`${base}/play-by-play`),
     fetchOptionalRosterReport(rosterReportUrl),
     fetchOptionalGameSummaryReport(gameSummaryReportUrl),
     fetchOptionalShootoutReport(shootoutReportUrl),
+    fetchOptionalTextReports(goalieToiReportUrls),
   ]);
   const warnings: string[] = [];
 
@@ -152,14 +178,20 @@ export async function autofillGameFromNhlGamecenter(
 
   const [existingGoals, existingShootoutAttempts] = await Promise.all([
     apiGet<GoalRecord[]>(`/admin/games/${game.id}/goals`),
-    shootoutGame ? apiGet<unknown[]>(`/admin/games/${game.id}/shootout-attempts`) : Promise.resolve([]),
+    shootoutGame
+      ? apiGet<ShootoutAttempt[]>(`/admin/games/${game.id}/shootout-attempts`)
+      : Promise.resolve([]),
   ]);
-  if (existingGoals.length > 0) {
-    throw new Error('This game already has goals. Remove them before using NHL autofill.');
-  }
-  if (existingShootoutAttempts.length > 0) {
-    throw new Error('This game already has shootout attempts. Remove them before using NHL autofill.');
-  }
+  const existingGoalKeys = new Set(existingGoals.map(goalAutofillKey));
+  const existingGoalsByKey = new Map(existingGoals.map((goal) => [goalAutofillKey(goal), goal]));
+  const existingShootoutAttemptKeys = new Set(
+    shootoutAttemptAutofillKeys(existingShootoutAttempts),
+  );
+  let goalsCreated = 0;
+  let goalsUpdated = 0;
+  let goalsSkipped = 0;
+  let shootoutAttemptsCreated = 0;
+  let shootoutAttemptsSkipped = 0;
 
   const [awayPlayers, homePlayers] = await Promise.all([
     fetchTeamPlayers(game.away_team.id, game.season_id, boxscore.gameDate ?? game.scheduled_at),
@@ -219,7 +251,7 @@ export async function autofillGameFromNhlGamecenter(
       const scorer = allMatchedByNhlId.get(goal.scorerId);
       if (!scorer) throw new Error(`Could not match NHL scorer ${goal.scorerId}.`);
 
-      await apiPost<GoalRecord, PostGoalData>(`/admin/games/${game.id}/goals`, {
+      const goalPayload: PostGoalData = {
         team_id: teamId,
         period: goal.period,
         period_time: goal.periodTime,
@@ -229,13 +261,44 @@ export async function autofillGameFromNhlGamecenter(
         scorer_id: scorer.localId,
         assist_1_id: resolveOptionalPlayerId(goal.assist1Id, allMatchedByNhlId),
         assist_2_id: resolveOptionalPlayerId(goal.assist2Id, allMatchedByNhlId),
-      });
+      };
+      const key = goalAutofillKey(goalPayload);
+      if (existingGoalKeys.has(key)) {
+        const existingGoal = existingGoalsByKey.get(key);
+        if (existingGoal && shouldUpdateGoalFromAutofill(existingGoal, goalPayload)) {
+          const updatedGoal = await apiPut<GoalRecord, PostGoalData>(
+            `/admin/games/${game.id}/goals/${existingGoal.id}`,
+            goalPayload,
+          );
+          existingGoalsByKey.set(key, updatedGoal);
+          goalsUpdated += 1;
+        } else {
+          goalsSkipped += 1;
+        }
+        continue;
+      }
+
+      const createdGoal = await apiPost<GoalRecord, PostGoalData>(
+        `/admin/games/${game.id}/goals`,
+        goalPayload,
+      );
+      existingGoalKeys.add(key);
+      existingGoalKeys.add(goalAutofillKey(createdGoal));
+      existingGoalsByKey.set(key, createdGoal);
+      existingGoalsByKey.set(goalAutofillKey(createdGoal), createdGoal);
+      goalsCreated += 1;
     }
   }
 
-  const shootoutAttempts = shootoutGame
+  const playByPlayShootoutAttempts = shootoutGame
+    ? resolvePlayByPlayShootoutAttempts(playByPlay, boxscore, matched, game)
+    : [];
+  const reportShootoutAttempts = shootoutGame && playByPlayShootoutAttempts.length === 0
     ? resolveShootoutAttempts(shootoutReport?.attempts ?? [], matched, game)
     : [];
+  const shootoutAttempts = playByPlayShootoutAttempts.length > 0
+    ? playByPlayShootoutAttempts
+    : reportShootoutAttempts;
   if (shootoutGame && shootoutAttempts.length === 0) {
     throw new Error('NHL shootout report could not be parsed into shootout attempts.');
   }
@@ -245,11 +308,20 @@ export async function autofillGameFromNhlGamecenter(
       shootout: true,
       shootout_first_team_id: shootoutAttempts[0]?.team_id,
     });
-    for (const attempt of shootoutAttempts) {
-      await apiPost<unknown, { team_id: string; shooter_id: string; scored: boolean }>(
+    const shootoutAttemptKeys = shootoutAttemptAutofillKeys(shootoutAttempts);
+    for (const [index, attempt] of shootoutAttempts.entries()) {
+      const key = shootoutAttemptKeys[index];
+      if (existingShootoutAttemptKeys.has(key)) {
+        shootoutAttemptsSkipped += 1;
+        continue;
+      }
+
+      await apiPost<unknown, ShootoutAttemptPayload>(
         `/admin/games/${game.id}/shootout-attempts`,
         attempt,
       );
+      existingShootoutAttemptKeys.add(key);
+      shootoutAttemptsCreated += 1;
     }
   }
 
@@ -259,11 +331,23 @@ export async function autofillGameFromNhlGamecenter(
   }
 
   const goalieStats = getGoalieStats(game, boxscore, matched);
-  for (const stat of goalieStats) {
-    await apiPut<GoalieStatRecord, UpsertGoalieStatData>(
-      `/admin/games/${game.id}/goalie-stats`,
-      stat,
-    );
+  const goalieStints = buildGoalieStintPayloads(
+    game,
+    boxscore,
+    playByPlay,
+    goalieToiReports,
+    matched,
+    goalieStats,
+  );
+  if (goalieStints.length > 0) {
+    await syncGoalieStints(game.id, goalieStints);
+  } else {
+    for (const stat of goalieStats) {
+      await apiPut<GoalieStatRecord, UpsertGoalieStatData>(
+        `/admin/games/${game.id}/goalie-stats`,
+        stat,
+      );
+    }
   }
 
   const reportStars = gameSummaryReport
@@ -299,18 +383,32 @@ export async function autofillGameFromNhlGamecenter(
   if (shootoutGame && !shootoutReport) {
     warnings.push('NHL shootout report was unavailable or empty.');
   }
+  if (shootoutGame && playByPlayShootoutAttempts.length === 0 && reportShootoutAttempts.length > 0) {
+    warnings.push('NHL shootout attempts came from the HTML shootout report because GameCenter play-by-play had no attempts.');
+  }
+  if (goalsSkipped > 0) {
+    warnings.push(`${goalsSkipped} existing ${pluralize('goal', goalsSkipped)} matched NHL data and were skipped.`);
+  }
+  if (goalsUpdated > 0) {
+    warnings.push(`${goalsUpdated} existing ${pluralize('goal', goalsUpdated)} matched NHL data and were updated.`);
+  }
+  if (shootoutAttemptsSkipped > 0) {
+    warnings.push(
+      `${shootoutAttemptsSkipped} existing shootout ${pluralize('attempt', shootoutAttemptsSkipped)} matched NHL data and were skipped.`,
+    );
+  }
 
   return {
     warnings,
     summary: {
       gameId: gamecenterId,
-      goalsCreated: goals.length,
+      goalsCreated,
       rosterPlayers: rosterMatched.away.length + rosterMatched.home.length,
       periodShots,
       goalieStats: goalieStats.length,
       starsSet: stars.length,
       lineupsSet,
-      shootoutAttempts: shootoutAttempts.length,
+      shootoutAttempts: shootoutAttemptsCreated,
       usedRosterReport: !!rosterReport,
     },
   };
@@ -363,6 +461,24 @@ async function fetchOptionalShootoutReport(url: string): Promise<NhlShootoutRepo
   }
 }
 
+async function fetchOptionalTextReports(urls: string[]) {
+  const reports = await Promise.all(
+    urls.map(async (url) => {
+      try {
+        const { data } = await axios.get<string>(`${API}/admin/games/nhl-api`, {
+          headers: authHeaders(),
+          params: { url },
+          responseType: 'text',
+        });
+        return typeof data === 'string' && data.trim() ? data : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return reports.filter((report): report is string => !!report);
+}
+
 function buildRosterReportUrl(gamecenterId: string) {
   const seasonStart = gamecenterId.slice(0, 4);
   const seasonEnd = String(Number(seasonStart) + 1);
@@ -379,6 +495,16 @@ function buildShootoutReportUrl(gamecenterId: string) {
   const seasonStart = gamecenterId.slice(0, 4);
   const seasonEnd = String(Number(seasonStart) + 1);
   return `https://www.nhl.com/scores/htmlreports/${seasonStart}${seasonEnd}/SO${gamecenterId.slice(4)}.HTM`;
+}
+
+function buildGoalieToiReportUrls(gamecenterId: string) {
+  const seasonStart = gamecenterId.slice(0, 4);
+  const seasonEnd = String(Number(seasonStart) + 1);
+  const gameTypeAndNumber = gamecenterId.slice(4);
+  return ['TV', 'TH'].map(
+    (prefix) =>
+      `https://www.nhl.com/scores/htmlreports/${seasonStart}${seasonEnd}/${prefix}${gameTypeAndNumber}.HTM`,
+  );
 }
 
 async function apiGet<T>(path: string): Promise<T> {
@@ -403,6 +529,41 @@ async function apiPatch(path: string, body: Record<string, unknown>) {
 
 async function apiDelete(path: string) {
   await axios.delete(`${API}${path}`, { headers: authHeaders() });
+}
+
+function goalAutofillKey(goal: Pick<PostGoalData, 'team_id' | 'period' | 'period_time' | 'scorer_id'>) {
+  return [
+    goal.team_id,
+    goal.period,
+    goal.period_time ?? '',
+    goal.scorer_id,
+  ].join('|');
+}
+
+function shouldUpdateGoalFromAutofill(existing: GoalRecord, next: PostGoalData) {
+  return (
+    existing.goal_type !== (next.goal_type ?? 'even-strength') ||
+    existing.empty_net !== !!next.empty_net ||
+    existing.penalty_shot !== !!next.penalty_shot
+  );
+}
+
+function shootoutAttemptAutofillKeys(
+  attempts: Array<Pick<ShootoutAttemptPayload, 'team_id' | 'shooter_id' | 'scored'> & { attempt_order?: number }>,
+) {
+  const counts = new Map<string, number>();
+  return [...attempts]
+    .sort((a, b) => (a.attempt_order ?? 0) - (b.attempt_order ?? 0))
+    .map((attempt) => {
+      const baseKey = `${attempt.team_id}|${attempt.shooter_id}|${attempt.scored ? '1' : '0'}`;
+      const count = (counts.get(baseKey) ?? 0) + 1;
+      counts.set(baseKey, count);
+      return `${baseKey}|${count}`;
+    });
+}
+
+function pluralize(word: string, count: number) {
+  return count === 1 ? word : `${word}s`;
 }
 
 async function fetchTeamPlayers(
@@ -617,11 +778,13 @@ function parseShootoutAttemptCells(cells: string[], headers: string[]): NhlShoot
   const teamCode =
     readIndexedCell(cells, headers, /team|club/) ??
     tokens.find((token) => isLikelyTeamCode(token));
+  const indexedNameCell = readIndexedCell(cells, headers, /shooter|player|name/);
   const sweaterNumber =
+    readExplicitSweaterNumber(indexedNameCell ? [indexedNameCell] : []) ??
     readShootoutSweaterNumber(cells, headers) ??
     readExplicitSweaterNumber(cells);
   const nameCell =
-    readIndexedCell(cells, headers, /shooter|player|name/) ??
+    indexedNameCell ??
     cells.map((cell) => cleanShootoutName(cell, teamCode, sweaterNumber))
       .find((cell) => isLikelyPlayerName(cell)) ??
     cleanShootoutName(joined, teamCode, sweaterNumber);
@@ -651,14 +814,18 @@ function readShootoutSweaterNumber(cells: string[], headers: string[]) {
 
 function readExplicitSweaterNumber(cells: string[]) {
   for (const cell of cells) {
-    const match = cell.match(/#\s*(\d{1,2})\b/);
-    if (match) return Number(match[1]);
+    const shooterPrefixMatch = cell.match(/(?:^|\s)#?\s*(\d{1,2})\s+[A-Z]\./);
+    if (shooterPrefixMatch) return Number(shooterPrefixMatch[1]);
+    const hashMatch = cell.match(/#\s*(\d{1,2})\b/);
+    if (hashMatch) return Number(hashMatch[1]);
   }
   return undefined;
 }
 
 function shootoutResultScored(value: string) {
   const text = normalizeReportText(value).toLowerCase();
+  if (text === 'g') return true;
+  if (['m', 'p', 's'].includes(text)) return false;
   if (/\b(no goal|miss|missed|save|saved|stop|stopped|fail|failed)\b/.test(text)) return false;
   if (/\b(goal|scored|score|made|good)\b/.test(text)) return true;
   return null;
@@ -670,6 +837,7 @@ function cleanShootoutName(value: string, teamCode?: string, sweaterNumber?: num
     .replace(/\b(?:team|club|shooter|player|name|no\.?|#)\b/gi, ' ');
   if (teamCode) text = text.replace(new RegExp(`\\b${teamCode}\\b`, 'g'), ' ');
   if (sweaterNumber != null) text = text.replace(new RegExp(`\\b#?${sweaterNumber}\\b`, 'g'), ' ');
+  text = text.replace(/^\d{1,2}\s+/, ' ');
   return normalizeReportPlayerName(text);
 }
 
@@ -684,6 +852,9 @@ function dedupeShootoutAttempts(attempts: NhlShootoutAttempt[]) {
 }
 
 function parseSummaryStars(doc: Document): NhlSummaryStar[] {
+  const threeStarsByStars = parseThreeStarsBySection(doc);
+  if (threeStarsByStars.length > 0) return threeStarsByStars;
+
   const starTable = [...doc.querySelectorAll('table')].find((table) =>
     /(?:three|3)\s+stars/i.test(normalizeReportText(table.textContent)),
   );
@@ -695,6 +866,97 @@ function parseSummaryStars(doc: Document): NhlSummaryStar[] {
     .filter(Boolean);
   const markerIndex = lines.findIndex((line) => /(?:three|3)\s+stars/i.test(line));
   return markerIndex >= 0 ? parseSummaryStarLines(lines.slice(markerIndex + 1, markerIndex + 20)) : [];
+}
+
+function parseThreeStarsBySection(doc: Document): NhlSummaryStar[] {
+  const tableStars = [...doc.querySelectorAll('table')]
+    .map(parseThreeStarsByTable)
+    .find((stars) => stars.length > 0);
+  if (tableStars) return tableStars;
+
+  const lines = [...doc.querySelectorAll('td, th')]
+    .map((cell) => normalizeReportText(cell.textContent))
+    .filter(Boolean);
+  const markerIndex = lines.findIndex((line) => isThreeStarsByMarker(line));
+  return markerIndex >= 0 ? parseThreeStarsByLines(lines.slice(markerIndex + 1, markerIndex + 30)) : [];
+}
+
+function parseThreeStarsByTable(table: Element): NhlSummaryStar[] {
+  const rows = [...table.querySelectorAll('tr')].map((row) =>
+    [...row.querySelectorAll('td, th')]
+      .map((cell) => normalizeReportText(cell.textContent))
+      .filter(Boolean),
+  );
+  const markerIndex = rows.findIndex((cells) => cells.some(isThreeStarsByMarker));
+  if (markerIndex < 0) return [];
+
+  const stars: NhlSummaryStar[] = [];
+  for (const cells of rows.slice(markerIndex + 1)) {
+    if (cells.some(isReportSectionMarker) && stars.length > 0) break;
+    const star = parseThreeStarsByCells(cells);
+    if (star && !stars.some((existing) => existing.rank === star.rank)) stars.push(star);
+    if (stars.length >= 3) break;
+  }
+  return stars.sort((a, b) => a.rank - b.rank);
+}
+
+function parseThreeStarsByLines(lines: string[]): NhlSummaryStar[] {
+  const stars: NhlSummaryStar[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const rank = readStarRank([lines[index]]);
+    if (!rank || stars.some((existing) => existing.rank === rank)) continue;
+    const windowCells = lines.slice(index, index + 5);
+    if (windowCells.some(isReportSectionMarker) && stars.length > 0) break;
+    const star = parseThreeStarsByCells(windowCells) ?? parseThreeStarsByCells([lines[index]]);
+    if (star && !stars.some((existing) => existing.rank === star.rank)) stars.push(star);
+    if (stars.length >= 3) break;
+  }
+  return stars.sort((a, b) => a.rank - b.rank);
+}
+
+function parseThreeStarsByCells(cells: string[]): NhlSummaryStar | null {
+  if (cells.length === 0) return null;
+  const joined = cells.join(' ');
+  if (
+    isThreeStarsByMarker(joined) ||
+    /^star\s+team\s+pos\s+(?:no\.?|#)\s+player$/i.test(joined) ||
+    /^(?:star|team|pos|player|no\.?|#)$/i.test(joined)
+  ) {
+    return null;
+  }
+
+  const rankIndex = cells.findIndex((cell) => readStarRank([cell]) != null);
+  const rank = rankIndex >= 0 ? readStarRank([cells[rankIndex]]) : readStarRank([joined]);
+  if (!rank) return null;
+
+  const teamCode = cells.find((cell, index) => index !== rankIndex && isLikelyTeamCode(cell));
+  const sweaterNumber = readSweaterNumberExcludingCells(cells, new Set([rankIndex]));
+  const name =
+    cells.map((cell, index) =>
+      index === rankIndex ? '' : cleanSummaryStarName(cell, rank, teamCode, sweaterNumber),
+    ).find((cell) => isLikelyPlayerName(cell)) ??
+    cleanSummaryStarName(joined, rank, teamCode, sweaterNumber);
+
+  return isLikelyPlayerName(name)
+    ? {
+        rank,
+        sweaterNumber,
+        teamCode,
+        name: normalizeReportPlayerName(name),
+      }
+    : null;
+}
+
+function isThreeStarsByMarker(value: string) {
+  return /(?:three|3)\s+stars\s+by/i.test(normalizeReportText(value));
+}
+
+function isReportSectionMarker(value: string) {
+  const text = normalizeReportText(value);
+  return (
+    !isThreeStarsByMarker(text) &&
+    /^(?:game\s+summary|scoring\s+summary|penalty\s+summary|shots\s+by\s+period|power\s+play|officials|scratches|goaltender\s+summary)\b/i.test(text)
+  );
 }
 
 function parseSummaryStarRows(table: Element): NhlSummaryStar[] {
@@ -768,6 +1030,15 @@ function readSweaterNumber(cells: string[], rank: number) {
   return undefined;
 }
 
+function readSweaterNumberExcludingCells(cells: string[], excludedIndexes: Set<number>) {
+  for (const [index, cell] of cells.entries()) {
+    if (excludedIndexes.has(index)) continue;
+    const normalized = cell.replace('#', '').trim();
+    if (/^\d{1,2}$/.test(normalized)) return Number(normalized);
+  }
+  return undefined;
+}
+
 function cleanSummaryStarName(
   value: string,
   rank: number,
@@ -783,7 +1054,7 @@ function cleanSummaryStarName(
 }
 
 function isLikelyTeamCode(value: string) {
-  return /^[A-Z]{2,4}$/.test(value) && !['STAR', 'TEAM', 'NO', 'POS', 'NAME'].includes(value);
+  return /^[A-Z]{2,4}$/.test(value) && !['STAR', 'TEAM', 'NO', 'POS', 'NAME', 'PLAYER', 'LW', 'RW', 'LD', 'RD'].includes(value);
 }
 
 function isLikelyPlayerName(value: string | undefined) {
@@ -915,7 +1186,7 @@ function getNhlGoals(playByPlay: any, boxscore: any): NhlGoal[] {
         period: nhlPeriodToLocal(periodNumber),
         periodTime: play.timeInPeriod,
         goalType: goalTypeFromSituation(play.situationCode, teamSide),
-        emptyNet: !!play.details?.emptyNet,
+        emptyNet: isEmptyNetGoal(play, teamSide),
         penaltyShot: !!play.details?.penaltyShot,
         scorerId: Number(play.details?.scoringPlayerId),
         assist1Id: toOptionalNumber(play.details?.assist1PlayerId),
@@ -987,6 +1258,198 @@ function getGoalieStats(
         goals_against: Number(goalie.goalsAgainst ?? 0),
       }));
   });
+}
+
+function buildGoalieStintPayloads(
+  game: GameRecord,
+  boxscore: any,
+  playByPlay: any,
+  goalieToiReports: string[],
+  matched: Record<TeamSide, MatchedPlayer[]>,
+  goalieStats: UpsertGoalieStatData[],
+): GoalieStintPayload[] {
+  const goaliesByTeam = getGoaliesFromLanding(boxscore);
+  const parsedStints = buildParsedGoalieStints(goalieToiReports, playByPlay, goaliesByTeam);
+  const rawStints = parsedStints.length > 0 ? parsedStints : buildDefaultGoalieStints(goaliesByTeam);
+  const matchedByNhlId = new Map(
+    (['away', 'home'] as const).flatMap((side) =>
+      matched[side].map((player) => [player.playerId, { ...player, side }] as const),
+    ),
+  );
+  const statsByGoalieId = new Map(goalieStats.map((stat) => [stat.goalie_id, stat]));
+  const stintCountByGoalieId = new Map<number, number>();
+  rawStints.forEach((stint) => {
+    stintCountByGoalieId.set(stint.goalieId, (stintCountByGoalieId.get(stint.goalieId) ?? 0) + 1);
+  });
+
+  const seenGoalieStints = new Map<number, number>();
+  return rawStints
+    .map((stint) => {
+      const matchedGoalie = matchedByNhlId.get(stint.goalieId);
+      if (!matchedGoalie) return null;
+
+      const enteredPeriod = normalizeGoalieStintPeriod(stint.enteredPeriod);
+      if (!enteredPeriod) return null;
+
+      const stintIndex = seenGoalieStints.get(stint.goalieId) ?? 0;
+      seenGoalieStints.set(stint.goalieId, stintIndex + 1);
+      const goalieStat = statsByGoalieId.get(matchedGoalie.localId);
+      const useGoalieTotals = (stintCountByGoalieId.get(stint.goalieId) ?? 0) <= 1 || stintIndex === 0;
+
+      return {
+        goalie_id: matchedGoalie.localId,
+        team_id: matchedGoalie.side === 'away' ? game.away_team.id : game.home_team.id,
+        entered_period: enteredPeriod,
+        entered_time: normalizeGoalieStintTime(stint.enteredTime, enteredPeriod, stintIndex),
+        exited_period: normalizeGoalieStintPeriod(stint.exitedPeriod),
+        exited_time: normalizeGoalieStintTime(stint.exitedTime),
+        shots_against: useGoalieTotals ? goalieStat?.shots_against ?? 0 : 0,
+        goals_against: useGoalieTotals ? goalieStat?.goals_against ?? null : null,
+      } satisfies GoalieStintPayload;
+    })
+    .filter((stint): stint is GoalieStintPayload => !!stint);
+}
+
+function buildParsedGoalieStints(
+  goalieToiReports: string[],
+  playByPlay: any,
+  goaliesByTeam: GoaliesByTeam,
+) {
+  const toiStints = buildGoalieStintsFromToiHtml(goalieToiReports, goaliesByTeam)
+    .filter((stint) => !stint.timingUnavailable);
+  return toiStints.length > 0
+    ? toiStints
+    : buildGoalieStints(playByPlay, goaliesByTeam).filter((stint) => !stint.timingUnavailable);
+}
+
+function buildDefaultGoalieStints(goaliesByTeam: GoaliesByTeam): GoalieStint[] {
+  return (['away', 'home'] as const).flatMap((side) =>
+    goaliesByTeam[side]
+      .filter(goalieActuallyPlayed)
+      .map((goalie) => ({
+        teamSide: side,
+        teamAbbrev: goalie.teamAbbrev ?? side.toUpperCase(),
+        goalieId: goalie.playerId,
+        goalieName: goalie.name,
+        enteredPeriod: 'P1',
+        enteredTime: '00:00',
+        exitedPeriod: null,
+        exitedTime: null,
+        toi: goalie.toi,
+      })),
+  );
+}
+
+async function syncGoalieStints(gameId: string, desiredStints: GoalieStintPayload[]) {
+  const existingStats = await apiGet<GoalieStatRecord[]>(`/admin/games/${gameId}/goalie-stats`);
+  const existingByTeam = groupExistingGoalieStints(existingStats);
+  const desiredByTeam = groupDesiredGoalieStints(desiredStints);
+  const teamIds = new Set([...existingByTeam.keys(), ...desiredByTeam.keys()]);
+
+  for (const teamId of teamIds) {
+    const existing = existingByTeam.get(teamId) ?? [];
+    const desired = desiredByTeam.get(teamId) ?? [];
+    const sharedLength = Math.min(existing.length, desired.length);
+
+    for (let index = 0; index < sharedLength; index += 1) {
+      const existingStint = existing[index]!;
+      const desiredStint = desired[index]!;
+      if (goalieStintNeedsUpdate(existingStint, desiredStint)) {
+        await apiPut<GoalieStatRecord[], GoalieStintPayload>(
+          `/admin/games/${gameId}/goalie-stints/${existingStint.id}`,
+          desiredStint,
+        );
+      }
+    }
+
+    for (const desiredStint of desired.slice(sharedLength)) {
+      await apiPost<GoalieStatRecord[], GoalieStintPayload>(
+        `/admin/games/${gameId}/goalie-stints`,
+        desiredStint,
+      );
+    }
+
+    for (const extraStint of existing.slice(desired.length).reverse()) {
+      await apiDelete(`/admin/games/${gameId}/goalie-stints/${extraStint.id}`);
+    }
+  }
+}
+
+function groupExistingGoalieStints(stats: GoalieStatRecord[]) {
+  const byTeam = new Map<string, ExistingGoalieStint[]>();
+  for (const stat of stats) {
+    for (const stint of stat.stints ?? []) {
+      const rows = byTeam.get(stat.team_id) ?? [];
+      rows.push({
+        id: stint.id,
+        stint_ord: stint.stint_ord,
+        goalie_id: stat.goalie_id,
+        team_id: stat.team_id,
+        entered_period: stint.entered_period,
+        entered_time: stint.entered_time,
+        exited_period: stint.exited_period,
+        exited_time: stint.exited_time,
+        shots_against: stint.shots_against,
+        goals_against: stint.goals_against_override,
+      });
+      byTeam.set(stat.team_id, rows);
+    }
+  }
+  for (const rows of byTeam.values()) {
+    rows.sort((a, b) => a.stint_ord - b.stint_ord);
+  }
+  return byTeam;
+}
+
+function groupDesiredGoalieStints(stints: GoalieStintPayload[]) {
+  const byTeam = new Map<string, GoalieStintPayload[]>();
+  for (const stint of stints) {
+    const rows = byTeam.get(stint.team_id) ?? [];
+    rows.push(stint);
+    byTeam.set(stint.team_id, rows);
+  }
+  return byTeam;
+}
+
+function goalieStintNeedsUpdate(existing: ExistingGoalieStint, desired: GoalieStintPayload) {
+  return (
+    existing.goalie_id !== desired.goalie_id ||
+    existing.team_id !== desired.team_id ||
+    existing.entered_period !== desired.entered_period ||
+    nullish(existing.entered_time) !== nullish(desired.entered_time) ||
+    nullish(existing.exited_period) !== nullish(desired.exited_period) ||
+    nullish(existing.exited_time) !== nullish(desired.exited_time) ||
+    Number(existing.shots_against ?? 0) !== Number(desired.shots_against ?? 0) ||
+    nullishNumber(existing.goals_against) !== nullishNumber(desired.goals_against)
+  );
+}
+
+function normalizeGoalieStintPeriod(period: string | null | undefined) {
+  if (!period) return null;
+  const normalized = period.replace(/^P/i, '').toUpperCase();
+  if (['1', '2', '3'].includes(normalized)) return normalized;
+  if (normalized === 'OT' || Number(normalized) > 3) return 'OT';
+  if (normalized === 'SO') return 'SO';
+  return null;
+}
+
+function normalizeGoalieStintTime(
+  time: string | null | undefined,
+  enteredPeriod?: string,
+  goalieStintIndex = 0,
+) {
+  if (!time || /^unknown$/i.test(time)) return null;
+  const normalized = time.replace(/^0(\d:)/, '$1');
+  if (enteredPeriod === '1' && goalieStintIndex === 0 && ['00:00', '0:00'].includes(time)) return null;
+  return normalized;
+}
+
+function nullish(value: string | null | undefined) {
+  return value ?? null;
+}
+
+function nullishNumber(value: number | null | undefined) {
+  return value == null ? null : Number(value);
 }
 
 function inferStars(
@@ -1113,6 +1576,45 @@ function resolveShootoutAttempts(
   });
 }
 
+function resolvePlayByPlayShootoutAttempts(
+  playByPlay: any,
+  boxscore: any,
+  matched: Record<TeamSide, MatchedPlayer[]>,
+  game: GameRecord,
+): ShootoutAttemptPayload[] {
+  const matchedByNhlId = new Map(
+    [...matched.away, ...matched.home].map((player) => [player.playerId, player.localId]),
+  );
+  const teamIdByNhlId = new Map([
+    [Number(boxscore.awayTeam?.id), game.away_team.id],
+    [Number(boxscore.homeTeam?.id), game.home_team.id],
+  ]);
+
+  return getPlays(playByPlay)
+    .filter((play) => isShootoutPlay(play) && isShootoutAttemptPlay(play))
+    .sort((a, b) => Number(a.sortOrder ?? 0) - Number(b.sortOrder ?? 0))
+    .map((play) => {
+      const shooterNhlId = shootoutShooterId(play);
+      const teamId = teamIdByNhlId.get(Number(play.details?.eventOwnerTeamId));
+      const shooterId = shooterNhlId ? matchedByNhlId.get(shooterNhlId) : undefined;
+      if (!teamId || !shooterId) return null;
+      return {
+        team_id: teamId,
+        shooter_id: shooterId,
+        scored: play.typeDescKey === 'goal',
+      };
+    })
+    .filter((attempt): attempt is ShootoutAttemptPayload => !!attempt);
+}
+
+function isShootoutAttemptPlay(play: any) {
+  return ['goal', 'shot-on-goal', 'missed-shot'].includes(String(play?.typeDescKey ?? ''));
+}
+
+function shootoutShooterId(play: any) {
+  return toOptionalNumber(play.details?.scoringPlayerId ?? play.details?.shootingPlayerId);
+}
+
 function normalizeNameKey(value: string) {
   return value
     .normalize('NFD')
@@ -1232,8 +1734,10 @@ function localHourFromIso(iso: string) {
 
 function goalTypeFromSituation(situationCode: string | undefined, side: TeamSide) {
   if (!situationCode || situationCode.length < 4) return 'even-strength';
-  const awaySkaters = Number(situationCode[1]);
-  const homeSkaters = Number(situationCode[2]);
+  const awayGoalieOn = situationCode[0] !== '0';
+  const homeGoalieOn = situationCode[3] !== '0';
+  const awaySkaters = Number(situationCode[1]) - (awayGoalieOn ? 0 : 1);
+  const homeSkaters = Number(situationCode[2]) - (homeGoalieOn ? 0 : 1);
   if (!Number.isFinite(awaySkaters) || !Number.isFinite(homeSkaters)) return 'even-strength';
 
   const scoringSkaters = side === 'away' ? awaySkaters : homeSkaters;
@@ -1241,6 +1745,17 @@ function goalTypeFromSituation(situationCode: string | undefined, side: TeamSide
   if (scoringSkaters > defendingSkaters) return 'power-play';
   if (scoringSkaters < defendingSkaters) return 'short-handed';
   return 'even-strength';
+}
+
+function isEmptyNetGoal(play: any, scoringSide: TeamSide) {
+  if (play.details?.emptyNet) return true;
+  if (play.details?.goalieInNetId) return false;
+
+  const situationCode = String(play.situationCode ?? '');
+  if (situationCode.length < 4) return false;
+  const awayGoalieOn = situationCode[0] !== '0';
+  const homeGoalieOn = situationCode[3] !== '0';
+  return scoringSide === 'away' ? !homeGoalieOn : !awayGoalieOn;
 }
 
 function nhlPeriodToLocal(period: unknown) {
