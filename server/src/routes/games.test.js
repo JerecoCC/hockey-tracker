@@ -836,6 +836,28 @@ describe('GET /api/admin/games/:id/lineup', () => {
     expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
     expect(queries[2]).toMatch(/acquisition_type/);
   });
+
+  it('inherits from one previous saved lineup row before unpivoting slots', async () => {
+    sql
+      .mockResolvedValueOnce([{ home_team_id: 'home-1', away_team_id: 'away-1' }])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ id: 'home-lineup-F1', team_id: 'home-1', inherited: true }])
+      .mockResolvedValueOnce([{ id: 'away-lineup-F1', team_id: 'away-1', inherited: true }]);
+
+    const res = await request(app).get('/api/admin/games/game-1/lineup');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([
+      { id: 'home-lineup-F1', team_id: 'home-1', inherited: true },
+      { id: 'away-lineup-F1', team_id: 'away-1', inherited: true },
+    ]);
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[3]).toMatch(/WITH source_lineup AS/);
+    expect(queries[3]).toMatch(/LIMIT 1/);
+    expect(queries[3]).toMatch(/CROSS JOIN LATERAL \(VALUES/);
+    expect(queries[3]).not.toMatch(/LIMIT 6/);
+  });
 });
 
 describe('PUT /api/admin/games/:id/lineup', () => {
