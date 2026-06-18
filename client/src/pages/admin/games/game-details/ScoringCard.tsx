@@ -99,6 +99,8 @@ const ScoringCard = ({
   getPlayerHref,
   showPlayerDataStatus = false,
 }: Props) => {
+  const canUseEditControls = isInProgress || isEditMode;
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   const periodTimeToSecs = (t: string | null | undefined): number => {
     if (!t) return 0;
@@ -256,7 +258,7 @@ const ScoringCard = ({
               <span className={styles.goalScore}>
                 {awayScore} - {homeScore}
               </span>
-              {isInProgress && onEditGoal && onDeleteGoal && (
+              {canUseEditControls && onEditGoal && onDeleteGoal && (
                 <ActionOverlay className={styles.goalActions}>
                   <Button
                     variant="ghost"
@@ -293,7 +295,7 @@ const ScoringCard = ({
           const currentIdx = PERIOD_IDS.indexOf(game.current_period as '1' | '2' | '3');
           const isPostRegulation =
             game.current_period === PERIOD.OVERTIME || game.current_period === PERIOD.SHOOTOUT;
-          const isActive = !isFinal && game.current_period === periodId;
+          const isActive = canUseEditControls && game.current_period === periodId;
           const isDone = isFinal || isPostRegulation || currentIdx > idx;
           const periodGoals = sortedByTime(goals.filter((g) => g.period === periodId));
           if (isFinal && !isEditMode && periodGoals.length === 0) return null;
@@ -396,7 +398,7 @@ const ScoringCard = ({
           (isFinal && game.shootout)) &&
           (() => {
             const isPlayoff = game.game_type === 'playoff';
-            const isOTActive = !isFinal && game.current_period === PERIOD.OVERTIME;
+            const isOTActive = canUseEditControls && game.current_period === PERIOD.OVERTIME;
             const isOTDone = isFinal || game.current_period === PERIOD.SHOOTOUT;
             const otGoals = sortedByTime(goals.filter((g) => g.period === PERIOD.OVERTIME));
             const otCount = game.overtime_periods ?? 1;
@@ -573,11 +575,12 @@ const ScoringCard = ({
             goals={goals}
             isFinal={isFinal}
             isInProgress={isInProgress}
+            canUseEditControls={isEditMode}
             soComplete={soComplete}
             busy={busy}
             deletingAttemptId={deletingAttemptId}
             className={
-              !isFinal && game.current_period === PERIOD.SHOOTOUT
+              canUseEditControls && game.current_period === PERIOD.SHOOTOUT
                 ? styles.periodItemActive
                 : undefined
             }

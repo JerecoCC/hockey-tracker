@@ -91,6 +91,7 @@ const NhlGoalieSwitchCheckerModal = ({
         queryClient.invalidateQueries({ queryKey: ['game-roster', game.id] }),
         queryClient.invalidateQueries({ queryKey: ['game-lineup', game.id] }),
         queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', game.id] }),
+        queryClient.invalidateQueries({ queryKey: ['shootout-attempts', game.id] }),
       ]);
       toast.success(
         `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`,

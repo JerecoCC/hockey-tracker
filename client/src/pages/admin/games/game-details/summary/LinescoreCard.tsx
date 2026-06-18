@@ -16,7 +16,6 @@ interface LinescorePeriod {
 interface Props {
   game: GameRecord;
   isFinal: boolean;
-  isEditMode: boolean;
   busy: string | null;
   liveAwayScore: number;
   liveHomeScore: number;
@@ -38,7 +37,6 @@ interface Props {
 const LinescoreCard = ({
   game,
   isFinal,
-  isEditMode,
   busy,
   liveAwayScore,
   liveHomeScore,
@@ -193,7 +191,7 @@ const LinescoreCard = ({
                   : game.period_scores.find((s) => s.period === p.id);
                 const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
                 const isPeriodDone =
-                  (isFinal && !isEditMode) ||
+                  isFinal ||
                   (pIdx >= 0 ? isPostRegulation || currentPeriodIdx > pIdx : true);
                 if (p.id === PERIOD.SHOOTOUT) {
                   const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);

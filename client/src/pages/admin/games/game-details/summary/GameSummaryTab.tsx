@@ -326,8 +326,7 @@ const GameSummaryTab = ({
     setDeletingAttemptId(null);
   };
 
-  // Treat the game as in-progress for all edit controls when edit mode is on.
-  const isEditInProgress = editable && (isInProgress || isEditMode);
+  const canUseEditControls = editable && (isInProgress || isEditMode);
 
   // ── End Game / 3-stars modal ─────────────────────────────────────────────
   const [starsModalOpen, setStarsModalOpen] = useState(false);
@@ -525,8 +524,8 @@ const GameSummaryTab = ({
             <ScoringCard
               game={game}
               goals={goals}
-              isFinal={isFinal && !isEditMode}
-              isInProgress={isEditInProgress}
+              isFinal={isFinal}
+              isInProgress={isInProgress}
               isEditMode={isEditMode}
               busy={busy}
               goalSavingPeriod={goalSavingPeriod}
@@ -547,9 +546,9 @@ const GameSummaryTab = ({
               onAddAttempt={editable ? openAttemptModal : undefined}
               onEditAttempt={editable ? openEditAttemptModal : undefined}
               onDeleteAttempt={editable ? handleDeleteAttempt : undefined}
-              onGoBackPeriod={isEditInProgress ? (prev) => advancePeriod(prev) : undefined}
+              onGoBackPeriod={canUseEditControls ? (prev) => advancePeriod(prev) : undefined}
               onGoBackOTPeriod={
-                isEditInProgress ? (targetNum) => revertOTPeriod(targetNum) : undefined
+                canUseEditControls ? (targetNum) => revertOTPeriod(targetNum) : undefined
               }
               getPlayerHref={
                 playerHrefBuilder
@@ -608,7 +607,6 @@ const GameSummaryTab = ({
             <LinescoreCard
               game={game}
               isFinal={isFinal}
-              isEditMode={isEditMode}
               busy={busy}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}

@@ -101,7 +101,6 @@ const ScoreboardCard = ({
   game,
   isFinal,
   isInProgress,
-  isEditMode = false,
   liveAwayScore,
   liveHomeScore,
   overtimeSuffix,
@@ -262,12 +261,7 @@ const ScoreboardCard = ({
                 })()}
               </span>
             )}
-            {isEditMode ? (
-              <Badge
-                label="Editing"
-                intent="info"
-              />
-            ) : isFinal ? (
+            {isFinal ? (
               <Badge
                 label={`Final${overtimeSuffix}`}
                 intent="success"

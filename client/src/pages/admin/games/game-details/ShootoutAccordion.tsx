@@ -21,6 +21,7 @@ interface Props {
   goals: GoalRecord[];
   isFinal: boolean;
   isInProgress: boolean;
+  canUseEditControls?: boolean;
   soComplete: boolean;
   busy: string | null;
   deletingAttemptId: string | null;
@@ -46,6 +47,7 @@ const ShootoutAccordion = ({
   goals,
   isFinal,
   isInProgress,
+  canUseEditControls = false,
   soComplete,
   busy,
   deletingAttemptId,
@@ -58,7 +60,8 @@ const ShootoutAccordion = ({
   getPlayerHref,
   showPlayerDataStatus = false,
 }: Props) => {
-  const isSOActive = !isFinal && game.current_period === PERIOD.SHOOTOUT;
+  const canEditShootout = isInProgress || canUseEditControls;
+  const isSOActive = canEditShootout && game.current_period === PERIOD.SHOOTOUT;
   const isSODone = isFinal;
 
   // ── Shoot order & team split ──────────────────────────────────────────────
@@ -274,7 +277,7 @@ const ShootoutAccordion = ({
             {photo}
           </>
         )}
-        {isInProgress &&
+        {canEditShootout &&
           attempt.attempt_order === maxAttemptOrder &&
           onEditAttempt &&
           onDeleteAttempt && (
@@ -412,9 +415,9 @@ const ShootoutAccordion = ({
   const canEndGame = soComplete && (!roundUnbalanced || secondWonEarly || firstWonEarly);
 
   const hoverActions: AccordionAction[] | undefined =
-    isSOActive && onAddAttempt && onEndGame
+    isSOActive && (onAddAttempt || onEndGame)
       ? ([
-          canAddAttempt
+          canAddAttempt && onAddAttempt
             ? {
                 icon: 'sports_hockey',
                 tooltip: 'Add Attempt',
@@ -423,7 +426,7 @@ const ShootoutAccordion = ({
                 onClick: onAddAttempt,
               }
             : null,
-          canEndGame
+          canEndGame && onEndGame
             ? {
                 icon: 'flag',
                 tooltip: 'End Game',
