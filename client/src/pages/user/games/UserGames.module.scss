@@ -130,122 +130,8 @@
 .calendarGameList {
   display: flex;
   flex-direction: column;
-  gap: $space-sm;
-}
-
-.calendarGameCard {
-  position: relative;
-  width: 100%;
-  border: 2px solid var(--game-league-primary);
-  border-radius: $radius-md;
-  padding: $space-sm $space-xs;
-  background: color-mix(in srgb, var(--game-league-primary) 50%, #2d3820 50%);
-  color: var(--game-league-text);
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &:hover {
-    background: color-mix(in srgb, var(--game-league-primary) 94%, #0f172a 6%);
-    border-color: color-mix(in srgb, var(--game-league-primary) 82%, white);
-  }
-
-  &:focus-visible {
-    outline: 2px solid $accent;
-    outline-offset: 2px;
-  }
-
-  &:hover,
-  &:focus-within {
-    .gameActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
-  }
-}
-
-.calendarGameCardDraggable {
-  cursor: grab;
-}
-
-.calendarGameCardDragging {
-  opacity: 0.55;
-  cursor: grabbing;
-}
-
-.calendarGameOriginalDate {
-  grid-column: 1 / -1;
-  width: 100%;
-  margin-bottom: $space-xs;
-  padding-bottom: $space-xs;
-  border-bottom: 1px solid color-mix(in srgb, var(--game-league-text) 18%, transparent);
-  font-size: $font-sm;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: $text-body;
-}
-
-.calendarGameLive {
-  border-color: rgba($success, 0.65);
-}
-
-.calendarGameCardUnwatched {
-  background: var(--game-league-primary);
-  border-color: var(--game-league-primary);
-}
-
-.calendarGameTeam {
-  width: fit-content;
-  display: flex;
-  flex-direction: column;
   gap: $space-xs;
-}
-
-.calendarGameInfo {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.calendarGameScore,
-.calendarGameAtSymbol {
-  font-size: $font-lg;
-  font-weight: 700;
-  color: inherit;
-}
-
-.calendarGameScore {
-  line-height: 20px;
-  padding: 2px $space-xs;
-  background-color: var(--game-league-primary);
-  border-radius: 2px;
-}
-
-.calendarGameScoreWin {
-  background-color: #067400;
-}
-
-.calendarGameScoreLose {
-  background-color: #d40000;
-}
-
-.calendarGameAt {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  line-height: 1;
   width: 100%;
-}
-
-.calendarGamePlayoffMeta {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--game-league-text) 84%, transparent);
-  white-space: nowrap;
 }
 
 .playoffDots {
@@ -258,7 +144,7 @@
   width: 10px;
   height: 10px;
   border-radius: 999px;
-  border: 1.5px solid color-mix(in srgb, var(--game-league-text) 28%, transparent);
+  border: 1.5px solid color-mix(in srgb, #{$text-dim} 56%, transparent);
   background: transparent;
 }
 

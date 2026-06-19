@@ -6,6 +6,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
@@ -13,7 +14,7 @@ import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import Modal from '@/components/Modal/Modal';
 import Select, { type SelectOption } from '@/components/Select/Select';
-import TeamLogo, { TeamLogoProps } from '@/components/TeamLogo/TeamLogo';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
@@ -349,7 +350,10 @@ const GameHoverActions = ({
   onSchedule,
   onSkip,
 }: GameActionsProps) => (
-  <span className={styles.gameActions}>
+  <span
+    className={styles.gameActions}
+    data-calendar-game-actions
+  >
     {watched && (
       <Button
         type="button"
@@ -681,56 +685,6 @@ const GameCard = ({
   );
 };
 
-const CalendarGameTeam = ({
-  code,
-  gameStatus,
-  logo,
-  primaryColor,
-  score,
-  showPlayoffSeriesDots,
-  seriesTotalWins = 0,
-  seriesWins = 0,
-  textColor,
-}: Pick<TeamLogoProps, 'logo' | 'code' | 'primaryColor' | 'textColor'> & {
-  gameStatus: 'pending' | 'win' | 'lose';
-  score: string | number;
-  showPlayoffSeriesDots?: boolean;
-  seriesTotalWins: number | null;
-  seriesWins: number | null;
-}) => {
-  return (
-    <div className={styles.calendarGameTeam}>
-      <div className={styles.calendarGameInfo}>
-        <span
-          className={[
-            styles.calendarGameScore,
-            gameStatus === 'win' ? styles.calendarGameScoreWin : '',
-            gameStatus === 'lose' ? styles.calendarGameScoreLose : '',
-          ]
-            .filter(Boolean)
-            .join(' ')}
-        >
-          {score}
-        </span>
-        <TeamLogo
-          logo={logo}
-          code={code}
-          primaryColor={primaryColor}
-          textColor={textColor}
-          size={28}
-          shape="circle"
-        />
-      </div>
-      {showPlayoffSeriesDots && (
-        <PlayoffSeriesDots
-          wins={seriesWins || 0}
-          total={seriesTotalWins || 0}
-        />
-      )}
-    </div>
-  );
-};
-
 const CalendarGameCard = ({
   game,
   tzPref,
@@ -772,22 +726,49 @@ const CalendarGameCard = ({
   const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
   const homeSeriesWins = getSeriesWinsForTeam(game, game.home_team.id);
   const seriesTotalWins = game.series_games_to_win;
+  const showAwaySeriesDots =
+    !!game.watched_by_user && seriesTotalWins != null && awaySeriesWins != null;
+  const showHomeSeriesDots =
+    !!game.watched_by_user && seriesTotalWins != null && homeSeriesWins != null;
 
   return (
-    <div
-      className={[
-        styles.calendarGameCard,
-        game.status === 'in_progress' ? styles.calendarGameLive : '',
-        !game.watched_by_user ? styles.calendarGameCardUnwatched : '',
-        draggable ? styles.calendarGameCardDraggable : '',
-        dragging ? styles.calendarGameCardDragging : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={getLeagueStyle(game)}
+    <CalendarGameListItem
+      showScore={showScore}
+      live={game.status === 'in_progress'}
+      dragging={dragging}
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
+      topLabel={originalDateLabel}
+      centerLabel={playoffMetaLabel}
+      awayTeam={{
+        logo: game.away_team.logo,
+        code: game.away_team.code,
+        primaryColor: game.away_team.primary_color,
+        textColor: game.away_team.text_color,
+        score: away,
+        scoreStatus: awayGameStatus,
+        meta: showAwaySeriesDots ? (
+          <PlayoffSeriesDots
+            wins={awaySeriesWins || 0}
+            total={seriesTotalWins || 0}
+          />
+        ) : undefined,
+      }}
+      homeTeam={{
+        logo: game.home_team.logo,
+        code: game.home_team.code,
+        primaryColor: game.home_team.primary_color,
+        textColor: game.home_team.text_color,
+        score: home,
+        scoreStatus: homeGameStatus,
+        meta: showHomeSeriesDots ? (
+          <PlayoffSeriesDots
+            wins={homeSeriesWins || 0}
+            total={seriesTotalWins || 0}
+          />
+        ) : undefined,
+      }}
     >
       <GameHoverActions
         watched={!!game.watched_by_user}
@@ -800,44 +781,7 @@ const CalendarGameCard = ({
         onSchedule={onSchedule}
         onSkip={onSkip}
       />
-      {originalDateLabel && (
-        <div className={styles.calendarGameOriginalDate}>{originalDateLabel}</div>
-      )}
-      <div className={styles.calendarGameInfo}>
-        <CalendarGameTeam
-          code={game.away_team.code}
-          gameStatus={awayGameStatus}
-          logo={game.away_team.logo}
-          primaryColor={game.away_team.primary_color}
-          score={showScore ? away : '–'}
-          showPlayoffSeriesDots={
-            !!game.watched_by_user && seriesTotalWins != null && awaySeriesWins != null
-          }
-          seriesTotalWins={seriesTotalWins}
-          seriesWins={awaySeriesWins}
-          textColor={game.away_team.text_color}
-        />
-        <span className={styles.calendarGameAt}>
-          {playoffMetaLabel && (
-            <span className={styles.calendarGamePlayoffMeta}>{playoffMetaLabel}</span>
-          )}
-          <span className={styles.calendarGameAtSymbol}>@</span>
-        </span>
-        <CalendarGameTeam
-          code={game.home_team.code}
-          gameStatus={homeGameStatus}
-          logo={game.home_team.logo}
-          primaryColor={game.home_team.primary_color}
-          score={showScore ? home : '–'}
-          showPlayoffSeriesDots={
-            !!game.watched_by_user && seriesTotalWins != null && homeSeriesWins != null
-          }
-          seriesTotalWins={seriesTotalWins}
-          seriesWins={homeSeriesWins}
-          textColor={game.home_team.text_color}
-        />
-      </div>
-    </div>
+    </CalendarGameListItem>
   );
 };
 

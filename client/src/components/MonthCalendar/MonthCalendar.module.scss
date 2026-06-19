@@ -77,12 +77,6 @@
 .dayBodyScrollable {
   scrollbar-gutter: stable;
   padding-right: 0;
-
-  .dayContent {
-    > * {
-      min-height: 0;
-    }
-  }
 }
 
 .dayContent {
@@ -95,7 +89,6 @@
 
   > * {
     width: 100%;
-    min-height: 100%;
   }
 }
 

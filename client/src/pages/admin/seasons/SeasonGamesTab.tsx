@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
+import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import Tooltip from '@/components/Tooltip/Tooltip';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
@@ -475,48 +474,29 @@ const SeasonGamesTab = ({
     const awayLost = isFinal && game.away_score < game.home_score;
     const homeLost = isFinal && game.home_score < game.away_score;
     return (
-      <Tooltip
+      <CalendarGameListItem
         key={game.id}
-        className={styles.calendarPillWrap}
-        text={`${game.away_team.name} @ ${game.home_team.name}`}
-      >
-        <Link
-          to={gameDetailsPath(game)}
-          className={styles.calendarGamePill}
-        >
-          <span
-            className={[styles.calendarPillTeam, awayLost && styles.calendarPillLoser]
-              .filter(Boolean)
-              .join(' ')}
-          >
-            <TeamLogo
-              logo={game.away_team.logo}
-              code={game.away_team.code}
-              primaryColor={game.away_team.primary_color}
-              textColor={game.away_team.text_color}
-              size={26}
-              shape="circle"
-            />
-          </span>
-          <span className={styles.calendarPillMid}>
-            {showScore ? `${game.away_score}-${game.home_score}` : '@'}
-          </span>
-          <span
-            className={[styles.calendarPillTeam, homeLost && styles.calendarPillLoser]
-              .filter(Boolean)
-              .join(' ')}
-          >
-            <TeamLogo
-              logo={game.home_team.logo}
-              code={game.home_team.code}
-              primaryColor={game.home_team.primary_color}
-              textColor={game.home_team.text_color}
-              size={26}
-              shape="circle"
-            />
-          </span>
-        </Link>
-      </Tooltip>
+        href={gameDetailsPath(game)}
+        tooltip={`${game.away_team.name} @ ${game.home_team.name}`}
+        showScore={showScore}
+        live={game.status === 'in_progress'}
+        awayTeam={{
+          logo: game.away_team.logo,
+          code: game.away_team.code,
+          primaryColor: game.away_team.primary_color,
+          textColor: game.away_team.text_color,
+          score: game.away_score,
+          dimmed: awayLost,
+        }}
+        homeTeam={{
+          logo: game.home_team.logo,
+          code: game.home_team.code,
+          primaryColor: game.home_team.primary_color,
+          textColor: game.home_team.text_color,
+          score: game.home_score,
+          dimmed: homeLost,
+        }}
+      />
     );
   };
 
