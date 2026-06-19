@@ -1949,7 +1949,7 @@ function goalTypeFromSituation(situationCode: string | undefined, side: TeamSide
   const scoringSkaters = side === 'away' ? awaySkaters : homeSkaters;
   const defendingSkaters = side === 'away' ? homeSkaters : awaySkaters;
   if (scoringSkaters > defendingSkaters) return 'power-play';
-  if (scoringSkaters < defendingSkaters) return 'short-handed';
+  if (scoringSkaters < defendingSkaters) return 'shorthanded';
   return 'even-strength';
 }
 

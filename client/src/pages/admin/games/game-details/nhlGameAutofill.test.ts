@@ -220,6 +220,39 @@ describe('autofillGameFromNhlGamecenter', () => {
     mockedAxios.put.mockResolvedValue({ data: {} });
   });
 
+  it('records a shorthanded goal with the canonical "shorthanded" goal_type', async () => {
+    boxscoreData = {
+      ...boxscore,
+      homeTeam: { ...boxscore.homeTeam, score: 1 },
+      awayTeam: { ...boxscore.awayTeam, score: 0 },
+      periodDescriptor: { number: 3, periodType: 'REG' },
+      gameOutcome: { lastPeriodType: 'REG' },
+    };
+    playByPlayData = {
+      plays: [
+        {
+          sortOrder: 1,
+          typeDescKey: 'goal',
+          periodDescriptor: { number: 3, periodType: 'REG' },
+          timeInPeriod: '12:00',
+          // Home (scoring) is a skater down: away 5 skaters vs home 4 skaters.
+          situationCode: '1541',
+          details: { eventOwnerTeamId: 30, scoringPlayerId: 6, awayScore: 0, homeScore: 1 },
+        },
+      ],
+    };
+
+    const result = await autofillGameFromNhlGamecenter(game, '317');
+    const goalPosts = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/games/game-1/goals'),
+    );
+
+    expect(result.summary.goalsCreated).toBe(1);
+    expect(goalPosts[0][1]).toEqual(
+      expect.objectContaining({ scorer_id: 'boldy', goal_type: 'shorthanded' }),
+    );
+  });
+
   it('marks GameCenter goals with a pulled defending goalie as empty net goals', async () => {
     boxscoreData = {
       ...boxscore,
@@ -280,7 +313,7 @@ describe('autofillGameFromNhlGamecenter', () => {
         period: '3',
         period_time: '18:59',
         scorer_id: 'boldy',
-        goal_type: 'short-handed',
+        goal_type: 'shorthanded',
         empty_net: false,
         penalty_shot: false,
       },

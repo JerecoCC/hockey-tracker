@@ -369,7 +369,7 @@ const ScoringCard = ({
                               ),
                           }
                         : null,
-                      num === 3 && liveAwayScore !== liveHomeScore && !isEditMode
+                      num === 3 && liveAwayScore !== liveHomeScore && isInProgress
                         ? {
                             icon: 'flag',
                             tooltip: 'End Game',
@@ -463,7 +463,7 @@ const ScoringCard = ({
                                     onOpenShotsModal(otPeriodId(otNum), { type: 'next-ot' }, true),
                                 }
                               : null,
-                            periodGoals.length > 0 && !isEditMode
+                            periodGoals.length > 0 && isInProgress
                               ? {
                                   icon: 'flag',
                                   tooltip: 'End Game',
@@ -544,7 +544,7 @@ const ScoringCard = ({
                                 ),
                             }
                           : null,
-                        otGoals.length > 0 && !isEditMode
+                        otGoals.length > 0 && isInProgress
                           ? {
                               icon: 'flag',
                               tooltip: 'End Game',
@@ -591,7 +591,7 @@ const ScoringCard = ({
             getPlayerHref={getPlayerHref}
             showPlayerDataStatus={showPlayerDataStatus}
             onEndGame={
-              onOpenShotsModal && !isEditMode
+              onOpenShotsModal && isInProgress
                 ? () => onOpenShotsModal(PERIOD.SHOOTOUT, { type: 'end-game' }, true)
                 : undefined
             }

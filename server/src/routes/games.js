@@ -499,13 +499,17 @@ const selectInheritedLineupRows = (gameId, teamId, hasAcquisitionType) => sql`
 
 // ---------------------------------------------------------------------------
 // GET /api/admin/games
-// Query params: season_id, team_id (home OR away), game_type, status, week (YYYY-MM-DD week start)
+// Query params: season_id, team_id (home OR away), game_type, status, week (YYYY-MM-DD week start), month (YYYY-MM)
 // ---------------------------------------------------------------------------
 router.get('/', async (req, res) => {
   const { season_id, team_id, game_type, status } = req.query;
   const week = req.query.week ?? req.query.week_start ?? null;
+  const month = req.query.month ?? null;
   if (week && !/^\d{4}-\d{2}-\d{2}$/.test(String(week))) {
     return res.status(400).json({ error: 'week must be a YYYY-MM-DD date' });
+  }
+  if (month && !/^\d{4}-\d{2}$/.test(String(month))) {
+    return res.status(400).json({ error: 'month must be a YYYY-MM value' });
   }
 
   try {
@@ -520,6 +524,12 @@ router.get('/', async (req, res) => {
       where.push(ormSql`
         ${gamesTable.scheduledAt} >= ${week}::date
         AND ${gamesTable.scheduledAt} < (${week}::date + INTERVAL '7 days')
+      `);
+    }
+    if (month) {
+      where.push(ormSql`
+        ${gamesTable.scheduledAt} >= (${month} || '-01')::date
+        AND ${gamesTable.scheduledAt} < ((${month} || '-01')::date + INTERVAL '1 month')
       `);
     }
 
@@ -3859,4 +3869,3 @@ router.delete('/:id/shootout-attempts/:attemptId', async (req, res) => {
 });
 
 module.exports = router;
-

@@ -5,6 +5,8 @@ import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import Modal from '@/components/Modal/Modal';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
 import GameListItem from './GameListItem';
 import Select from '@/components/Select/Select';
@@ -73,6 +75,13 @@ const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warnin
   cancelled: 'danger',
 };
 
+const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'long',
+  year: 'numeric',
+});
+
+const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
 const formatStatusLabel = (game: GameRecord): string => {
   if (game.status !== 'final') return STATUS_LABEL[game.status];
   // Prefer period_scores (source of truth) but fall back to stored columns for
@@ -105,6 +114,11 @@ const STATUS_FILTER_OPTIONS: SelectOption[] = [
 
 const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
+const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
+const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
+const daysInMonth = (year: number, monthIndex: number) =>
+  new Date(year, monthIndex + 1, 0).getDate();
+const firstDayOfWeek = (year: number, monthIndex: number) => new Date(year, monthIndex, 1).getDay();
 
 const toLocalDateKey = (iso: string) => {
   const d = new Date(iso);
@@ -117,6 +131,14 @@ const dateToISO = (d: Date) =>
 const fromISODate = (iso: string): Date => {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d);
+};
+
+const toMonthPickerValue = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+
+const fromMonthPickerValue = (value: string) => {
+  const [year, month] = value.split('-').map(Number);
+  return new Date(year, month - 1, 1);
 };
 
 const fmtDayHeading = (key: string) => {
@@ -185,6 +207,38 @@ const SeasonGamesTab = ({
 }: Props) => {
   const navigate = useNavigate();
 
+  const viewKey = `season-games-view:${seasonId}`;
+  const [view, setView] = useState<'list' | 'calendar'>(() =>
+    sessionStorage.getItem(`season-games-view:${seasonId}`) === 'calendar' ? 'calendar' : 'list',
+  );
+  const calendarMonthKey = `season-games-calendar-month:${seasonId}`;
+  const [calendarMonth, setCalendarMonthState] = useState<Date>(() => {
+    const stored = sessionStorage.getItem(`season-games-calendar-month:${seasonId}`);
+    return stored ? fromMonthPickerValue(stored) : monthStart(new Date());
+  });
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem(viewKey);
+    setView(stored === 'calendar' ? 'calendar' : 'list');
+  }, [viewKey]);
+
+  useEffect(() => {
+    sessionStorage.setItem(viewKey, view);
+  }, [viewKey, view]);
+
+  useEffect(() => {
+    const stored = sessionStorage.getItem(calendarMonthKey);
+    setCalendarMonthState(stored ? fromMonthPickerValue(stored) : monthStart(new Date()));
+  }, [calendarMonthKey]);
+
+  const setCalendarMonth = (updater: Date | ((d: Date) => Date)) => {
+    setCalendarMonthState((prev) => {
+      const next = monthStart(typeof updater === 'function' ? updater(prev) : updater);
+      sessionStorage.setItem(calendarMonthKey, toMonthPickerValue(next));
+      return next;
+    });
+  };
+
   // ── Week navigation (with sessionStorage persistence) ────────────────────
   const weekKey = `season-games-week:${seasonId}`;
   const [weekStart, setWeekStartState] = useState<Date>(() => {
@@ -232,7 +286,9 @@ const SeasonGamesTab = ({
 
   const { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames } = useGames({
     seasonId,
-    week: dateToISO(weekStart),
+    ...(view === 'calendar'
+      ? { month: toMonthPickerValue(calendarMonth) }
+      : { week: dateToISO(weekStart) }),
     gameType: gameTypeFilter ? (gameTypeFilter as GameType) : undefined,
     status: statusFilter ? (statusFilter as GameStatus) : undefined,
   });
@@ -291,12 +347,39 @@ const SeasonGamesTab = ({
     return Array.from(map.entries());
   }, [filteredGames, weekStart]);
 
+  const calendarGamesByDate = useMemo(() => {
+    const map = new Map<string, GameRecord[]>();
+    for (const game of filteredGames) {
+      if (!game.scheduled_at) continue;
+      const key = toLocalDateKey(game.scheduled_at);
+      const dayGames = map.get(key) ?? [];
+      dayGames.push(game);
+      map.set(key, dayGames);
+    }
+    return map;
+  }, [filteredGames]);
+
+  const calendarCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const monthIndex = calendarMonth.getMonth();
+    const total = daysInMonth(year, monthIndex);
+    const startDow = firstDayOfWeek(year, monthIndex);
+    const cells: (number | null)[] = Array(startDow).fill(null);
+    for (let day = 1; day <= total; day++) cells.push(day);
+    while (cells.length % 7 !== 0) cells.push(null);
+    return cells;
+  }, [calendarMonth]);
+
   const [filtersVisible, setFiltersVisible] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [formDate, setFormDate] = useState<string | null>(null);
   const [bulkDate, setBulkDate] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<GameRecord | null>(null);
+  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
+  const selectedCalendarGames = selectedCalendarDay
+    ? (calendarGamesByDate.get(selectedCalendarDay) ?? [])
+    : [];
   const todayKey = dateToISO(toDay(new Date()));
   const initialSummaryDay = groupedByDate.some(([dateKey]) => dateKey === todayKey)
     ? todayKey
@@ -319,7 +402,7 @@ const SeasonGamesTab = ({
   };
 
   useEffect(() => {
-    if (loading || groupedByDate.length === 0) return;
+    if (view !== 'list' || loading || groupedByDate.length === 0) return;
     const firstDayRef = dayRefs.current[groupedByDate[0][0]];
     if (!firstDayRef) return;
 
@@ -362,7 +445,7 @@ const SeasonGamesTab = ({
       scrollEl.removeEventListener('scroll', scheduleUpdate);
       window.removeEventListener('resize', scheduleUpdate);
     };
-  }, [groupedByDate, loading]);
+  }, [groupedByDate, loading, view]);
 
   const handleAdd = (date?: string) => {
     setEditTarget(null);
@@ -382,6 +465,97 @@ const SeasonGamesTab = ({
     setFormDate(null);
   };
 
+  const changeCalendarMonth = (value: string) => {
+    if (!value) return;
+    setCalendarMonth(fromMonthPickerValue(value));
+  };
+
+  const gameDetailsPath = (game: GameRecord) =>
+    buildGameDetailsPath({
+      leagueCode,
+      leagueId,
+      seasonName,
+      seasonId,
+      gameId: game.id,
+      awayTeamCode: game.away_team.code,
+      homeTeamCode: game.home_team.code,
+      scheduledAt: game.scheduled_at,
+    });
+
+  const openGame = (game: GameRecord) => navigate(gameDetailsPath(game));
+
+  const renderGameListItem = (game: GameRecord, options: { fromCalendarModal?: boolean } = {}) => {
+    const closeCalendarModal = () => {
+      if (options.fromCalendarModal) setSelectedCalendarDay(null);
+    };
+
+    return (
+      <GameListItem
+        key={game.id}
+        href={gameDetailsPath(game)}
+        awayTeam={{
+          logo: game.away_team.logo,
+          code: game.away_team.code,
+          primaryColor: game.away_team.primary_color,
+          textColor: game.away_team.text_color,
+        }}
+        homeTeam={{
+          logo: game.home_team.logo,
+          code: game.home_team.code,
+          primaryColor: game.home_team.primary_color,
+          textColor: game.home_team.text_color,
+        }}
+        awayScore={game.away_score}
+        homeScore={game.home_score}
+        showScore={game.status === 'final' || game.status === 'in_progress'}
+        isFinal={game.status === 'final'}
+        statusLabel={formatStatusLabel(game)}
+        statusIntent={STATUS_INTENT[game.status]}
+        gameType={game.game_type}
+        time={formatGameTime(game)}
+        venue={game.venue ?? undefined}
+        round={game.playoff_round}
+        roundLabel={
+          game.playoff_round != null
+            ? (game.playoff_round_names?.[game.playoff_round] ?? null)
+            : null
+        }
+        gameNumberInSeries={game.game_number_in_series}
+        gameNumber={game.game_number}
+        actions={[
+          {
+            icon: 'open_in_new',
+            intent: 'neutral',
+            tooltip: 'View game',
+            onClick: () => openGame(game),
+          },
+          ...(!isEnded
+            ? [
+                {
+                  icon: 'edit',
+                  intent: 'neutral' as const,
+                  tooltip: 'Edit game',
+                  onClick: () => {
+                    closeCalendarModal();
+                    handleEdit(game);
+                  },
+                },
+                game.status === 'scheduled' && {
+                  icon: 'delete',
+                  intent: 'danger' as const,
+                  tooltip: 'Delete game',
+                  onClick: () => {
+                    closeCalendarModal();
+                    setConfirmDelete(game);
+                  },
+                },
+              ]
+            : []),
+        ]}
+      />
+    );
+  };
+
   return (
     <>
       <Card
@@ -389,35 +563,92 @@ const SeasonGamesTab = ({
         title={
           <>
             Games
-            <span className={styles.titleDivider} />
-            <span className={styles.weekNav}>
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="chevron_left"
-                size="sm"
-                onClick={() => setWeekStart((d) => addDays(d, -7))}
-              />
-              <div className={styles.datePicker}>
-                <DatePicker
-                  value={dateToISO(weekStart)}
-                  onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
-                  triggerLabel={fmtWeekRange(weekStart, weekEnd)}
-                  triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
-                />
-              </div>
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="chevron_right"
-                size="sm"
-                onClick={() => setWeekStart((d) => addDays(d, 7))}
-              />
-            </span>
+            {view === 'list' && (
+              <>
+                <span className={styles.titleDivider} />
+                <span className={styles.weekNav}>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_left"
+                    size="sm"
+                    onClick={() => setWeekStart((d) => addDays(d, -7))}
+                  />
+                  <div className={styles.datePicker}>
+                    <DatePicker
+                      value={dateToISO(weekStart)}
+                      onChange={(v) => setWeekStart(v ? fromISODate(v) : toDay(new Date()))}
+                      triggerLabel={fmtWeekRange(weekStart, weekEnd)}
+                      triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
+                    />
+                  </div>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_right"
+                    size="sm"
+                    onClick={() => setWeekStart((d) => addDays(d, 7))}
+                  />
+                </span>
+              </>
+            )}
+            {view === 'calendar' && (
+              <>
+                <span className={styles.titleDivider} />
+                <span className={styles.weekNav}>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_left"
+                    size="sm"
+                    tooltip="Previous month"
+                    aria-label="Previous month"
+                    onClick={() => setCalendarMonth((current) => addMonths(current, -1))}
+                  />
+                  <div className={styles.datePicker}>
+                    <DatePicker
+                      value={toMonthPickerValue(calendarMonth)}
+                      onChange={changeCalendarMonth}
+                      granularity="month"
+                      triggerLabel={MONTH_LABEL_FMT.format(calendarMonth)}
+                      triggerAriaLabel={`Select month: ${MONTH_LABEL_FMT.format(calendarMonth)}`}
+                    />
+                  </div>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_right"
+                    size="sm"
+                    tooltip="Next month"
+                    aria-label="Next month"
+                    onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
+                  />
+                </span>
+              </>
+            )}
           </>
         }
         action={
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <div className={styles.actionsRow}>
+            <SegmentedControl
+              value={view}
+              onChange={(value) => setView(value as 'list' | 'calendar')}
+              className={styles.viewSegmentedControl}
+              options={[
+                {
+                  value: 'list',
+                  label: <Icon name="view_list" />,
+                  tooltip: 'List view',
+                  ariaLabel: 'List view',
+                },
+                {
+                  value: 'calendar',
+                  label: <Icon name="calendar_month" />,
+                  tooltip: 'Calendar view',
+                  ariaLabel: 'Calendar view',
+                },
+              ]}
+            />
             {!isEnded && (
               <>
                 <Button
@@ -472,7 +703,7 @@ const SeasonGamesTab = ({
       </Card>
 
       {/* ── Day cards ── */}
-      {!loading && (
+      {!loading && view === 'list' && (
         <Card
           className={styles.weekSummaryCard}
           noHeaderMargin
@@ -508,6 +739,84 @@ const SeasonGamesTab = ({
 
       {loading ? (
         <p className={styles.empty}>Loading…</p>
+      ) : view === 'calendar' ? (
+        <Card
+          className={styles.calendarCard}
+          noHeaderMargin
+        >
+          <div className={styles.calendarWrap}>
+            <div className={styles.calendarScroll}>
+              <div className={styles.calendarGrid}>
+                {DAY_LABELS.map((label) => (
+                  <div
+                    key={label}
+                    className={styles.calendarDayName}
+                  >
+                    {label}
+                  </div>
+                ))}
+                {calendarCells.map((day, index) => {
+                  if (day === null) {
+                    return (
+                      <div
+                        key={`blank-${index}`}
+                        className={styles.calendarEmptyCell}
+                      />
+                    );
+                  }
+
+                  const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                  const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
+
+                  return (
+                    <div
+                      key={dateKey}
+                      className={[
+                        styles.calendarDayCell,
+                        gameCount > 0 ? styles.calendarDayCellFilled : styles.calendarDayCellEmpty,
+                      ]
+                        .filter(Boolean)
+                        .join(' ')}
+                    >
+                      <span className={styles.calendarDayNumber}>{day}</span>
+                      <button
+                        type="button"
+                        className={styles.calendarGameCountCircle}
+                        onClick={() => setSelectedCalendarDay(dateKey)}
+                        aria-label={`View ${fmtDayHeading(dateKey)} games: ${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
+                      >
+                        <span className={styles.calendarGameCountValue}>{gameCount}</span>
+                        <span className={styles.calendarGameCountLabel}>
+                          {gameCount === 1 ? 'Game' : 'Games'}
+                        </span>
+                      </button>
+                      {!isEnded && (
+                        <div className={styles.calendarDayActions}>
+                          <Button
+                            variant="outlined"
+                            intent="accent"
+                            icon="playlist_add"
+                            size="sm"
+                            tooltip="Bulk Create"
+                            aria-label={`Bulk create games on ${fmtDayHeading(dateKey)}`}
+                            onClick={() => setBulkDate(dateKey)}
+                          />
+                          <Button
+                            icon="add"
+                            size="sm"
+                            tooltip="Create Game"
+                            aria-label={`Create game on ${fmtDayHeading(dateKey)}`}
+                            onClick={() => handleAdd(dateKey)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </Card>
       ) : (
         <div className={styles.dayList}>
           {groupedByDate.map(([dateKey, dayGames]) => (
@@ -547,86 +856,7 @@ const SeasonGamesTab = ({
                   </p>
                 ) : (
                   <ul className={styles.list}>
-                    {dayGames.map((game) => (
-                      <GameListItem
-                        key={game.id}
-                        href={buildGameDetailsPath({
-                          leagueCode,
-                          leagueId,
-                          seasonName,
-                          seasonId,
-                          gameId: game.id,
-                          awayTeamCode: game.away_team.code,
-                          homeTeamCode: game.home_team.code,
-                          scheduledAt: game.scheduled_at,
-                        })}
-                        awayTeam={{
-                          logo: game.away_team.logo,
-                          code: game.away_team.code,
-                          primaryColor: game.away_team.primary_color,
-                          textColor: game.away_team.text_color,
-                        }}
-                        homeTeam={{
-                          logo: game.home_team.logo,
-                          code: game.home_team.code,
-                          primaryColor: game.home_team.primary_color,
-                          textColor: game.home_team.text_color,
-                        }}
-                        awayScore={game.away_score}
-                        homeScore={game.home_score}
-                        showScore={game.status === 'final' || game.status === 'in_progress'}
-                        isFinal={game.status === 'final'}
-                        statusLabel={formatStatusLabel(game)}
-                        statusIntent={STATUS_INTENT[game.status]}
-                        gameType={game.game_type}
-                        time={formatGameTime(game)}
-                        venue={game.venue ?? undefined}
-                        round={game.playoff_round}
-                        roundLabel={
-                          game.playoff_round != null
-                            ? (game.playoff_round_names?.[game.playoff_round] ?? null)
-                            : null
-                        }
-                        gameNumberInSeries={game.game_number_in_series}
-                        gameNumber={game.game_number}
-                        actions={[
-                          {
-                            icon: 'open_in_new',
-                            intent: 'neutral',
-                            tooltip: 'View game',
-                            onClick: () =>
-                              navigate(
-                                buildGameDetailsPath({
-                                  leagueCode,
-                                  leagueId,
-                                  seasonName,
-                                  seasonId,
-                                  gameId: game.id,
-                                  awayTeamCode: game.away_team.code,
-                                  homeTeamCode: game.home_team.code,
-                                  scheduledAt: game.scheduled_at,
-                                }),
-                              ),
-                          },
-                          ...(!isEnded
-                            ? [
-                                {
-                                  icon: 'edit',
-                                  intent: 'neutral' as const,
-                                  tooltip: 'Edit game',
-                                  onClick: () => handleEdit(game),
-                                },
-                                game.status === 'scheduled' && {
-                                  icon: 'delete',
-                                  intent: 'danger' as const,
-                                  tooltip: 'Delete game',
-                                  onClick: () => setConfirmDelete(game),
-                                },
-                              ]
-                            : []),
-                        ]}
-                      />
-                    ))}
+                    {dayGames.map((game) => renderGameListItem(game))}
                   </ul>
                 )}
               </Card>
@@ -655,6 +885,26 @@ const SeasonGamesTab = ({
         updateGame={updateGame}
         onClose={handleFormClose}
       />
+
+      <Modal
+        open={selectedCalendarDay !== null}
+        title={selectedCalendarDay ? fmtDayHeading(selectedCalendarDay) : 'Games'}
+        onClose={() => setSelectedCalendarDay(null)}
+        size="lg"
+        hideFooter
+      >
+        {selectedCalendarGames.length === 0 ? (
+          <p className={styles.dayEmpty}>
+            {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
+          </p>
+        ) : (
+          <ul className={styles.list}>
+            {selectedCalendarGames.map((game) =>
+              renderGameListItem(game, { fromCalendarModal: true }),
+            )}
+          </ul>
+        )}
+      </Modal>
 
       <ConfirmModal
         open={confirmDelete !== null}

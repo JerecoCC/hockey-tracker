@@ -211,6 +211,7 @@ interface Filters {
   gameType?:  GameType;
   status?:    GameStatus;
   week?:      string;
+  month?:     string;
 }
 
 interface GameRouteLookupInput {
@@ -282,6 +283,7 @@ const useGames = (filters: Filters = {}) => {
   if (filters.gameType)  params.game_type  = filters.gameType;
   if (filters.status)    params.status     = filters.status;
   if (filters.week)      params.week       = filters.week;
+  if (filters.month)     params.month      = filters.month;
 
   const queryKey = ['games', params];
 
@@ -845,4 +847,3 @@ export const usePlayoffSeries = (seasonId: string | undefined) => {
 
   return { series, loading, busy, createSeries, updateSeries, deleteSeries, startSeries, advanceBracket, forceAdvance };
 };
-
