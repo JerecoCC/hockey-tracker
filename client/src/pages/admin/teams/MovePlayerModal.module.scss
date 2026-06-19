@@ -13,10 +13,56 @@
   gap: $space-md;
 }
 
-.row {
+.teamRow {
   display: grid;
   grid-template-columns: 1fr 10rem;
   gap: $space-md;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: 0;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+}
+
+.groupLabel {
+  padding: 0 $space-xs;
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.movementRow,
+.dateRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: $space-md;
+}
+
+.segmentedField {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.segmentedLabel {
+  font-size: $font-sm;
+  font-weight: 600;
+  color: $text-dim;
+}
+
+@media (max-width: 520px) {
+  .teamRow,
+  .movementRow,
+  .dateRow {
+    grid-template-columns: 1fr;
+  }
 }
 
 // ── Trade History ──────────────────────────────────────────────────────────
