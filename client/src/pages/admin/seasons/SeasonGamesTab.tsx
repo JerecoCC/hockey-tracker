@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
+import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
-import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
 import GameListItem from './GameListItem';
@@ -376,10 +378,6 @@ const SeasonGamesTab = ({
   const [bulkDate, setBulkDate] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<GameRecord | null>(null);
-  const [selectedCalendarDay, setSelectedCalendarDay] = useState<string | null>(null);
-  const selectedCalendarGames = selectedCalendarDay
-    ? (calendarGamesByDate.get(selectedCalendarDay) ?? [])
-    : [];
   const todayKey = dateToISO(toDay(new Date()));
   const initialSummaryDay = groupedByDate.some(([dateKey]) => dateKey === todayKey)
     ? todayKey
@@ -484,11 +482,57 @@ const SeasonGamesTab = ({
 
   const openGame = (game: GameRecord) => navigate(gameDetailsPath(game));
 
-  const renderGameListItem = (game: GameRecord, options: { fromCalendarModal?: boolean } = {}) => {
-    const closeCalendarModal = () => {
-      if (options.fromCalendarModal) setSelectedCalendarDay(null);
-    };
+  // Compact game representation for a calendar day cell — mirrors the user games
+  // calendar (away vs home in one row), clickable to open the game.
+  const renderCalendarGamePill = (game: GameRecord) => {
+    const showScore = game.status === 'final' || game.status === 'in_progress';
+    const isFinal = game.status === 'final';
+    const awayLost = isFinal && game.away_score < game.home_score;
+    const homeLost = isFinal && game.home_score < game.away_score;
+    return (
+      <Tooltip
+        key={game.id}
+        className={styles.calendarPillWrap}
+        text={`${game.away_team.name} @ ${game.home_team.name}`}
+      >
+        <Link to={gameDetailsPath(game)} className={styles.calendarGamePill}>
+          <span
+            className={[styles.calendarPillTeam, awayLost && styles.calendarPillLoser]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <TeamLogo
+              logo={game.away_team.logo}
+              code={game.away_team.code}
+              primaryColor={game.away_team.primary_color}
+              textColor={game.away_team.text_color}
+              size={22}
+              shape="circle"
+            />
+          </span>
+          <span className={styles.calendarPillMid}>
+            {showScore ? `${game.away_score}-${game.home_score}` : '@'}
+          </span>
+          <span
+            className={[styles.calendarPillTeam, homeLost && styles.calendarPillLoser]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <TeamLogo
+              logo={game.home_team.logo}
+              code={game.home_team.code}
+              primaryColor={game.home_team.primary_color}
+              textColor={game.home_team.text_color}
+              size={22}
+              shape="circle"
+            />
+          </span>
+        </Link>
+      </Tooltip>
+    );
+  };
 
+  const renderGameListItem = (game: GameRecord) => {
     return (
       <GameListItem
         key={game.id}
@@ -535,19 +579,13 @@ const SeasonGamesTab = ({
                   icon: 'edit',
                   intent: 'neutral' as const,
                   tooltip: 'Edit game',
-                  onClick: () => {
-                    closeCalendarModal();
-                    handleEdit(game);
-                  },
+                  onClick: () => handleEdit(game),
                 },
                 game.status === 'scheduled' && {
                   icon: 'delete',
                   intent: 'danger' as const,
                   tooltip: 'Delete game',
-                  onClick: () => {
-                    closeCalendarModal();
-                    setConfirmDelete(game);
-                  },
+                  onClick: () => setConfirmDelete(game),
                 },
               ]
             : []),
@@ -766,48 +804,43 @@ const SeasonGamesTab = ({
                   }
 
                   const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                  const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
+                  const dayGames = calendarGamesByDate.get(dateKey) ?? [];
 
                   return (
                     <div
                       key={dateKey}
                       className={[
                         styles.calendarDayCell,
-                        gameCount > 0 ? styles.calendarDayCellFilled : styles.calendarDayCellEmpty,
+                        dayGames.length > 0
+                          ? styles.calendarDayCellFilled
+                          : styles.calendarDayCellEmpty,
                       ]
                         .filter(Boolean)
                         .join(' ')}
                     >
-                      <span className={styles.calendarDayNumber}>{day}</span>
-                      <button
-                        type="button"
-                        className={styles.calendarGameCountCircle}
-                        onClick={() => setSelectedCalendarDay(dateKey)}
-                        aria-label={`View ${fmtDayHeading(dateKey)} games: ${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
-                      >
-                        <span className={styles.calendarGameCountValue}>{gameCount}</span>
-                        <span className={styles.calendarGameCountLabel}>
-                          {gameCount === 1 ? 'Game' : 'Games'}
-                        </span>
-                      </button>
-                      {!isEnded && (
-                        <div className={styles.calendarDayActions}>
-                          <Button
-                            variant="outlined"
-                            intent="accent"
-                            icon="playlist_add"
-                            size="sm"
-                            tooltip="Bulk Create"
-                            aria-label={`Bulk create games on ${fmtDayHeading(dateKey)}`}
-                            onClick={() => setBulkDate(dateKey)}
+                      <div className={styles.calendarDayHeader}>
+                        <span className={styles.calendarDayNumber}>{day}</span>
+                        {!isEnded && (
+                          <MoreActionsMenu
+                            variant="ghost"
+                            items={[
+                              {
+                                label: 'Create Game',
+                                icon: 'add',
+                                onClick: () => handleAdd(dateKey),
+                              },
+                              {
+                                label: 'Bulk Create',
+                                icon: 'playlist_add',
+                                onClick: () => setBulkDate(dateKey),
+                              },
+                            ]}
                           />
-                          <Button
-                            icon="add"
-                            size="sm"
-                            tooltip="Create Game"
-                            aria-label={`Create game on ${fmtDayHeading(dateKey)}`}
-                            onClick={() => handleAdd(dateKey)}
-                          />
+                        )}
+                      </div>
+                      {dayGames.length > 0 && (
+                        <div className={styles.calendarGameList}>
+                          {dayGames.map((game) => renderCalendarGamePill(game))}
                         </div>
                       )}
                     </div>
@@ -885,26 +918,6 @@ const SeasonGamesTab = ({
         updateGame={updateGame}
         onClose={handleFormClose}
       />
-
-      <Modal
-        open={selectedCalendarDay !== null}
-        title={selectedCalendarDay ? fmtDayHeading(selectedCalendarDay) : 'Games'}
-        onClose={() => setSelectedCalendarDay(null)}
-        size="lg"
-        hideFooter
-      >
-        {selectedCalendarGames.length === 0 ? (
-          <p className={styles.dayEmpty}>
-            {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
-          </p>
-        ) : (
-          <ul className={styles.list}>
-            {selectedCalendarGames.map((game) =>
-              renderGameListItem(game, { fromCalendarModal: true }),
-            )}
-          </ul>
-        )}
-      </Modal>
 
       <ConfirmModal
         open={confirmDelete !== null}

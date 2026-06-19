@@ -215,7 +215,9 @@
 
 .calendarEmptyCell,
 .calendarDayCell {
-  min-height: 140px;
+  // Square cells with a uniform height, whether or not the day has games.
+  aspect-ratio: 1 / 1;
+  min-height: 0;
   border: 1px solid $border;
   border-radius: $radius-md;
 }
@@ -227,12 +229,9 @@
 }
 
 .calendarDayCell {
-  position: relative;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $space-sm;
+  gap: $space-xs;
   padding: $space-sm;
   background: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
   color: $text-body;
@@ -249,92 +248,100 @@
   border-color: color-mix(in srgb, #{$border}, #{$accent} 28%);
 }
 
-.calendarDayCell:has(.calendarGameCountCircle:hover),
-.calendarDayCell:has(.calendarGameCountCircle:focus-visible) {
-  border-color: rgba($accent, 0.65);
-  background: rgba($accent, 0.07);
+.calendarDayHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-xs;
+  min-height: 28px;
 }
 
 .calendarDayNumber {
-  position: absolute;
-  top: $space-sm;
-  left: $space-sm;
   color: $text-bright;
   font-size: $font-sm;
   font-weight: 700;
   line-height: 1;
 }
 
-.calendarGameCountCircle {
+.calendarGameList {
   display: flex;
-  align-items: center;
-  justify-content: center;
   flex-direction: column;
-  width: 76px;
-  height: 76px;
-  border: 1px solid rgba($accent, 0.42);
-  border-radius: 999px;
-  background: radial-gradient(
-    circle,
-    rgba($accent, 0.2) 0 44%,
-    rgba($accent, 0.1) 66%,
-    rgba($accent, 0.04) 100%
-  );
-  color: $text-bright;
-  cursor: pointer;
-  font: inherit;
-  padding: 0;
-  box-shadow: inset 0 0 0 1px rgba($accent-light, 0.08);
+  gap: $space-xs;
+  // Fill the remaining square below the header; scroll when there are more games.
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-right: 3px;
+
+  // Custom scrollbar — thin $border thumb on a transparent track.
+  scrollbar-width: thin;
+  scrollbar-color: $border transparent;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border;
+    border-radius: $radius-md;
+  }
+}
+
+.calendarPillWrap {
+  display: flex;
+  width: 100%;
+}
+
+.calendarGamePill {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-sm;
+  padding: $space-xs $space-sm;
+  min-height: 1.9rem;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, #{$bg-card} 80%, #{$bg-page});
+  color: $text-body;
+  text-decoration: none;
+  font-size: $font-sm;
+  line-height: 1;
   transition:
     border-color $transition-fast ease,
-    box-shadow $transition-fast ease,
-    transform $transition-fast ease;
+    background $transition-fast ease;
 
   &:hover {
-    border-color: rgba($accent, 0.72);
-    box-shadow:
-      inset 0 0 0 1px rgba($accent-light, 0.12),
-      0 10px 24px rgba($accent, 0.14);
-    transform: translateY(-1px);
+    border-color: rgba($accent, 0.6);
+    background: rgba($accent, 0.08);
   }
 
   &:focus-visible {
     outline: 2px solid $accent;
-    outline-offset: 3px;
+    outline-offset: 1px;
   }
 }
 
-.calendarDayCellEmpty .calendarGameCountCircle {
-  border-color: $border;
-  background: radial-gradient(
-    circle,
-    rgba($bg-input, 0.85) 0 44%,
-    rgba($bg-input, 0.55) 66%,
-    rgba($bg-input, 0.25) 100%
-  );
-  color: $text-dim;
-  box-shadow: none;
-}
-
-.calendarGameCountValue {
-  font-size: $font-2xl;
-  font-weight: 800;
-  line-height: 1;
-}
-
-.calendarGameCountLabel {
-  margin-top: 2px;
-  font-size: $font-xs;
-  font-weight: 700;
-  line-height: 1;
-}
-
-.calendarDayActions {
+.calendarPillTeam {
   display: flex;
   align-items: center;
-  justify-content: center;
-  gap: $space-sm;
-  min-height: 32px;
+  gap: 4px;
+  min-width: 0;
+}
+
+.calendarPillMid {
+  flex: 0 0 auto;
+  font-weight: 700;
+  color: $text-dim;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendarPillLoser {
+  opacity: 0.5;
 }
 
 @media (max-width: 768px) {
@@ -348,11 +355,6 @@
 
   .calendarGrid {
     min-width: 760px;
-  }
-
-  .calendarEmptyCell,
-  .calendarDayCell {
-    min-height: 124px;
   }
 
   .dayCardAnchor {
