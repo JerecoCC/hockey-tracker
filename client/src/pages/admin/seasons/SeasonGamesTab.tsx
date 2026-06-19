@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
+import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
@@ -495,7 +496,10 @@ const SeasonGamesTab = ({
         className={styles.calendarPillWrap}
         text={`${game.away_team.name} @ ${game.home_team.name}`}
       >
-        <Link to={gameDetailsPath(game)} className={styles.calendarGamePill}>
+        <Link
+          to={gameDetailsPath(game)}
+          className={styles.calendarGamePill}
+        >
           <span
             className={[styles.calendarPillTeam, awayLost && styles.calendarPillLoser]
               .filter(Boolean)
@@ -506,7 +510,7 @@ const SeasonGamesTab = ({
               code={game.away_team.code}
               primaryColor={game.away_team.primary_color}
               textColor={game.away_team.text_color}
-              size={22}
+              size={26}
               shape="circle"
             />
           </span>
@@ -523,7 +527,7 @@ const SeasonGamesTab = ({
               code={game.home_team.code}
               primaryColor={game.home_team.primary_color}
               textColor={game.home_team.text_color}
-              size={22}
+              size={26}
               shape="circle"
             />
           </span>
@@ -860,39 +864,40 @@ const SeasonGamesTab = ({
               }}
               className={styles.dayCardAnchor}
             >
-              <Card
-                title={fmtDayHeading(dateKey)}
-                action={
-                  !isEnded && (
-                    <div style={{ display: 'flex', gap: '0.5rem' }}>
-                      <Button
-                        variant="outlined"
-                        intent="accent"
-                        icon="playlist_add"
-                        size="sm"
-                        tooltip="Bulk Create"
-                        onClick={() => setBulkDate(dateKey)}
-                      />
-                      <Button
-                        icon="add"
-                        size="sm"
-                        tooltip="Create Game"
-                        onClick={() => handleAdd(dateKey)}
-                      />
-                    </div>
-                  )
+              <Accordion
+                label={fmtDayHeading(dateKey)}
+                variant="static"
+                className={styles.dayAccordion}
+                hoverActions={
+                  !isEnded
+                    ? ([
+                        {
+                          icon: 'playlist_add',
+                          intent: 'accent',
+                          tooltip: 'Bulk Create',
+                          onClick: () => setBulkDate(dateKey),
+                        },
+                        {
+                          icon: 'add',
+                          tooltip: 'Create Game',
+                          onClick: () => handleAdd(dateKey),
+                        },
+                      ] satisfies AccordionAction[])
+                    : undefined
                 }
               >
-                {dayGames.length === 0 ? (
-                  <p className={styles.dayEmpty}>
-                    {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
-                  </p>
-                ) : (
-                  <ul className={styles.list}>
-                    {dayGames.map((game) => renderGameListItem(game))}
-                  </ul>
-                )}
-              </Card>
+                <div className={styles.dayAccordionBody}>
+                  {dayGames.length === 0 ? (
+                    <p className={styles.dayEmpty}>
+                      {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
+                    </p>
+                  ) : (
+                    <ul className={styles.list}>
+                      {dayGames.map((game) => renderGameListItem(game))}
+                    </ul>
+                  )}
+                </div>
+              </Accordion>
             </div>
           ))}
         </div>

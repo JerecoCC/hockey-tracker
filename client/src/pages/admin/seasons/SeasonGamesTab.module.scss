@@ -1,5 +1,5 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 // ── Title divider (vertical rule between "Games" and the week nav) ────
 .titleDivider {
@@ -185,6 +185,14 @@
   scroll-margin-top: 190px;
 }
 
+.dayAccordion {
+  background: $bg-card;
+}
+
+.dayAccordionBody {
+  padding: $space-md;
+}
+
 .calendarCard {
   margin-top: $space-md;
 }
@@ -302,7 +310,7 @@
   align-items: center;
   justify-content: space-between;
   gap: $space-sm;
-  padding: $space-xs $space-sm;
+  padding: $space-sm;
   min-height: 1.9rem;
   border: 1px solid $border;
   border-radius: $radius-sm;
