@@ -19,12 +19,16 @@
 .dayCell {
   aspect-ratio: 1 / 1;
   min-height: 0;
-  border: 1px solid $border;
   border-radius: $radius-md;
+}
+
+.dayCell {
+  border: 2px solid $border;
 }
 
 .emptyCell {
   background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
+  border: 1px solid $border;
   border-style: dashed;
   opacity: 0.55;
 }
@@ -54,7 +58,10 @@
   overflow-x: hidden;
   overflow-y: auto;
   padding: var(--month-calendar-cell-padding);
+  padding-right: 0;
+  box-sizing: border-box;
   scrollbar-color: $border transparent;
+  scrollbar-gutter: stable;
   scrollbar-width: thin;
 
   &::-webkit-scrollbar {
@@ -74,16 +81,12 @@
   }
 }
 
-.dayBodyScrollable {
-  scrollbar-gutter: stable;
-  padding-right: 0;
-}
-
 .dayContent {
   display: flex;
   flex: 1 0 auto;
   flex-direction: column;
   width: 100%;
+  min-width: 0;
   min-height: 100%;
   box-sizing: border-box;
 

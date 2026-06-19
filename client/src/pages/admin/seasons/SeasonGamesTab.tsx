@@ -92,6 +92,12 @@ const formatStatusLabel = (game: GameRecord): string => {
   return 'Final';
 };
 
+const shouldShowGameScore = (game: GameRecord) =>
+  game.status === 'final' ||
+  game.status === 'in_progress' ||
+  game.away_score > 0 ||
+  game.home_score > 0;
+
 // ── Filter options ────────────────────────────────────────────────────────────
 
 const GAME_TYPE_OPTIONS: SelectOption[] = [
@@ -469,10 +475,22 @@ const SeasonGamesTab = ({
   // Compact game representation for a calendar day cell — mirrors the user games
   // calendar (away vs home in one row), clickable to open the game.
   const renderCalendarGamePill = (game: GameRecord) => {
-    const showScore = game.status === 'final' || game.status === 'in_progress';
+    const showScore = shouldShowGameScore(game);
     const isFinal = game.status === 'final';
     const awayLost = isFinal && game.away_score < game.home_score;
     const homeLost = isFinal && game.home_score < game.away_score;
+    const awayScoreStatus =
+      !showScore || game.away_score === game.home_score
+        ? 'pending'
+        : game.away_score > game.home_score
+          ? 'win'
+          : 'lose';
+    const homeScoreStatus =
+      !showScore || game.home_score === game.away_score
+        ? 'pending'
+        : game.home_score > game.away_score
+          ? 'win'
+          : 'lose';
     return (
       <CalendarGameListItem
         key={game.id}
@@ -486,6 +504,7 @@ const SeasonGamesTab = ({
           primaryColor: game.away_team.primary_color,
           textColor: game.away_team.text_color,
           score: game.away_score,
+          scoreStatus: awayScoreStatus,
           dimmed: awayLost,
         }}
         homeTeam={{
@@ -494,6 +513,7 @@ const SeasonGamesTab = ({
           primaryColor: game.home_team.primary_color,
           textColor: game.home_team.text_color,
           score: game.home_score,
+          scoreStatus: homeScoreStatus,
           dimmed: homeLost,
         }}
       />
@@ -519,7 +539,7 @@ const SeasonGamesTab = ({
         }}
         awayScore={game.away_score}
         homeScore={game.home_score}
-        showScore={game.status === 'final' || game.status === 'in_progress'}
+        showScore={shouldShowGameScore(game)}
         isFinal={game.status === 'final'}
         statusLabel={formatStatusLabel(game)}
         statusIntent={STATUS_INTENT[game.status]}
@@ -754,26 +774,40 @@ const SeasonGamesTab = ({
             <div className={styles.calendarScroll}>
               <MonthCalendar
                 month={calendarMonth}
-                getDayHeaderRight={({ dateKey }) =>
-                  !isEnded ? (
-                    <MoreActionsMenu
-                      variant="ghost"
-                      buttonClassName={styles.calendarDayActionButton}
-                      items={[
-                        {
-                          label: 'Create Game',
-                          icon: 'add',
-                          onClick: () => handleAdd(dateKey),
-                        },
-                        {
-                          label: 'Bulk Create',
-                          icon: 'playlist_add',
-                          onClick: () => setBulkDate(dateKey),
-                        },
-                      ]}
-                    />
-                  ) : undefined
-                }
+                getDayHeaderRight={({ dateKey }) => {
+                  const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
+                  if (gameCount === 0 && isEnded) return undefined;
+                  return (
+                    <span className={styles.calendarDayHeaderRight}>
+                      {gameCount > 0 && (
+                        <span
+                          className={styles.calendarDayCount}
+                          aria-label={`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
+                        >
+                          {gameCount} {gameCount === 1 ? 'Game' : 'Games'}
+                        </span>
+                      )}
+                      {!isEnded && (
+                        <MoreActionsMenu
+                          variant="ghost"
+                          buttonClassName={styles.calendarDayActionButton}
+                          items={[
+                            {
+                              label: 'Create Game',
+                              icon: 'add',
+                              onClick: () => handleAdd(dateKey),
+                            },
+                            {
+                              label: 'Bulk Create',
+                              icon: 'playlist_add',
+                              onClick: () => setBulkDate(dateKey),
+                            },
+                          ]}
+                        />
+                      )}
+                    </span>
+                  );
+                }}
                 renderDayContent={({ dateKey }) => {
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
                   return dayGames.length > 0 ? (

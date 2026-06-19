@@ -204,6 +204,33 @@
   flex-direction: column;
   gap: $space-xs;
   width: 100%;
+
+  > :last-child {
+    margin-bottom: $space-sm;
+  }
+}
+
+.calendarDayHeaderRight {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  min-width: 0;
+}
+
+.calendarDayCount {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  padding: 0.1rem $space-xs;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: rgba($bg-card, 0.72);
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .calendarDayActionButton.calendarDayActionButton {
