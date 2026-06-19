@@ -143,12 +143,55 @@ export interface NhlAutofillResult {
   warnings: string[];
 }
 
+export interface NhlAutofillProgress {
+  step: string;
+  message: string;
+  completed?: number;
+  total?: number;
+  refresh?: boolean;
+}
+
+interface NhlAutofillOptions {
+  onProgress?: (progress: NhlAutofillProgress) => void | Promise<void>;
+}
+
 type ShootoutAttemptPayload = Pick<ShootoutAttempt, 'team_id' | 'shooter_id' | 'scored'>;
+
+async function emitAutofillProgress(
+  onProgress: NhlAutofillOptions['onProgress'],
+  progress: NhlAutofillProgress,
+) {
+  if (!onProgress) return;
+  await onProgress(progress);
+  await new Promise<void>((resolve) => {
+    if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+      setTimeout(resolve, 0);
+      return;
+    }
+    window.requestAnimationFrame(() => resolve());
+  });
+}
+
+function formatAutofillPeriod(periodNumber: number) {
+  if (periodNumber <= 3) return `${periodNumber}${periodOrdinalSuffix(periodNumber)}`;
+  if (periodNumber === 4) return 'overtime';
+  return `overtime ${periodNumber - 3}`;
+}
+
+function periodOrdinalSuffix(periodNumber: number) {
+  if (periodNumber === 1) return 'st';
+  if (periodNumber === 2) return 'nd';
+  if (periodNumber === 3) return 'rd';
+  return 'th';
+}
 
 export async function autofillGameFromNhlGamecenter(
   game: GameRecord,
   input: string,
+  options: NhlAutofillOptions = {},
 ): Promise<NhlAutofillResult> {
+  const emitProgress = (progress: NhlAutofillProgress) =>
+    emitAutofillProgress(options.onProgress, progress);
   const context: NhlGameIdContext = {
     seasonName: game.season_name,
     scheduledAt: game.scheduled_at,
@@ -158,6 +201,11 @@ export async function autofillGameFromNhlGamecenter(
   if (!gamecenterId) {
     throw new Error('Enter an NHL game number, full GameCenter id, or GameCenter URL.');
   }
+
+  await emitProgress({
+    step: 'fetch',
+    message: `Fetching NHL GameCenter data for game ${gamecenterId}...`,
+  });
 
   const base = `https://api-web.nhle.com/v1/gamecenter/${gamecenterId}`;
   const rosterReportUrl = buildRosterReportUrl(gamecenterId);
@@ -173,6 +221,11 @@ export async function autofillGameFromNhlGamecenter(
     fetchOptionalTextReports(goalieToiReportUrls),
   ]);
   const warnings: string[] = [];
+
+  await emitProgress({
+    step: 'match',
+    message: 'Matching NHL teams and existing game data...',
+  });
 
   assertTeamsMatch(game, boxscore);
   const shootoutGame = isShootoutGame(boxscore);
@@ -199,6 +252,11 @@ export async function autofillGameFromNhlGamecenter(
     fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
     fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
   ]);
+
+  await emitProgress({
+    step: 'roster',
+    message: 'Matching dressed players to the local roster...',
+  });
 
   // Auto-create any dressed roster-report players missing from the local season
   // roster so matching below doesn't fail on recent call-ups/trades.
@@ -229,9 +287,21 @@ export async function autofillGameFromNhlGamecenter(
     : matched;
 
   await syncGameRoster(game, rosterMatched);
+  await emitProgress({
+    step: 'roster',
+    message: `Roster saved (${rosterMatched.away.length + rosterMatched.home.length} players).`,
+    refresh: true,
+  });
   const lineupsSet = rosterReport
     ? await syncStartingLineups(game, rosterMatched, warnings)
     : 0;
+  if (lineupsSet > 0) {
+    await emitProgress({
+      step: 'lineups',
+      message: 'Starting lineups saved.',
+      refresh: true,
+    });
+  }
 
   const allMatchedByNhlId = new Map<number, MatchedPlayer>();
   [...matched.away, ...matched.home].forEach((player) => {
@@ -253,9 +323,24 @@ export async function autofillGameFromNhlGamecenter(
     time_start: reportTimes.startIso ?? undefined,
   });
 
+  await emitProgress({
+    step: 'start',
+    message: 'Game moved to in-progress. Filling periods...',
+    refresh: true,
+  });
+
   const goalsByPeriod = groupGoalsByPeriodNumber(goals);
-  for (const periodNumber of getPlayedPeriodNumbers(boxscore, goals, shootoutGame)) {
+  const playedPeriodNumbers = getPlayedPeriodNumbers(boxscore, goals, shootoutGame);
+  let processedGoals = 0;
+  for (const [periodIndex, periodNumber] of playedPeriodNumbers.entries()) {
     await apiPatch(`/admin/games/${game.id}`, gameProgressPatchForPeriod(periodNumber));
+    await emitProgress({
+      step: 'period',
+      message: `Filling ${formatAutofillPeriod(periodNumber)} period...`,
+      completed: periodIndex,
+      total: playedPeriodNumbers.length,
+      refresh: true,
+    });
 
     for (const goal of goalsByPeriod.get(periodNumber) ?? []) {
       const teamId = goal.teamSide === 'away' ? game.away_team.id : game.home_team.id;
@@ -286,6 +371,14 @@ export async function autofillGameFromNhlGamecenter(
         } else {
           goalsSkipped += 1;
         }
+        processedGoals += 1;
+        await emitProgress({
+          step: 'goals',
+          message: `Checked goal ${processedGoals} of ${goals.length}.`,
+          completed: processedGoals,
+          total: goals.length,
+          refresh: true,
+        });
         continue;
       }
 
@@ -298,7 +391,23 @@ export async function autofillGameFromNhlGamecenter(
       existingGoalsByKey.set(key, createdGoal);
       existingGoalsByKey.set(goalAutofillKey(createdGoal), createdGoal);
       goalsCreated += 1;
+      processedGoals += 1;
+      await emitProgress({
+        step: 'goals',
+        message: `Added goal ${processedGoals} of ${goals.length}.`,
+        completed: processedGoals,
+        total: goals.length,
+        refresh: true,
+      });
     }
+
+    await emitProgress({
+      step: 'period',
+      message: `Finished ${formatAutofillPeriod(periodNumber)} period.`,
+      completed: periodIndex + 1,
+      total: playedPeriodNumbers.length,
+      refresh: true,
+    });
   }
 
   const playByPlayShootoutAttempts = shootoutGame
@@ -333,12 +442,26 @@ export async function autofillGameFromNhlGamecenter(
       );
       existingShootoutAttemptKeys.add(key);
       shootoutAttemptsCreated += 1;
+      await emitProgress({
+        step: 'shootout',
+        message: `Added shootout attempt ${index + 1} of ${shootoutAttempts.length}.`,
+        completed: index + 1,
+        total: shootoutAttempts.length,
+        refresh: true,
+      });
     }
   }
 
   const periodShots = getPeriodShots(playByPlay, boxscore);
-  for (const row of periodShots) {
+  for (const [index, row] of periodShots.entries()) {
     await apiPatch(`/admin/games/${game.id}/shots`, row);
+    await emitProgress({
+      step: 'shots',
+      message: `Saved shots for period ${row.period}.`,
+      completed: index + 1,
+      total: periodShots.length,
+      refresh: true,
+    });
   }
 
   const goalieStats = getGoalieStats(game, boxscore, matched);
@@ -353,12 +476,26 @@ export async function autofillGameFromNhlGamecenter(
   if (goalieStints.length > 0) {
     await syncGoalieStints(game.id, goalieStints);
   } else {
-    for (const stat of goalieStats) {
+    for (const [index, stat] of goalieStats.entries()) {
       await apiPut<GoalieStatRecord, UpsertGoalieStatData>(
         `/admin/games/${game.id}/goalie-stats`,
         stat,
       );
+      await emitProgress({
+        step: 'goalies',
+        message: `Saved goalie stats ${index + 1} of ${goalieStats.length}.`,
+        completed: index + 1,
+        total: goalieStats.length,
+        refresh: true,
+      });
     }
+  }
+  if (goalieStints.length > 0) {
+    await emitProgress({
+      step: 'goalies',
+      message: `Saved ${goalieStints.length} goalie stint${goalieStints.length === 1 ? '' : 's'}.`,
+      refresh: true,
+    });
   }
 
   const reportStars = gameSummaryReport
@@ -366,6 +503,10 @@ export async function autofillGameFromNhlGamecenter(
     : [];
   const inferredStars = inferStars(boxscore, goals, matched);
   const stars = [...new Set([...reportStars, ...inferredStars])].slice(0, 3);
+  await emitProgress({
+    step: 'final',
+    message: 'Finalizing game details and three stars...',
+  });
   await apiPatch(`/admin/games/${game.id}`, {
     scheduled_at: boxscore.gameDate ?? undefined,
     scheduled_time: boxscore.startTimeUTC ? easternScheduledTime(boxscore.startTimeUTC) : undefined,
@@ -380,6 +521,11 @@ export async function autofillGameFromNhlGamecenter(
     star_1_id: stars[0] ?? undefined,
     star_2_id: stars[1] ?? undefined,
     star_3_id: stars[2] ?? undefined,
+  });
+  await emitProgress({
+    step: 'complete',
+    message: 'NHL auto-fill complete.',
+    refresh: true,
   });
 
   if (stars.length < 3) warnings.push('Less than three stars could be inferred from matched players.');

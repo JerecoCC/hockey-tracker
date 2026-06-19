@@ -248,6 +248,113 @@
   text-align: center;
 }
 
+.gameAutofillStatus {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  // Stay visible while scrolling, pinned just below the sticky scoreboard
+  // (its dynamic height sets `top` inline; this is the pre-measurement fallback).
+  // Sits beneath the scoreboard (z-index 4) so it never overlaps on top of it.
+  position: sticky;
+  top: 52px;
+  z-index: 3;
+  margin: -$space-sm 0 $space-lg;
+  padding: $space-lg $space-xl;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
+  background: $bg-card;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
+}
+
+.gameAutofillStatusHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  min-width: 0;
+}
+
+.gameAutofillPulse {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  background: $info;
+  box-shadow: 0 0 0 0 rgba($info, 0.5);
+  animation: gameAutofillPulse 1.4s ease-out infinite;
+}
+
+.gameAutofillStatusText {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+
+  strong {
+    color: $text-bright;
+    font-size: $font-base;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  span {
+    color: $text-dim;
+    font-size: $font-sm;
+    line-height: 1.25;
+    overflow-wrap: anywhere;
+  }
+}
+
+.gameAutofillProgress {
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 999px;
+  background: rgba($bg-page, 0.8);
+
+  &::-webkit-progress-bar {
+    background: rgba($bg-page, 0.8);
+  }
+
+  &::-webkit-progress-value {
+    border-radius: 999px;
+    background: $info;
+  }
+
+  &::-moz-progress-bar {
+    border-radius: 999px;
+    background: $info;
+  }
+}
+
+.gameAutofillLockedRegion {
+  opacity: 0.62;
+
+  :is(button, a, input, select, textarea, [role="button"]) {
+    pointer-events: none;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    cursor: not-allowed;
+  }
+}
+
+@keyframes gameAutofillPulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba($info, 0.45);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba($info, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba($info, 0);
+  }
+}
+
 // ── Period scores table ────────────────────────────────────────────────────────
 .periodsTable {
   width: 100%;
@@ -1225,6 +1332,10 @@
   .nhlGoalieCheckerTeamHeader {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .gameAutofillStatusHeader {
+    align-items: flex-start;
   }
 
   .nhlGoalieCheckerStint {

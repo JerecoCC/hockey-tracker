@@ -20,10 +20,20 @@ interface TabsProps {
   className?: string;
   /** When true, all tab buttons are dimmed and non-interactive. */
   disabled?: boolean;
+  /** When true, inactive tab panels stay mounted and are only hidden. */
+  keepMounted?: boolean;
 }
 
 const Tabs = (props: TabsProps) => {
-  const { tabs, activeIndex, defaultIndex = 0, onTabChange, className, disabled = false } = props;
+  const {
+    tabs,
+    activeIndex,
+    defaultIndex = 0,
+    onTabChange,
+    className,
+    disabled = false,
+    keepMounted = false,
+  } = props;
   const [internal, setInternal] = useState(defaultIndex);
   const requestedActive = activeIndex ?? internal;
   const active = Math.min(Math.max(requestedActive, 0), Math.max(tabs.length - 1, 0));
@@ -84,7 +94,25 @@ const Tabs = (props: TabsProps) => {
         ))}
       </div>
 
-      <div className={styles.tabPanel}>{tabs[active]?.content}</div>
+      {keepMounted ? (
+        tabs.map((tab, i) => (
+          <div
+            key={tab.label}
+            className={styles.tabPanel}
+            role="tabpanel"
+            hidden={active !== i}
+          >
+            {tab.content}
+          </div>
+        ))
+      ) : (
+        <div
+          className={styles.tabPanel}
+          role="tabpanel"
+        >
+          {tabs[active]?.content}
+        </div>
+      )}
     </div>
   );
 };

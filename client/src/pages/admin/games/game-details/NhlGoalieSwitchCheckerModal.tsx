@@ -9,6 +9,7 @@ import { fetchNhlGoalieSwitchReport, type NhlGoalieSwitchReport } from './nhlGoa
 import {
   autofillGameFromNhlGamecenter,
   nhlAutofillApiError,
+  type NhlAutofillProgress,
 } from './nhlGameAutofill';
 import type { GameRecord } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
@@ -19,7 +20,7 @@ interface Props {
   onClose: () => void;
   setReportData: (data: NhlGoalieSwitchReport | null) => void;
   onLoadingChange?: (loading: boolean) => void;
-  onAutofillChange?: (loading: boolean) => void;
+  onAutofillChange?: (progress: NhlAutofillProgress | null) => void;
 }
 
 type FormValues = {
@@ -55,6 +56,23 @@ const NhlGoalieSwitchCheckerModal = ({
   const canUseGameNumber = isValid && !!String(gameNumber ?? '').trim();
   const canAutofillGame = game.status !== 'final';
 
+  const invalidateGameDetailQueries = () =>
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['games', game.id] }),
+      queryClient.invalidateQueries({ queryKey: ['game-goals', game.id] }),
+      queryClient.invalidateQueries({ queryKey: ['game-roster', game.id] }),
+      queryClient.invalidateQueries({ queryKey: ['game-lineup', game.id] }),
+      queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', game.id] }),
+      queryClient.invalidateQueries({ queryKey: ['shootout-attempts', game.id] }),
+    ]);
+
+  const handleAutofillProgress = async (progress: NhlAutofillProgress) => {
+    onAutofillChange?.(progress);
+    if (progress.refresh) {
+      await invalidateGameDetailQueries();
+    }
+  };
+
   const onSubmit = handleSubmit(async (values) => {
     setReportData(null);
     setChecking(true);
@@ -82,7 +100,10 @@ const NhlGoalieSwitchCheckerModal = ({
     setReportData(null);
     setFilling(true);
     onLoadingChange?.(true);
-    onAutofillChange?.(true);
+    onAutofillChange?.({
+      step: 'start',
+      message: 'Starting NHL auto-fill...',
+    });
     onClose();
 
     const goalieSwitchReportPromise = fetchNhlGoalieSwitchReport(input, {
@@ -95,7 +116,9 @@ const NhlGoalieSwitchCheckerModal = ({
     );
 
     try {
-      const result = await autofillGameFromNhlGamecenter(game, input);
+      const result = await autofillGameFromNhlGamecenter(game, input, {
+        onProgress: handleAutofillProgress,
+      });
       const goalieSwitchReportResult = await goalieSwitchReportPromise;
       const reportWarning = goalieSwitchReportResult.error
         ? nhlAutofillApiError(
@@ -108,15 +131,8 @@ const NhlGoalieSwitchCheckerModal = ({
         setReportData(goalieSwitchReportResult.report);
       }
 
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['games', game.id] }),
-        queryClient.invalidateQueries({ queryKey: ['games'] }),
-        queryClient.invalidateQueries({ queryKey: ['game-goals', game.id] }),
-        queryClient.invalidateQueries({ queryKey: ['game-roster', game.id] }),
-        queryClient.invalidateQueries({ queryKey: ['game-lineup', game.id] }),
-        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', game.id] }),
-        queryClient.invalidateQueries({ queryKey: ['shootout-attempts', game.id] }),
-      ]);
+      await invalidateGameDetailQueries();
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
       toast.success(
         `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`,
       );
@@ -130,7 +146,7 @@ const NhlGoalieSwitchCheckerModal = ({
     } finally {
       setFilling(false);
       onLoadingChange?.(false);
-      onAutofillChange?.(false);
+      onAutofillChange?.(null);
     }
   };
 

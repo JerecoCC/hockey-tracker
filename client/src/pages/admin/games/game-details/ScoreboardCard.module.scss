@@ -303,6 +303,16 @@ $scoreboard-stripe-overlap: 8px;
   &:hover {
     opacity: 0.75;
   }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &:disabled:hover {
+    opacity: 0.55;
+  }
+
   &:focus-visible {
     outline: 2px solid $accent;
     outline-offset: 4px;

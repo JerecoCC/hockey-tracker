@@ -45,6 +45,7 @@ interface Props {
   /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
   leagueId?: string;
   leagueCode?: string | null;
+  disabled?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -106,6 +107,7 @@ const ScoreboardCard = ({
   overtimeSuffix,
   leagueId,
   leagueCode,
+  disabled = false,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -187,8 +189,9 @@ const ScoreboardCard = ({
           <button
             type="button"
             className={styles.teamLogoBtn}
+            disabled={disabled}
             onClick={
-              leagueId
+              leagueId && !disabled
                 ? () =>
                     navigate(
                       buildTeamDetailsPath({
@@ -330,8 +333,9 @@ const ScoreboardCard = ({
           <button
             type="button"
             className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
+            disabled={disabled}
             onClick={
-              leagueId
+              leagueId && !disabled
                 ? () =>
                     navigate(
                       buildTeamDetailsPath({

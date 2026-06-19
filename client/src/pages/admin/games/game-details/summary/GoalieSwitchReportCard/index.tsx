@@ -7,10 +7,11 @@ import { useEffect, useState } from 'react';
 import Button from '@/components/Button/Button';
 import styles from '../../GameDetailsPage.module.scss';
 import { GameRecord } from '@/hooks/useGames';
+import type { NhlAutofillProgress } from '../../nhlGameAutofill';
 
 type Props = {
   game: GameRecord;
-  onAutofillChange?: (loading: boolean) => void;
+  onAutofillChange?: (progress: NhlAutofillProgress | null) => void;
 };
 
 const storageKey = (gameId: string) => `nhl-goalie-switch-report:${gameId}`;

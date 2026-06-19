@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Tabs from '@/components/Tabs/Tabs';
@@ -11,9 +11,11 @@ import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import type { NhlAutofillProgress } from './nhlGameAutofill';
 import GameLineupsTab from './lineups/GameLineupsTab';
 import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
+import styles from './GameDetailsPage.module.scss';
 
 import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
 import { DATE_FMT_SHORT } from './formatUtils';
@@ -169,8 +171,41 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
-  const [gameAutofilling, setGameAutofilling] = useState(false);
+  const [gameAutofillProgress, setGameAutofillProgress] =
+    useState<NhlAutofillProgress | null>(null);
+  const isGameAutofilling = !!gameAutofillProgress;
   const isEditMode = isAdminView;
+
+  // Keep the sticky auto-fill banner pinned just below the sticky scoreboard.
+  // The scoreboard height is dynamic, so measure it and offset the banner's
+  // sticky `top` accordingly (the scoreboard is not sticky on mobile).
+  const autofillBannerRef = useRef<HTMLDivElement>(null);
+  const [autofillBannerTop, setAutofillBannerTop] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isGameAutofilling) return;
+    const banner = autofillBannerRef.current;
+    const scoreboard = banner?.previousElementSibling as HTMLElement | null;
+    if (!banner || !scoreboard) return;
+
+    const HEADER_OFFSET = 52;
+    const MOBILE_HEADER_OFFSET = 88;
+    const GAP = 8;
+    const update = () => {
+      if (window.innerWidth <= 768) {
+        setAutofillBannerTop(MOBILE_HEADER_OFFSET);
+        return;
+      }
+      setAutofillBannerTop(HEADER_OFFSET + scoreboard.getBoundingClientRect().height + GAP);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(scoreboard);
+    window.addEventListener('resize', update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [isGameAutofilling]);
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -446,21 +481,38 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       ? [{ id: PERIOD.SHOOTOUT, label: PERIOD.SHOOTOUT, shortLabel: PERIOD.SHOOTOUT }]
       : []),
   ];
+  const lockTabContent = (content: ReactNode) => (
+    <div
+      className={isGameAutofilling ? styles.gameAutofillLockedRegion : undefined}
+      aria-disabled={isGameAutofilling || undefined}
+      data-autofill-locked={isGameAutofilling || undefined}
+      inert={isGameAutofilling ? '' : undefined}
+      onClickCapture={
+        isGameAutofilling
+          ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          : undefined
+      }
+      onKeyDownCapture={
+        isGameAutofilling
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }
+          : undefined
+      }
+    >
+      {content}
+    </div>
+  );
 
   return (
     <>
-      {gameAutofilling && (
-        <LoadingSpinner
-          message="Auto-filling game from NHL data..."
-          layout="page"
-          size="lg"
-        />
-      )}
-
-      <div
-        aria-hidden={gameAutofilling}
-        style={{ display: gameAutofilling ? 'none' : 'contents' }}
-      >
+      <div style={{ display: 'contents' }}>
         {/* ── Scoreboard card ── */}
         <ScoreboardCard
           game={game}
@@ -472,17 +524,46 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           overtimeSuffix={overtimeSuffix}
           leagueId={isAdminView ? leagueId : undefined}
           leagueCode={game.league_code}
+          disabled={isGameAutofilling}
         />
+
+        {gameAutofillProgress && (
+          <div
+            ref={autofillBannerRef}
+            className={styles.gameAutofillStatus}
+            style={autofillBannerTop != null ? { top: `${autofillBannerTop}px` } : undefined}
+            role="status"
+            aria-live="polite"
+            aria-label={gameAutofillProgress.message}
+          >
+            <div className={styles.gameAutofillStatusHeader}>
+              <span className={styles.gameAutofillPulse} />
+              <div className={styles.gameAutofillStatusText}>
+                <strong>Auto-filling NHL game</strong>
+                <span>{gameAutofillProgress.message}</span>
+              </div>
+            </div>
+            {gameAutofillProgress.total ? (
+              <progress
+                className={styles.gameAutofillProgress}
+                value={gameAutofillProgress.completed ?? 0}
+                max={gameAutofillProgress.total}
+                aria-label="Auto-fill progress"
+              />
+            ) : null}
+          </div>
+        )}
 
         {/* ── Tabs ── */}
         <Tabs
           activeIndex={activeTab}
           onTabChange={handleTabChange}
+          keepMounted={isGameAutofilling}
           tabs={[
             {
               label: 'Summary',
               icon: 'apps',
-              content: (
+              content: lockTabContent(
                 <GameSummaryTab
                   game={game}
                   isFinal={isFinal}
@@ -521,14 +602,14 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                   updateGameInfo={updateGameInfo}
                   updatePeriodShots={updatePeriodShots}
                   deleteGame={deleteGame}
-                  onGameAutofillChange={setGameAutofilling}
-                />
+                  onGameAutofillChange={setGameAutofillProgress}
+                />,
               ),
             },
             {
               label: 'Lineups',
               icon: 'set_lineup',
-              content: (
+              content: lockTabContent(
                 <GameLineupsTab
                   game={game}
                   isEditMode={isEditMode}
@@ -546,7 +627,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                   saveTeamLineup={saveTeamLineup}
                   addToRoster={addToRoster}
                   removeFromRoster={removeFromRoster}
-                />
+                />,
               ),
             },
           ]}

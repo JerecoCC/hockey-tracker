@@ -36,6 +36,7 @@ import { PERIOD, PERIOD_TITLE_LABEL, otPeriodId } from '../constants';
 import { formatPlayerName } from '../formatUtils';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
+import type { NhlAutofillProgress } from '../nhlGameAutofill';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -86,7 +87,7 @@ interface Props {
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
-  onGameAutofillChange?: (loading: boolean) => void;
+  onGameAutofillChange?: (progress: NhlAutofillProgress | null) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
