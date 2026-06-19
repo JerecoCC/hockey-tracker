@@ -135,6 +135,8 @@ let existingGoalieStatsData: unknown[];
 // so the post-creation roster re-fetch can return them.
 let extraPlayers: Array<Record<string, unknown>>;
 let createdPlayerStore: Map<string, Record<string, unknown>>;
+// League-wide roster returned for the cross-team duplicate check (league_id lookup).
+let leagueRosterPlayers: Array<Record<string, unknown>>;
 
 describe('autofillGameFromNhlGamecenter', () => {
   beforeEach(() => {
@@ -150,6 +152,7 @@ describe('autofillGameFromNhlGamecenter', () => {
     existingGoalieStatsData = [];
     extraPlayers = [];
     createdPlayerStore = new Map();
+    leagueRosterPlayers = [];
     mockedAxios.get.mockImplementation((url, config) => {
       if (String(url).endsWith('/admin/games/nhl-api')) {
         const targetUrl = String(config?.params?.url ?? '');
@@ -175,6 +178,10 @@ describe('autofillGameFromNhlGamecenter', () => {
         return Promise.resolve({ data: existingGoalieStatsData });
       }
       if (String(url).endsWith('/admin/players')) {
+        // League-wide lookup (cross-team duplicate check): no team_id, has league_id.
+        if (config?.params?.league_id && !config?.params?.team_id) {
+          return Promise.resolve({ data: leagueRosterPlayers });
+        }
         return Promise.resolve({
           data: [...localPlayers, ...extraPlayers].filter(
             (player) => player.team_id === config?.params?.team_id,
@@ -625,6 +632,48 @@ describe('autofillGameFromNhlGamecenter', () => {
     expect(result.warnings).toEqual(
       expect.arrayContaining([expect.stringContaining('#19 Norman Mystery')]),
     );
+  });
+
+  it('stops and reports when a missing player already exists on another team', async () => {
+    const gameWithLeague = { ...game, league_id: 'nhl-league' } as typeof game;
+    // #19 is dressed for MIN in the report, but the same player ("Nicholas Mystery")
+    // is already rostered on CAR — should halt instead of creating a duplicate.
+    leagueRosterPlayers = [
+      {
+        id: 'mystery-existing',
+        first_name: 'Nicholas',
+        last_name: 'Mystery',
+        team_id: 'car-team',
+        team_code: 'CAR',
+      },
+    ];
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr><td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td></tr>
+              <tr><td>19</td><td>L</td><td>Nick Mystery</td></tr>
+            </table>
+          </td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).rejects.toThrow(
+      /already exist.* on another team/i,
+    );
+    await expect(autofillGameFromNhlGamecenter(gameWithLeague, '317')).rejects.toThrow(
+      '#19 Nick Mystery → MIN (currently on CAR)',
+    );
+    // No duplicate player is created.
+    expect(
+      mockedAxios.post.mock.calls.filter(([url]) => String(url).endsWith('/admin/players/bulk')),
+    ).toHaveLength(0);
   });
 
   it('sets start and end times from the club playing roster header', async () => {

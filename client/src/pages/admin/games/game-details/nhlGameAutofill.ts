@@ -258,6 +258,43 @@ export async function autofillGameFromNhlGamecenter(
     message: 'Matching dressed players to the local roster...',
   });
 
+  // Before auto-creating, make sure a "missing" player isn't simply on the wrong
+  // team in the database (e.g. a trade not yet recorded). Creating a duplicate
+  // would be wrong, so stop and tell the user to move that player first.
+  if (rosterReport) {
+    const leaguePlayers = await fetchLeaguePlayers(game);
+    if (leaguePlayers.length > 0) {
+      const conflicts = [
+        ...findCrossTeamPlayerConflicts(
+          leaguePlayers,
+          game.away_team.id,
+          rosterReport.players.away,
+          initialAwayPlayers,
+        ).map((conflict) => ({ ...conflict, targetCode: game.away_team.code })),
+        ...findCrossTeamPlayerConflicts(
+          leaguePlayers,
+          game.home_team.id,
+          rosterReport.players.home,
+          initialHomePlayers,
+        ).map((conflict) => ({ ...conflict, targetCode: game.home_team.code })),
+      ];
+      if (conflicts.length > 0) {
+        const lines = conflicts
+          .map(
+            (conflict) =>
+              `• #${conflict.reportPlayer.sweaterNumber} ${conflict.reportPlayer.name} → ${conflict.targetCode} (currently on ${conflict.existing.team_code ?? 'another team'})`,
+          )
+          .join('\n');
+        throw new Error(
+          `Auto-fill stopped — ${conflicts.length} ${pluralize('player', conflicts.length)} in the roster ` +
+            `report already ${conflicts.length === 1 ? 'exists' : 'exist'} on another team. ` +
+            `Move ${conflicts.length === 1 ? 'this player' : 'these players'} to the correct team ` +
+            `first, then re-run auto-fill:\n${lines}`,
+        );
+      }
+    }
+  }
+
   // Auto-create any dressed roster-report players missing from the local season
   // roster so matching below doesn't fail on recent call-ups/trades.
   const awayPlayers = rosterReport
@@ -765,6 +802,81 @@ function splitReportName(fullName: string): { firstName: string; lastName: strin
     return { firstName: only, lastName: only };
   }
   return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+
+interface LeaguePlayer {
+  id: string;
+  first_name: string;
+  last_name: string;
+  team_id: string | null;
+  team_code: string | null;
+}
+
+/** All players rostered in this game's league for the season, with their team. */
+async function fetchLeaguePlayers(game: GameRecord): Promise<LeaguePlayer[]> {
+  if (!game.league_id) return [];
+  const { data } = await axios.get<LeaguePlayer[] | { players: LeaguePlayer[] }>(
+    `${API}/admin/players`,
+    {
+      headers: authHeaders(),
+      params: {
+        league_id: game.league_id,
+        season_id: game.season_id,
+        include_prospects: 'true',
+      },
+    },
+  );
+  return Array.isArray(data) ? data : (data.players ?? []);
+}
+
+/** Last-name + first-initial key — catches "Nick Paul" vs "Nicholas Paul". */
+function lastNameInitialKey(firstName: string, lastName: string) {
+  return `${normalizeNameKey(lastName)}|${normalizeNameKey(firstName).slice(0, 1)}`;
+}
+
+interface PlayerConflict {
+  reportPlayer: ReportRosterPlayer;
+  existing: LeaguePlayer;
+}
+
+/**
+ * Find roster-report players who are missing from the target team's roster but
+ * already exist on a different team in the league — these must be moved, not
+ * re-created as duplicates.
+ */
+function findCrossTeamPlayerConflicts(
+  leaguePlayers: LeaguePlayer[],
+  teamId: string,
+  reportPlayers: ReportRosterPlayer[],
+  localPlayers: TeamPlayerRecord[],
+): PlayerConflict[] {
+  const rosteredJerseys = new Set(
+    localPlayers.map((player) => player.jersey_number).filter((jersey): jersey is number => jersey != null),
+  );
+  const missing = reportPlayers.filter(
+    (player) => Number.isFinite(player.sweaterNumber) && !rosteredJerseys.has(player.sweaterNumber),
+  );
+  if (missing.length === 0) return [];
+
+  const byFullName = new Map<string, LeaguePlayer>();
+  const byLastInitial = new Map<string, LeaguePlayer>();
+  for (const player of leaguePlayers) {
+    if (!player.team_id || player.team_id === teamId) continue;
+    const fullKey = normalizeNameKey(`${player.first_name} ${player.last_name}`);
+    const liKey = lastNameInitialKey(player.first_name, player.last_name);
+    if (!byFullName.has(fullKey)) byFullName.set(fullKey, player);
+    if (!byLastInitial.has(liKey)) byLastInitial.set(liKey, player);
+  }
+
+  const conflicts: PlayerConflict[] = [];
+  for (const reportPlayer of missing) {
+    const { firstName, lastName } = splitReportName(reportPlayer.name);
+    const existing =
+      byFullName.get(normalizeNameKey(`${firstName} ${lastName}`)) ??
+      byLastInitial.get(lastNameInitialKey(firstName, lastName));
+    if (existing) conflicts.push({ reportPlayer, existing });
+  }
+  return conflicts;
 }
 
 /**
