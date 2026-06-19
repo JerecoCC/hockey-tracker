@@ -37,6 +37,7 @@ interface Props {
   dayNumberClassName?: string;
   dayBodyClassName?: string;
   getDayClassName?: (args: MonthCalendarDayArgs) => string | undefined;
+  getDayLabelSuffix?: (args: MonthCalendarDayArgs) => ReactNode;
   getDayHeaderRight?: (args: MonthCalendarDayArgs) => ReactNode;
   getDayProps?: (args: MonthCalendarDayArgs) => HTMLAttributes<HTMLDivElement>;
   renderDayContent: (args: MonthCalendarDayArgs) => ReactNode;
@@ -51,6 +52,7 @@ interface MonthCalendarDayProps {
   dayNumberClassName?: string;
   dayBodyClassName?: string;
   getDayClassName?: (args: MonthCalendarDayArgs) => string | undefined;
+  labelSuffix?: ReactNode;
   headerRight?: ReactNode;
 }
 
@@ -63,6 +65,7 @@ const MonthCalendarDay = ({
   dayNumberClassName,
   dayBodyClassName,
   getDayClassName,
+  labelSuffix,
   headerRight,
 }: MonthCalendarDayProps) => {
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -110,6 +113,7 @@ const MonthCalendarDay = ({
       label={
         <span className={[styles.dayNumber, dayNumberClassName].filter(Boolean).join(' ')}>
           {args.day}
+          {labelSuffix}
         </span>
       }
       variant="static"
@@ -150,6 +154,7 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
       dayNumberClassName,
       dayBodyClassName,
       getDayClassName,
+      getDayLabelSuffix,
       getDayHeaderRight,
       getDayProps,
       renderDayContent,
@@ -202,6 +207,7 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
               dayNumberClassName={dayNumberClassName}
               dayBodyClassName={dayBodyClassName}
               getDayClassName={getDayClassName}
+              labelSuffix={getDayLabelSuffix?.(args)}
               headerRight={getDayHeaderRight?.(args)}
             />
           );

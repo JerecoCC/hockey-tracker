@@ -774,38 +774,36 @@ const SeasonGamesTab = ({
             <div className={styles.calendarScroll}>
               <MonthCalendar
                 month={calendarMonth}
-                getDayHeaderRight={({ dateKey }) => {
+                getDayLabelSuffix={({ dateKey }) => {
                   const gameCount = calendarGamesByDate.get(dateKey)?.length ?? 0;
-                  if (gameCount === 0 && isEnded) return undefined;
-                  return (
-                    <span className={styles.calendarDayHeaderRight}>
-                      {gameCount > 0 && (
-                        <span
-                          className={styles.calendarDayCount}
-                          aria-label={`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
-                        >
-                          {gameCount} {gameCount === 1 ? 'Game' : 'Games'}
-                        </span>
-                      )}
-                      {!isEnded && (
-                        <MoreActionsMenu
-                          variant="ghost"
-                          buttonClassName={styles.calendarDayActionButton}
-                          items={[
-                            {
-                              label: 'Create Game',
-                              icon: 'add',
-                              onClick: () => handleAdd(dateKey),
-                            },
-                            {
-                              label: 'Bulk Create',
-                              icon: 'playlist_add',
-                              onClick: () => setBulkDate(dateKey),
-                            },
-                          ]}
-                        />
-                      )}
+                  return gameCount > 0 ? (
+                    <span
+                      className={styles.calendarDayCount}
+                      aria-label={`${gameCount} ${gameCount === 1 ? 'game' : 'games'}`}
+                    >
+                      ({gameCount} {gameCount === 1 ? 'Game' : 'Games'})
                     </span>
+                  ) : undefined;
+                }}
+                getDayHeaderRight={({ dateKey }) => {
+                  if (isEnded) return undefined;
+                  return (
+                    <MoreActionsMenu
+                      variant="ghost"
+                      buttonClassName={styles.calendarDayActionButton}
+                      items={[
+                        {
+                          label: 'Create Game',
+                          icon: 'add',
+                          onClick: () => handleAdd(dateKey),
+                        },
+                        {
+                          label: 'Bulk Create',
+                          icon: 'playlist_add',
+                          onClick: () => setBulkDate(dateKey),
+                        },
+                      ]}
+                    />
                   );
                 }}
                 renderDayContent={({ dateKey }) => {
