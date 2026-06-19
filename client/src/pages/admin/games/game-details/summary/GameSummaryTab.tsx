@@ -32,7 +32,8 @@ import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
 import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
-import { PERIOD, otPeriodId } from '../constants';
+import { PERIOD, PERIOD_TITLE_LABEL, otPeriodId } from '../constants';
+import { formatPlayerName } from '../formatUtils';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
 
@@ -417,6 +418,23 @@ const GameSummaryTab = ({
     setEditGoal(null);
   };
 
+  // ── Delete Goal confirm ──────────────────────────────────────────────────
+  const [confirmDeleteGoal, setConfirmDeleteGoal] = useState<GoalRecord | null>(null);
+  const [deletingGoal, setDeletingGoal] = useState(false);
+  const requestDeleteGoal = (goalId: string) => {
+    setConfirmDeleteGoal(goals.find((goal) => goal.id === goalId) ?? null);
+  };
+  const handleConfirmDeleteGoal = async () => {
+    if (!confirmDeleteGoal) return;
+    setDeletingGoal(true);
+    try {
+      await deleteGoal(confirmDeleteGoal.id);
+    } finally {
+      setDeletingGoal(false);
+      setConfirmDeleteGoal(null);
+    }
+  };
+
   const handleAddGoal = useCallback(
     async (data: PostGoalData) => {
       setGoalSavingPeriod(data.period);
@@ -543,7 +561,7 @@ const GameSummaryTab = ({
               setAccordionRef={editable ? setAccordionRef : undefined}
               onScoreGoal={editable ? openGoalModal : undefined}
               onEditGoal={editable ? openEditGoalModal : undefined}
-              onDeleteGoal={editable ? deleteGoal : undefined}
+              onDeleteGoal={editable ? requestDeleteGoal : undefined}
               onOpenShotsModal={editable ? openShotsModal : undefined}
               onAddAttempt={editable ? openAttemptModal : undefined}
               onEditAttempt={editable ? openEditAttemptModal : undefined}
@@ -927,6 +945,30 @@ const GameSummaryTab = ({
               setConfirmDeleteOpen(false);
             }
           }}
+        />
+      )}
+
+      {/* ── Delete Goal confirm ── */}
+      {editable && confirmDeleteGoal && (
+        <ConfirmModal
+          open={!!confirmDeleteGoal}
+          title="Delete Goal"
+          body={`Delete the ${
+            confirmDeleteGoal.team_id === game.away_team.id ? game.away_team.code : game.home_team.code
+          } goal by ${formatPlayerName(
+            confirmDeleteGoal.scorer_first_name,
+            confirmDeleteGoal.scorer_last_name,
+          )}${
+            confirmDeleteGoal.period_time
+              ? ` at ${PERIOD_TITLE_LABEL[confirmDeleteGoal.period] ?? confirmDeleteGoal.period} ${confirmDeleteGoal.period_time}`
+              : ''
+          }? This cannot be undone.`}
+          confirmLabel="Delete"
+          confirmIcon="delete"
+          variant="danger"
+          busy={deletingGoal}
+          onCancel={() => setConfirmDeleteGoal(null)}
+          onConfirm={handleConfirmDeleteGoal}
         />
       )}
     </>
