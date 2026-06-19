@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
@@ -128,6 +128,22 @@ const sortGamesBySchedule = (games: GameRecord[]) =>
     return a.scheduled_time < b.scheduled_time ? -1 : 1;
   });
 
+type CalendarDayStyle = CSSProperties & {
+  '--team-calendar-day-accent'?: string;
+  '--team-calendar-day-text'?: string;
+};
+
+const getTeamCalendarDayStyle = (game: GameRecord, teamId: string): CalendarDayStyle => {
+  const isHomeGame = game.home_team.id === teamId;
+
+  return {
+    '--team-calendar-day-accent': isHomeGame
+      ? game.home_team.primary_color || '#334155'
+      : '#ffffff',
+    '--team-calendar-day-text': isHomeGame ? game.home_team.text_color || '#ffffff' : '#14181f',
+  };
+};
+
 const TeamCalendarGame = ({
   game,
   teamId,
@@ -142,6 +158,7 @@ const TeamCalendarGame = ({
   const isHomeGame = game.home_team.id === teamId;
   const team = isHomeGame ? game.home_team : game.away_team;
   const opponent = isHomeGame ? game.away_team : game.home_team;
+  const logoAccentColor = isHomeGame ? team.secondary_color || team.primary_color : '#ffffff';
   const { home, away, winnerTeamId } = displayScore(game);
   const teamGoals = isHomeGame ? home : away;
   const opponentGoals = isHomeGame ? away : home;
@@ -186,9 +203,11 @@ const TeamCalendarGame = ({
       detail={detail}
       topLabel={dayNumber}
       homePrimaryColor={team.primary_color}
+      logoAccentColor={logoAccentColor}
       live={game.status === 'in_progress'}
       fillContainer
       flush
+      transparentBackground
       ariaLabel={`Open game ${isHomeGame ? 'vs' : 'at'} ${opponent.name}`}
       onOpen={() => onOpen(game)}
     />
@@ -323,13 +342,16 @@ const TeamGamesTab = ({
     const calendarNode = calendarGridRef.current;
     if (exportingMonthImage || view !== 'calendar' || scheduledGames.length === 0 || !calendarNode)
       return;
+    const renderedCalendarWidth = Math.ceil(
+      Math.max(calendarNode.getBoundingClientRect().width, calendarNode.scrollWidth),
+    );
     setExportingMonthImage(true);
     try {
       await downloadMonthScheduleImage({
         calendarNode,
         calendarMonth,
         headerLabel: MONTH_LABEL_FMT.format(calendarMonth),
-        exportWidth: 1120,
+        exportWidth: renderedCalendarWidth || undefined,
         filename: `${teamName} Game Schedule - ${new Intl.DateTimeFormat('en-US', {
           month: 'short',
           year: 'numeric',
@@ -555,6 +577,14 @@ const TeamGamesTab = ({
               <MonthCalendar
                 ref={calendarGridRef}
                 month={calendarMonth}
+                getDayClassName={({ dateKey }) =>
+                  gamesByDate.has(dateKey) ? styles.calendarDayGameCell : undefined
+                }
+                getDayProps={({ dateKey }) => {
+                  const dayGame = gamesByDate.get(dateKey);
+                  if (!dayGame) return {};
+                  return { style: getTeamCalendarDayStyle(dayGame, teamId) };
+                }}
                 renderDayContent={({ dateKey }) => {
                   const dayGame = gamesByDate.get(dateKey);
                   return dayGame ? (

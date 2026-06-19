@@ -59,3 +59,12 @@
   height: 100%;
 }
 
+.calendarDayGameCell {
+  --accordion-header-bg: var(--team-calendar-day-accent);
+  --accordion-border-color: var(--team-calendar-day-accent);
+  --month-calendar-day-bg: color-mix(in srgb, var(--team-calendar-day-accent) 9%, #{$bg-card});
+  --month-calendar-day-number-color: var(--team-calendar-day-text);
+
+  border-color: var(--team-calendar-day-accent);
+}
+

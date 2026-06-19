@@ -93,7 +93,7 @@
 }
 
 .dayNumber {
-  color: $text-bright;
+  color: var(--month-calendar-day-number-color, #{$text-bright});
   font-size: $font-sm;
   font-weight: 700;
   line-height: 1;
