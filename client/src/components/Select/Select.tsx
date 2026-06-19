@@ -36,6 +36,7 @@ interface Props {
   searchable?: boolean;
   /** Moves focus to the trigger on mount. */
   autoFocus?: boolean;
+  ariaLabelledBy?: string;
 }
 
 const Select = (props: Props) => {
@@ -49,6 +50,7 @@ const Select = (props: Props) => {
     error = false,
     searchable = false,
     autoFocus = false,
+    ariaLabelledBy,
   } = props;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -247,6 +249,7 @@ const Select = (props: Props) => {
             }}
             onClick={(e) => e.stopPropagation()}
             disabled={disabled}
+            aria-labelledby={ariaLabelledBy}
           />
           <Icon
             name="expand_more"
@@ -263,6 +266,7 @@ const Select = (props: Props) => {
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-controls={menuId}
+          aria-labelledby={ariaLabelledBy}
           className={cn(
             styles.trigger,
             open && styles.triggerOpen,

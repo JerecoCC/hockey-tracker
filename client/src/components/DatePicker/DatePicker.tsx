@@ -19,6 +19,7 @@ interface Props {
   granularity?: 'day' | 'month';
   triggerLabel?: string;
   triggerAriaLabel?: string;
+  ariaLabelledBy?: string;
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -146,6 +147,7 @@ const DatePicker = (props: Props) => {
     granularity = 'day',
     triggerLabel,
     triggerAriaLabel,
+    ariaLabelledBy,
   } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
@@ -487,7 +489,8 @@ const DatePicker = (props: Props) => {
             type="button"
             className={styles.triggerButton}
             onClick={openPicker}
-            aria-label={triggerAriaLabel ?? triggerLabel}
+            aria-label={ariaLabelledBy ? undefined : triggerAriaLabel ?? triggerLabel}
+            aria-labelledby={ariaLabelledBy}
             disabled={disabled}
           >
             <Icon
@@ -526,6 +529,7 @@ const DatePicker = (props: Props) => {
               onFocus={!disabled ? handleFocus : undefined}
               onBlur={!disabled ? handleBlur : undefined}
               readOnly={disabled}
+              aria-labelledby={ariaLabelledBy}
             />
             {value && !disabled && (
               <span

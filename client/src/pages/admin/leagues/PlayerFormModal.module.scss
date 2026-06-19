@@ -94,6 +94,27 @@
   }
 }
 
+.heightSegmentedFieldDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+
+  &:focus-within {
+    border-color: $border;
+  }
+
+  .heightSegment {
+    cursor: not-allowed;
+
+    input:disabled {
+      opacity: 1;
+    }
+
+    span {
+      cursor: not-allowed;
+    }
+  }
+}
+
 .heightSegment {
   display: flex;
   align-items: center;

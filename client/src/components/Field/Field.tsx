@@ -1,5 +1,6 @@
 import {
   useRef,
+  useId,
   useState,
   type ChangeEvent,
   type FocusEvent,
@@ -89,6 +90,7 @@ const Field = (props: FieldProps) => {
   const ctrl = control as Control<any>;
   const [showPassword, setShowPassword] = useState(false);
   const colorPickerRef = useRef<HTMLInputElement>(null);
+  const labelId = useId();
 
   return (
     <Controller
@@ -97,6 +99,10 @@ const Field = (props: FieldProps) => {
       rules={rules}
       render={({ field, fieldState }) => {
         const hasError = !!fieldState.error;
+        const ariaLabelledBy = label ? labelId : undefined;
+        const ariaLabelledByProps = ariaLabelledBy
+          ? { 'aria-labelledby': ariaLabelledBy }
+          : {};
         const getField = () => {
           if (props.type === 'textarea') {
             /* eslint-disable @typescript-eslint/no-unused-vars */
@@ -129,6 +135,7 @@ const Field = (props: FieldProps) => {
                 )}
                 required={required}
                 {...rest}
+                {...ariaLabelledByProps}
                 value={(field.value as string) ?? ''}
                 onChange={onChange}
                 onBlur={onBlur}
@@ -148,6 +155,7 @@ const Field = (props: FieldProps) => {
                 disabled={disabled}
                 searchable={searchable}
                 error={hasError}
+                ariaLabelledBy={ariaLabelledBy}
               />
             );
           } else if (props.type === 'custom') {
@@ -160,6 +168,7 @@ const Field = (props: FieldProps) => {
                 placeholder={props.placeholder}
                 disabled={props.disabled}
                 autoFocus={props.autoFocus}
+                ariaLabelledBy={ariaLabelledBy}
               />
             );
           } else if (props.type === 'timepicker') {
@@ -171,6 +180,7 @@ const Field = (props: FieldProps) => {
                 disabled={props.disabled}
                 mode={props.mode}
                 autoFocus={props.autoFocus}
+                ariaLabelledBy={ariaLabelledBy}
               />
             );
           } else if (props.type === 'color') {
@@ -197,6 +207,7 @@ const Field = (props: FieldProps) => {
                   className={styles.colorHiddenInput}
                   tabIndex={-1}
                   disabled={props.disabled}
+                  aria-hidden="true"
                 />
                 <input
                   type="text"
@@ -207,6 +218,7 @@ const Field = (props: FieldProps) => {
                   spellCheck={false}
                   maxLength={7}
                   disabled={props.disabled}
+                  {...ariaLabelledByProps}
                 />
               </div>
             );
@@ -239,6 +251,7 @@ const Field = (props: FieldProps) => {
                   error={hasError}
                   required={required}
                   {...rest}
+                  {...ariaLabelledByProps}
                   value={(field.value as string) ?? ''}
                   onChange={(value) => {
                     field.onChange(transform ? transform(value) : value);
@@ -259,6 +272,7 @@ const Field = (props: FieldProps) => {
                 )}
                 required={required}
                 {...rest}
+                {...ariaLabelledByProps}
                 type={isPassword ? (showPassword ? 'text' : 'password') : props.type}
                 value={(field.value as string) ?? ''}
                 onChange={onChange}
@@ -292,9 +306,12 @@ const Field = (props: FieldProps) => {
         };
 
         return (
-          <label className={styles.label}>
+          <div className={styles.label}>
             {label && (
-              <span className={styles.labelText}>
+              <span
+                id={labelId}
+                className={styles.labelText}
+              >
                 {label}
                 {required && <span className={styles.required}>*</span>}
               </span>
@@ -303,7 +320,7 @@ const Field = (props: FieldProps) => {
             {fieldState.error?.message && (
               <span className={styles.errorMsg}>{fieldState.error.message}</span>
             )}
-          </label>
+          </div>
         );
       }}
     />

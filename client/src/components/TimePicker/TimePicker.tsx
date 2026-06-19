@@ -12,6 +12,7 @@ interface Props {
   mode?: 'clock' | 'duration';
   /** When true, focuses the text input and activates the hour segment on mount. */
   autoFocus?: boolean;
+  ariaLabelledBy?: string;
 }
 
 type Segment = 'hour' | 'minute' | 'ampm';
@@ -96,6 +97,7 @@ const TimePicker = ({
   disabled,
   mode = 'clock',
   autoFocus,
+  ariaLabelledBy,
 }: Props) => {
   const parsed = parseTime(value);
   const init12 = parsed && mode === 'clock' ? to12h(parsed.h24) : null;
@@ -493,6 +495,7 @@ const TimePicker = ({
           onFocus={!disabled ? handleFocus : undefined}
           onBlur={!disabled ? handleBlur : undefined}
           readOnly={disabled}
+          aria-labelledby={ariaLabelledBy}
         />
         {!disabled && (
           <span
