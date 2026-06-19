@@ -811,10 +811,21 @@ function parseNhlShootoutReport(html: string): NhlShootoutReport | null {
 }
 
 function findRosterTables(doc: Document) {
-  return [...doc.querySelectorAll('table')].filter((table) => {
-    const headers = [...table.querySelectorAll('th')].map((cell) => normalizeReportText(cell.textContent));
-    return headers.includes('#') && headers.includes('Pos') && headers.includes('Name');
-  }).slice(0, 2);
+  // Official NHL reports put the "# / Pos / Name" column headers in <td class="heading">
+  // cells (not <th>), and nest each roster table inside layout tables. Match a table by
+  // a header row built from its *own* direct cells so wrapper tables don't qualify.
+  return [...doc.querySelectorAll('table')]
+    .filter((table) =>
+      [...table.querySelectorAll('tr')]
+        .filter((row) => row.closest('table') === table)
+        .some((row) => {
+          const cells = [...row.children]
+            .filter((cell) => cell.tagName === 'TD' || cell.tagName === 'TH')
+            .map((cell) => normalizeReportText(cell.textContent));
+          return cells.includes('#') && cells.includes('Pos') && cells.includes('Name');
+        }),
+    )
+    .slice(0, 2);
 }
 
 function parseRosterTable(table: Element): ReportRosterPlayer[] {

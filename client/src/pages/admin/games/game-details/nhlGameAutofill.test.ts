@@ -548,15 +548,24 @@ describe('autofillGameFromNhlGamecenter', () => {
   it('auto-creates dressed roster-report players missing from the local roster', async () => {
     // #19 is dressed in the report but absent from the local MIN roster; it should
     // be created (full name + mapped position) and rostered, not error out.
+    // Mirrors the real report: <td> column headers nested inside a layout table.
     optionalRosterReportHtml = `
       <html><body>
         <table>
-          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
-          <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
-        </table>
-        <table>
-          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
-          <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+          <tr><td>
+            <table>
+              <tr>
+                <td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td>
+              </tr>
+              <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+            </table>
+            <table>
+              <tr>
+                <td class="heading">#</td><td class="heading">Pos</td><td class="heading">Name</td>
+              </tr>
+              <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+            </table>
+          </td></tr>
         </table>
       </body></html>
     `;
