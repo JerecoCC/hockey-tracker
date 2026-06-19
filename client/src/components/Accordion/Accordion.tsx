@@ -1,5 +1,5 @@
 import { forwardRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode, Ref } from 'react';
 import Button from '../Button/Button';
 import type { ButtonIntent, ButtonVariant } from '../Button/Button';
 import Icon from '../Icon/Icon';
@@ -19,7 +19,7 @@ export interface AccordionAction {
   onClick: () => void;
 }
 
-interface Props {
+interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Header label – any ReactNode. */
   label: ReactNode;
   /** Always-visible right-side header content (badges, scores, etc.). */
@@ -37,6 +37,12 @@ interface Props {
   variant?: 'collapsible' | 'static';
   /** Extra class applied to the root element (for border-color overrides, etc.). */
   className?: string;
+  /** Extra class applied to the header row. */
+  rowClassName?: string;
+  /** Extra class applied to the body wrapper. */
+  bodyClassName?: string;
+  /** Ref forwarded to the body wrapper. */
+  bodyRef?: Ref<HTMLDivElement>;
   /** Collapsible body content. */
   children?: ReactNode;
 }
@@ -51,7 +57,11 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
       toggleDisabled = false,
       variant = 'collapsible',
       className,
+      rowClassName,
+      bodyClassName,
+      bodyRef,
       children,
+      ...rootProps
     },
     ref,
   ) => {
@@ -61,6 +71,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
 
     return (
       <div
+        {...rootProps}
         ref={ref}
         className={[styles.accordion, className].filter(Boolean).join(' ')}
       >
@@ -69,6 +80,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             styles.row,
             !(bodyVisible && children != null) ? styles.rowCollapsed : '',
             isStatic ? styles.rowStatic : '',
+            rowClassName,
           ]
             .filter(Boolean)
             .join(' ')}
@@ -115,7 +127,14 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             </div>
           )}
         </div>
-        {bodyVisible && children != null && <div className={styles.body}>{children}</div>}
+        {bodyVisible && children != null && (
+          <div
+            ref={bodyRef}
+            className={[styles.body, bodyClassName].filter(Boolean).join(' ')}
+          >
+            {children}
+          </div>
+        )}
       </div>
     );
   },

@@ -127,69 +127,10 @@
   overflow-x: auto;
 }
 
-.calendarGrid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: $space-sm;
-  min-width: 980px;
-}
-
-.calendarDayName {
-  text-align: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-bright;
-}
-
-.calendarEmptyCell,
-.calendarDayCell {
-  min-height: 180px;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
-}
-
-.calendarEmptyCell {
-  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-.calendarDayCell {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  padding: $space-sm;
-  min-height: 240px;
-  height: 240px;
-  min-width: 0;
-}
-
-.calendarDayCellDropTarget {
-  border-color: $accent;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #{$accent} 55%, transparent);
-}
-
-.calendarDayHeader {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.calendarDayNumber {
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-bright;
-  line-height: 1;
-}
-
 .calendarGameList {
   display: flex;
   flex-direction: column;
   gap: $space-sm;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 2px;
 }
 
 .calendarGameCard {

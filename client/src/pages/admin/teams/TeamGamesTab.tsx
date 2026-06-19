@@ -5,6 +5,7 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
+import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
@@ -23,8 +24,6 @@ const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
 });
-
-const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const formatTime = (hhmm: string, scheduledAt?: string | null): string => {
   const [hStr, mStr] = hhmm.split(':');
@@ -60,9 +59,6 @@ const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
 const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
-const daysInMonth = (year: number, monthIndex: number) =>
-  new Date(year, monthIndex + 1, 0).getDate();
-const firstDayOfWeek = (year: number, monthIndex: number) => new Date(year, monthIndex, 1).getDay();
 const dateToISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const fromISODate = (iso: string): Date => {
@@ -304,17 +300,6 @@ const TeamGamesTab = ({
     }
     return Array.from(map.entries());
   }, [scheduledGames, weekStart]);
-
-  const calendarCells = useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const monthIndex = calendarMonth.getMonth();
-    const total = daysInMonth(year, monthIndex);
-    const startDow = firstDayOfWeek(year, monthIndex);
-    const cells: (number | null)[] = Array(startDow).fill(null);
-    for (let day = 1; day <= total; day++) cells.push(day);
-    while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
-  }, [calendarMonth]);
 
   const loading = seasonsLoading || gamesLoading;
   const openGame = (game: GameRecord) =>
@@ -567,54 +552,23 @@ const TeamGamesTab = ({
               />
             </div>
             <div className={styles.calendarScroll}>
-              <div
+              <MonthCalendar
                 ref={calendarGridRef}
-                className={styles.calendarGrid}
-              >
-                {DAY_LABELS.map((label) => (
-                  <div
-                    key={label}
-                    className={styles.calendarDayName}
-                  >
-                    {label}
-                  </div>
-                ))}
-                {calendarCells.map((day, index) => {
-                  if (day === null) {
-                    return (
-                      <div
-                        key={`blank-${index}`}
-                        className={styles.calendarEmptyCell}
-                      />
-                    );
-                  }
-
-                  const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                month={calendarMonth}
+                renderDayContent={({ dateKey }) => {
                   const dayGame = gamesByDate.get(dateKey);
-                  return (
-                    <div
-                      key={dateKey}
-                      className={styles.calendarDayCell}
-                    >
-                      {dayGame ? (
-                        <div className={styles.calendarDayGamesFilled}>
-                          <TeamCalendarGame
-                            key={dayGame.id}
-                            game={dayGame}
-                            teamId={teamId}
-                            onOpen={openGame}
-                            dayNumber={day}
-                          />
-                        </div>
-                      ) : (
-                        <div className={styles.calendarDayEmpty}>
-                          <span className={styles.calendarDayNumber}>{day}</span>
-                        </div>
-                      )}
+                  return dayGame ? (
+                    <div className={styles.calendarDayGamesFilled}>
+                      <TeamCalendarGame
+                        key={dayGame.id}
+                        game={dayGame}
+                        teamId={teamId}
+                        onOpen={openGame}
+                      />
                     </div>
-                  );
-                })}
-              </div>
+                  ) : null;
+                }}
+              />
             </div>
           </div>
         )}

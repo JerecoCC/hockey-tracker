@@ -185,14 +185,6 @@
   scroll-margin-top: 190px;
 }
 
-.dayAccordion {
-  background: $bg-card;
-}
-
-.dayAccordionBody {
-  padding: $space-md;
-}
-
 .calendarCard {
   margin-top: $space-md;
 }
@@ -207,96 +199,22 @@
   overflow-x: auto;
 }
 
-.calendarGrid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: $space-sm;
-  min-width: 840px;
-}
-
-.calendarDayName {
-  color: $text-bright;
-  font-size: $font-sm;
-  font-weight: 700;
-  text-align: center;
-}
-
-.calendarEmptyCell,
-.calendarDayCell {
-  // Square cells with a uniform height, whether or not the day has games.
-  aspect-ratio: 1 / 1;
-  min-height: 0;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-}
-
-.calendarEmptyCell {
-  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-.calendarDayCell {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  padding: $space-sm;
-  background: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
-  color: $text-body;
-  transition:
-    border-color $transition-fast ease,
-    background $transition-fast ease;
-}
-
-.calendarDayCellEmpty {
-  color: $text-dim;
-}
-
-.calendarDayCellFilled {
-  border-color: color-mix(in srgb, #{$border}, #{$accent} 28%);
-}
-
-.calendarDayHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-xs;
-  min-height: 28px;
-}
-
-.calendarDayNumber {
-  color: $text-bright;
-  font-size: $font-sm;
-  font-weight: 700;
-  line-height: 1;
-}
-
 .calendarGameList {
   display: flex;
   flex-direction: column;
   gap: $space-xs;
-  // Fill the remaining square below the header; scroll when there are more games.
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 3px;
+  width: 100%;
+}
 
-  // Custom scrollbar — thin $border thumb on a transparent track.
-  scrollbar-width: thin;
-  scrollbar-color: $border transparent;
-
-  &::-webkit-scrollbar {
-    width: 4px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: $border;
-    border-radius: $radius-md;
-  }
+.calendarDayActionButton.calendarDayActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  min-width: 0;
+  padding: 0;
+  line-height: 1;
 }
 
 .calendarPillWrap {
@@ -359,10 +277,6 @@
 
   .weekSummaryGrid {
     grid-template-columns: repeat(7, minmax(124px, 1fr));
-  }
-
-  .calendarGrid {
-    min-width: 760px;
   }
 
   .dayCardAnchor {

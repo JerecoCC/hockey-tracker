@@ -9,6 +9,7 @@ import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
+import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import Modal from '@/components/Modal/Modal';
 import Select, { type SelectOption } from '@/components/Select/Select';
@@ -110,14 +111,9 @@ const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
 const monthKey = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-const daysInMonth = (year: number, monthIndex: number) =>
-  new Date(year, monthIndex + 1, 0).getDate();
-const firstDayOfWeek = (year: number, monthIndex: number) => new Date(year, monthIndex, 1).getDay();
 const toMonthPickerValue = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 const fromMonthPickerValue = (value: string) => {
@@ -859,7 +855,6 @@ const UserGames = () => {
   const [tzPref, setTzPref] = useState<TzPref>(() => getStoredTzPref());
   const [actionGameId, setActionGameId] = useState<string | null>(null);
   const [dragGameId, setDragGameId] = useState<string | null>(null);
-  const [dragOverDateKey, setDragOverDateKey] = useState<string | null>(null);
   const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
@@ -1028,17 +1023,6 @@ const UserGames = () => {
     return map;
   }, [scheduledGames, tzPref]);
 
-  const calendarCells = useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const monthIndex = calendarMonth.getMonth();
-    const total = daysInMonth(year, monthIndex);
-    const startDow = firstDayOfWeek(year, monthIndex);
-    const cells: (number | null)[] = Array(startDow).fill(null);
-    for (let day = 1; day <= total; day++) cells.push(day);
-    while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
-  }, [calendarMonth]);
-
   const leagueOptions: SelectOption[] = [
     { value: 'all', label: 'All Leagues' },
     ...leagues.map((l) => ({ value: l.id, label: l.code, logo: l.logo })),
@@ -1179,21 +1163,18 @@ const UserGames = () => {
 
   const handleCalendarDragEnd = () => {
     setDragGameId(null);
-    setDragOverDateKey(null);
   };
 
-  const handleCalendarDragOver = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+  const handleCalendarDragOver = (_dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
     const draggedId = dragGameId || event.dataTransfer.getData('text/user-game-id');
     if (!draggedId) return;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
-    if (dragOverDateKey !== dateKey) setDragOverDateKey(dateKey);
   };
 
   const handleCalendarDrop = (dateKey: string) => async (event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const draggedId = dragGameId || event.dataTransfer.getData('text/user-game-id');
-    setDragOverDateKey(null);
     setDragGameId(null);
     if (!draggedId) return;
 
@@ -1405,73 +1386,40 @@ const UserGames = () => {
         </p>
       ) : (
         <div className={styles.calendarWrap}>
-          <div
+          <MonthCalendar
             ref={calendarGridRef}
-            className={styles.calendarGrid}
-          >
-            {DAY_LABELS.map((label) => (
-              <div
-                key={label}
-                className={styles.calendarDayName}
-              >
-                {label}
-              </div>
-            ))}
-            {calendarCells.map((day, index) => {
-              if (day === null) {
-                return (
-                  <div
-                    key={`blank-${index}`}
-                    className={styles.calendarEmptyCell}
-                  />
-                );
-              }
-
-              const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-              const dayGames = gamesByCalendarDate.get(dateKey) ?? [];
-
-              return (
-                <div
-                  key={dateKey}
-                  className={[
-                    styles.calendarDayCell,
-                    dragOverDateKey === dateKey ? styles.calendarDayCellDropTarget : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  data-date-key={dateKey}
-                  onDragOver={handleCalendarDragOver(dateKey)}
-                  onDrop={handleCalendarDrop(dateKey)}
-                >
-                  <div className={styles.calendarDayHeader}>
-                    <span className={styles.calendarDayNumber}>{day}</span>
-                  </div>
-                  {dayGames.length > 0 && (
-                    <div className={styles.calendarGameList}>
-                      {dayGames.map((game) => (
-                        <CalendarGameCard
-                          key={game.id}
-                          game={game}
-                          tzPref={tzPref}
-                          onOpen={() => openGame(game.id)}
-                          onDownloadScoreCard={() => openScoreCardModal(game)}
-                          onMarkWatched={() => markGameWatched(game.id)}
-                          onUnwatch={() => unwatchGame(game.id)}
-                          onSchedule={() => openScheduleModal(game)}
-                          onSkip={() => openSkipConfirm(game)}
-                          onDragStart={handleCalendarDragStart(game)}
-                          onDragEnd={handleCalendarDragEnd}
-                          draggable={!game.watched_by_user && actionGameId !== game.id}
-                          dragging={dragGameId === game.id}
-                          busy={actionGameId === game.id}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
+            month={calendarMonth}
+            getDayProps={({ dateKey }) => ({
+              'data-date-key': dateKey,
+              onDragOver: handleCalendarDragOver(dateKey),
+              onDrop: handleCalendarDrop(dateKey),
             })}
-          </div>
+            renderDayContent={({ dateKey }) => {
+              const dayGames = gamesByCalendarDate.get(dateKey) ?? [];
+              return dayGames.length > 0 ? (
+                <div className={styles.calendarGameList}>
+                  {dayGames.map((game) => (
+                    <CalendarGameCard
+                      key={game.id}
+                      game={game}
+                      tzPref={tzPref}
+                      onOpen={() => openGame(game.id)}
+                      onDownloadScoreCard={() => openScoreCardModal(game)}
+                      onMarkWatched={() => markGameWatched(game.id)}
+                      onUnwatch={() => unwatchGame(game.id)}
+                      onSchedule={() => openScheduleModal(game)}
+                      onSkip={() => openSkipConfirm(game)}
+                      onDragStart={handleCalendarDragStart(game)}
+                      onDragEnd={handleCalendarDragEnd}
+                      draggable={!game.watched_by_user && actionGameId !== game.id}
+                      dragging={dragGameId === game.id}
+                      busy={actionGameId === game.id}
+                    />
+                  ))}
+                </div>
+              ) : null;
+            }}
+          />
         </div>
       )}
 

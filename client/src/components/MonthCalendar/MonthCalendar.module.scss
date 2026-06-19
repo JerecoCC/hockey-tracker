@@ -1,0 +1,107 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: $space-sm;
+  min-width: 840px;
+}
+
+.dayName {
+  color: $text-bright;
+  font-size: $font-sm;
+  font-weight: 700;
+  text-align: center;
+}
+
+.emptyCell,
+.dayCell {
+  aspect-ratio: 1 / 1;
+  min-height: 0;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+}
+
+.emptyCell {
+  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.dayCell {
+  --month-calendar-day-bg: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
+
+  background: var(--month-calendar-day-bg);
+  color: $text-body;
+  overflow: hidden;
+}
+
+.dayHeader {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: $space-xs $space-sm;
+}
+
+.dayBody {
+  --month-calendar-cell-padding: #{$space-sm};
+  --month-calendar-scrollbar-lane-width: var(--month-calendar-cell-padding);
+  --month-calendar-scrollbar-thumb-inset: 0.1875rem;
+
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: var(--month-calendar-cell-padding);
+  scrollbar-color: $border transparent;
+  scrollbar-width: thin;
+
+  &::-webkit-scrollbar {
+    width: var(--month-calendar-scrollbar-lane-width);
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: $border;
+    background-clip: content-box;
+    border: var(--month-calendar-scrollbar-thumb-inset) solid transparent;
+    border-radius: $radius-md;
+    min-height: 1.25rem;
+  }
+}
+
+.dayBodyScrollable {
+  scrollbar-gutter: stable;
+  padding-right: 0;
+
+  .dayContent {
+    > * {
+      min-height: 0;
+    }
+  }
+}
+
+.dayContent {
+  display: flex;
+  flex: 1 0 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 100%;
+  box-sizing: border-box;
+
+  > * {
+    width: 100%;
+    min-height: 100%;
+  }
+}
+
+.dayNumber {
+  color: $text-bright;
+  font-size: $font-sm;
+  font-weight: 700;
+  line-height: 1;
+}

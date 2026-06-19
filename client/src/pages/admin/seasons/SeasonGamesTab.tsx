@@ -3,12 +3,12 @@ import { Link, useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
-import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
 import GameListItem from './GameListItem';
@@ -83,8 +83,6 @@ const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
-const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-
 const formatStatusLabel = (game: GameRecord): string => {
   if (game.status !== 'final') return STATUS_LABEL[game.status];
   // Prefer period_scores (source of truth) but fall back to stored columns for
@@ -119,9 +117,6 @@ const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
 const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
-const daysInMonth = (year: number, monthIndex: number) =>
-  new Date(year, monthIndex + 1, 0).getDate();
-const firstDayOfWeek = (year: number, monthIndex: number) => new Date(year, monthIndex, 1).getDay();
 
 const toLocalDateKey = (iso: string) => {
   const d = new Date(iso);
@@ -361,17 +356,6 @@ const SeasonGamesTab = ({
     }
     return map;
   }, [filteredGames]);
-
-  const calendarCells = useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const monthIndex = calendarMonth.getMonth();
-    const total = daysInMonth(year, monthIndex);
-    const startDow = firstDayOfWeek(year, monthIndex);
-    const cells: (number | null)[] = Array(startDow).fill(null);
-    for (let day = 1; day <= total; day++) cells.push(day);
-    while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
-  }, [calendarMonth]);
 
   const [filtersVisible, setFiltersVisible] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
@@ -788,69 +772,37 @@ const SeasonGamesTab = ({
         >
           <div className={styles.calendarWrap}>
             <div className={styles.calendarScroll}>
-              <div className={styles.calendarGrid}>
-                {DAY_LABELS.map((label) => (
-                  <div
-                    key={label}
-                    className={styles.calendarDayName}
-                  >
-                    {label}
-                  </div>
-                ))}
-                {calendarCells.map((day, index) => {
-                  if (day === null) {
-                    return (
-                      <div
-                        key={`blank-${index}`}
-                        className={styles.calendarEmptyCell}
-                      />
-                    );
-                  }
-
-                  const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+              <MonthCalendar
+                month={calendarMonth}
+                getDayHeaderRight={({ dateKey }) =>
+                  !isEnded ? (
+                    <MoreActionsMenu
+                      variant="ghost"
+                      buttonClassName={styles.calendarDayActionButton}
+                      items={[
+                        {
+                          label: 'Create Game',
+                          icon: 'add',
+                          onClick: () => handleAdd(dateKey),
+                        },
+                        {
+                          label: 'Bulk Create',
+                          icon: 'playlist_add',
+                          onClick: () => setBulkDate(dateKey),
+                        },
+                      ]}
+                    />
+                  ) : undefined
+                }
+                renderDayContent={({ dateKey }) => {
                   const dayGames = calendarGamesByDate.get(dateKey) ?? [];
-
-                  return (
-                    <div
-                      key={dateKey}
-                      className={[
-                        styles.calendarDayCell,
-                        dayGames.length > 0
-                          ? styles.calendarDayCellFilled
-                          : styles.calendarDayCellEmpty,
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      <div className={styles.calendarDayHeader}>
-                        <span className={styles.calendarDayNumber}>{day}</span>
-                        {!isEnded && (
-                          <MoreActionsMenu
-                            variant="ghost"
-                            items={[
-                              {
-                                label: 'Create Game',
-                                icon: 'add',
-                                onClick: () => handleAdd(dateKey),
-                              },
-                              {
-                                label: 'Bulk Create',
-                                icon: 'playlist_add',
-                                onClick: () => setBulkDate(dateKey),
-                              },
-                            ]}
-                          />
-                        )}
-                      </div>
-                      {dayGames.length > 0 && (
-                        <div className={styles.calendarGameList}>
-                          {dayGames.map((game) => renderCalendarGamePill(game))}
-                        </div>
-                      )}
+                  return dayGames.length > 0 ? (
+                    <div className={styles.calendarGameList}>
+                      {dayGames.map((game) => renderCalendarGamePill(game))}
                     </div>
-                  );
-                })}
-              </div>
+                  ) : null;
+                }}
+              />
             </div>
           </div>
         </Card>
@@ -864,40 +816,39 @@ const SeasonGamesTab = ({
               }}
               className={styles.dayCardAnchor}
             >
-              <Accordion
-                label={fmtDayHeading(dateKey)}
-                variant="static"
-                className={styles.dayAccordion}
-                hoverActions={
-                  !isEnded
-                    ? ([
-                        {
-                          icon: 'playlist_add',
-                          intent: 'accent',
-                          tooltip: 'Bulk Create',
-                          onClick: () => setBulkDate(dateKey),
-                        },
-                        {
-                          icon: 'add',
-                          tooltip: 'Create Game',
-                          onClick: () => handleAdd(dateKey),
-                        },
-                      ] satisfies AccordionAction[])
-                    : undefined
+              <Card
+                title={fmtDayHeading(dateKey)}
+                action={
+                  !isEnded && (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <Button
+                        variant="outlined"
+                        intent="accent"
+                        icon="playlist_add"
+                        size="sm"
+                        tooltip="Bulk Create"
+                        onClick={() => setBulkDate(dateKey)}
+                      />
+                      <Button
+                        icon="add"
+                        size="sm"
+                        tooltip="Create Game"
+                        onClick={() => handleAdd(dateKey)}
+                      />
+                    </div>
+                  )
                 }
               >
-                <div className={styles.dayAccordionBody}>
-                  {dayGames.length === 0 ? (
-                    <p className={styles.dayEmpty}>
-                      {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
-                    </p>
-                  ) : (
-                    <ul className={styles.list}>
-                      {dayGames.map((game) => renderGameListItem(game))}
-                    </ul>
-                  )}
-                </div>
-              </Accordion>
+                {dayGames.length === 0 ? (
+                  <p className={styles.dayEmpty}>
+                    {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
+                  </p>
+                ) : (
+                  <ul className={styles.list}>
+                    {dayGames.map((game) => renderGameListItem(game))}
+                  </ul>
+                )}
+              </Card>
             </div>
           ))}
         </div>
