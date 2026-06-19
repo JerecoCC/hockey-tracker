@@ -326,8 +326,8 @@ describe('NHL goalie switch checker helpers', () => {
         goalieName: 'Home Relief',
         enteredPeriod: 'P2',
         enteredTime: '10:30',
-        exitedPeriod: 'P2',
-        exitedTime: '20:00',
+        exitedPeriod: null,
+        exitedTime: null,
         toi: '09:30',
       },
     ]);
@@ -383,8 +383,8 @@ describe('NHL goalie switch checker helpers', () => {
         goalieName: 'Kevin Lankinen',
         enteredPeriod: 'P2',
         enteredTime: '00:00',
-        exitedPeriod: 'P2',
-        exitedTime: '20:00',
+        exitedPeriod: null,
+        exitedTime: null,
         toi: '20:00',
       },
     ]);
@@ -440,8 +440,8 @@ describe('NHL goalie switch checker helpers', () => {
         goalieName: 'Kevin Lankinen',
         enteredPeriod: 'P2',
         enteredTime: '00:00',
-        exitedPeriod: 'P2',
-        exitedTime: '20:00',
+        exitedPeriod: null,
+        exitedTime: null,
         toi: '20:00',
       },
     ]);

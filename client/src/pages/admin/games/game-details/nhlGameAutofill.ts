@@ -109,6 +109,7 @@ interface ExistingGoalieStint extends GoalieStintPayload {
 
 interface NhlReportClock {
   clock: string;
+  meridiem?: 'AM' | 'PM';
   zone: string;
 }
 
@@ -193,18 +194,28 @@ export async function autofillGameFromNhlGamecenter(
   let shootoutAttemptsCreated = 0;
   let shootoutAttemptsSkipped = 0;
 
-  const [awayPlayers, homePlayers] = await Promise.all([
-    fetchTeamPlayers(game.away_team.id, game.season_id, boxscore.gameDate ?? game.scheduled_at),
-    fetchTeamPlayers(game.home_team.id, game.season_id, boxscore.gameDate ?? game.scheduled_at),
+  const rosterDate = boxscore.gameDate ?? game.scheduled_at;
+  const [initialAwayPlayers, initialHomePlayers] = await Promise.all([
+    fetchTeamPlayers(game.away_team.id, game.season_id, rosterDate),
+    fetchTeamPlayers(game.home_team.id, game.season_id, rosterDate),
   ]);
+
+  // Auto-create any dressed roster-report players missing from the local season
+  // roster so matching below doesn't fail on recent call-ups/trades.
+  const awayPlayers = rosterReport
+    ? await ensureReportPlayersRostered(game, game.away_team.id, game.away_team.code, rosterReport.players.away, initialAwayPlayers, rosterDate, warnings)
+    : initialAwayPlayers;
+  const homePlayers = rosterReport
+    ? await ensureReportPlayersRostered(game, game.home_team.id, game.home_team.code, rosterReport.players.home, initialHomePlayers, rosterDate, warnings)
+    : initialHomePlayers;
 
   const nhlPlayers = {
     away: getNhlPlayers(boxscore, 'away'),
     home: getNhlPlayers(boxscore, 'home'),
   };
   const matched = {
-    away: matchNhlPlayers(nhlPlayers.away, awayPlayers, game.away_team.code),
-    home: matchNhlPlayers(nhlPlayers.home, homePlayers, game.home_team.code),
+    away: matchNhlPlayers(nhlPlayers.away, awayPlayers, game.away_team.code, rosterReport?.players.away),
+    home: matchNhlPlayers(nhlPlayers.home, homePlayers, game.home_team.code, rosterReport?.players.home),
   };
   if (matched.away.length === 0 || matched.home.length === 0) {
     throw new Error('NHL boxscore did not include dressed player stats for both teams.');
@@ -583,6 +594,88 @@ async function fetchTeamPlayers(
   return data;
 }
 
+const LOCAL_POSITIONS = ['C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G'];
+
+/** Map an NHL roster-report position (C/L/R/D/G) to a local player position. */
+function reportPositionToLocalPosition(position: string | null | undefined): string {
+  const normalized = (position ?? '').toUpperCase().trim();
+  if (normalized === 'L') return 'LW';
+  if (normalized === 'R') return 'RW';
+  return LOCAL_POSITIONS.includes(normalized) ? normalized : 'F';
+}
+
+/** Title-case an ALL-CAPS report name, preserving hyphen/apostrophe/period breaks. */
+function toTitleCaseName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/(^|[\s'’.-])([a-z])/g, (_match, separator, char) => `${separator}${char.toUpperCase()}`);
+}
+
+function splitReportName(fullName: string): { firstName: string; lastName: string } {
+  const titled = toTitleCaseName(normalizeReportPlayerName(fullName));
+  const parts = titled.split(' ').filter(Boolean);
+  if (parts.length <= 1) {
+    const only = parts[0] ?? titled;
+    return { firstName: only, lastName: only };
+  }
+  return { firstName: parts[0], lastName: parts.slice(1).join(' ') };
+}
+
+/**
+ * Ensure every dressed player in the roster report exists on the local season
+ * roster. Any player missing by jersey is created from the report's full name
+ * and position, then added to the team's season roster — so autofill can match
+ * recent call-ups/trades without a manual roster edit first. Returns the (possibly
+ * augmented) local player list.
+ */
+async function ensureReportPlayersRostered(
+  game: GameRecord,
+  teamId: string,
+  teamCode: string,
+  reportPlayers: ReportRosterPlayer[],
+  localPlayers: TeamPlayerRecord[],
+  gameDate: string | null | undefined,
+  warnings: string[],
+): Promise<TeamPlayerRecord[]> {
+  const rosteredJerseys = new Set(
+    localPlayers.map((player) => player.jersey_number).filter((jersey): jersey is number => jersey != null),
+  );
+  const missing = reportPlayers.filter(
+    (player) => Number.isFinite(player.sweaterNumber) && !rosteredJerseys.has(player.sweaterNumber),
+  );
+  if (missing.length === 0) return localPlayers;
+
+  const { created } = await apiPost<{ created: Array<{ id: string }> }, { players: Array<Record<string, unknown>> }>(
+    '/admin/players/bulk',
+    {
+      players: missing.map((player) => {
+        const { firstName, lastName } = splitReportName(player.name);
+        return { first_name: firstName, last_name: lastName, position: reportPositionToLocalPosition(player.position) };
+      }),
+    },
+  );
+
+  await apiPost<unknown, { team_id: string; season_id: string; players: Array<{ player_id: string; jersey_number: number }> }>(
+    '/admin/player-teams/bulk',
+    {
+      team_id: teamId,
+      season_id: game.season_id,
+      players: created.map((player, index) => ({
+        player_id: player.id,
+        jersey_number: missing[index].sweaterNumber,
+      })),
+    },
+  );
+
+  warnings.push(
+    `Auto-created ${missing.length} missing ${teamCode} ${pluralize('player', missing.length)} from the roster report: ${missing
+      .map((player) => `#${player.sweaterNumber} ${player.name}`)
+      .join(', ')}.`,
+  );
+
+  return fetchTeamPlayers(teamId, game.season_id, gameDate);
+}
+
 function assertTeamsMatch(game: GameRecord, boxscore: any) {
   const awayCode = readText(boxscore?.awayTeam?.abbrev) ?? boxscore?.awayTeam?.abbrev;
   const homeCode = readText(boxscore?.homeTeam?.abbrev) ?? boxscore?.homeTeam?.abbrev;
@@ -607,7 +700,11 @@ function getNhlPlayers(boxscore: any, side: TeamSide): NhlPlayer[] {
       ? stats[group].map((player: any) => ({
           playerId: Number(player.playerId),
           sweaterNumber: Number(player.sweaterNumber),
-          name: [readText(player.firstName), readText(player.lastName)].filter(Boolean).join(' '),
+          // NHL boxscores now expose a single `name` ({default}); fall back to the
+          // older firstName/lastName fields for compatibility.
+          name:
+            readText(player.name) ||
+            [readText(player.firstName), readText(player.lastName)].filter(Boolean).join(' '),
           group,
         }))
       : [],
@@ -618,6 +715,7 @@ function matchNhlPlayers(
   nhlPlayers: NhlPlayer[],
   localPlayers: TeamPlayerRecord[],
   teamCode: string,
+  reportPlayers: ReportRosterPlayer[] = [],
 ): MatchedPlayer[] {
   const localByJersey = new Map<number, TeamPlayerRecord[]>();
   localPlayers.forEach((player) => {
@@ -626,13 +724,19 @@ function matchNhlPlayers(
     rows.push(player);
     localByJersey.set(player.jersey_number, rows);
   });
+  // The boxscore only carries an abbreviated name (e.g. "N. Paul"); prefer the
+  // full name from the roster report so the "missing player" message is actionable.
+  const reportNameByJersey = new Map(
+    reportPlayers.map((player) => [player.sweaterNumber, player.name]),
+  );
 
   const missing: string[] = [];
   const matched = nhlPlayers.flatMap((nhlPlayer) => {
     const rows = localByJersey.get(nhlPlayer.sweaterNumber) ?? [];
     const local = rows[0];
     if (!local) {
-      missing.push(`#${nhlPlayer.sweaterNumber} ${nhlPlayer.name || `NHL ${nhlPlayer.playerId}`}`);
+      const fullName = reportNameByJersey.get(nhlPlayer.sweaterNumber) || nhlPlayer.name;
+      missing.push(`#${nhlPlayer.sweaterNumber} ${fullName || `NHL ${nhlPlayer.playerId}`}`);
       return [];
     }
     return [{ ...nhlPlayer, localId: local.id }];
@@ -851,7 +955,56 @@ function dedupeShootoutAttempts(attempts: NhlShootoutAttempt[]) {
   });
 }
 
+// A single hockey position token, used to recognise an official "3 Stars" row
+// shape: [rank, team, position, "## NAME"] (or "## "/"NAME" as separate cells).
+const STAR_POSITION_TOKEN = /^(?:C|L|R|D|G|F|LW|RW|LD|RD)$/i;
+
+function directReportCells(row: Element): string[] {
+  return [...row.children]
+    .filter((child) => child.tagName === 'TD' || child.tagName === 'TH')
+    .map((cell) => normalizeReportText(cell.textContent))
+    .filter(Boolean);
+}
+
+/**
+ * Parse a single "3 Stars" row from its *direct* cells. The official NHL game
+ * summary lays OFFICIALS and 3 STARS out as side-by-side nested tables, so the
+ * star rows must be read by their own direct children — flattening a parent row
+ * recursively pulls in the officials (e.g. "#20 Mitch Dunning") and corrupts the
+ * result. The strict shape (rank + team code + position + named player) keeps
+ * scoring/penalty summary rows from matching.
+ */
+function parseStrictStarRow(cells: string[]): NhlSummaryStar | null {
+  if (cells.length < 4) return null;
+  if (!/^[123](?:st|nd|rd)?\.?$/i.test(cells[0].trim())) return null;
+  const rank = Number(cells[0].replace(/[^\d]/g, ''));
+  if (rank < 1 || rank > 3) return null;
+
+  const teamCode = isLikelyTeamCode(cells[1]) ? cells[1] : undefined;
+  const positionIndex = cells.findIndex((cell) => STAR_POSITION_TOKEN.test(cell.trim()));
+  if (!teamCode || positionIndex < 2) return null;
+
+  const rest = cells.slice(positionIndex + 1).join(' ').trim();
+  const sweaterMatch = rest.match(/\b(\d{1,2})\b/);
+  const sweaterNumber = sweaterMatch ? Number(sweaterMatch[1]) : undefined;
+  const name = normalizeReportPlayerName(rest.replace(/\b\d{1,2}\b/, ' '));
+  return isLikelyPlayerName(name) ? { rank, sweaterNumber, teamCode, name } : null;
+}
+
+function parseStrictStarRows(doc: Document): NhlSummaryStar[] {
+  const stars: NhlSummaryStar[] = [];
+  for (const row of doc.querySelectorAll('tr')) {
+    const star = parseStrictStarRow(directReportCells(row));
+    if (star && !stars.some((existing) => existing.rank === star.rank)) stars.push(star);
+    if (stars.length >= 3) break;
+  }
+  return stars.sort((a, b) => a.rank - b.rank);
+}
+
 function parseSummaryStars(doc: Document): NhlSummaryStar[] {
+  const strictStars = parseStrictStarRows(doc);
+  if (strictStars.length > 0) return strictStars;
+
   const threeStarsByStars = parseThreeStarsBySection(doc);
   if (threeStarsByStars.length > 0) return threeStarsByStars;
 
@@ -1062,20 +1215,44 @@ function isLikelyPlayerName(value: string | undefined) {
 }
 
 function parseReportGameInfo(doc: Document): Pick<NhlRosterReport, 'venue' | 'start' | 'end'> {
-  const lines = [...doc.querySelectorAll('#GameInfo td')]
+  const gameInfoCells = [...doc.querySelectorAll('#GameInfo td, #GameInfo th')];
+  const sourceCells =
+    gameInfoCells.length > 0
+      ? gameInfoCells
+      : [...doc.querySelectorAll('td, th, div, span')].slice(0, 80);
+  const lines = sourceCells
     .map((cell) => normalizeReportText(cell.textContent))
     .filter(Boolean);
-  const attendanceLine = lines.find((line) => /\bAttendance\b/i.test(line));
-  const timeLine = lines.find((line) => /\bStart\b/i.test(line) && /\bEnd\b/i.test(line));
-  const attendanceMatch = attendanceLine?.match(/\bAttendance\s+[\d,]+\s+at\s+(.+)$/i);
-  const timeMatch = timeLine?.match(
-    /\bStart\s+(\d{1,2}:\d{2})\s+([A-Z]{2,4})\s*;\s*End\s+(\d{1,2}:\d{2})\s+([A-Z]{2,4})/i,
-  );
+  const joined = normalizeReportText(lines.join(' '));
 
   return {
-    venue: attendanceMatch?.[1]?.trim(),
-    start: timeMatch ? { clock: timeMatch[1], zone: timeMatch[2].toUpperCase() } : undefined,
-    end: timeMatch ? { clock: timeMatch[3], zone: timeMatch[4].toUpperCase() } : undefined,
+    venue: parseReportVenue(lines, joined),
+    start: parseReportClock(joined, 'Start'),
+    end: parseReportClock(joined, 'End'),
+  };
+}
+
+function parseReportVenue(lines: string[], joined: string) {
+  const attendanceLine = lines.find((line) => /\bAttendance\b/i.test(line));
+  const venuePattern =
+    /\bAttendance\s+[\d,]+\s+at\s+(.+?)(?=\s+\b(?:Start|Game|Referee|Linesman|Officials)\b|$)/i;
+  const lineMatch = attendanceLine?.match(venuePattern);
+  if (lineMatch?.[1]) return lineMatch[1].trim();
+
+  const joinedMatch = joined.match(venuePattern);
+  return joinedMatch?.[1]?.trim();
+}
+
+function parseReportClock(text: string, label: 'Start' | 'End'): NhlReportClock | undefined {
+  const match = text.match(
+    new RegExp(`\\b${label}\\s+(\\d{1,2}:\\d{2})(?:\\s*([AP]M))?\\s+([A-Z]{2,4})\\b`, 'i'),
+  );
+  if (!match) return undefined;
+  const meridiem = match[2]?.toUpperCase();
+  return {
+    clock: match[1],
+    meridiem: meridiem === 'AM' || meridiem === 'PM' ? meridiem : undefined,
+    zone: match[3].toUpperCase(),
   };
 }
 
@@ -1156,12 +1333,19 @@ async function syncStartingLineups(
   return saved;
 }
 
+function isDefensePosition(position: string | null | undefined) {
+  return position === 'D' || position === 'LD' || position === 'RD';
+}
+
 function buildStartingLineupSlots(players: MatchedRosterPlayer[]) {
-  const starters = players.filter((player) => player.starter);
-  const forwards = starters.filter((player) => !['D', 'G'].includes(player.position ?? '')).slice(0, 3);
-  const defense = starters.filter((player) => player.position === 'D').slice(0, 2);
-  const goalie = starters.find((player) => player.position === 'G');
-  if (forwards.length !== 3 || defense.length !== 2 || !goalie) return null;
+  const starters = players.filter((player) => player.starter).sort(compareStartingLineupOrder);
+  const goalies = starters.filter((player) => player.position === 'G');
+  const defense = starters.filter((player) => isDefensePosition(player.position));
+  // Anything that isn't a goalie or defenseman is treated as a forward (C/L/R/F).
+  const forwards = starters.filter(
+    (player) => player.position !== 'G' && !isDefensePosition(player.position),
+  );
+  if (forwards.length !== 3 || defense.length !== 2 || goalies.length !== 1) return null;
 
   return [
     { position_slot: 'F1' as const, player_id: forwards[0].localId },
@@ -1169,8 +1353,15 @@ function buildStartingLineupSlots(players: MatchedRosterPlayer[]) {
     { position_slot: 'F3' as const, player_id: forwards[2].localId },
     { position_slot: 'D1' as const, player_id: defense[0].localId },
     { position_slot: 'D2' as const, player_id: defense[1].localId },
-    { position_slot: 'G' as const, player_id: goalie.localId },
+    { position_slot: 'G' as const, player_id: goalies[0].localId },
   ];
+}
+
+function compareStartingLineupOrder(a: MatchedRosterPlayer, b: MatchedRosterPlayer) {
+  const goalieOrder = Number(a.position === 'G') - Number(b.position === 'G');
+  if (goalieOrder !== 0) return goalieOrder;
+  if (a.sweaterNumber !== b.sweaterNumber) return a.sweaterNumber - b.sweaterNumber;
+  return a.name.localeCompare(b.name);
 }
 
 function getNhlGoals(playByPlay: any, boxscore: any): NhlGoal[] {
@@ -1697,7 +1888,11 @@ function reportClockCandidates(gameDate: string, time: NhlReportClock) {
   const [rawHour, minute] = time.clock.split(':').map(Number);
   if (!offset || !Number.isFinite(rawHour) || !Number.isFinite(minute)) return [];
 
-  const hours = rawHour === 12 ? [0, 12] : [rawHour, rawHour + 12];
+  const hours = time.meridiem
+    ? [time.meridiem === 'AM' ? rawHour % 12 : (rawHour % 12) + 12]
+    : rawHour === 12
+      ? [0, 12]
+      : [rawHour, rawHour + 12];
   return [0, 1].flatMap((dayOffset) => {
     const candidateDate = shiftDate(gameDate, dayOffset);
     return hours.map((hour) => {

@@ -111,21 +111,30 @@ const localPlayers = [
   { id: 'jarvis', first_name: 'Seth', last_name: 'Jarvis', jersey_number: 24, team_id: 'car-team', position: 'F' },
   { id: 'svechnikov', first_name: 'Andrei', last_name: 'Svechnikov', jersey_number: 37, team_id: 'car-team', position: 'F' },
   { id: 'hall', first_name: 'Taylor', last_name: 'Hall', jersey_number: 71, team_id: 'car-team', position: 'F' },
+  { id: 'orlov', first_name: 'Dmitry', last_name: 'Orlov', jersey_number: 7, team_id: 'car-team', position: 'D' },
+  { id: 'slavin', first_name: 'Jaccob', last_name: 'Slavin', jersey_number: 74, team_id: 'car-team', position: 'D' },
   { id: 'andersen', first_name: 'Frederik', last_name: 'Andersen', jersey_number: 31, team_id: 'car-team', position: 'G' },
   { id: 'zuccarello', first_name: 'Mats', last_name: 'Zuccarello', jersey_number: 36, team_id: 'min-team', position: 'F' },
   { id: 'kaprizov', first_name: 'Kirill', last_name: 'Kaprizov', jersey_number: 97, team_id: 'min-team', position: 'F' },
   { id: 'boldy', first_name: 'Matt', last_name: 'Boldy', jersey_number: 12, team_id: 'min-team', position: 'F' },
+  { id: 'faber', first_name: 'Brock', last_name: 'Faber', jersey_number: 7, team_id: 'min-team', position: 'D' },
+  { id: 'spurgeon', first_name: 'Jared', last_name: 'Spurgeon', jersey_number: 46, team_id: 'min-team', position: 'D' },
   { id: 'wallstedt', first_name: 'Jesper', last_name: 'Wallstedt', jersey_number: 30, team_id: 'min-team', position: 'G' },
   { id: 'gustavsson', first_name: 'Filip', last_name: 'Gustavsson', jersey_number: 32, team_id: 'min-team', position: 'G' },
 ];
 
 let playByPlayData: { plays: unknown[] };
+let optionalRosterReportHtml: string | null;
 let optionalShootoutReportHtml: string | null;
 let optionalGameSummaryReportHtml: string | null;
 let optionalGoalieToiReportHtml: string | null;
 let boxscoreData: typeof boxscore;
 let existingGoalsData: unknown[];
 let existingGoalieStatsData: unknown[];
+// Players auto-created during a run (via /admin/players/bulk + /admin/player-teams/bulk)
+// so the post-creation roster re-fetch can return them.
+let extraPlayers: Array<Record<string, unknown>>;
+let createdPlayerStore: Map<string, Record<string, unknown>>;
 
 describe('autofillGameFromNhlGamecenter', () => {
   beforeEach(() => {
@@ -133,16 +142,22 @@ describe('autofillGameFromNhlGamecenter', () => {
     localStorage.setItem('token', 'token');
     boxscoreData = boxscore;
     playByPlayData = { plays: [] };
+    optionalRosterReportHtml = null;
     optionalShootoutReportHtml = shootoutReportHtml;
     optionalGameSummaryReportHtml = null;
     optionalGoalieToiReportHtml = null;
     existingGoalsData = [];
     existingGoalieStatsData = [];
+    extraPlayers = [];
+    createdPlayerStore = new Map();
     mockedAxios.get.mockImplementation((url, config) => {
       if (String(url).endsWith('/admin/games/nhl-api')) {
         const targetUrl = String(config?.params?.url ?? '');
         if (targetUrl.endsWith('/boxscore')) return Promise.resolve({ data: boxscoreData });
         if (targetUrl.endsWith('/play-by-play')) return Promise.resolve({ data: playByPlayData });
+        if (targetUrl.includes('/RO020317.HTM') && optionalRosterReportHtml) {
+          return Promise.resolve({ data: optionalRosterReportHtml });
+        }
         if (targetUrl.includes('/GS020317.HTM') && optionalGameSummaryReportHtml) {
           return Promise.resolve({ data: optionalGameSummaryReportHtml });
         }
@@ -161,13 +176,46 @@ describe('autofillGameFromNhlGamecenter', () => {
       }
       if (String(url).endsWith('/admin/players')) {
         return Promise.resolve({
-          data: localPlayers.filter((player) => player.team_id === config?.params?.team_id),
+          data: [...localPlayers, ...extraPlayers].filter(
+            (player) => player.team_id === config?.params?.team_id,
+          ),
         });
       }
       if (String(url).endsWith('/admin/games/game-1/roster')) return Promise.resolve({ data: [] });
       return Promise.reject(new Error(`Unexpected GET ${url}`));
     });
-    mockedAxios.post.mockResolvedValue({ data: {} });
+    mockedAxios.post.mockImplementation((url, body: any) => {
+      const u = String(url);
+      if (u.endsWith('/admin/players/bulk')) {
+        const created = (body?.players ?? []).map((player: any, index: number) => {
+          const id = `auto-${String(player.last_name).toLowerCase()}-${index}`;
+          createdPlayerStore.set(id, player);
+          return { id };
+        });
+        return Promise.resolve({ data: { created } });
+      }
+      if (u.endsWith('/admin/player-teams/bulk')) {
+        for (const row of body?.players ?? []) {
+          const player = createdPlayerStore.get(row.player_id) ?? {};
+          extraPlayers.push({
+            id: row.player_id,
+            player_team_id: row.player_id,
+            player_id: row.player_id,
+            team_id: body.team_id,
+            jersey_number: row.jersey_number,
+            first_name: player.first_name,
+            last_name: player.last_name,
+            position: player.position,
+            primary_color: null,
+            text_color: null,
+            team_name: null,
+            is_prospect: false,
+          });
+        }
+        return Promise.resolve({ data: { created: [] } });
+      }
+      return Promise.resolve({ data: {} });
+    });
     mockedAxios.patch.mockResolvedValue({ data: {} });
     mockedAxios.put.mockResolvedValue({ data: {} });
   });
@@ -387,6 +435,201 @@ describe('autofillGameFromNhlGamecenter', () => {
     );
   });
 
+  it('saves roster report starters into forward and defense slots by position', async () => {
+    optionalRosterReportHtml = `
+      <html><body>
+        <table id="GameInfo">
+          <tr><td>Attendance 18,000 at Grand Casino Arena</td></tr>
+          <tr><td>Start 8:09 CST; End 10:47 CST</td></tr>
+        </table>
+        <table>
+          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
+          <tr><td class="bold">24</td><td>C</td><td>Seth Jarvis</td></tr>
+          <tr><td class="bold">7</td><td>D</td><td>Dmitry Orlov</td></tr>
+          <tr><td class="bold">74</td><td>D</td><td>Jaccob Slavin</td></tr>
+          <tr><td class="bold">37</td><td>R</td><td>Andrei Svechnikov</td></tr>
+          <tr><td class="bold">71</td><td>L</td><td>Taylor Hall</td></tr>
+          <tr><td class="bold">31</td><td>G</td><td>Frederik Andersen</td></tr>
+        </table>
+        <table>
+          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
+          <tr><td class="bold">97</td><td>L</td><td>Kirill Kaprizov</td></tr>
+          <tr><td class="bold">12</td><td>L</td><td>Matt Boldy</td></tr>
+          <tr><td class="bold">46</td><td>D</td><td>Jared Spurgeon</td></tr>
+          <tr><td class="bold">7</td><td>D</td><td>Brock Faber</td></tr>
+          <tr><td class="bold">36</td><td>R</td><td>Mats Zuccarello</td></tr>
+          <tr><td class="bold">30</td><td>G</td><td>Jesper Wallstedt</td></tr>
+        </table>
+      </body></html>
+    `;
+
+    const result = await autofillGameFromNhlGamecenter(game, '317');
+    const lineupPuts = mockedAxios.put.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/games/game-1/lineup'),
+    );
+
+    expect(result.summary.lineupsSet).toBe(2);
+    expect(lineupPuts.map(([, payload]) => payload)).toEqual([
+      {
+        team_id: 'car-team',
+        slots: [
+          { position_slot: 'F1', player_id: 'jarvis' },
+          { position_slot: 'F2', player_id: 'svechnikov' },
+          { position_slot: 'F3', player_id: 'hall' },
+          { position_slot: 'D1', player_id: 'orlov' },
+          { position_slot: 'D2', player_id: 'slavin' },
+          { position_slot: 'G', player_id: 'andersen' },
+        ],
+      },
+      {
+        team_id: 'min-team',
+        slots: [
+          { position_slot: 'F1', player_id: 'boldy' },
+          { position_slot: 'F2', player_id: 'zuccarello' },
+          { position_slot: 'F3', player_id: 'kaprizov' },
+          { position_slot: 'D1', player_id: 'faber' },
+          { position_slot: 'D2', player_id: 'spurgeon' },
+          { position_slot: 'G', player_id: 'wallstedt' },
+        ],
+      },
+    ]);
+  });
+
+  it('reads 3 stars from the nested officials/stars layout without picking up officials', async () => {
+    // Mirrors the real GS report: OFFICIALS and 3 STARS are side-by-side nested
+    // tables, with officials (#20 Mitch Dunning, etc.) appearing before the stars.
+    optionalGameSummaryReportHtml = `
+      <html><body>
+        <table><tr><td>Scoring Summary</td></tr><tr><td>1</td><td>MIN</td><td>Goal</td></tr></table>
+        <table>
+          <tr>
+            <td>OFFICIALS</td>
+            <td><span class="sectionheading">3 STARS</span>&nbsp;By:Attending Media</td>
+          </tr>
+          <tr>
+            <td>
+              <table>
+                <tr><td>Referee</td><td>Linesperson</td></tr>
+                <tr>
+                  <td><table><tr><td>#20 Mitch Dunning</td></tr><tr><td>#7 Garrett Rank</td></tr></table></td>
+                  <td><table><tr><td>#60 Libor Suchanek</td></tr><tr><td>#86 Jesse Marquis</td></tr></table></td>
+                </tr>
+              </table>
+            </td>
+            <td>
+              <table>
+                <tr><td>1.</td><td>MIN</td><td>L</td><td>12 M.BOLDY</td></tr>
+                <tr><td>2.</td><td>MIN</td><td>R</td><td>36 M.ZUCCARELLO</td></tr>
+                <tr><td>3.</td><td>CAR</td><td>C</td><td>24 S.JARVIS</td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body></html>
+    `;
+
+    const result = await autofillGameFromNhlGamecenter(game, '317');
+    const finalPatch = mockedAxios.patch.mock.calls.find(
+      ([url, payload]) =>
+        String(url).endsWith('/admin/games/game-1') &&
+        (payload as Record<string, unknown>)?.status === 'final',
+    );
+
+    expect(result.summary.starsSet).toBe(3);
+    expect(finalPatch?.[1]).toEqual(
+      expect.objectContaining({
+        star_1_id: 'boldy',
+        star_2_id: 'zuccarello',
+        star_3_id: 'jarvis',
+      }),
+    );
+  });
+
+  it('auto-creates dressed roster-report players missing from the local roster', async () => {
+    // #19 is dressed in the report but absent from the local MIN roster; it should
+    // be created (full name + mapped position) and rostered, not error out.
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
+          <tr><td>24</td><td>C</td><td>Seth Jarvis</td></tr>
+        </table>
+        <table>
+          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
+          <tr><td>19</td><td>L</td><td>Norman Mystery</td></tr>
+        </table>
+      </body></html>
+    `;
+
+    const result = await autofillGameFromNhlGamecenter(game, '317');
+
+    const playerCreates = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/players/bulk'),
+    );
+    expect(playerCreates).toHaveLength(1);
+    expect(playerCreates[0][1]).toEqual({
+      players: [{ first_name: 'Norman', last_name: 'Mystery', position: 'LW' }],
+    });
+
+    const rosterAdds = mockedAxios.post.mock.calls.filter(([url]) =>
+      String(url).endsWith('/admin/player-teams/bulk'),
+    );
+    expect(rosterAdds[0][1]).toEqual(
+      expect.objectContaining({
+        team_id: 'min-team',
+        players: [expect.objectContaining({ jersey_number: 19 })],
+      }),
+    );
+    expect(result.warnings).toEqual(
+      expect.arrayContaining([expect.stringContaining('#19 Norman Mystery')]),
+    );
+  });
+
+  it('sets start and end times from the club playing roster header', async () => {
+    optionalRosterReportHtml = `
+      <html><body>
+        <table>
+          <tr><td>Attendance 18,000 at Grand Casino Arena</td></tr>
+          <tr><td>Start 10:08 PM EST</td><td>End 12:38 AM EST</td></tr>
+          <tr><td>Game 0317</td></tr>
+        </table>
+        <table>
+          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
+          <tr><td class="bold">24</td><td>C</td><td>Seth Jarvis</td></tr>
+          <tr><td class="bold">7</td><td>D</td><td>Dmitry Orlov</td></tr>
+          <tr><td class="bold">74</td><td>D</td><td>Jaccob Slavin</td></tr>
+          <tr><td class="bold">37</td><td>R</td><td>Andrei Svechnikov</td></tr>
+          <tr><td class="bold">71</td><td>L</td><td>Taylor Hall</td></tr>
+          <tr><td class="bold">31</td><td>G</td><td>Frederik Andersen</td></tr>
+        </table>
+        <table>
+          <tr><th>#</th><th>Pos</th><th>Name</th></tr>
+          <tr><td class="bold">97</td><td>L</td><td>Kirill Kaprizov</td></tr>
+          <tr><td class="bold">12</td><td>L</td><td>Matt Boldy</td></tr>
+          <tr><td class="bold">46</td><td>D</td><td>Jared Spurgeon</td></tr>
+          <tr><td class="bold">7</td><td>D</td><td>Brock Faber</td></tr>
+          <tr><td class="bold">36</td><td>R</td><td>Mats Zuccarello</td></tr>
+          <tr><td class="bold">30</td><td>G</td><td>Jesper Wallstedt</td></tr>
+        </table>
+      </body></html>
+    `;
+
+    await autofillGameFromNhlGamecenter(game, '317');
+    const finalPatch = mockedAxios.patch.mock.calls.find(
+      ([url, payload]) =>
+        String(url).endsWith('/admin/games/game-1') &&
+        (payload as Record<string, unknown>)?.status === 'final',
+    );
+
+    expect(finalPatch?.[1]).toEqual(
+      expect.objectContaining({
+        venue: 'Grand Casino Arena',
+        time_start: '2025-11-20T03:08:00.000Z',
+        time_end: '2025-11-20T05:38:00.000Z',
+      }),
+    );
+  });
+
   it('writes multi-goalie NHL games through native goalie stints with parsed entry times', async () => {
     boxscoreData = {
       ...boxscore,
@@ -462,8 +705,8 @@ describe('autofillGameFromNhlGamecenter', () => {
         team_id: 'car-team',
         entered_period: '1',
         entered_time: null,
-        exited_period: 'OT',
-        exited_time: '5:00',
+        exited_period: null,
+        exited_time: null,
         shots_against: 30,
         goals_against: 3,
       }),
@@ -482,8 +725,8 @@ describe('autofillGameFromNhlGamecenter', () => {
         team_id: 'min-team',
         entered_period: '2',
         entered_time: '0:00',
-        exited_period: 'OT',
-        exited_time: '5:00',
+        exited_period: null,
+        exited_time: null,
         shots_against: 20,
         goals_against: 2,
       }),

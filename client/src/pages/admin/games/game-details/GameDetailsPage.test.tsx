@@ -1,5 +1,5 @@
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
-import { render } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { useGameDetails, useGameRouteLookup } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
@@ -129,6 +129,25 @@ describe('GameDetailsPage', () => {
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
+  });
+
+  it('hides game details content behind a page spinner while NHL auto-fill is running', () => {
+    mockUseParams.mockReturnValue({ leagueId: 'league-1', seasonId: 'season-1', id: 'game-1' });
+    render(<GameDetailsPage />);
+
+    act(() => {
+      mockSummaryTab.mock.calls[0][0].onGameAutofillChange(true);
+    });
+
+    expect(screen.getByRole('status', { name: /auto-filling game from nhl data/i })).toBeInTheDocument();
+    expect(screen.getByText('scoreboard')).not.toBeVisible();
+    expect(screen.getByText('summary')).not.toBeVisible();
+    expect(screen.getByText('lineups')).not.toBeVisible();
+    expect(mockUsePageBreadcrumbs.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        backLabel: 'Back to 2024-25',
+      }),
+    );
   });
 
   it('uses nickname-only team names in the document title', () => {

@@ -85,6 +85,7 @@ interface Props {
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
+  onGameAutofillChange?: (loading: boolean) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -127,6 +128,7 @@ const GameSummaryTab = ({
   updateGameInfo,
   updatePeriodShots,
   deleteGame,
+  onGameAutofillChange,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -738,7 +740,12 @@ const GameSummaryTab = ({
               </Card>
             )}
 
-            {showGoalieSwitchReport && <GoalieSwitchReportCard game={game} />}
+            {showGoalieSwitchReport && (
+              <GoalieSwitchReportCard
+                game={game}
+                onAutofillChange={onGameAutofillChange}
+              />
+            )}
 
             {/* ── Game Info card ── */}
             <GameInfoCard

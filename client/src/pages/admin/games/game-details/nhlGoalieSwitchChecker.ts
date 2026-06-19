@@ -430,9 +430,8 @@ export function buildGoalieStintsFromToiHtml(
         stintSortValue(b.enteredPeriod, b.enteredTime),
     );
 
-  return completeMissingGoalieStintsFromToiHtml(
-    mergeAdjacentGoalieShiftStints(rawStints),
-    teamGoalies,
+  return openFinalGoalieStintPerTeam(
+    completeMissingGoalieStintsFromToiHtml(mergeAdjacentGoalieShiftStints(rawStints), teamGoalies),
   );
 }
 
@@ -532,7 +531,25 @@ export function buildGoalieStintsFromShiftChart(
         stintSortValue(b.enteredPeriod, b.enteredTime),
     );
 
-  return mergeAdjacentGoalieShiftStints(rawStints);
+  return openFinalGoalieStintPerTeam(mergeAdjacentGoalieShiftStints(rawStints));
+}
+
+/**
+ * Clear the exit on each team's final stint. Shift- and TOI-based reports record
+ * an exit period/time for every shift, so the last goalie of the game ends up with
+ * an exit at the final period even though they were never switched out. Leaving the
+ * final stint open (exit = null) means "played to end of game" — matching the
+ * play-by-play builder, and letting the display infer a full-game starter rather
+ * than annotating a phantom "P1 → P3" window.
+ */
+function openFinalGoalieStintPerTeam(stints: GoalieStint[]): GoalieStint[] {
+  const lastIndexBySide = new Map<TeamSide, number>();
+  stints.forEach((stint, index) => lastIndexBySide.set(stint.teamSide, index));
+  return stints.map((stint, index) =>
+    lastIndexBySide.get(stint.teamSide) === index
+      ? { ...stint, exitedPeriod: null, exitedTime: null }
+      : stint,
+  );
 }
 
 function mergeAdjacentGoalieShiftStints(stints: GoalieStint[]): GoalieStint[] {

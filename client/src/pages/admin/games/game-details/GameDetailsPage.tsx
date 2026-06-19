@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Tabs from '@/components/Tabs/Tabs';
@@ -169,6 +169,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
+  const [gameAutofilling, setGameAutofilling] = useState(false);
   const isEditMode = isAdminView;
 
   /**
@@ -448,95 +449,109 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
 
   return (
     <>
-      {/* ── Scoreboard card ── */}
-      <ScoreboardCard
-        game={game}
-        isFinal={isFinal}
-        isInProgress={isInProgress}
-        isEditMode={isEditMode}
-        liveAwayScore={liveAwayScore}
-        liveHomeScore={liveHomeScore}
-        overtimeSuffix={overtimeSuffix}
-        leagueId={isAdminView ? leagueId : undefined}
-        leagueCode={game.league_code}
-      />
+      {gameAutofilling && (
+        <LoadingSpinner
+          message="Auto-filling game from NHL data..."
+          layout="page"
+          size="lg"
+        />
+      )}
 
-      {/* ── Tabs ── */}
-      <Tabs
-        activeIndex={activeTab}
-        onTabChange={handleTabChange}
-        tabs={[
-          {
-            label: 'Summary',
-            icon: 'apps',
-            content: (
-              <GameSummaryTab
-                game={game}
-                isFinal={isFinal}
-                isInProgress={isInProgress}
-                isEditMode={isEditMode}
-                editable={isAdminView}
-                showPlayerDataStatus={isAdminView}
-                busy={busy}
-                leagueId={leagueId}
-                seasonId={seasonId ?? ''}
-                liveAwayScore={liveAwayScore}
-                liveHomeScore={liveHomeScore}
-                overtimeSuffix={overtimeSuffix}
-                gameHrefBuilder={gameHrefBuilder}
-                playerHrefBuilder={playerHrefBuilder}
-                linescorePeriods={linescorePeriods}
-                goalieStats={goalieStats}
-                awayRoster={awayRoster}
-                homeRoster={homeRoster}
-                roster={roster}
-                lineup={lineup}
-                rosterReady={rosterReady}
-                lineupsReady={lineupsReady}
-                upsertGoalieStat={upsertGoalieStat}
-                switchGoalie={switchGoalie}
-                removeGoalieStat={removeGoalieStat}
-                updateGoalieStint={updateGoalieStint}
-                removeGoalieStint={removeGoalieStint}
-                startGame={startGame}
-                updateStatus={updateStatus}
-                advancePeriod={advancePeriod}
-                advanceOTPeriod={advanceOTPeriod}
-                revertOTPeriod={revertOTPeriod}
-                endGame={endGame}
-                updateStars={updateStars}
-                updateGameInfo={updateGameInfo}
-                updatePeriodShots={updatePeriodShots}
-                deleteGame={deleteGame}
-              />
-            ),
-          },
-          {
-            label: 'Lineups',
-            icon: 'set_lineup',
-            content: (
-              <GameLineupsTab
-                game={game}
-                isEditMode={isEditMode}
-                readOnly={!isAdminView}
-                showPlayerDataStatus={isAdminView}
-                isFinal={isFinal}
-                leagueId={leagueId}
-                seasonId={seasonId}
-                playerHrefBuilder={playerHrefBuilder}
-                awayRoster={awayRoster}
-                homeRoster={homeRoster}
-                awayRosterInherited={awayRosterInherited}
-                homeRosterInherited={homeRosterInherited}
-                lineup={lineup}
-                saveTeamLineup={saveTeamLineup}
-                addToRoster={addToRoster}
-                removeFromRoster={removeFromRoster}
-              />
-            ),
-          },
-        ]}
-      />
+      <div
+        aria-hidden={gameAutofilling}
+        style={{ display: gameAutofilling ? 'none' : 'contents' }}
+      >
+        {/* ── Scoreboard card ── */}
+        <ScoreboardCard
+          game={game}
+          isFinal={isFinal}
+          isInProgress={isInProgress}
+          isEditMode={isEditMode}
+          liveAwayScore={liveAwayScore}
+          liveHomeScore={liveHomeScore}
+          overtimeSuffix={overtimeSuffix}
+          leagueId={isAdminView ? leagueId : undefined}
+          leagueCode={game.league_code}
+        />
+
+        {/* ── Tabs ── */}
+        <Tabs
+          activeIndex={activeTab}
+          onTabChange={handleTabChange}
+          tabs={[
+            {
+              label: 'Summary',
+              icon: 'apps',
+              content: (
+                <GameSummaryTab
+                  game={game}
+                  isFinal={isFinal}
+                  isInProgress={isInProgress}
+                  isEditMode={isEditMode}
+                  editable={isAdminView}
+                  showPlayerDataStatus={isAdminView}
+                  busy={busy}
+                  leagueId={leagueId}
+                  seasonId={seasonId ?? ''}
+                  liveAwayScore={liveAwayScore}
+                  liveHomeScore={liveHomeScore}
+                  overtimeSuffix={overtimeSuffix}
+                  gameHrefBuilder={gameHrefBuilder}
+                  playerHrefBuilder={playerHrefBuilder}
+                  linescorePeriods={linescorePeriods}
+                  goalieStats={goalieStats}
+                  awayRoster={awayRoster}
+                  homeRoster={homeRoster}
+                  roster={roster}
+                  lineup={lineup}
+                  rosterReady={rosterReady}
+                  lineupsReady={lineupsReady}
+                  upsertGoalieStat={upsertGoalieStat}
+                  switchGoalie={switchGoalie}
+                  removeGoalieStat={removeGoalieStat}
+                  updateGoalieStint={updateGoalieStint}
+                  removeGoalieStint={removeGoalieStint}
+                  startGame={startGame}
+                  updateStatus={updateStatus}
+                  advancePeriod={advancePeriod}
+                  advanceOTPeriod={advanceOTPeriod}
+                  revertOTPeriod={revertOTPeriod}
+                  endGame={endGame}
+                  updateStars={updateStars}
+                  updateGameInfo={updateGameInfo}
+                  updatePeriodShots={updatePeriodShots}
+                  deleteGame={deleteGame}
+                  onGameAutofillChange={setGameAutofilling}
+                />
+              ),
+            },
+            {
+              label: 'Lineups',
+              icon: 'set_lineup',
+              content: (
+                <GameLineupsTab
+                  game={game}
+                  isEditMode={isEditMode}
+                  readOnly={!isAdminView}
+                  showPlayerDataStatus={isAdminView}
+                  isFinal={isFinal}
+                  leagueId={leagueId}
+                  seasonId={seasonId}
+                  playerHrefBuilder={playerHrefBuilder}
+                  awayRoster={awayRoster}
+                  homeRoster={homeRoster}
+                  awayRosterInherited={awayRosterInherited}
+                  homeRosterInherited={homeRosterInherited}
+                  lineup={lineup}
+                  saveTeamLineup={saveTeamLineup}
+                  addToRoster={addToRoster}
+                  removeFromRoster={removeFromRoster}
+                />
+              ),
+            },
+          ]}
+        />
+      </div>
     </>
   );
 };

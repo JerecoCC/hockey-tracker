@@ -10,6 +10,7 @@ import { GameRecord } from '@/hooks/useGames';
 
 type Props = {
   game: GameRecord;
+  onAutofillChange?: (loading: boolean) => void;
 };
 
 const storageKey = (gameId: string) => `nhl-goalie-switch-report:${gameId}`;
@@ -35,7 +36,7 @@ const writeStoredReport = (gameId: string, report: NhlGoalieSwitchReport | null)
   }
 };
 
-const GoalieSwitchReportCard = ({ game }: Props) => {
+const GoalieSwitchReportCard = ({ game, onAutofillChange }: Props) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [report, setReport] = useState<NhlGoalieSwitchReport | null>(() =>
     readStoredReport(game.id),
@@ -100,6 +101,7 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
         onClose={() => setModalOpen(false)}
         setReportData={handleSetReport}
         onLoadingChange={setLoading}
+        onAutofillChange={onAutofillChange}
       />
     </>
   );

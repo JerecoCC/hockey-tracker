@@ -1,16 +1,19 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
-.lineupSlotList {
+.content {
   display: flex;
   flex-direction: column;
-  gap: $space-lg;
+  flex: 1;
+  min-height: 0;
 }
 
-.lineupSlotGroup {
+.groupHeader {
   display: flex;
-  flex-direction: column;
-  gap: $space-sm;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  margin-bottom: $space-md;
 }
 
 .slotGroupLabel {
@@ -27,31 +30,119 @@
   font-style: normal;
 }
 
-// Label + dropdown for a single position slot
-.slotField {
-  min-width: 0;
+.groupMeta {
+  color: $text-dim;
+  font-size: $font-sm;
+  white-space: nowrap;
+}
+
+.controls {
+  flex-shrink: 0;
+  margin-bottom: $space-md;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.quickAddWrap {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+
+  > label {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}
+
+.quickAddField {
+  min-height: 36px;
+  padding-top: $space-sm;
+  padding-bottom: $space-sm;
+}
+
+.controlsDivider {
+  height: 1px;
+  background: $border;
+}
+
+.notice {
+  margin: 0;
+  color: $info-light;
+  font-size: $font-sm;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+
+  > label {
+    flex: 1;
+    margin-bottom: 0;
+  }
+}
+
+.searchField {
+  min-height: 42px;
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  margin-bottom: -$space-xl;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.empty {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  text-align: center;
+  padding: $space-2xl 0;
 }
 
 .error {
-  margin: $space-md 0 0;
+  margin: 0 0 $space-sm;
   font-size: $font-sm;
   color: $danger;
 }
 
 .footerActions {
+  width: 100%;
   display: flex;
   align-items: center;
   gap: $space-md;
 }
 
-.footerCancel {
-  margin-left: auto;
+.footerSummary {
+  margin-right: auto;
+  color: $text-dim;
+  font-size: $font-sm;
 }
 
 @media (max-width: 768px) {
+  .groupHeader {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
   .footerActions {
     flex-wrap: wrap;
     gap: $space-sm;
+  }
+
+  .footerSummary {
+    order: 0;
+    width: 100%;
+    margin-right: 0;
   }
 
   .footerClear {
@@ -66,7 +157,6 @@
 
   .footerCancel {
     order: 3;
-    margin-left: 0;
     width: 100%;
   }
 }

@@ -521,9 +521,12 @@ const GameLineupsTab = ({
       {!readOnly &&
         lineupSetTeam !== null &&
         (() => {
+          const sideTeam = lineupSetTeam === 'away' ? game.away_team : game.home_team;
           const rosterForSide = (lineupSetTeam === 'away' ? awayRoster : homeRoster).map((e) => ({
             ...e,
             id: e.player_id,
+            primary_color: sideTeam.primary_color,
+            text_color: sideTeam.text_color,
           }));
           return (
             <SetLineupModal

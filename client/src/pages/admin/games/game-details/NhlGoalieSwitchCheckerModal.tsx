@@ -19,6 +19,7 @@ interface Props {
   onClose: () => void;
   setReportData: (data: NhlGoalieSwitchReport | null) => void;
   onLoadingChange?: (loading: boolean) => void;
+  onAutofillChange?: (loading: boolean) => void;
 }
 
 type FormValues = {
@@ -33,6 +34,7 @@ const NhlGoalieSwitchCheckerModal = ({
   onClose,
   setReportData,
   onLoadingChange,
+  onAutofillChange,
 }: Props) => {
   const queryClient = useQueryClient();
   const {
@@ -81,6 +83,8 @@ const NhlGoalieSwitchCheckerModal = ({
     setError(null);
     setFilling(true);
     onLoadingChange?.(true);
+    onAutofillChange?.(true);
+    onClose();
 
     try {
       const result = await autofillGameFromNhlGamecenter(game, input);
@@ -100,10 +104,13 @@ const NhlGoalieSwitchCheckerModal = ({
         setError(result.warnings.join(' '));
       }
     } catch (err) {
-      setError(nhlAutofillApiError(err, 'Unable to auto-fill game from NHL data.'));
+      const message = nhlAutofillApiError(err, 'Unable to auto-fill game from NHL data.');
+      setError(message);
+      toast.error(message);
     } finally {
       setFilling(false);
       onLoadingChange?.(false);
+      onAutofillChange?.(false);
     }
   };
 
