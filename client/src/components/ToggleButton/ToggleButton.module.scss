@@ -6,29 +6,38 @@
   background: #1e3a8a !important;
 }
 
+.inactive {
+  border-color: color-mix(in srgb, #{$text-dim} 42%, transparent) !important;
+  background: color-mix(in srgb, #{$border} 76%, #{$bg-input}) !important;
+  color: $text-body !important;
+
+  &:hover:not(:disabled) {
+    border-color: color-mix(in srgb, #{$text-light} 72%, transparent) !important;
+    background: color-mix(in srgb, #{$border} 86%, #{$bg-input}) !important;
+    color: $text-bright !important;
+  }
+}
+
 .switchToggle {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  min-height: 42px;
-  padding: $space-sm $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: transparent;
+  width: 78px;
+  height: 42px;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid color-mix(in srgb, #{$text-dim} 42%, transparent);
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, #{$border} 76%, #{$bg-input});
   color: $text-body;
   font: inherit;
-  font-size: $font-sm;
-  font-weight: 700;
   cursor: pointer;
   transition:
     background $transition-fast,
-    border-color $transition-fast,
-    color $transition-fast;
+    border-color $transition-fast;
 
   &:hover:not(:disabled) {
-    border-color: $text-light;
-    color: $text-bright;
+    border-color: color-mix(in srgb, #{$text-light} 72%, transparent);
   }
 
   &:focus-visible {
@@ -43,45 +52,31 @@
 }
 
 .switchToggleActive {
-  border-color: $accent;
-  background: rgba($accent, 0.12);
-  color: $text-bright;
-}
-
-.switchTrack {
-  position: relative;
-  display: inline-flex;
-  width: 38px;
-  height: 22px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  background: $border;
-  transition: background $transition-fast;
+  border-color: color-mix(in srgb, #{$accent} 84%, #{$text-bright});
+  background: $accent;
 }
 
 .switchThumb {
   position: absolute;
-  top: 3px;
-  left: 3px;
-  width: 16px;
-  height: 16px;
-  border-radius: 999px;
-  background: $text-body;
+  top: 4px;
+  left: 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, #{$text-bright} 80%, #{$bg-input});
+  color: color-mix(in srgb, #{$text-dim} 86%, #{$bg-input});
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
   transition:
+    color $transition-fast,
     background $transition-fast,
     transform $transition-fast;
 }
 
-.switchToggleActive .switchTrack {
-  background: $accent;
-}
-
 .switchToggleActive .switchThumb {
   background: #fff;
-  transform: translateX(16px);
-}
-
-.switchLabel {
-  white-space: nowrap;
+  color: $accent;
+  transform: translateX(38px);
 }

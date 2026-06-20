@@ -151,7 +151,7 @@
     opacity 0.25s ease,
     margin-top 0.25s ease;
 
-  > *:not(.teamFilter) {
+  > *:not(.teamFilter):not(.watchFilterSwitch) {
     flex: 1 0 130px;
   }
 }
@@ -173,6 +173,7 @@
 
 .watchFilterSwitch {
   flex: 0 0 auto !important;
+  align-self: center;
 }
 
 // ── Empty / loading ────────────────────────────────────────────────────

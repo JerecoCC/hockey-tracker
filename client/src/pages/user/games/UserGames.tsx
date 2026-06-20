@@ -1356,12 +1356,12 @@ const UserGames = () => {
             variant="switch"
             active={showSkippedGames}
             onClick={() => setShowSkippedGames((show) => !show)}
+            activeIcon="visibility"
+            inactiveIcon="visibility_off"
             activeTooltip="Hide skipped games"
             inactiveTooltip="Show skipped games"
             className={styles.watchFilterSwitch}
-          >
-            Skipped games
-          </ToggleButton>
+          />
         </div>
       </Card>
 
