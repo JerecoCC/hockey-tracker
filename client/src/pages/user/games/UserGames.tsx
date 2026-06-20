@@ -523,9 +523,13 @@ const ScheduleWatchModal = ({
   });
   const scheduledFor = watch('scheduled_for');
 
+  // Initialise the form only when the modal opens (or the target game changes).
+  // Depending on `value` here would reset the form on every date pick, clearing
+  // `isDirty` and keeping the Save button permanently disabled.
   useEffect(() => {
     if (open) reset({ scheduled_for: value });
-  }, [open, reset, value]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, game?.id, reset]);
 
   const submit = handleSubmit(() => onSave());
 

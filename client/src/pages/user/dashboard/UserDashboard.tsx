@@ -7,6 +7,7 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useAuth } from '@/context/AuthContext';
@@ -178,22 +179,15 @@ const getStatusLabel = (game: GameRecord) => {
 };
 
 const TeamChip = ({ team }: { team: TeamRecord }) => (
-  <div className={styles.favoriteTeam}>
-    <TeamLogo
-      logo={team.logo}
-      code={team.code}
-      primaryColor={team.primary_color}
-      textColor={team.text_color}
-      size={40}
-      shape={team.logo ? 'square' : 'circle'}
-    />
-    <div className={styles.favoriteTeamText}>
-      <span className={styles.favoriteTeamName}>{team.team_name || team.name}</span>
-      <span className={styles.favoriteTeamMeta}>
-        {team.place_name ? `${team.place_name} - ${team.code}` : team.code}
-      </span>
-    </div>
-  </div>
+  <ListItem
+    className={styles.favoriteTeam}
+    image={team.logo}
+    eyebrow={team.place_name || undefined}
+    name={team.team_name || team.name}
+    rightContent={{ type: 'code', value: team.code }}
+    primaryColor={team.primary_color}
+    textColor={team.text_color}
+  />
 );
 
 const GameHoverActions = ({
@@ -357,7 +351,8 @@ const TodayGameTile = ({
       className={[
         styles.todayGame,
         game.status === 'in_progress' ? styles.todayGameLive : '',
-        !isWatched ? styles.todayGameUnwatched : '',
+        game.watched_by_user ? styles.todayGameWatched : '',
+        game.skipped_by_user ? styles.todayGameSkipped : '',
         isWatched ? styles.todayGameClickable : '',
       ]
         .filter(Boolean)
@@ -598,14 +593,14 @@ const UserDashboard = () => {
         ) : favoriteTeams.length === 0 ? (
           <p className={styles.empty}>No favorite teams yet.</p>
         ) : (
-          <div className={styles.favoriteScroller}>
+          <ul className={styles.favoriteScroller}>
             {favoriteTeams.map((team) => (
               <TeamChip
                 key={team.id}
                 team={team}
               />
             ))}
-          </div>
+          </ul>
         )}
       </Card>
 

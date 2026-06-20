@@ -43,44 +43,46 @@
 }
 
 .favoriteScroller {
+  margin: 0;
   display: flex;
   align-items: stretch;
   gap: $space-md;
   overflow-x: auto;
   padding: $space-xs 0 $space-sm;
   scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+
+  &:hover,
+  &:focus-within {
+    scrollbar-color: $border transparent;
+  }
+
+  &::-webkit-scrollbar {
+    height: 4px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: $radius-md;
+  }
+
+  &:hover::-webkit-scrollbar-thumb,
+  &:focus-within::-webkit-scrollbar-thumb {
+    background: $border;
+
+    &:hover {
+      background: $text-dim;
+    }
+  }
 }
 
 .favoriteTeam {
   flex: 0 0 230px;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  min-width: 0;
-  padding: $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: $bg-page;
-}
-
-.favoriteTeamText {
-  min-width: 0;
-}
-
-.favoriteTeamName {
-  display: block;
-  color: $text-bright;
-  font-size: $font-base;
-  font-weight: 700;
-  @include truncate;
-}
-
-.favoriteTeamMeta {
-  display: block;
-  margin-top: 2px;
-  color: $text-dim;
-  font-size: $font-xs;
-  @include truncate;
 }
 
 .todayGamesGrid {
@@ -97,17 +99,18 @@
   gap: $space-md;
   min-height: 176px;
   padding: $space-lg;
-  border: 1px solid color-mix(in srgb, var(--game-league-primary) 46%, #{$border});
+  border: 1px solid $border;
   border-radius: $radius-sm;
-  background: color-mix(in srgb, var(--game-league-primary) 16%, #{$bg-card});
-  color: $text-bright;
+  background: color-mix(in srgb, #{$bg-card} 80%, #{$bg-page});
+  color: $text-body;
   transition:
     border-color $transition-fast,
     background $transition-fast;
 
   &:hover,
   &:focus-within {
-    border-color: color-mix(in srgb, var(--game-league-primary) 68%, #475569);
+    border-color: rgba($accent, 0.6);
+    background: rgba($accent, 0.08);
 
     .gameActions {
       opacity: 1;
@@ -116,13 +119,32 @@
   }
 }
 
-.todayGameUnwatched {
-  background: color-mix(in srgb, var(--game-league-primary) 10%, #{$border});
-  border-color: color-mix(in srgb, var(--game-league-primary) 24%, #{$border});
+.todayGameLive {
+  border-color: rgba($success, 0.65);
+  background: rgba($success, 0.08);
 }
 
-.todayGameLive {
-  border-color: $success;
+.todayGameWatched {
+  border-color: rgba($success, 0.7);
+  box-shadow: inset 3px 0 0 $success;
+
+  &:hover,
+  &:focus-within {
+    border-color: rgba($success, 0.9);
+  }
+}
+
+.todayGameSkipped {
+  border-style: dashed;
+  border-color: rgba($danger, 0.68);
+  background: rgba($danger, 0.07);
+  box-shadow: inset 3px 0 0 rgba($danger, 0.75);
+
+  &:hover,
+  &:focus-within {
+    border-color: rgba($danger, 0.86);
+    background: rgba($danger, 0.11);
+  }
 }
 
 .todayGameClickable {
@@ -156,7 +178,7 @@
   justify-content: space-between;
   gap: $space-sm;
   font-size: $font-sm;
-  color: color-mix(in srgb, var(--game-league-primary) 44%, #{$text-dim});
+  color: $text-dim;
 }
 
 .gameFooter {
@@ -187,7 +209,7 @@
   min-width: 30px;
   text-align: right;
   font-size: $font-2xl;
-  color: color-mix(in srgb, var(--game-league-primary) 72%, #{$text-bright});
+  color: $text-bright;
 }
 
 .scheduleModalBody {
