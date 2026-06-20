@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toPng } from 'html-to-image';
+import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
+import monthCalendarStyles from '@/components/MonthCalendar/MonthCalendar.module.scss';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -28,11 +30,12 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@/components/Card/Card', () => ({ title, children }: any) => (
-  <div>
-    <div>{title}</div>
+jest.mock('@/components/Card/Card', () => ({ title, action, children, className }: any) => (
+  <section className={className}>
+    {title && <div>{title}</div>}
+    {action}
     {children}
-  </div>
+  </section>
 ));
 jest.mock(
   '@/components/DatePicker/DatePicker',
@@ -70,13 +73,14 @@ jest.mock(
 jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code || 'LOGO'}</span>);
 jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
   __esModule: true,
-  default: ({ open, game, liveAwayScore, liveHomeScore, overtimeSuffix, onClose }: any) =>
+  default: ({ open, game, liveAwayScore, liveHomeScore, overtimeSuffix, showForm, onClose }: any) =>
     open ? (
       <div>
         <div>Generate Score Card</div>
-        <div>{`${game?.away_team?.code} @ ${game?.home_team?.code}`}</div>
-        <div>{`Score ${liveAwayScore}-${liveHomeScore}`}</div>
-        <div>{`Suffix ${overtimeSuffix ?? ''}`}</div>
+        {showForm && <div>Score image form</div>}
+        {game && <div>{`${game.away_team.code} @ ${game.home_team.code}`}</div>}
+        {game && <div>{`Score ${liveAwayScore}-${liveHomeScore}`}</div>}
+        {game && <div>{`Suffix ${overtimeSuffix ?? ''}`}</div>}
         <button onClick={onClose}>Close score card</button>
       </div>
     ) : null,
@@ -282,6 +286,7 @@ const games = [
     league_primary_color: '#0a4fa3',
     league_text_color: '#ffffff',
     watched_by_user: false,
+    skipped_by_user: false,
     watched_on: null,
     scheduled_for: scheduledWatchDate,
   },
@@ -345,10 +350,26 @@ const games = [
     league_primary_color: '#0a4fa3',
     league_text_color: '#ffffff',
     watched_by_user: true,
+    skipped_by_user: false,
     watched_on: watchedDate,
     scheduled_for: null,
   },
 ];
+
+const skippedGame = {
+  ...games[0],
+  id: 'game-skipped',
+  away_team: {
+    ...games[0].away_team,
+    id: 'team-skipped',
+    name: 'Skipped Away',
+    code: 'SKP',
+  },
+  watched_by_user: false,
+  skipped_by_user: true,
+  watched_on: null,
+  scheduled_for: scheduledWatchDate,
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -371,7 +392,8 @@ beforeEach(() => {
     if (queryKey[0] === 'user-leagues')
       return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
     if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
-    if (queryKey[0] === 'user-games') return { data: games, isLoading: false };
+    if (queryKey[0] === 'user-games')
+      return { data: queryKey[3] ? [...games, skippedGame] : games, isLoading: false };
     return { data: [], isLoading: false };
   });
 });
@@ -433,6 +455,23 @@ describe('UserGames calendar view', () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
+  it("shows won't watch games when the filter switch is enabled", async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    expect(screen.queryByText('SKP')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('switch', { name: "Show won't watch games" }));
+
+    expect(screen.getByRole('switch', { name: "Hide won't watch games" })).toBeInTheDocument();
+    expect(screen.getByText('SKP')).toBeInTheDocument();
+    expect(mockUseQuery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKey: ['user-games', 'all', 'all', true],
+      }),
+    );
+  });
+
   it('shows playoff round metadata on calendar cards but hides series dots until watched', () => {
     render(<UserGames />);
 
@@ -446,19 +485,30 @@ describe('UserGames calendar view', () => {
 
     const watchedCard = screen
       .getByRole('button', { name: 'Download score card' })
-      .closest(`.${styles.calendarGameCard}`);
+      .closest(`.${calendarItemStyles.item}`);
 
     expect(watchedCard).not.toBeNull();
 
     const winnerScore = within(watchedCard as HTMLElement)
       .getByText('2')
-      .closest(`.${styles.calendarGameScore}`);
+      .closest(`.${calendarItemStyles.score}`);
     const loserScore = within(watchedCard as HTMLElement)
       .getByText('1')
-      .closest(`.${styles.calendarGameScore}`);
+      .closest(`.${calendarItemStyles.score}`);
 
-    expect(winnerScore).toHaveClass(styles.calendarGameScoreWin);
-    expect(loserScore).toHaveClass(styles.calendarGameScoreLose);
+    expect(winnerScore).toHaveClass(calendarItemStyles.scoreWin);
+    expect(loserScore).toHaveClass(calendarItemStyles.scoreLose);
+  });
+
+  it('opens the score image form from the games toolbar', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: /Generate Score Image/ }));
+
+    expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
+    expect(screen.getByText('Score image form')).toBeInTheDocument();
   });
 
   it('opens the score card modal from a watched game hover action', async () => {
@@ -489,9 +539,10 @@ describe('UserGames calendar view', () => {
 
     render(<UserGames />);
 
-    expect(screen.getByRole('button', { name: 'Download month image' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    expect(screen.getByRole('button', { name: /Download Month Image/ })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Download month image' }));
+    await user.click(screen.getByRole('button', { name: /Download Month Image/ }));
 
     await waitFor(() => expect(clickMock).toHaveBeenCalled());
     const capturedNode = mockToPng.mock.calls[0][0] as HTMLElement;
@@ -506,7 +557,7 @@ describe('UserGames calendar view', () => {
     expect(capturedNode.textContent).toContain(
       new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(currentDate),
     );
-    expect(capturedNode.querySelector(`.${styles.calendarGrid}`)).not.toBeNull();
+    expect(capturedNode.querySelector(`.${monthCalendarStyles.grid}`)).not.toBeNull();
     expect(createdAnchor?.download).toContain('user-games-');
     expect(createdAnchor?.href).toBe('data:image/png;base64,test');
 

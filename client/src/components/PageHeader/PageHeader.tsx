@@ -58,6 +58,7 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
   const mobileTabTitle = activeTabLabel ? `${routePrefix} ${activeTabLabel}` : null;
   const title = routeTitle;
   const showAdminPanelButton = user?.role === 'admin' && !pathname.startsWith('/admin');
+  const showUserViewButton = user?.role === 'admin' && pathname.startsWith('/admin');
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -98,6 +99,18 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
         </div>
 
         <div className={styles.right}>
+          {showUserViewButton && (
+            <Button
+              variant="ghost"
+              intent="neutral"
+              icon="apps"
+              iconHeight="button"
+              className={styles.adminPanelButton}
+              aria-label="User View"
+              tooltip="User View"
+              onClick={() => navigate('/dashboard')}
+            />
+          )}
           {showAdminPanelButton && (
             <Button
               variant="ghost"

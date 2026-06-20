@@ -11,10 +11,13 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
+import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import Modal from '@/components/Modal/Modal';
+import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
@@ -329,6 +332,7 @@ const getScoreCardGame = (game: GameRecord): GameRecord => ({
 
 interface GameActionsProps {
   watched: boolean;
+  skipped: boolean;
   scheduled: boolean;
   busy: boolean;
   onView: () => void;
@@ -341,6 +345,7 @@ interface GameActionsProps {
 
 const GameHoverActions = ({
   watched,
+  skipped,
   scheduled,
   busy,
   onView,
@@ -397,7 +402,7 @@ const GameHoverActions = ({
         }}
       />
     )}
-    {!watched && (
+    {!watched && !skipped && (
       <Button
         type="button"
         variant="outlined"
@@ -627,6 +632,7 @@ const GameCard = ({
     >
       <GameHoverActions
         watched={isWatched}
+        skipped={!!game.skipped_by_user}
         scheduled={!!game.scheduled_for}
         busy={busy}
         onView={onOpen}
@@ -772,6 +778,7 @@ const CalendarGameCard = ({
     >
       <GameHoverActions
         watched={!!game.watched_by_user}
+        skipped={!!game.skipped_by_user}
         scheduled={!!game.scheduled_for}
         busy={busy}
         onView={onOpen}
@@ -793,6 +800,8 @@ const UserGames = () => {
   const initialStoredCalendarMonth = getStoredCalendarMonth();
   const [weekStart, setWeekStart] = useState<Date>(() => getStoredWeekStart());
   const [view, setView] = useState<'list' | 'calendar'>('calendar');
+  const [filtersVisible, setFiltersVisible] = useState(true);
+  const [showSkippedGames, setShowSkippedGames] = useState(false);
   const [leagueId, setLeagueId] = useState<string>('all');
   const [teamFilter, setTeamFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -802,6 +811,7 @@ const UserGames = () => {
   const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
+  const [scoreImageOpen, setScoreImageOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [exportingMonthImage, setExportingMonthImage] = useState(false);
@@ -843,11 +853,12 @@ const UserGames = () => {
   const leagueSelected = leagueId !== 'all';
 
   const { data: games = [], isLoading } = useQuery<GameRecord[]>({
-    queryKey: ['user-games', statusFilter, leagueId],
+    queryKey: ['user-games', statusFilter, leagueId, showSkippedGames],
     queryFn: async () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (leagueSelected) params.league_id = leagueId;
+      if (showSkippedGames) params.include_skipped = 'true';
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
         headers: authHeaders(),
         params,
@@ -887,11 +898,12 @@ const UserGames = () => {
   }, [favoriteTeamOptions]);
 
   const filteredGames = useMemo(() => {
-    if (teamFilter.length === 0) return games;
-    return games.filter(
+    const visibleGames = showSkippedGames ? games : games.filter((game) => !game.skipped_by_user);
+    if (teamFilter.length === 0) return visibleGames;
+    return visibleGames.filter(
       (game) => teamFilter.includes(game.home_team.id) || teamFilter.includes(game.away_team.id),
     );
-  }, [games, teamFilter]);
+  }, [games, showSkippedGames, teamFilter]);
 
   const scheduledGames = useMemo(
     () => filteredGames.filter((game) => !!getEffectiveUserDateKey(game, tzPref)),
@@ -995,7 +1007,9 @@ const UserGames = () => {
         (existing: GameRecord[] | undefined) => {
           if (!Array.isArray(existing)) return existing;
           return existing.map((game) =>
-            game.id === gameId ? { ...game, scheduled_for: scheduledFor } : game,
+            game.id === gameId
+              ? { ...game, scheduled_for: scheduledFor, skipped_by_user: false }
+              : game,
           );
         },
       );
@@ -1024,6 +1038,7 @@ const UserGames = () => {
                   ...game,
                   watched_by_user: true,
                   watched_on: getScheduledWatchDateKey(game.scheduled_for) ?? dateToISO(new Date()),
+                  skipped_by_user: false,
                 }
               : game,
           );
@@ -1046,7 +1061,19 @@ const UserGames = () => {
         { queryKey: ['user-games'] },
         (existing: GameRecord[] | undefined) => {
           if (!Array.isArray(existing)) return existing;
-          return existing.filter((game) => game.id !== gameId);
+          return showSkippedGames
+            ? existing.map((game) =>
+                game.id === gameId
+                  ? {
+                      ...game,
+                      watched_by_user: false,
+                      watched_on: null,
+                      scheduled_for: null,
+                      skipped_by_user: true,
+                    }
+                  : game,
+              )
+            : existing.filter((game) => game.id !== gameId);
         },
       );
     } catch {
@@ -1072,6 +1099,7 @@ const UserGames = () => {
                   ...game,
                   watched_by_user: false,
                   watched_on: null,
+                  skipped_by_user: false,
                 }
               : game,
           );
@@ -1167,88 +1195,141 @@ const UserGames = () => {
 
   return (
     <div className={styles.page}>
-      <div className={styles.toolbar}>
-        <div className={styles.primaryControls}>
-          {view === 'list' ? (
-            <div className={styles.weekNav}>
-              <button
-                className={styles.navBtn}
-                aria-label="Previous week"
-                onClick={() => handleWeekNavigate(-7)}
-              >
-                <Icon name="chevron_left" />
-              </button>
-              <DatePicker
-                value={dateToISO(weekStart)}
-                onChange={handleWeekPickerChange}
-                triggerLabel={fmtWeekRange(weekStart, weekEnd)}
-                triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
+      <Card
+        className={styles.controlsCard}
+        noHeaderMargin
+        title={
+          <>
+            Games
+            <span className={styles.titleDivider} />
+            <span className={styles.weekNav}>
+              {view === 'list' ? (
+                <>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_left"
+                    size="sm"
+                    tooltip="Previous week"
+                    aria-label="Previous week"
+                    onClick={() => handleWeekNavigate(-7)}
+                  />
+                  <div className={styles.datePicker}>
+                    <DatePicker
+                      value={dateToISO(weekStart)}
+                      onChange={handleWeekPickerChange}
+                      triggerLabel={fmtWeekRange(weekStart, weekEnd)}
+                      triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
+                    />
+                  </div>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_right"
+                    size="sm"
+                    tooltip="Next week"
+                    aria-label="Next week"
+                    onClick={() => handleWeekNavigate(7)}
+                  />
+                </>
+              ) : (
+                <>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_left"
+                    size="sm"
+                    tooltip="Previous month"
+                    aria-label="Previous month"
+                    onClick={() => handleCalendarMonthChange((current) => addMonths(current, -1))}
+                  />
+                  <div className={styles.datePicker}>
+                    <DatePicker
+                      value={toMonthPickerValue(calendarMonth)}
+                      onChange={(value) =>
+                        value && handleCalendarMonthChange(fromMonthPickerValue(value))
+                      }
+                      granularity="month"
+                      triggerLabel={MONTH_LABEL_FMT.format(calendarMonth)}
+                      triggerAriaLabel={`Select month: ${MONTH_LABEL_FMT.format(calendarMonth)}`}
+                    />
+                  </div>
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="chevron_right"
+                    size="sm"
+                    tooltip="Next month"
+                    aria-label="Next month"
+                    onClick={() => handleCalendarMonthChange((current) => addMonths(current, 1))}
+                  />
+                </>
+              )}
+            </span>
+          </>
+        }
+        action={
+          <div className={styles.actionsRow}>
+            <div className={styles.viewFilterControls}>
+              <SegmentedControl
+                value={view}
+                onChange={(value) => setView(value as 'list' | 'calendar')}
+                className={styles.viewSegmentedControl}
+                options={[
+                  {
+                    value: 'list',
+                    label: <Icon name="view_list" />,
+                    tooltip: 'List view',
+                    ariaLabel: 'List view',
+                  },
+                  {
+                    value: 'calendar',
+                    label: <Icon name="calendar_month" />,
+                    tooltip: 'Calendar view',
+                    ariaLabel: 'Calendar view',
+                  },
+                ]}
               />
-              <button
-                className={styles.navBtn}
-                aria-label="Next week"
-                onClick={() => handleWeekNavigate(7)}
-              >
-                <Icon name="chevron_right" />
-              </button>
-            </div>
-          ) : (
-            <div className={styles.weekNav}>
-              <button
-                className={styles.navBtn}
-                aria-label="Previous month"
-                onClick={() => handleCalendarMonthChange((current) => addMonths(current, -1))}
-              >
-                <Icon name="chevron_left" />
-              </button>
-              <DatePicker
-                value={toMonthPickerValue(calendarMonth)}
-                onChange={(value) =>
-                  value && handleCalendarMonthChange(fromMonthPickerValue(value))
-                }
-                granularity="month"
-                triggerLabel={MONTH_LABEL_FMT.format(calendarMonth)}
-                triggerAriaLabel={`Select month: ${MONTH_LABEL_FMT.format(calendarMonth)}`}
+              <ToggleButton
+                active={filtersVisible}
+                onClick={() => setFiltersVisible((visible) => !visible)}
+                icon="filter_list"
+                iconHeight="button"
+                activeTooltip="Hide filters"
+                inactiveTooltip="Show filters"
               />
-              <button
-                className={styles.navBtn}
-                aria-label="Next month"
-                onClick={() => handleCalendarMonthChange((current) => addMonths(current, 1))}
-              >
-                <Icon name="chevron_right" />
-              </button>
+              <MoreActionsMenu
+                size="md"
+                buttonClassName={styles.toolbarMoreButton}
+                items={[
+                  {
+                    label: 'Generate Score Image',
+                    icon: 'image',
+                    onClick: () => setScoreImageOpen(true),
+                  },
+                  ...(view === 'calendar' && scheduledGames.length > 0
+                    ? [
+                        {
+                          label: 'Download Month Image',
+                          icon: 'download',
+                          disabled: exportingMonthImage,
+                          onClick: () => void handleDownloadMonthImage(),
+                        },
+                      ]
+                    : []),
+                ]}
+              />
             </div>
-          )}
-
-          <div className={styles.viewToggle}>
-            <button
-              type="button"
-              className={`${styles.viewBtn} ${view === 'calendar' ? styles.viewBtnActive : ''}`}
-              aria-label="Calendar view"
-              onClick={() => setView('calendar')}
-            >
-              <Icon name="calendar_month" />
-            </button>
-            <button
-              type="button"
-              className={`${styles.viewBtn} ${view === 'list' ? styles.viewBtnActive : ''}`}
-              aria-label="List view"
-              onClick={() => setView('list')}
-            >
-              <Icon name="view_list" />
-            </button>
           </div>
-        </div>
-
-        <div className={styles.filters}>
-          <div className={styles.filterSelect}>
-            <Select
-              value={leagueId}
-              options={leagueOptions}
-              onChange={setLeagueId}
-            />
-          </div>
-          <div className={`${styles.filterSelect} ${styles.teamFilter}`}>
+        }
+      >
+        <div className={`${styles.filters}${filtersVisible ? '' : ` ${styles.filtersHidden}`}`}>
+          <Select
+            value={leagueId}
+            options={leagueOptions}
+            onChange={setLeagueId}
+          />
+          <div className={styles.teamFilter}>
             <MultiSelect
               value={teamFilter}
               options={favoriteTeamOptions}
@@ -1258,39 +1339,28 @@ const UserGames = () => {
               searchable
             />
           </div>
-          <div className={styles.filterSelect}>
-            <Select
-              value={statusFilter}
-              options={STATUS_OPTIONS}
-              onChange={setStatusFilter}
-            />
-          </div>
-          <div className={styles.filterSelect}>
-            <Select
-              value={tzPref}
-              options={TZ_OPTIONS}
-              onChange={(v) => setTzPref(v as TzPref)}
-            />
-          </div>
-          {view === 'calendar' && scheduledGames.length > 0 && (
-            <div className={`${styles.filterSelect} ${styles.filterAction}`}>
-              <Button
-                type="button"
-                variant="outlined"
-                intent="neutral"
-                size="sm"
-                icon="download"
-                iconHeight="field"
-                aria-label="Download month image"
-                tooltip="Download month image"
-                className={styles.calendarExportButton}
-                onClick={() => void handleDownloadMonthImage()}
-                disabled={exportingMonthImage}
-              />
-            </div>
-          )}
+          <Select
+            value={statusFilter}
+            options={STATUS_OPTIONS}
+            onChange={setStatusFilter}
+          />
+          <Select
+            value={tzPref}
+            options={TZ_OPTIONS}
+            onChange={(v) => setTzPref(v as TzPref)}
+          />
+          <ToggleButton
+            variant="switch"
+            active={showSkippedGames}
+            onClick={() => setShowSkippedGames((show) => !show)}
+            activeTooltip="Hide won't watch games"
+            inactiveTooltip="Show won't watch games"
+            className={styles.watchFilterSwitch}
+          >
+            Won't watch
+          </ToggleButton>
         </div>
-      </div>
+      </Card>
 
       {isLoading ? (
         <p className={styles.empty}>Loading…</p>
@@ -1324,47 +1394,54 @@ const UserGames = () => {
             </Card>
           ))}
         </div>
-      ) : scheduledGames.length === 0 ? (
-        <p className={styles.empty}>
-          No scheduled games from your favorite teams to place on the calendar.
-        </p>
       ) : (
-        <div className={styles.calendarWrap}>
-          <MonthCalendar
-            ref={calendarGridRef}
-            month={calendarMonth}
-            getDayProps={({ dateKey }) => ({
-              'data-date-key': dateKey,
-              onDragOver: handleCalendarDragOver(dateKey),
-              onDrop: handleCalendarDrop(dateKey),
-            })}
-            renderDayContent={({ dateKey }) => {
-              const dayGames = gamesByCalendarDate.get(dateKey) ?? [];
-              return dayGames.length > 0 ? (
-                <div className={styles.calendarGameList}>
-                  {dayGames.map((game) => (
-                    <CalendarGameCard
-                      key={game.id}
-                      game={game}
-                      tzPref={tzPref}
-                      onOpen={() => openGame(game.id)}
-                      onDownloadScoreCard={() => openScoreCardModal(game)}
-                      onMarkWatched={() => markGameWatched(game.id)}
-                      onUnwatch={() => unwatchGame(game.id)}
-                      onSchedule={() => openScheduleModal(game)}
-                      onSkip={() => openSkipConfirm(game)}
-                      onDragStart={handleCalendarDragStart(game)}
-                      onDragEnd={handleCalendarDragEnd}
-                      draggable={!game.watched_by_user && actionGameId !== game.id}
-                      dragging={dragGameId === game.id}
-                      busy={actionGameId === game.id}
-                    />
-                  ))}
-                </div>
-              ) : null;
-            }}
-          />
-        </div>
+        <Card
+          className={styles.calendarCard}
+          noHeaderMargin
+        >
+          {scheduledGames.length === 0 ? (
+            <p className={styles.empty}>
+              No scheduled games from your favorite teams to place on the calendar.
+            </p>
+          ) : (
+            <div className={styles.calendarWrap}>
+              <MonthCalendar
+                ref={calendarGridRef}
+                month={calendarMonth}
+                getDayProps={({ dateKey }) => ({
+                  'data-date-key': dateKey,
+                  onDragOver: handleCalendarDragOver(dateKey),
+                  onDrop: handleCalendarDrop(dateKey),
+                })}
+                renderDayContent={({ dateKey }) => {
+                  const dayGames = gamesByCalendarDate.get(dateKey) ?? [];
+                  return dayGames.length > 0 ? (
+                    <div className={styles.calendarGameList}>
+                      {dayGames.map((game) => (
+                        <CalendarGameCard
+                          key={game.id}
+                          game={game}
+                          tzPref={tzPref}
+                          onOpen={() => openGame(game.id)}
+                          onDownloadScoreCard={() => openScoreCardModal(game)}
+                          onMarkWatched={() => markGameWatched(game.id)}
+                          onUnwatch={() => unwatchGame(game.id)}
+                          onSchedule={() => openScheduleModal(game)}
+                          onSkip={() => openSkipConfirm(game)}
+                          onDragStart={handleCalendarDragStart(game)}
+                          onDragEnd={handleCalendarDragEnd}
+                          draggable={!game.watched_by_user && actionGameId !== game.id}
+                          dragging={dragGameId === game.id}
+                          busy={actionGameId === game.id}
+                        />
+                      ))}
+                    </div>
+                  ) : null;
+                }}
+              />
+            </div>
+          )}
+        </Card>
       )}
 
       <ScheduleWatchModal
@@ -1405,12 +1482,16 @@ const UserGames = () => {
       />
 
       <ScoreImageModal
-        open={!!scoreCardTarget}
+        open={scoreImageOpen || !!scoreCardTarget}
         game={scoreCardTarget ?? undefined}
         liveAwayScore={scoreCardTarget?.away_score}
         liveHomeScore={scoreCardTarget?.home_score}
         overtimeSuffix={scoreCardTarget ? getOvertimeSuffix(scoreCardTarget) : ''}
-        onClose={() => setScoreCardTarget(null)}
+        showForm={scoreImageOpen}
+        onClose={() => {
+          setScoreImageOpen(false);
+          setScoreCardTarget(null);
+        }}
       />
     </div>
   );

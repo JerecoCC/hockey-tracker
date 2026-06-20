@@ -220,12 +220,13 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games  – read-only game list for authenticated users
-// Query params: season_id, league_id, team_id, game_type, status
+// Query params: season_id, league_id, team_id, game_type, status, include_skipped
 // Results are scoped to games involving the user's favourite teams.
 // ---------------------------------------------------------------------------
 router.get('/games', async (req, res) => {
   const userId = req.user.id;
   const { season_id, league_id, team_id, game_type, status } = req.query;
+  const includeSkipped = req.query.include_skipped === 'true' || req.query.include_skipped === '1';
   try {
     const games = await sql`
       SELECT
@@ -285,6 +286,7 @@ router.get('/games', async (req, res) => {
         l.text_color AS league_text_color,
         COALESCE(uwg.watched_on, uwg.watched_at::date) AS watched_on,
         uwg.scheduled_for,
+        (uwg.skipped_at IS NOT NULL) AS skipped_by_user,
         (uwg.game_id IS NOT NULL AND (uwg.watched_on IS NOT NULL OR uwg.watched_at IS NOT NULL)) AS watched_by_user
       FROM games g
       JOIN seasons          s      ON s.id      = g.season_id
@@ -453,7 +455,7 @@ router.get('/games', async (req, res) => {
         )
         AND
         g.status <> 'cancelled'
-        AND uwg.skipped_at IS NULL
+        AND (${includeSkipped}::boolean OR uwg.skipped_at IS NULL)
         AND
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${league_id ?? null}::uuid IS NULL OR l.id        = ${league_id ?? null}::uuid)

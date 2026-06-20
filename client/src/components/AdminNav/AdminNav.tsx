@@ -1,5 +1,4 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './AdminNav.module.scss';
@@ -26,7 +25,6 @@ const AdminNav = (props: AdminNavProps) => {
   const { collapsed, mobileOpen, onMobileClose } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user } = useAuth();
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
@@ -76,27 +74,6 @@ const AdminNav = (props: AdminNavProps) => {
         </ul>
       </div>
 
-      {user && (
-        <div className={styles.bottom}>
-          <Button
-            variant="ghost"
-            intent="neutral"
-            className={styles.navItem}
-            onClick={() => {
-              navigate('/dashboard');
-              onMobileClose?.();
-            }}
-            tooltip={!showExpanded ? 'User View' : undefined}
-            tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
-          >
-            <Icon
-              name="apps"
-              className={styles.icon}
-            />
-            {showExpanded && <span className={styles.label}>User View</span>}
-          </Button>
-        </div>
-      )}
     </nav>
   );
 };

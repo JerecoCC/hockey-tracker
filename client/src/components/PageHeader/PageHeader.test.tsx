@@ -106,6 +106,16 @@ describe('PageHeader – switch button', () => {
     expect(screen.queryByRole('button', { name: 'Admin Panel' })).not.toBeInTheDocument();
   });
 
+  it('shows a user view shortcut for admin users on admin routes', () => {
+    setup('/admin/leagues', adminUser);
+    expect(screen.getByRole('button', { name: 'User View' })).toBeInTheDocument();
+  });
+
+  it('hides the user view shortcut on user routes', () => {
+    setup('/dashboard', adminUser);
+    expect(screen.queryByRole('button', { name: 'User View' })).not.toBeInTheDocument();
+  });
+
   it('hides the admin panel shortcut for non-admin users', () => {
     setup('/dashboard', regularUser);
     expect(screen.queryByRole('button', { name: 'Admin Panel' })).not.toBeInTheDocument();
@@ -115,6 +125,12 @@ describe('PageHeader – switch button', () => {
     setup('/dashboard', adminUser);
     fireEvent.click(screen.getByRole('button', { name: 'Admin Panel' }));
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues');
+  });
+
+  it('navigates to the user view from the header shortcut', () => {
+    setup('/admin/leagues', adminUser);
+    fireEvent.click(screen.getByRole('button', { name: 'User View' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/dashboard');
   });
 
   it('does not navigate when clicking the account menu on an admin panel route', () => {

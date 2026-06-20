@@ -133,6 +133,7 @@ export interface GameRecord {
   league_text_color?:    string;
   watched_by_user?:      boolean;
   watched_on?:           string | null;
+  skipped_by_user?:      boolean;
   scheduled_for?:        string | null;
   /** Last 5 final games for the home team within the same season (detail endpoint only). */
   home_last_five?:       LastFiveGame[];

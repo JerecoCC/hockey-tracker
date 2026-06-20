@@ -8,6 +8,58 @@
   gap: $space-2xl;
 }
 
+.controlsCard {
+  width: 100%;
+}
+
+.titleDivider {
+  display: inline-block;
+  width: 1px;
+  height: 1.2em;
+  background: $border;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.datePicker {
+  flex-shrink: 0;
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: $space-sm;
+}
+
+.viewFilterControls {
+  display: inline-flex;
+  align-items: stretch;
+  gap: $space-sm;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
+}
+
+.viewSegmentedControl {
+  width: fit-content;
+  align-self: stretch;
+
+  svg {
+    width: 1.15rem;
+    height: 1.15rem;
+  }
+
+  button {
+    padding: $space-md;
+  }
+}
+
+.toolbarMoreButton.toolbarMoreButton {
+  padding: $space-md;
+  border-radius: $radius-md;
+}
+
 // ── Toolbar (week nav + filter selects) ───────────────────────────────
 .toolbar {
   display: flex;
@@ -26,9 +78,11 @@
 
 // ── Week navigation (prev btn + date picker + next btn) ───────────────
 .weekNav {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: $space-sm;
+  gap: $space-xs;
+  font-size: initial;
+  font-weight: initial;
 }
 
 .navBtn {
@@ -85,18 +139,27 @@
 // ── Filter row (league · favorite teams · status · timezone) ──────────
 .filters {
   display: flex;
-  align-items: center;
-  gap: $space-md;
   flex-wrap: wrap;
+  gap: $space-md;
+  justify-content: flex-end;
+  overflow: hidden;
+  max-height: 200px;
+  opacity: 1;
+  margin-top: $space-xl;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.25s ease,
+    margin-top 0.25s ease;
+
+  > *:not(.teamFilter) {
+    flex: 1 0 130px;
+  }
 }
 
-.filterSelect {
-  min-width: 150px;
-}
-
-.filterAction {
-  min-width: auto;
-  flex: 0 0 auto;
+.filtersHidden {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
 }
 
 .calendarExportButton {
@@ -104,8 +167,12 @@
 }
 
 .teamFilter {
-  min-width: 260px;
-  flex: 1 1 260px;
+  flex: 3 0 220px;
+  max-width: 480px;
+}
+
+.watchFilterSwitch {
+  flex: 0 0 auto !important;
 }
 
 // ── Empty / loading ────────────────────────────────────────────────────
@@ -127,11 +194,19 @@
   overflow-x: auto;
 }
 
+.calendarCard {
+  width: 100%;
+}
+
 .calendarGameList {
   display: flex;
   flex-direction: column;
   gap: $space-xs;
   width: 100%;
+
+  > :last-child {
+    margin-bottom: $space-sm;
+  }
 }
 
 .playoffDots {

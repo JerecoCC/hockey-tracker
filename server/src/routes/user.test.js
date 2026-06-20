@@ -61,6 +61,7 @@ const GAME = {
   league_text_color: '#ffffff',
   watched_by_user: false,
   watched_on: null,
+  skipped_by_user: false,
   scheduled_for: '2024-10-12',
 };
 
@@ -86,11 +87,24 @@ describe('GET /api/user/games', () => {
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBe('game-1');
     expect(res.body[0].watched_by_user).toBe(false);
+    expect(res.body[0].skipped_by_user).toBe(false);
     expect(res.body[0].scheduled_for).toBe('2024-10-12');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(queryText).toContain("g.status <> 'cancelled'");
     expect(queryText).toContain('uwg.skipped_at IS NULL');
+  });
+
+  it('can include skipped games when requested', async () => {
+    sql.mockResolvedValueOnce([{ ...GAME, skipped_by_user: true }]);
+
+    const res = await request(app).get('/api/user/games?include_skipped=true');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].skipped_by_user).toBe(true);
+    expect(sql.mock.calls[0].slice(1)).toContain(true);
+    expect(queryText).toContain('OR uwg.skipped_at IS NULL');
   });
 
   it('keeps league and status filters working on top of favorite-team scoping', async () => {

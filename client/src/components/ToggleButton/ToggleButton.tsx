@@ -6,6 +6,8 @@ interface Props {
   active: boolean;
   /** Toggles the active state. */
   onClick: () => void;
+  /** Visual variant. Default keeps the existing outlined button style. */
+  variant?: 'button' | 'switch';
   /** Icon name (Material Icons ligature). */
   icon?: string;
   /** Size preset. Default: 'md'. */
@@ -47,6 +49,7 @@ interface Props {
 const ToggleButton = ({
   active,
   onClick,
+  variant = 'button',
   icon,
   size,
   iconHeight,
@@ -57,20 +60,48 @@ const ToggleButton = ({
   children,
   disabled,
   className,
-}: Props) => (
-  <Button
-    variant="outlined"
-    intent={active ? activeIntent : inactiveIntent}
-    icon={icon}
-    size={size}
-    iconHeight={iconHeight}
-    tooltip={active ? activeTooltip : inactiveTooltip}
-    onClick={onClick}
-    disabled={disabled}
-    className={[active ? styles.active : '', className].filter(Boolean).join(' ')}
-  >
-    {children}
-  </Button>
-);
+}: Props) => {
+  if (variant === 'switch') {
+    return (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={active}
+        aria-label={active ? activeTooltip : inactiveTooltip}
+        title={active ? activeTooltip : inactiveTooltip}
+        onClick={onClick}
+        disabled={disabled}
+        className={[
+          styles.switchToggle,
+          active ? styles.switchToggleActive : '',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <span className={styles.switchTrack}>
+          <span className={styles.switchThumb} />
+        </span>
+        {children && <span className={styles.switchLabel}>{children}</span>}
+      </button>
+    );
+  }
+
+  return (
+    <Button
+      variant="outlined"
+      intent={active ? activeIntent : inactiveIntent}
+      icon={icon}
+      size={size}
+      iconHeight={iconHeight}
+      tooltip={active ? activeTooltip : inactiveTooltip}
+      onClick={onClick}
+      disabled={disabled}
+      className={[active ? styles.active : '', className].filter(Boolean).join(' ')}
+    >
+      {children}
+    </Button>
+  );
+};
 
 export default ToggleButton;
