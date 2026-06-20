@@ -174,23 +174,6 @@ const formatNumericDate = (key: string) => {
     year: 'numeric',
   }).format(new Date(y, m - 1, d));
 };
-const etDateKeyForIso = (iso: string, scheduledTime: string | null) => {
-  if (!scheduledTime) {
-    return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(new Date(iso));
-  }
-  const offset = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/New_York',
-    timeZoneName: 'short',
-  })
-    .formatToParts(new Date(iso))
-    .find((part) => part.type === 'timeZoneName')?.value;
-  const etDatePart = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(
-    new Date(iso),
-  );
-  const zoneOffset = offset === 'EDT' ? '-04:00' : '-05:00';
-  const instant = new Date(`${etDatePart}T${scheduledTime}:00${zoneOffset}`);
-  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/New_York' }).format(instant);
-};
 const localDateKeyForIso = (iso: string, scheduledTime: string | null) => {
   if (!scheduledTime) {
     const d = new Date(iso);
@@ -208,6 +191,34 @@ const localDateKeyForIso = (iso: string, scheduledTime: string | null) => {
   const zoneOffset = offset === 'EDT' ? '-04:00' : '-05:00';
   const instant = new Date(`${etDatePart}T${scheduledTime}:00${zoneOffset}`);
   return `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, '0')}-${String(instant.getDate()).padStart(2, '0')}`;
+};
+const localDateKeyForEtDateTime = (dateKey: string, scheduledTime: string | null) => {
+  if (!scheduledTime) return dateKey;
+  const offset = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    timeZoneName: 'short',
+  })
+    .formatToParts(new Date(`${dateKey}T17:00:00Z`))
+    .find((part) => part.type === 'timeZoneName')?.value;
+  const zoneOffset = offset === 'EDT' ? '-04:00' : '-05:00';
+  const instant = new Date(`${dateKey}T${scheduledTime}:00${zoneOffset}`);
+  return `${instant.getFullYear()}-${String(instant.getMonth() + 1).padStart(2, '0')}-${String(instant.getDate()).padStart(2, '0')}`;
+};
+const localDateKeyForGame = (game: { scheduled_at: string | null; scheduled_time: string | null }) => {
+  if (!game.scheduled_at) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(game.scheduled_at)) {
+    return localDateKeyForEtDateTime(game.scheduled_at, game.scheduled_time);
+  }
+  const rawDateKey = game.scheduled_at.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] ?? null;
+  const isMidnightPlaceholder =
+    !!game.scheduled_time &&
+    game.scheduled_time !== '00:00' &&
+    !!rawDateKey &&
+    /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/.test(game.scheduled_at);
+  if (isMidnightPlaceholder) {
+    return localDateKeyForEtDateTime(rawDateKey, game.scheduled_time);
+  }
+  return localDateKeyForIso(game.scheduled_at, null);
 };
 const scheduledWatchDate = localDateString(0);
 const watchedDate = localDateString(1);
@@ -421,9 +432,12 @@ describe('UserGames calendar view', () => {
     ).not.toBeInTheDocument();
     expect(
       within(firstGameCard as HTMLElement).getByText(
-        formatNumericDate(etDateKeyForIso(games[0].scheduled_at, games[0].scheduled_time)),
+        formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
       ),
     ).toBeInTheDocument();
+    expect(within(firstGameCard as HTMLElement).getByText('R2 - G3')).toHaveClass(
+      styles.playoffGameMeta,
+    );
     expect(firstGameCard).toHaveStyle('--game-league-primary: #0a4fa3');
 
     const scheduledDayCard = screen.getByText(formatHeading(scheduledWatchDate)).parentElement;
@@ -431,7 +445,7 @@ describe('UserGames calendar view', () => {
     expect(
       within(
         screen.getByText(
-          formatHeading(etDateKeyForIso(games[0].scheduled_at, games[0].scheduled_time)),
+          formatHeading(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
         ).parentElement as HTMLElement,
       ).queryByText('Away Team'),
     ).not.toBeInTheDocument();
@@ -455,16 +469,34 @@ describe('UserGames calendar view', () => {
     ).toBeGreaterThanOrEqual(1);
   });
 
-  it("shows won't watch games when the filter switch is enabled", async () => {
+  it('shows skipped games when the filter switch is enabled', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
     expect(screen.queryByText('SKP')).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole('switch', { name: "Show won't watch games" }));
+    await user.click(screen.getByRole('switch', { name: 'Show skipped games' }));
 
-    expect(screen.getByRole('switch', { name: "Hide won't watch games" })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Hide skipped games' })).toBeInTheDocument();
     expect(screen.getByText('SKP')).toBeInTheDocument();
+    expect(screen.getByText('SKP').closest(`.${calendarItemStyles.item}`)).toHaveClass(
+      styles.calendarGameSkipped,
+    );
+    const skippedCard = screen.getByText('SKP').closest(`.${calendarItemStyles.item}`);
+    expect(within(skippedCard as HTMLElement).getByRole('button', { name: 'View game details' })).toBeInTheDocument();
+    expect(within(skippedCard as HTMLElement).getByRole('button', { name: 'Undo skip' })).toBeInTheDocument();
+    expect(
+      within(skippedCard as HTMLElement).queryByRole('button', { name: 'Schedule watch' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(skippedCard as HTMLElement).queryByRole('button', { name: 'Edit watch schedule' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(skippedCard as HTMLElement).queryByRole('button', { name: 'Mark as watched' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(skippedCard as HTMLElement).queryByRole('button', { name: 'Skip game' }),
+    ).not.toBeInTheDocument();
     expect(mockUseQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         queryKey: ['user-games', 'all', 'all', true],
@@ -472,10 +504,37 @@ describe('UserGames calendar view', () => {
     );
   });
 
+  it('shows a scheduled watch game original date in the user timezone', async () => {
+    const user = userEvent.setup();
+    const originalEtDate = localDateString(1);
+    const timezoneShiftedGame = {
+      ...games[0],
+      id: 'game-scheduled-local-original',
+      scheduled_at: `${originalEtDate}T04:00:00.000Z`,
+      scheduled_time: '23:30',
+      scheduled_for: scheduledWatchDate,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-games') return { data: [timezoneShiftedGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+
+    expect(
+      screen.getByText(formatNumericDate(localDateKeyForEtDateTime(originalEtDate, '23:30'))),
+    ).toHaveClass(styles.originalGameDate);
+  });
+
   it('shows playoff round metadata on calendar cards but hides series dots until watched', () => {
     render(<UserGames />);
 
-    expect(screen.getByText('R2 - G3')).toBeInTheDocument();
+    expect(screen.getByText('R2 - G3')).toHaveClass(calendarItemStyles.bottomLabel);
     expect(screen.queryByLabelText('Series record 1 of 4')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
   });
@@ -488,6 +547,7 @@ describe('UserGames calendar view', () => {
       .closest(`.${calendarItemStyles.item}`);
 
     expect(watchedCard).not.toBeNull();
+    expect(watchedCard).toHaveClass(styles.calendarGameWatched);
 
     const winnerScore = within(watchedCard as HTMLElement)
       .getByText('2')
@@ -498,6 +558,44 @@ describe('UserGames calendar view', () => {
 
     expect(winnerScore).toHaveClass(calendarItemStyles.scoreWin);
     expect(loserScore).toHaveClass(calendarItemStyles.scoreLose);
+  });
+
+  it('puts watched games first within each calendar day list', () => {
+    const unwatchedSameDayGame = {
+      ...games[0],
+      id: 'game-same-day-unwatched',
+      away_team: { ...games[0].away_team, name: 'Same Day Away', code: 'SDA' },
+      scheduled_for: watchedDate,
+      watched_by_user: false,
+      watched_on: null,
+    };
+    const watchedSameDayGame = {
+      ...games[1],
+      id: 'game-same-day-watched',
+      away_team: { ...games[1].away_team, name: 'Same Day Watched', code: 'SDW' },
+      scheduled_for: watchedDate,
+      watched_by_user: true,
+      watched_on: watchedDate,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-games')
+        return { data: [unwatchedSameDayGame, watchedSameDayGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const watchedItem = screen.getByText('SDW').closest(`.${calendarItemStyles.item}`);
+    const unwatchedItem = screen.getByText('SDA').closest(`.${calendarItemStyles.item}`);
+    expect(watchedItem).toHaveClass(styles.calendarGameWatched);
+    expect(unwatchedItem).not.toHaveClass(styles.calendarGameWatched);
+    expect(watchedItem?.compareDocumentPosition(unwatchedItem as Node)).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING,
+    );
   });
 
   it('opens the score image form from the games toolbar', async () => {
@@ -624,7 +722,7 @@ describe('UserGames calendar view', () => {
     expect(screen.queryByLabelText('Series record 4 of 4')).not.toBeInTheDocument();
   });
 
-  it('keeps ET date placement correct for games with a date-only scheduled_at', async () => {
+  it('keeps local date placement correct for games with a date-only scheduled_at', async () => {
     const user = userEvent.setup();
     const dateOnlyKey = localDateString(1);
     const dateOnlyGame = {
@@ -647,15 +745,15 @@ describe('UserGames calendar view', () => {
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'List view' }));
 
-    const daySection = screen.getByText(formatHeading(dateOnlyKey)).parentElement;
+    const expectedDateKey = localDateKeyForGame(dateOnlyGame) ?? dateOnlyKey;
+    const daySection = screen.getByText(formatHeading(expectedDateKey)).parentElement;
     expect(daySection).not.toBeNull();
     expect(within(daySection as HTMLElement).getByText('Date Only Team')).toBeInTheDocument();
   });
 
-  it('keeps ET date placement correct for midnight-UTC scheduled_at placeholders', async () => {
+  it('keeps local date placement correct for midnight-UTC scheduled_at placeholders', async () => {
     const user = userEvent.setup();
     const intendedEtDate = localDateString(1);
-    const previousEtDate = localDateString(0);
     const midnightPlaceholderGame = {
       ...games[0],
       id: 'game-midnight-placeholder',
@@ -677,16 +775,20 @@ describe('UserGames calendar view', () => {
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'List view' }));
 
-    const intendedDaySection = screen.getByText(formatHeading(intendedEtDate)).parentElement;
+    const expectedDateKey = localDateKeyForGame(midnightPlaceholderGame) ?? intendedEtDate;
+    const intendedDaySection = screen.getByText(formatHeading(expectedDateKey)).parentElement;
     expect(intendedDaySection).not.toBeNull();
     expect(
       within(intendedDaySection as HTMLElement).getByText('Midnight Placeholder'),
     ).toBeInTheDocument();
 
-    const previousDaySection = screen.getByText(formatHeading(previousEtDate)).parentElement;
-    expect(
-      within(previousDaySection as HTMLElement).queryByText('Midnight Placeholder'),
-    ).not.toBeInTheDocument();
+    for (const key of [localDateString(0), localDateString(1)]) {
+      if (key === expectedDateKey) continue;
+      const daySection = screen.getByText(formatHeading(key)).parentElement;
+      expect(
+        within(daySection as HTMLElement).queryByText('Midnight Placeholder'),
+      ).not.toBeInTheDocument();
+    }
   });
 
   it('filters user games by selected favorite teams', async () => {
@@ -703,7 +805,7 @@ describe('UserGames calendar view', () => {
   it('allows dragging a calendar game to another date to schedule it', async () => {
     render(<UserGames />);
 
-    const originalDate = etDateKeyForIso(games[0].scheduled_at, games[0].scheduled_time);
+    const originalDate = localDateKeyForGame(games[0]) ?? scheduledWatchDate;
     const targetDate = alternateCurrentMonthDate([originalDate, scheduledWatchDate]);
     const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
     const targetCell = document.querySelector(`[data-date-key="${targetDate}"]`);
@@ -753,7 +855,7 @@ describe('UserGames calendar view', () => {
   it('clears the schedule when dragging a game back to its original date', async () => {
     render(<UserGames />);
 
-    const originalDate = etDateKeyForIso(games[0].scheduled_at, games[0].scheduled_time);
+    const originalDate = localDateKeyForGame(games[0]) ?? scheduledWatchDate;
     const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
     const targetCell = document.querySelector(`[data-date-key="${originalDate}"]`);
     const dataTransfer = {
@@ -825,13 +927,13 @@ describe('UserGames calendar view', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getAllByRole('button', { name: 'Won’t watch' })[0]);
+    await user.click(screen.getAllByRole('button', { name: 'Skip game' })[0]);
 
-    expect(screen.getByText('Won’t Watch Game')).toBeInTheDocument();
-    expect(screen.getByText('Hide AWY @ HOM from your games feed?')).toBeInTheDocument();
+    expect(screen.getByText('Skip Game')).toBeInTheDocument();
+    expect(screen.getByText('Move AWY @ HOM to skipped games?')).toBeInTheDocument();
     expect(mockAxios.post).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: 'Hide game' }));
+    await user.click(screen.getAllByRole('button', { name: 'Skip game' }).at(-1)!);
 
     expect(mockAxios.post).toHaveBeenCalledWith(
       expect.stringContaining('/user/watched-games/game-1/skip'),
@@ -845,6 +947,34 @@ describe('UserGames calendar view', () => {
 
     const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
     expect(updater(games)).toEqual([games[1]]);
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('undoes a skipped game from the hover action', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('switch', { name: 'Show skipped games' }));
+    await user.click(screen.getByRole('button', { name: 'Undo skip' }));
+
+    expect(mockAxios.delete).toHaveBeenCalledWith(
+      expect.stringContaining('/user/watched-games/game-skipped'),
+      expect.objectContaining({ headers: expect.any(Object) }),
+    );
+    expect(mockSetQueriesData).toHaveBeenCalledWith(
+      { queryKey: ['user-games'] },
+      expect.any(Function),
+    );
+
+    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    expect(updater([skippedGame])[0]).toEqual(
+      expect.objectContaining({
+        id: 'game-skipped',
+        watched_by_user: false,
+        watched_on: null,
+        skipped_by_user: false,
+      }),
+    );
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -900,12 +1030,11 @@ describe('UserGames calendar view', () => {
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
-  it('keeps the selected calendar month and timezone after saving a watch schedule', async () => {
+  it('keeps the selected calendar month after saving a watch schedule', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'Calendar view' }));
-    await user.selectOptions(screen.getAllByRole('combobox')[3], 'local');
 
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
@@ -918,14 +1047,11 @@ describe('UserGames calendar view', () => {
     await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
 
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
-    expect(screen.getAllByRole('combobox')[3]).toHaveValue('local');
   });
 
-  it('keeps the selected calendar month and timezone after marking a scheduled game as watched', async () => {
+  it('keeps the selected calendar month after marking a scheduled game as watched', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
-
-    await user.selectOptions(screen.getAllByRole('combobox')[3], 'local');
 
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
@@ -934,7 +1060,6 @@ describe('UserGames calendar view', () => {
     await user.click(screen.getAllByRole('button', { name: 'Mark as watched' })[0]);
 
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
-    expect(screen.getAllByRole('combobox')[3]).toHaveValue('local');
   });
 
   it('keeps the selected week after marking a scheduled game as watched in list view', async () => {
@@ -947,15 +1072,6 @@ describe('UserGames calendar view', () => {
     await user.click(screen.getAllByRole('button', { name: 'Mark as watched' })[0]);
 
     expect(screen.getByRole('button', { name: `Select week: ${weekLabel}` })).toBeInTheDocument();
-  });
-
-  it('stores the selected timezone in local storage', async () => {
-    const user = userEvent.setup();
-    render(<UserGames />);
-
-    await user.selectOptions(screen.getAllByRole('combobox')[3], 'local');
-
-    expect(window.localStorage.getItem('user-games-tz-pref')).toBe('local');
   });
 
   it('stores and restores the selected week in session storage', async () => {
@@ -1015,7 +1131,7 @@ describe('UserGames calendar view', () => {
     ).toBeInTheDocument();
     expect(
       screen.getAllByText(
-        formatNumericDate(etDateKeyForIso(games[0].scheduled_at, games[0].scheduled_time)),
+        formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
       ).length,
     ).toBeGreaterThan(0);
     expect(screen.getAllByRole('button', { name: 'View game details' })).toHaveLength(1);
@@ -1025,7 +1141,7 @@ describe('UserGames calendar view', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/games/game-2');
   });
 
-  it('changes displayed game dates when timezone changes without changing the rendered month', async () => {
+  it('uses local date placement for timezone-sensitive games', async () => {
     const user = userEvent.setup();
     const timezoneSensitiveGame = {
       ...games[0],
@@ -1049,27 +1165,14 @@ describe('UserGames calendar view', () => {
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
     );
-    const etHeading = formatHeading(
-      etDateKeyForIso(timezoneSensitiveGame.scheduled_at, timezoneSensitiveGame.scheduled_time),
-    );
     const localHeading = formatHeading(
-      localDateKeyForIso(timezoneSensitiveGame.scheduled_at, timezoneSensitiveGame.scheduled_time),
+      localDateKeyForGame(timezoneSensitiveGame) ?? localDateString(1),
     );
 
     await user.click(screen.getByRole('button', { name: 'List view' }));
-
-    if (etHeading !== localHeading) {
-      expect(screen.getByText(etHeading)).toBeInTheDocument();
-    }
+    expect(screen.getByText(localHeading)).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Calendar view' }));
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
-    await user.selectOptions(screen.getAllByRole('combobox')[3], 'local');
-    expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'List view' }));
-
-    if (etHeading !== localHeading) {
-      expect(screen.getByText(localHeading)).toBeInTheDocument();
-    }
   });
 });

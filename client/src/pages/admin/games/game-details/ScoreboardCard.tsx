@@ -5,16 +5,10 @@ import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
+import { DATE_FMT_LONG, formatScheduledDateLocal } from './formatUtils';
 import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const DATE_FMT = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric',
-});
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
@@ -46,6 +40,7 @@ interface Props {
   leagueId?: string;
   leagueCode?: string | null;
   disabled?: boolean;
+  useLocalTimezone?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -108,6 +103,7 @@ const ScoreboardCard = ({
   leagueId,
   leagueCode,
   disabled = false,
+  useLocalTimezone = false,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -277,7 +273,13 @@ const ScoreboardCard = ({
             )}
             {game.scheduled_at && (
               <span className={styles.scoreDate}>
-                {DATE_FMT.format(new Date(game.scheduled_at))}
+                {useLocalTimezone
+                  ? formatScheduledDateLocal(
+                      game.scheduled_at,
+                      game.scheduled_time,
+                      DATE_FMT_LONG,
+                    )
+                  : DATE_FMT_LONG.format(new Date(game.scheduled_at))}
               </span>
             )}
           </div>

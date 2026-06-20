@@ -25,6 +25,7 @@ interface Props {
   tooltip?: string;
   topLabel?: ReactNode;
   centerLabel?: ReactNode;
+  bottomLabel?: ReactNode;
   live?: boolean;
   dragging?: boolean;
   draggable?: boolean;
@@ -61,6 +62,7 @@ const CalendarGameListItem = ({
   tooltip,
   topLabel,
   centerLabel,
+  bottomLabel,
   live = false,
   dragging = false,
   draggable = false,
@@ -122,6 +124,7 @@ const CalendarGameListItem = ({
           <span className={styles.homeMeta}>{homeTeam.meta}</span>
         </div>
       )}
+      {bottomLabel != null && <div className={styles.bottomLabel}>{bottomLabel}</div>}
     </>
   );
 

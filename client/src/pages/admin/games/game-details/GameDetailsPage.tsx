@@ -525,6 +525,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           leagueId={isAdminView ? leagueId : undefined}
           leagueCode={game.league_code}
           disabled={isGameAutofilling}
+          useLocalTimezone={!isAdminView}
         />
 
         {gameAutofillProgress && (
@@ -571,6 +572,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
                   isEditMode={isEditMode}
                   editable={isAdminView}
                   showPlayerDataStatus={isAdminView}
+                  useLocalTimezone={!isAdminView}
                   busy={busy}
                   leagueId={leagueId}
                   seasonId={seasonId ?? ''}

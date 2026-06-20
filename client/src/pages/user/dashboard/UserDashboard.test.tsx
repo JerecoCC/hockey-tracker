@@ -99,12 +99,12 @@ jest.mock(
 jest.mock(
   '@/components/ConfirmModal/ConfirmModal',
   () =>
-    ({ open, title, body, onConfirm, onCancel }: any) =>
+    ({ open, title, body, onConfirm, onCancel, confirmLabel }: any) =>
       open ? (
         <div>
           <h3>{title}</h3>
           <p>{body}</p>
-          <button onClick={onConfirm}>Hide game</button>
+          <button onClick={onConfirm}>{confirmLabel}</button>
           <button onClick={onCancel}>Cancel</button>
         </div>
       ) : null,
@@ -229,7 +229,14 @@ describe('UserDashboard', () => {
     expect(screen.getByText('Maple Leafs')).toBeInTheDocument();
     expect(screen.queryByText('Rangers')).not.toBeInTheDocument();
     expect(screen.getByText('Sunday, June 21')).toBeInTheDocument();
-    expect(screen.getByText('7:00 PM EDT')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        new Date('2026-06-21T19:00:00-04:00').toLocaleTimeString('en-US', {
+          hour: 'numeric',
+          minute: '2-digit',
+        }),
+      ),
+    ).toBeInTheDocument();
   });
 
   it('marks a dashboard game as watched', async () => {

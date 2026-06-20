@@ -48,6 +48,7 @@ interface Props {
   isEditMode: boolean;
   editable?: boolean;
   showPlayerDataStatus?: boolean;
+  useLocalTimezone?: boolean;
   busy: string | null;
   leagueId: string;
   seasonId: string;
@@ -100,6 +101,7 @@ const GameSummaryTab = ({
   isEditMode,
   editable = true,
   showPlayerDataStatus = false,
+  useLocalTimezone = false,
   busy,
   leagueId,
   seasonId,
@@ -774,6 +776,7 @@ const GameSummaryTab = ({
             <GameInfoCard
               game={game}
               busy={busy}
+              useLocalTimezone={useLocalTimezone}
               updateGameInfo={
                 editable && (isEditMode || game.status === 'scheduled') ? updateGameInfo : undefined
               }

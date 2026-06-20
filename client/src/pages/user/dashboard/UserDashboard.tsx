@@ -18,7 +18,6 @@ import styles from './UserDashboard.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-const TZ_STORAGE_KEY = 'user-games-tz-pref';
 // Admin-only testing aid: overrides the dashboard's notion of "today".
 const ADMIN_DATE_OVERRIDE_KEY = 'admin-dashboard-date-override';
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
@@ -26,6 +25,7 @@ const ISO_DATE_PREFIX_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
 const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
 
 type TzPref = 'ET' | 'local';
+const USER_TIMEZONE: TzPref = 'local';
 
 interface GameActionsProps {
   watched: boolean;
@@ -73,11 +73,6 @@ const fmtDayHeading = (key: string) => {
   });
 };
 
-const getStoredTzPref = (): TzPref => {
-  const stored = localStorage.getItem(TZ_STORAGE_KEY);
-  return stored === 'local' || stored === 'ET' ? stored : 'ET';
-};
-
 const getEtAbbrForDateKey = (dateKey: string): string =>
   new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
@@ -106,20 +101,10 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
 
   const direct = new Date(scheduledAt);
   const hasDirectInstant = !Number.isNaN(direct.getTime());
-  const rawDateKey = getRawDateKey(scheduledAt);
-  const isMidnightPlaceholder =
-    !!scheduledTime &&
-    scheduledTime !== '00:00' &&
-    !!rawDateKey &&
-    ISO_MIDNIGHT_RE.test(scheduledAt);
 
   if (!scheduledTime) {
     if (DATE_ONLY_RE.test(scheduledAt)) return new Date(`${scheduledAt}T17:00:00Z`);
     return hasDirectInstant ? direct : null;
-  }
-
-  if (hasDirectInstant && !DATE_ONLY_RE.test(scheduledAt) && !isMidnightPlaceholder) {
-    return direct;
   }
 
   const etDatePart =
@@ -274,7 +259,7 @@ const GameHoverActions = ({
         intent="danger"
         icon="visibility_off"
         size="sm"
-        tooltip="Won't watch"
+        tooltip="Skip game"
         disabled={busy}
         onClick={(e) => {
           e.stopPropagation();
@@ -447,7 +432,7 @@ const UserDashboard = () => {
     else localStorage.removeItem(ADMIN_DATE_OVERRIDE_KEY);
   };
   const todayKey = isAdmin && dateOverride ? dateOverride : dateToISO(new Date());
-  const tzPref = getStoredTzPref();
+  const tzPref = USER_TIMEZONE;
 
   const { data: games = [], isLoading: gamesLoading } = useQuery<GameRecord[]>({
     queryKey: ['user-dashboard-games', todayKey],
@@ -538,7 +523,7 @@ const UserDashboard = () => {
       await axios.post(`${API}/user/watched-games/${gameId}/skip`, {}, { headers: authHeaders() });
       setDashboardGames((existing) => existing.filter((game) => game.id !== gameId));
     } catch {
-      toast.error('Failed to hide game');
+      toast.error('Failed to skip game');
     } finally {
       setActionGameId(null);
     }
@@ -719,13 +704,13 @@ const UserDashboard = () => {
 
       <ConfirmModal
         open={!!confirmSkipGame}
-        title="Won't Watch Game"
+        title="Skip Game"
         body={
           confirmSkipGame
-            ? `Hide ${confirmSkipGame.away_team.code} @ ${confirmSkipGame.home_team.code} from your games feed?`
+            ? `Move ${confirmSkipGame.away_team.code} @ ${confirmSkipGame.home_team.code} to skipped games?`
             : ''
         }
-        confirmLabel="Hide game"
+        confirmLabel="Skip game"
         confirmIcon="visibility_off"
         variant="danger"
         busy={actionGameId === confirmSkipGame?.id}

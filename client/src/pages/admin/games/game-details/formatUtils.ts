@@ -6,6 +6,13 @@ export const DATE_FMT_SHORT = new Intl.DateTimeFormat('en-US', {
   year: 'numeric',
 });
 
+export const DATE_FMT_LONG = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+});
+
 /** Formats an ISO timestamp as "7:05 PM EST" or "7:05 PM EDT" (ET, DST-aware). */
 export const TIME_FMT = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',
@@ -42,6 +49,17 @@ const extractDatePart = (value?: string | null): string | null => {
   return value.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
 };
 
+const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
+const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
+
+const localDateKey = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+const localDateFromDateKey = (dateKey: string): Date => {
+  const [year, month, day] = dateKey.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 /**
  * Returns 'EST' or 'EDT' for an ET calendar date.
  *
@@ -67,6 +85,65 @@ export const etOffsetForDate = (etDateStr?: string | null): '-04:00' | '-05:00' 
 export const etHHMMtoISO = (hhmm: string, etDateStr?: string | null): string => {
   const etDate = extractDatePart(etDateStr) ?? todayETDate();
   return new Date(`${etDate}T${hhmm}:00${etOffsetForDate(etDate)}`).toISOString();
+};
+
+const getScheduledInstantForDisplay = (
+  scheduledAt?: string | null,
+  scheduledTime?: string | null,
+): Date | null => {
+  if (!scheduledAt) return null;
+
+  if (!scheduledTime) {
+    if (DATE_ONLY_RE.test(scheduledAt)) return localDateFromDateKey(scheduledAt);
+    const direct = new Date(scheduledAt);
+    return Number.isNaN(direct.getTime()) ? null : direct;
+  }
+
+  const direct = new Date(scheduledAt);
+  const rawDateKey = extractDatePart(scheduledAt);
+  const isMidnightPlaceholder =
+    scheduledTime !== '00:00' && !!rawDateKey && ISO_MIDNIGHT_RE.test(scheduledAt);
+
+  if (!DATE_ONLY_RE.test(scheduledAt) && !isMidnightPlaceholder && !Number.isNaN(direct.getTime())) {
+    return direct;
+  }
+
+  const etDate = rawDateKey ?? todayETDate();
+  return new Date(`${etDate}T${scheduledTime}:00${etOffsetForDate(etDate)}`);
+};
+
+export const formatScheduledDateLocal = (
+  scheduledAt?: string | null,
+  scheduledTime?: string | null,
+  formatter: Intl.DateTimeFormat = DATE_FMT_SHORT,
+): string | null => {
+  const instant = getScheduledInstantForDisplay(scheduledAt, scheduledTime);
+  return instant ? formatter.format(instant) : null;
+};
+
+export const formatScheduledTimeLocal = (
+  scheduledTime?: string | null,
+  scheduledAt?: string | null,
+): string | null => {
+  if (!scheduledTime) return null;
+  const instant = getScheduledInstantForDisplay(scheduledAt, scheduledTime);
+  return instant ? instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null;
+};
+
+export const formatTimestampTimeLocal = (value?: string | null): string | null => {
+  if (!value) return null;
+  const instant = new Date(value);
+  if (Number.isNaN(instant.getTime())) return null;
+  return instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+};
+
+export const formatEndTimeLocal = (timeEnd: string, timeStart?: string | null): string => {
+  const end = new Date(timeEnd);
+  const formatted = formatTimestampTimeLocal(timeEnd) ?? '';
+  if (!timeStart) return formatted;
+  const start = new Date(timeStart);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return formatted;
+  return localDateKey(start) !== localDateKey(end) ? `${formatted} (+1)` : formatted;
 };
 
 /** Advances a "YYYY-MM-DD" string by one calendar day. */

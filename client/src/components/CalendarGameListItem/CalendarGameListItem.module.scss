@@ -69,6 +69,17 @@
   text-align: center;
 }
 
+.bottomLabel {
+  width: 100%;
+  margin-top: $space-xs;
+  padding-top: $space-xs;
+  border-top: 1px solid $border;
+  color: $text-dim;
+  font-size: $font-sm;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
 .matchup {
   display: grid;
   grid-template-columns: auto auto minmax(0, 1fr) auto auto;
@@ -172,10 +183,10 @@
 
 .awayMeta {
   grid-column: 1 / span 2;
-  justify-self: start;
+  justify-self: center;
 }
 
 .homeMeta {
   grid-column: 4 / span 2;
-  justify-self: end;
+  justify-self: center;
 }

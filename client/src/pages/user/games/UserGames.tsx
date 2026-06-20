@@ -25,16 +25,10 @@ import styles from './UserGames.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-const TZ_STORAGE_KEY = 'user-games-tz-pref';
 const WEEK_STORAGE_KEY = 'user-games-week-start';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const TZ_OPTIONS: SelectOption[] = [
-  { value: 'ET', label: 'Eastern Time' },
-  { value: 'local', label: 'My Timezone' },
-];
 
 const STATUS_OPTIONS: SelectOption[] = [
   { value: 'all', label: 'All Statuses' },
@@ -137,10 +131,7 @@ const getStoredCalendarMonth = () => {
 
 type TzPref = 'ET' | 'local';
 
-const getStoredTzPref = (): TzPref => {
-  const stored = localStorage.getItem(TZ_STORAGE_KEY);
-  return stored === 'local' || stored === 'ET' ? stored : 'ET';
-};
+const USER_TIMEZONE: TzPref = 'local';
 
 /** Returns 'EST' or 'EDT' for the America/New_York timezone on the given game date. */
 const getEtAbbrForDateKey = (dateKey: string): string => {
@@ -174,20 +165,10 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
 
   const direct = new Date(scheduledAt);
   const hasDirectInstant = !Number.isNaN(direct.getTime());
-  const rawDateKey = getRawDateKey(scheduledAt);
-  const isMidnightPlaceholder =
-    !!scheduledTime &&
-    scheduledTime !== '00:00' &&
-    !!rawDateKey &&
-    ISO_MIDNIGHT_RE.test(scheduledAt);
 
   if (!scheduledTime) {
     if (DATE_ONLY_RE.test(scheduledAt)) return new Date(`${scheduledAt}T17:00:00Z`);
     return hasDirectInstant ? direct : null;
-  }
-
-  if (hasDirectInstant && !DATE_ONLY_RE.test(scheduledAt) && !isMidnightPlaceholder) {
-    return direct;
   }
 
   const etDatePart =
@@ -200,11 +181,8 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
 /**
  * Format a game's scheduled time.
  *
- * When `tzPref` is 'ET', the raw HH:MM stored in the DB (Eastern Time) is
- * formatted as 12-hour with "EST" or "EDT" suffix (DST-aware).
- *
- * When `tzPref` is 'local', we reconstruct the exact Eastern moment (DST-aware)
- * and convert it to the browser's local timezone using the browser's locale.
+ * The user games page always passes 'local': reconstruct the exact Eastern
+ * scheduled moment when needed and display it in the browser's timezone.
  */
 const fmtGameTime = (
   scheduledAt: string | null,
@@ -269,6 +247,7 @@ const getPlayoffRoundShortLabel = (game: GameRecord) => {
 };
 
 const getPlayoffGameMetaLabel = (game: GameRecord) => {
+  if (game.game_type !== 'playoff') return null;
   const round = getPlayoffRoundShortLabel(game);
   const gameNumber = game.game_number_in_series ?? game.game_number;
   if (!round && gameNumber == null) return null;
@@ -293,6 +272,12 @@ const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   if (!a.scheduled_time) return 1;
   if (!b.scheduled_time) return -1;
   return a.scheduled_time.localeCompare(b.scheduled_time);
+};
+
+const sortCalendarDayGames = (a: GameRecord, b: GameRecord) => {
+  const watchedDiff = Number(!!b.watched_by_user) - Number(!!a.watched_by_user);
+  if (watchedDiff !== 0) return watchedDiff;
+  return sortGamesByTime(a, b);
 };
 
 const getLeagueStyle = (game: GameRecord) =>
@@ -339,6 +324,7 @@ interface GameActionsProps {
   onDownloadScoreCard: () => void;
   onMarkWatched: () => void;
   onUnwatch: () => void;
+  onUndoSkip: () => void;
   onSchedule: () => void;
   onSkip: () => void;
 }
@@ -352,6 +338,7 @@ const GameHoverActions = ({
   onDownloadScoreCard,
   onMarkWatched,
   onUnwatch,
+  onUndoSkip,
   onSchedule,
   onSkip,
 }: GameActionsProps) => (
@@ -359,7 +346,7 @@ const GameHoverActions = ({
     className={styles.gameActions}
     data-calendar-game-actions
   >
-    {watched && (
+    {(watched || skipped) && (
       <Button
         type="button"
         variant="outlined"
@@ -370,6 +357,21 @@ const GameHoverActions = ({
         onClick={(e) => {
           e.stopPropagation();
           onView();
+        }}
+      />
+    )}
+    {skipped && (
+      <Button
+        type="button"
+        variant="outlined"
+        intent="warning"
+        icon="undo"
+        size="sm"
+        tooltip="Undo skip"
+        disabled={busy}
+        onClick={(e) => {
+          e.stopPropagation();
+          void onUndoSkip();
         }}
       />
     )}
@@ -391,8 +393,8 @@ const GameHoverActions = ({
       <Button
         type="button"
         variant="outlined"
-        intent="warning"
-        icon="undo"
+        intent="danger"
+        icon="visibility_off"
         size="sm"
         tooltip="Unwatch"
         disabled={busy}
@@ -406,10 +408,10 @@ const GameHoverActions = ({
       <Button
         type="button"
         variant="outlined"
-        intent="danger"
-        icon="visibility_off"
+        intent="warning"
+        icon="remove_circle_outline"
         size="sm"
-        tooltip="Won’t watch"
+        tooltip="Skip game"
         disabled={busy}
         onClick={(e) => {
           e.stopPropagation();
@@ -417,7 +419,7 @@ const GameHoverActions = ({
         }}
       />
     )}
-    {!watched && (
+    {!watched && !skipped && (
       <Button
         type="button"
         variant="outlined"
@@ -432,7 +434,7 @@ const GameHoverActions = ({
         }}
       />
     )}
-    {!watched && (
+    {!watched && !skipped && (
       <Button
         type="button"
         variant="outlined"
@@ -606,7 +608,9 @@ const GameCard = ({
   const home = game.home_score;
   const away = game.away_score;
   const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
+  const playoffMetaLabel = getPlayoffGameMetaLabel(game);
   const isWatched = !!game.watched_by_user;
+  const canOpen = isWatched || !!game.skipped_by_user;
 
   return (
     <div
@@ -614,16 +618,18 @@ const GameCard = ({
         styles.gameCard,
         game.status === 'in_progress' ? styles.live : '',
         !game.watched_by_user ? styles.gameCardUnwatched : '',
-        isWatched ? styles.gameCardClickable : '',
+        game.watched_by_user ? styles.gameCardWatched : '',
+        game.skipped_by_user ? styles.gameCardSkipped : '',
+        canOpen ? styles.gameCardClickable : '',
       ]
         .filter(Boolean)
         .join(' ')}
-      role={isWatched ? 'button' : undefined}
-      tabIndex={isWatched ? 0 : undefined}
+      role={canOpen ? 'button' : undefined}
+      tabIndex={canOpen ? 0 : undefined}
       style={getLeagueStyle(game)}
-      onClick={isWatched ? onOpen : undefined}
+      onClick={canOpen ? onOpen : undefined}
       onKeyDown={
-        isWatched
+        canOpen
           ? (e) => {
               if (e.key === 'Enter' || e.key === ' ') onOpen();
             }
@@ -639,6 +645,7 @@ const GameCard = ({
         onDownloadScoreCard={onDownloadScoreCard}
         onMarkWatched={onMarkWatched}
         onUnwatch={onUnwatch}
+        onUndoSkip={onUnwatch}
         onSchedule={onSchedule}
         onSkip={onSkip}
       />
@@ -687,6 +694,8 @@ const GameCard = ({
           align="right"
         />
       </div>
+
+      {playoffMetaLabel && <div className={styles.playoffGameMeta}>{playoffMetaLabel}</div>}
     </div>
   );
 };
@@ -739,6 +748,12 @@ const CalendarGameCard = ({
 
   return (
     <CalendarGameListItem
+      className={[
+        game.watched_by_user ? styles.calendarGameWatched : '',
+        game.skipped_by_user ? styles.calendarGameSkipped : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
       showScore={showScore}
       live={game.status === 'in_progress'}
       dragging={dragging}
@@ -746,7 +761,7 @@ const CalendarGameCard = ({
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}
       topLabel={originalDateLabel}
-      centerLabel={playoffMetaLabel}
+      bottomLabel={playoffMetaLabel}
       awayTeam={{
         logo: game.away_team.logo,
         code: game.away_team.code,
@@ -785,6 +800,7 @@ const CalendarGameCard = ({
         onDownloadScoreCard={onDownloadScoreCard}
         onMarkWatched={onMarkWatched}
         onUnwatch={onUnwatch}
+        onUndoSkip={onUnwatch}
         onSchedule={onSchedule}
         onSkip={onSkip}
       />
@@ -805,7 +821,7 @@ const UserGames = () => {
   const [leagueId, setLeagueId] = useState<string>('all');
   const [teamFilter, setTeamFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [tzPref, setTzPref] = useState<TzPref>(() => getStoredTzPref());
+  const tzPref = USER_TIMEZONE;
   const [actionGameId, setActionGameId] = useState<string | null>(null);
   const [dragGameId, setDragGameId] = useState<string | null>(null);
   const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
@@ -815,16 +831,11 @@ const UserGames = () => {
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
   const [exportingMonthImage, setExportingMonthImage] = useState(false);
-  const prevTzPrefRef = useRef<TzPref>(tzPref);
   const preserveCalendarMonthRef = useRef(false);
   const hasPinnedCalendarMonthRef = useRef(initialStoredCalendarMonth !== null);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
   const weekEnd = addDays(weekStart, 6);
-
-  useEffect(() => {
-    localStorage.setItem(TZ_STORAGE_KEY, tzPref);
-  }, [tzPref]);
 
   useEffect(() => {
     sessionStorage.setItem(WEEK_STORAGE_KEY, dateToISO(weekStart));
@@ -933,9 +944,6 @@ const UserGames = () => {
   }, [calendarMonth]);
 
   useEffect(() => {
-    const tzChanged = prevTzPrefRef.current !== tzPref;
-    prevTzPrefRef.current = tzPref;
-    if (tzChanged) return;
     if (preserveCalendarMonthRef.current) {
       preserveCalendarMonthRef.current = false;
       return;
@@ -944,7 +952,7 @@ const UserGames = () => {
     setCalendarMonth((current) =>
       monthKey(monthStart(current)) === monthKey(preferredMonth) ? current : preferredMonth,
     );
-  }, [preferredMonth, tzPref]);
+  }, [preferredMonth]);
 
   // Build a 7-slot array (one per day in the window), each with its games.
   const groupedByDate = useMemo(() => {
@@ -974,7 +982,7 @@ const UserGames = () => {
       map.get(key)!.push(game);
     });
     for (const [key, dayGames] of map.entries()) {
-      map.set(key, dayGames.slice().sort(sortGamesByTime));
+      map.set(key, dayGames.slice().sort(sortCalendarDayGames));
     }
     return map;
   }, [scheduledGames, tzPref]);
@@ -1077,7 +1085,7 @@ const UserGames = () => {
         },
       );
     } catch {
-      toast.error('Failed to hide game');
+      toast.error('Failed to skip game');
     } finally {
       setActionGameId(null);
     }
@@ -1344,20 +1352,15 @@ const UserGames = () => {
             options={STATUS_OPTIONS}
             onChange={setStatusFilter}
           />
-          <Select
-            value={tzPref}
-            options={TZ_OPTIONS}
-            onChange={(v) => setTzPref(v as TzPref)}
-          />
           <ToggleButton
             variant="switch"
             active={showSkippedGames}
             onClick={() => setShowSkippedGames((show) => !show)}
-            activeTooltip="Hide won't watch games"
-            inactiveTooltip="Show won't watch games"
+            activeTooltip="Hide skipped games"
+            inactiveTooltip="Show skipped games"
             className={styles.watchFilterSwitch}
           >
-            Won't watch
+            Skipped games
           </ToggleButton>
         </div>
       </Card>
@@ -1430,7 +1433,11 @@ const UserGames = () => {
                           onSkip={() => openSkipConfirm(game)}
                           onDragStart={handleCalendarDragStart(game)}
                           onDragEnd={handleCalendarDragEnd}
-                          draggable={!game.watched_by_user && actionGameId !== game.id}
+                          draggable={
+                            !game.watched_by_user &&
+                            !game.skipped_by_user &&
+                            actionGameId !== game.id
+                          }
                           dragging={dragGameId === game.id}
                           busy={actionGameId === game.id}
                         />
@@ -1460,13 +1467,13 @@ const UserGames = () => {
 
       <ConfirmModal
         open={!!confirmSkipGame}
-        title="Won’t Watch Game"
+        title="Skip Game"
         body={
           confirmSkipGame
-            ? `Hide ${confirmSkipGame.away_team.code} @ ${confirmSkipGame.home_team.code} from your games feed?`
+            ? `Move ${confirmSkipGame.away_team.code} @ ${confirmSkipGame.home_team.code} to skipped games?`
             : ''
         }
-        confirmLabel="Hide game"
+        confirmLabel="Skip game"
         confirmIcon="visibility_off"
         variant="danger"
         busy={actionGameId === confirmSkipGame?.id}
