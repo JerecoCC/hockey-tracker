@@ -1,5 +1,4 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './UserNav.module.scss';
@@ -26,8 +25,6 @@ const UserNav = (props: UserNavProps) => {
   const { collapsed, mobileOpen, onMobileClose } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { user } = useAuth();
-  const isAdmin = user?.role === 'admin';
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
@@ -77,27 +74,22 @@ const UserNav = (props: UserNavProps) => {
         </ul>
       </div>
 
-      {isAdmin && (
-        <div className={styles.bottom}>
-          <Button
-            variant="ghost"
-            intent="neutral"
-            className={styles.navItem}
-            onClick={() => {
-              navigate('/admin/leagues');
-              onMobileClose?.();
-            }}
-            tooltip={!showExpanded ? 'Admin Panel' : undefined}
-            tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
-          >
-            <Icon
-              name="shield"
-              className={styles.icon}
-            />
-            {showExpanded && <span className={styles.label}>Admin Panel</span>}
-          </Button>
-        </div>
-      )}
+      <div className={styles.bottom}>
+        <Button
+          variant="ghost"
+          intent="neutral"
+          className={`${styles.navItem} ${isActive('/settings') ? styles.active : ''}`}
+          onClick={() => handleNavClick('/settings')}
+          tooltip={!showExpanded ? 'Settings' : undefined}
+          tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
+        >
+          <Icon
+            name="settings"
+            className={styles.icon}
+          />
+          {showExpanded && <span className={styles.label}>Settings</span>}
+        </Button>
+      </div>
     </nav>
   );
 };

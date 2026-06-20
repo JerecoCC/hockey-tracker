@@ -29,6 +29,7 @@ import {
   faFilter,
   faFlag,
   faGauge,
+  faGear,
   faCalendarDays,
   faChevronDown,
   faChevronLeft,
@@ -100,6 +101,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   south: faArrowDown,
   menu: faBars,
   shield: faShield,
+  settings: faGear,
 
   // info
   info: faCircleInfo,

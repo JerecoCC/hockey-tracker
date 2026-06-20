@@ -37,6 +37,7 @@ describe('PageHeader – title resolution', () => {
     ['/admin/users', 'Users'],
     ['/admin/leagues/123', 'League Details'],
     ['/admin/leagues/123/teams/456', 'Team Details'],
+    ['/settings', 'Settings'],
   ])('shows "%s" title for %s', (pathname, title) => {
     setup(pathname);
     expect(screen.getByRole('heading', { name: title })).toBeInTheDocument();
@@ -93,6 +94,27 @@ describe('PageHeader – switch button', () => {
   it('hides the switch button for non-admin users', () => {
     setup('/admin/leagues', regularUser);
     expect(screen.queryByRole('tooltip', { name: 'Dashboard' })).not.toBeInTheDocument();
+  });
+
+  it('shows an admin panel shortcut for admin users on user routes', () => {
+    setup('/dashboard', adminUser);
+    expect(screen.getByRole('button', { name: 'Admin Panel' })).toBeInTheDocument();
+  });
+
+  it('hides the admin panel shortcut on admin routes', () => {
+    setup('/admin/leagues', adminUser);
+    expect(screen.queryByRole('button', { name: 'Admin Panel' })).not.toBeInTheDocument();
+  });
+
+  it('hides the admin panel shortcut for non-admin users', () => {
+    setup('/dashboard', regularUser);
+    expect(screen.queryByRole('button', { name: 'Admin Panel' })).not.toBeInTheDocument();
+  });
+
+  it('navigates to the admin panel from the header shortcut', () => {
+    setup('/dashboard', adminUser);
+    fireEvent.click(screen.getByRole('button', { name: 'Admin Panel' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues');
   });
 
   it('does not navigate when clicking the account menu on an admin panel route', () => {

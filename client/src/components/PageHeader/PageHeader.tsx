@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useMobileTabs } from '@/context/MobileTabsContext';
+import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './PageHeader.module.scss';
 
@@ -10,6 +11,7 @@ const EXACT_TITLES: Record<string, string> = {
   '/admin/users': 'Users',
   '/dashboard': 'Dashboard',
   '/games': 'Games',
+  '/settings': 'Settings',
 };
 
 const getTitle = (pathname: string): string => {
@@ -55,6 +57,7 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
   const routePrefix = routeTitle.split(' ')[0]; // "League Details" → "League"
   const mobileTabTitle = activeTabLabel ? `${routePrefix} ${activeTabLabel}` : null;
   const title = routeTitle;
+  const showAdminPanelButton = user?.role === 'admin' && !pathname.startsWith('/admin');
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -95,6 +98,18 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
         </div>
 
         <div className={styles.right}>
+          {showAdminPanelButton && (
+            <Button
+              variant="ghost"
+              intent="neutral"
+              icon="shield"
+              iconHeight="button"
+              className={styles.adminPanelButton}
+              aria-label="Admin Panel"
+              tooltip="Admin Panel"
+              onClick={() => navigate('/admin/leagues')}
+            />
+          )}
           {user && (
             <div
               className={styles.profileChip}

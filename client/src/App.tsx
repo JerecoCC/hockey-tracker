@@ -9,6 +9,7 @@ import UserLayout from './components/UserLayout/UserLayout';
 import UserDashboard from './pages/user/dashboard/UserDashboard';
 import UserGames from './pages/user/games/UserGames';
 import UserGameDetailsPage from './pages/user/games/game-details/UserGameDetailsPage';
+import UserSettings from './pages/user/settings/UserSettings';
 import LeaguesPage from './pages/admin/leagues/Leagues';
 import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
@@ -104,6 +105,7 @@ const router = createBrowserRouter([
       { path: '/dashboard', element: <UserDashboard /> },
       { path: '/games', element: <UserGames /> },
       { path: '/games/:id', element: <UserGameDetailsPage /> },
+      { path: '/settings', element: <UserSettings /> },
     ],
   },
   {

@@ -184,6 +184,15 @@
   cursor: pointer;
 }
 
+.adminPanelButton {
+  color: $text-light;
+  flex-shrink: 0;
+
+  &:hover {
+    color: $text-bright;
+  }
+}
+
 // ── User profile chip ──────────────────────────────────────────────────
 .profileChip {
   position: relative;

@@ -1,0 +1,122 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+  container-type: inline-size;
+}
+
+.accountCard {
+  width: 100%;
+}
+
+.infoGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: $space-2xl;
+
+  @container (max-width: 560px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.contentGrid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: $space-lg;
+  align-items: start;
+
+  @container (max-width: #{$bp-tablet}) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.mainColumn,
+.sideColumn {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.empty {
+  margin: 0;
+  font-size: $font-base;
+  color: $text-dim;
+  padding: $space-lg 0;
+}
+
+.leaguesList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.searchField {
+  margin-bottom: $space-lg;
+}
+
+.leagueHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+}
+
+.leagueText {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+}
+
+.leagueName {
+  font-size: $font-base;
+  font-weight: 600;
+  color: $text-bright;
+  @include truncate;
+}
+
+.leagueCode,
+.leagueCount {
+  font-size: $font-xs;
+  color: $text-dim;
+}
+
+.leagueCount {
+  white-space: nowrap;
+}
+
+.leagueBody {
+  padding: $space-lg;
+}
+
+.teamList {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: $space-md;
+  padding: 0;
+
+  @container (max-width: 1120px) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @container (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.favoriteList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  padding: 0;
+}
+
+.teamItemFavorited {
+  border-color: $warning;
+  background: rgba($warning, 0.08);
+  box-shadow: inset 3px 0 0 $warning;
+}
