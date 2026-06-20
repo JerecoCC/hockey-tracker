@@ -150,26 +150,11 @@ const fmtGameTime = (
   return instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 };
 
-const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
-  if (game.scheduled_at && DATE_ONLY_RE.test(game.scheduled_at) && !game.scheduled_time) {
-    return game.scheduled_at;
-  }
-  const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
-  if (!instant) return null;
-  return tzPref === 'ET'
-    ? (getEtDateKey(game.scheduled_at, game.scheduled_time) ??
-        toDateKeyInZone(instant, 'America/New_York'))
-    : toDateKeyInZone(instant);
-};
-
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
   if (!value) return null;
   if (DATE_ONLY_RE.test(value)) return value;
   return toLocalDateKey(value);
 };
-
-const getEffectiveUserDateKey = (game: GameRecord, tzPref: TzPref) =>
-  getScheduledWatchDateKey(game.scheduled_for) ?? getOriginalGameDateKey(game, tzPref);
 
 const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   if (!a.scheduled_time && !b.scheduled_time) return 0;
@@ -465,10 +450,11 @@ const UserDashboard = () => {
   const tzPref = getStoredTzPref();
 
   const { data: games = [], isLoading: gamesLoading } = useQuery<GameRecord[]>({
-    queryKey: ['user-dashboard-games'],
+    queryKey: ['user-dashboard-games', todayKey],
     queryFn: async () => {
       const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
         headers: authHeaders(),
+        params: { date: todayKey },
       });
       return data;
     },
@@ -481,16 +467,12 @@ const UserDashboard = () => {
       .sort((a, b) => a.name.localeCompare(b.name));
   }, [favorites, teams]);
 
-  const todayGames = useMemo(
-    () =>
-      games
-        .filter((game) => getEffectiveUserDateKey(game, tzPref) === todayKey)
-        .sort(sortGamesByTime),
-    [games, todayKey, tzPref],
-  );
+  // The API already returns only games for `todayKey` (effective date filter),
+  // so just order them for display.
+  const todayGames = useMemo(() => [...games].sort(sortGamesByTime), [games]);
 
   const setDashboardGames = (updater: (games: GameRecord[]) => GameRecord[]) => {
-    queryClient.setQueryData<GameRecord[]>(['user-dashboard-games'], (existing) =>
+    queryClient.setQueryData<GameRecord[]>(['user-dashboard-games', todayKey], (existing) =>
       Array.isArray(existing) ? updater(existing) : existing,
     );
     void queryClient.invalidateQueries({ queryKey: ['user-games'] });
@@ -525,14 +507,18 @@ const UserDashboard = () => {
     if (actionGameId === gameId) return;
     setActionGameId(gameId);
     try {
-      await axios.post(`${API}/user/watched-games/${gameId}`, {}, { headers: authHeaders() });
+      await axios.post(
+        `${API}/user/watched-games/${gameId}`,
+        { watched_on: todayKey },
+        { headers: authHeaders() },
+      );
       setDashboardGames((existing) =>
         existing.map((game) =>
           game.id === gameId
             ? {
                 ...game,
                 watched_by_user: true,
-                watched_on: getScheduledWatchDateKey(game.scheduled_for) ?? dateToISO(new Date()),
+                watched_on: getScheduledWatchDateKey(game.scheduled_for) ?? todayKey,
                 skipped_by_user: false,
               }
             : game,

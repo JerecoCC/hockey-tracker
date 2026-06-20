@@ -212,8 +212,10 @@ describe('UserDashboard', () => {
       setQueryData: mockSetQueryData,
       invalidateQueries: mockInvalidateQueries,
     });
+    // The dashboard now filters by date on the server, so the query returns
+    // only the effective date's games.
     mockUseQuery.mockReturnValue({
-      data: [makeGame(), makeGame({ id: 'game-2', scheduled_at: '2026-06-22' })],
+      data: [makeGame()],
       isLoading: false,
     });
   });
@@ -239,11 +241,14 @@ describe('UserDashboard', () => {
     await waitFor(() => {
       expect(mockAxios.post).toHaveBeenCalledWith(
         expect.stringContaining('/user/watched-games/game-1'),
-        {},
+        { watched_on: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/) },
         expect.any(Object),
       );
     });
-    expect(mockSetQueryData).toHaveBeenCalledWith(['user-dashboard-games'], expect.any(Function));
+    expect(mockSetQueryData).toHaveBeenCalledWith(
+      ['user-dashboard-games', expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/)],
+      expect.any(Function),
+    );
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['user-games'] });
   });
 

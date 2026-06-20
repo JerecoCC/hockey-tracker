@@ -70,17 +70,24 @@ router.delete('/favorites/:teamId', async (req, res) => {
 router.post('/watched-games/:gameId', async (req, res) => {
   const userId = req.user.id;
   const { gameId } = req.params;
+  // Optional caller-supplied "watched on" date (YYYY-MM-DD). Lets the client
+  // record the effective date it is operating on (e.g. an admin test date)
+  // instead of always defaulting to the server's CURRENT_DATE.
+  const watchedOn =
+    typeof req.body?.watched_on === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.body.watched_on)
+      ? req.body.watched_on
+      : null;
   try {
     const game = await sql`SELECT id FROM games WHERE id = ${gameId}`;
     if (game.length === 0) return res.status(404).json({ error: 'Game not found' });
 
     const [saved] = await sql`
       INSERT INTO user_watched_games (user_id, game_id, watched_at, watched_on, scheduled_for)
-      VALUES (${userId}, ${gameId}, NOW(), CURRENT_DATE, NULL)
+      VALUES (${userId}, ${gameId}, NOW(), COALESCE(${watchedOn}::date, CURRENT_DATE), NULL)
       ON CONFLICT (user_id, game_id)
       DO UPDATE SET
         watched_at = NOW(),
-        watched_on = COALESCE(user_watched_games.scheduled_for, CURRENT_DATE),
+        watched_on = COALESCE(user_watched_games.scheduled_for, ${watchedOn}::date, CURRENT_DATE),
         skipped_at = NULL
       RETURNING watched_on::text AS watched_on, scheduled_for::text AS scheduled_for
     `;
@@ -220,13 +227,19 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games  – read-only game list for authenticated users
-// Query params: season_id, league_id, team_id, game_type, status, include_skipped
+// Query params: season_id, league_id, team_id, game_type, status, include_skipped, date
+// `date` (YYYY-MM-DD) filters to games whose effective user date matches — the
+// user's personal scheduled_for if set, otherwise the game's Eastern-time date.
 // Results are scoped to games involving the user's favourite teams.
 // ---------------------------------------------------------------------------
 router.get('/games', async (req, res) => {
   const userId = req.user.id;
   const { season_id, league_id, team_id, game_type, status } = req.query;
   const includeSkipped = req.query.include_skipped === 'true' || req.query.include_skipped === '1';
+  const dateFilter =
+    typeof req.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
+      ? req.query.date
+      : null;
   try {
     const games = await sql`
       SELECT
@@ -463,6 +476,13 @@ router.get('/games', async (req, res) => {
                                                 OR g.away_team_id = ${team_id ?? null}::uuid)
         AND (${game_type ?? null}::text IS NULL OR g.game_type = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status    = ${status    ?? null})
+        AND (
+          ${dateFilter}::date IS NULL
+          OR COALESCE(
+               uwg.scheduled_for,
+               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+             ) = ${dateFilter}::date
+        )
       ORDER BY
         CASE g.status WHEN 'in_progress' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,
         CASE g.status WHEN 'scheduled'   THEN g.scheduled_at END ASC NULLS LAST,
