@@ -1,14 +1,12 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
-// ── Page ───────────────────────────────────────────────────────────────
 .page {
   display: flex;
   flex-direction: column;
-  gap: $space-4xl;
+  gap: $space-2xl;
 }
 
-// ── Welcome ────────────────────────────────────────────────────────────
 .welcome {
   display: flex;
   align-items: center;
@@ -37,20 +35,6 @@
   color: $text-dim;
 }
 
-// ── Section ────────────────────────────────────────────────────────────
-.section {
-  display: flex;
-  flex-direction: column;
-  gap: $space-lg;
-}
-
-.sectionTitle {
-  margin: 0;
-  font-size: $font-xl;
-  font-weight: 700;
-  color: $text-bright;
-}
-
 .empty {
   margin: 0;
   font-size: $font-base;
@@ -58,134 +42,190 @@
   padding: $space-lg 0;
 }
 
-// ── League list ────────────────────────────────────────────────────────
-.leaguesList {
+.favoriteScroller {
   display: flex;
-  flex-direction: column;
-  gap: $space-lg;
-}
-
-.leagueCard {
-  display: flex;
-  flex-direction: column;
-  gap: $space-lg;
-}
-
-.leagueHeader {
-  display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: $space-md;
+  overflow-x: auto;
+  padding: $space-xs 0 $space-sm;
+  scrollbar-gutter: stable;
 }
 
-.leagueLogo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.leagueLogoPlaceholder {
-  width: 28px;
-  height: 28px;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xs;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.leagueName {
-  font-size: $font-lg;
-  font-weight: 600;
-  color: $text-bright;
-}
-
-// ── Teams grid ─────────────────────────────────────────────────────────
-.teamsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: $space-md;
-}
-
-// ── Team card ──────────────────────────────────────────────────────────
-.teamCard {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  padding: $space-md $space-lg;
-  background: $bg-page;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  transition: border-color $transition-fast;
-
-  &.teamCardFavorited {
-    border-color: $accent;
-  }
-}
-
-.teamCardLeft {
+.favoriteTeam {
+  flex: 0 0 230px;
   display: flex;
   align-items: center;
   gap: $space-md;
   min-width: 0;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: $bg-page;
 }
 
-.teamLogo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
+.favoriteTeamText {
+  min-width: 0;
 }
 
-.teamLogoPlaceholder {
-  width: 32px;
-  height: 32px;
+.favoriteTeamName {
+  display: block;
+  color: $text-bright;
+  font-size: $font-base;
+  font-weight: 700;
+  @include truncate;
+}
+
+.favoriteTeamMeta {
+  display: block;
+  margin-top: 2px;
+  color: $text-dim;
+  font-size: $font-xs;
+  @include truncate;
+}
+
+.todayGamesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: $space-md;
+  padding: $space-xs 0;
+}
+
+.todayGame {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  min-height: 176px;
+  padding: $space-lg;
+  border: 1px solid color-mix(in srgb, var(--game-league-primary) 46%, #{$border});
   border-radius: $radius-sm;
+  background: color-mix(in srgb, var(--game-league-primary) 16%, #{$bg-card});
+  color: $text-bright;
+  transition:
+    border-color $transition-fast,
+    background $transition-fast;
+
+  &:hover,
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--game-league-primary) 68%, #475569);
+
+    .gameActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.todayGameUnwatched {
+  background: color-mix(in srgb, var(--game-league-primary) 10%, #{$border});
+  border-color: color-mix(in srgb, var(--game-league-primary) 24%, #{$border});
+}
+
+.todayGameLive {
+  border-color: $success;
+}
+
+.todayGameClickable {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
+.gameActions {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: $font-xs;
-  font-weight: 700;
-  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: $space-xs;
+  border-radius: inherit;
+  background: rgba(15, 23, 42, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
 }
 
-.teamName {
-  margin: 0 0 2px;
-  font-size: $font-base;
+.gameMeta,
+.gameFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-sm;
+  font-size: $font-sm;
+  color: color-mix(in srgb, var(--game-league-primary) 44%, #{$text-dim});
+}
+
+.gameFooter {
+  margin-top: auto;
+  text-transform: uppercase;
   font-weight: 600;
+}
+
+.teamLine {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  font-weight: 700;
+}
+
+.teamLineDim {
+  opacity: 0.55;
+}
+
+.teamCode {
+  min-width: 0;
   color: $text-body;
   @include truncate;
 }
 
-.teamCode {
+.teamScore {
+  margin-left: auto;
+  min-width: 30px;
+  text-align: right;
+  font-size: $font-2xl;
+  color: color-mix(in srgb, var(--game-league-primary) 72%, #{$text-bright});
+}
+
+.scheduleModalBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.scheduleModalCopy {
   margin: 0;
+  color: $text-dim;
+  font-size: $font-sm;
+}
+
+.testDateControl {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.testDateLabel {
   font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
   color: $text-dim;
 }
 
-// ── Star button ────────────────────────────────────────────────────────
-.starBtn {
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  background: transparent;
-  border: none;
-  border-radius: $radius-sm;
-  color: $text-dim;
-  cursor: pointer;
-  transition: color $transition-fast;
-
-  &:hover {
-    color: $warning-light;
+@media (max-width: 640px) {
+  .welcome {
+    align-items: flex-start;
   }
 
-  &.starActive {
-    color: $warning-light;
+  .favoriteTeam {
+    flex-basis: 210px;
+  }
+
+  .todayGamesGrid {
+    grid-template-columns: 1fr;
   }
 }
