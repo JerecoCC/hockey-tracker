@@ -227,6 +227,30 @@ describe('autofillGameFromNhlGamecenter', () => {
     mockedAxios.put.mockResolvedValue({ data: {} });
   });
 
+  it('rejects before writing when the NHL game date does not match this game', async () => {
+    boxscoreData = {
+      ...boxscore,
+      gameDate: '2025-11-18',
+    };
+
+    await expect(autofillGameFromNhlGamecenter(game, '317')).rejects.toThrow(
+      /NHL game is scheduled for 2025-11-18, but this page is scheduled for 2025-11-19/i,
+    );
+
+    expect(mockedAxios.post).not.toHaveBeenCalled();
+    expect(mockedAxios.patch).not.toHaveBeenCalled();
+    expect(mockedAxios.put).not.toHaveBeenCalled();
+    expect(
+      mockedAxios.get.mock.calls.some(([, config]) => {
+        const targetUrl = String(config?.params?.url ?? '');
+        return targetUrl.includes('/play-by-play') || targetUrl.includes('/RO020317.HTM');
+      }),
+    ).toBe(false);
+    expect(
+      mockedAxios.get.mock.calls.some(([url]) => String(url).endsWith('/admin/games/game-1/goals')),
+    ).toBe(false);
+  });
+
   it('records a shorthanded goal with the canonical "shorthanded" goal_type', async () => {
     boxscoreData = {
       ...boxscore,

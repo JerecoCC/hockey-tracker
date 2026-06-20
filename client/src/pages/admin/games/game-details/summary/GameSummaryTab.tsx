@@ -7,6 +7,7 @@ import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import StartGameModal from '../StartGameModal';
+import NhlGameAutofillModal from '../NhlGameAutofillModal';
 import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
@@ -345,6 +346,7 @@ const GameSummaryTab = ({
 
   // ── Start Game modal ─────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
+  const [nhlAutofillModalOpen, setNhlAutofillModalOpen] = useState(false);
   const openStartGameModal = () => setStartGameModalOpen(true);
   const handleStartGame = async (isoTime: string) => {
     const started = await startGame(isoTime);
@@ -496,7 +498,9 @@ const GameSummaryTab = ({
   }, [busy, focusCurrentPeriodAction]);
 
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
-  const showGoalieSwitchReport = editable && game.league_code?.toUpperCase() === 'NHL';
+  const showNhlAdminTools = editable && game.league_code?.toUpperCase() === 'NHL';
+  const showGoalieSwitchReport = showNhlAdminTools;
+  const canAutofillNhlGame = showNhlAdminTools && game.status !== 'final';
 
   // For edit-mode revert: use current_period if set (retained after endGame), else
   // fall back to the highest period that has a score recorded.
@@ -647,6 +651,9 @@ const GameSummaryTab = ({
                 (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
               }
               onStartGame={editable ? openStartGameModal : undefined}
+              onAutofillGame={
+                canAutofillNhlGame ? () => setNhlAutofillModalOpen(true) : undefined
+              }
               onReschedule={editable ? () => updateStatus('postponed') : undefined}
               onCancel={editable ? () => updateStatus('cancelled') : undefined}
               onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
@@ -760,10 +767,7 @@ const GameSummaryTab = ({
             )}
 
             {showGoalieSwitchReport && (
-              <GoalieSwitchReportCard
-                game={game}
-                onAutofillChange={onGameAutofillChange}
-              />
+              <GoalieSwitchReportCard game={game} />
             )}
 
             {/* ── Game Info card ── */}
@@ -822,6 +826,15 @@ const GameSummaryTab = ({
           disabled={!!busy}
           onClose={() => setStartGameModalOpen(false)}
           onStart={handleStartGame}
+        />
+      )}
+
+      {canAutofillNhlGame && (
+        <NhlGameAutofillModal
+          open={nhlAutofillModalOpen}
+          game={game}
+          onClose={() => setNhlAutofillModalOpen(false)}
+          onAutofillChange={onGameAutofillChange}
         />
       )}
 

@@ -212,22 +212,23 @@ export async function autofillGameFromNhlGamecenter(
   const gameSummaryReportUrl = buildGameSummaryReportUrl(gamecenterId);
   const shootoutReportUrl = buildShootoutReportUrl(gamecenterId);
   const goalieToiReportUrls = buildGoalieToiReportUrls(gamecenterId);
-  const [boxscore, playByPlay, rosterReport, gameSummaryReport, shootoutReport, goalieToiReports] = await Promise.all([
-    fetchNhlJson(`${base}/boxscore`),
+  const boxscore = await fetchNhlJson(`${base}/boxscore`);
+  const warnings: string[] = [];
+
+  await emitProgress({
+    step: 'match',
+    message: 'Matching NHL date, teams, and existing game data...',
+  });
+
+  assertGameMatches(game, boxscore);
+
+  const [playByPlay, rosterReport, gameSummaryReport, shootoutReport, goalieToiReports] = await Promise.all([
     fetchNhlJson(`${base}/play-by-play`),
     fetchOptionalRosterReport(rosterReportUrl),
     fetchOptionalGameSummaryReport(gameSummaryReportUrl),
     fetchOptionalShootoutReport(shootoutReportUrl),
     fetchOptionalTextReports(goalieToiReportUrls),
   ]);
-  const warnings: string[] = [];
-
-  await emitProgress({
-    step: 'match',
-    message: 'Matching NHL teams and existing game data...',
-  });
-
-  assertTeamsMatch(game, boxscore);
   const shootoutGame = isShootoutGame(boxscore);
 
   const [existingGoals, existingShootoutAttempts] = await Promise.all([
@@ -934,7 +935,15 @@ async function ensureReportPlayersRostered(
   return fetchTeamPlayers(teamId, game.season_id, gameDate);
 }
 
-function assertTeamsMatch(game: GameRecord, boxscore: any) {
+function assertGameMatches(game: GameRecord, boxscore: any) {
+  const nhlDate = typeof boxscore?.gameDate === 'string' ? boxscore.gameDate.slice(0, 10) : null;
+  const localDate = nhlLocalDate(game.scheduled_at);
+  if (nhlDate && localDate && nhlDate !== localDate) {
+    throw new Error(
+      `NHL game is scheduled for ${nhlDate}, but this page is scheduled for ${localDate}.`,
+    );
+  }
+
   const awayCode = readText(boxscore?.awayTeam?.abbrev) ?? boxscore?.awayTeam?.abbrev;
   const homeCode = readText(boxscore?.homeTeam?.abbrev) ?? boxscore?.homeTeam?.abbrev;
   if (awayCode !== game.away_team.code || homeCode !== game.home_team.code) {
@@ -942,6 +951,26 @@ function assertTeamsMatch(game: GameRecord, boxscore: any) {
       `NHL game is ${awayCode} @ ${homeCode}, but this page is ${game.away_team.code} @ ${game.home_team.code}.`,
     );
   }
+}
+
+function nhlLocalDate(value: string | null | undefined) {
+  if (!value) return null;
+  const rawDate = value.slice(0, 10);
+  if (!value.includes('T')) return rawDate;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return rawDate;
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  return year && month && day ? `${year}-${month}-${day}` : rawDate;
 }
 
 function isShootoutGame(boxscore: any) {

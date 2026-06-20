@@ -27,6 +27,7 @@ interface Props {
   canEndGame: boolean;
   // ── Action callbacks ──
   onStartGame?: () => void;
+  onAutofillGame?: () => void;
   onReschedule?: () => void;
   onCancel?: () => void;
   onDelete?: () => void;
@@ -46,6 +47,7 @@ const LinescoreCard = ({
   lineupsReady,
   canEndGame,
   onStartGame,
+  onAutofillGame,
   onReschedule,
   onCancel,
   onDelete,
@@ -83,6 +85,17 @@ const LinescoreCard = ({
       title="Linescore"
       action={
         <div className={styles.linescoreActions}>
+          {onAutofillGame && (
+            <Button
+              variant="outlined"
+              intent="info"
+              icon="sports_hockey"
+              size="sm"
+              tooltip="Auto-fill NHL game"
+              disabled={!!busy}
+              onClick={onAutofillGame}
+            />
+          )}
           {game.status === 'scheduled' && onStartGame && onReschedule && onCancel && onDelete && (
             <>
               <Button

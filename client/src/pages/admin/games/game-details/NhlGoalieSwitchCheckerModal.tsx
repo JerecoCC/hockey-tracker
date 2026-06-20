@@ -1,16 +1,9 @@
 import { useState } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { toast } from 'react-toastify';
-import Button from '@/components/Button/Button';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { fetchNhlGoalieSwitchReport, type NhlGoalieSwitchReport } from './nhlGoalieSwitchChecker';
-import {
-  autofillGameFromNhlGamecenter,
-  nhlAutofillApiError,
-  type NhlAutofillProgress,
-} from './nhlGameAutofill';
 import type { GameRecord } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
 
@@ -20,7 +13,6 @@ interface Props {
   onClose: () => void;
   setReportData: (data: NhlGoalieSwitchReport | null) => void;
   onLoadingChange?: (loading: boolean) => void;
-  onAutofillChange?: (progress: NhlAutofillProgress | null) => void;
 }
 
 type FormValues = {
@@ -35,9 +27,7 @@ const NhlGoalieSwitchCheckerModal = ({
   onClose,
   setReportData,
   onLoadingChange,
-  onAutofillChange,
 }: Props) => {
-  const queryClient = useQueryClient();
   const {
     control,
     handleSubmit,
@@ -50,28 +40,9 @@ const NhlGoalieSwitchCheckerModal = ({
     mode: 'onChange',
   });
   const [checking, setChecking] = useState(false);
-  const [filling, setFilling] = useState(false);
   const gameNumber = watch('game_number');
-  const busy = checking || filling;
+  const busy = checking;
   const canUseGameNumber = isValid && !!String(gameNumber ?? '').trim();
-  const canAutofillGame = game.status !== 'final';
-
-  const invalidateGameDetailQueries = () =>
-    Promise.all([
-      queryClient.invalidateQueries({ queryKey: ['games', game.id] }),
-      queryClient.invalidateQueries({ queryKey: ['game-goals', game.id] }),
-      queryClient.invalidateQueries({ queryKey: ['game-roster', game.id] }),
-      queryClient.invalidateQueries({ queryKey: ['game-lineup', game.id] }),
-      queryClient.invalidateQueries({ queryKey: ['game-goalie-stats', game.id] }),
-      queryClient.invalidateQueries({ queryKey: ['shootout-attempts', game.id] }),
-    ]);
-
-  const handleAutofillProgress = async (progress: NhlAutofillProgress) => {
-    onAutofillChange?.(progress);
-    if (progress.refresh) {
-      await invalidateGameDetailQueries();
-    }
-  };
 
   const onSubmit = handleSubmit(async (values) => {
     setReportData(null);
@@ -94,62 +65,6 @@ const NhlGoalieSwitchCheckerModal = ({
     }
   });
 
-  const handleAutofill = async () => {
-    const input = String(gameNumber ?? '').trim();
-    if (!input || !canAutofillGame) return;
-    setReportData(null);
-    setFilling(true);
-    onLoadingChange?.(true);
-    onAutofillChange?.({
-      step: 'start',
-      message: 'Starting NHL auto-fill...',
-    });
-    onClose();
-
-    const goalieSwitchReportPromise = fetchNhlGoalieSwitchReport(input, {
-      seasonName: game.season_name,
-      scheduledAt: game.scheduled_at,
-      gameType: game.game_type,
-    }).then(
-      (report) => ({ report, error: null }),
-      (reportError) => ({ report: null, error: reportError }),
-    );
-
-    try {
-      const result = await autofillGameFromNhlGamecenter(game, input, {
-        onProgress: handleAutofillProgress,
-      });
-      const goalieSwitchReportResult = await goalieSwitchReportPromise;
-      const reportWarning = goalieSwitchReportResult.error
-        ? nhlAutofillApiError(
-            goalieSwitchReportResult.error,
-            'Game was auto-filled, but goalie switch report could not be fetched.',
-          )
-        : null;
-
-      if (goalieSwitchReportResult.report) {
-        setReportData(goalieSwitchReportResult.report);
-      }
-
-      await invalidateGameDetailQueries();
-      await queryClient.invalidateQueries({ queryKey: ['games'] });
-      toast.success(
-        `Filled NHL game ${result.summary.gameId}: ${result.summary.goalsCreated} goals, ${result.summary.rosterPlayers} roster players.`,
-      );
-      const warnings = reportWarning ? [...result.warnings, reportWarning] : result.warnings;
-      if (warnings.length > 0) {
-        toast.error(warnings.join(' '));
-      }
-    } catch (err) {
-      const message = nhlAutofillApiError(err, 'Unable to auto-fill game from NHL data.');
-      toast.error(message);
-    } finally {
-      setFilling(false);
-      onLoadingChange?.(false);
-      onAutofillChange?.(null);
-    }
-  };
-
   return (
     <Modal
       open={open}
@@ -160,20 +75,6 @@ const NhlGoalieSwitchCheckerModal = ({
       confirmForm={FORM_ID}
       confirmDisabled={busy || !canUseGameNumber}
       busy={busy}
-      footerStart={
-        canAutofillGame ? (
-          <Button
-            variant="outlined"
-            intent="info"
-            icon="sports_hockey"
-            onClick={handleAutofill}
-            disabled={busy || !canUseGameNumber}
-            type="button"
-          >
-            {filling ? 'Filling...' : 'Auto-fill Game'}
-          </Button>
-        ) : undefined
-      }
     >
       <div className={styles.nhlGoalieChecker}>
         <form
@@ -199,7 +100,7 @@ const NhlGoalieSwitchCheckerModal = ({
 
         {busy && (
           <p className={styles.nhlGoalieCheckerStatus}>
-            {filling ? 'Filling game from NHL GameCenter data...' : 'Fetching NHL GameCenter data...'}
+            Fetching NHL GameCenter data...
           </p>
         )}
       </div>

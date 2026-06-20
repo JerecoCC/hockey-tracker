@@ -7,11 +7,9 @@ import { useEffect, useState } from 'react';
 import Button from '@/components/Button/Button';
 import styles from '../../GameDetailsPage.module.scss';
 import { GameRecord } from '@/hooks/useGames';
-import type { NhlAutofillProgress } from '../../nhlGameAutofill';
 
 type Props = {
   game: GameRecord;
-  onAutofillChange?: (progress: NhlAutofillProgress | null) => void;
 };
 
 const storageKey = (gameId: string) => `nhl-goalie-switch-report:${gameId}`;
@@ -37,7 +35,7 @@ const writeStoredReport = (gameId: string, report: NhlGoalieSwitchReport | null)
   }
 };
 
-const GoalieSwitchReportCard = ({ game, onAutofillChange }: Props) => {
+const GoalieSwitchReportCard = ({ game }: Props) => {
   const [modalOpen, setModalOpen] = useState(false);
   const [report, setReport] = useState<NhlGoalieSwitchReport | null>(() =>
     readStoredReport(game.id),
@@ -102,7 +100,6 @@ const GoalieSwitchReportCard = ({ game, onAutofillChange }: Props) => {
         onClose={() => setModalOpen(false)}
         setReportData={handleSetReport}
         onLoadingChange={setLoading}
-        onAutofillChange={onAutofillChange}
       />
     </>
   );
