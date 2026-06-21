@@ -341,8 +341,8 @@ const TodayGameTile = ({
   const showScore = shouldShowWatchedScore(game);
   const homeScore = showScore ? game.home_score : '-';
   const awayScore = showScore ? game.away_score : '-';
-  const awayDim = !showScore || game.away_score < game.home_score;
-  const homeDim = !showScore || game.home_score < game.away_score;
+  const awayDim = showScore && game.away_score < game.home_score;
+  const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;
   const timeLabel = fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref);
 
