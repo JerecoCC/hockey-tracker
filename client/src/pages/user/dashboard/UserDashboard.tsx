@@ -76,6 +76,11 @@ const fmtDayHeading = (key: string) => {
   });
 };
 
+const dateKeyToDate = (key: string) => {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
 const getEtAbbrForDateKey = (dateKey: string): string =>
   new Intl.DateTimeFormat('en-US', {
     timeZone: 'America/New_York',
@@ -196,6 +201,20 @@ const getLeagueStyle = (game: GameRecord) =>
     '--game-league-primary': game.league_primary_color ?? '#334155',
     '--game-league-text': game.league_text_color ?? '#ffffff',
   }) as CSSProperties;
+
+const ORIGINAL_GAME_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: '2-digit',
+  day: '2-digit',
+  year: 'numeric',
+});
+
+const getOriginalGameDateLabel = (game: GameRecord, tzPref: TzPref) => {
+  const watchDateKey = getScheduledWatchDateKey(game.scheduled_for);
+  if (!watchDateKey) return null;
+  const originalDateKey = getOriginalGameDateKey(game, tzPref);
+  if (!originalDateKey || originalDateKey === watchDateKey) return null;
+  return ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey));
+};
 
 const getStatusLabel = (game: GameRecord) => {
   if (game.status === 'in_progress') return 'LIVE';
@@ -386,6 +405,10 @@ const TodayGameTile = ({
   const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;
   const timeLabel = fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref);
+  const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
+  const primaryMetaLabel = [originalDateLabel, timeLabel || getStatusLabel(game)]
+    .filter(Boolean)
+    .join(' · ');
 
   return (
     <div
@@ -428,7 +451,7 @@ const TodayGameTile = ({
         </span>
       )}
       <div className={styles.gameMeta}>
-        <span>{timeLabel || getStatusLabel(game)}</span>
+        <span>{primaryMetaLabel}</span>
         {game.season_name && <span>{game.season_name}</span>}
       </div>
       <TeamLine

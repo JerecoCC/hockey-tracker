@@ -291,6 +291,27 @@ describe('UserDashboard', () => {
     expect(mockAxios.put).not.toHaveBeenCalled();
   });
 
+  it('shows the original scheduled date for games moved to another watch day', () => {
+    const originalLocalDate = toLocalDateKey(new Date('2026-06-21T19:00:00-04:00'));
+    const originalDateLabel = new Intl.DateTimeFormat('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: 'numeric',
+    }).format(new Date(`${originalLocalDate}T00:00:00`));
+    const timeLabel = new Date('2026-06-21T19:00:00-04:00').toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+    mockUseQuery.mockReturnValue({
+      data: [makeGame({ scheduled_for: '2026-06-23' })],
+      isLoading: false,
+    });
+
+    render(<UserDashboard />);
+
+    expect(screen.getByText(`${originalDateLabel} · ${timeLabel}`)).toBeInTheDocument();
+  });
+
   it('opens watched-game hover actions for details and score image', () => {
     mockUseQuery.mockReturnValue({
       data: [makeGame({ status: 'final', watched_by_user: true, home_score: 4, away_score: 2 })],
