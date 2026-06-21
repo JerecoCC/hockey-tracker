@@ -1,7 +1,20 @@
-import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  type ReactNode,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import styles from './Select.module.scss';
+
+// Keep in sync with `.menu { max-height }` in Select.module.scss.
+const MENU_MAX_HEIGHT = 220;
 
 export type SelectOption =
   | { value: string; label: string; logo?: string | null; code?: string; indicator?: ReactNode }
@@ -51,6 +64,34 @@ const Select = (props: Props) => {
   const menuRef = useRef<HTMLUListElement>(null);
   const suppressNextFocusOpenRef = useRef(false);
   const menuId = useId();
+  // The menu is portaled to <body> and positioned `fixed` so it overlays
+  // without expanding/clipping inside an overflow card or modal. Measure the
+  // trigger to place it (flipping above when there's little room below), and
+  // keep it aligned while open as the page scrolls/resizes.
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+  useLayoutEffect(() => {
+    if (!open) return;
+    const position = () => {
+      const r = (triggerRef.current ?? ref.current)?.getBoundingClientRect();
+      if (!r) return;
+      const gap = 4;
+      const spaceBelow = window.innerHeight - r.bottom;
+      const spaceAbove = r.top;
+      const flip = spaceBelow < MENU_MAX_HEIGHT && spaceAbove > spaceBelow;
+      setMenuStyle(
+        flip
+          ? { bottom: window.innerHeight - r.top + gap, left: r.left, width: r.width }
+          : { top: r.bottom + gap, left: r.left, width: r.width },
+      );
+    };
+    position();
+    window.addEventListener('scroll', position, true);
+    window.addEventListener('resize', position);
+    return () => {
+      window.removeEventListener('scroll', position, true);
+      window.removeEventListener('resize', position);
+    };
+  }, [open]);
 
   const closeMenu = () => {
     setOpen(false);
@@ -247,13 +288,15 @@ const Select = (props: Props) => {
         </button>
       )}
 
-      {open && (
-        <ul
-          ref={menuRef}
-          id={menuId}
-          role="listbox"
-          className={styles.menu}
-        >
+      {open &&
+        createPortal(
+          <ul
+            ref={menuRef}
+            id={menuId}
+            role="listbox"
+            className={styles.menu}
+            style={menuStyle}
+          >
           {selectableVisible.length === 0 ? (
             <li className={styles.emptyMessage}>
               {searchable && query ? `No results for "${query}"` : emptyMessage}
@@ -300,8 +343,9 @@ const Select = (props: Props) => {
               ),
             )
           )}
-        </ul>
-      )}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 };

@@ -19,13 +19,29 @@ jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
 jest.mock(
   '@/components/Modal/Modal',
   () =>
-    ({ open, title, children, onClose, onConfirm, confirmLabel, footerStart }: any) =>
+    ({
+      open,
+      title,
+      children,
+      onClose,
+      onConfirm,
+      confirmLabel,
+      confirmDisabled,
+      footerStart,
+    }: any) =>
       open ? (
         <div>
           <div>{title}</div>
           {children}
           {footerStart}
-          {onConfirm && <button onClick={onConfirm}>{confirmLabel ?? 'Save'}</button>}
+          {onConfirm && (
+            <button
+              onClick={onConfirm}
+              disabled={confirmDisabled}
+            >
+              {confirmLabel ?? 'Save'}
+            </button>
+          )}
           <button onClick={onClose}>Cancel</button>
         </div>
       ) : null,
@@ -222,20 +238,6 @@ const localDateKeyForGame = (game: { scheduled_at: string | null; scheduled_time
 };
 const scheduledWatchDate = localDateString(0);
 const watchedDate = localDateString(1);
-const alternateCurrentMonthDate = (excluded: string[] = []) => {
-  const year = currentDate.getFullYear();
-  const monthIndex = currentDate.getMonth();
-  const lastDay = new Date(year, monthIndex + 1, 0).getDate();
-  const excludedSet = new Set(excluded);
-
-  for (let day = 1; day <= lastDay; day++) {
-    const candidate = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (!excludedSet.has(candidate)) return candidate;
-  }
-
-  return `${year}-${String(monthIndex + 1).padStart(2, '0')}-01`;
-};
-
 const games = [
   {
     id: 'game-1',
@@ -418,9 +420,41 @@ beforeEach(() => {
 });
 
 describe('UserGames calendar view', () => {
+  it('shows loading spinner inside a card section for calendar and list views', async () => {
+    const user = userEvent.setup();
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
+      if (queryKey[0] === 'user-games') return { data: [], isLoading: true };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const calendarLoadingSection = screen
+      .getByRole('status', { name: 'Loading games...' })
+      .closest('section');
+    expect(calendarLoadingSection).toHaveClass(styles.calendarCard, styles.loadingCard);
+
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+
+    const listLoadingSection = screen
+      .getByRole('status', { name: 'Loading games...' })
+      .closest('section');
+    expect(listLoadingSection).toHaveClass(styles.loadingCard);
+    expect(listLoadingSection?.parentElement).toHaveClass(styles.gamesList);
+  });
+
   it('shows team filtering with favorite teams first and hides status text in list view', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
+
+    const calendarGameItem = screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`);
+    expect(calendarGameItem).toHaveClass(styles.calendarGameLeagueTint);
+    expect(calendarGameItem).toHaveStyle('--game-league-primary: #0a4fa3');
+
     await user.click(screen.getByRole('button', { name: 'List view' }));
 
     const teamFilter = screen.getByRole('combobox', { name: 'Teams' });
@@ -556,7 +590,7 @@ describe('UserGames calendar view', () => {
     expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
   });
 
-  it('styles watched calendar teams differently for winners and losers', () => {
+  it('shows watched calendar scores differently for winners and losers', () => {
     render(<UserGames />);
 
     const watchedCard = screen
@@ -564,7 +598,6 @@ describe('UserGames calendar view', () => {
       .closest(`.${calendarItemStyles.item}`);
 
     expect(watchedCard).not.toBeNull();
-    expect(watchedCard).toHaveClass(styles.calendarGameWatched);
 
     const winnerScore = within(watchedCard as HTMLElement)
       .getByText('2')
@@ -575,6 +608,40 @@ describe('UserGames calendar view', () => {
 
     expect(winnerScore).toHaveClass(calendarItemStyles.scoreWin);
     expect(loserScore).toHaveClass(calendarItemStyles.scoreLose);
+  });
+
+  it('shows muted dash score boxes for watched games without recorded scores', () => {
+    const watchedMissingScoreGame = {
+      ...games[0],
+      id: 'game-watched-missing-score',
+      status: 'scheduled',
+      away_team: { ...games[0].away_team, name: 'Missing Score Away', code: 'MSA' },
+      home_score: 0,
+      away_score: 0,
+      watched_by_user: true,
+      watched_on: scheduledWatchDate,
+      scheduled_for: scheduledWatchDate,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+      if (queryKey[0] === 'user-games') return { data: [watchedMissingScoreGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    const watchedCard = screen.getByText('MSA').closest(`.${calendarItemStyles.item}`);
+    const missingScores = within(watchedCard as HTMLElement)
+      .getAllByText('-')
+      .map((score) => score.closest(`.${calendarItemStyles.score}`));
+
+    expect(missingScores).toHaveLength(2);
+    for (const score of missingScores) {
+      expect(score).toHaveClass(calendarItemStyles.scoreMissing);
+    }
   });
 
   it('puts watched games first within each calendar day list', () => {
@@ -608,8 +675,6 @@ describe('UserGames calendar view', () => {
 
     const watchedItem = screen.getByText('SDW').closest(`.${calendarItemStyles.item}`);
     const unwatchedItem = screen.getByText('SDA').closest(`.${calendarItemStyles.item}`);
-    expect(watchedItem).toHaveClass(styles.calendarGameWatched);
-    expect(unwatchedItem).not.toHaveClass(styles.calendarGameWatched);
     expect(watchedItem?.compareDocumentPosition(unwatchedItem as Node)).toBe(
       Node.DOCUMENT_POSITION_FOLLOWING,
     );
@@ -882,7 +947,7 @@ describe('UserGames calendar view', () => {
     render(<UserGames />);
 
     const originalDate = localDateKeyForGame(games[0]) ?? scheduledWatchDate;
-    const targetDate = alternateCurrentMonthDate([originalDate, scheduledWatchDate]);
+    const targetDate = localDateString(3);
     const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
     const targetCell = document.querySelector(`[data-date-key="${targetDate}"]`);
     const dataTransfer = {
@@ -1079,6 +1144,7 @@ describe('UserGames calendar view', () => {
 
   it('opens schedule watch and saves the selected watch date', async () => {
     const user = userEvent.setup();
+    const targetDate = localDateString(3);
     render(<UserGames />);
 
     await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
@@ -1087,12 +1153,12 @@ describe('UserGames calendar view', () => {
     expect(screen.getByText(/saved in your local timezone/i)).toBeInTheDocument();
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
-    await user.type(input, '2024-10-20');
+    await user.type(input, targetDate);
     await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
 
     expect(mockAxios.put).toHaveBeenCalledWith(
       expect.stringContaining('/user/watched-games/game-1/schedule'),
-      { scheduled_for: '2024-10-20' },
+      { scheduled_for: targetDate },
       expect.objectContaining({ headers: expect.any(Object) }),
     );
     expect(mockSetQueriesData).toHaveBeenCalledWith(
@@ -1100,6 +1166,21 @@ describe('UserGames calendar view', () => {
       expect.any(Function),
     );
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('prevents scheduling a watch on or before the local game date', async () => {
+    const user = userEvent.setup();
+    render(<UserGames />);
+
+    await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
+    const input = screen.getByLabelText('Watch date');
+    await user.clear(input);
+    await user.type(input, localDateKeyForGame(games[0]) ?? scheduledWatchDate);
+
+    expect(screen.getByText(/after the game's scheduled date/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Schedule' })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+    expect(mockAxios.put).not.toHaveBeenCalled();
   });
 
   it('keeps the selected calendar month after saving a watch schedule', async () => {
@@ -1115,7 +1196,7 @@ describe('UserGames calendar view', () => {
     await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
     const input = screen.getByLabelText('Watch date');
     await user.clear(input);
-    await user.type(input, '2024-10-20');
+    await user.type(input, localDateString(3));
     await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
 
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();

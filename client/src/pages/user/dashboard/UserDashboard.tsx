@@ -7,6 +7,7 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import Icon from '@/components/Icon/Icon';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -37,6 +38,7 @@ interface GameActionsProps {
   onDownloadScoreCard: () => void;
   onMarkWatched: () => void;
   onUnwatch: () => void;
+  onUndoSkip: () => void;
   onSchedule: () => void;
   onSkip: () => void;
 }
@@ -142,6 +144,29 @@ const getScheduledWatchDateKey = (value: string | null | undefined) => {
   return toLocalDateKey(value);
 };
 
+const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
+  if (game.scheduled_at && DATE_ONLY_RE.test(game.scheduled_at) && !game.scheduled_time) {
+    return game.scheduled_at;
+  }
+  const instant = getScheduledInstant(game.scheduled_at, game.scheduled_time);
+  if (!instant) return null;
+  return tzPref === 'ET'
+    ? (getEtDateKey(game.scheduled_at, game.scheduled_time) ??
+        toDateKeyInZone(instant, 'America/New_York'))
+    : toDateKeyInZone(instant);
+};
+
+const isInvalidWatchScheduleDate = (
+  game: GameRecord,
+  scheduledFor: string | null | undefined,
+  tzPref: TzPref,
+) => {
+  const watchDateKey = getScheduledWatchDateKey(scheduledFor);
+  if (!watchDateKey) return false;
+  const gameDateKey = getOriginalGameDateKey(game, tzPref);
+  return !!gameDateKey && watchDateKey <= gameDateKey;
+};
+
 const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   if (!a.scheduled_time && !b.scheduled_time) return 0;
   if (!a.scheduled_time) return 1;
@@ -199,11 +224,12 @@ const GameHoverActions = ({
   onDownloadScoreCard,
   onMarkWatched,
   onUnwatch,
+  onUndoSkip,
   onSchedule,
   onSkip,
 }: GameActionsProps) => (
   <span className={styles.gameActions}>
-    {watched && (
+    {(watched || skipped) && (
       <Button
         type="button"
         variant="outlined"
@@ -214,6 +240,21 @@ const GameHoverActions = ({
         onClick={(e) => {
           e.stopPropagation();
           onView();
+        }}
+      />
+    )}
+    {skipped && (
+      <Button
+        type="button"
+        variant="outlined"
+        intent="warning"
+        icon="undo"
+        size="sm"
+        tooltip="Undo skip"
+        disabled={busy}
+        onClick={(e) => {
+          e.stopPropagation();
+          onUndoSkip();
         }}
       />
     )}
@@ -235,8 +276,8 @@ const GameHoverActions = ({
       <Button
         type="button"
         variant="outlined"
-        intent="warning"
-        icon="undo"
+        intent="danger"
+        icon="visibility_off"
         size="sm"
         tooltip="Unwatch"
         disabled={busy}
@@ -250,8 +291,8 @@ const GameHoverActions = ({
       <Button
         type="button"
         variant="outlined"
-        intent="danger"
-        icon="visibility_off"
+        intent="warning"
+        icon="remove_circle_outline"
         size="sm"
         tooltip="Skip game"
         disabled={busy}
@@ -261,7 +302,7 @@ const GameHoverActions = ({
         }}
       />
     )}
-    {!watched && (
+    {!watched && !skipped && (
       <Button
         type="button"
         variant="outlined"
@@ -276,7 +317,7 @@ const GameHoverActions = ({
         }}
       />
     )}
-    {!watched && (
+    {!watched && !skipped && (
       <Button
         type="button"
         variant="outlined"
@@ -351,7 +392,6 @@ const TodayGameTile = ({
       className={[
         styles.todayGame,
         game.status === 'in_progress' ? styles.todayGameLive : '',
-        game.watched_by_user ? styles.todayGameWatched : '',
         game.skipped_by_user ? styles.todayGameSkipped : '',
         isWatched ? styles.todayGameClickable : '',
       ]
@@ -378,9 +418,15 @@ const TodayGameTile = ({
         onDownloadScoreCard={onDownloadScoreCard}
         onMarkWatched={onMarkWatched}
         onUnwatch={onUnwatch}
+        onUndoSkip={onUnwatch}
         onSchedule={onSchedule}
         onSkip={onSkip}
       />
+      {isWatched && (
+        <span className={styles.watchedMarker} aria-label="Watched">
+          <Icon name="visibility" size="0.9rem" />
+        </span>
+      )}
       <div className={styles.gameMeta}>
         <span>{timeLabel || getStatusLabel(game)}</span>
         {game.season_name && <span>{game.season_name}</span>}
@@ -458,8 +504,13 @@ const UserDashboard = () => {
     void queryClient.invalidateQueries({ queryKey: ['user-games'] });
   };
 
-  const saveScheduleForGame = async (gameId: string, scheduledFor: string | null) => {
+  const saveScheduleForGame = async (game: GameRecord, scheduledFor: string | null) => {
+    const gameId = game.id;
     if (actionGameId === gameId || scheduleBusy) return false;
+    if (isInvalidWatchScheduleDate(game, scheduledFor, tzPref)) {
+      toast.error("Choose a watch date after the game's scheduled date");
+      return false;
+    }
     setActionGameId(gameId);
     try {
       await axios.put(
@@ -555,11 +606,10 @@ const UserDashboard = () => {
 
   const saveSchedule = async () => {
     if (!scheduleTarget || scheduleBusy) return;
-    const targetGameId = scheduleTarget.id;
     const normalizedScheduleDate = getScheduledWatchDateKey(scheduleDate);
     setScheduleBusy(true);
     try {
-      const ok = await saveScheduleForGame(targetGameId, normalizedScheduleDate);
+      const ok = await saveScheduleForGame(scheduleTarget, normalizedScheduleDate);
       if (!ok) return;
       setScheduleTarget(null);
       setScheduleDate('');
@@ -567,6 +617,10 @@ const UserDashboard = () => {
       setScheduleBusy(false);
     }
   };
+
+  const scheduleDateInvalid = scheduleTarget
+    ? isInvalidWatchScheduleDate(scheduleTarget, scheduleDate, tzPref)
+    : false;
 
   return (
     <div className={styles.page}>
@@ -667,6 +721,7 @@ const UserDashboard = () => {
         }}
         onConfirm={() => void saveSchedule()}
         confirmLabel={scheduleBusy ? 'Saving...' : 'Save Schedule'}
+        confirmDisabled={scheduleBusy || scheduleDateInvalid}
         busy={scheduleBusy}
         footerStart={
           scheduleDate ? (
@@ -693,6 +748,11 @@ const UserDashboard = () => {
               onChange={setScheduleDate}
               placeholder="Watch date"
             />
+            {scheduleDateInvalid && (
+              <p className={styles.scheduleModalError}>
+                Choose a watch date after the game's scheduled date.
+              </p>
+            )}
           </div>
         )}
       </Modal>

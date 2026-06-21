@@ -85,13 +85,27 @@ jest.mock('@/components/TeamLogo/TeamLogo', () => ({ code }: any) => <span>{code
 jest.mock(
   '@/components/Modal/Modal',
   () =>
-    ({ open, title, children, onConfirm, confirmLabel, onClose, footerStart }: any) =>
+    ({
+      open,
+      title,
+      children,
+      onConfirm,
+      confirmLabel,
+      confirmDisabled,
+      onClose,
+      footerStart,
+    }: any) =>
       open ? (
         <div>
           <h3>{title}</h3>
           {children}
           {footerStart}
-          <button onClick={onConfirm}>{confirmLabel}</button>
+          <button
+            onClick={onConfirm}
+            disabled={confirmDisabled}
+          >
+            {confirmLabel}
+          </button>
           <button onClick={onClose}>Cancel</button>
         </div>
       ) : null,
@@ -195,6 +209,9 @@ const makeGame = (overrides: Partial<any> = {}) => ({
   ...overrides,
 });
 
+const toLocalDateKey = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
 describe('UserDashboard', () => {
   beforeAll(() => {
     jest.useFakeTimers();
@@ -257,6 +274,21 @@ describe('UserDashboard', () => {
       expect.any(Function),
     );
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['user-games'] });
+  });
+
+  it('prevents scheduling a watch on or before the local game date', async () => {
+    render(<UserDashboard />);
+
+    fireEvent.click(screen.getByLabelText('Schedule watch'));
+    const input = screen.getByLabelText('Watch date');
+    fireEvent.change(input, {
+      target: { value: toLocalDateKey(new Date('2026-06-21T19:00:00-04:00')) },
+    });
+
+    expect(screen.getByText(/after the game's scheduled date/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Save Schedule' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Save Schedule' }));
+    expect(mockAxios.put).not.toHaveBeenCalled();
   });
 
   it('opens watched-game hover actions for details and score image', () => {

@@ -148,6 +148,12 @@
   color: color-mix(in srgb, #{$text-body} 72%, transparent);
 }
 
+.scoreMissing {
+  border-color: color-mix(in srgb, #{$text-dim} 46%, #{$border});
+  background: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
+  color: $text-dim;
+}
+
 .center {
   grid-column: 3;
   display: inline-flex;

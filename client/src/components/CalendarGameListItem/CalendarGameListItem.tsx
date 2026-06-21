@@ -1,10 +1,10 @@
-import type { DragEventHandler, ReactNode } from 'react';
+import type { CSSProperties, DragEventHandler, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import styles from './CalendarGameListItem.module.scss';
 
-type ScoreStatus = 'pending' | 'win' | 'lose';
+type ScoreStatus = 'pending' | 'win' | 'lose' | 'missing';
 
 export interface CalendarGameListItemTeam {
   code: string;
@@ -29,6 +29,7 @@ interface Props {
   live?: boolean;
   dragging?: boolean;
   draggable?: boolean;
+  style?: CSSProperties;
   className?: string;
   onDragStart?: DragEventHandler<HTMLDivElement>;
   onDragEnd?: DragEventHandler<HTMLDivElement>;
@@ -41,6 +42,7 @@ const scoreClassName = (status: ScoreStatus | undefined, side: 'away' | 'home') 
     side === 'away' ? styles.scoreAway : styles.scoreHome,
     status === 'win' ? styles.scoreWin : '',
     status === 'lose' ? styles.scoreLose : '',
+    status === 'missing' ? styles.scoreMissing : '',
   ]
     .filter(Boolean)
     .join(' ');
@@ -66,6 +68,7 @@ const CalendarGameListItem = ({
   live = false,
   dragging = false,
   draggable = false,
+  style,
   className,
   onDragStart,
   onDragEnd,
@@ -137,6 +140,7 @@ const CalendarGameListItem = ({
         <Link
           to={href}
           className={itemClassName}
+          style={style}
         >
           {content}
         </Link>
@@ -147,6 +151,7 @@ const CalendarGameListItem = ({
   return (
     <div
       className={itemClassName}
+      style={style}
       draggable={draggable}
       onDragStart={draggable ? onDragStart : undefined}
       onDragEnd={draggable ? onDragEnd : undefined}

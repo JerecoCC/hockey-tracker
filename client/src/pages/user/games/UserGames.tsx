@@ -9,6 +9,7 @@ import Card from '@/components/Card/Card';
 import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
+import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
@@ -222,6 +223,17 @@ const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
     ? (getEtDateKey(game.scheduled_at, game.scheduled_time) ??
         toDateKeyInZone(instant, 'America/New_York'))
     : toDateKeyInZone(instant);
+};
+
+const isInvalidWatchScheduleDate = (
+  game: GameRecord,
+  scheduledFor: string | null | undefined,
+  tzPref: TzPref,
+) => {
+  const watchDateKey = getScheduledWatchDateKey(scheduledFor);
+  if (!watchDateKey) return false;
+  const gameDateKey = getOriginalGameDateKey(game, tzPref);
+  return !!gameDateKey && watchDateKey <= gameDateKey;
 };
 
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
@@ -538,6 +550,9 @@ const ScheduleWatchModal = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, game?.id, reset]);
 
+  const scheduleDateInvalid = game
+    ? isInvalidWatchScheduleDate(game, scheduledFor, USER_TIMEZONE)
+    : false;
   const submit = handleSubmit(() => onSave());
 
   if (!game) return null;
@@ -549,7 +564,7 @@ const ScheduleWatchModal = ({
       onClose={onClose}
       onConfirm={submit}
       confirmLabel={busy ? 'Saving…' : 'Save Schedule'}
-      confirmDisabled={busy || !isDirty || !isValid}
+      confirmDisabled={busy || !isDirty || !isValid || scheduleDateInvalid}
       busy={busy}
       footerStart={
         scheduledFor ? (
@@ -587,6 +602,11 @@ const ScheduleWatchModal = ({
             />
           )}
         />
+        {scheduleDateInvalid && (
+          <p className={styles.scheduleModalError}>
+            Choose a watch date after the game's scheduled date.
+          </p>
+        )}
       </div>
     </Modal>
   );
@@ -740,13 +760,25 @@ const CalendarGameCard = ({
   dragging?: boolean;
   busy: boolean;
 }) => {
-  const showScore = shouldShowWatchedScore(game);
+  const showRecordedScore = shouldShowWatchedScore(game);
+  const showMissingScore = !!game.watched_by_user && !showRecordedScore;
+  const showScore = showRecordedScore || showMissingScore;
   const home = game.home_score;
   const away = game.away_score;
-  const awayGameStatus: 'pending' | 'win' | 'lose' =
-    !showScore || away === home ? 'pending' : away > home ? 'win' : 'lose';
-  const homeGameStatus: 'pending' | 'win' | 'lose' =
-    !showScore || home === away ? 'pending' : home > away ? 'win' : 'lose';
+  const awayGameStatus = showMissingScore
+    ? 'missing'
+    : !showRecordedScore || away === home
+      ? 'pending'
+      : away > home
+        ? 'win'
+        : 'lose';
+  const homeGameStatus = showMissingScore
+    ? 'missing'
+    : !showRecordedScore || home === away
+      ? 'pending'
+      : home > away
+        ? 'win'
+        : 'lose';
   const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
   const awaySeriesWins = getSeriesWinsForTeam(game, game.away_team.id);
@@ -760,11 +792,12 @@ const CalendarGameCard = ({
   return (
     <CalendarGameListItem
       className={[
-        game.watched_by_user ? styles.calendarGameWatched : '',
+        styles.calendarGameLeagueTint,
         game.skipped_by_user ? styles.calendarGameSkipped : '',
       ]
         .filter(Boolean)
         .join(' ')}
+      style={getLeagueStyle(game)}
       showScore={showScore}
       live={game.status === 'in_progress'}
       dragging={dragging}
@@ -778,7 +811,7 @@ const CalendarGameCard = ({
         code: game.away_team.code,
         primaryColor: game.away_team.primary_color,
         textColor: game.away_team.text_color,
-        score: away,
+        score: showMissingScore ? '-' : away,
         scoreStatus: awayGameStatus,
         meta: showAwaySeriesDots ? (
           <PlayoffSeriesDots
@@ -792,7 +825,7 @@ const CalendarGameCard = ({
         code: game.home_team.code,
         primaryColor: game.home_team.primary_color,
         textColor: game.home_team.text_color,
-        score: home,
+        score: showMissingScore ? '-' : home,
         scoreStatus: homeGameStatus,
         meta: showHomeSeriesDots ? (
           <PlayoffSeriesDots
@@ -1037,8 +1070,13 @@ const UserGames = () => {
     setScheduleDate(getScheduledWatchDateKey(game.scheduled_for) ?? '');
   };
 
-  const saveScheduleForGame = async (gameId: string, scheduledFor: string | null) => {
+  const saveScheduleForGame = async (game: GameRecord, scheduledFor: string | null) => {
+    const gameId = game.id;
     if (actionGameId === gameId || scheduleBusy) return false;
+    if (isInvalidWatchScheduleDate(game, scheduledFor, tzPref)) {
+      toast.error("Choose a watch date after the game's scheduled date");
+      return false;
+    }
     setActionGameId(gameId);
     try {
       await axios.put(
@@ -1159,11 +1197,10 @@ const UserGames = () => {
 
   const saveSchedule = async () => {
     if (!scheduleTarget || scheduleBusy) return;
-    const targetGameId = scheduleTarget.id;
     const normalizedScheduleDate = getScheduledWatchDateKey(scheduleDate);
     setScheduleBusy(true);
     try {
-      const ok = await saveScheduleForGame(targetGameId, normalizedScheduleDate);
+      const ok = await saveScheduleForGame(scheduleTarget, normalizedScheduleDate);
       if (!ok) return;
       setScheduleTarget(null);
       setScheduleDate('');
@@ -1201,7 +1238,7 @@ const UserGames = () => {
     const normalizedScheduleDate = originalDateKey === dateKey ? null : dateKey;
     if (getScheduledWatchDateKey(draggedGame.scheduled_for) === normalizedScheduleDate) return;
 
-    await saveScheduleForGame(draggedId, normalizedScheduleDate);
+    await saveScheduleForGame(draggedGame, normalizedScheduleDate);
   };
 
   const handleWeekNavigate = (offsetDays: number) => {
@@ -1403,7 +1440,23 @@ const UserGames = () => {
       </Card>
 
       {isLoading ? (
-        <p className={styles.empty}>Loading…</p>
+        view === 'list' ? (
+          <div className={styles.gamesList}>
+            <Card
+              className={styles.loadingCard}
+              noHeaderMargin
+            >
+              <LoadingSpinner message="Loading games..." />
+            </Card>
+          </div>
+        ) : (
+          <Card
+            className={[styles.calendarCard, styles.loadingCard].join(' ')}
+            noHeaderMargin
+          >
+            <LoadingSpinner message="Loading games..." />
+          </Card>
+        )
       ) : view === 'list' ? (
         <div className={styles.gamesList}>
           {groupedByDate.map(([dateKey, dayGames]) => (

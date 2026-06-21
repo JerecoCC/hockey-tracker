@@ -4,7 +4,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: $space-2xl;
+  gap: $space-md;
 }
 
 .welcome {
@@ -99,9 +99,10 @@
   gap: $space-md;
   min-height: 176px;
   padding: $space-lg;
+  overflow: hidden;
   border: 1px solid $border;
   border-radius: $radius-sm;
-  background: color-mix(in srgb, #{$bg-card} 80%, #{$bg-page});
+  background: color-mix(in srgb, var(--game-league-primary, #334155) 16%, #{$bg-card});
   color: $text-body;
   transition:
     border-color $transition-fast,
@@ -110,7 +111,7 @@
   &:hover,
   &:focus-within {
     border-color: rgba($accent, 0.6);
-    background: rgba($accent, 0.08);
+    background: color-mix(in srgb, var(--game-league-primary, #334155) 22%, #{$bg-card});
 
     .gameActions {
       opacity: 1;
@@ -122,16 +123,6 @@
 .todayGameLive {
   border-color: rgba($success, 0.65);
   background: rgba($success, 0.08);
-}
-
-.todayGameWatched {
-  border-color: rgba($success, 0.7);
-  box-shadow: inset 3px 0 0 $success;
-
-  &:hover,
-  &:focus-within {
-    border-color: rgba($success, 0.9);
-  }
 }
 
 .todayGameSkipped {
@@ -154,6 +145,22 @@
     outline: 2px solid $accent;
     outline-offset: 2px;
   }
+}
+
+.watchedMarker {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-sm 0 0 0;
+  background: $accent;
+  color: #fff;
+  pointer-events: none;
 }
 
 .gameActions {
@@ -221,6 +228,12 @@
 .scheduleModalCopy {
   margin: 0;
   color: $text-dim;
+  font-size: $font-sm;
+}
+
+.scheduleModalError {
+  margin: 0;
+  color: $danger-light;
   font-size: $font-sm;
 }
 

@@ -1,8 +1,20 @@
-import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import Tooltip from '../Tooltip/Tooltip';
 import styles from './MultiSelect.module.scss';
+
+// Keep in sync with `.menu { max-height }` in MultiSelect.module.scss.
+const MENU_MAX_HEIGHT = 220;
 
 export type MultiSelectOption = {
   value: string;
@@ -46,6 +58,34 @@ const MultiSelect = ({
   const searchRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   const menuId = useId();
+  // The menu is portaled to <body> and positioned `fixed` so it overlays
+  // without expanding/clipping inside an overflow card or modal. Measure the
+  // trigger to place it (flipping above when there's little room below), and
+  // keep it aligned while open as the page scrolls/resizes.
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+  useLayoutEffect(() => {
+    if (!open) return;
+    const position = () => {
+      const r = wrapperRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const gap = 4;
+      const spaceBelow = window.innerHeight - r.bottom;
+      const spaceAbove = r.top;
+      const flip = spaceBelow < MENU_MAX_HEIGHT && spaceAbove > spaceBelow;
+      setMenuStyle(
+        flip
+          ? { bottom: window.innerHeight - r.top + gap, left: r.left, width: r.width }
+          : { top: r.bottom + gap, left: r.left, width: r.width },
+      );
+    };
+    position();
+    window.addEventListener('scroll', position, true);
+    window.addEventListener('resize', position);
+    return () => {
+      window.removeEventListener('scroll', position, true);
+      window.removeEventListener('resize', position);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (autoFocus) triggerRef.current?.focus();
@@ -194,14 +234,16 @@ const MultiSelect = ({
         />
       </div>
 
-      {open && (
-        <ul
-          ref={menuRef}
-          id={menuId}
-          role="listbox"
-          aria-multiselectable="true"
-          className={styles.menu}
-        >
+      {open &&
+        createPortal(
+          <ul
+            ref={menuRef}
+            id={menuId}
+            role="listbox"
+            aria-multiselectable="true"
+            className={styles.menu}
+            style={menuStyle}
+          >
           {visibleOptions.length === 0 ? (
             <li className={styles.emptyMessage}>
               {searchable && query ? `No results for "${query}"` : emptyMessage}
@@ -251,8 +293,9 @@ const MultiSelect = ({
               );
             })
           )}
-        </ul>
-      )}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 };

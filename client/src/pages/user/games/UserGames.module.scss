@@ -186,6 +186,10 @@
 }
 
 // ── Games list ─────────────────────────────────────────────────────────
+.loadingCard {
+  width: 100%;
+}
+
 .gamesList {
   display: flex;
   flex-direction: column;
@@ -211,15 +215,6 @@
   }
 }
 
-.calendarGameWatched {
-  border-color: rgba($success, 0.7);
-  box-shadow: inset 3px 0 0 $success;
-
-  &:hover {
-    border-color: rgba($success, 0.9);
-  }
-}
-
 .calendarGameSkipped {
   border-style: dashed;
   border-color: rgba($danger, 0.68);
@@ -229,6 +224,26 @@
   &:hover {
     border-color: rgba($danger, 0.86);
     background: rgba($danger, 0.11);
+  }
+}
+
+.calendarGameLeagueTint {
+  background: color-mix(in srgb, var(--game-league-primary, #334155) 16%, #{$bg-card});
+
+  &:hover {
+    background: color-mix(in srgb, var(--game-league-primary, #334155) 22%, #{$bg-card});
+  }
+}
+
+.calendarGameSkipped.calendarGameLeagueTint {
+  background:
+    linear-gradient(0deg, rgba($danger, 0.1), rgba($danger, 0.1)),
+    color-mix(in srgb, var(--game-league-primary, #334155) 14%, #{$bg-card});
+
+  &:hover {
+    background:
+      linear-gradient(0deg, rgba($danger, 0.13), rgba($danger, 0.13)),
+      color-mix(in srgb, var(--game-league-primary, #334155) 20%, #{$bg-card});
   }
 }
 
@@ -393,6 +408,12 @@
 .scheduleModalCopy {
   margin: 0;
   color: $text-dim;
+  font-size: $font-sm;
+}
+
+.scheduleModalError {
+  margin: 0;
+  color: $danger-light;
   font-size: $font-sm;
 }
 

@@ -92,17 +92,16 @@
 }
 
 .menu {
-  position: absolute;
-  top: calc(100% + 4px);
-  left: 0;
-  width: 100%;
+  // Positioned `fixed` with coordinates measured from the trigger so it overlays
+  // instead of growing/clipping inside an overflow card or modal.
+  position: fixed;
   background: $bg-card;
   border: 1px solid $accent;
   border-radius: $radius-md;
   list-style: none;
   margin: 0;
   padding: $space-xs;
-  z-index: 4;
+  z-index: 200;
   max-height: 220px;
   overflow-y: auto;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
