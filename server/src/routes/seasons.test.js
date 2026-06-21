@@ -104,6 +104,31 @@ describe('GET /api/admin/seasons/:id/stats', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:id/standings
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/seasons/:id/standings', () => {
+  it('uses season participants and shootout attempts to build standings', async () => {
+    sql.mockResolvedValueOnce([
+      {
+        team_id: 'team-1',
+        team_name: 'Sharks',
+        points: 2,
+        gp: 1,
+      },
+    ]);
+
+    const res = await request(app).get('/api/admin/seasons/season-1/standings');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    const queryText = sql.mock.calls[0][0].join('');
+    expect(queryText).toContain('participant_teams');
+    expect(queryText).toContain('season_teams');
+    expect(queryText).toContain('shootout_attempts');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/admin/seasons
 // ---------------------------------------------------------------------------
 describe('POST /api/admin/seasons', () => {

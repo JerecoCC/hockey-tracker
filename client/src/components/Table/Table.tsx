@@ -81,6 +81,7 @@ interface TableProps<T> {
   sortDir?: 'asc' | 'desc';
   onSort?: (key: string, dir: 'asc' | 'desc') => void;
   onRowClick?: (row: T) => void;
+  rowClassName?: (row: T, index: number) => string | undefined;
 }
 
 const Table = <T,>({
@@ -93,6 +94,7 @@ const Table = <T,>({
   sortDir = 'asc',
   onSort,
   onRowClick,
+  rowClassName,
 }: TableProps<T>) => {
   if (loading) {
     return (
@@ -156,22 +158,31 @@ const Table = <T,>({
               </td>
             </tr>
           ) : (
-            data.map((row) => (
-              <tr
-                key={rowKey(row)}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={onRowClick ? styles.clickableRow : undefined}
-              >
-                {columns.map((col, index) => (
-                  <td
-                    key={`${rowKey(row)}-${getColSortKey(col) ?? index}`}
-                    style={col.align ? { textAlign: col.align } : undefined}
-                  >
-                    {renderCell(col, row)}
-                  </td>
-                ))}
-              </tr>
-            ))
+            data.map((row, rowIndex) => {
+              const rowClasses = [
+                onRowClick ? styles.clickableRow : undefined,
+                rowClassName?.(row, rowIndex),
+              ]
+                .filter(Boolean)
+                .join(' ');
+
+              return (
+                <tr
+                  key={rowKey(row)}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  className={rowClasses || undefined}
+                >
+                  {columns.map((col, index) => (
+                    <td
+                      key={`${rowKey(row)}-${getColSortKey(col) ?? index}`}
+                      style={col.align ? { textAlign: col.align } : undefined}
+                    >
+                      {renderCell(col, row)}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })
           )}
         </tbody>
       </table>

@@ -981,10 +981,45 @@ router.get('/:id/standings', async (req, res) => {
   try {
     const standings = await sql`
       WITH season_info AS (
-        SELECT l.scoring_system, s.games_per_season
+        SELECT l.id AS league_id, COALESCE(s.scoring_system, l.scoring_system) AS scoring_system, s.games_per_season
         FROM seasons s
         JOIN leagues l ON l.id = s.league_id
         WHERE s.id = ${id}
+      ),
+      participant_teams AS (
+        SELECT team_id
+        FROM season_teams
+        WHERE season_id = ${id}
+
+        UNION
+
+        SELECT team_id
+        FROM season_group_teams
+        WHERE season_id = ${id}
+
+        UNION
+
+        SELECT gt.team_id
+        FROM group_teams gt
+        JOIN groups gr ON gr.id = gt.group_id
+        WHERE gr.season_id = ${id}
+           OR (
+                gr.league_id = (SELECT league_id FROM season_info)
+            AND gr.season_id IS NULL
+            AND COALESCE(gr.is_auto, false) = false
+           )
+
+        UNION
+
+        SELECT home_team_id
+        FROM games
+        WHERE season_id = ${id}
+
+        UNION
+
+        SELECT away_team_id
+        FROM games
+        WHERE season_id = ${id}
       ),
       season_games AS (
         SELECT
@@ -993,8 +1028,14 @@ router.get('/:id/standings', async (req, res) => {
           g.away_team_id,
           g.overtime_periods,
           g.shootout,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id)::int AS home_goals,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id)::int AS away_goals
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id AND period <> 'SO')::int AS home_goals,
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id AND period <> 'SO')::int AS away_goals,
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id AND period = 'OT')::int AS home_ot_goals,
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id AND period = 'OT')::int AS away_ot_goals,
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id AND period = 'SO')::int AS home_so_goals,
+          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id AND period = 'SO')::int AS away_so_goals,
+          (SELECT COUNT(*) FROM shootout_attempts WHERE game_id = g.id AND team_id = g.home_team_id AND scored)::int AS home_so_attempt_goals,
+          (SELECT COUNT(*) FROM shootout_attempts WHERE game_id = g.id AND team_id = g.away_team_id AND scored)::int AS away_so_attempt_goals
         FROM games g
         WHERE g.season_id = ${id}
           AND g.status    = 'final'
@@ -1004,9 +1045,31 @@ router.get('/:id/standings', async (req, res) => {
         SELECT
           home_team_id,
           away_team_id,
-          (COALESCE(overtime_periods, 0) > 0 OR shootout)           AS is_extra_time,
-          CASE WHEN home_goals > away_goals THEN home_team_id
-               ELSE away_team_id END                                AS winner_id
+          (
+            COALESCE(overtime_periods, 0) > 0
+            OR shootout
+            OR home_ot_goals > 0
+            OR away_ot_goals > 0
+            OR home_so_goals > 0
+            OR away_so_goals > 0
+          )                                                         AS is_extra_time,
+          CASE
+            WHEN shootout OR home_so_attempt_goals > 0 OR away_so_attempt_goals > 0 OR home_so_goals > 0 OR away_so_goals > 0 THEN
+              CASE
+                WHEN home_so_attempt_goals > away_so_attempt_goals THEN home_team_id
+                WHEN away_so_attempt_goals > home_so_attempt_goals THEN away_team_id
+                WHEN home_so_goals > away_so_goals THEN home_team_id
+                WHEN away_so_goals > home_so_goals THEN away_team_id
+                WHEN home_goals > away_goals THEN home_team_id
+                WHEN away_goals > home_goals THEN away_team_id
+                ELSE NULL
+              END
+            WHEN home_goals > away_goals THEN home_team_id
+            WHEN away_goals > home_goals THEN away_team_id
+            ELSE NULL
+          END                                                       AS winner_id,
+          home_goals,
+          away_goals
         FROM season_games
       ),
       -- Expand each game into two rows: one per team
@@ -1016,16 +1079,22 @@ router.get('/:id/standings', async (req, res) => {
           CASE WHEN winner_id = home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
           CASE WHEN winner_id = home_team_id AND is_extra_time     THEN 1 ELSE 0 END AS ot_win,
           CASE WHEN winner_id != home_team_id AND is_extra_time    THEN 1 ELSE 0 END AS otl,
-          CASE WHEN winner_id != home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss
+          CASE WHEN winner_id != home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss,
+          home_goals                                                AS goals_for,
+          away_goals                                                AS goals_against
         FROM game_results
+        WHERE winner_id IS NOT NULL
         UNION ALL
         SELECT
           away_team_id                                              AS team_id,
           CASE WHEN winner_id = away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
           CASE WHEN winner_id = away_team_id AND is_extra_time     THEN 1 ELSE 0 END AS ot_win,
           CASE WHEN winner_id != away_team_id AND is_extra_time    THEN 1 ELSE 0 END AS otl,
-          CASE WHEN winner_id != away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss
+          CASE WHEN winner_id != away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss,
+          away_goals                                                AS goals_for,
+          home_goals                                                AS goals_against
         FROM game_results
+        WHERE winner_id IS NOT NULL
       ),
       aggregated AS (
         SELECT
@@ -1035,7 +1104,9 @@ router.get('/:id/standings', async (req, res) => {
           SUM(reg_win)::int                 AS reg_wins,
           SUM(ot_win)::int                  AS ot_wins,
           SUM(otl)::int                     AS otl,
-          SUM(loss)::int                    AS losses
+          SUM(loss)::int                    AS losses,
+          SUM(goals_for)::int               AS goals_for,
+          SUM(goals_against)::int           AS goals_against
         FROM team_game
         GROUP BY team_id
       )
@@ -1046,31 +1117,35 @@ router.get('/:id/standings', async (req, res) => {
         ti.logo                            AS team_logo,
         t.primary_color                    AS team_primary_color,
         t.text_color                       AS team_text_color,
-        a.gp,
-        a.wins,
-        a.reg_wins,
-        a.ot_wins,
-        a.losses,
-        a.otl,
+        COALESCE(a.gp, 0)::int             AS gp,
+        COALESCE(a.wins, 0)::int           AS wins,
+        COALESCE(a.reg_wins, 0)::int       AS reg_wins,
+        COALESCE(a.ot_wins, 0)::int        AS ot_wins,
+        COALESCE(a.losses, 0)::int         AS losses,
+        COALESCE(a.otl, 0)::int            AS otl,
         CASE (SELECT scoring_system FROM season_info)
-          WHEN '3-2-1-0' THEN (a.reg_wins * 3 + a.ot_wins * 2 + a.otl)
-          ELSE                 (a.wins * 2 + a.otl)
+          WHEN '3-2-1-0' THEN (COALESCE(a.reg_wins, 0) * 3 + COALESCE(a.ot_wins, 0) * 2 + COALESCE(a.otl, 0))
+          ELSE                 (COALESCE(a.wins, 0) * 2 + COALESCE(a.otl, 0))
         END::int                           AS points,
         CASE WHEN (SELECT games_per_season FROM season_info) IS NOT NULL
-          THEN GREATEST(0, (SELECT games_per_season FROM season_info) - a.gp)
+          THEN GREATEST(0, (SELECT games_per_season FROM season_info) - COALESCE(a.gp, 0))
           ELSE NULL
-        END::int                           AS games_remaining
-      FROM aggregated a
-      JOIN teams t ON t.id = a.team_id
+        END::int                           AS games_remaining,
+        COALESCE(a.goals_for, 0)::int      AS goals_for,
+        COALESCE(a.goals_against, 0)::int  AS goals_against,
+        (COALESCE(a.goals_for, 0) - COALESCE(a.goals_against, 0))::int AS goal_diff
+      FROM participant_teams pt
+      JOIN teams t ON t.id = pt.team_id
+      LEFT JOIN aggregated a ON a.team_id = pt.team_id
       LEFT JOIN LATERAL (
         SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
-        WHERE team_id = a.team_id
+        WHERE team_id = pt.team_id
         ORDER BY CASE WHEN season_id = ${id} THEN 0 ELSE 1 END,
                  CASE WHEN season_id IS NULL  THEN 0 ELSE 1 END,
                  recorded_at DESC
         LIMIT 1
       ) ti ON true
-      ORDER BY points DESC, wins DESC, otl DESC
+      ORDER BY points DESC, reg_wins DESC, wins DESC, goal_diff DESC, goals_for DESC, gp ASC, ti.name ASC
     `;
     return res.json(standings);
   } catch (err) {

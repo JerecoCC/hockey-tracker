@@ -21,7 +21,7 @@ import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
 import Select from '@/components/Select/Select';
 import useBracketRuleSets, { type BracketSlotRule } from '@/hooks/useBracketRuleSets';
-import useSeasonStandings from '@/hooks/useSeasonStandings';
+import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import BracketRulesModal, {
   type BracketStructure,
@@ -60,6 +60,27 @@ const STATUS_LABEL: Record<SeriesStatus, string> = {
   active: 'Active',
   complete: 'Complete',
 };
+
+const standingTeamLabel = (team: TeamStandingRecord) =>
+  team.team_name ?? team.team_code ?? team.team_id;
+
+interface SimulatedSlotTeam {
+  teamId: string;
+  name: string;
+  code: string;
+  logo: string | null;
+  primaryColor: string | null;
+  textColor: string | null;
+}
+
+const simulatedTeamFromStanding = (team: TeamStandingRecord): SimulatedSlotTeam => ({
+  teamId: team.team_id,
+  name: standingTeamLabel(team),
+  code: team.team_code ?? standingTeamLabel(team).slice(0, 3).toUpperCase(),
+  logo: team.team_logo,
+  primaryColor: team.team_primary_color,
+  textColor: team.team_text_color,
+});
 
 // ── Bracket structure derivation ──────────────────────────────────────────────
 
@@ -350,13 +371,18 @@ const PlayoffFormatModal = ({
 
 // ── Choice Pick Modal ─────────────────────────────────────────────────────────
 
+interface ChoiceCandidate {
+  teamId: string;
+  name: string;
+}
+
 interface ChoicePick {
   /** The slot key of the 'choice' slot (e.g. "r1m0home"). */
   choiceSlotKey: string;
   /** The seeded team that gets to pick, resolved from the companion slot. */
   chooserName: string | null;
   /** All candidate team names the chooser may pick from. */
-  candidates: string[];
+  candidates: ChoiceCandidate[];
   /** The user's selection — null until chosen. */
   picked: string | null;
 }
@@ -410,8 +436,8 @@ const ChoicePickModal = ({
           // Filter out any team already chosen by another picker, unless it is
           // the current picker's own selection (so they can change their mind).
           const options = pick.candidates
-            .filter((c) => c === pick.picked || !pickedSet.has(c))
-            .map((c) => ({ value: c, label: c }));
+            .filter((c) => c.teamId === pick.picked || !pickedSet.has(c.teamId))
+            .map((c) => ({ value: c.teamId, label: c.name }));
 
           return (
             <div
@@ -447,8 +473,10 @@ interface BracketSlotProps {
   seasonName: string | null | undefined;
   /** Simulated team name for Team 1 (home ice). Only shown when series is null. */
   simulatedTeam1?: string | null;
+  simulatedTeam1Details?: SimulatedSlotTeam | null;
   /** Simulated team name for Team 2. Only shown when series is null. */
   simulatedTeam2?: string | null;
+  simulatedTeam2Details?: SimulatedSlotTeam | null;
   /** True when both feeder series are complete and this slot has no series yet. */
   canAdvance?: boolean;
   /** True when this completed series' winner can be force-advanced to the next round. */
@@ -468,7 +496,9 @@ const BracketSlot = ({
   seasonId,
   seasonName,
   simulatedTeam1,
+  simulatedTeam1Details,
   simulatedTeam2,
+  simulatedTeam2Details,
   canAdvance = false,
   canAdvanceWinner = false,
   onStart,
@@ -476,14 +506,16 @@ const BracketSlot = ({
   onForceAdvance,
 }: BracketSlotProps) => {
   if (!series) {
-    const isSimulated = simulatedTeam1 != null || simulatedTeam2 != null;
+    const team1Name = simulatedTeam1Details?.name ?? simulatedTeam1 ?? null;
+    const team2Name = simulatedTeam2Details?.name ?? simulatedTeam2 ?? null;
+    const isSimulated = team1Name != null || team2Name != null;
     return (
       <div
         className={[
           styles.bracketSlot,
           styles.slotFilled,
           isSimulated ? styles.slotSimulated : styles.slotEmptyMatchup,
-          !canAdvance ? styles.slotEmptyDisabled : '',
+          !canAdvance && !isSimulated ? styles.slotEmptyDisabled : '',
         ]
           .filter(Boolean)
           .join(' ')}
@@ -501,12 +533,34 @@ const BracketSlot = ({
             />
           </div>
         )}
-        <div className={`${styles.slotTeam} ${!simulatedTeam1 ? styles.slotTeamTbd : ''}`}>
-          <span className={styles.slotTeamName}>{simulatedTeam1 ?? 'TBD'}</span>
+        <div className={`${styles.slotTeam} ${!team1Name ? styles.slotTeamTbd : ''}`}>
+          {simulatedTeam1Details && (
+            <TeamLogo
+              logo={simulatedTeam1Details.logo}
+              code={simulatedTeam1Details.code}
+              alt={simulatedTeam1Details.name}
+              primaryColor={simulatedTeam1Details.primaryColor}
+              textColor={simulatedTeam1Details.textColor}
+              size={20}
+              shape="square"
+            />
+          )}
+          <span className={styles.slotTeamName}>{team1Name ?? 'TBD'}</span>
         </div>
         <div className={styles.slotDivider} />
-        <div className={`${styles.slotTeam} ${!simulatedTeam2 ? styles.slotTeamTbd : ''}`}>
-          <span className={styles.slotTeamName}>{simulatedTeam2 ?? 'TBD'}</span>
+        <div className={`${styles.slotTeam} ${!team2Name ? styles.slotTeamTbd : ''}`}>
+          {simulatedTeam2Details && (
+            <TeamLogo
+              logo={simulatedTeam2Details.logo}
+              code={simulatedTeam2Details.code}
+              alt={simulatedTeam2Details.name}
+              primaryColor={simulatedTeam2Details.primaryColor}
+              textColor={simulatedTeam2Details.textColor}
+              size={20}
+              shape="square"
+            />
+          )}
+          <span className={styles.slotTeamName}>{team2Name ?? 'TBD'}</span>
         </div>
       </div>
     );
@@ -783,25 +837,45 @@ const SeasonPlayoffsTab = ({
 
   // Build a name → team_id lookup so resolved slot names can be turned into IDs for createSeries.
   const teamIdByName = useMemo(
-    () => new Map(standings.map((s) => [s.team_name, s.team_id])),
+    () => new Map(standings.map((s) => [standingTeamLabel(s), s.team_id])),
     [standings],
   );
+  const simulatedTeamById = useMemo(
+    () => new Map(standings.map((s) => [s.team_id, simulatedTeamFromStanding(s)])),
+    [standings],
+  );
+  const buildSimulatedSlotTeams = (slotTeamIds: Record<string, string | null>) =>
+    Object.fromEntries(
+      Object.entries(slotTeamIds).map(([slotKey, teamId]) => [
+        slotKey,
+        teamId ? (simulatedTeamById.get(teamId) ?? null) : null,
+      ]),
+    ) as Record<string, SimulatedSlotTeam | null>;
 
   // ── Simulation state ──────────────────────────────────────────────────────────
   const [simulatedSlots, setSimulatedSlots] = useState<Record<string, string | null> | null>(null);
+  const [simulatedSlotTeams, setSimulatedSlotTeams] = useState<
+    Record<string, SimulatedSlotTeam | null> | null
+  >(null);
   const [simulating, setSimulating] = useState(false);
 
   // State for the opponent-pick step (used when 'choice' slots are present).
   const [pickModalOpen, setPickModalOpen] = useState(false);
   const [pendingChoices, setPendingChoices] = useState<ChoicePick[]>([]);
   const [partialSimResult, setPartialSimResult] = useState<Record<string, string | null>>({});
+  const [partialSimResultTeamIds, setPartialSimResultTeamIds] = useState<
+    Record<string, string | null>
+  >({});
   const [pendingRuleSlots, setPendingRuleSlots] = useState<BracketSlotRule[]>([]);
 
   /**
    * Persists round 1 matchups to the database using the resolved slot map.
    * Called instead of setSimulatedSlots when playoffsStarted is true.
    */
-  const commitRound1Matchups = async (slots: Record<string, string | null>) => {
+  const commitRound1Matchups = async (
+    slots: Record<string, string | null>,
+    slotTeamIds: Record<string, string | null> = {},
+  ) => {
     const matchupIndices = [
       ...new Set(
         Object.keys(slots)
@@ -816,11 +890,15 @@ const SeasonPlayoffsTab = ({
       matchupIndices
         .map((mi) => {
           // Team 1 always holds home-ice advantage; Team 2 is the visitor.
-          const team1Name = slots[`r1m${mi}team1`];
-          const team2Name = slots[`r1m${mi}team2`];
-          const team1Id = team1Name != null ? teamIdByName.get(team1Name) : undefined;
-          const team2Id = team2Name != null ? teamIdByName.get(team2Name) : undefined;
-          if (!team1Id || !team2Id) return null;
+          const team1Key = `r1m${mi}team1`;
+          const team2Key = `r1m${mi}team2`;
+          const team1Name = slots[team1Key];
+          const team2Name = slots[team2Key];
+          const team1Id =
+            slotTeamIds[team1Key] ?? (team1Name != null ? teamIdByName.get(team1Name) : undefined);
+          const team2Id =
+            slotTeamIds[team2Key] ?? (team2Name != null ? teamIdByName.get(team2Name) : undefined);
+          if (!team1Id || !team2Id || team1Id === team2Id) return null;
           return createSeries({
             season_id: seasonId,
             round: 1,
@@ -854,30 +932,54 @@ const SeasonPlayoffsTab = ({
       };
 
       // First pass — resolve all 'seed' slots; leave everything else null for now.
+      const scopedStandings = (
+        scope: BracketSlotRule['scope'] | string | null,
+        groupId?: string | null,
+      ) => {
+        if ((scope === 'specific_conference' || scope === 'specific_division') && groupId) {
+          const ids = getGroupTeamIds(groupId);
+          return standings.filter((s) => ids.has(s.team_id));
+        }
+        return standings;
+      };
+
+      const pickSeedTeam = (
+        rows: TeamStandingRecord[],
+        rank: number | null,
+        assignedTeamIds: Set<string>,
+      ) => {
+        const startIdx = Math.max((rank ?? 1) - 1, 0);
+        return rows.slice(startIdx).find((team) => !assignedTeamIds.has(team.team_id)) ?? null;
+      };
+
       const result: Record<string, string | null> = {};
+      const resultTeamIds: Record<string, string | null> = {};
+      const assignedTeamIds = new Set<string>();
       for (const slot of ruleSet.slots) {
         if (slot.rule_type !== 'seed') {
           result[slot.slot_key] = null;
+          resultTeamIds[slot.slot_key] = null;
           continue;
         }
-        let filtered = standings;
-        if (
-          (slot.scope === 'specific_conference' || slot.scope === 'specific_division') &&
-          slot.group_id
-        ) {
-          const ids = getGroupTeamIds(slot.group_id);
-          filtered = standings.filter((s) => ids.has(s.team_id));
+        const team = pickSeedTeam(
+          scopedStandings(slot.scope, slot.group_id),
+          slot.rank,
+          assignedTeamIds,
+        );
+        result[slot.slot_key] = team ? standingTeamLabel(team) : null;
+        resultTeamIds[slot.slot_key] = team?.team_id ?? null;
+        if (team) {
+          assignedTeamIds.add(team.team_id);
         }
-        const idx = (slot.rank ?? 1) - 1;
-        result[slot.slot_key] = filtered[idx]?.team_name ?? null;
       }
 
       // Check whether any slots require a human pick.
       const choiceSlots = ruleSet.slots.filter((s) => s.rule_type === 'choice');
       if (choiceSlots.length === 0) {
         if (playoffsStarted) {
-          await commitRound1Matchups(result);
+          await commitRound1Matchups(result, resultTeamIds);
         } else {
+          setSimulatedSlotTeams(buildSimulatedSlotTeams(resultTeamIds));
           setSimulatedSlots(result);
         }
         return;
@@ -895,27 +997,26 @@ const SeasonPlayoffsTab = ({
 
         // Resolve the candidate pool from standings, deduplicating when multiple
         // pool entries resolve to the same team.
+        const seenCandidates = new Set<string>();
         const candidates = slot.pool
           .map((p) => {
-            let filtered = standings;
-            if (
-              (p.scope === 'specific_conference' || p.scope === 'specific_division') &&
-              p.group_id
-            ) {
-              const ids = getGroupTeamIds(p.group_id);
-              filtered = standings.filter((s) => ids.has(s.team_id));
-            }
+            const filtered = scopedStandings(p.scope, p.group_id);
             const idx = (p.rank ?? 1) - 1;
-            return filtered[idx]?.team_name ?? null;
+            const team = filtered[idx] ?? null;
+            if (!team || assignedTeamIds.has(team.team_id) || seenCandidates.has(team.team_id)) {
+              return null;
+            }
+            seenCandidates.add(team.team_id);
+            return { teamId: team.team_id, name: standingTeamLabel(team) };
           })
-          .filter((n): n is string => n !== null)
-          .filter((n, i, arr) => arr.indexOf(n) === i);
+          .filter((candidate): candidate is ChoiceCandidate => candidate !== null);
 
         return { choiceSlotKey: slot.slot_key, chooserName, candidates, picked: null };
       });
 
       // Store the partial result and open the pick modal.
       setPartialSimResult(result);
+      setPartialSimResultTeamIds(resultTeamIds);
       setPendingChoices(choices);
       setPendingRuleSlots(ruleSet.slots);
       setPickModalOpen(true);
@@ -932,14 +1033,23 @@ const SeasonPlayoffsTab = ({
    */
   const finalizeSimulation = async (picks: ChoicePick[]) => {
     const result = { ...partialSimResult };
+    const resultTeamIds = { ...partialSimResultTeamIds };
+    const assigned = new Set(
+      Object.values(resultTeamIds).filter((v): v is string => v !== null),
+    );
 
     // Apply each picker's choice.
     for (const pick of picks) {
-      result[pick.choiceSlotKey] = pick.picked;
+      const picked = pick.candidates.find((candidate) => candidate.teamId === pick.picked) ?? null;
+      if (!picked || assigned.has(picked.teamId)) {
+        result[pick.choiceSlotKey] = null;
+        resultTeamIds[pick.choiceSlotKey] = null;
+        continue;
+      }
+      result[pick.choiceSlotKey] = picked.name;
+      resultTeamIds[pick.choiceSlotKey] = picked.teamId;
+      assigned.add(picked.teamId);
     }
-
-    // Track every team already placed to prevent duplicates in unchosen slots.
-    const assigned = new Set(Object.values(result).filter((v): v is string => v !== null));
 
     // Fill 'unchosen' slots: take the first candidate from the referenced choice's
     // pool that hasn't been placed anywhere yet.
@@ -948,21 +1058,26 @@ const SeasonPlayoffsTab = ({
       const matchingPick = picks.find((p) => p.choiceSlotKey === slot.choice_ref);
       if (!matchingPick) {
         result[slot.slot_key] = null;
+        resultTeamIds[slot.slot_key] = null;
         continue;
       }
-      const unchosen = matchingPick.candidates.find((c) => !assigned.has(c)) ?? null;
-      result[slot.slot_key] = unchosen;
-      if (unchosen) assigned.add(unchosen);
+      const unchosen =
+        matchingPick.candidates.find((candidate) => !assigned.has(candidate.teamId)) ?? null;
+      result[slot.slot_key] = unchosen?.name ?? null;
+      resultTeamIds[slot.slot_key] = unchosen?.teamId ?? null;
+      if (unchosen) assigned.add(unchosen.teamId);
     }
 
     if (playoffsStarted) {
-      await commitRound1Matchups(result);
+      await commitRound1Matchups(result, resultTeamIds);
     } else {
+      setSimulatedSlotTeams(buildSimulatedSlotTeams(resultTeamIds));
       setSimulatedSlots(result);
     }
     setPickModalOpen(false);
     setPendingChoices([]);
     setPartialSimResult({});
+    setPartialSimResultTeamIds({});
     setPendingRuleSlots([]);
   };
 
@@ -1000,6 +1115,12 @@ const SeasonPlayoffsTab = ({
   };
 
   const handleStartSeries = (s: PlayoffSeriesRecord) => startSeries(s.id);
+  const hasRoundOneSeries = series.some((s) => s.round === 1);
+  const canSimulateFirstRound =
+    !!bracketStructure && !!bracketRuleSetId && !playoffsStarted && !hasRoundOneSeries;
+  const canSeedMatchups =
+    !!bracketStructure && !!bracketRuleSetId && playoffsStarted && !hasRoundOneSeries;
+  const showBracketAction = canSimulateFirstRound || canSeedMatchups;
 
   return (
     <>
@@ -1022,17 +1143,17 @@ const SeasonPlayoffsTab = ({
           <Card
             title="Playoff Bracket"
             action={
-              bracketStructure &&
-              bracketRuleSetId &&
-              playoffsStarted &&
-              !series.some((s) => s.round === 1) ? (
+              showBracketAction ? (
                 simulatedSlots !== null ? (
                   <Button
                     variant="outlined"
                     intent="neutral"
                     icon="close"
                     size="sm"
-                    onClick={() => setSimulatedSlots(null)}
+                    onClick={() => {
+                      setSimulatedSlots(null);
+                      setSimulatedSlotTeams(null);
+                    }}
                   >
                     Clear
                   </Button>
@@ -1041,10 +1162,15 @@ const SeasonPlayoffsTab = ({
                     intent="success"
                     icon="play_arrow"
                     size="sm"
+                    tooltip={
+                      canSimulateFirstRound
+                        ? 'Uses current standings from final regular-season games'
+                        : undefined
+                    }
                     disabled={simulating || pickModalOpen}
                     onClick={handleSimulate}
                   >
-                    Seed Matchups
+                    {canSeedMatchups ? 'Seed Matchups' : 'Simulate First Round'}
                   </Button>
                 )
               ) : null
@@ -1115,8 +1241,18 @@ const SeasonPlayoffsTab = ({
                               simulatedTeam1={
                                 simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
                               }
+                              simulatedTeam1Details={
+                                simulatedSlotTeams?.[
+                                  makeSlotKey(roundInfo.round, slotIndex, 'team1')
+                                ]
+                              }
                               simulatedTeam2={
                                 simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team2')]
+                              }
+                              simulatedTeam2Details={
+                                simulatedSlotTeams?.[
+                                  makeSlotKey(roundInfo.round, slotIndex, 'team2')
+                                ]
                               }
                               canAdvance={canAdvance}
                               canAdvanceWinner={canAdvanceWinner}
@@ -1367,6 +1503,7 @@ const SeasonPlayoffsTab = ({
             setPickModalOpen(false);
             setPendingChoices([]);
             setPartialSimResult({});
+            setPartialSimResultTeamIds({});
             setPendingRuleSlots([]);
           }}
         />

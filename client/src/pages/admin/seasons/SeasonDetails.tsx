@@ -13,7 +13,7 @@ import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
-import useLeagues from '@/hooks/useLeagues';
+import useLeagues, { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import useGames from '@/hooks/useGames';
 import useSeasonDetails, {
   type SeasonGroupRecord,
@@ -65,6 +65,11 @@ const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
 type SkaterStatType = 'points' | 'goals' | 'assists';
 
 const PAGE_SIZE = 10;
+const DEFAULT_WILDCARD_FORMAT: PlayoffFormatRule[] = [
+  { scope: 'division', method: 'top', count: 3 },
+  { scope: 'conference', method: 'wildcard', count: 2 },
+];
+
 const sortBySkaterStat = (arr: SkaterStatRecord[], stat: SkaterStatType) =>
   [...arr]
     .sort((a, b) => ((b[stat] as number) ?? 0) - ((a[stat] as number) ?? 0))
@@ -398,21 +403,64 @@ const SeasonDetailsPage = () => {
     return map;
   }, [standingsTopGroups, standingsDivisionGroups, groups]);
 
-  // Current division leader: the highest-ranked team (by pts) in each division.
-  // standings is already sorted points-desc from the API.
-  const divisionLeaderIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const div of standingsDivisionGroups) {
-      const divIds = standingsGroupTeamIds.get(div.id);
-      if (!divIds) continue;
-      const leader = standings.find((t) => divIds.has(t.team_id));
-      if (leader) ids.add(leader.team_id);
+  const wildcardFormat = useMemo(
+    () =>
+      season?.playoff_format && season.playoff_format.length > 0
+        ? season.playoff_format
+        : DEFAULT_WILDCARD_FORMAT,
+    [season?.playoff_format],
+  );
+
+  const wildcardRule = useMemo(
+    () => wildcardFormat.find((rule) => rule.method === 'wildcard') ?? null,
+    [wildcardFormat],
+  );
+  const wildcardQualifierCount = wildcardRule?.count ?? 2;
+  const divisionQualifierCount = useMemo(
+    () =>
+      wildcardFormat.find((rule) => rule.scope === 'division' && rule.method === 'top')?.count ??
+      null,
+    [wildcardFormat],
+  );
+
+  // Teams already placed by earlier "top" rules should not appear in the wildcard pool.
+  // For NHL-style rules this removes the top three teams in each division, not only leaders.
+  const wildcardDirectQualifierIds = useMemo(() => {
+    const claimed = new Set<string>();
+    for (const rule of wildcardFormat) {
+      if (rule.method === 'wildcard') break;
+      if (rule.method !== 'top') continue;
+
+      const groupIds =
+        rule.scope === 'division'
+          ? standingsDivisionGroups
+              .map((group) => standingsGroupTeamIds.get(group.id))
+              .filter((ids): ids is Set<string> => !!ids)
+          : rule.scope === 'conference'
+            ? standingsTopGroups
+                .map((group) => standingsGroupTeamIds.get(group.id))
+                .filter((ids): ids is Set<string> => !!ids)
+            : [new Set(standings.map((team) => team.team_id))];
+
+      for (const ids of groupIds) {
+        standings
+          .filter((team) => ids.has(team.team_id) && !claimed.has(team.team_id))
+          .slice(0, rule.count)
+          .forEach((team) => claimed.add(team.team_id));
+      }
     }
-    return ids;
-  }, [standingsDivisionGroups, standingsGroupTeamIds, standings]);
+    return claimed;
+  }, [
+    standings,
+    standingsDivisionGroups,
+    standingsGroupTeamIds,
+    standingsTopGroups,
+    wildcardFormat,
+  ]);
 
   // Wildcard tab requires at least 2 conferences and at least 2 divisions.
-  const hasWildcard = standingsTopGroups.length >= 2 && standingsDivisionGroups.length >= 2;
+  const hasWildcard =
+    !!wildcardRule && standingsTopGroups.length >= 2 && standingsDivisionGroups.length >= 2;
 
   // Fixed-label SegmentedControl options — categories only, not individual group names.
   const standingsSubTabOptions = useMemo(() => {
@@ -1077,7 +1125,11 @@ const SeasonDetailsPage = () => {
                       return standingsSort.dir === 'desc' ? cmp : -cmp;
                     });
 
-                  const renderTable = (rows: TeamStandingRecord[], emptyMsg: string) =>
+                  const renderTable = (
+                    rows: TeamStandingRecord[],
+                    emptyMsg: string,
+                    rowClassName?: (row: TeamStandingRecord, index: number) => string | undefined,
+                  ) =>
                     standingsLoading ? (
                       <p className={styles.tabPlaceholder}>Loading standings…</p>
                     ) : rows.length === 0 ? (
@@ -1091,6 +1143,7 @@ const SeasonDetailsPage = () => {
                         sortDir={standingsSort.dir}
                         onSort={(key, dir) => setStandingsSort({ key, dir })}
                         onRowClick={navigateToTeam}
+                        rowClassName={rowClassName}
                       />
                     );
 
@@ -1114,13 +1167,23 @@ const SeasonDetailsPage = () => {
                   if (standingsSubTab === 'division') {
                     return standingsDivisionGroups.map((div) => {
                       const ids = standingsGroupTeamIds.get(div.id) ?? new Set<string>();
-                      const rows = sortRows(standings.filter((t) => ids.has(t.team_id)));
+                      const rankedRows = standings.filter((t) => ids.has(t.team_id));
+                      const cutoffTeamId =
+                        divisionQualifierCount != null && rankedRows.length > divisionQualifierCount
+                          ? rankedRows[divisionQualifierCount - 1]?.team_id
+                          : null;
+                      const rows = sortRows(rankedRows);
                       return (
                         <Card
                           key={div.id}
                           title={div.name}
                         >
-                          {renderTable(rows, 'No standings data yet.')}
+                          {renderTable(
+                            rows,
+                            'No standings data yet.',
+                            (row) =>
+                              row.team_id === cutoffTeamId ? styles.wildcardCutoffRow : undefined,
+                          )}
                         </Card>
                       );
                     });
@@ -1130,17 +1193,25 @@ const SeasonDetailsPage = () => {
                   if (standingsSubTab === 'wildcard') {
                     return standingsTopGroups.map((conf) => {
                       const ids = standingsGroupTeamIds.get(conf.id) ?? new Set<string>();
-                      const rows = sortRows(
-                        standings.filter(
-                          (t) => ids.has(t.team_id) && !divisionLeaderIds.has(t.team_id),
-                        ),
+                      const rankedRows = standings.filter(
+                        (t) => ids.has(t.team_id) && !wildcardDirectQualifierIds.has(t.team_id),
                       );
+                      const cutoffTeamId =
+                        rankedRows.length > wildcardQualifierCount
+                          ? rankedRows[wildcardQualifierCount - 1]?.team_id
+                          : null;
+                      const rows = sortRows(rankedRows);
                       return (
                         <Card
                           key={conf.id}
                           title={conf.name}
                         >
-                          {renderTable(rows, 'No wildcard contenders yet.')}
+                          {renderTable(
+                            rows,
+                            'No wildcard contenders yet.',
+                            (row) =>
+                              row.team_id === cutoffTeamId ? styles.wildcardCutoffRow : undefined,
+                          )}
                         </Card>
                       );
                     });

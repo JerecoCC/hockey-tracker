@@ -20,6 +20,9 @@ export interface TeamStandingRecord {
   otl: number;
   points: number;
   games_remaining: number | null;
+  goals_for?: number;
+  goals_against?: number;
+  goal_diff?: number;
 }
 
 const useSeasonStandings = (seasonId: string | undefined) => {

@@ -50,6 +50,15 @@
 }
 
 // ── Info grid ──────────────────────────────────────────────────────────────────
+.wildcardCutoffRow {
+  border-bottom: 2px solid rgba($accent, 0.85) !important;
+  box-shadow: 0 1px 0 rgba($accent, 0.35);
+
+  td {
+    padding-bottom: calc(#{$space-lg} + 2px);
+  }
+}
+
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
