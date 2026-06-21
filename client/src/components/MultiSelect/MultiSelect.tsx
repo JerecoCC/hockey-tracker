@@ -1,6 +1,7 @@
-import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import { type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './MultiSelect.module.scss';
 
 export type MultiSelectOption = {
@@ -40,7 +41,6 @@ const MultiSelect = ({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [focusedIdx, setFocusedIdx] = useState(-1);
-  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -58,12 +58,6 @@ const MultiSelect = ({
     items[focusedIdx]?.scrollIntoView({ block: 'nearest' });
   }, [focusedIdx, open]);
 
-  const measureMenu = () => {
-    const r = triggerRef.current?.getBoundingClientRect();
-    if (!r) return;
-    setMenuStyle({ top: r.bottom + 4, left: r.left, width: r.width });
-  };
-
   const closeMenu = () => {
     setOpen(false);
     setQuery('');
@@ -72,7 +66,6 @@ const MultiSelect = ({
 
   const openMenu = () => {
     if (disabled) return;
-    measureMenu();
     setOpen(true);
     if (searchable) setTimeout(() => searchRef.current?.focus(), 0);
   };
@@ -140,28 +133,40 @@ const MultiSelect = ({
       >
         <div className={styles.pills}>
           {selectedOptions.map((opt) => (
-            <span
+            <Tooltip
               key={opt.value}
-              className={styles.pill}
+              text={opt.label}
+              className={styles.pillTooltip}
             >
-              <span className={styles.pillLabel}>{opt.label}</span>
-              <button
-                type="button"
-                className={styles.pillRemove}
-                tabIndex={-1}
-                disabled={disabled}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggle(opt.value);
-                }}
-                aria-label={`Remove ${opt.label}`}
-              >
-                <Icon
-                  name="close"
-                  size="0.75em"
-                />
-              </button>
-            </span>
+              <span className={styles.pill}>
+                {opt.logo ? (
+                  <img
+                    src={opt.logo}
+                    alt=""
+                    className={styles.pillLogo}
+                  />
+                ) : opt.code ? (
+                  <span className={styles.pillNoLogo}>{opt.code.slice(0, 1)}</span>
+                ) : null}
+                <span className={styles.pillLabel}>{opt.code ?? opt.label}</span>
+                <button
+                  type="button"
+                  className={styles.pillRemove}
+                  tabIndex={-1}
+                  disabled={disabled}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggle(opt.value);
+                  }}
+                  aria-label={`Remove ${opt.label}`}
+                >
+                  <Icon
+                    name="close"
+                    size="0.75em"
+                  />
+                </button>
+              </span>
+            </Tooltip>
           ))}
           {searchable && open ? (
             <input
@@ -196,7 +201,6 @@ const MultiSelect = ({
           role="listbox"
           aria-multiselectable="true"
           className={styles.menu}
-          style={menuStyle}
         >
           {visibleOptions.length === 0 ? (
             <li className={styles.emptyMessage}>

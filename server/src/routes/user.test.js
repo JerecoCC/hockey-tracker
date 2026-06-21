@@ -76,6 +76,24 @@ describe('GET /api/user/favorites', () => {
   });
 });
 
+describe('GET /api/user/teams', () => {
+  it('returns all teams for user-facing filters', async () => {
+    sql.mockResolvedValueOnce([
+      { id: 'team-1', league_id: 'league-1', name: 'Home', code: 'HOM', logo: null },
+      { id: 'team-2', league_id: 'league-1', name: 'Idle', code: 'IDL', logo: null },
+    ]);
+
+    const res = await request(app).get('/api/user/teams');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[1]).toMatchObject({ id: 'team-2', name: 'Idle', code: 'IDL' });
+    expect(queryText).toContain('FROM teams t');
+    expect(queryText).not.toContain('games');
+  });
+});
+
 describe('GET /api/user/games', () => {
   it('returns games and scopes the query to the authenticated user favorites', async () => {
     sql.mockResolvedValueOnce([GAME]);

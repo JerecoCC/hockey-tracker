@@ -684,7 +684,36 @@ router.get('/leagues', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/user/seasons  – list seasons, optionally filtered by league_id
+// GET /api/user/teams  - list all teams for user-facing filters
+// ---------------------------------------------------------------------------
+router.get('/teams', async (_req, res) => {
+  try {
+    const teams = await sql`
+      SELECT
+        t.id,
+        t.league_id,
+        ti.name,
+        ti.code,
+        team_logo_default(ti.logo_dark, ti.logo_light) AS logo
+      FROM teams t
+      LEFT JOIN LATERAL (
+        SELECT name, code, logo_dark, logo_light
+        FROM team_iterations
+        WHERE team_id = t.id
+        ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+        LIMIT 1
+      ) ti ON true
+      ORDER BY ti.name ASC NULLS LAST
+    `;
+    return res.json(teams);
+  } catch (err) {
+    console.error('user teams list error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/user/seasons  - list seasons, optionally filtered by league_id
 // ---------------------------------------------------------------------------
 router.get('/seasons', async (req, res) => {
   const { league_id } = req.query;

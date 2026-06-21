@@ -142,7 +142,7 @@
   flex-wrap: wrap;
   gap: $space-md;
   justify-content: flex-end;
-  overflow: hidden;
+  overflow: visible;
   max-height: 200px;
   opacity: 1;
   margin-top: $space-xl;
@@ -160,6 +160,7 @@
   max-height: 0;
   opacity: 0;
   margin-top: 0;
+  overflow: hidden;
 }
 
 .calendarExportButton {

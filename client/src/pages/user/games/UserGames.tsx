@@ -7,7 +7,6 @@ import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
@@ -29,6 +28,14 @@ const WEEK_STORAGE_KEY = 'user-games-week-start';
 const CALENDAR_MONTH_STORAGE_KEY = 'user-games-calendar-month';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
+
+interface UserTeamOptionRecord {
+  id: string;
+  name: string | null;
+  code: string | null;
+  logo: string | null;
+  league_id: string | null;
+}
 
 const STATUS_OPTIONS: SelectOption[] = [
   { value: 'all', label: 'All Statuses' },
@@ -828,7 +835,6 @@ const UserGames = () => {
   const tzPref = USER_TIMEZONE;
   const [actionGameId, setActionGameId] = useState<string | null>(null);
   const [dragGameId, setDragGameId] = useState<string | null>(null);
-  const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
@@ -837,6 +843,7 @@ const UserGames = () => {
   const [exportingMonthImage, setExportingMonthImage] = useState(false);
   const preserveCalendarMonthRef = useRef(false);
   const hasPinnedCalendarMonthRef = useRef(initialStoredCalendarMonth !== null);
+  const hasSeededTeamFilterRef = useRef(false);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
   const weekEnd = addDays(weekStart, 6);
@@ -855,7 +862,7 @@ const UserGames = () => {
     },
   });
 
-  const { data: favoriteTeamIds = [] } = useQuery<string[]>({
+  const { data: favoriteTeamIdsData } = useQuery<string[]>({
     queryKey: ['user-favorites'],
     queryFn: async () => {
       const { data } = await axios.get<string[]>(`${API}/user/favorites`, {
@@ -864,8 +871,19 @@ const UserGames = () => {
       return data;
     },
   });
+  const favoriteTeamIds = useMemo(() => favoriteTeamIdsData ?? [], [favoriteTeamIdsData]);
 
   const leagueSelected = leagueId !== 'all';
+
+  const { data: allTeams = [], isLoading: teamsLoading } = useQuery<UserTeamOptionRecord[]>({
+    queryKey: ['user-teams'],
+    queryFn: async () => {
+      const { data } = await axios.get<UserTeamOptionRecord[]>(`${API}/user/teams`, {
+        headers: authHeaders(),
+      });
+      return data;
+    },
+  });
 
   const { data: games = [], isLoading } = useQuery<GameRecord[]>({
     queryKey: ['user-games', statusFilter, leagueId, showSkippedGames],
@@ -882,35 +900,51 @@ const UserGames = () => {
     },
   });
 
-  const favoriteTeamOptions = useMemo<MultiSelectOption[]>(() => {
+  const teamOptions = useMemo<MultiSelectOption[]>(() => {
     const favoriteTeamIdSet = new Set(favoriteTeamIds);
     const options = new Map<string, MultiSelectOption>();
 
-    for (const game of games) {
-      for (const team of [game.home_team, game.away_team]) {
-        if (!favoriteTeamIdSet.has(team.id) || options.has(team.id)) continue;
-        options.set(team.id, {
-          value: team.id,
-          label: team.name,
-          logo: team.logo ?? undefined,
-          code: team.code,
-        });
-      }
+    for (const team of allTeams) {
+      if (leagueSelected && team.league_id !== leagueId) continue;
+      if (options.has(team.id)) continue;
+      const label = team.name ?? team.code ?? 'Unnamed Team';
+      options.set(team.id, {
+        value: team.id,
+        label,
+        logo: team.logo ?? undefined,
+        code: team.code ?? undefined,
+      });
     }
 
-    return Array.from(options.values()).sort((a, b) => a.label.localeCompare(b.label));
-  }, [games, favoriteTeamIds]);
+    return Array.from(options.values()).sort((a, b) => {
+      const favoriteDiff =
+        Number(favoriteTeamIdSet.has(b.value)) - Number(favoriteTeamIdSet.has(a.value));
+      if (favoriteDiff !== 0) return favoriteDiff;
+      return a.label.localeCompare(b.label);
+    });
+  }, [allTeams, favoriteTeamIds, leagueId, leagueSelected]);
 
   useEffect(() => {
-    const availableIds = new Set(favoriteTeamOptions.map((option) => option.value));
+    if (favoriteTeamIdsData === undefined) return;
+
+    const availableIds = new Set(teamOptions.map((option) => option.value));
+    const availableFavoriteIds = favoriteTeamIds.filter((teamId) => availableIds.has(teamId));
+    const shouldSeedFavorites =
+      !hasSeededTeamFilterRef.current &&
+      (!teamsLoading || teamOptions.length > 0 || favoriteTeamIds.length === 0);
+
+    if (shouldSeedFavorites) hasSeededTeamFilterRef.current = true;
+
     setTeamFilter((current) => {
-      const next = current.filter((teamId) => availableIds.has(teamId));
+      const next = shouldSeedFavorites
+        ? availableFavoriteIds
+        : current.filter((teamId) => availableIds.has(teamId));
       return next.length === current.length &&
         next.every((teamId, index) => teamId === current[index])
         ? current
         : next;
     });
-  }, [favoriteTeamOptions]);
+  }, [favoriteTeamIds, favoriteTeamIdsData, teamOptions, teamsLoading]);
 
   const filteredGames = useMemo(() => {
     const visibleGames = showSkippedGames ? games : games.filter((game) => !game.skipped_by_user);
@@ -997,7 +1031,6 @@ const UserGames = () => {
   ];
 
   const openGame = (gameId: string) => navigate(`/games/${gameId}`);
-  const openSkipConfirm = (game: GameRecord) => setConfirmSkipGame(game);
   const openScoreCardModal = (game: GameRecord) => setScoreCardTarget(getScoreCardGame(game));
   const openScheduleModal = (game: GameRecord) => {
     setScheduleTarget(game);
@@ -1344,9 +1377,9 @@ const UserGames = () => {
           <div className={styles.teamFilter}>
             <MultiSelect
               value={teamFilter}
-              options={favoriteTeamOptions}
-              placeholder="All Favorite Teams"
-              emptyMessage="No favorite teams available"
+              options={teamOptions}
+              placeholder="Teams"
+              emptyMessage="No teams available"
               onChange={setTeamFilter}
               searchable
             />
@@ -1392,7 +1425,7 @@ const UserGames = () => {
                       onMarkWatched={() => markGameWatched(g.id)}
                       onUnwatch={() => unwatchGame(g.id)}
                       onSchedule={() => openScheduleModal(g)}
-                      onSkip={() => openSkipConfirm(g)}
+                      onSkip={() => skipGame(g.id)}
                       busy={actionGameId === g.id}
                     />
                   ))}
@@ -1408,7 +1441,7 @@ const UserGames = () => {
         >
           {scheduledGames.length === 0 ? (
             <p className={styles.empty}>
-              No scheduled games from your favorite teams to place on the calendar.
+              No scheduled games from the selected teams to place on the calendar.
             </p>
           ) : (
             <div className={styles.calendarWrap}>
@@ -1434,7 +1467,7 @@ const UserGames = () => {
                           onMarkWatched={() => markGameWatched(game.id)}
                           onUnwatch={() => unwatchGame(game.id)}
                           onSchedule={() => openScheduleModal(game)}
-                          onSkip={() => openSkipConfirm(game)}
+                          onSkip={() => skipGame(game.id)}
                           onDragStart={handleCalendarDragStart(game)}
                           onDragEnd={handleCalendarDragEnd}
                           draggable={
@@ -1467,29 +1500,6 @@ const UserGames = () => {
           setScheduleDate('');
         }}
         onSave={saveSchedule}
-      />
-
-      <ConfirmModal
-        open={!!confirmSkipGame}
-        title="Skip Game"
-        body={
-          confirmSkipGame
-            ? `Move ${confirmSkipGame.away_team.code} @ ${confirmSkipGame.home_team.code} to skipped games?`
-            : ''
-        }
-        confirmLabel="Skip game"
-        confirmIcon="visibility_off"
-        variant="danger"
-        busy={actionGameId === confirmSkipGame?.id}
-        onCancel={() => {
-          if (actionGameId === confirmSkipGame?.id) return;
-          setConfirmSkipGame(null);
-        }}
-        onConfirm={async () => {
-          if (!confirmSkipGame) return;
-          await skipGame(confirmSkipGame.id);
-          setConfirmSkipGame(null);
-        }}
       />
 
       <ScoreImageModal

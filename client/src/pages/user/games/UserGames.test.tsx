@@ -382,6 +382,13 @@ const skippedGame = {
   scheduled_for: scheduledWatchDate,
 };
 
+const allTeams = [
+  { id: 'team-home', name: 'Home Team', code: 'HOM', logo: null, league_id: 'league-1' },
+  { id: 'team-away', name: 'Away Team', code: 'AWY', logo: null, league_id: 'league-1' },
+  { id: 'team-opp', name: 'Opponent', code: 'OPP', logo: null, league_id: 'league-1' },
+  { id: 'team-idle', name: 'Idle Team', code: 'IDL', logo: null, league_id: 'league-1' },
+];
+
 beforeEach(() => {
   jest.clearAllMocks();
   window.localStorage.clear();
@@ -403,6 +410,7 @@ beforeEach(() => {
     if (queryKey[0] === 'user-leagues')
       return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
     if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
+    if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
     if (queryKey[0] === 'user-games')
       return { data: queryKey[3] ? [...games, skippedGame] : games, isLoading: false };
     return { data: [], isLoading: false };
@@ -410,14 +418,23 @@ beforeEach(() => {
 });
 
 describe('UserGames calendar view', () => {
-  it('shows favorite team filtering and hides status text in list view', async () => {
+  it('shows team filtering with favorite teams first and hides status text in list view', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
     await user.click(screen.getByRole('button', { name: 'List view' }));
 
-    expect(screen.getByRole('combobox', { name: 'All Favorite Teams' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Toggle Home Team' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Toggle Opponent' })).toBeInTheDocument();
+    const teamFilter = screen.getByRole('combobox', { name: 'Teams' });
+    expect(teamFilter).toBeInTheDocument();
+    expect(within(teamFilter).getByRole('button', { name: 'Toggle Home Team' })).toBeInTheDocument();
+    expect(within(teamFilter).getByRole('button', { name: 'Toggle Opponent' })).toBeInTheDocument();
+    expect(within(teamFilter).getByRole('button', { name: 'Toggle Away Team' })).toBeInTheDocument();
+    expect(within(teamFilter).getByRole('button', { name: 'Toggle Idle Team' })).toBeInTheDocument();
+    expect(within(teamFilter).getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Toggle Home Team',
+      'Toggle Opponent',
+      'Toggle Away Team',
+      'Toggle Idle Team',
+    ]);
 
     const firstGameCard = screen.getAllByText('Away Team')[0].closest('[style]');
     expect(within(firstGameCard as HTMLElement).queryByText('Upcoming')).not.toBeInTheDocument();
@@ -791,15 +808,74 @@ describe('UserGames calendar view', () => {
     }
   });
 
-  it('filters user games by selected favorite teams', async () => {
+  it('filters user games by the preselected favorite teams', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'List view' }));
-    await user.click(screen.getByRole('button', { name: 'Toggle Opponent' }));
+    await user.click(screen.getByRole('button', { name: 'Toggle Home Team' }));
 
     expect(screen.queryByText('Away Team')).not.toBeInTheDocument();
     expect(screen.getByText('Opponent')).toBeInTheDocument();
+  });
+
+  it('lets watched non-favorite teams be selected from the team filter', async () => {
+    const user = userEvent.setup();
+    const watchedNonFavoriteGame = {
+      ...games[1],
+      id: 'game-watched-nonfavorite',
+      home_team: {
+        ...games[1].home_team,
+        id: 'team-extra-home',
+        name: 'Extra Home',
+        code: 'EXH',
+      },
+      away_team: {
+        ...games[1].away_team,
+        id: 'team-extra-away',
+        name: 'Extra Away',
+        code: 'EXA',
+      },
+      watched_by_user: true,
+      watched_on: watchedDate,
+    };
+
+    mockUseQuery.mockImplementation(({ queryKey }: any) => {
+      if (queryKey[0] === 'user-leagues')
+        return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
+      if (queryKey[0] === 'user-favorites') return { data: ['team-home'] };
+      if (queryKey[0] === 'user-teams')
+        return {
+          data: [
+            ...allTeams,
+            {
+              id: 'team-extra-home',
+              name: 'Extra Home',
+              code: 'EXH',
+              logo: null,
+              league_id: 'league-1',
+            },
+            {
+              id: 'team-extra-away',
+              name: 'Extra Away',
+              code: 'EXA',
+              logo: null,
+              league_id: 'league-1',
+            },
+          ],
+          isLoading: false,
+        };
+      if (queryKey[0] === 'user-games')
+        return { data: [games[0], watchedNonFavoriteGame], isLoading: false };
+      return { data: [], isLoading: false };
+    });
+
+    render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'List view' }));
+    expect(screen.queryByText('Extra Home')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Toggle Extra Home' }));
+    expect(screen.getByText('Extra Home')).toBeInTheDocument();
   });
 
   it('allows dragging a calendar game to another date to schedule it', async () => {
@@ -929,17 +1005,13 @@ describe('UserGames calendar view', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'Skip game' })[0]);
 
-    expect(screen.getByText('Skip Game')).toBeInTheDocument();
-    expect(screen.getByText('Move AWY @ HOM to skipped games?')).toBeInTheDocument();
-    expect(mockAxios.post).not.toHaveBeenCalled();
-
-    await user.click(screen.getAllByRole('button', { name: 'Skip game' }).at(-1)!);
-
     expect(mockAxios.post).toHaveBeenCalledWith(
       expect.stringContaining('/user/watched-games/game-1/skip'),
       {},
       expect.objectContaining({ headers: expect.any(Object) }),
     );
+    expect(screen.queryByText('Skip Game')).not.toBeInTheDocument();
+    expect(screen.queryByText('Move AWY @ HOM to skipped games?')).not.toBeInTheDocument();
     expect(mockSetQueriesData).toHaveBeenCalledWith(
       { queryKey: ['user-games'] },
       expect.any(Function),

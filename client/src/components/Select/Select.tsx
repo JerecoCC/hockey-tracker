@@ -1,13 +1,4 @@
-import {
-  type CSSProperties,
-  type KeyboardEvent,
-  type ReactNode,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react';
-import { createPortal } from 'react-dom';
+import { type KeyboardEvent, type ReactNode, useEffect, useId, useRef, useState } from 'react';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
 import styles from './Select.module.scss';
@@ -54,46 +45,12 @@ const Select = (props: Props) => {
   } = props;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
-  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   const suppressNextFocusOpenRef = useRef(false);
   const menuId = useId();
-
-  /** Measure the trigger and compute fixed-position coordinates for the menu. */
-  const measureMenu = () => {
-    // Searchable mode has no button trigger — measure the outer wrapper instead.
-    const target = searchable ? ref.current : triggerRef.current;
-    if (!target) return;
-    const r = target.getBoundingClientRect();
-    const gap = 4;
-    const maxMenuHeight = 220;
-    const minMenuHeight = 120;
-    const viewportHeight =
-      typeof window === 'undefined' ? Number.POSITIVE_INFINITY : window.innerHeight;
-    const availableBelow = viewportHeight - r.bottom - gap;
-    const availableAbove = r.top - gap;
-    const openAbove = availableBelow < minMenuHeight && availableAbove > availableBelow;
-
-    if (openAbove) {
-      setMenuStyle({
-        bottom: viewportHeight - r.top + gap,
-        left: r.left,
-        width: r.width,
-        maxHeight: Math.max(minMenuHeight, Math.min(maxMenuHeight, availableAbove)),
-      });
-      return;
-    }
-
-    setMenuStyle({
-      top: r.bottom + gap,
-      left: r.left,
-      width: r.width,
-      maxHeight: Math.max(minMenuHeight, Math.min(maxMenuHeight, availableBelow)),
-    });
-  };
 
   const closeMenu = () => {
     setOpen(false);
@@ -103,7 +60,6 @@ const Select = (props: Props) => {
   const openSearchMenu = () => {
     if (disabled) return;
     if (!open) {
-      measureMenu();
       setOpen(true);
     }
     searchRef.current?.focus();
@@ -135,17 +91,6 @@ const Select = (props: Props) => {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  useEffect(() => {
-    if (!open) return;
-    const handleLayoutChange = () => measureMenu();
-    window.addEventListener('resize', handleLayoutChange);
-    window.addEventListener('scroll', handleLayoutChange, true);
-    return () => {
-      window.removeEventListener('resize', handleLayoutChange);
-      window.removeEventListener('scroll', handleLayoutChange, true);
-    };
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-
   // Scroll the active option into view when the value changes while the menu
   // is open (arrow-key navigation) or when the menu first opens.
   useEffect(() => {
@@ -170,7 +115,6 @@ const Select = (props: Props) => {
     } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       if (!open) {
-        measureMenu();
         setOpen(true);
         return;
       }
@@ -183,7 +127,6 @@ const Select = (props: Props) => {
     } else if (e.key === 'Enter' || (!searchable && e.key === ' ')) {
       e.preventDefault();
       if (!open) {
-        measureMenu();
         setOpen(true);
       } else if (searchable && selectableVisible.length === 1) {
         // Auto-select the only matching result on Enter.
@@ -232,7 +175,6 @@ const Select = (props: Props) => {
             placeholder={open && selected ? selected.label : placeholder}
             onChange={(e) => {
               if (!open && !disabled) {
-                measureMenu();
                 setOpen(true);
               }
               setQuery(e.target.value);
@@ -243,7 +185,6 @@ const Select = (props: Props) => {
                 return;
               }
               if (!open && !disabled) {
-                measureMenu();
                 setOpen(true);
               }
             }}
@@ -275,7 +216,6 @@ const Select = (props: Props) => {
           )}
           onClick={() => {
             if (disabled) return;
-            if (!open) measureMenu();
             setOpen((o) => !o);
           }}
           disabled={disabled}
@@ -307,15 +247,12 @@ const Select = (props: Props) => {
         </button>
       )}
 
-      {open &&
-        typeof document !== 'undefined' &&
-        createPortal(
+      {open && (
         <ul
           ref={menuRef}
           id={menuId}
           role="listbox"
           className={styles.menu}
-          style={menuStyle}
         >
           {selectableVisible.length === 0 ? (
             <li className={styles.emptyMessage}>
@@ -363,8 +300,7 @@ const Select = (props: Props) => {
               ),
             )
           )}
-        </ul>,
-        document.body,
+        </ul>
       )}
     </div>
   );
