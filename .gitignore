@@ -22,5 +22,8 @@ graphify-out/
 **/graphify-out/
 .graphify_*
 
+# Local Codex config
+.codex/config.toml
+
 .vercel
 .env*.local

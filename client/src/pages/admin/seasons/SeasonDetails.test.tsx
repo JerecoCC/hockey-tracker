@@ -31,7 +31,7 @@ jest.mock('@/components/Button/Button', () => (props: any) => (
   <button {...props}>{props.children}</button>
 ));
 jest.mock('@/components/Card/Card', () => (props: any) => (
-  <div>
+  <div data-testid="card">
     {props.title}
     {props.children}
   </div>
@@ -214,6 +214,19 @@ beforeEach(() => {
 });
 
 describe('SeasonDetails standings tab', () => {
+  it('shows the standings loading spinner inside the card', () => {
+    mockUseSeasonStandings.mockReturnValue({
+      standings: [],
+      loading: true,
+    });
+
+    render(<SeasonDetails />);
+
+    const loaderText = screen.getByText(/Loading/);
+    expect(loaderText.closest('[data-testid="card"]')).toBeInTheDocument();
+    expect(screen.queryByText('No standings data yet.')).not.toBeInTheDocument();
+  });
+
   it('navigates to the team details page when a standings row is clicked', async () => {
     const user = userEvent.setup();
     render(<SeasonDetails />);

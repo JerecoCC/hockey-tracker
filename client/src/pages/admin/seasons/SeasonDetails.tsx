@@ -1151,15 +1151,14 @@ const SeasonDetailsPage = () => {
                     rows: StandingDisplayRow[],
                     emptyMsg: string,
                   ) =>
-                    standingsLoading ? (
-                      <p className={styles.tabPlaceholder}>Loading standings…</p>
-                    ) : rows.length === 0 ? (
+                    !standingsLoading && rows.length === 0 ? (
                       <p className={styles.tabPlaceholder}>{emptyMsg}</p>
                     ) : (
                       <Table
                         columns={standingsColumns}
                         data={rows}
                         rowKey={(row) => row.team_id}
+                        loading={standingsLoading}
                         activeSortKey={standingsSort.key}
                         sortDir={standingsSort.dir}
                         onSort={(key, dir) => setStandingsSort({ key, dir })}
