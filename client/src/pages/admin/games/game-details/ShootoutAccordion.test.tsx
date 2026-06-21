@@ -1,5 +1,6 @@
 import { render } from '@testing-library/react';
 import type { GameRecord } from '@/hooks/useGames';
+import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
 import ShootoutAccordion from './ShootoutAccordion';
 
 jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
@@ -83,5 +84,34 @@ describe('ShootoutAccordion empty attempts', () => {
       expect(cells[0]).toHaveClass(expectedAway ? 'soAttemptCell' : 'soAttemptSpacer');
       expect(cells[1]).toHaveClass(expectedAway ? 'soAttemptSpacer' : 'soAttemptCell');
     });
+  });
+
+  it('does not pre-render empty future attempts once a shootout game is final', () => {
+    const attempts: ShootoutAttempt[] = [
+      { id: 'a1', game_id: game.id, team_id: 'away-team', shooter_id: 'p1', scored: true, attempt_order: 0, created_at: '2024-10-10T00:00:00Z', shooter_first_name: 'Away', shooter_last_name: 'One', shooter_photo: null, shooter_jersey_number: 11, shooter_date_of_birth: null, shooter_start_date: null, shooter_acquisition_type: null, team_name: 'Away', team_code: 'AWY', team_logo: null, team_primary_color: '#333333', team_text_color: '#ffffff' },
+      { id: 'h1', game_id: game.id, team_id: 'home-team', shooter_id: 'p2', scored: false, attempt_order: 1, created_at: '2024-10-10T00:00:00Z', shooter_first_name: 'Home', shooter_last_name: 'One', shooter_photo: null, shooter_jersey_number: 21, shooter_date_of_birth: null, shooter_start_date: null, shooter_acquisition_type: null, team_name: 'Home', team_code: 'HOM', team_logo: null, team_primary_color: '#111111', team_text_color: '#ffffff' },
+      { id: 'a2', game_id: game.id, team_id: 'away-team', shooter_id: 'p3', scored: true, attempt_order: 2, created_at: '2024-10-10T00:00:00Z', shooter_first_name: 'Away', shooter_last_name: 'Two', shooter_photo: null, shooter_jersey_number: 12, shooter_date_of_birth: null, shooter_start_date: null, shooter_acquisition_type: null, team_name: 'Away', team_code: 'AWY', team_logo: null, team_primary_color: '#333333', team_text_color: '#ffffff' },
+      { id: 'h2', game_id: game.id, team_id: 'home-team', shooter_id: 'p4', scored: false, attempt_order: 3, created_at: '2024-10-10T00:00:00Z', shooter_first_name: 'Home', shooter_last_name: 'Two', shooter_photo: null, shooter_jersey_number: 22, shooter_date_of_birth: null, shooter_start_date: null, shooter_acquisition_type: null, team_name: 'Home', team_code: 'HOM', team_logo: null, team_primary_color: '#111111', team_text_color: '#ffffff' },
+    ];
+
+    const { container } = render(
+      <ShootoutAccordion
+        game={{ ...game, status: 'final', shootout: true }}
+        attempts={attempts}
+        goals={[]}
+        isFinal
+        isInProgress={false}
+        canUseEditControls
+        soComplete
+        busy={null}
+        deletingAttemptId={null}
+        onAddAttempt={jest.fn()}
+        onEndGame={jest.fn()}
+      />,
+    );
+
+    const rows = Array.from(container.querySelectorAll('.soAttemptRow'));
+    expect(rows).toHaveLength(attempts.length);
+    expect(container.querySelectorAll('.soAttemptCellEmpty')).toHaveLength(0);
   });
 });

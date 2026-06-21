@@ -138,7 +138,8 @@ const ShootoutAccordion = ({
   const leftInfo = awayShootsFirst ? firstTeamInfo : secondTeamInfo;
   const rightInfo = awayShootsFirst ? secondTeamInfo : firstTeamInfo;
   const orderedAttempts = [...attempts].sort((a, b) => a.attempt_order - b.attempt_order);
-  const visibleAttemptRowCount = isSOActive
+  const shouldShowFutureAttemptRows = isSOActive && !isFinal;
+  const visibleAttemptRowCount = shouldShowFutureAttemptRows
     ? Math.max(orderedAttempts.length, roundCount * 2)
     : orderedAttempts.length;
   const awayPreShootoutScore = goals.filter((goal) => goal.team_id === game.away_team.id).length;
