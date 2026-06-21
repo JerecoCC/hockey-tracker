@@ -50,12 +50,24 @@
 }
 
 // ── Info grid ──────────────────────────────────────────────────────────────────
-.wildcardCutoffRow {
-  border-bottom: 2px solid rgba($accent, 0.85) !important;
-  box-shadow: 0 1px 0 rgba($accent, 0.35);
+.standingsPlace {
+  font-weight: 700;
+  color: $text-dim;
+}
 
-  td {
-    padding-bottom: calc(#{$space-lg} + 2px);
+.standingsQualifierRow {
+  background: rgba($accent, 0.08);
+
+  &:hover {
+    background: rgba($accent, 0.13) !important;
+  }
+
+  td:first-child {
+    box-shadow: inset 3px 0 0 rgba($accent, 0.75);
+  }
+
+  .standingsPlace {
+    color: $accent-light;
   }
 }
 

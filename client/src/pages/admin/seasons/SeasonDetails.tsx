@@ -63,6 +63,10 @@ const FORWARD_POSITIONS = new Set(['C', 'LW', 'RW']);
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
 
 type SkaterStatType = 'points' | 'goals' | 'assists';
+type StandingDisplayRow = TeamStandingRecord & {
+  place?: number;
+  isQualifier?: boolean;
+};
 
 const PAGE_SIZE = 10;
 const DEFAULT_WILDCARD_FORMAT: PlayoffFormatRule[] = [
@@ -598,7 +602,16 @@ const SeasonDetailsPage = () => {
     },
   ];
 
-  const standingsColumns: Column<TeamStandingRecord>[] = [
+  const standingsColumns: Column<StandingDisplayRow>[] = [
+    {
+      type: 'custom',
+      header: 'Place',
+      render: (row) =>
+        row.place != null ? <span className={styles.standingsPlace}>{row.place}</span> : '—',
+      sortable: true,
+      sortKey: 'place',
+      align: 'center',
+    },
     {
       type: 'custom',
       header: 'Team',
@@ -1117,7 +1130,16 @@ const SeasonDetailsPage = () => {
                 )}
 
                 {(() => {
-                  const sortRows = (rows: TeamStandingRecord[]) =>
+                  const withPlaces = (
+                    rows: TeamStandingRecord[],
+                    qualifierCount?: number | null,
+                  ): StandingDisplayRow[] =>
+                    rows.map((row, index) => ({
+                      ...row,
+                      place: index + 1,
+                      isQualifier: qualifierCount != null && index < qualifierCount,
+                    }));
+                  const sortRows = <T extends TeamStandingRecord>(rows: T[]) =>
                     [...rows].sort((a, b) => {
                       const av = (a as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
                       const bv = (b as unknown as Record<string, unknown>)[standingsSort.key] ?? 0;
@@ -1126,9 +1148,8 @@ const SeasonDetailsPage = () => {
                     });
 
                   const renderTable = (
-                    rows: TeamStandingRecord[],
+                    rows: StandingDisplayRow[],
                     emptyMsg: string,
-                    rowClassName?: (row: TeamStandingRecord, index: number) => string | undefined,
                   ) =>
                     standingsLoading ? (
                       <p className={styles.tabPlaceholder}>Loading standings…</p>
@@ -1143,7 +1164,9 @@ const SeasonDetailsPage = () => {
                         sortDir={standingsSort.dir}
                         onSort={(key, dir) => setStandingsSort({ key, dir })}
                         onRowClick={navigateToTeam}
-                        rowClassName={rowClassName}
+                        rowClassName={(row) =>
+                          row.isQualifier ? styles.standingsQualifierRow : undefined
+                        }
                       />
                     );
 
@@ -1151,7 +1174,7 @@ const SeasonDetailsPage = () => {
                   if (standingsSubTab === 'conference') {
                     return standingsTopGroups.map((conf) => {
                       const ids = standingsGroupTeamIds.get(conf.id) ?? new Set<string>();
-                      const rows = sortRows(standings.filter((t) => ids.has(t.team_id)));
+                      const rows = sortRows(withPlaces(standings.filter((t) => ids.has(t.team_id))));
                       return (
                         <Card
                           key={conf.id}
@@ -1168,22 +1191,13 @@ const SeasonDetailsPage = () => {
                     return standingsDivisionGroups.map((div) => {
                       const ids = standingsGroupTeamIds.get(div.id) ?? new Set<string>();
                       const rankedRows = standings.filter((t) => ids.has(t.team_id));
-                      const cutoffTeamId =
-                        divisionQualifierCount != null && rankedRows.length > divisionQualifierCount
-                          ? rankedRows[divisionQualifierCount - 1]?.team_id
-                          : null;
-                      const rows = sortRows(rankedRows);
+                      const rows = sortRows(withPlaces(rankedRows, divisionQualifierCount));
                       return (
                         <Card
                           key={div.id}
                           title={div.name}
                         >
-                          {renderTable(
-                            rows,
-                            'No standings data yet.',
-                            (row) =>
-                              row.team_id === cutoffTeamId ? styles.wildcardCutoffRow : undefined,
-                          )}
+                          {renderTable(rows, 'No standings data yet.')}
                         </Card>
                       );
                     });
@@ -1196,29 +1210,22 @@ const SeasonDetailsPage = () => {
                       const rankedRows = standings.filter(
                         (t) => ids.has(t.team_id) && !wildcardDirectQualifierIds.has(t.team_id),
                       );
-                      const cutoffTeamId =
-                        rankedRows.length > wildcardQualifierCount
-                          ? rankedRows[wildcardQualifierCount - 1]?.team_id
-                          : null;
-                      const rows = sortRows(rankedRows);
+                      const rows = sortRows(withPlaces(rankedRows, wildcardQualifierCount));
                       return (
                         <Card
                           key={conf.id}
                           title={conf.name}
                         >
-                          {renderTable(
-                            rows,
-                            'No wildcard contenders yet.',
-                            (row) =>
-                              row.team_id === cutoffTeamId ? styles.wildcardCutoffRow : undefined,
-                          )}
+                          {renderTable(rows, 'No wildcard contenders yet.')}
                         </Card>
                       );
                     });
                   }
 
                   // ── League: all teams in one table (default) ─────────────────────
-                  return <Card>{renderTable(sortRows(standings), 'No standings data yet.')}</Card>;
+                  return (
+                    <Card>{renderTable(sortRows(withPlaces(standings)), 'No standings data yet.')}</Card>
+                  );
                 })()}
               </div>
             ),

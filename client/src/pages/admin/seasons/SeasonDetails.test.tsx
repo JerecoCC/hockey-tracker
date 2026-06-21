@@ -223,7 +223,7 @@ describe('SeasonDetails standings tab', () => {
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor?season=2024-25');
   });
 
-  it('uses the post-division pool for wildcard standings and shows the cutoff line', async () => {
+  it('uses the post-division pool for wildcard standings and highlights qualifying rows', async () => {
     const user = userEvent.setup();
     const teamNames = {
       a1: 'Atlantic One',
@@ -305,14 +305,28 @@ describe('SeasonDetails standings tab', () => {
     render(<SeasonDetails />);
     await user.click(screen.getByRole('button', { name: 'Division' }));
 
-    expect(screen.getByText('Atlantic Three').closest('tr')).toHaveClass('wildcardCutoffRow');
+    const atlanticThreeRow = screen.getByText('Atlantic Three').closest('tr');
+    expect(atlanticThreeRow).toHaveClass('standingsQualifierRow');
+    expect(atlanticThreeRow?.querySelectorAll('td')[0]).toHaveTextContent('3');
+    expect(atlanticThreeRow?.querySelectorAll('td')[1]).toHaveTextContent('Atlantic Three');
+    expect(screen.getByText('Atlantic Four').closest('tr')).not.toHaveClass(
+      'standingsQualifierRow',
+    );
+
+    await user.click(screen.getAllByRole('button', { name: 'GP' })[0]);
+    expect(screen.getByText('Atlantic Three').closest('tr')).toHaveClass('standingsQualifierRow');
 
     await user.click(screen.getByRole('button', { name: 'Wildcard' }));
 
     expect(screen.queryByText('Atlantic Three')).not.toBeInTheDocument();
     expect(screen.queryByText('Metro Three')).not.toBeInTheDocument();
     expect(screen.getByText('Metro Four')).toBeInTheDocument();
-    expect(screen.getByText('Atlantic Four').closest('tr')).toHaveClass('wildcardCutoffRow');
+    const atlanticFourRow = screen.getByText('Atlantic Four').closest('tr');
+    expect(atlanticFourRow).toHaveClass('standingsQualifierRow');
+    expect(atlanticFourRow?.querySelectorAll('td')[0]).toHaveTextContent('2');
+
+    await user.click(screen.getAllByRole('button', { name: 'GP' })[0]);
+    expect(screen.getByText('Atlantic Four').closest('tr')).toHaveClass('standingsQualifierRow');
   });
 });
 
