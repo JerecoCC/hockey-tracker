@@ -12,6 +12,51 @@
   width: 100%;
 }
 
+.accountHero {
+  display: flex;
+  align-items: center;
+  gap: $space-lg;
+  margin-bottom: $space-xl;
+
+  @container (max-width: 560px) {
+    align-items: flex-start;
+  }
+}
+
+.accountAvatar {
+  box-shadow:
+    0 0 0 1px rgba($border, 0.85),
+    0 10px 24px rgba(#000, 0.18);
+}
+
+.accountTitle {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  min-width: 0;
+}
+
+.accountName {
+  margin: 0;
+  font-size: $font-2xl;
+  line-height: 1.1;
+  color: $text-bright;
+  letter-spacing: 0;
+}
+
+.accountBadge {
+  align-self: flex-start;
+  border: 1px solid rgba($accent, 0.35);
+  border-radius: $radius-sm;
+  background: rgba($accent, 0.12);
+  color: $accent;
+  font-size: $font-xs;
+  font-weight: 700;
+  line-height: 1;
+  padding: $space-xs $space-sm;
+  text-transform: uppercase;
+}
+
 .infoGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

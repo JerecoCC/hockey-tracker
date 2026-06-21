@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
 import Card from '@/components/Card/Card';
-import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SearchField from '@/components/SearchField/SearchField';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useAuth } from '@/context/AuthContext';
@@ -19,6 +19,16 @@ interface TeamCardProps {
   onToggle: () => void;
 }
 
+const getUserInitials = (name: string, email?: string) => {
+  const parts = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  if (parts.length === 1 && parts[0] !== 'Player') return parts[0].slice(0, 2).toUpperCase();
+  return (email?.slice(0, 2) || 'P').toUpperCase();
+};
+
 const TeamCard = ({ team, favorited, showFavoriteIndicator = false, onToggle }: TeamCardProps) => (
   <ListItem
     className={favorited && showFavoriteIndicator ? styles.teamItemFavorited : undefined}
@@ -31,7 +41,7 @@ const TeamCard = ({ team, favorited, showFavoriteIndicator = false, onToggle }: 
     actions={
       [
         {
-          icon: 'stars',
+          icon: favorited ? 'remove_circle_outline' : 'favorite',
           intent: favorited ? 'danger' : 'warning',
           tooltip: favorited ? 'Remove from favorites' : 'Add to favorites',
           onClick: onToggle,
@@ -50,6 +60,7 @@ const UserSettings = () => {
   const displayName = user?.display_name ?? user?.displayName ?? 'Player';
   const authProvider = user?.is_google ? 'Google' : 'Email';
   const accountCode = user?.role === 'admin' ? 'Admin' : 'User';
+  const userInitials = getUserInitials(displayName, user?.email);
 
   const teamsByLeague = useMemo(() => {
     const map: Record<string, TeamRecord[]> = {};
@@ -89,13 +100,20 @@ const UserSettings = () => {
   return (
     <div className={styles.page}>
       <Card className={styles.accountCard}>
-        <EntityHeader
-          logo={user?.photo ?? null}
-          name={displayName}
-          code={accountCode}
-          primaryColor="#2563eb"
-          textColor="#ffffff"
-        />
+        <div className={styles.accountHero}>
+          <PlayerAvatar
+            photo={user?.photo ?? null}
+            initials={userInitials}
+            primaryColor="#2563eb"
+            textColor="#ffffff"
+            size={88}
+            className={styles.accountAvatar}
+          />
+          <div className={styles.accountTitle}>
+            <h2 className={styles.accountName}>{displayName}</h2>
+            <span className={styles.accountBadge}>{accountCode}</span>
+          </div>
+        </div>
         <div className={styles.infoGrid}>
           <InfoItem
             label="Email"
@@ -131,7 +149,7 @@ const UserSettings = () => {
                     <Accordion
                       key={league.id}
                       bodyClassName={styles.leagueBody}
-                      defaultOpen={false}
+                      variant="static"
                       label={
                         <div className={styles.leagueHeader}>
                           <TeamLogo
