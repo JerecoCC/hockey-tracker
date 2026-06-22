@@ -103,7 +103,11 @@ const useSeasonDetails = (seasonId: string | undefined) => {
 
   // ③ All league teams — used to populate the override modal
   const leagueId = season?.league_id;
-  const { alignmentSets, loading: alignmentSetsLoading } = useGroupAlignmentSets(leagueId);
+  const {
+    alignmentSets,
+    loading: alignmentSetsLoading,
+    fetchAlignmentSet,
+  } = useGroupAlignmentSets(leagueId);
 
   const { data: leagueData = null, isLoading: leagueLoading } = useQuery<{
     teams: LeagueTeam[];
@@ -348,9 +352,13 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     try {
       await axios.patch(`${API}/admin/seasons/${id}`, payload, { headers: authHeaders() });
       toast.success('Season updated!');
+      const targetSeasonId = id || seasonId;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
-        queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-groups', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-teams', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-standings', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-stats', targetSeasonId] }),
         queryClient.invalidateQueries({ queryKey: ['seasons'] }),
       ]);
       return true;
@@ -366,6 +374,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     season,
     groups,
     alignmentSets,
+    fetchAlignmentSet,
     seasonTeams,
     leagueTeams,
     loading,

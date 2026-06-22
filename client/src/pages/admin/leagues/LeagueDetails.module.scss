@@ -157,18 +157,33 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
+  gap: $space-md;
 }
 
 .ruleSetItem {
+  position: relative;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: $space-md;
-  padding: $space-sm $space-md;
-  background: $bg-page;
+  overflow: hidden;
+  padding: $space-md;
   border: 1px solid $border;
   border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.02);
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &:hover,
+  &:focus-within {
+    background: rgba(255, 255, 255, 0.04);
+
+    .ruleSetHoverActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }
 
 .ruleSetName {
@@ -190,11 +205,14 @@
   }
 }
 
-.ruleSetActions {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-shrink: 0;
+.ruleSetSubtitle {
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 400;
+}
+
+.ruleSetHoverActions {
+  z-index: 2;
 }
 
 .alignmentSetMeta {

@@ -132,6 +132,7 @@ const SeasonDetailsPage = () => {
     season,
     groups,
     alignmentSets,
+    fetchAlignmentSet,
     seasonTeams,
     loading: detailsLoading,
     busy,
@@ -872,6 +873,7 @@ const SeasonDetailsPage = () => {
                 groups={groups}
                 seasonTeams={effectiveSeasonTeams}
                 alignmentSets={alignmentSets}
+                fetchAlignmentSet={fetchAlignmentSet}
                 loading={loading}
                 busy={busy}
                 isEnded={season.is_ended}

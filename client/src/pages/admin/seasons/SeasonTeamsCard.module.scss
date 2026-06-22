@@ -2,6 +2,9 @@
 @use 'styles/mixins' as *;
 
 .alignmentHeaderControl {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
   width: min(320px, 100%);
   min-width: 240px;
 
@@ -9,6 +12,11 @@
     width: 100%;
     min-width: 0;
   }
+}
+
+.alignmentSelectField {
+  flex: 1;
+  min-width: 0;
 }
 
 .readonlyAlignmentBox {

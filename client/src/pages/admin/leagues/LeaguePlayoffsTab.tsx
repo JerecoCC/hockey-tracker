@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -11,6 +12,15 @@ interface Props {
   leagueId: string;
   className?: string;
 }
+
+const inferBracketSizeFromSlots = (slots: BracketRuleSet['slots'] | undefined): number => {
+  const round1Matchups = new Set(
+    (slots ?? [])
+      .map((slot) => slot.slot_key.match(/^r1m(\d+)/)?.[1])
+      .filter((value): value is string => value !== undefined),
+  ).size;
+  return Math.max(4, round1Matchups * 2);
+};
 
 const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
   const { ruleSets, loading, deleteRuleSet } = useBracketRuleSets(leagueId);
@@ -61,8 +71,13 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
                 key={rs.id}
                 className={styles.ruleSetItem}
               >
-                <span className={styles.ruleSetName}>{rs.name}</span>
-                <div className={styles.ruleSetActions}>
+                <span className={styles.ruleSetName}>
+                  <span>{rs.name}</span>
+                  <span className={styles.ruleSetSubtitle}>
+                    {inferBracketSizeFromSlots(rs.slots)}-team bracket
+                  </span>
+                </span>
+                <ActionOverlay className={styles.ruleSetHoverActions}>
                   <Button
                     variant="outlined"
                     intent="neutral"
@@ -79,7 +94,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
                     tooltip="Delete rule set"
                     onClick={() => setConfirmDelete(rs)}
                   />
-                </div>
+                </ActionOverlay>
               </li>
             ))}
           </ul>

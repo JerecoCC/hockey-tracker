@@ -1,6 +1,6 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
-const { asc, eq } = require('drizzle-orm');
+const { asc, eq, inArray } = require('drizzle-orm');
 const { db, schema } = require('../db');
 
 const { bracketRuleSets, bracketSlotRules } = schema;
@@ -57,7 +57,32 @@ router.get('/', async (req, res) => {
       .from(bracketRuleSets)
       .where(eq(bracketRuleSets.leagueId, league_id))
       .orderBy(asc(bracketRuleSets.name));
-    return res.json(rows);
+    if (rows.length === 0) return res.json([]);
+
+    const slots = await db
+      .select({
+        rule_set_id: bracketSlotRules.ruleSetId,
+        slot_key: bracketSlotRules.slotKey,
+        rule_type: bracketSlotRules.ruleType,
+        rank: bracketSlotRules.rank,
+        scope: bracketSlotRules.scope,
+        group_id: bracketSlotRules.groupId,
+        pool: bracketSlotRules.pool,
+        choice_ref: bracketSlotRules.choiceRef,
+        matchup_ref: bracketSlotRules.matchupRef,
+      })
+      .from(bracketSlotRules)
+      .where(inArray(bracketSlotRules.ruleSetId, rows.map((row) => row.id)))
+      .orderBy(asc(bracketSlotRules.slotKey));
+
+    const slotsByRuleSet = new Map();
+    slots.forEach(({ rule_set_id, ...slot }) => {
+      const current = slotsByRuleSet.get(rule_set_id) ?? [];
+      current.push(slot);
+      slotsByRuleSet.set(rule_set_id, current);
+    });
+
+    return res.json(rows.map((row) => ({ ...row, slots: slotsByRuleSet.get(row.id) ?? [] })));
   } catch (err) {
     console.error('bracket-rule-sets list error:', err);
     return res.status(500).json({ error: 'Internal server error' });

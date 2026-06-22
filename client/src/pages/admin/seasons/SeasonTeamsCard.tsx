@@ -1,9 +1,11 @@
+import { useEffect, useMemo, useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
+import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import GroupTeamCount from '@/components/GroupTeamCount/GroupTeamCount';
 import ListItem from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
-import { type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
+import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
@@ -119,6 +121,16 @@ type TeamDisplayRecord = Pick<
   'id' | 'name' | 'place_name' | 'team_name' | 'code' | 'logo' | 'primary_color' | 'text_color'
 >;
 
+const alignmentGroupsToSeasonGroups = (
+  alignmentGroups: AlignmentGroupRecord[] | undefined,
+): SeasonGroupRecord[] =>
+  (alignmentGroups ?? []).map((group) => ({
+    ...group,
+    has_season_override: group.has_season_override ?? false,
+    is_inherited: group.is_inherited ?? false,
+    is_auto: group.is_auto ?? false,
+  }));
+
 const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => (
   <ul className={styles.teamList}>
     {teams.map((team) => (
@@ -152,6 +164,7 @@ interface Props {
   groups: SeasonGroupRecord[];
   seasonTeams: SeasonTeam[];
   alignmentSets: GroupAlignmentSet[];
+  fetchAlignmentSet: (alignmentSetId: string) => Promise<GroupAlignmentSet | null>;
   loading: boolean;
   busy: string | null;
   isEnded: boolean;
@@ -168,6 +181,7 @@ const SeasonTeamsCard = ({
   groups,
   seasonTeams,
   alignmentSets,
+  fetchAlignmentSet,
   loading,
   busy,
   isEnded,
@@ -175,13 +189,63 @@ const SeasonTeamsCard = ({
   groupAlignmentSetId,
   updateSeason,
 }: Props) => {
-  const userGroups = groups.filter((group) => !group.is_auto);
+  const [draftAlignmentSetId, setDraftAlignmentSetId] = useState<string | null>(
+    groupAlignmentSetId,
+  );
+  const [alignmentDetails, setAlignmentDetails] = useState<Record<string, GroupAlignmentSet>>({});
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  useEffect(() => {
+    setDraftAlignmentSetId(groupAlignmentSetId);
+  }, [groupAlignmentSetId]);
+
+  const selectedAlignment = alignmentSets.find((set) => set.id === groupAlignmentSetId) ?? null;
+  const draftAlignment =
+    alignmentSets.find((set) => set.id === draftAlignmentSetId) ?? selectedAlignment;
+  const hasDraftAlignmentChange = draftAlignmentSetId !== groupAlignmentSetId;
+  const draftAlignmentDetails = draftAlignmentSetId ? alignmentDetails[draftAlignmentSetId] : null;
+
+  useEffect(() => {
+    if (!hasDraftAlignmentChange || !draftAlignmentSetId || alignmentDetails[draftAlignmentSetId]) {
+      setPreviewLoading(false);
+      return;
+    }
+
+    let ignore = false;
+    setPreviewLoading(true);
+    fetchAlignmentSet(draftAlignmentSetId)
+      .then((details) => {
+        if (ignore || !details) return;
+        setAlignmentDetails((current) => ({ ...current, [draftAlignmentSetId]: details }));
+      })
+      .finally(() => {
+        if (!ignore) setPreviewLoading(false);
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [alignmentDetails, draftAlignmentSetId, fetchAlignmentSet, hasDraftAlignmentChange]);
+
+  const savedUserGroups = groups.filter((group) => !group.is_auto);
+  const savedAutoGroup = groups.find((group) => group.is_auto);
+  const savedFlatTeams: TeamDisplayRecord[] = savedAutoGroup?.teams.length
+    ? savedAutoGroup.teams
+    : seasonTeams;
+  const previewGroups = useMemo(
+    () => alignmentGroupsToSeasonGroups(draftAlignmentDetails?.groups),
+    [draftAlignmentDetails?.groups],
+  );
+  const showPreview = hasDraftAlignmentChange && !!draftAlignment;
+  const userGroups =
+    showPreview && draftAlignment?.structure_type === 'groups' ? previewGroups : savedUserGroups;
   const userRoots = userGroups
     .filter((group) => group.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
-  const autoGroup = groups.find((group) => group.is_auto);
-  const flatTeams: TeamDisplayRecord[] = autoGroup?.teams.length ? autoGroup.teams : seasonTeams;
-  const selectedAlignment = alignmentSets.find((set) => set.id === groupAlignmentSetId) ?? null;
+  const flatTeams: TeamDisplayRecord[] =
+    showPreview && draftAlignment?.structure_type === 'league'
+      ? (draftAlignmentDetails?.teams ?? [])
+      : savedFlatTeams;
   const alignmentOptions = alignmentSets.map((set) => ({
     value: set.id,
     label: set.structure_type === 'league' ? `${set.name} (league-wide)` : set.name,
@@ -192,6 +256,12 @@ const SeasonTeamsCard = ({
       ? `${selectedAlignment.name} (league-wide)`
       : selectedAlignment.name
     : 'No alignment assigned';
+  const handleSaveAlignment = async () => {
+    if (!hasDraftAlignmentChange || !draftAlignmentSetId) return;
+    await updateSeason(seasonId, {
+      group_alignment_set_id: draftAlignmentSetId,
+    });
+  };
   const alignmentControl = (
     <div className={styles.alignmentHeaderControl}>
       {alignmentLocked ? (
@@ -206,31 +276,44 @@ const SeasonTeamsCard = ({
           {alignmentLabel}
         </div>
       ) : (
-        <Select
-          value={groupAlignmentSetId}
-          options={alignmentOptions}
-          placeholder={
-            alignmentSets.length === 0
-              ? 'No alignment sets - create one in the league Alignments tab'
-              : 'Select an alignment set...'
-          }
-          onChange={async (value) => {
-            await updateSeason(seasonId, {
-              group_alignment_set_id: value,
-            });
-          }}
-          disabled={busy === 'update' || alignmentSets.length === 0}
-        />
+        <>
+          <div className={styles.alignmentSelectField}>
+            <Select
+              value={draftAlignmentSetId}
+              options={alignmentOptions}
+              placeholder={
+                alignmentSets.length === 0
+                  ? 'No alignment sets - create one in the league Alignments tab'
+                  : 'Select an alignment set...'
+              }
+              onChange={setDraftAlignmentSetId}
+              disabled={busy === 'update' || alignmentSets.length === 0}
+            />
+          </div>
+          {hasDraftAlignmentChange && (
+            <Button
+              type="button"
+              icon="save"
+              size="sm"
+              variant="filled"
+              intent="accent"
+              iconHeight="field"
+              tooltip="Save alignment"
+              disabled={busy === 'update' || !draftAlignmentSetId}
+              onClick={handleSaveAlignment}
+            />
+          )}
+        </>
       )}
     </div>
   );
 
   return (
     <Card
-      title={selectedAlignment?.structure_type === 'groups' ? 'Team Groups' : 'Teams'}
+      title={draftAlignment?.structure_type === 'groups' ? 'Team Groups' : 'Teams'}
       action={alignmentControl}
     >
-      {loading ? (
+      {loading || (showPreview && previewLoading) ? (
         <p className={styles.emptyMsg}>Loading...</p>
       ) : userRoots.length > 0 ? (
         <ul className={styles.groupList}>
@@ -255,7 +338,7 @@ const SeasonTeamsCard = ({
         />
       ) : (
         <p className={styles.emptyMsg}>
-          {selectedAlignment
+          {draftAlignment
             ? 'No teams are defined for this alignment set.'
             : 'Select an alignment set to view this season team structure.'}
         </p>
