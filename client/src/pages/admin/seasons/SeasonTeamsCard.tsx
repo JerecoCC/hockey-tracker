@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import GroupTeamCount from '@/components/GroupTeamCount/GroupTeamCount';
-import ListItem from '@/components/ListItem/ListItem';
+import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
@@ -62,7 +63,7 @@ const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: Group
         headerRight={<GroupTeamCount count={teamCount} />}
       >
         {isLeaf && group.teams.length > 0 && (
-          <ul className={styles.teamList}>
+          <ul className={styles.groupTeamList}>
             {group.teams.map((team) => (
               <ListItem
                 key={team.id}
@@ -132,30 +133,47 @@ const alignmentGroupsToSeasonGroups = (
     is_auto: group.is_auto ?? false,
   }));
 
-const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => (
-  <ul className={styles.teamList}>
-    {teams.map((team) => (
-      <ListItem
-        key={team.id}
-        image={team.logo}
-        eyebrow={team.place_name || ''}
-        name={team.team_name || team.name}
-        variant="plain"
-        rightContent={{ type: 'code', value: team.code }}
-        primaryColor={team.primary_color}
-        textColor={team.text_color}
-        href={buildTeamDetailsPath({
+const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamListProps) => {
+  const navigate = useNavigate();
+
+  return (
+    <ul className={styles.teamList}>
+      {teams.map((team) => {
+        const teamHref = buildTeamDetailsPath({
           leagueCode,
           leagueId,
           teamCode: team.code,
           teamId: team.id,
           seasonName,
           seasonId,
-        })}
-      />
-    ))}
-  </ul>
-);
+        });
+
+        return (
+          <ListItem
+            key={team.id}
+            image={team.logo}
+            eyebrow={team.place_name || ''}
+            name={team.team_name || team.name}
+            rightContent={{ type: 'code', value: team.code }}
+            primaryColor={team.primary_color}
+            textColor={team.text_color}
+            href={teamHref}
+            actions={
+              [
+                {
+                  icon: 'open_in_new',
+                  intent: 'neutral',
+                  tooltip: 'View team',
+                  onClick: () => navigate(teamHref),
+                },
+              ] satisfies ListItemAction[]
+            }
+          />
+        );
+      })}
+    </ul>
+  );
+};
 
 const SeasonTeamsSkeleton = ({ variant }: { variant: 'groups' | 'teams' }) => {
   if (variant === 'groups') {

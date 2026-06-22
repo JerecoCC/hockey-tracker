@@ -60,7 +60,7 @@ const LeagueTeamsTab = (props: Props) => {
                     [
                       {
                         icon: 'open_in_new',
-                        intent: 'accent',
+                        intent: 'neutral',
                         tooltip: 'View team',
                         onClick: () => navigate(teamHref),
                       },
