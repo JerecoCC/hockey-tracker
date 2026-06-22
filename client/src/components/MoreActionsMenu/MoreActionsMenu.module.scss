@@ -6,6 +6,23 @@
   display: flex;
 }
 
+.trigger.trigger {
+  padding: 0;
+  background: transparent;
+  border: none;
+  color: $text-dim;
+
+  &:hover:not(:disabled),
+  &:focus-visible:not(:disabled) {
+    background: transparent;
+    color: $text-bright;
+  }
+
+  svg {
+    font-size: 1.35rem;
+  }
+}
+
 .menu {
   position: absolute;
   top: calc(100% + 6px);

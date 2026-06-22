@@ -27,6 +27,18 @@ const LeagueInfoCard = ({ league, onEdit, className }: Props) => (
 
     <div className={styles.infoGrid}>
       <InfoItem
+        label="Playoff Series Format"
+        data={`Best of ${league.best_of_playoff}`}
+      />
+      <InfoItem
+        label="Shootout Rounds"
+        data={`${league.best_of_shootout} rounds`}
+      />
+      <InfoItem
+        label="Scoring System"
+        data={league.scoring_system}
+      />
+      <InfoItem
         type="html"
         label="Description"
         data={league.description}

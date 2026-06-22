@@ -227,6 +227,10 @@
   min-width: 0;
   padding: 0;
   line-height: 1;
+
+  svg {
+    font-size: 1em;
+  }
 }
 
 @media (max-width: 768px) {

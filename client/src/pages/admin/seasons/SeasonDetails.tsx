@@ -831,8 +831,7 @@ const SeasonDetailsPage = () => {
                       ];
                       return moreItems.length > 0 ? (
                         <MoreActionsMenu
-                          size="md"
-                          buttonClassName={styles.moreActionsBtn}
+                          variant="ghost"
                           items={moreItems}
                         />
                       ) : null;
@@ -856,6 +855,21 @@ const SeasonDetailsPage = () => {
                   <InfoItem
                     label="Games Per Season"
                     data={season.games_per_season != null ? String(season.games_per_season) : null}
+                  />
+                  <InfoItem
+                    label="Shootout Rounds"
+                    data={
+                      season.best_of_shootout != null
+                        ? `${season.best_of_shootout} rounds`
+                        : `${season.league_best_of_shootout} rounds (league default)`
+                    }
+                  />
+                  <InfoItem
+                    label="Scoring System"
+                    data={
+                      season.scoring_system ??
+                      `${season.league_scoring_system} (league default)`
+                    }
                   />
                 </div>
               </Card>
@@ -1238,11 +1252,7 @@ const SeasonDetailsPage = () => {
                 playoffsStarted={season.playoffs_started}
                 playoffFormat={season.playoff_format ?? null}
                 bestOfPlayoff={season.best_of_playoff ?? null}
-                bestOfShootout={season.best_of_shootout ?? null}
-                scoringSystem={season.scoring_system ?? null}
                 leagueBestOfPlayoff={season.league_best_of_playoff}
-                leagueBestOfShootout={season.league_best_of_shootout}
-                leagueScoringSystem={season.league_scoring_system}
                 updateSeason={updateSeason}
               />
             ),
@@ -1289,6 +1299,9 @@ const SeasonDetailsPage = () => {
         addSeason={async () => false}
         updateSeason={updateSeason}
         lockedLeagueId={season.league_id}
+        showRegularSeasonSettings
+        leagueBestOfShootout={season.league_best_of_shootout}
+        leagueScoringSystem={season.league_scoring_system}
         onClose={() => setShowEditModal(false)}
       />
     </>

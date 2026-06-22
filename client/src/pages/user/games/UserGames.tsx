@@ -1382,7 +1382,6 @@ const UserGames = () => {
               />
               <MoreActionsMenu
                 size="md"
-                buttonClassName={styles.toolbarMoreButton}
                 items={[
                   {
                     label: 'Generate Score Image',

@@ -25,6 +25,16 @@
   }
 }
 
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: $space-md;
+}
+
+.settingsGridFull {
+  grid-column: 1 / -1;
+}
+
 // ── Playoff format rule builder ─────────────────────────────────────────────
 
 .formatSection {

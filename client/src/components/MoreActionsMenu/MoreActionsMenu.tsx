@@ -56,7 +56,7 @@ const MoreActionsMenu = ({
         size={size}
         tooltip="More actions"
         disabled={disabled}
-        className={buttonClassName}
+        className={[styles.trigger, buttonClassName].filter(Boolean).join(' ')}
         onClick={() => setOpen((o) => !o)}
       />
 

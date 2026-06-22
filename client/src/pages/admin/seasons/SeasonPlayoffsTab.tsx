@@ -113,58 +113,37 @@ const BEST_OF_PLAYOFF_OPTIONS = (leagueDefault: number) => [
   { value: '5', label: 'Best of 5' },
   { value: '7', label: 'Best of 7' },
 ];
-const SHOOTOUT_OPTIONS = (leagueDefault: number) => [
-  { value: '', label: `Use league default (${leagueDefault} rounds)` },
-  { value: '3', label: '3 rounds' },
-  { value: '5', label: '5 rounds' },
-  { value: '7', label: '7 rounds' },
-];
-const SCORING_OPTIONS = (leagueDefault: string) => [
-  { value: '', label: `Use league default (${leagueDefault})` },
-  { value: '2-1-0', label: '2-1-0  (W / OTL / L)' },
-  { value: '3-2-1-0', label: '3-2-1-0  (W / OT W / OTL / L)' },
-];
 
-// ── Game Settings Modal ────────────────────────────────────────────────────────
+// ── Playoff Settings Modal ─────────────────────────────────────────────────────
 
-interface GameSettingsFormValues {
+interface PlayoffSettingsFormValues {
   best_of_playoff: string;
-  best_of_shootout: string;
-  scoring_system: string;
 }
 
-interface GameSettingsModalProps {
+interface PlayoffSettingsModalProps {
   open: boolean;
   bestOfPlayoff: number | null;
-  bestOfShootout: number | null;
-  scoringSystem: string | null;
   leagueBestOfPlayoff: number;
-  leagueBestOfShootout: number;
-  leagueScoringSystem: string;
   seasonId: string;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
   onClose: () => void;
 }
 
-const GameSettingsModal = ({
+const PlayoffSettingsModal = ({
   open,
   bestOfPlayoff,
-  bestOfShootout,
-  scoringSystem,
   leagueBestOfPlayoff,
-  leagueBestOfShootout,
-  leagueScoringSystem,
   seasonId,
   updateSeason,
   onClose,
-}: GameSettingsModalProps) => {
+}: PlayoffSettingsModalProps) => {
   const {
     control,
     handleSubmit,
     reset,
     formState: { isSubmitting, isDirty, isValid },
-  } = useForm<GameSettingsFormValues>({
-    defaultValues: { best_of_playoff: '', best_of_shootout: '', scoring_system: '' },
+  } = useForm<PlayoffSettingsFormValues>({
+    defaultValues: { best_of_playoff: '' },
     mode: 'onChange',
   });
 
@@ -172,16 +151,12 @@ const GameSettingsModal = ({
     if (!open) return;
     reset({
       best_of_playoff: bestOfPlayoff != null ? String(bestOfPlayoff) : '',
-      best_of_shootout: bestOfShootout != null ? String(bestOfShootout) : '',
-      scoring_system: scoringSystem ?? '',
     });
-  }, [open, bestOfPlayoff, bestOfShootout, scoringSystem, reset]);
+  }, [open, bestOfPlayoff, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
     const ok = await updateSeason(seasonId, {
       best_of_playoff: data.best_of_playoff ? parseInt(data.best_of_playoff, 10) : null,
-      best_of_shootout: data.best_of_shootout ? parseInt(data.best_of_shootout, 10) : null,
-      scoring_system: (data.scoring_system as '2-1-0' | '3-2-1-0') || null,
     });
     if (ok) onClose();
   });
@@ -189,15 +164,15 @@ const GameSettingsModal = ({
   return (
     <Modal
       open={open}
-      title="Game Settings"
+      title="Playoff Settings"
       onClose={onClose}
       confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
-      confirmForm="game-settings-form"
+      confirmForm="playoff-settings-form"
       confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
     >
       <form
-        id="game-settings-form"
+        id="playoff-settings-form"
         className={styles.modalForm}
         onSubmit={onSubmit}
       >
@@ -207,22 +182,6 @@ const GameSettingsModal = ({
           control={control}
           name="best_of_playoff"
           options={BEST_OF_PLAYOFF_OPTIONS(leagueBestOfPlayoff)}
-          disabled={isSubmitting}
-        />
-        <Field
-          type="select"
-          label="Shootout Rounds"
-          control={control}
-          name="best_of_shootout"
-          options={SHOOTOUT_OPTIONS(leagueBestOfShootout)}
-          disabled={isSubmitting}
-        />
-        <Field
-          type="select"
-          label="Scoring System"
-          control={control}
-          name="scoring_system"
-          options={SCORING_OPTIONS(leagueScoringSystem)}
           disabled={isSubmitting}
         />
       </form>
@@ -757,11 +716,7 @@ interface Props {
   playoffsStarted: boolean;
   playoffFormat: PlayoffFormatRule[] | null;
   bestOfPlayoff: number | null;
-  bestOfShootout: number | null;
-  scoringSystem: '2-1-0' | '3-2-1-0' | null;
   leagueBestOfPlayoff: number;
-  leagueBestOfShootout: number;
-  leagueScoringSystem: string;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
 }
 
@@ -776,11 +731,7 @@ const SeasonPlayoffsTab = ({
   playoffsStarted,
   playoffFormat,
   bestOfPlayoff,
-  bestOfShootout,
-  scoringSystem,
   leagueBestOfPlayoff,
-  leagueBestOfShootout,
-  leagueScoringSystem,
   updateSeason,
 }: Props) => {
   const {
@@ -1363,9 +1314,9 @@ const SeasonPlayoffsTab = ({
             </div>
           </Card>
 
-          {/* ── Game Settings ── */}
+          {/* ── Playoff Settings ── */}
           <Card
-            title="Game Settings"
+            title="Playoff Settings"
             action={
               !playoffsStarted ? (
                 <Button
@@ -1373,7 +1324,7 @@ const SeasonPlayoffsTab = ({
                   intent="neutral"
                   icon="edit"
                   size="sm"
-                  tooltip="Edit game settings"
+                  tooltip="Edit playoff settings"
                   disabled={isEnded}
                   onClick={() => setSettingsModalOpen(true)}
                 />
@@ -1388,18 +1339,6 @@ const SeasonPlayoffsTab = ({
                     ? `Best of ${bestOfPlayoff}`
                     : `Best of ${leagueBestOfPlayoff} (league default)`
                 }
-              />
-              <InfoItem
-                label="Shootout Rounds"
-                data={
-                  bestOfShootout != null
-                    ? `${bestOfShootout} rounds`
-                    : `${leagueBestOfShootout} rounds (league default)`
-                }
-              />
-              <InfoItem
-                label="Scoring System"
-                data={scoringSystem ?? `${leagueScoringSystem} (league default)`}
               />
             </div>
           </Card>
@@ -1481,14 +1420,10 @@ const SeasonPlayoffsTab = ({
           onClose={() => setFormatModalOpen(false)}
         />
 
-        <GameSettingsModal
+        <PlayoffSettingsModal
           open={settingsModalOpen}
           bestOfPlayoff={bestOfPlayoff}
-          bestOfShootout={bestOfShootout}
-          scoringSystem={scoringSystem}
           leagueBestOfPlayoff={leagueBestOfPlayoff}
-          leagueBestOfShootout={leagueBestOfShootout}
-          leagueScoringSystem={leagueScoringSystem}
           seasonId={seasonId}
           updateSeason={updateSeason}
           onClose={() => setSettingsModalOpen(false)}

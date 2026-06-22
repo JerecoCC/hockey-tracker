@@ -13,3 +13,9 @@
   column-gap: $space-md;
   row-gap: $space-xl;
 }
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: $space-md;
+}
