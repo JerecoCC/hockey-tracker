@@ -3,6 +3,7 @@ import InfoItem from '@/components/InfoItem/InfoItem';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Badge from '@/components/Badge/Badge';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
@@ -57,6 +58,9 @@ const parseLocal = (iso: string) => {
 const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : '—');
 const formatEndDate = (d: string | null, isCurrent: boolean) =>
   d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : '—';
+
+const formatDateRange = (start: string | null, end: string | null, isCurrent: boolean) =>
+  `${formatDate(start)} - ${formatEndDate(end, isCurrent)}`;
 
 const FORWARD_POSITIONS = new Set(['C', 'LW', 'RW']);
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD']);
@@ -759,98 +763,85 @@ const SeasonDetailsPage = () => {
             label: 'Info',
             icon: 'info',
             content: (
-              <Card
-                title={
-                  <>
-                    {season.name}
-                    {season.is_current && !season.playoffs_started && (
-                      <Badge
-                        label="Current"
-                        intent="success"
-                      />
-                    )}
-                    {season.is_current && season.playoffs_started && (
-                      <Badge
-                        label="Playoffs"
-                        intent="accent"
-                      />
-                    )}
-                    {season.is_ended && (
-                      <Badge
-                        label="Ended"
-                        intent="neutral"
-                      />
-                    )}
-                  </>
-                }
-                action={
-                  <div className={styles.infoCardActions}>
-                    <Button
-                      variant="outlined"
-                      intent="neutral"
-                      icon="edit"
-                      onClick={() => setShowEditModal(true)}
-                    >
-                      Edit
-                    </Button>
-                    {(() => {
-                      const moreItems = [
-                        ...(!season.is_current
-                          ? [
-                              {
-                                label: 'Set as Current',
-                                icon: 'stars',
-                                disabled: busy === 'set-current',
-                                onClick: () => setCurrentSeason(true),
-                              },
-                            ]
-                          : []),
-                        ...(season.is_current &&
-                        !season.playoffs_started &&
-                        !hasUnfinishedRegularGames
-                          ? [
-                              {
-                                label: 'End Regular Season',
-                                icon: 'emoji_events',
-                                disabled: busy === 'start-playoffs',
-                                onClick: () => setShowStartPlayoffsConfirm(true),
-                              },
-                            ]
-                          : []),
-                        ...(season.is_current
-                          ? [
-                              {
-                                label: 'End Season',
-                                icon: 'flag',
-                                intent: 'danger' as const,
-                                disabled: busy === 'end-season',
-                                onClick: () => setShowEndModal(true),
-                              },
-                            ]
-                          : []),
-                      ];
-                      return moreItems.length > 0 ? (
-                        <MoreActionsMenu
-                          variant="ghost"
-                          items={moreItems}
+              <Card>
+                <EntityHeader
+                  logo={season.league_logo}
+                  name={season.name}
+                  code={season.league_code}
+                  subtitle={formatDateRange(season.start_date, season.end_date, season.is_current)}
+                  primaryColor="#334155"
+                  textColor="#ffffff"
+                  onEdit={() => setShowEditModal(true)}
+                  nameAccessory={
+                    <>
+                      {season.is_current && !season.playoffs_started && (
+                        <Badge
+                          label="Current"
+                          intent="success"
                         />
-                      ) : null;
-                    })()}
-                  </div>
-                }
-              >
+                      )}
+                      {season.is_current && season.playoffs_started && (
+                        <Badge
+                          label="Playoffs"
+                          intent="accent"
+                        />
+                      )}
+                      {season.is_ended && (
+                        <Badge
+                          label="Ended"
+                          intent="neutral"
+                        />
+                      )}
+                    </>
+                  }
+                  actions={(() => {
+                    const moreItems = [
+                      ...(!season.is_current
+                        ? [
+                            {
+                              label: 'Set as Current',
+                              icon: 'stars',
+                              disabled: busy === 'set-current',
+                              onClick: () => setCurrentSeason(true),
+                            },
+                          ]
+                        : []),
+                      ...(season.is_current &&
+                      !season.playoffs_started &&
+                      !hasUnfinishedRegularGames
+                        ? [
+                            {
+                              label: 'End Regular Season',
+                              icon: 'emoji_events',
+                              disabled: busy === 'start-playoffs',
+                              onClick: () => setShowStartPlayoffsConfirm(true),
+                            },
+                          ]
+                        : []),
+                      ...(season.is_current
+                        ? [
+                            {
+                              label: 'End Season',
+                              icon: 'flag',
+                              intent: 'danger' as const,
+                              disabled: busy === 'end-season',
+                              onClick: () => setShowEndModal(true),
+                            },
+                          ]
+                        : []),
+                    ];
+                    return moreItems.length > 0 ? (
+                      <MoreActionsMenu
+                        variant="ghost"
+                        items={moreItems}
+                      />
+                    ) : null;
+                  })()}
+                />
                 <div className={styles.infoGrid}>
                   <InfoItem
                     label="League"
                     data={season.league_name}
-                  />
-                  <InfoItem
-                    label="Start Date"
-                    data={formatDate(season.start_date)}
-                  />
-                  <InfoItem
-                    label="End Date"
-                    data={formatEndDate(season.end_date, season.is_current)}
                   />
                   <InfoItem
                     label="Games Per Season"
@@ -867,8 +858,7 @@ const SeasonDetailsPage = () => {
                   <InfoItem
                     label="Scoring System"
                     data={
-                      season.scoring_system ??
-                      `${season.league_scoring_system} (league default)`
+                      season.scoring_system ?? `${season.league_scoring_system} (league default)`
                     }
                   />
                 </div>

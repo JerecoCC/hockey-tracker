@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import type { ReactNode } from 'react';
 import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
 import ImagePreviewModal from '../ImagePreviewModal/ImagePreviewModal';
@@ -14,6 +15,9 @@ interface Props {
   logo: string | null;
   name: string;
   code: string;
+  subtitle?: ReactNode;
+  nameAccessory?: ReactNode;
+  actions?: ReactNode;
   primaryColor: string;
   textColor: string;
   swatches?: Swatch[];
@@ -24,6 +28,9 @@ const EntityHeader = ({
   logo,
   name,
   code,
+  subtitle,
+  nameAccessory,
+  actions,
   primaryColor,
   textColor,
   swatches = [],
@@ -58,21 +65,29 @@ const EntityHeader = ({
       )}
 
       <div className={styles.nameBlock}>
-        <h3 className={styles.name}>{name}</h3>
-        <span className={styles.code}>{code}</span>
+        <div className={styles.nameRow}>
+          <h3 className={styles.name}>{name}</h3>
+          {nameAccessory}
+        </div>
+        <span className={styles.code}>{subtitle ?? code}</span>
       </div>
 
-      {(onEdit || swatches.length > 0) && (
+      {(onEdit || actions || swatches.length > 0) && (
         <div className={styles.rightCol}>
-          {onEdit && (
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="edit"
-              onClick={onEdit}
-            >
-              Edit
-            </Button>
+          {(onEdit || actions) && (
+            <div className={styles.actions}>
+              {onEdit && (
+                <Button
+                  variant="outlined"
+                  intent="neutral"
+                  icon="edit"
+                  onClick={onEdit}
+                >
+                  Edit
+                </Button>
+              )}
+              {actions}
+            </div>
           )}
           {swatches.length > 0 && (
             <div className={styles.swatches}>
