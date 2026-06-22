@@ -444,6 +444,12 @@ const AlignmentGroupNode = ({
   const canHaveSubgroups = group.parent_id === null && group.role !== 'division';
   const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
   const teamCount = countGroupTeams(group, allGroups);
+  const removeTeam = (teamId: string) => {
+    void onSetGroupTeams(
+      group.id,
+      group.teams.filter((team) => team.id !== teamId).map((team) => team.id),
+    );
+  };
 
   return (
     <li className={styles.groupItem}>
@@ -515,6 +521,15 @@ const AlignmentGroupNode = ({
                 rightContent={{ type: 'code', value: team.code }}
                 primaryColor={team.primary_color}
                 textColor={team.text_color}
+                actions={[
+                  {
+                    icon: 'close',
+                    tooltip: 'Remove team',
+                    intent: 'danger',
+                    disabled: busy === group.id,
+                    onClick: () => removeTeam(team.id),
+                  },
+                ]}
               />
             ))}
           </ul>
@@ -848,6 +863,13 @@ const AlignmentPanel = ({
     setDraftDirty(true);
     return true;
   };
+  const handleRemoveDraftAlignmentTeam = (teamId: string) => {
+    setDraftDetails((current) => ({
+      ...current,
+      teams: current.teams.filter((team) => team.id !== teamId),
+    }));
+    setDraftDirty(true);
+  };
 
   return (
     <>
@@ -958,17 +980,25 @@ const AlignmentPanel = ({
               flatTeams.length === 0 ? (
                 <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
               ) : (
-                <ul className={styles.teamList}>
+                <ul className={styles.alignmentTeamGrid}>
                   {flatTeams.map((team) => (
                     <ListItem
                       key={team.id}
                       image={team.logo}
                       eyebrow={team.place_name || ''}
                       name={team.team_name || team.name}
-                      variant="plain"
                       rightContent={{ type: 'code', value: team.code }}
                       primaryColor={team.primary_color}
                       textColor={team.text_color}
+                      actions={[
+                        {
+                          icon: 'close',
+                          tooltip: 'Remove team',
+                          intent: 'danger',
+                          disabled: busy === alignmentSet.id,
+                          onClick: () => handleRemoveDraftAlignmentTeam(team.id),
+                        },
+                      ]}
                     />
                   ))}
                 </ul>

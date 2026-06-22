@@ -309,6 +309,19 @@
   gap: $space-md;
 }
 
+.alignmentTeamGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: $space-md;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
 .alignmentEditRow {
   display: grid;
   grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr);
@@ -357,17 +370,18 @@
 .alignmentBooleanField {
   display: flex;
   align-items: center;
-  min-height: 42px;
+  height: 42px;
 }
 
 .alignmentStructureSegmented {
   max-width: 220px;
-  min-height: 42px;
+  height: 42px;
 
   > button,
   > span {
     flex: 1;
     min-width: 0;
+    height: 100%;
   }
 
   > span {
@@ -376,8 +390,11 @@
 
   > button,
   > span > button {
-    min-height: 40px;
+    min-height: 0;
+    height: 100%;
     width: 100%;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 }
 
