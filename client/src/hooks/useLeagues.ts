@@ -35,6 +35,8 @@ export interface LeagueRecord {
   scoring_system: '3-2-1-0' | '2-1-0';
   /** Ordered list of qualification rules. Null means no programmatic format is set. */
   playoff_format: PlayoffFormatRule[] | null;
+  /** Current league phase derived from the current season. */
+  season_phase: 'regular' | 'playoffs' | 'postseason';
 }
 
 export interface CreateLeagueData {

@@ -9,6 +9,15 @@ import LeagueDeleteModal from './LeagueDeleteModal';
 import LeagueFormModal from './LeagueFormModal';
 import styles from './Leagues.module.scss';
 
+const LEAGUE_PHASE_TAGS: Record<
+  LeagueRecord['season_phase'],
+  { label: string; intent: 'info' | 'accent' | 'neutral' }
+> = {
+  regular: { label: 'Regular Season', intent: 'info' },
+  playoffs: { label: 'Playoffs', intent: 'accent' },
+  postseason: { label: 'Post-season', intent: 'neutral' },
+};
+
 const sortRows = <T,>(data: T[], key: string, dir: 'asc' | 'desc'): T[] =>
   [...data].sort((a, b) => {
     const av = String((a as Record<string, unknown>)[key] ?? '');
@@ -68,14 +77,19 @@ const LeaguesPage = () => {
                 leagueCode: league.code,
                 leagueId: league.id,
               });
+              const phaseTag = LEAGUE_PHASE_TAGS[league.season_phase] ?? LEAGUE_PHASE_TAGS.postseason;
 
               return (
                 <ListItem
                   key={league.id}
                   image={league.logo}
                   placeholder={league.code.slice(0, 3)}
+                  eyebrow={league.code}
                   name={league.name}
-                  rightContent={{ type: 'code', value: league.code }}
+                  rightContent={{
+                    type: 'tag',
+                    ...phaseTag,
+                  }}
                   primaryColor={league.primary_color}
                   textColor={league.text_color}
                   href={leagueHref}

@@ -122,6 +122,7 @@ const mockLeague = {
   logo: '',
   primary_color: '#0000ff',
   text_color: '#ffffff',
+  season_phase: 'regular',
   location: 'Test City',
   description: null,
   created_at: '2024-01-01T00:00:00Z',

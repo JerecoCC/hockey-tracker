@@ -22,6 +22,7 @@ const mockLeague = {
   code: 'NHL',
   description: null,
   logo: null,
+  season_phase: 'regular',
   created_at: '2024-01-01',
 };
 
