@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -873,76 +874,73 @@ const AlignmentPanel = ({
 
   return (
     <>
-      <Card
+      <li
         className={[styles.alignmentCard, editMode ? styles.alignmentCardExpanded : '']
           .filter(Boolean)
           .join(' ')}
-        noHeaderMargin
       >
         <div className={styles.alignmentCardHeader}>
           <div className={styles.ruleSetName}>
             <span>{alignmentSet.name}</span>
             <span className={styles.alignmentSetMeta}>{headerMeta}</span>
           </div>
-          <div className={styles.alignmentCardActions}>
-            {editMode ? (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outlined"
-                  intent="neutral"
-                  icon="close"
-                  tooltip="Cancel editing"
-                  disabled={busy === alignmentSet.id}
-                  onClick={handleCancelEdit}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outlined"
-                  intent="accent"
-                  icon={alignmentActionIcon}
-                  tooltip={alignmentActionTooltip}
-                  disabled={busy === alignmentSet.id || detailsLoading}
-                  onClick={handleAlignmentAction}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="filled"
-                  intent="accent"
-                  icon="save"
-                  tooltip="Save alignment"
-                  disabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
-                  onClick={onSubmit}
-                />
-              </>
-            ) : (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  tooltip="Edit alignment"
-                  disabled={busy === alignmentSet.id || editLocked}
-                  onClick={onStartEdit}
-                />
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outlined"
-                  intent="danger"
-                  icon="delete"
-                  tooltip="Delete alignment"
-                  disabled={busy === alignmentSet.id || editLocked}
-                  onClick={onDelete}
-                />
-              </>
-            )}
-          </div>
+          {editMode ? (
+            <div className={styles.alignmentCardActions}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outlined"
+                intent="neutral"
+                icon="close"
+                tooltip="Cancel editing"
+                disabled={busy === alignmentSet.id}
+                onClick={handleCancelEdit}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outlined"
+                intent="accent"
+                icon={alignmentActionIcon}
+                tooltip={alignmentActionTooltip}
+                disabled={busy === alignmentSet.id || detailsLoading}
+                onClick={handleAlignmentAction}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="filled"
+                intent="accent"
+                icon="save"
+                tooltip="Save alignment"
+                disabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
+                onClick={onSubmit}
+              />
+            </div>
+          ) : (
+            <ActionOverlay className={styles.alignmentCardHoverActions}>
+              <Button
+                type="button"
+                size="sm"
+                variant="outlined"
+                intent="neutral"
+                icon="edit"
+                tooltip="Edit alignment"
+                disabled={busy === alignmentSet.id || editLocked}
+                onClick={onStartEdit}
+              />
+              <Button
+                type="button"
+                size="sm"
+                variant="outlined"
+                intent="danger"
+                icon="delete"
+                tooltip="Delete alignment"
+                disabled={busy === alignmentSet.id || editLocked}
+                onClick={onDelete}
+              />
+            </ActionOverlay>
+          )}
         </div>
         {editMode && (
           <div className={styles.alignmentPanelBody}>
@@ -1027,7 +1025,7 @@ const AlignmentPanel = ({
             )}
           </div>
         )}
-      </Card>
+      </li>
       <ConfirmModal
         open={confirmCancelOpen}
         title="Discard Alignment Edits"
@@ -1177,55 +1175,44 @@ const LeagueAlignmentsTab = (props: Props) => {
               New Alignment
             </Button>
           </div>
-        </Card>
 
-        {alignmentsLoading ? (
-          <Card noHeaderMargin>
+          {alignmentsLoading ? (
             <p className={styles.emptyMsg}>Loading...</p>
-          </Card>
-        ) : alignmentSets.length === 0 ? (
-          <Card noHeaderMargin>
+          ) : alignmentSets.length === 0 ? (
             <div className={styles.alignmentEmptyState}>
               <p className={styles.emptyMsg}>No alignment sets yet.</p>
-              <Button
-                icon="add"
-                size="sm"
-                onClick={() => setCreateModalOpen(true)}
-              >
-                New Alignment
-              </Button>
             </div>
-          </Card>
-        ) : (
-          <div className={styles.alignmentSetStack}>
-            {alignmentSets.map((alignmentSet) => {
-              const editMode = editingAlignmentId === alignmentSet.id;
-              const editLocked =
-                editingAlignmentId !== null && editingAlignmentId !== alignmentSet.id;
+          ) : (
+            <ul className={styles.alignmentSetStack}>
+              {alignmentSets.map((alignmentSet) => {
+                const editMode = editingAlignmentId === alignmentSet.id;
+                const editLocked =
+                  editingAlignmentId !== null && editingAlignmentId !== alignmentSet.id;
 
-              return (
-                <AlignmentPanel
-                  key={alignmentSet.id}
-                  alignmentSet={alignmentSet}
-                  busy={alignmentBusy}
-                  details={alignmentDetails[alignmentSet.id] ?? null}
-                  leagueTeams={teams}
-                  editMode={editMode}
-                  editLocked={editLocked}
-                  onLoadDetails={loadAlignmentDetails}
-                  onDelete={() => setConfirmDelete(alignmentSet)}
-                  onStartEdit={() => setEditingAlignmentId(alignmentSet.id)}
-                  onStopEdit={() =>
-                    setEditingAlignmentId((current) =>
-                      current === alignmentSet.id ? null : current,
-                    )
-                  }
-                  onSave={handleSaveAlignment}
-                />
-              );
-            })}
-          </div>
-        )}
+                return (
+                  <AlignmentPanel
+                    key={alignmentSet.id}
+                    alignmentSet={alignmentSet}
+                    busy={alignmentBusy}
+                    details={alignmentDetails[alignmentSet.id] ?? null}
+                    leagueTeams={teams}
+                    editMode={editMode}
+                    editLocked={editLocked}
+                    onLoadDetails={loadAlignmentDetails}
+                    onDelete={() => setConfirmDelete(alignmentSet)}
+                    onStartEdit={() => setEditingAlignmentId(alignmentSet.id)}
+                    onStopEdit={() =>
+                      setEditingAlignmentId((current) =>
+                        current === alignmentSet.id ? null : current,
+                      )
+                    }
+                    onSave={handleSaveAlignment}
+                  />
+                );
+              })}
+            </ul>
+          )}
+        </Card>
       </div>
 
       <Modal

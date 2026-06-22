@@ -231,7 +231,7 @@
 .alignmentCards {
   display: flex;
   flex-direction: column;
-  gap: $space-lg;
+  gap: $space-md;
 }
 
 .alignmentViewHeader {
@@ -259,17 +259,41 @@
 }
 
 .alignmentSetStack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: $space-md;
 }
 
 .alignmentHeaderCard {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
   padding: $space-lg $space-xl !important;
 }
 
 .alignmentCard {
+  position: relative;
   overflow: hidden;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.02);
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  &:not(.alignmentCardExpanded):hover,
+  &:not(.alignmentCardExpanded):focus-within {
+    background: rgba(255, 255, 255, 0.04);
+
+    .alignmentCardHoverActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
 }
 
 .alignmentCardHeader {
@@ -301,6 +325,10 @@
   @media (max-width: 640px) {
     justify-content: flex-start;
   }
+}
+
+.alignmentCardHoverActions {
+  z-index: 2;
 }
 
 .alignmentPanelBody {
