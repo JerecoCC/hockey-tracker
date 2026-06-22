@@ -5,6 +5,7 @@ import Card from '@/components/Card/Card';
 import GroupTeamCount from '@/components/GroupTeamCount/GroupTeamCount';
 import ListItem from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
@@ -155,6 +156,57 @@ const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamLis
     ))}
   </ul>
 );
+
+const SeasonTeamsSkeleton = ({ variant }: { variant: 'groups' | 'teams' }) => {
+  if (variant === 'groups') {
+    return (
+      <ul
+        className={styles.skeletonGroupList}
+        aria-hidden="true"
+      >
+        {Array.from({ length: 4 }, (_, index) => (
+          <li
+            key={index}
+            className={styles.skeletonGroupItem}
+          >
+            <Skeleton
+              type="text"
+              className={styles.skeletonGroupTitle}
+            />
+            <Skeleton type="circle" />
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
+  return (
+    <ul
+      className={styles.skeletonTeamList}
+      aria-hidden="true"
+    >
+      {Array.from({ length: 6 }, (_, index) => (
+        <li
+          key={index}
+          className={styles.skeletonTeamItem}
+        >
+          <Skeleton type="picture" />
+          <span className={styles.skeletonTextStack}>
+            <Skeleton
+              type="subtitle"
+              className={styles.skeletonEyebrow}
+            />
+            <Skeleton
+              type="text"
+              className={styles.skeletonName}
+            />
+          </span>
+          <Skeleton type="code" />
+        </li>
+      ))}
+    </ul>
+  );
+};
 
 interface Props {
   seasonId: string;
@@ -314,7 +366,9 @@ const SeasonTeamsCard = ({
       action={alignmentControl}
     >
       {loading || (showPreview && previewLoading) ? (
-        <p className={styles.emptyMsg}>Loading...</p>
+        <SeasonTeamsSkeleton
+          variant={draftAlignment?.structure_type === 'groups' ? 'groups' : 'teams'}
+        />
       ) : userRoots.length > 0 ? (
         <ul className={styles.groupList}>
           {userRoots.map((group) => (

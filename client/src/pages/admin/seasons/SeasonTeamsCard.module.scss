@@ -49,6 +49,73 @@
   gap: $space-xs;
 }
 
+.skeletonTeamList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.skeletonTeamItem {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  padding: $space-md;
+  min-height: 74px;
+  opacity: 0.55;
+}
+
+.skeletonTextStack {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.skeletonEyebrow {
+  width: min(92px, 35%);
+  height: 10px;
+}
+
+.skeletonName {
+  width: min(180px, 65%);
+  height: 14px;
+}
+
+.skeletonGroupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-md;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.skeletonGroupItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  min-height: 50px;
+  padding: $space-sm $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.02);
+  opacity: 0.55;
+}
+
+.skeletonGroupTitle {
+  width: min(180px, 70%);
+  height: 14px;
+}
+
 .groupList {
   list-style: none;
   margin: 0;
