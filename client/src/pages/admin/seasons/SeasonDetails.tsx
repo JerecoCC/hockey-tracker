@@ -1299,6 +1299,7 @@ const SeasonDetailsPage = () => {
         addSeason={async () => false}
         updateSeason={updateSeason}
         lockedLeagueId={season.league_id}
+        showGamesPerSeason
         showRegularSeasonSettings
         leagueBestOfShootout={season.league_best_of_shootout}
         leagueScoringSystem={season.league_scoring_system}

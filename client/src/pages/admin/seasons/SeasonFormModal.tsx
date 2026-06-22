@@ -6,22 +6,12 @@ import { type SelectOption } from '@/components/Select/Select';
 import { type CreateSeasonData, type SeasonRecord } from '@/hooks/useSeasons';
 import styles from './SeasonFormModal.module.scss';
 
-const SHOOTOUT_OPTIONS = (leagueDefault?: number) => [
-  {
-    value: '',
-    label:
-      leagueDefault != null ? `Use league default (${leagueDefault} rounds)` : 'Use league default',
-  },
-  { value: '3', label: '3 rounds' },
-  { value: '5', label: '5 rounds' },
-  { value: '7', label: '7 rounds' },
-];
+const SHOOTOUT_OPTIONS: SelectOption[] = [3, 5, 7].map((value) => ({
+  value: String(value),
+  label: `${value} rounds`,
+}));
 
-const SCORING_SYSTEM_OPTIONS = (leagueDefault?: string) => [
-  {
-    value: '',
-    label: leagueDefault != null ? `Use league default (${leagueDefault})` : 'Use league default',
-  },
+const SCORING_SYSTEM_OPTIONS: SelectOption[] = [
   { value: '2-1-0', label: '2-1-0 (W / OT Loss / Loss)' },
   { value: '3-2-1-0', label: '3-2-1-0 (W / OT W / OT Loss / Loss)' },
 ];
@@ -47,6 +37,8 @@ interface Props {
   lockedLeagueId?: string;
   /** Shows regular-season override fields when the full season details record is available. */
   showRegularSeasonSettings?: boolean;
+  /** Shows the games-per-season field. Hidden in league details where it is not managed. */
+  showGamesPerSeason?: boolean;
   leagueBestOfShootout?: number;
   leagueScoringSystem?: '3-2-1-0' | '2-1-0';
 }
@@ -61,6 +53,7 @@ const SeasonFormModal = (props: Props) => {
     updateSeason,
     lockedLeagueId,
     showRegularSeasonSettings = false,
+    showGamesPerSeason = false,
     leagueBestOfShootout,
     leagueScoringSystem,
   } = props;
@@ -73,10 +66,14 @@ const SeasonFormModal = (props: Props) => {
       games_per_season:
         editTarget?.games_per_season != null ? String(editTarget.games_per_season) : '',
       best_of_shootout:
-        editTarget?.best_of_shootout != null ? String(editTarget.best_of_shootout) : '',
-      scoring_system: editTarget?.scoring_system ?? '',
+        editTarget?.best_of_shootout != null
+          ? String(editTarget.best_of_shootout)
+          : leagueBestOfShootout != null
+            ? String(leagueBestOfShootout)
+            : '',
+      scoring_system: editTarget?.scoring_system ?? leagueScoringSystem ?? '',
     }),
-    [editTarget, lockedLeagueId],
+    [editTarget, lockedLeagueId, leagueBestOfShootout, leagueScoringSystem],
   );
   const {
     control,
@@ -103,13 +100,18 @@ const SeasonFormModal = (props: Props) => {
       name: data.name.trim(),
       start_date: data.start_date || null,
       end_date: data.end_date || null,
-      games_per_season: data.games_per_season ? parseInt(data.games_per_season, 10) : null,
     };
+    if (showGamesPerSeason) {
+      payload.games_per_season = data.games_per_season ? parseInt(data.games_per_season, 10) : null;
+    }
     if (showRegularSeasonSettings) {
-      payload.best_of_shootout = data.best_of_shootout
-        ? parseInt(data.best_of_shootout, 10)
-        : null;
-      payload.scoring_system = (data.scoring_system as '2-1-0' | '3-2-1-0') || null;
+      const shootoutValue = data.best_of_shootout ? parseInt(data.best_of_shootout, 10) : null;
+      payload.best_of_shootout =
+        shootoutValue != null && shootoutValue !== leagueBestOfShootout ? shootoutValue : null;
+      payload.scoring_system =
+        data.scoring_system && data.scoring_system !== leagueScoringSystem
+          ? (data.scoring_system as '2-1-0' | '3-2-1-0')
+          : null;
     }
     const ok = editTarget ? await updateSeason(editTarget.id, payload) : await addSeason(payload);
     if (ok) handleClose();
@@ -130,17 +132,19 @@ const SeasonFormModal = (props: Props) => {
         className={styles.form}
         onSubmit={onSubmit}
       >
-        <Field
-          label="League"
-          required
-          type="select"
-          control={control}
-          name="league_id"
-          rules={{ required: true }}
-          options={leagueOptions}
-          placeholder="— Select a league —"
-          disabled={!!editTarget || !!lockedLeagueId}
-        />
+        {!lockedLeagueId && (
+          <Field
+            label="League"
+            required
+            type="select"
+            control={control}
+            name="league_id"
+            rules={{ required: true }}
+            options={leagueOptions}
+            placeholder="— Select a league —"
+            disabled={!!editTarget}
+          />
+        )}
         <Field
           label="Name"
           required
@@ -167,33 +171,56 @@ const SeasonFormModal = (props: Props) => {
             placeholder="Select end date…"
           />
         </div>
-        <Field
-          label="Games Per Season"
-          type="number"
-          control={control}
-          name="games_per_season"
-          placeholder="e.g. 82"
-          rules={{
-            min: { value: 1, message: 'Must be at least 1' },
-            max: { value: 9999, message: 'Too many games' },
-          }}
-        />
+        {showGamesPerSeason && !showRegularSeasonSettings && (
+          <Field
+            label="Games Per Season"
+            type="number"
+            control={control}
+            name="games_per_season"
+            placeholder="e.g. 82"
+            rules={{
+              min: { value: 1, message: 'Must be at least 1' },
+              max: { value: 9999, message: 'Too many games' },
+            }}
+          />
+        )}
         {showRegularSeasonSettings && (
           <div className={styles.settingsGrid}>
-            <Field
-              label="Shootout Rounds"
-              type="select"
-              control={control}
-              name="best_of_shootout"
-              options={SHOOTOUT_OPTIONS(leagueBestOfShootout)}
-              disabled={isSubmitting}
-            />
+            {showGamesPerSeason && (
+              <div className={styles.settingsGridCompact}>
+                <Field
+                  label="Games Per Season"
+                  type="number"
+                  control={control}
+                  name="games_per_season"
+                  placeholder="e.g. 82"
+                  rules={{
+                    min: { value: 1, message: 'Must be at least 1' },
+                    max: { value: 9999, message: 'Too many games' },
+                  }}
+                />
+              </div>
+            )}
+            <div>
+              <Field
+                label="Shootout Rounds"
+                type="select"
+                control={control}
+                name="best_of_shootout"
+                options={SHOOTOUT_OPTIONS}
+                disabled={isSubmitting}
+              />
+            </div>
+          </div>
+        )}
+        {showRegularSeasonSettings && (
+          <div className={styles.settingsGridFull}>
             <Field
               label="Scoring System"
               type="select"
               control={control}
               name="scoring_system"
-              options={SCORING_SYSTEM_OPTIONS(leagueScoringSystem)}
+              options={SCORING_SYSTEM_OPTIONS}
               disabled={isSubmitting}
             />
           </div>
