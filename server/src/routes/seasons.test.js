@@ -367,6 +367,15 @@ describe('GET /api/admin/seasons/:seasonId/groups', () => {
     expect(res.body[0].has_season_override).toBe(false);
   });
 
+  it('returns no groups for a league-wide alignment set', async () => {
+    sql
+      .mockResolvedValueOnce([{ ...SEASON, group_alignment_set_id: 'alignment-1' }])
+      .mockResolvedValueOnce([{ id: 'alignment-1', structure_type: 'league' }]);
+    const res = await request(app).get('/api/admin/seasons/season-1/groups');
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([]);
+  });
+
   it('returns 500 on DB error', async () => {
     sql.mockRejectedValueOnce(new Error('DB down'));
     const res = await request(app).get('/api/admin/seasons/season-1/groups');
@@ -387,9 +396,7 @@ describe('PUT /api/admin/seasons/:seasonId/groups/:groupId/teams', () => {
   });
 
   it('returns 404 when season not found', async () => {
-    sql
-      .mockResolvedValueOnce([])         // season check
-      .mockResolvedValueOnce([GROUP]);   // group check
+    sql.mockResolvedValueOnce([]); // season check
     const res = await request(app)
       .put('/api/admin/seasons/nope/groups/group-1/teams')
       .send({ team_ids: [] });
@@ -441,7 +448,9 @@ describe('PUT /api/admin/seasons/:seasonId/groups/:groupId/teams', () => {
 // ---------------------------------------------------------------------------
 describe('DELETE /api/admin/seasons/:seasonId/groups/:groupId/teams', () => {
   it('removes the season override and returns 200', async () => {
-    sql.mockResolvedValueOnce([]);
+    sql
+      .mockResolvedValueOnce([SEASON])
+      .mockResolvedValueOnce([]);
     const res = await request(app)
       .delete('/api/admin/seasons/season-1/groups/group-1/teams');
     expect(res.status).toBe(200);

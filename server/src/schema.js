@@ -70,6 +70,7 @@ const seasons = pgTable('seasons', {
   gamesPerSeason: smallint('games_per_season'),
   playoffFormat: jsonb('playoff_format'),
   bracketRuleSetId: uuid('bracket_rule_set_id'),
+  groupAlignmentSetId: uuid('group_alignment_set_id'),
   bestOfPlayoff: smallint('best_of_playoff'),
   bestOfShootout: smallint('best_of_shootout'),
   scoringSystem: text('scoring_system'),
@@ -103,6 +104,52 @@ const seasonGroupTeams = pgTable('season_group_teams', {
   createdAt: createdAt(),
 }, (table) => ({
   pk: primaryKey({ columns: [table.seasonId, table.groupId, table.teamId] }),
+}));
+
+const groupAlignmentSets = pgTable('group_alignment_sets', {
+  id: id(),
+  leagueId: uuid('league_id').notNull().references(() => leagues.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  structureType: text('structure_type').notNull().default('groups'),
+  createdAt: createdAt(),
+}, (table) => ({
+  leagueAlignmentSetNameUnique: unique().on(table.leagueId, table.name),
+}));
+
+const groupAlignmentGroups = pgTable('group_alignment_groups', {
+  id: id(),
+  alignmentSetId: uuid('alignment_set_id').notNull().references(() => groupAlignmentSets.id, { onDelete: 'cascade' }),
+  parentId: uuid('parent_id'),
+  stableKey: text('stable_key'),
+  name: text('name').notNull(),
+  role: text('role'),
+  sortOrder: integer('sort_order').notNull().default(0),
+  createdAt: createdAt(),
+});
+
+const groupAlignmentTeams = pgTable('group_alignment_teams', {
+  alignmentGroupId: uuid('alignment_group_id').notNull().references(() => groupAlignmentGroups.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.alignmentGroupId, table.teamId] }),
+}));
+
+const groupAlignmentSetTeams = pgTable('group_alignment_set_teams', {
+  alignmentSetId: uuid('alignment_set_id').notNull().references(() => groupAlignmentSets.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.alignmentSetId, table.teamId] }),
+}));
+
+const seasonAlignmentGroupTeams = pgTable('season_alignment_group_teams', {
+  seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
+  alignmentGroupId: uuid('alignment_group_id').notNull().references(() => groupAlignmentGroups.id, { onDelete: 'cascade' }),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  createdAt: createdAt(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.seasonId, table.alignmentGroupId, table.teamId] }),
 }));
 
 const seasonTeams = pgTable('season_teams', {
@@ -333,6 +380,11 @@ module.exports = {
   groups,
   groupTeams,
   seasonGroupTeams,
+  groupAlignmentSets,
+  groupAlignmentGroups,
+  groupAlignmentTeams,
+  groupAlignmentSetTeams,
+  seasonAlignmentGroupTeams,
   seasonTeams,
   leagueAwards,
   seasonAwards,

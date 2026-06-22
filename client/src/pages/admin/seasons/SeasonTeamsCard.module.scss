@@ -1,0 +1,109 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.layout {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: $space-xl;
+  align-items: start;
+  container-type: inline-size;
+
+  @container (max-width: #{$bp-tablet}) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.layoutLeft,
+.layoutRight {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+.alignmentSelector {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.alignmentHint {
+  margin: 0;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-style: italic;
+}
+
+.emptyMsg {
+  margin: $space-sm $space-md;
+  color: $text-dim;
+  font-size: $font-sm;
+  font-style: italic;
+}
+
+.teamList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.groupList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-md;
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.groupNestedList {
+  padding: $space-sm $space-md $space-md;
+
+  > .groupList {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+}
+
+.groupItem {
+  display: flex;
+  flex-direction: column;
+}
+
+.groupLabel {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.groupRoleBadge {
+  display: inline-block;
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+  text-transform: uppercase;
+}
+
+.groupRoleBadge_conference {
+  background: rgba($accent, 0.18);
+  color: $accent-light;
+  border: 1px solid rgba($accent, 0.3);
+}
+
+.groupRoleBadge_division {
+  background: rgba($success, 0.18);
+  color: $success-light;
+  border: 1px solid rgba($success, 0.3);
+}

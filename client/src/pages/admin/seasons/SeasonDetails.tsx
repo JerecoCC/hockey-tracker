@@ -130,17 +130,10 @@ const SeasonDetailsPage = () => {
   const {
     season,
     groups,
+    alignmentSets,
     seasonTeams,
-    leagueTeams,
     loading: detailsLoading,
     busy,
-    groupBusy,
-    setSeasonTeams,
-    setSeasonGroupTeams,
-    resetSeasonGroupTeams,
-    addGroup,
-    updateGroup,
-    deleteGroup,
     setCurrentSeason,
     startPlayoffs,
     endSeason,
@@ -229,7 +222,6 @@ const SeasonDetailsPage = () => {
     ],
   );
 
-  const [confirmDeleteGroup, setConfirmDeleteGroup] = useState<SeasonGroupRecord | null>(null);
   const [showEndModal, setShowEndModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showStartPlayoffsConfirm, setShowStartPlayoffsConfirm] = useState(false);
@@ -886,20 +878,16 @@ const SeasonDetailsPage = () => {
               <SeasonTeamsCard
                 seasonId={id!}
                 seasonName={season.name}
-                seasonTeams={seasonTeams}
-                groups={groups}
-                leagueTeams={leagueTeams}
+                leagueId={season.league_id}
                 leagueCode={season.league_code}
+                groups={groups}
+                seasonTeams={effectiveSeasonTeams}
+                alignmentSets={alignmentSets}
                 loading={loading}
                 busy={busy}
-                groupBusy={groupBusy}
                 isEnded={season.is_ended}
-                setSeasonTeams={setSeasonTeams}
-                setSeasonGroupTeams={setSeasonGroupTeams}
-                resetSeasonGroupTeams={resetSeasonGroupTeams}
-                addGroup={addGroup}
-                updateGroup={updateGroup}
-                onDeleteGroup={setConfirmDeleteGroup}
+                groupAlignmentSetId={season.group_alignment_set_id}
+                updateSeason={updateSeason}
               />
             ),
           },
@@ -1267,27 +1255,6 @@ const SeasonDetailsPage = () => {
             ),
           },
         ]}
-      />
-
-      <ConfirmModal
-        open={confirmDeleteGroup !== null}
-        title="Delete Division"
-        body={
-          <>
-            Delete <strong>{confirmDeleteGroup?.name}</strong>? This will also remove any
-            sub-divisions and all season team assignments for this division.
-          </>
-        }
-        confirmLabel="Delete"
-        confirmIcon="delete"
-        variant="danger"
-        busy={groupBusy === confirmDeleteGroup?.id}
-        onCancel={() => setConfirmDeleteGroup(null)}
-        onConfirm={async () => {
-          if (!confirmDeleteGroup) return;
-          await deleteGroup(confirmDeleteGroup.id);
-          setConfirmDeleteGroup(null);
-        }}
       />
 
       <ConfirmModal

@@ -811,3 +811,28 @@
     transform: rotate(360deg);
   }
 }
+
+.alignmentControls {
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr);
+  align-items: center;
+  gap: $space-sm;
+  margin-bottom: $space-md;
+}
+
+.alignmentSelect {
+  min-width: 0;
+}
+
+.alignmentHint {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: $text-dim;
+  font-size: $font-sm;
+}
+
+@media (max-width: 640px) {
+  .alignmentControls {
+    grid-template-columns: 1fr;
+  }
+}

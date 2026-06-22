@@ -171,6 +171,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   grid_view: faTableCells,
   view_list: faList,
   playlist_add: faLayerGroup,
+  account_tree: faLayerGroup,
 
   // loading / time
   hourglass_empty: faHourglassHalf,

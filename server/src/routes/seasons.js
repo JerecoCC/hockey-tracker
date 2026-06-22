@@ -21,6 +21,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 s.group_alignment_set_id,
                  s.created_at,
                  l.name AS league_name, l.code AS league_code, l.logo AS league_logo
           FROM seasons s
@@ -34,6 +35,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 s.group_alignment_set_id,
                  s.created_at,
                  l.name AS league_name, l.code AS league_code, l.logo AS league_logo
           FROM seasons s
@@ -64,6 +66,7 @@ router.get('/:id', async (req, res) => {
              s.best_of_shootout,
              s.scoring_system,
              s.bracket_rule_set_id,
+             s.group_alignment_set_id,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
              l.scoring_system    AS league_scoring_system,
@@ -86,7 +89,14 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/seasons  – create a season
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { league_id, name, start_date, end_date, games_per_season } = req.body;
+  const {
+    league_id,
+    name,
+    start_date,
+    end_date,
+    games_per_season,
+    group_alignment_set_id,
+  } = req.body;
 
   if (!league_id)
     return res.status(400).json({ error: 'league_id is required' });
@@ -99,11 +109,33 @@ router.post('/', async (req, res) => {
     if (leagueRows.length === 0)
       return res.status(400).json({ error: 'League not found' });
 
+    if (group_alignment_set_id) {
+      const alignmentRows = await sql`
+        SELECT id FROM group_alignment_sets
+        WHERE id = ${group_alignment_set_id} AND league_id = ${league_id}
+      `;
+      if (alignmentRows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'group_alignment_set_id does not belong to this league' });
+      }
+    }
+
     const rows = await sql`
-      INSERT INTO seasons (name, league_id, start_date, end_date, games_per_season)
-      VALUES (${name.trim()}, ${league_id}, ${start_date ?? null}, ${end_date ?? null}, ${games_per_season ?? null})
+      INSERT INTO seasons (
+        name, league_id, start_date, end_date, games_per_season, group_alignment_set_id
+      )
+      VALUES (
+        ${name.trim()},
+        ${league_id},
+        ${start_date ?? null},
+        ${end_date ?? null},
+        ${games_per_season ?? null},
+        ${group_alignment_set_id || null}
+      )
       RETURNING id, name, league_id, FALSE AS is_current,
-                start_date::text AS start_date, end_date::text AS end_date, games_per_season, created_at
+                start_date::text AS start_date, end_date::text AS end_date,
+                games_per_season, group_alignment_set_id, created_at
     `;
     return res.status(201).json(rows[0]);
   } catch (err) {
@@ -131,6 +163,7 @@ router.patch('/:id', async (req, res) => {
     best_of_shootout,
     scoring_system,
     bracket_rule_set_id,
+    group_alignment_set_id,
   } = req.body;
 
   try {
@@ -141,7 +174,7 @@ router.patch('/:id', async (req, res) => {
              playoffs_started,
              games_per_season, playoff_format,
              best_of_playoff, best_of_shootout, scoring_system,
-             bracket_rule_set_id
+             bracket_rule_set_id, group_alignment_set_id
       FROM seasons WHERE id = ${id}
     `;
     if (existing.length === 0)
@@ -182,6 +215,10 @@ router.patch('/:id', async (req, res) => {
       bracket_rule_set_id !== undefined
         ? bracket_rule_set_id || null
         : cur.bracket_rule_set_id;
+    const mergedGroupAlignmentSetId =
+      group_alignment_set_id !== undefined
+        ? group_alignment_set_id || null
+        : cur.group_alignment_set_id;
     // Auto-set is_ended when an end_date is provided; never auto-clear it.
     const mergedIsEnded = mergedEndDate ? true : cur.is_ended;
 
@@ -192,6 +229,18 @@ router.patch('/:id', async (req, res) => {
         await sql`SELECT id FROM leagues WHERE id = ${mergedLeagueId}`;
       if (leagueRows.length === 0)
         return res.status(400).json({ error: 'League not found' });
+    }
+
+    if (mergedGroupAlignmentSetId) {
+      const alignmentRows = await sql`
+        SELECT id FROM group_alignment_sets
+        WHERE id = ${mergedGroupAlignmentSetId} AND league_id = ${mergedLeagueId}
+      `;
+      if (alignmentRows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'group_alignment_set_id does not belong to this league' });
+      }
     }
 
     await sql`
@@ -207,7 +256,8 @@ router.patch('/:id', async (req, res) => {
         best_of_playoff      = ${mergedBestOfPlayoff},
         best_of_shootout     = ${mergedBestOfShootout},
         scoring_system       = ${mergedScoringSystem},
-        bracket_rule_set_id  = ${mergedBracketRuleSetId}
+        bracket_rule_set_id  = ${mergedBracketRuleSetId},
+        group_alignment_set_id = ${mergedGroupAlignmentSetId}
       WHERE id = ${id}
     `;
 
@@ -227,6 +277,8 @@ router.patch('/:id', async (req, res) => {
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
              s.playoff_format,
+             s.bracket_rule_set_id,
+             s.group_alignment_set_id,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
       FROM seasons s
@@ -325,6 +377,7 @@ router.patch('/:id/playoffs', async (req, res) => {
              s.games_per_season,
              s.playoff_format,
              s.bracket_rule_set_id,
+             s.group_alignment_set_id,
              s.best_of_playoff, s.best_of_shootout, s.scoring_system,
              s.created_at,
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo,
@@ -491,11 +544,61 @@ router.delete('/:id', async (req, res) => {
 router.get('/:seasonId/teams', async (req, res) => {
   const { seasonId } = req.params;
   try {
-    const seasonRows =
-      await sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`;
+    const seasonRows = await sql`
+      SELECT id, league_id, start_date::text, group_alignment_set_id
+      FROM seasons
+      WHERE id = ${seasonId}
+    `;
     if (seasonRows.length === 0)
       return res.status(404).json({ error: 'Season not found' });
-    const { league_id, start_date: seasonStartDate } = seasonRows[0];
+    const {
+      league_id,
+      start_date: seasonStartDate,
+      group_alignment_set_id: groupAlignmentSetId,
+    } = seasonRows[0];
+
+    if (groupAlignmentSetId) {
+      const alignmentRows = await sql`
+        SELECT id, structure_type
+        FROM group_alignment_sets
+        WHERE id = ${groupAlignmentSetId} AND league_id = ${league_id}
+      `;
+      if (alignmentRows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'Season alignment set does not belong to this league' });
+      }
+
+      if (alignmentRows[0].structure_type !== 'league') {
+        return res.json([]);
+      }
+
+      const alignmentTeams = await sql`
+        SELECT
+          t.id, iter.name, iter.place_name, iter.team_name, iter.code, iter.logo,
+          t.primary_color, t.text_color, t.secondary_color, t.home_arena,
+          false AS inherited
+        FROM group_alignment_set_teams ast
+        JOIN teams t ON t.id = ast.team_id
+        LEFT JOIN LATERAL (
+          (SELECT ti.name, ti.place_name, ti.team_name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
+            LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+            LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
+            WHERE ti.team_id = t.id
+              AND (ti.start_season_id  IS NULL OR ss.start_date <= ${seasonStartDate}::date)
+              AND (ti.latest_season_id IS NULL OR ls.start_date >= ${seasonStartDate}::date)
+            ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
+            LIMIT 1)
+          UNION ALL
+          (SELECT ti.name, ti.place_name, ti.team_name, ti.code, team_logo_default(ti.logo_dark, ti.logo_light) AS logo FROM team_iterations ti
+            WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
+          LIMIT 1
+        ) iter ON true
+        WHERE ast.alignment_set_id = ${groupAlignmentSetId}
+        ORDER BY iter.name
+      `;
+      return res.json(alignmentTeams);
+    }
 
     // 1. Try the current season's explicit roster.
     //    Resolve each team's identity using season FKs on team_iterations:
@@ -713,10 +816,145 @@ router.get('/:seasonId/groups', async (req, res) => {
   const { seasonId } = req.params;
   try {
     const seasonRows =
-      await sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`;
+      await sql`
+        SELECT id, league_id, start_date::text, group_alignment_set_id
+        FROM seasons
+        WHERE id = ${seasonId}
+      `;
     if (seasonRows.length === 0)
       return res.status(404).json({ error: 'Season not found' });
-    const { league_id, start_date: seasonStartDate } = seasonRows[0];
+    const {
+      league_id,
+      start_date: seasonStartDate,
+      group_alignment_set_id: groupAlignmentSetId,
+    } = seasonRows[0];
+
+    if (groupAlignmentSetId) {
+      const alignmentRows = await sql`
+        SELECT id, structure_type
+        FROM group_alignment_sets
+        WHERE id = ${groupAlignmentSetId} AND league_id = ${league_id}
+      `;
+      if (alignmentRows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'Season alignment set does not belong to this league' });
+      }
+
+      if (alignmentRows[0].structure_type === 'league') {
+        return res.json([]);
+      }
+
+      const groups = await sql`
+        WITH
+          cur_overrides AS (
+            SELECT DISTINCT alignment_group_id
+            FROM season_alignment_group_teams
+            WHERE season_id = ${seasonId}
+          ),
+          resolved AS (
+            SELECT sagt.alignment_group_id, sagt.team_id, 'season' AS src
+            FROM season_alignment_group_teams sagt
+            WHERE sagt.season_id = ${seasonId}
+
+            UNION ALL
+
+            SELECT gat.alignment_group_id, gat.team_id, 'default' AS src
+            FROM group_alignment_teams gat
+            WHERE gat.alignment_group_id NOT IN (
+              SELECT alignment_group_id FROM cur_overrides
+            )
+          ),
+          versioned AS (
+            SELECT
+              r.alignment_group_id,
+              r.team_id,
+              r.src,
+              iter.name,
+              iter.place_name,
+              iter.team_name,
+              iter.code,
+              iter.logo,
+              iter.logo_dark,
+              iter.logo_light,
+              t.primary_color,
+              t.text_color,
+              t.home_arena
+            FROM resolved r
+            JOIN group_alignment_groups ag ON ag.id = r.alignment_group_id
+            JOIN teams t ON t.id = r.team_id
+            LEFT JOIN LATERAL (
+              (SELECT
+                  ti.name,
+                  ti.place_name,
+                  ti.team_name,
+                  ti.code,
+                  team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+                  team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+                  team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+                FROM team_iterations ti
+                LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+                LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
+                WHERE ti.team_id = t.id
+                  AND (ti.start_season_id IS NULL OR ss.start_date <= ${seasonStartDate}::date)
+                  AND (ti.latest_season_id IS NULL OR ls.start_date >= ${seasonStartDate}::date)
+                ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
+                LIMIT 1)
+              UNION ALL
+              (SELECT
+                  ti.name,
+                  ti.place_name,
+                  ti.team_name,
+                  ti.code,
+                  team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+                  team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+                  team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+                FROM team_iterations ti
+                WHERE ti.team_id = t.id ORDER BY ti.recorded_at ASC LIMIT 1)
+              LIMIT 1
+            ) iter ON true
+            WHERE ag.alignment_set_id = ${groupAlignmentSetId}
+          )
+        SELECT
+          ag.id,
+          gas.league_id,
+          ag.alignment_set_id,
+          ag.parent_id,
+          ag.name,
+          ag.sort_order,
+          ag.created_at,
+          ag.role,
+          false AS is_auto,
+          COALESCE(
+            json_agg(
+              json_build_object(
+                'id', v.team_id,
+                'name', v.name,
+                'place_name', v.place_name,
+                'team_name', v.team_name,
+                'code', v.code,
+                'logo', v.logo,
+                'logo_dark', v.logo_dark,
+                'logo_light', v.logo_light,
+                'primary_color', v.primary_color,
+                'text_color', v.text_color,
+                'home_arena', v.home_arena
+              )
+              ORDER BY v.name
+            ) FILTER (WHERE v.team_id IS NOT NULL),
+            '[]'::json
+          ) AS teams,
+          BOOL_OR(v.src = 'season') AS has_season_override,
+          false AS is_inherited
+        FROM group_alignment_groups ag
+        JOIN group_alignment_sets gas ON gas.id = ag.alignment_set_id
+        LEFT JOIN versioned v ON v.alignment_group_id = ag.id
+        WHERE ag.alignment_set_id = ${groupAlignmentSetId}
+        GROUP BY ag.id, gas.league_id
+        ORDER BY ag.parent_id NULLS FIRST, ag.sort_order, ag.name
+      `;
+      return res.json(groups);
+    }
 
     const groups = await sql`
       WITH
@@ -893,15 +1131,75 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
   }
 
   try {
-    const [seasonRows, groupRows] = await Promise.all([
-      sql`SELECT id, league_id, start_date::text FROM seasons WHERE id = ${seasonId}`,
-      sql`SELECT id, league_id FROM groups  WHERE id = ${groupId}`,
-    ]);
+    const seasonRows = await sql`
+      SELECT id, league_id, start_date::text, group_alignment_set_id
+      FROM seasons
+      WHERE id = ${seasonId}
+    `;
     if (seasonRows.length === 0)
       return res.status(404).json({ error: 'Season not found' });
+    const {
+      league_id: seasonLeagueId,
+      start_date: seasonStartDate,
+      group_alignment_set_id: groupAlignmentSetId,
+    } = seasonRows[0];
+
+    if (groupAlignmentSetId) {
+      const groupRows = await sql`
+        SELECT ag.id, gas.league_id
+        FROM group_alignment_groups ag
+        JOIN group_alignment_sets gas ON gas.id = ag.alignment_set_id
+        WHERE ag.id = ${groupId}
+          AND ag.alignment_set_id = ${groupAlignmentSetId}
+      `;
+      if (groupRows.length === 0)
+        return res.status(404).json({ error: 'Group not found' });
+      if (groupRows[0].league_id !== seasonLeagueId) {
+        return res
+          .status(400)
+          .json({ error: 'Season and group must belong to the same league' });
+      }
+
+      await sql`
+        DELETE FROM season_alignment_group_teams
+        WHERE season_id = ${seasonId} AND alignment_group_id = ${groupId}
+      `;
+      for (const team_id of team_ids) {
+        await sql`
+          INSERT INTO season_alignment_group_teams (season_id, alignment_group_id, team_id)
+          VALUES (${seasonId}, ${groupId}, ${team_id})
+          ON CONFLICT DO NOTHING
+        `;
+      }
+
+      const teams = await sql`
+        SELECT t.id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, t.primary_color, t.text_color
+        FROM season_alignment_group_teams sagt
+        JOIN teams t ON t.id = sagt.team_id
+        LEFT JOIN LATERAL (
+          (SELECT ti2.name, ti2.place_name, ti2.team_name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
+            LEFT JOIN seasons ss ON ss.id = ti2.start_season_id
+            LEFT JOIN seasons ls ON ls.id = ti2.latest_season_id
+            WHERE ti2.team_id = t.id
+              AND (ti2.start_season_id  IS NULL OR ss.start_date <= ${seasonStartDate}::date)
+              AND (ti2.latest_season_id IS NULL OR ls.start_date >= ${seasonStartDate}::date)
+            ORDER BY ss.start_date DESC NULLS LAST, ti2.recorded_at DESC
+            LIMIT 1)
+          UNION ALL
+          (SELECT ti2.name, ti2.place_name, ti2.team_name, ti2.code, team_logo_default(ti2.logo_dark, ti2.logo_light) AS logo FROM team_iterations ti2
+            WHERE ti2.team_id = t.id ORDER BY ti2.recorded_at ASC LIMIT 1)
+          LIMIT 1
+        ) ti ON true
+        WHERE sagt.season_id = ${seasonId} AND sagt.alignment_group_id = ${groupId}
+        ORDER BY ti.name
+      `;
+      return res.json({ season_id: seasonId, group_id: groupId, teams });
+    }
+
+    const groupRows = await sql`SELECT id, league_id FROM groups WHERE id = ${groupId}`;
     if (groupRows.length === 0)
       return res.status(404).json({ error: 'Group not found' });
-    if (seasonRows[0].league_id !== groupRows[0].league_id) {
+    if (seasonLeagueId !== groupRows[0].league_id) {
       return res
         .status(400)
         .json({ error: 'Season and group must belong to the same league' });
@@ -916,7 +1214,6 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
       `;
     }
 
-    const { start_date: seasonStartDate } = seasonRows[0];
     const teams = await sql`
       SELECT t.id, ti.name, ti.place_name, ti.team_name, ti.code, ti.logo, t.primary_color, t.text_color
       FROM season_group_teams sgt
@@ -954,6 +1251,22 @@ router.put('/:seasonId/groups/:groupId/teams', async (req, res) => {
 router.delete('/:seasonId/groups/:groupId/teams', async (req, res) => {
   const { seasonId, groupId } = req.params;
   try {
+    const seasonRows = await sql`
+      SELECT group_alignment_set_id FROM seasons WHERE id = ${seasonId}
+    `;
+    if (seasonRows.length === 0)
+      return res.status(404).json({ error: 'Season not found' });
+
+    if (seasonRows[0].group_alignment_set_id) {
+      await sql`
+        DELETE FROM season_alignment_group_teams
+        WHERE season_id = ${seasonId} AND alignment_group_id = ${groupId}
+      `;
+      return res.json({
+        message: 'Season override removed; group reverts to alignment defaults',
+      });
+    }
+
     await sql`
       DELETE FROM season_group_teams WHERE season_id = ${seasonId} AND group_id = ${groupId}
     `;

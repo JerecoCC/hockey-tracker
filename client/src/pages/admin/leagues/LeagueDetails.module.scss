@@ -151,14 +151,22 @@
 }
 
 .ruleSetName {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   font-size: $font-sm;
   color: $text-body;
   font-weight: 500;
-  flex: 1;
-  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
+
+  > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .ruleSetActions {
@@ -166,6 +174,228 @@
   align-items: center;
   gap: $space-xs;
   flex-shrink: 0;
+}
+
+.alignmentSetMeta {
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 400;
+}
+
+.alignmentSetForm {
+  display: grid;
+  gap: $space-md;
+}
+
+.teamsTabStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.leagueTeamsActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.teamsViewSwitch {
+  width: auto;
+  flex-shrink: 0;
+  min-height: calc(#{$font-sm} * 1.2 + #{$space-md} * 2 + 2px);
+
+  button {
+    height: 100%;
+    min-width: 38px;
+    padding: 0 $space-md;
+  }
+}
+
+.alignmentCards {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.alignmentViewHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+
+  h3 {
+    margin: 0;
+    color: $text-body;
+    font-size: $font-lg;
+  }
+
+  p {
+    margin: 3px 0 0;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
+
+  @media (max-width: 640px) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.alignmentSetStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.alignmentPanel {
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: $bg-page;
+  overflow: hidden;
+}
+
+.alignmentPanelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  padding: $space-sm $space-md;
+}
+
+.alignmentPanelBody {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  padding: $space-md;
+  border-top: 1px solid $border;
+}
+
+.alignmentEditRow {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 220px) auto;
+  align-items: end;
+  gap: $space-md;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
+
+.alignmentEditLabel {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  min-width: 0;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+
+  input,
+  select {
+    min-height: 38px;
+    width: 100%;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba(0, 0, 0, 0.18);
+    color: $text-body;
+    font-size: $font-sm;
+    font-weight: 500;
+    letter-spacing: 0;
+    padding: 0 $space-sm;
+    text-transform: none;
+
+    &:focus {
+      outline: none;
+      border-color: $accent-light;
+      box-shadow: 0 0 0 2px rgba($accent, 0.18);
+    }
+  }
+}
+
+.alignmentCardMeta {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  flex-wrap: wrap;
+}
+
+.alignmentExpanded {
+  margin-top: $space-md;
+}
+
+.alignmentGroupTools {
+  display: flex;
+  justify-content: flex-end;
+  padding: $space-sm $space-md 0;
+}
+
+.alignmentTeamPicker {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  padding: $space-sm $space-md $space-md;
+}
+
+.alignmentTeamPickerHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: $space-md;
+  color: $text-dim;
+  font-size: $font-sm;
+}
+
+.alignmentTeamPickerList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: $space-xs;
+
+  @media (max-width: 720px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.alignmentTeamPickerItem {
+  display: grid;
+  grid-template-columns: 18px 24px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: $space-sm;
+  min-height: 38px;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: rgba(0, 0, 0, 0.12);
+  color: $text-body;
+  font-size: $font-sm;
+  padding: 0 $space-sm;
+
+  input {
+    margin: 0;
+  }
+
+  span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  code {
+    color: $text-dim;
+    font-size: $font-xs;
+    letter-spacing: 0;
+  }
+}
+
+.alignmentEmptyState {
+  display: flex;
+  align-items: flex-start;
+  flex-direction: column;
+  gap: $space-md;
 }
 
 // Applied only when teams.length > 5 — caps height and enables scrolling

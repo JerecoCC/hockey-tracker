@@ -18,6 +18,301 @@ const connectionString = `${rawUrl}${sep}options=-c%20TimeZone%3DAmerica/New_Yor
 const sql = neon(connectionString);
 const db = drizzle(sql, { schema });
 
+async function copyLegacyGroupsToAlignmentSet({ leagueId, alignmentSetId }) {
+  const legacyGroups = await sql`
+    SELECT id, parent_id, name, role, sort_order
+    FROM groups
+    WHERE league_id = ${leagueId}
+      AND season_id IS NULL
+      AND COALESCE(is_auto, false) = false
+    ORDER BY parent_id NULLS FIRST, sort_order, name
+  `;
+  const idMap = new Map();
+  const pending = [...legacyGroups];
+
+  while (pending.length > 0) {
+    const before = pending.length;
+    for (let i = pending.length - 1; i >= 0; i -= 1) {
+      const group = pending[i];
+      if (group.parent_id && !idMap.has(group.parent_id)) continue;
+      const parentId = group.parent_id ? idMap.get(group.parent_id) : null;
+      const stableKey = `legacy:${group.id}`;
+      const rows = await sql`
+        INSERT INTO group_alignment_groups (
+          alignment_set_id, parent_id, stable_key, name, role, sort_order
+        )
+        VALUES (
+          ${alignmentSetId},
+          ${parentId},
+          ${stableKey},
+          ${group.name},
+          ${group.role ?? null},
+          ${group.sort_order ?? 0}
+        )
+        RETURNING id
+      `;
+      idMap.set(group.id, rows[0].id);
+      pending.splice(i, 1);
+    }
+    if (pending.length === before) break;
+  }
+
+  for (const legacyGroup of legacyGroups) {
+    const alignmentGroupId = idMap.get(legacyGroup.id);
+    if (!alignmentGroupId) continue;
+    const teams = await sql`SELECT team_id FROM group_teams WHERE group_id = ${legacyGroup.id}`;
+    for (const { team_id: teamId } of teams) {
+      await sql`
+        INSERT INTO group_alignment_teams (alignment_group_id, team_id)
+        VALUES (${alignmentGroupId}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+  }
+}
+
+async function copyLegacyGroupTeamsToAlignmentSet({ leagueId, alignmentSetId }) {
+  const alignmentGroups = await sql`
+    SELECT
+      ag.id AS alignment_group_id,
+      REPLACE(ag.stable_key, 'legacy:', '')::uuid AS legacy_group_id
+    FROM group_alignment_groups ag
+    WHERE ag.alignment_set_id = ${alignmentSetId}
+      AND ag.stable_key LIKE 'legacy:%'
+  `;
+
+  for (const group of alignmentGroups) {
+    const existing = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM group_alignment_teams
+      WHERE alignment_group_id = ${group.alignment_group_id}
+    `;
+    if ((existing[0]?.count ?? 0) > 0) continue;
+
+    const defaultTeams = await sql`
+      SELECT team_id
+      FROM group_teams
+      WHERE group_id = ${group.legacy_group_id}
+    `;
+    for (const { team_id: teamId } of defaultTeams) {
+      await sql`
+        INSERT INTO group_alignment_teams (alignment_group_id, team_id)
+        VALUES (${group.alignment_group_id}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+
+    const copiedDefaults = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM group_alignment_teams
+      WHERE alignment_group_id = ${group.alignment_group_id}
+    `;
+    if ((copiedDefaults[0]?.count ?? 0) > 0) continue;
+
+    const inheritedSeasonTeams = await sql`
+      WITH source_season AS (
+        SELECT s.id
+        FROM seasons s
+        WHERE s.league_id = ${leagueId}
+          AND EXISTS (
+            SELECT 1
+            FROM season_group_teams sgt
+            WHERE sgt.season_id = s.id
+              AND sgt.group_id = ${group.legacy_group_id}
+          )
+        ORDER BY s.is_current DESC, s.start_date DESC NULLS LAST, s.created_at DESC
+        LIMIT 1
+      )
+      SELECT sgt.team_id
+      FROM season_group_teams sgt
+      WHERE sgt.season_id = (SELECT id FROM source_season)
+        AND sgt.group_id = ${group.legacy_group_id}
+    `;
+    for (const { team_id: teamId } of inheritedSeasonTeams) {
+      await sql`
+        INSERT INTO group_alignment_teams (alignment_group_id, team_id)
+        VALUES (${group.alignment_group_id}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+  }
+}
+
+async function backfillLegacyGroupAlignmentSets() {
+  const leaguesWithLegacyGroups = await sql`
+    SELECT DISTINCT l.id, l.code
+    FROM leagues l
+    JOIN groups g ON g.league_id = l.id
+    WHERE g.season_id IS NULL
+      AND COALESCE(g.is_auto, false) = false
+  `;
+
+  for (const league of leaguesWithLegacyGroups) {
+    const name = `${league.code || 'League'} Groupings`;
+    const rows = await sql`
+      INSERT INTO group_alignment_sets (league_id, name, structure_type)
+      VALUES (${league.id}, ${name}, 'groups')
+      ON CONFLICT (league_id, name) DO UPDATE
+      SET name = EXCLUDED.name
+      RETURNING id
+    `;
+    const alignmentSetId = rows[0].id;
+    const copiedGroups = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM group_alignment_groups
+      WHERE alignment_set_id = ${alignmentSetId}
+    `;
+    if ((copiedGroups[0]?.count ?? 0) === 0) {
+      await copyLegacyGroupsToAlignmentSet({ leagueId: league.id, alignmentSetId });
+    }
+    await copyLegacyGroupTeamsToAlignmentSet({ leagueId: league.id, alignmentSetId });
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSetId}
+      WHERE league_id = ${league.id}
+        AND group_alignment_set_id IS NULL
+    `;
+  }
+}
+
+async function ensureFlatAlignmentTeamsFromSeason({ alignmentSetId, seasonId }) {
+  const alignmentTeams = await sql`
+    SELECT team_id
+    FROM group_alignment_set_teams
+    WHERE alignment_set_id = ${alignmentSetId}
+  `;
+  const seasonTeams = await sql`
+    SELECT team_id
+    FROM season_teams
+    WHERE season_id = ${seasonId}
+  `;
+  const alignmentTeamIds = new Set(alignmentTeams.map((row) => row.team_id));
+  const seasonTeamIds = new Set(seasonTeams.map((row) => row.team_id));
+  const matches =
+    alignmentTeamIds.size === seasonTeamIds.size &&
+    [...seasonTeamIds].every((teamId) => alignmentTeamIds.has(teamId));
+
+  if (alignmentTeamIds.size > 0 && matches) return { matches: true, wasEmpty: false };
+
+  if (alignmentTeamIds.size === 0) {
+    for (const { team_id: teamId } of seasonTeams) {
+      await sql`
+        INSERT INTO group_alignment_set_teams (alignment_set_id, team_id)
+        VALUES (${alignmentSetId}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+    return { matches: true, wasEmpty: true };
+  }
+
+  return { matches: false, wasEmpty: false };
+}
+
+async function backfillFlatAlignmentSetsFromSeasonRosters() {
+  const seasonsWithAssignedFlatRosters = await sql`
+    SELECT
+      s.id,
+      s.name AS season_name,
+      s.league_id,
+      s.group_alignment_set_id,
+      l.code AS league_code
+    FROM seasons s
+    JOIN leagues l ON l.id = s.league_id
+    JOIN group_alignment_sets gas ON gas.id = s.group_alignment_set_id
+    WHERE gas.structure_type = 'league'
+      AND EXISTS (
+        SELECT 1 FROM season_teams st WHERE st.season_id = s.id
+      )
+    ORDER BY s.league_id, s.start_date NULLS LAST, s.created_at
+  `;
+
+  for (const season of seasonsWithAssignedFlatRosters) {
+    const existing = await ensureFlatAlignmentTeamsFromSeason({
+      alignmentSetId: season.group_alignment_set_id,
+      seasonId: season.id,
+    });
+    if (existing.matches) continue;
+
+    const name = `${season.league_code || 'League'} ${season.season_name} Teams`;
+    const rows = await sql`
+      INSERT INTO group_alignment_sets (league_id, name, structure_type)
+      VALUES (${season.league_id}, ${name}, 'league')
+      ON CONFLICT (league_id, name) DO UPDATE
+      SET structure_type = 'league'
+      RETURNING id
+    `;
+    const alignmentSetId = rows[0].id;
+    const created = await ensureFlatAlignmentTeamsFromSeason({ alignmentSetId, seasonId: season.id });
+    if (!created.matches) continue;
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSetId}
+      WHERE id = ${season.id}
+    `;
+  }
+
+  const seasonsWithRosters = await sql`
+    SELECT
+      s.id,
+      s.name AS season_name,
+      s.league_id,
+      l.code AS league_code
+    FROM seasons s
+    JOIN leagues l ON l.id = s.league_id
+    WHERE EXISTS (
+      SELECT 1 FROM season_teams st WHERE st.season_id = s.id
+    )
+      AND s.group_alignment_set_id IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM groups g
+        WHERE g.league_id = s.league_id
+          AND g.season_id IS NULL
+          AND COALESCE(g.is_auto, false) = false
+      )
+    ORDER BY s.league_id, s.start_date NULLS LAST, s.created_at
+  `;
+
+  for (const season of seasonsWithRosters) {
+    const name = `${season.league_code || 'League'} ${season.season_name} Teams`;
+    const rows = await sql`
+      INSERT INTO group_alignment_sets (league_id, name, structure_type)
+      VALUES (${season.league_id}, ${name}, 'league')
+      ON CONFLICT (league_id, name) DO UPDATE
+      SET structure_type = 'league'
+      RETURNING id
+    `;
+    const alignmentSetId = rows[0].id;
+    const ensured = await ensureFlatAlignmentTeamsFromSeason({ alignmentSetId, seasonId: season.id });
+    if (!ensured.matches) continue;
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSetId}
+      WHERE id = ${season.id}
+        AND group_alignment_set_id IS NULL
+    `;
+  }
+}
+
+async function backfillMissingDefaultGroupAlignmentAssignments() {
+  const defaultGroupings = await sql`
+    SELECT gas.id, gas.league_id
+    FROM group_alignment_sets gas
+    JOIN leagues l ON l.id = gas.league_id
+    WHERE gas.structure_type = 'groups'
+      AND gas.name = CONCAT(l.code, ' Groupings')
+  `;
+
+  for (const alignmentSet of defaultGroupings) {
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSet.id}
+      WHERE league_id = ${alignmentSet.league_id}
+        AND group_alignment_set_id IS NULL
+    `;
+  }
+}
+
 /**
  * Run once at startup: create the users table if it doesn't exist.
  */
@@ -130,6 +425,65 @@ async function initSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (season_id, group_id, team_id)
     )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_sets (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id      UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      name           TEXT NOT NULL,
+      structure_type TEXT NOT NULL DEFAULT 'groups'
+                     CHECK (structure_type IN ('groups', 'league')),
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (league_id, name)
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_groups (
+      id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      alignment_set_id UUID NOT NULL REFERENCES group_alignment_sets(id) ON DELETE CASCADE,
+      parent_id        UUID REFERENCES group_alignment_groups(id) ON DELETE CASCADE,
+      stable_key       TEXT,
+      name             TEXT NOT NULL,
+      role             TEXT CHECK (role IN ('conference', 'division')),
+      sort_order       INT NOT NULL DEFAULT 0,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_teams (
+      alignment_group_id UUID NOT NULL REFERENCES group_alignment_groups(id) ON DELETE CASCADE,
+      team_id            UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (alignment_group_id, team_id)
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_set_teams (
+      alignment_set_id UUID NOT NULL REFERENCES group_alignment_sets(id) ON DELETE CASCADE,
+      team_id          UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (alignment_set_id, team_id)
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS season_alignment_group_teams (
+      season_id          UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      alignment_group_id UUID NOT NULL REFERENCES group_alignment_groups(id) ON DELETE CASCADE,
+      team_id            UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (season_id, alignment_group_id, team_id)
+    )
+  `;
+
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS group_alignment_set_id UUID
+        REFERENCES group_alignment_sets(id) ON DELETE SET NULL
   `;
 
   // Which teams are participating in a given season (season-level roster)
@@ -1502,6 +1856,10 @@ async function initSchema() {
   //   NHL  (top 3/div + 2 WC/conf):
   //     [{"scope":"division","method":"top","count":3},
   //      {"scope":"conference","method":"wildcard","count":2}]
+  await backfillLegacyGroupAlignmentSets();
+  await backfillFlatAlignmentSetsFromSeasonRosters();
+  await backfillMissingDefaultGroupAlignmentAssignments();
+
   await sql`
     ALTER TABLE leagues
       ADD COLUMN IF NOT EXISTS playoff_format JSONB
