@@ -23,6 +23,8 @@ export interface AccordionAction {
 interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Header label – any ReactNode. */
   label: ReactNode;
+  /** Small content rendered immediately after the label, such as counts. */
+  labelMeta?: ReactNode;
   /** Always-visible right-side header content (badges, scores, etc.). */
   headerRight?: ReactNode;
   /** Hover-revealed action buttons rendered from a config array. */
@@ -56,6 +58,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
   (
     {
       label,
+      labelMeta,
       headerRight,
       hoverActions,
       defaultOpen = true,
@@ -75,6 +78,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
     const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
     const open = controlledOpen ?? uncontrolledOpen;
     const isStatic = variant === 'static';
+    const hasHoverActions = hoverActions != null && hoverActions.length > 0;
     const bodyVisible = isStatic || open;
     const setOpen = (next: boolean) => {
       if (controlledOpen === undefined) setUncontrolledOpen(next);
@@ -92,6 +96,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             styles.row,
             !(bodyVisible && children != null) ? styles.rowCollapsed : '',
             isStatic ? styles.rowStatic : '',
+            hasHoverActions ? styles.rowWithActions : '',
             rowClassName,
           ]
             .filter(Boolean)
@@ -110,14 +115,17 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             >
               <Icon
                 name="expand_more"
-                size="0.8em"
+                size="0.8rem"
                 className={open ? styles.toggleIconOpen : styles.toggleIcon}
               />
             </button>
           )}
-          <div className={styles.label}>{label}</div>
+          <div className={styles.labelWrap}>
+            <div className={styles.label}>{label}</div>
+            {labelMeta != null && <div className={styles.labelMeta}>{labelMeta}</div>}
+          </div>
           {headerRight != null && <div className={styles.headerRight}>{headerRight}</div>}
-          {hoverActions != null && hoverActions.length > 0 && (
+          {hasHoverActions && (
             <ActionOverlay className={styles.hoverActions}>
               {hoverActions.map((action, i) => (
                 <Button

@@ -3,7 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import GroupTeamCount from '@/components/GroupTeamCount/GroupTeamCount';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
@@ -48,19 +47,22 @@ const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: Group
   return (
     <li className={styles.groupItem}>
       <Accordion
-        label={
-          <span className={styles.groupLabel}>
-            {group.name}
-            {roleLabel && (
-              <span
-                className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}
-              >
-                {roleLabel}
-              </span>
-            )}
+        label={<span className={styles.groupLabel}>{group.name}</span>}
+        labelMeta={
+          <span
+            className={styles.groupTeamCount}
+            title={`${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
+          >
+            ({teamCount} {teamCount === 1 ? 'team' : 'teams'})
           </span>
         }
-        headerRight={<GroupTeamCount count={teamCount} />}
+        headerRight={
+          roleLabel ? (
+            <span className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}>
+              {roleLabel}
+            </span>
+          ) : null
+        }
       >
         {isLeaf && group.teams.length > 0 && (
           <ul className={styles.groupTeamList}>
@@ -343,7 +345,7 @@ const SeasonTeamsCard = ({
               : 'Alignment cannot be changed after the season ends.'
           }
         >
-          {alignmentLabel}
+          <span className={styles.readonlyAlignmentLabel}>{alignmentLabel}</span>
         </div>
       ) : (
         <>

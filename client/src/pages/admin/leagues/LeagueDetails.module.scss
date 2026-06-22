@@ -812,6 +812,13 @@
   gap: $space-sm;
 }
 
+.groupTeamCount {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+  white-space: nowrap;
+}
+
 // Small pill badge indicating a group's playoff role
 .groupRoleBadge {
   display: inline-flex;

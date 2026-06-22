@@ -231,9 +231,9 @@ const GameLineupsTab = ({
             shape="square"
           />
           {teamName}
-          <span className={styles.accordionTeamCount}>({rosterEntries.length}/23)</span>
         </span>
       }
+      labelMeta={<span className={styles.accordionTeamCount}>({rosterEntries.length}/23)</span>}
       hoverActions={
         readOnly || (isFinal && !isEditMode)
           ? []
@@ -309,7 +309,9 @@ const GameLineupsTab = ({
               isStarter ||
               (isFinal && !isEditMode && isInheritedStarter) ||
               (isInheritedStarter && game.status !== 'scheduled' && !(isFinal && isEditMode));
-            const positionPart = e.position ? (POSITION_LABEL[e.position] ?? e.position) : undefined;
+            const positionPart = e.position
+              ? (POSITION_LABEL[e.position] ?? e.position)
+              : undefined;
             const starterState = buildStarterDraft(e.team_id);
             const quickAddSlot = isStarter ? null : findQuickAddStarterSlot(e, starterState);
             return (

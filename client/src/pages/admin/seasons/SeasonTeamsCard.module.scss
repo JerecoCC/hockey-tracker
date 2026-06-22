@@ -20,17 +20,26 @@
 }
 
 .readonlyAlignmentBox {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   min-height: 42px;
   width: 100%;
+  min-width: 0;
   padding: 0 $space-lg;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: $bg-input;
-  color: $text-body;
+  border: 1px solid rgba($text-dim, 0.2);
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.03);
+  color: $text-dim;
   font-size: $font-base;
   line-height: 1.4;
+  cursor: default;
+}
+
+.readonlyAlignmentLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .emptyMsg {
@@ -161,6 +170,13 @@
   gap: $space-sm;
   min-width: 0;
   overflow: hidden;
+  white-space: nowrap;
+}
+
+.groupTeamCount {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
   white-space: nowrap;
 }
 
