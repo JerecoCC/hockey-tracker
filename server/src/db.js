@@ -1572,29 +1572,6 @@ async function initSchema() {
 
   await sql`DROP TABLE IF EXISTS game_period_shots`;
 
-  // ── Goalie stats ───────────────────────────────────────────────────────────
-  // One row per goalie per game. shots_against is entered manually.
-  // goals_against is derived from the goals table based on entered_period window.
-  // saves = shots_against - goals_against (computed server-side).
-  // entered_period: the period the goalie entered (NULL = started from period 1).
-  await sql`
-    CREATE TABLE IF NOT EXISTS game_goalie_stats (
-      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
-      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
-      goalie_id     UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-      shots_against SMALLINT NOT NULL DEFAULT 0 CHECK (shots_against >= 0),
-      entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO')),
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (game_id, goalie_id)
-    )
-  `;
-  // Migration: add entered_period if missing, drop saves if still present.
-  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO'))`;
-  await sql`ALTER TABLE game_goalie_stats DROP COLUMN IF EXISTS saves`;
-  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS sub_time TEXT CHECK (sub_time ~ '^[0-9]{1,2}:[0-5][0-9]$')`;
-  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS goals_against INTEGER CHECK (goals_against >= 0)`;
-
   // ── Goalie stints ─────────────────────────────────────────────────────────
   // One row per goalie stint within a game. Supports a goalie being pulled and
   // re-inserted any number of times (including within the same period).
@@ -1603,9 +1580,7 @@ async function initSchema() {
   // shots_against and goals_against are stored per-stint; goals_against NULL
   // means "fall back to derivation from the goals table for this window".
   // stint_ord is 1-based and unique per (game_id, team_id).
-  // Phase 1 of the goalie-stints migration: this table is dual-written from
-  // the same admin endpoints that write game_goalie_stats; reads still come
-  // from game_goalie_stats. See rebuild_goalie_stints() below.
+  // This is the source of truth for goalie participation and goalie stats.
   await sql`
     CREATE TABLE IF NOT EXISTS game_goalie_stints (
       id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1626,144 +1601,58 @@ async function initSchema() {
   await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_game_idx   ON game_goalie_stints(game_id)`;
   await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_goalie_idx ON game_goalie_stints(goalie_id)`;
 
-  // ── Helper function: rebuild_goalie_stints ────────────────────────────────
-  // Idempotently rebuilds the per-stint rows for an entire game from the
-  // legacy game_goalie_stats table. Called from each admin write endpoint
-  // (PUT/POST switch/DELETE) so the stints table stays in sync without
-  // requiring callers to perform multiple ordered statements. Will be removed
-  // in Phase 5 once the legacy table is dropped.
+  // Final legacy goalie-stats migration: copy old one-row goalie stats into
+  // stints for games that do not already have stint rows, then remove the
+  // retired table/functions.
   await sql`
-    CREATE OR REPLACE FUNCTION rebuild_goalie_stints(p_game_id uuid)
-    RETURNS void
-    LANGUAGE plpgsql
-    AS $func$
+    DO $$
     BEGIN
-      DELETE FROM game_goalie_stints WHERE game_id = p_game_id;
-      INSERT INTO game_goalie_stints (
-        game_id, team_id, goalie_id, stint_ord,
-        entered_period, entered_time, exited_period, exited_time,
-        shots_against, goals_against
-      )
-      WITH period_vals (p, v) AS (
-        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
-      ),
-      ordered AS (
-        SELECT
-          gs.game_id, gs.team_id, gs.goalie_id,
-          gs.shots_against, gs.goals_against,
-          COALESCE(gs.entered_period, '1')                                    AS entered_period,
-          gs.sub_time                                                         AS entered_time,
-          ROW_NUMBER() OVER (PARTITION BY gs.team_id ORDER BY pv.v)::smallint AS stint_ord,
-          LEAD(COALESCE(gs.entered_period, '1')) OVER (
-            PARTITION BY gs.team_id ORDER BY pv.v
-          )                                                                   AS exited_period,
-          LEAD(gs.sub_time) OVER (
-            PARTITION BY gs.team_id ORDER BY pv.v
-          )                                                                   AS exited_time
-        FROM game_goalie_stats gs
-        JOIN period_vals pv ON pv.p = COALESCE(gs.entered_period, '1')
-        WHERE gs.game_id = p_game_id
-      )
-      SELECT
-        game_id, team_id, goalie_id, stint_ord,
-        entered_period, entered_time, exited_period, exited_time,
-        shots_against, goals_against
-      FROM ordered;
-    END;
-    $func$
-  `;
+      IF to_regclass('public.game_goalie_stats') IS NOT NULL THEN
+        ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO'));
+        ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS sub_time TEXT CHECK (sub_time ~ '^[0-9]{1,2}:[0-5][0-9]$');
+        ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS goals_against INTEGER CHECK (goals_against >= 0);
 
-  // ── Helper function: rebuild_legacy_goalie_stats ─────────────────────────
-  // Reverse direction of rebuild_goalie_stints: summarizes all stints for a
-  // game back into the legacy game_goalie_stats table (one row per goalie).
-  // Called from each /goalie-stints write endpoint so consumers that still
-  // read the legacy table (notably seasons.js) keep working until Phase 5.
-  // The reduction is lossy by design — multi-stint goalies collapse to:
-  //   shots_against    = SUM(stints.shots_against)
-  //   entered_period   = first stint's entered_period (NULL if starter from P1 puck-drop)
-  //   sub_time         = first stint's entered_time   (NULL if starter from P1 puck-drop)
-  //   goals_against    = SUM(stints.goals_against) when ALL stints have an
-  //                      override; NULL otherwise so the legacy CTE can derive.
-  // Will be removed in Phase 5 when the legacy table is dropped.
-  await sql`
-    CREATE OR REPLACE FUNCTION rebuild_legacy_goalie_stats(p_game_id uuid)
-    RETURNS void
-    LANGUAGE plpgsql
-    AS $func$
-    BEGIN
-      DELETE FROM game_goalie_stats WHERE game_id = p_game_id;
-      WITH period_vals (p, v) AS (
-        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
-      ),
-      stint_pos AS (
+        INSERT INTO game_goalie_stints (
+          game_id, team_id, goalie_id, stint_ord,
+          entered_period, entered_time, exited_period, exited_time,
+          shots_against, goals_against
+        )
+        WITH period_vals (p, v) AS (
+          VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+        ),
+        ordered AS (
+          SELECT
+            gs.game_id, gs.team_id, gs.goalie_id,
+            gs.shots_against, gs.goals_against,
+            COALESCE(gs.entered_period, '1') AS entered_period,
+            gs.sub_time AS entered_time,
+            ROW_NUMBER() OVER (PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v)::smallint AS stint_ord,
+            LEAD(COALESCE(gs.entered_period, '1')) OVER (
+              PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v
+            ) AS exited_period,
+            LEAD(gs.sub_time) OVER (
+              PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v
+            ) AS exited_time
+          FROM game_goalie_stats gs
+          JOIN period_vals pv ON pv.p = COALESCE(gs.entered_period, '1')
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM game_goalie_stints existing
+            WHERE existing.game_id = gs.game_id
+          )
+        )
         SELECT
-          st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
-          st.entered_period, st.entered_time,
-          st.shots_against, st.goals_against AS override_ga,
-          pv.v * 100000
-            + COALESCE(
-                SPLIT_PART(st.entered_time, ':', 1)::int * 60
-                + SPLIT_PART(st.entered_time, ':', 2)::int,
-                0
-              ) AS pos
-        FROM game_goalie_stints st
-        JOIN period_vals pv ON pv.p = st.entered_period
-        WHERE st.game_id = p_game_id
-      ),
-      per_goalie AS (
-        SELECT
-          game_id, team_id, goalie_id,
-          SUM(shots_against)::smallint            AS total_sa,
-          SUM(COALESCE(override_ga, 0))::int      AS sum_overrides,
-          BOOL_AND(override_ga IS NOT NULL)       AS all_overrides
-        FROM stint_pos
-        GROUP BY game_id, team_id, goalie_id
-      ),
-      first_stint AS (
-        SELECT DISTINCT ON (game_id, team_id, goalie_id)
-          game_id, team_id, goalie_id,
-          entered_period AS first_entered_period,
-          entered_time   AS first_entered_time,
-          stint_ord      AS first_stint_ord
-        FROM stint_pos
-        ORDER BY game_id, team_id, goalie_id, stint_ord
-      )
-      INSERT INTO game_goalie_stats (
-        game_id, team_id, goalie_id, shots_against,
-        entered_period, sub_time, goals_against
-      )
-      SELECT
-        pg.game_id, pg.team_id, pg.goalie_id, pg.total_sa,
-        CASE WHEN fs.first_stint_ord = 1
-              AND fs.first_entered_period = '1'
-              AND fs.first_entered_time IS NULL
-             THEN NULL ELSE fs.first_entered_period END,
-        CASE WHEN fs.first_stint_ord = 1
-              AND fs.first_entered_period = '1'
-              AND fs.first_entered_time IS NULL
-             THEN NULL ELSE fs.first_entered_time END,
-        CASE WHEN pg.all_overrides THEN pg.sum_overrides ELSE NULL END
-      FROM per_goalie pg
-      JOIN first_stint fs
-        ON fs.game_id = pg.game_id
-       AND fs.team_id = pg.team_id
-       AND fs.goalie_id = pg.goalie_id;
-    END;
-    $func$
+          game_id, team_id, goalie_id, stint_ord,
+          entered_period, entered_time, exited_period, exited_time,
+          shots_against, goals_against
+        FROM ordered
+        ON CONFLICT (game_id, team_id, stint_ord) DO NOTHING;
+      END IF;
+    END $$;
   `;
-
-  // One-time backfill: if the stints table is empty but legacy stats exist,
-  // rebuild every game with goalie stats. Safe to re-run — the function does a
-  // full DELETE+INSERT per game, but the guard ensures we only pay the cost
-  // once. After Phase 1 ships, every write keeps the table in sync.
-  const stintsCount = await sql`SELECT COUNT(*)::int AS c FROM game_goalie_stints`;
-  if (stintsCount[0].c === 0) {
-    await sql`
-      SELECT rebuild_goalie_stints(g.id)
-      FROM games g
-      WHERE EXISTS (SELECT 1 FROM game_goalie_stats gs WHERE gs.game_id = g.id)
-    `;
-  }
+  await sql`DROP FUNCTION IF EXISTS rebuild_goalie_stints(uuid)`;
+  await sql`DROP FUNCTION IF EXISTS rebuild_legacy_goalie_stats(uuid)`;
+  await sql`DROP TABLE IF EXISTS game_goalie_stats`;
 
   // ── Shootout attempts ──────────────────────────────────────────────────────
   // One row per shot attempt in a shootout (both scored and missed).
@@ -1778,6 +1667,37 @@ async function initSchema() {
       attempt_order INT NOT NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  // Game-data query indexes. Keep this set intentionally small: these support
+  // the highest-volume reads without turning index storage into its own issue.
+  await sql`
+    CREATE INDEX IF NOT EXISTS games_season_status_schedule_idx
+      ON games(season_id, status, game_type, scheduled_at DESC NULLS LAST, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS games_home_team_status_schedule_idx
+      ON games(home_team_id, status, scheduled_at DESC NULLS LAST, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS games_away_team_status_schedule_idx
+      ON games(away_team_id, status, scheduled_at DESC NULLS LAST, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS goals_game_team_period_idx
+      ON goals(game_id, team_id, period)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_rosters_player_game_idx
+      ON game_rosters(player_id, game_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_starting_lineup_team_game_idx
+      ON game_starting_lineup(team_id, game_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS shootout_attempts_game_order_idx
+      ON shootout_attempts(game_id, attempt_order)
   `;
 
   // ── Megan Carter jersey-number migration ──────────────────────────────────
@@ -2199,4 +2119,3 @@ async function initSchema() {
 }
 
 module.exports = { sql, db, schema, initSchema };
-

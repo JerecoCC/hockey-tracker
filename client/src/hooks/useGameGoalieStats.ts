@@ -12,6 +12,8 @@ const authHeaders = () => ({
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
 
+const goalieStintsPath = (gameId: string) => `${API}/admin/games/${gameId}/goalie-stints`;
+
 // ── Types ────────────────────────────────────────────────────────────────────
 
 export interface UpsertGoalieStatData {
@@ -110,10 +112,9 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
     queryFn: async () => {
       if (!gameId) return [];
       try {
-        const { data } = await axios.get<GoalieStatRecord[]>(
-          `${API}/admin/games/${gameId}/goalie-stats`,
-          { headers: authHeaders() },
-        );
+        const { data } = await axios.get<GoalieStatRecord[]>(goalieStintsPath(gameId), {
+          headers: authHeaders(),
+        });
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load goalie stats'));
@@ -126,15 +127,35 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
     if (!gameId) return null;
     setBusy(data.goalie_id);
     try {
-      const { data: row } = await axios.put<GoalieStatRecord>(
-        `${API}/admin/games/${gameId}/goalie-stats`,
-        data,
-        { headers: authHeaders() },
-      );
-      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, (current = []) => [
-        ...current.filter((stat) => stat.goalie_id !== row.goalie_id),
-        row,
-      ]);
+      const currentStats = queryClient.getQueryData<GoalieStatRecord[]>(queryKey) ?? goalieStats;
+      const existingStat = currentStats.find((stat) => stat.goalie_id === data.goalie_id);
+      const firstStint = existingStat?.stints?.[0];
+      const stintData: UpdateGoalieStintData = {
+        goalie_id: data.goalie_id,
+        team_id: data.team_id,
+        shots_against: data.shots_against,
+      };
+      if ('goals_against' in data) stintData.goals_against = data.goals_against;
+      if ('entered_period' in data) stintData.entered_period = data.entered_period || '1';
+      if ('sub_time' in data) stintData.entered_time = data.sub_time || null;
+
+      const { data: rows } = firstStint
+        ? await axios.put<GoalieStatRecord[]>(
+          `${goalieStintsPath(gameId)}/${firstStint.id}`,
+          stintData,
+          { headers: authHeaders() },
+        )
+        : await axios.post<GoalieStatRecord[]>(
+          goalieStintsPath(gameId),
+          {
+            ...stintData,
+            entered_period: data.entered_period || '1',
+            entered_time: data.sub_time || null,
+          },
+          { headers: authHeaders() },
+        );
+      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, rows);
+      const row = rows.find((stat) => stat.goalie_id === data.goalie_id) ?? null;
       return row;
     } catch (err) {
       toast.error(apiError(err, 'Failed to save goalie stats'));
@@ -208,12 +229,21 @@ const useGameGoalieStats = (gameId: string | undefined, options: { enabled?: boo
     if (!gameId) return false;
     setBusy(goalieId);
     try {
-      await axios.delete(
-        `${API}/admin/games/${gameId}/goalie-stats/${goalieId}`,
-        { headers: authHeaders() },
-      );
-      queryClient.setQueryData<GoalieStatRecord[]>(queryKey, (current = []) =>
-        current.filter((stat) => stat.goalie_id !== goalieId),
+      const currentStats = queryClient.getQueryData<GoalieStatRecord[]>(queryKey) ?? goalieStats;
+      const stat = currentStats.find((row) => row.goalie_id === goalieId);
+      let rows: GoalieStatRecord[] | null = null;
+
+      for (const stint of [...(stat?.stints ?? [])].sort((a, b) => b.stint_ord - a.stint_ord)) {
+        const response = await axios.delete<GoalieStatRecord[]>(
+          `${goalieStintsPath(gameId)}/${stint.id}`,
+          { headers: authHeaders() },
+        );
+        rows = response.data;
+      }
+
+      queryClient.setQueryData<GoalieStatRecord[]>(
+        queryKey,
+        rows ?? currentStats.filter((row) => row.goalie_id !== goalieId),
       );
       return true;
     } catch (err) {

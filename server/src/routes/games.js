@@ -3155,324 +3155,26 @@ const fetchGoalieStatsForGame = (gameId) => sql`
 `;
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/games/:id/goalie-stats  – list goalie stats for both teams
-// Phase 2: reads from game_goalie_stints; per-goalie row aggregates SA/GA
-// across all stints and embeds the per-stint detail under `stints`.
-// Legacy `entered_period` / `sub_time` are NULL only for goalies whose first
-// stint was at the very start of the game (P1, no time) — preserving the
-// existing "starter vs backup" UI distinction.
+// GET /api/admin/games/:id/goalie-stints  – list goalie stats for both teams.
+// Returns one aggregate row per goalie with per-stint detail under `stints`.
 // ---------------------------------------------------------------------------
-router.get('/:id/goalie-stats', async (req, res) => {
+router.get('/:id/goalie-stints', async (req, res) => {
   const { id } = req.params;
   try {
-    const rows = await sql`
-      ${goalieStintsCTE(id)}
-      SELECT
-        fs.first_stint_id                       AS id,
-        ga.game_id,
-        ga.team_id,
-        ga.goalie_id,
-        ga.total_sa                             AS shots_against,
-        ga.total_ga                             AS goals_against,
-        (ga.total_sa - ga.total_save_ga)        AS saves,
-        CASE
-          WHEN fs.first_stint_ord = 1
-           AND fs.first_entered_period = '1'
-           AND fs.first_entered_time IS NULL
-          THEN NULL
-          ELSE fs.first_entered_period
-        END                                     AS entered_period,
-        CASE
-          WHEN fs.first_stint_ord = 1
-           AND fs.first_entered_period = '1'
-           AND fs.first_entered_time IS NULL
-          THEN NULL
-          ELSE fs.first_entered_time
-        END                                     AS sub_time,
-        ga.first_created_at                     AS created_at,
-        ga.stints,
-        p.first_name AS goalie_first_name,
-        p.last_name  AS goalie_last_name,
-        COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, ga.team_id), NULLIF(p.photo, '')) AS goalie_photo,
-        COALESCE(pt_jnh.jersey_number, pt.jersey_number)     AS goalie_jersey_number,
-        ti.name  AS team_name,
-        ti.code  AS team_code,
-        ti.logo  AS team_logo,
-        t.primary_color AS team_primary_color,
-        t.text_color    AS team_text_color
-      FROM goalie_agg ga
-      JOIN goalie_first_stint fs
-        ON fs.game_id = ga.game_id AND fs.team_id = ga.team_id AND fs.goalie_id = ga.goalie_id
-      JOIN games g   ON g.id  = ga.game_id
-      JOIN players p ON p.id  = ga.goalie_id
-      JOIN teams t   ON t.id  = ga.team_id
-      LEFT JOIN player_teams pt
-        ON pt.player_id = ga.goalie_id
-        AND pt.team_id  = ga.team_id
-        AND pt.season_id = g.season_id
-        AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-        AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-      LEFT JOIN LATERAL (
-        SELECT jersey_number FROM jersey_number_history
-        WHERE player_teams_id = pt.id
-          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
-        ORDER BY effective_from DESC LIMIT 1
-      ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
-        WHERE team_id = ga.team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-        LIMIT 1
-      ) ti ON true
-      ORDER BY ti.code ASC, ga.first_pos ASC, COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST
-    `;
+    const rows = await fetchGoalieStatsForGame(id);
     return res.json(rows);
   } catch (err) {
-    console.error('goalie stats get error:', err);
+    console.error('goalie stints get error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 });
 
 // ---------------------------------------------------------------------------
-// PUT /api/admin/games/:id/goalie-stats  – upsert a goalie's SA/GA (and optionally entered_period / sub_time)
-// Body: { goalie_id, team_id, shots_against, goals_against?, entered_period?, sub_time? }
-// When goals_against is provided it is stored and takes precedence over the goals-table derivation.
-// ---------------------------------------------------------------------------
-router.put('/:id/goalie-stats', async (req, res) => {
-  const { id } = req.params;
-  const { goalie_id, team_id, shots_against, goals_against, entered_period, sub_time } = req.body;
-
-  if (!goalie_id || !team_id || shots_against == null) {
-    return res.status(400).json({ error: 'goalie_id, team_id, and shots_against are required' });
-  }
-  if (entered_period !== undefined && entered_period !== null) {
-    const validPeriods = ['1', '2', '3', 'OT', 'SO'];
-    if (!validPeriods.includes(entered_period)) {
-      return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
-    }
-  }
-  if (sub_time !== undefined && sub_time !== null && sub_time !== '') {
-    if (!/^[0-9]{1,2}:[0-5][0-9]$/.test(sub_time)) {
-      return res.status(400).json({ error: 'sub_time must be in MM:SS format' });
-    }
-  }
-
-  // entered_period / sub_time: explicit null/empty clears; undefined leaves unchanged
-  const epValue = entered_period === undefined ? undefined : (entered_period || null);
-  const stValue = sub_time === undefined ? undefined : (sub_time || null);
-  // goals_against: null clears (reverts to auto-calc); undefined leaves unchanged; number stores override
-  const gaValue = goals_against === undefined ? undefined : (goals_against == null ? null : Number(goals_against));
-
-  try {
-    // Single upsert — always set shots_against; conditionally set other columns
-    await sql`
-      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against,
-        ${epValue !== undefined ? sql`entered_period,` : sql``}
-        ${stValue !== undefined ? sql`sub_time,` : sql``}
-        ${gaValue !== undefined ? sql`goals_against,` : sql``}
-        created_at)
-      VALUES (${id}, ${team_id}, ${goalie_id}, ${shots_against},
-        ${epValue !== undefined ? sql`${epValue},` : sql``}
-        ${stValue !== undefined ? sql`${stValue},` : sql``}
-        ${gaValue !== undefined ? sql`${gaValue},` : sql``}
-        NOW())
-      ON CONFLICT (game_id, goalie_id) DO UPDATE
-        SET team_id       = EXCLUDED.team_id,
-            shots_against = EXCLUDED.shots_against
-            ${epValue !== undefined ? sql`, entered_period = EXCLUDED.entered_period` : sql``}
-            ${stValue !== undefined ? sql`, sub_time       = EXCLUDED.sub_time`       : sql``}
-            ${gaValue !== undefined ? sql`, goals_against  = EXCLUDED.goals_against`  : sql``}
-    `;
-    // Keep game_goalie_stints in sync with the legacy table; reads now come
-    // from the stints table via goalieStintsCTE below.
-    await sql`SELECT rebuild_goalie_stints(${id})`;
-    const rows = await sql`
-      ${goalieStintsCTE(id)}
-      SELECT
-        fs.first_stint_id                       AS id,
-        ga.game_id, ga.team_id, ga.goalie_id,
-        ga.total_sa                             AS shots_against,
-        ga.total_ga                             AS goals_against,
-        (ga.total_sa - ga.total_save_ga)        AS saves,
-        CASE
-          WHEN fs.first_stint_ord = 1
-           AND fs.first_entered_period = '1'
-           AND fs.first_entered_time IS NULL
-          THEN NULL ELSE fs.first_entered_period
-        END                                     AS entered_period,
-        CASE
-          WHEN fs.first_stint_ord = 1
-           AND fs.first_entered_period = '1'
-           AND fs.first_entered_time IS NULL
-          THEN NULL ELSE fs.first_entered_time
-        END                                     AS sub_time,
-        ga.first_created_at                     AS created_at,
-        ga.stints,
-        p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
-        COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, ga.team_id), NULLIF(p.photo, '')) AS goalie_photo,
-        COALESCE(pt_jnh.jersey_number, pt.jersey_number) AS goalie_jersey_number,
-        ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
-        t.primary_color AS team_primary_color, t.text_color AS team_text_color
-      FROM goalie_agg ga
-      JOIN goalie_first_stint fs
-        ON fs.game_id = ga.game_id AND fs.team_id = ga.team_id AND fs.goalie_id = ga.goalie_id
-      JOIN games g   ON g.id  = ga.game_id
-      JOIN players p ON p.id  = ga.goalie_id
-      JOIN teams t   ON t.id  = ga.team_id
-      LEFT JOIN player_teams pt
-        ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
-        AND pt.season_id = g.season_id
-        AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-        AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-      LEFT JOIN LATERAL (
-        SELECT jersey_number FROM jersey_number_history
-        WHERE player_teams_id = pt.id
-          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
-        ORDER BY effective_from DESC LIMIT 1
-      ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
-        WHERE team_id = ga.team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-        LIMIT 1
-      ) ti ON true
-      WHERE ga.goalie_id = ${goalie_id}
-    `;
-    return res.json(rows[0]);
-  } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
-    console.error('goalie stats put error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// POST /api/admin/games/:id/goalie-stats/switch  – record a backup goalie
-// Body: { goalie_id, team_id, entered_period, sub_time? }
-// Creates a new stat row for the backup with shots_against = 0.
-// Returns the full updated goalie stats list for the game.
-// ---------------------------------------------------------------------------
-router.post('/:id/goalie-stats/switch', async (req, res) => {
-  const { id } = req.params;
-  const { goalie_id, team_id, entered_period, sub_time } = req.body;
-
-  if (!goalie_id || !team_id || !entered_period) {
-    return res.status(400).json({ error: 'goalie_id, team_id, and entered_period are required' });
-  }
-  const validPeriods = ['1', '2', '3', 'OT', 'SO'];
-  if (!validPeriods.includes(entered_period)) {
-    return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
-  }
-  if (sub_time && !/^[0-9]{1,2}:[0-5][0-9]$/.test(sub_time)) {
-    return res.status(400).json({ error: 'sub_time must be in MM:SS format' });
-  }
-
-  const stValue = sub_time || null;
-
-  try {
-    await sql`
-      INSERT INTO game_goalie_stats (game_id, team_id, goalie_id, shots_against, entered_period, sub_time)
-      VALUES (${id}, ${team_id}, ${goalie_id}, 0, ${entered_period}, ${stValue})
-      ON CONFLICT (game_id, goalie_id)
-      DO UPDATE SET entered_period = EXCLUDED.entered_period, sub_time = EXCLUDED.sub_time
-    `;
-    // Keep game_goalie_stints in sync with the legacy table.
-    await sql`SELECT rebuild_goalie_stints(${id})`;
-    // Return the full updated list so the client can refresh in one round-trip.
-    const rows = await sql`
-      ${goalieStintsCTE(id)}
-      SELECT
-        fs.first_stint_id                       AS id,
-        ga.game_id, ga.team_id, ga.goalie_id,
-        ga.total_sa                             AS shots_against,
-        ga.total_ga                             AS goals_against,
-        (ga.total_sa - ga.total_save_ga)        AS saves,
-        CASE
-          WHEN fs.first_stint_ord = 1
-           AND fs.first_entered_period = '1'
-           AND fs.first_entered_time IS NULL
-          THEN NULL ELSE fs.first_entered_period
-        END                                     AS entered_period,
-        CASE
-          WHEN fs.first_stint_ord = 1
-           AND fs.first_entered_period = '1'
-           AND fs.first_entered_time IS NULL
-          THEN NULL ELSE fs.first_entered_time
-        END                                     AS sub_time,
-        ga.first_created_at                     AS created_at,
-        ga.stints,
-        p.first_name AS goalie_first_name, p.last_name AS goalie_last_name,
-        COALESCE(NULLIF(pt.photo, ''), best_player_photo(p.id, g.season_id, ga.team_id), NULLIF(p.photo, '')) AS goalie_photo,
-        COALESCE(pt_jnh.jersey_number, pt.jersey_number)     AS goalie_jersey_number,
-        ti.name AS team_name, ti.code AS team_code, ti.logo AS team_logo,
-        t.primary_color AS team_primary_color, t.text_color AS team_text_color
-      FROM goalie_agg ga
-      JOIN goalie_first_stint fs
-        ON fs.game_id = ga.game_id AND fs.team_id = ga.team_id AND fs.goalie_id = ga.goalie_id
-      JOIN games g   ON g.id  = ga.game_id
-      JOIN players p ON p.id  = ga.goalie_id
-      JOIN teams t   ON t.id  = ga.team_id
-      LEFT JOIN player_teams pt
-        ON pt.player_id = ga.goalie_id AND pt.team_id = ga.team_id
-        AND pt.season_id = g.season_id
-        AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-        AND (pt.end_date   IS NULL OR pt.end_date   >= COALESCE(g.scheduled_at::date, CURRENT_DATE))
-      LEFT JOIN LATERAL (
-        SELECT jersey_number FROM jersey_number_history
-        WHERE player_teams_id = pt.id
-          AND effective_from <= COALESCE(g.scheduled_at::date, CURRENT_DATE)
-        ORDER BY effective_from DESC LIMIT 1
-      ) pt_jnh ON true
-      LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
-        WHERE team_id = ga.team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
-        LIMIT 1
-      ) ti ON true
-      ORDER BY ti.code ASC, ga.first_pos ASC
-    `;
-    return res.json(rows);
-  } catch (err) {
-    if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
-    console.error('goalie stats switch error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ---------------------------------------------------------------------------
-// DELETE /api/admin/games/:id/goalie-stats/:goalieId  – remove a goalie entry
-// Used to undo an incorrectly recorded goalie switch.
-// ---------------------------------------------------------------------------
-router.delete('/:id/goalie-stats/:goalieId', async (req, res) => {
-  const { id, goalieId } = req.params;
-  try {
-    const rows = await sql`
-      DELETE FROM game_goalie_stats
-      WHERE game_id = ${id} AND goalie_id = ${goalieId}
-      RETURNING id
-    `;
-    if (rows.length === 0) return res.status(404).json({ error: 'Goalie stat not found' });
-    // Keep game_goalie_stints in sync (grace period — drop game_goalie_stats next release).
-    await sql`SELECT rebuild_goalie_stints(${id})`;
-    return res.json({ message: 'Goalie stat removed' });
-  } catch (err) {
-    console.error('goalie stats delete error:', err);
-    return res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// ===========================================================================
 // Stint-native write APIs
 // ---------------------------------------------------------------------------
 // These endpoints write directly to game_goalie_stints and let admins record
-// non-sequential stints (pull-and-return, multiple goalie changes within a
-// single period, etc.) — something the legacy /goalie-stats endpoints can
-// not express because they are limited to one row per goalie per game.
-//
-// seasons.js now reads from game_goalie_stints directly, so there is no
-// longer any need to back-fill game_goalie_stats after a stint write.
-// game_goalie_stats will be dropped in the next release.
-// ===========================================================================
+// non-sequential stints, including pull-and-return changes or multiple goalie
+// changes within one period.
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/games/:id/goalie-stints  – open a new stint for a goalie
@@ -3488,7 +3190,7 @@ router.delete('/:id/goalie-stats/:goalieId', async (req, res) => {
 //                                                // given point. true ⇒ close
 //                                                // it at the new entered point.
 //   }
-// Returns the full updated goalie-stats list for the game.
+// Returns the full updated goalie list for the game.
 // ---------------------------------------------------------------------------
 router.post('/:id/goalie-stints', async (req, res) => {
   const { id } = req.params;
@@ -3601,7 +3303,7 @@ router.post('/:id/goalie-stints', async (req, res) => {
 //   shots_against,  goals_against
 // }
 // Explicit null clears nullable columns (entered_time, exited_period,
-// exited_time, goals_against). Returns the full updated goalie-stats list.
+// exited_time, goals_against). Returns the full updated goalie list.
 // ---------------------------------------------------------------------------
 router.put('/:id/goalie-stints/:stintId', async (req, res) => {
   const { id, stintId } = req.params;

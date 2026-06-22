@@ -511,27 +511,14 @@ export async function autofillGameFromNhlGamecenter(
     matched,
     goalieStats,
   );
-  if (goalieStints.length > 0) {
-    await syncGoalieStints(game.id, goalieStints);
-  } else {
-    for (const [index, stat] of goalieStats.entries()) {
-      await apiPut<GoalieStatRecord, UpsertGoalieStatData>(
-        `/admin/games/${game.id}/goalie-stats`,
-        stat,
-      );
-      await emitProgress({
-        step: 'goalies',
-        message: `Saved goalie stats ${index + 1} of ${goalieStats.length}.`,
-        completed: index + 1,
-        total: goalieStats.length,
-        refresh: true,
-      });
-    }
-  }
-  if (goalieStints.length > 0) {
+  const desiredGoalieStints = goalieStints.length > 0
+    ? goalieStints
+    : goalieStats.map(goalieStatToStintPayload);
+  if (desiredGoalieStints.length > 0) {
+    await syncGoalieStints(game.id, desiredGoalieStints);
     await emitProgress({
       step: 'goalies',
-      message: `Saved ${goalieStints.length} goalie stint${goalieStints.length === 1 ? '' : 's'}.`,
+      message: `Saved ${desiredGoalieStints.length} goalie stint${desiredGoalieStints.length === 1 ? '' : 's'}.`,
       refresh: true,
     });
   }
@@ -1830,7 +1817,7 @@ function buildDefaultGoalieStints(goaliesByTeam: GoaliesByTeam): GoalieStint[] {
 }
 
 async function syncGoalieStints(gameId: string, desiredStints: GoalieStintPayload[]) {
-  const existingStats = await apiGet<GoalieStatRecord[]>(`/admin/games/${gameId}/goalie-stats`);
+  const existingStats = await apiGet<GoalieStatRecord[]>(`/admin/games/${gameId}/goalie-stints`);
   const existingByTeam = groupExistingGoalieStints(existingStats);
   const desiredByTeam = groupDesiredGoalieStints(desiredStints);
   const teamIds = new Set([...existingByTeam.keys(), ...desiredByTeam.keys()]);
@@ -1862,6 +1849,17 @@ async function syncGoalieStints(gameId: string, desiredStints: GoalieStintPayloa
       await apiDelete(`/admin/games/${gameId}/goalie-stints/${extraStint.id}`);
     }
   }
+}
+
+function goalieStatToStintPayload(stat: UpsertGoalieStatData): GoalieStintPayload {
+  return {
+    goalie_id: stat.goalie_id,
+    team_id: stat.team_id,
+    entered_period: stat.entered_period || '1',
+    entered_time: stat.sub_time || null,
+    shots_against: stat.shots_against,
+    goals_against: stat.goals_against ?? null,
+  };
 }
 
 function groupExistingGoalieStints(stats: GoalieStatRecord[]) {

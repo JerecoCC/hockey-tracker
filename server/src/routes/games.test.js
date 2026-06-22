@@ -937,13 +937,13 @@ describe('PUT /api/admin/games/:id/lineup', () => {
 });
 
 // ---------------------------------------------------------------------------
-// GET /api/admin/games/:id/goalie-stats
+// GET /api/admin/games/:id/goalie-stints
 // ---------------------------------------------------------------------------
-describe('GET /api/admin/games/:id/goalie-stats', () => {
+describe('GET /api/admin/games/:id/goalie-stints', () => {
   it('returns an array of goalie stats', async () => {
     mockSqlFragments(1); // goalieStintsCTE(id)
     sql.mockResolvedValueOnce([GOALIE_STAT]);
-    const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
+    const res = await request(app).get('/api/admin/games/game-1/goalie-stints');
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBe('gs-1');
@@ -960,7 +960,7 @@ describe('GET /api/admin/games/:id/goalie-stats', () => {
   it('returns an empty array when no goalie stats exist', async () => {
     mockSqlFragments(1); // goalieStintsCTE(id)
     sql.mockResolvedValueOnce([]);
-    const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
+    const res = await request(app).get('/api/admin/games/game-1/goalie-stints');
     expect(res.status).toBe(200);
     expect(res.body).toEqual([]);
   });
@@ -968,67 +968,7 @@ describe('GET /api/admin/games/:id/goalie-stats', () => {
   it('returns 500 on DB error', async () => {
     mockSqlFragments(1); // goalieStintsCTE(id)
     sql.mockRejectedValueOnce(new Error('DB down'));
-    const res = await request(app).get('/api/admin/games/game-1/goalie-stats');
-    expect(res.status).toBe(500);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// PUT /api/admin/games/:id/goalie-stats
-// ---------------------------------------------------------------------------
-describe('PUT /api/admin/games/:id/goalie-stats', () => {
-  it('returns 400 when required fields are missing', async () => {
-    const res = await request(app).put('/api/admin/games/game-1/goalie-stats')
-      .send({ goalie_id: 'player-10', team_id: 'team-1' }); // missing shots_against, saves
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/required/i);
-  });
-
-  it('upserts goalie stats and returns the record', async () => {
-    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
-    sql
-      .mockResolvedValueOnce([]) // INSERT ON CONFLICT (no meaningful return)
-      .mockResolvedValueOnce([]) // SELECT rebuild_goalie_stints (legacy→stints sync)
-      .mockReturnValueOnce('') // goalieStintsCTE(id)
-      .mockResolvedValueOnce([GOALIE_STAT]); // SELECT full record
-    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
-      goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
-    });
-    expect(res.status).toBe(200);
-    expect(res.body.id).toBe('gs-1');
-    expect(res.body.saves).toBe(28);
-  });
-
-  it('returns the inserted record keyed by goalie_id and game_id', async () => {
-    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
-    sql
-      .mockResolvedValueOnce([]) // INSERT
-      .mockResolvedValueOnce([]) // SELECT rebuild_goalie_stints (legacy→stints sync)
-      .mockReturnValueOnce('') // goalieStintsCTE(id)
-      .mockResolvedValueOnce([GOALIE_STAT]); // SELECT
-    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
-      goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
-    });
-    expect(res.body.goalie_id).toBe('player-10');
-    expect(res.body.shots_against).toBe(30);
-  });
-
-  it('returns 400 on FK violation', async () => {
-    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
-    sql.mockRejectedValueOnce(Object.assign(new Error('fk'), { code: '23503' }));
-    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
-      goalie_id: 'bad-player', team_id: 'team-1', shots_against: 30, saves: 28,
-    });
-    expect(res.status).toBe(400);
-    expect(res.body.error).toMatch(/invalid/i);
-  });
-
-  it('returns 500 on generic DB error', async () => {
-    mockSqlFragments(9); // conditional sql`` fragments inside the upsert
-    sql.mockRejectedValueOnce(new Error('DB down'));
-    const res = await request(app).put('/api/admin/games/game-1/goalie-stats').send({
-      goalie_id: 'player-10', team_id: 'team-1', shots_against: 30, saves: 28,
-    });
+    const res = await request(app).get('/api/admin/games/game-1/goalie-stints');
     expect(res.status).toBe(500);
   });
 });

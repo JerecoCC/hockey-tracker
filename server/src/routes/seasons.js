@@ -1934,7 +1934,7 @@ router.get('/:id/stats', async (req, res) => {
       ),
       -- Per-stint GA: count goals against each goalie during their active window.
       -- Reads from game_goalie_stints using precise (period, time) position windows,
-      -- matching the same attribution logic used by the per-game goalie-stats endpoint.
+      -- matching the same attribution logic used by the per-game goalie stints query.
       stint_ranges AS (
         SELECT
           st.id, st.game_id, g.season_id, g.scheduled_at, st.team_id, st.goalie_id, st.stint_ord,

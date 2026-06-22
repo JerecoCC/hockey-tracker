@@ -174,7 +174,7 @@ describe('autofillGameFromNhlGamecenter', () => {
       }
       if (String(url).endsWith('/admin/games/game-1/goals')) return Promise.resolve({ data: existingGoalsData });
       if (String(url).endsWith('/admin/games/game-1/shootout-attempts')) return Promise.resolve({ data: [] });
-      if (String(url).endsWith('/admin/games/game-1/goalie-stats')) {
+      if (String(url).endsWith('/admin/games/game-1/goalie-stints')) {
         return Promise.resolve({ data: existingGoalieStatsData });
       }
       if (String(url).endsWith('/admin/players')) {
@@ -805,15 +805,11 @@ describe('autofillGameFromNhlGamecenter', () => {
     `;
 
     const result = await autofillGameFromNhlGamecenter(game, '317');
-    const goalieStatPuts = mockedAxios.put.mock.calls.filter(([url]) =>
-      String(url).endsWith('/admin/games/game-1/goalie-stats'),
-    );
     const goalieStintPosts = mockedAxios.post.mock.calls.filter(([url]) =>
       String(url).endsWith('/admin/games/game-1/goalie-stints'),
     );
 
     expect(result.summary.goalieStats).toBe(3);
-    expect(goalieStatPuts).toHaveLength(0);
     expect(goalieStintPosts.map(([, payload]) => payload)).toEqual([
       expect.objectContaining({
         goalie_id: 'andersen',

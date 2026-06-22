@@ -230,7 +230,7 @@ describe('game details mutation cache updates', () => {
     const goalieKey = ['game-goalie-stats', 'game-1'];
     queryClient.setQueryData(goalieKey, []);
     mockedAxios.get.mockResolvedValue({ data: [] });
-    mockedAxios.put.mockResolvedValueOnce({ data: GOALIE_STAT });
+    mockedAxios.post.mockResolvedValueOnce({ data: [GOALIE_STAT] });
 
     const { result } = renderHook(() => useGameGoalieStats('game-1'), {
       wrapper: createWrapper(queryClient),
