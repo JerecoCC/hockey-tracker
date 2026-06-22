@@ -146,7 +146,8 @@ router.get('/', async (req, res) => {
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 is_active, created_at,
-                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+                acquisition_type, start_date::text AS start_date, has_games
               FROM (
                 SELECT DISTINCT ON (p.id)
                   p.id, p.first_name, p.last_name,
@@ -163,7 +164,16 @@ router.get('/', async (req, res) => {
                   ti.code        AS team_code,
                   ti.logo        AS team_logo,
                   t.primary_color,
-                  t.text_color
+                  t.text_color,
+                  pt.acquisition_type,
+                  pt.start_date,
+                  EXISTS (
+                    SELECT 1
+                    FROM game_rosters gr
+                    JOIN games rg ON rg.id = gr.game_id
+                    WHERE gr.player_id = p.id
+                      AND rg.season_id = ${season_id}
+                  ) AS has_games
                 FROM players p
                 JOIN player_teams pt ON pt.player_id = p.id
                                     AND pt.season_id  = ${season_id}
@@ -202,7 +212,8 @@ router.get('/', async (req, res) => {
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 is_active, created_at,
-                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+                acquisition_type, start_date::text AS start_date, has_games
               FROM (
                 SELECT DISTINCT ON (p.id)
                   p.id, p.first_name, p.last_name,
@@ -219,7 +230,17 @@ router.get('/', async (req, res) => {
                   ti.code        AS team_code,
                   ti.logo        AS team_logo,
                   t.primary_color,
-                  t.text_color
+                  t.text_color,
+                  pt.acquisition_type,
+                  pt.start_date,
+                  EXISTS (
+                    SELECT 1
+                    FROM game_rosters gr
+                    JOIN games rg ON rg.id = gr.game_id
+                    JOIN seasons rs ON rs.id = rg.season_id
+                    WHERE gr.player_id = p.id
+                      AND rs.league_id = ${league_id}
+                  ) AS has_games
                 FROM players p
                 JOIN player_teams pt ON pt.player_id = p.id
                                     AND (${includeProspects} OR pt.is_prospect = FALSE)
@@ -318,7 +339,8 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+            acquisition_type, start_date::text AS start_date, has_games
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -335,7 +357,16 @@ router.get('/', async (req, res) => {
               ti.code       AS team_code,
               ti.logo       AS team_logo,
               t.primary_color,
-              t.text_color
+              t.text_color,
+              pt.acquisition_type,
+              pt.start_date,
+              EXISTS (
+                SELECT 1
+                FROM game_rosters gr
+                JOIN games rg ON rg.id = gr.game_id
+                WHERE gr.player_id = p.id
+                  AND rg.season_id = ${season_id}
+              ) AS has_games
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.season_id  = ${season_id}
@@ -364,7 +395,8 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+            acquisition_type, start_date::text AS start_date, has_games
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -381,7 +413,17 @@ router.get('/', async (req, res) => {
               ti.code       AS team_code,
               ti.logo       AS team_logo,
               t.primary_color,
-              t.text_color
+              t.text_color,
+              pt.acquisition_type,
+              pt.start_date,
+              EXISTS (
+                SELECT 1
+                FROM game_rosters gr
+                JOIN games rg ON rg.id = gr.game_id
+                JOIN seasons rs ON rs.id = rg.season_id
+                WHERE gr.player_id = p.id
+                  AND rs.league_id = ${league_id}
+              ) AS has_games
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)

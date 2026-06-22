@@ -36,6 +36,9 @@ const PLAYER_WITH_ROSTER = {
   team_name: 'Oilers',
   primary_color: '#ff4500',
   text_color: '#ffffff',
+  acquisition_type: 'draft',
+  start_date: '2024-10-01',
+  has_games: true,
 };
 
 afterEach(() => jest.clearAllMocks());
@@ -61,7 +64,16 @@ describe('GET /api/admin/players', () => {
       team_name: 'Oilers',
       primary_color: '#ff4500',
       text_color: '#ffffff',
+      acquisition_type: 'draft',
+      start_date: '2024-10-01',
+      has_games: true,
     });
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('pt.acquisition_type');
+    expect(queryText).toContain('pt.start_date');
+    expect(queryText).toContain('AS has_games');
+    expect(queryText).toContain('FROM game_rosters gr');
+    expect(queryText).toContain('JOIN seasons rs');
   });
 
   it('returns unassigned players for a league', async () => {
@@ -99,6 +111,12 @@ describe('GET /api/admin/players', () => {
       page: 2,
       page_size: 20,
     });
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('pt.acquisition_type');
+    expect(queryText).toContain('pt.start_date');
+    expect(queryText).toContain('AS has_games');
+    expect(queryText).toContain('FROM game_rosters gr');
+    expect(queryText).toContain('rg.season_id');
   });
 
   it('filters by team_id and returns roster fields', async () => {

@@ -39,6 +39,9 @@ export interface PlayerRecord {
   primary_color?: string | null;
   text_color?: string | null;
   is_prospect?: boolean;
+  acquisition_type?: string | null;
+  start_date?: string | null;
+  has_games?: boolean;
 }
 
 export interface CreatePlayerData {

@@ -10,6 +10,7 @@ import { buildLeaguePlayerDetailsPath } from '@/lib/routeSlugs';
 import SearchableList from '@/components/SearchableList/SearchableList';
 import Select from '@/components/Select/Select';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
+import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 
@@ -50,6 +51,12 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const playerDataIndicator = (player: PlayerRecord) => {
+    const hasMissingData =
+      !player.date_of_birth || !player.start_date || !player.acquisition_type;
+    if (!player.has_games || !hasMissingData) return '';
+    return ` ${missingPlayerDataIndicator}`;
+  };
 
   useEffect(() => {
     if (!loading && total > 0 && page > pageCount) onPageChange(pageCount);
@@ -127,7 +134,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                             size={40}
                           />
                         }
-                        name={`${p.first_name} ${p.last_name}`}
+                        name={`${p.first_name} ${p.last_name}${playerDataIndicator(p)}`}
                         placeholder={`${p.first_name[0]}${p.last_name[0]}`}
                         primaryColor={p.primary_color ?? undefined}
                         textColor={p.text_color ?? undefined}

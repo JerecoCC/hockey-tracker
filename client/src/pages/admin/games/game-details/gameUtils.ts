@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-expressions */
 import type { LastFiveGame } from '@/hooks/useGames';
+export { playerDataComplete } from '@/lib/playerDataStatus';
 
 /**
  * Compute W-OTW-OTL-L form record counts from a last-five array.
@@ -20,7 +21,6 @@ export const buildFormRecord = (games: LastFiveGame[]) => {
   }
   return { w, otw, otl, l };
 };
-
 export const lastFiveOpponentLogo = (
   game: Pick<
     LastFiveGame,
@@ -31,29 +31,4 @@ export const lastFiveOpponentLogo = (
     return game.opponent_logo_light ?? game.opponent_logo ?? game.opponent_logo_dark ?? null;
   }
   return game.opponent_logo ?? game.opponent_logo_dark ?? game.opponent_logo_light ?? null;
-};
-
-export const playerDataComplete = (
-  dateOfBirth: string | null,
-  startDate: string | null,
-  acquisitionType: string | null,
-  isAdmin: boolean,
-) => {
-  if (!isAdmin) return '';
-
-  let emoji: string = '';
-  if (dateOfBirth && startDate && acquisitionType) {
-    emoji = ' ✅';
-  } else {
-    if (dateOfBirth) {
-      emoji += ' 📝';
-    }
-    if (startDate) {
-      emoji += ' 🕰️';
-    }
-    if (acquisitionType) {
-      emoji += ' 🤝🏼';
-    }
-  }
-  return emoji;
 };

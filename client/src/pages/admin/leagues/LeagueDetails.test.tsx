@@ -44,6 +44,24 @@ jest.mock('../../../hooks/useLeaguePlayers', () => ({
     deletePlayer: jest.fn(),
   })),
 }));
+jest.mock('../../../hooks/useGroupAlignmentSets', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    alignmentSets: [],
+    loading: false,
+    busy: null,
+    fetchAlignmentSet: jest.fn(async () => null),
+    createAlignmentSet: jest.fn(async () => null),
+    updateAlignmentSet: jest.fn(async () => true),
+    saveAlignmentConfig: jest.fn(async () => null),
+    deleteAlignmentSet: jest.fn(async () => true),
+    addGroup: jest.fn(async () => true),
+    updateGroup: jest.fn(async () => true),
+    deleteGroup: jest.fn(async () => true),
+    setGroupTeams: jest.fn(async () => true),
+    setAlignmentTeams: jest.fn(async () => true),
+  })),
+}));
 
 jest.mock('./BulkAddPlayersModal', () => () => null);
 
@@ -268,8 +286,8 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
   });
 
-  it('opens on the Players tab when navigated with activeTab 3', () => {
-    sessionStorage.setItem('tab:league-details', '3');
+  it('opens on the Players tab when navigated with activeTab 4', () => {
+    sessionStorage.setItem('tab:league-details', '4');
     setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
@@ -485,6 +503,65 @@ describe('LeagueDetailsPage – players tab', () => {
 
     const row = screen.getByText('John Smith').closest('li');
     expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
+  });
+
+  it('shows missing data indicators only for players with associated games', () => {
+    setup(
+      { league: mockLeague },
+      {},
+      null,
+      {
+        players: [
+          {
+            id: 'player-1',
+            first_name: 'John',
+            last_name: 'Smith',
+            photo: null,
+            date_of_birth: '1995-01-01',
+            birth_city: null,
+            birth_country: null,
+            height_cm: null,
+            weight_lbs: null,
+            position: 'C',
+            shoots: 'L',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            team_id: null,
+            team_code: null,
+            acquisition_type: null,
+            start_date: null,
+            has_games: true,
+          },
+          {
+            id: 'player-2',
+            first_name: 'Jane',
+            last_name: 'Doe',
+            photo: null,
+            date_of_birth: null,
+            birth_city: null,
+            birth_country: null,
+            height_cm: null,
+            weight_lbs: null,
+            position: 'D',
+            shoots: 'R',
+            is_active: true,
+            created_at: '2024-01-01T00:00:00Z',
+            team_id: null,
+            team_code: null,
+            acquisition_type: null,
+            start_date: null,
+            has_games: false,
+          },
+        ],
+        total: 2,
+      },
+    );
+    clickPlayersTab();
+
+    expect(screen.getByText('John Smith \u26A0\uFE0F')).toBeInTheDocument();
+    expect(screen.queryByText('John Smith \uD83D\uDCDD')).not.toBeInTheDocument();
+    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.queryByText('Jane Doe \u26A0\uFE0F')).not.toBeInTheDocument();
   });
 });
 
