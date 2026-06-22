@@ -1,5 +1,6 @@
 import { forwardRef, useState } from 'react';
 import type { HTMLAttributes, ReactNode, Ref } from 'react';
+import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button from '../Button/Button';
 import type { ButtonIntent, ButtonVariant } from '../Button/Button';
 import Icon from '../Icon/Icon';
@@ -28,6 +29,10 @@ interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   hoverActions?: AccordionAction[];
   /** Whether the body is expanded on first render. Defaults to true. */
   defaultOpen?: boolean;
+  /** Optional controlled expanded state. */
+  open?: boolean;
+  /** Called when the expanded state changes. */
+  onOpenChange?: (open: boolean) => void;
   /** When true the toggle button is inert — the row cannot be expanded or collapsed. */
   toggleDisabled?: boolean;
   /**
@@ -54,6 +59,8 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
       headerRight,
       hoverActions,
       defaultOpen = true,
+      open: controlledOpen,
+      onOpenChange,
       toggleDisabled = false,
       variant = 'collapsible',
       className,
@@ -65,9 +72,14 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
     },
     ref,
   ) => {
-    const [open, setOpen] = useState(defaultOpen);
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+    const open = controlledOpen ?? uncontrolledOpen;
     const isStatic = variant === 'static';
     const bodyVisible = isStatic || open;
+    const setOpen = (next: boolean) => {
+      if (controlledOpen === undefined) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    };
 
     return (
       <div
@@ -90,7 +102,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
               className={[styles.toggle, toggleDisabled ? styles.toggleDisabled : '']
                 .filter(Boolean)
                 .join(' ')}
-              onClick={() => !toggleDisabled && setOpen((v) => !v)}
+              onClick={() => !toggleDisabled && setOpen(!open)}
               aria-label={open ? 'Collapse' : 'Expand'}
               aria-expanded={open}
               aria-disabled={toggleDisabled}
@@ -106,10 +118,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
           <div className={styles.label}>{label}</div>
           {headerRight != null && <div className={styles.headerRight}>{headerRight}</div>}
           {hoverActions != null && hoverActions.length > 0 && (
-            <div
-              className={styles.hoverActions}
-              data-hover-actions
-            >
+            <ActionOverlay className={styles.hoverActions}>
               {hoverActions.map((action, i) => (
                 <Button
                   key={i}
@@ -118,13 +127,14 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
                   size="sm"
                   icon={action.icon}
                   disabled={action.disabled}
-                  tooltip={action.tooltip}
+                  tooltip={action.tooltip ?? action.label}
+                  aria-label={action.tooltip ?? action.label}
                   onClick={action.onClick}
                 >
                   {action.label}
                 </Button>
               ))}
-            </div>
+            </ActionOverlay>
           )}
         </div>
         {bodyVisible && children != null && (

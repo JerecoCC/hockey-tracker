@@ -1,36 +1,28 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
-.layout {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: $space-xl;
-  align-items: start;
-  container-type: inline-size;
+.alignmentHeaderControl {
+  width: min(320px, 100%);
+  min-width: 240px;
 
-  @container (max-width: #{$bp-tablet}) {
-    grid-template-columns: 1fr;
+  @media (max-width: 640px) {
+    width: 100%;
+    min-width: 0;
   }
 }
 
-.layoutLeft,
-.layoutRight {
+.readonlyAlignmentBox {
   display: flex;
-  flex-direction: column;
-  gap: $space-xl;
-}
-
-.alignmentSelector {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.alignmentHint {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-xs;
-  font-style: italic;
+  align-items: center;
+  min-height: 42px;
+  width: 100%;
+  padding: 0 $space-lg;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: $bg-input;
+  color: $text-body;
+  font-size: $font-base;
+  line-height: 1.4;
 }
 
 .emptyMsg {

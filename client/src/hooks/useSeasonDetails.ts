@@ -103,10 +103,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
 
   // ③ All league teams — used to populate the override modal
   const leagueId = season?.league_id;
-  const {
-    alignmentSets,
-    loading: alignmentSetsLoading,
-  } = useGroupAlignmentSets(leagueId);
+  const { alignmentSets, loading: alignmentSetsLoading } = useGroupAlignmentSets(leagueId);
 
   const { data: leagueData = null, isLoading: leagueLoading } = useQuery<{
     teams: LeagueTeam[];
@@ -290,6 +287,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
         queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-teams', seasonId] }),
         queryClient.invalidateQueries({ queryKey: ['seasons'] }),
       ]);
       return true;

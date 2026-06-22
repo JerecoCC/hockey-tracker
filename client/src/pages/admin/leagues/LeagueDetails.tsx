@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import LeagueAlignmentsTab from './LeagueAlignmentsTab';
 import LeagueAwardsTab from './LeagueAwardsTab';
 import LeagueEditModal from './LeagueEditModal';
 import LeagueInfoCard from './LeagueInfoCard';
@@ -288,6 +289,15 @@ const LeagueDetailsPage = () => {
               content: (
                 <div className={styles.grid}>
                   <LeagueTeamsTab className={styles.col12} />
+                </div>
+              ),
+            },
+            {
+              label: 'Alignments',
+              icon: 'account_tree',
+              content: (
+                <div className={styles.grid}>
+                  <LeagueAlignmentsTab className={styles.col12} />
                 </div>
               ),
             },

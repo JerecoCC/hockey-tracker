@@ -1,6 +1,5 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import useGames from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
 import useSeasonDetails from '@/hooks/useSeasonDetails';
@@ -15,7 +14,6 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
   useParams: () => ({ leagueId: 'league-1', id: 'season-1' }),
 }));
-jest.mock('@/hooks/useGames', () => jest.fn());
 jest.mock('@/hooks/useLeagueDetails', () => jest.fn());
 jest.mock('@/hooks/useLeagues', () => jest.fn());
 jest.mock('@/hooks/useSeasonDetails', () => jest.fn());
@@ -70,7 +68,6 @@ jest.mock('./SeasonGamesTab', () => () => null);
 jest.mock('./SeasonPlayoffsTab', () => () => null);
 jest.mock('./SeasonTeamsCard', () => () => null);
 
-const mockUseGames = useGames as jest.Mock;
 const mockUseLeagueDetails = useLeagueDetails as jest.Mock;
 const mockUseLeagues = useLeagues as jest.Mock;
 const mockUseSeasonDetails = useSeasonDetails as jest.Mock;
@@ -129,7 +126,6 @@ const makeGroup = (
 beforeEach(() => {
   jest.clearAllMocks();
   mockUseTabState.mockReturnValue([4, jest.fn()]);
-  mockUseGames.mockReturnValue({ games: [] });
   mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
   mockUseLeagueDetails.mockReturnValue({ seasons: [], loading: false });
   mockUseSeasonStats.mockReturnValue({
@@ -190,6 +186,8 @@ beforeEach(() => {
       is_current: true,
       playoffs_started: false,
       is_ended: false,
+      has_scheduled_games: false,
+      has_unfinished_regular_games: false,
       playoff_format: null,
       scoring_system: '2-1-0',
       league_scoring_system: '2-1-0',
@@ -283,6 +281,8 @@ describe('SeasonDetails standings tab', () => {
         is_current: true,
         playoffs_started: false,
         is_ended: false,
+        has_scheduled_games: false,
+        has_unfinished_regular_games: false,
         playoff_format: [
           { scope: 'division', method: 'top', count: 3 },
           { scope: 'conference', method: 'wildcard', count: 2 },
@@ -293,8 +293,22 @@ describe('SeasonDetails standings tab', () => {
       groups: [
         makeGroup('east', 'Eastern', 'conference', null, [], teamNames),
         makeGroup('west', 'Western', 'conference', null, [], teamNames),
-        makeGroup('atlantic', 'Atlantic', 'division', 'east', ['a1', 'a2', 'a3', 'a4', 'a5'], teamNames),
-        makeGroup('metro', 'Metropolitan', 'division', 'east', ['b1', 'b2', 'b3', 'b4', 'b5'], teamNames),
+        makeGroup(
+          'atlantic',
+          'Atlantic',
+          'division',
+          'east',
+          ['a1', 'a2', 'a3', 'a4', 'a5'],
+          teamNames,
+        ),
+        makeGroup(
+          'metro',
+          'Metropolitan',
+          'division',
+          'east',
+          ['b1', 'b2', 'b3', 'b4', 'b5'],
+          teamNames,
+        ),
         makeGroup('central', 'Central', 'division', 'west', ['c1'], teamNames),
         makeGroup('pacific', 'Pacific', 'division', 'west', ['d1'], teamNames),
       ],
@@ -351,9 +365,7 @@ describe('SeasonDetails stats tab', () => {
 
     await user.click(screen.getByText('John Smith'));
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin/leagues/nhl/teams/tor/players/john-smith',
-    );
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/john-smith');
   });
 
   it('navigates to the player details page when a stats table row is clicked', async () => {
@@ -364,8 +376,6 @@ describe('SeasonDetails stats tab', () => {
     await user.click(screen.getByRole('button', { name: 'Forwards' }));
     await user.click(screen.getByText('Smith, John'));
 
-    expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin/leagues/nhl/teams/tor/players/john-smith',
-    );
+    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/john-smith');
   });
 });

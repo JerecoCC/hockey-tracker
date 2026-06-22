@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 // ── Root container ────────────────────────────────────────────────────────────
 
@@ -19,18 +19,21 @@
 // ── Header row ────────────────────────────────────────────────────────────────
 
 .row {
+  --accordion-current-header-bg: var(--accordion-header-bg);
+
   position: relative;
   display: flex;
   align-items: center;
   gap: $space-sm;
+  min-height: 42px;
   padding: $space-sm $space-md;
-  background: var(--accordion-header-bg);
+  background: var(--accordion-current-header-bg);
   border-bottom: 1px solid var(--accordion-border-color);
   transition: background $transition-fast;
 
   &:hover,
   &:focus-within {
-    background: color-mix(in srgb, var(--accordion-header-bg), white 6%);
+    --accordion-current-header-bg: color-mix(in srgb, var(--accordion-header-bg), white 6%);
 
     .hoverActions {
       opacity: 1;
@@ -49,7 +52,7 @@
   cursor: default;
 
   &:hover {
-    background: var(--accordion-header-bg);
+    --accordion-current-header-bg: var(--accordion-header-bg);
   }
 
   .hoverActions {
@@ -121,29 +124,11 @@
 // ── Hover-revealed action overlay (replaces ActionOverlay) ────────────────────
 
 .hoverActions {
-  position: absolute;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: 0 $space-md;
-  background: var(--accordion-header-bg);
-  border-radius: 0 $radius-md $radius-md 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
+  background: var(--accordion-current-header-bg);
+  z-index: 1;
 
   &::before {
-    content: "";
-    position: absolute;
-    right: 100%;
-    top: 0;
-    bottom: 0;
-    width: 3rem;
-    background: linear-gradient(to right, transparent, var(--accordion-header-bg));
-    pointer-events: none;
+    background: linear-gradient(to right, transparent, var(--accordion-current-header-bg));
   }
 }
 

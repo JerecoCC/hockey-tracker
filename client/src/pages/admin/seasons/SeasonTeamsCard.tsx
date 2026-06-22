@@ -1,6 +1,6 @@
 import Accordion from '@/components/Accordion/Accordion';
-import Badge from '@/components/Badge/Badge';
 import Card from '@/components/Card/Card';
+import GroupTeamCount from '@/components/GroupTeamCount/GroupTeamCount';
 import ListItem from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
 import { type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
@@ -11,6 +11,19 @@ import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import styles from './SeasonTeamsCard.module.scss';
 
 const ROLE_LABELS: Record<string, string> = { conference: 'Conference', division: 'Division' };
+
+const countGroupTeams = (group: SeasonGroupRecord, allGroups: SeasonGroupRecord[]) => {
+  const teamIds = new Set<string>();
+  const collect = (current: SeasonGroupRecord) => {
+    current.teams.forEach((team) => teamIds.add(team.id));
+    allGroups
+      .filter((candidate) => candidate.parent_id === current.id)
+      .forEach((child) => collect(child));
+  };
+
+  collect(group);
+  return teamIds.size;
+};
 
 interface GroupNodeProps {
   group: SeasonGroupRecord;
@@ -26,6 +39,7 @@ const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: Group
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
   const isLeaf = children.length === 0;
+  const teamCount = countGroupTeams(group, allGroups);
 
   return (
     <li className={styles.groupItem}>
@@ -34,22 +48,15 @@ const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: Group
           <span className={styles.groupLabel}>
             {group.name}
             {roleLabel && (
-              <span className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}>
+              <span
+                className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}
+              >
                 {roleLabel}
               </span>
             )}
           </span>
         }
-        headerRight={
-          <Badge
-            label={
-              group.has_season_override ? 'Season' : group.is_inherited ? 'Inherited' : 'Default'
-            }
-            intent={
-              group.has_season_override ? 'accent' : group.is_inherited ? 'warning' : 'neutral'
-            }
-          />
-        }
+        headerRight={<GroupTeamCount count={teamCount} />}
       >
         {isLeaf && group.teams.length > 0 && (
           <ul className={styles.teamList}>
@@ -148,6 +155,7 @@ interface Props {
   loading: boolean;
   busy: string | null;
   isEnded: boolean;
+  hasScheduledGames: boolean;
   groupAlignmentSetId: string | null;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
 }
@@ -163,6 +171,7 @@ const SeasonTeamsCard = ({
   loading,
   busy,
   isEnded,
+  hasScheduledGames,
   groupAlignmentSetId,
   updateSeason,
 }: Props) => {
@@ -173,82 +182,85 @@ const SeasonTeamsCard = ({
   const autoGroup = groups.find((group) => group.is_auto);
   const flatTeams: TeamDisplayRecord[] = autoGroup?.teams.length ? autoGroup.teams : seasonTeams;
   const selectedAlignment = alignmentSets.find((set) => set.id === groupAlignmentSetId) ?? null;
-  const alignmentOptions = [
-    { value: '__none__', label: 'No alignment set' },
-    ...alignmentSets.map((set) => ({
-      value: set.id,
-      label: set.structure_type === 'league' ? `${set.name} (league-wide)` : set.name,
-    })),
-  ];
+  const alignmentOptions = alignmentSets.map((set) => ({
+    value: set.id,
+    label: set.structure_type === 'league' ? `${set.name} (league-wide)` : set.name,
+  }));
+  const alignmentLocked = isEnded || hasScheduledGames;
+  const alignmentLabel = selectedAlignment
+    ? selectedAlignment.structure_type === 'league'
+      ? `${selectedAlignment.name} (league-wide)`
+      : selectedAlignment.name
+    : 'No alignment assigned';
+  const alignmentControl = (
+    <div className={styles.alignmentHeaderControl}>
+      {alignmentLocked ? (
+        <div
+          className={styles.readonlyAlignmentBox}
+          title={
+            hasScheduledGames
+              ? 'Alignment cannot be changed after games are scheduled.'
+              : 'Alignment cannot be changed after the season ends.'
+          }
+        >
+          {alignmentLabel}
+        </div>
+      ) : (
+        <Select
+          value={groupAlignmentSetId}
+          options={alignmentOptions}
+          placeholder={
+            alignmentSets.length === 0
+              ? 'No alignment sets - create one in the league Alignments tab'
+              : 'Select an alignment set...'
+          }
+          onChange={async (value) => {
+            await updateSeason(seasonId, {
+              group_alignment_set_id: value,
+            });
+          }}
+          disabled={busy === 'update' || alignmentSets.length === 0}
+        />
+      )}
+    </div>
+  );
 
   return (
-    <div className={styles.layout}>
-      <div className={styles.layoutLeft}>
-        <Card title={selectedAlignment?.structure_type === 'groups' ? 'Team Groups' : 'Teams'}>
-          {loading ? (
-            <p className={styles.emptyMsg}>Loading...</p>
-          ) : userRoots.length > 0 ? (
-            <ul className={styles.groupList}>
-              {userRoots.map((group) => (
-                <GroupNode
-                  key={group.id}
-                  group={group}
-                  allGroups={userGroups}
-                  leagueCode={leagueCode}
-                  seasonId={seasonId}
-                  seasonName={seasonName}
-                />
-              ))}
-            </ul>
-          ) : flatTeams.length > 0 ? (
-            <TeamList
-              teams={flatTeams}
+    <Card
+      title={selectedAlignment?.structure_type === 'groups' ? 'Team Groups' : 'Teams'}
+      action={alignmentControl}
+    >
+      {loading ? (
+        <p className={styles.emptyMsg}>Loading...</p>
+      ) : userRoots.length > 0 ? (
+        <ul className={styles.groupList}>
+          {userRoots.map((group) => (
+            <GroupNode
+              key={group.id}
+              group={group}
+              allGroups={userGroups}
               leagueCode={leagueCode}
-              leagueId={leagueId}
               seasonId={seasonId}
               seasonName={seasonName}
             />
-          ) : (
-            <p className={styles.emptyMsg}>
-              {selectedAlignment
-                ? 'No teams are defined for this alignment set.'
-                : 'Select an alignment set to view this season team structure.'}
-            </p>
-          )}
-        </Card>
-      </div>
-
-      <div className={styles.layoutRight}>
-        <Card title="Team Alignment Set">
-          {loading ? (
-            <p className={styles.emptyMsg}>Loading...</p>
-          ) : (
-            <div className={styles.alignmentSelector}>
-              <Select
-                value={groupAlignmentSetId ?? '__none__'}
-                options={alignmentOptions}
-                placeholder={
-                  alignmentSets.length === 0
-                    ? 'No alignment sets - create one in the league Alignments tab'
-                    : 'Select an alignment set...'
-                }
-                onChange={async (value) => {
-                  await updateSeason(seasonId, {
-                    group_alignment_set_id: value === '__none__' ? null : value,
-                  });
-                }}
-                disabled={isEnded || busy === 'update' || alignmentSets.length === 0}
-              />
-              {groupAlignmentSetId === null && alignmentSets.length > 0 && (
-                <p className={styles.alignmentHint}>
-                  Select an alignment set to assign this season team structure.
-                </p>
-              )}
-            </div>
-          )}
-        </Card>
-      </div>
-    </div>
+          ))}
+        </ul>
+      ) : flatTeams.length > 0 ? (
+        <TeamList
+          teams={flatTeams}
+          leagueCode={leagueCode}
+          leagueId={leagueId}
+          seasonId={seasonId}
+          seasonName={seasonName}
+        />
+      ) : (
+        <p className={styles.emptyMsg}>
+          {selectedAlignment
+            ? 'No teams are defined for this alignment set.'
+            : 'Select an alignment set to view this season team structure.'}
+        </p>
+      )}
+    </Card>
   );
 };
 

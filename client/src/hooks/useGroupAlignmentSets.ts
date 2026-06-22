@@ -22,7 +22,8 @@ export interface GroupAlignmentSet {
   name: string;
   structure_type: GroupAlignmentStructureType;
   created_at: string;
-  group_count?: number;
+  conference_count?: number;
+  division_count?: number;
   team_count?: number;
   groups?: AlignmentGroupRecord[];
   teams?: GroupTeamRecord[];
@@ -41,7 +42,6 @@ export type AlignmentGroupRecord = Omit<
 interface CreateAlignmentSetPayload {
   name: string;
   structure_type?: GroupAlignmentStructureType;
-  source?: 'empty' | 'legacy' | 'league';
   clone_from_set_id?: string | null;
   team_ids?: string[];
 }
@@ -49,6 +49,21 @@ interface CreateAlignmentSetPayload {
 interface UpdateAlignmentSetPayload {
   name?: string;
   structure_type?: GroupAlignmentStructureType;
+}
+
+interface SaveAlignmentConfigPayload {
+  name: string;
+  structure_type: GroupAlignmentStructureType;
+  team_ids?: string[];
+  groups?: {
+    id?: string;
+    client_id: string;
+    parent_client_id?: string | null;
+    name: string;
+    role?: 'conference' | 'division' | null;
+    sort_order?: number;
+    team_ids?: string[];
+  }[];
 }
 
 const useGroupAlignmentSets = (leagueId: string | undefined) => {
@@ -59,10 +74,10 @@ const useGroupAlignmentSets = (leagueId: string | undefined) => {
     queryKey: ['group-alignment-sets', leagueId],
     queryFn: async () => {
       try {
-        const { data } = await axios.get<GroupAlignmentSet[]>(
-          `${API}/admin/group-alignment-sets`,
-          { headers: authHeaders(), params: { league_id: leagueId } },
-        );
+        const { data } = await axios.get<GroupAlignmentSet[]>(`${API}/admin/group-alignment-sets`, {
+          headers: authHeaders(),
+          params: { league_id: leagueId },
+        });
         return data;
       } catch (err) {
         toast.error(apiError(err, 'Failed to load alignment sets'));
@@ -126,6 +141,28 @@ const useGroupAlignmentSets = (leagueId: string | undefined) => {
     } catch (err) {
       toast.error(apiError(err, 'Failed to update alignment set'));
       return false;
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const saveAlignmentConfig = async (
+    alignmentSetId: string,
+    payload: SaveAlignmentConfigPayload,
+  ): Promise<GroupAlignmentSet | null> => {
+    setBusy(alignmentSetId);
+    try {
+      const { data } = await axios.put<GroupAlignmentSet>(
+        `${API}/admin/group-alignment-sets/${alignmentSetId}/config`,
+        payload,
+        { headers: authHeaders() },
+      );
+      toast.success('Alignment saved!');
+      await invalidate();
+      return data;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to save alignment'));
+      return null;
     } finally {
       setBusy(null);
     }
@@ -224,10 +261,7 @@ const useGroupAlignmentSets = (leagueId: string | undefined) => {
     }
   };
 
-  const setAlignmentTeams = async (
-    alignmentSetId: string,
-    teamIds: string[],
-  ): Promise<boolean> => {
+  const setAlignmentTeams = async (alignmentSetId: string, teamIds: string[]): Promise<boolean> => {
     setBusy(alignmentSetId);
     try {
       await axios.put(
@@ -253,6 +287,7 @@ const useGroupAlignmentSets = (leagueId: string | undefined) => {
     fetchAlignmentSet,
     createAlignmentSet,
     updateAlignmentSet,
+    saveAlignmentConfig,
     deleteAlignmentSet,
     addGroup,
     updateGroup,

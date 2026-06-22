@@ -27,6 +27,8 @@ export interface SelectableListItemProps {
   imagePlaceholder?: string;
   /** Shape of the image/placeholder. Defaults to 'square'. */
   imageShape?: 'square' | 'circle';
+  /** When false, real images render without the default image well background. */
+  imageBackground?: boolean;
   /** When true the image/avatar block is not rendered at all. */
   hideImage?: boolean;
   /** Team primary color — used as placeholder background when no image is set. */
@@ -56,6 +58,7 @@ const SelectableListItem = ({
   image,
   imagePlaceholder,
   imageShape = 'square',
+  imageBackground = true,
   hideImage = false,
   imagePrimaryColor,
   imageTextColor,
@@ -108,7 +111,13 @@ const SelectableListItem = ({
 
       {!hideImage && (
         <div
-          className={[styles.image, styles[imageShape]].join(' ')}
+          className={[
+            styles.image,
+            styles[imageShape],
+            image && !imageBackground ? styles.imageTransparent : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
           style={
             !image && imagePrimaryColor
               ? { background: imagePrimaryColor, color: imageTextColor ?? undefined }

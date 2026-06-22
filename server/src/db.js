@@ -138,6 +138,65 @@ async function copyLegacyGroupTeamsToAlignmentSet({ leagueId, alignmentSetId }) 
   }
 }
 
+async function getPreferredLegacyGroupAlignmentSet({ leagueId, defaultName }) {
+  const rows = await sql`
+    SELECT gas.id, gas.name, gas.created_at
+    FROM group_alignment_sets gas
+    WHERE gas.league_id = ${leagueId}
+      AND gas.structure_type = 'groups'
+      AND EXISTS (
+        SELECT 1
+        FROM group_alignment_groups gag
+        WHERE gag.alignment_set_id = gas.id
+          AND gag.stable_key LIKE 'legacy:%'
+      )
+    ORDER BY gas.created_at ASC, gas.id ASC
+  `;
+
+  const defaultSet = rows.find((row) => row.name === defaultName) ?? null;
+  const renamedOriginal =
+    rows.find((row) => {
+      if (row.name === defaultName) return false;
+      if (!defaultSet) return true;
+      return new Date(row.created_at).getTime() < new Date(defaultSet.created_at).getTime();
+    }) ?? null;
+
+  return renamedOriginal ?? defaultSet;
+}
+
+async function mergeDuplicateDefaultLegacyGroupAlignmentSets({
+  leagueId,
+  defaultName,
+  targetAlignmentSetId,
+}) {
+  const duplicateRows = await sql`
+    SELECT id
+    FROM group_alignment_sets gas
+    WHERE gas.league_id = ${leagueId}
+      AND gas.name = ${defaultName}
+      AND gas.id <> ${targetAlignmentSetId}
+      AND gas.structure_type = 'groups'
+      AND EXISTS (
+        SELECT 1
+        FROM group_alignment_groups gag
+        WHERE gag.alignment_set_id = gas.id
+          AND gag.stable_key LIKE 'legacy:%'
+      )
+  `;
+
+  for (const duplicate of duplicateRows) {
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${targetAlignmentSetId}
+      WHERE group_alignment_set_id = ${duplicate.id}
+    `;
+    await sql`
+      DELETE FROM group_alignment_sets
+      WHERE id = ${duplicate.id}
+    `;
+  }
+}
+
 async function backfillLegacyGroupAlignmentSets() {
   const leaguesWithLegacyGroups = await sql`
     SELECT DISTINCT l.id, l.code
@@ -149,14 +208,27 @@ async function backfillLegacyGroupAlignmentSets() {
 
   for (const league of leaguesWithLegacyGroups) {
     const name = `${league.code || 'League'} Groupings`;
-    const rows = await sql`
-      INSERT INTO group_alignment_sets (league_id, name, structure_type)
-      VALUES (${league.id}, ${name}, 'groups')
-      ON CONFLICT (league_id, name) DO UPDATE
-      SET name = EXCLUDED.name
-      RETURNING id
-    `;
-    const alignmentSetId = rows[0].id;
+    const existing = await getPreferredLegacyGroupAlignmentSet({
+      leagueId: league.id,
+      defaultName: name,
+    });
+    let alignmentSetId = existing?.id;
+    if (!alignmentSetId) {
+      const rows = await sql`
+        INSERT INTO group_alignment_sets (league_id, name, structure_type)
+        VALUES (${league.id}, ${name}, 'groups')
+        ON CONFLICT (league_id, name) DO UPDATE
+        SET structure_type = 'groups'
+        RETURNING id
+      `;
+      alignmentSetId = rows[0].id;
+    } else {
+      await mergeDuplicateDefaultLegacyGroupAlignmentSets({
+        leagueId: league.id,
+        defaultName: name,
+        targetAlignmentSetId: alignmentSetId,
+      });
+    }
     const copiedGroups = await sql`
       SELECT COUNT(*)::int AS count
       FROM group_alignment_groups
@@ -295,19 +367,24 @@ async function backfillFlatAlignmentSetsFromSeasonRosters() {
 }
 
 async function backfillMissingDefaultGroupAlignmentAssignments() {
-  const defaultGroupings = await sql`
-    SELECT gas.id, gas.league_id
-    FROM group_alignment_sets gas
-    JOIN leagues l ON l.id = gas.league_id
-    WHERE gas.structure_type = 'groups'
-      AND gas.name = CONCAT(l.code, ' Groupings')
+  const leaguesWithLegacyGroups = await sql`
+    SELECT DISTINCT l.id, l.code
+    FROM leagues l
+    JOIN groups g ON g.league_id = l.id
+    WHERE g.season_id IS NULL
+      AND COALESCE(g.is_auto, false) = false
   `;
 
-  for (const alignmentSet of defaultGroupings) {
+  for (const league of leaguesWithLegacyGroups) {
+    const alignmentSet = await getPreferredLegacyGroupAlignmentSet({
+      leagueId: league.id,
+      defaultName: `${league.code || 'League'} Groupings`,
+    });
+    if (!alignmentSet) continue;
     await sql`
       UPDATE seasons
       SET group_alignment_set_id = ${alignmentSet.id}
-      WHERE league_id = ${alignmentSet.league_id}
+      WHERE league_id = ${league.id}
         AND group_alignment_set_id IS NULL
     `;
   }

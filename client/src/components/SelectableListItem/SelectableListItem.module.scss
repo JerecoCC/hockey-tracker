@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .item {
   position: relative;
@@ -92,6 +92,10 @@
 }
 
 // ── Jersey number chip ────────────────────────────────────────────────────────
+.imageTransparent {
+  background: transparent;
+}
+
 .jerseyChip {
   flex-shrink: 0;
   min-width: 22px;

@@ -14,7 +14,6 @@ import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues, { type PlayoffFormatRule } from '@/hooks/useLeagues';
-import useGames from '@/hooks/useGames';
 import useSeasonDetails, {
   type SeasonGroupRecord,
   type SeasonTeam,
@@ -113,12 +112,14 @@ const SeasonDetailsPage = () => {
   const routeLeague = isLegacyLeagueRoute
     ? null
     : allLeagues.find(
-        (item) =>
-          toRouteSlug(item.code) === leagueSlug ||
-          toRouteSlug(item.name) === leagueSlug,
+        (item) => toRouteSlug(item.code) === leagueSlug || toRouteSlug(item.name) === leagueSlug,
       );
   const leagueId = isLegacyLeagueRoute ? leagueSlug : routeLeague?.id;
-  const { league, seasons: routeSeasons, loading: leagueDetailsLoading } = useLeagueDetails(leagueId);
+  const {
+    league,
+    seasons: routeSeasons,
+    loading: leagueDetailsLoading,
+  } = useLeagueDetails(leagueId);
   useDocumentIcon(league?.icon);
   const routeSeason = isLegacySeasonRoute
     ? null
@@ -155,11 +156,7 @@ const SeasonDetailsPage = () => {
   const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
   const { standings, loading: standingsLoading } = useSeasonStandings(id);
 
-  // Shared cache with SeasonGamesTab — no extra network request when that tab is loaded.
-  const { games } = useGames({ seasonId: id });
-  const hasUnfinishedRegularGames = games.some(
-    (g) => g.game_type === 'regular' && (g.status === 'scheduled' || g.status === 'in_progress'),
-  );
+  const hasUnfinishedRegularGames = season?.has_unfinished_regular_games ?? false;
 
   const clinchedIds = useMemo(
     () =>
@@ -180,9 +177,8 @@ const SeasonDetailsPage = () => {
     ],
   );
 
-  // When teams are managed via user groups (group-based seasons), the flat season_teams
-  // table is empty and seasonTeams will be []. Fall back to collecting unique teams from
-  // all groups so the game creation dropdowns always have options to pick from.
+  // Season teams are resolved by the backend from the assigned team alignment. Keep
+  // the group fallback for legacy seasons and any empty alignment responses.
   const effectiveSeasonTeams = useMemo<SeasonTeam[]>(() => {
     if (seasonTeams.length > 0) return seasonTeams;
     const seen = new Set<string>();
@@ -315,7 +311,8 @@ const SeasonDetailsPage = () => {
     [forwards, fwdSort, fwdPage],
   );
   const fallbackDefenseStats = useMemo(
-    () => sortSkaterTable(defensemen, defSort).slice((defPage - 1) * PAGE_SIZE, defPage * PAGE_SIZE),
+    () =>
+      sortSkaterTable(defensemen, defSort).slice((defPage - 1) * PAGE_SIZE, defPage * PAGE_SIZE),
     [defensemen, defSort, defPage],
   );
   const fallbackGoalieStats = useMemo(
@@ -341,9 +338,12 @@ const SeasonDetailsPage = () => {
   const goalieStats = Array.isArray(goalieStatItems)
     ? (goalieStatItems as GoalieStatRecord[])
     : fallbackGoalieStats;
-  const forwardStatsTotal = typeof rawForwardStatsTotal === 'number' ? rawForwardStatsTotal : forwards.length;
-  const defenseStatsTotal = typeof rawDefenseStatsTotal === 'number' ? rawDefenseStatsTotal : defensemen.length;
-  const goalieStatsTotal = typeof rawGoalieStatsTotal === 'number' ? rawGoalieStatsTotal : goalies.length;
+  const forwardStatsTotal =
+    typeof rawForwardStatsTotal === 'number' ? rawForwardStatsTotal : forwards.length;
+  const defenseStatsTotal =
+    typeof rawDefenseStatsTotal === 'number' ? rawDefenseStatsTotal : defensemen.length;
+  const goalieStatsTotal =
+    typeof rawGoalieStatsTotal === 'number' ? rawGoalieStatsTotal : goalies.length;
   const fwdPageCount = Math.max(1, Math.ceil(forwardStatsTotal / PAGE_SIZE));
   const defPageCount = Math.max(1, Math.ceil(defenseStatsTotal / PAGE_SIZE));
   const goaliePageCount = Math.max(1, Math.ceil(goalieStatsTotal / PAGE_SIZE));
@@ -679,10 +679,7 @@ const SeasonDetailsPage = () => {
     : null;
   useEffect(() => {
     if (!season || isLegacyLeagueRoute || isLegacySeasonRoute || !seasonHref) return;
-    if (
-      leagueSlug !== toRouteSlug(season.league_code) ||
-      seasonSlug !== toRouteSlug(season.name)
-    ) {
+    if (leagueSlug !== toRouteSlug(season.league_code) || seasonSlug !== toRouteSlug(season.name)) {
       navigate(seasonHref, { replace: true });
     }
   }, [
@@ -713,13 +710,7 @@ const SeasonDetailsPage = () => {
             { label: season?.name ?? 'Not Found' },
           ],
         },
-    [
-      loading,
-      leagueHref,
-      season?.league_name,
-      season?.league_code,
-      season?.name,
-    ],
+    [loading, leagueHref, season?.league_name, season?.league_code, season?.name],
   );
   const navigateToPlayer = (row: SkaterStatRecord | GoalieStatRecord) =>
     navigate(
@@ -754,9 +745,7 @@ const SeasonDetailsPage = () => {
   }
 
   if (!season) {
-    return (
-      <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>
-    );
+    return <p style={{ color: 'var(--text-dim)' }}>Season not found.</p>;
   }
 
   return (
@@ -886,6 +875,7 @@ const SeasonDetailsPage = () => {
                 loading={loading}
                 busy={busy}
                 isEnded={season.is_ended}
+                hasScheduledGames={season.has_scheduled_games}
                 groupAlignmentSetId={season.group_alignment_set_id}
                 updateSeason={updateSeason}
               />
@@ -1135,10 +1125,7 @@ const SeasonDetailsPage = () => {
                       return standingsSort.dir === 'desc' ? cmp : -cmp;
                     });
 
-                  const renderTable = (
-                    rows: StandingDisplayRow[],
-                    emptyMsg: string,
-                  ) =>
+                  const renderTable = (rows: StandingDisplayRow[], emptyMsg: string) =>
                     !standingsLoading && rows.length === 0 ? (
                       <p className={styles.tabPlaceholder}>{emptyMsg}</p>
                     ) : (
@@ -1161,7 +1148,9 @@ const SeasonDetailsPage = () => {
                   if (standingsSubTab === 'conference') {
                     return standingsTopGroups.map((conf) => {
                       const ids = standingsGroupTeamIds.get(conf.id) ?? new Set<string>();
-                      const rows = sortRows(withPlaces(standings.filter((t) => ids.has(t.team_id))));
+                      const rows = sortRows(
+                        withPlaces(standings.filter((t) => ids.has(t.team_id))),
+                      );
                       return (
                         <Card
                           key={conf.id}
@@ -1211,7 +1200,9 @@ const SeasonDetailsPage = () => {
 
                   // ── League: all teams in one table (default) ─────────────────────
                   return (
-                    <Card>{renderTable(sortRows(withPlaces(standings)), 'No standings data yet.')}</Card>
+                    <Card>
+                      {renderTable(sortRows(withPlaces(standings)), 'No standings data yet.')}
+                    </Card>
                   );
                 })()}
               </div>

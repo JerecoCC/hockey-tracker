@@ -40,6 +40,10 @@ export interface SeasonRecord {
   bracket_rule_set_id: string | null;
   /** ID of the team alignment set assigned to this season. Null uses legacy group fallback. */
   group_alignment_set_id: string | null;
+  /** True once any game exists for the season; alignment edits are locked after this. */
+  has_scheduled_games: boolean;
+  /** True while regular-season games are still scheduled or in progress. */
+  has_unfinished_regular_games: boolean;
   created_at: string;
 }
 
@@ -136,4 +140,3 @@ const useSeasons = (leagueId?: string) => {
 };
 
 export default useSeasons;
-
