@@ -978,6 +978,7 @@ router.get('/:seasonId/groups', async (req, res) => {
           gas.league_id,
           ag.alignment_set_id,
           ag.parent_id,
+          ag.stable_key,
           ag.name,
           ag.sort_order,
           ag.created_at,

@@ -20,6 +20,7 @@ const apiError = (err: unknown, fallback: string): string =>
 export interface SeasonGroupRecord {
   id: string;
   league_id: string;
+  stable_key?: string | null;
   parent_id: string | null;
   name: string;
   sort_order: number;
@@ -61,7 +62,14 @@ export interface SeasonTeam extends LeagueTeam {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-const useSeasonDetails = (seasonId: string | undefined) => {
+interface UseSeasonDetailsOptions {
+  leagueId?: string;
+}
+
+const useSeasonDetails = (
+  seasonId: string | undefined,
+  options: UseSeasonDetailsOptions = {},
+) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [groupBusy, setGroupBusy] = useState<string | null>(null);
@@ -102,7 +110,7 @@ const useSeasonDetails = (seasonId: string | undefined) => {
   });
 
   // ③ All league teams — used to populate the override modal
-  const leagueId = season?.league_id;
+  const leagueId = options.leagueId ?? season?.league_id;
   const {
     alignmentSets,
     loading: alignmentSetsLoading,

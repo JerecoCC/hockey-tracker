@@ -670,16 +670,61 @@ router.get('/playoff-series', async (req, res) => {
         at.logo AS away_team_logo, at.logo_dark AS away_team_logo_dark, at.logo_light AS away_team_logo_light,
         sg.games
       FROM playoff_series ps
+      JOIN seasons s ON s.id = ps.season_id
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
-        WHERE team_id = ps.home_team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        (SELECT
+            ti.name,
+            ti.code,
+            team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+            team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+            team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+          FROM team_iterations ti
+          LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+          LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
+          WHERE ti.team_id = ps.home_team_id
+            AND (ti.start_season_id IS NULL OR ss.start_date <= s.start_date)
+            AND (ti.latest_season_id IS NULL OR ls.start_date >= s.start_date)
+          ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
+          LIMIT 1)
+        UNION ALL
+        (SELECT
+            ti.name,
+            ti.code,
+            team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+            team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+            team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+          FROM team_iterations ti
+          WHERE ti.team_id = ps.home_team_id
+          ORDER BY ti.recorded_at ASC
+          LIMIT 1)
         LIMIT 1
       ) ht ON true
       LEFT JOIN LATERAL (
-        SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
-        WHERE team_id = ps.away_team_id
-        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        (SELECT
+            ti.name,
+            ti.code,
+            team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+            team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+            team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+          FROM team_iterations ti
+          LEFT JOIN seasons ss ON ss.id = ti.start_season_id
+          LEFT JOIN seasons ls ON ls.id = ti.latest_season_id
+          WHERE ti.team_id = ps.away_team_id
+            AND (ti.start_season_id IS NULL OR ss.start_date <= s.start_date)
+            AND (ti.latest_season_id IS NULL OR ls.start_date >= s.start_date)
+          ORDER BY ss.start_date DESC NULLS LAST, ti.recorded_at DESC
+          LIMIT 1)
+        UNION ALL
+        (SELECT
+            ti.name,
+            ti.code,
+            team_logo_default(ti.logo_dark, ti.logo_light) AS logo,
+            team_logo_dark(ti.logo_dark, ti.logo_light) AS logo_dark,
+            team_logo_light(ti.logo_dark, ti.logo_light) AS logo_light
+          FROM team_iterations ti
+          WHERE ti.team_id = ps.away_team_id
+          ORDER BY ti.recorded_at ASC
+          LIMIT 1)
         LIMIT 1
       ) at ON true
       LEFT JOIN LATERAL (

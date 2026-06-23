@@ -21,7 +21,7 @@ import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
 import Select from '@/components/Select/Select';
 import useBracketRuleSets, { type BracketSlotRule } from '@/hooks/useBracketRuleSets';
-import useSeasonStandings, { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
+import { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import BracketRulesModal, {
   type BracketStructure,
@@ -81,6 +81,37 @@ const simulatedTeamFromStanding = (team: TeamStandingRecord): SimulatedSlotTeam 
   primaryColor: team.team_primary_color,
   textColor: team.team_text_color,
 });
+
+export const canonicalSlotKey = (key: string | null | undefined): string | null => {
+  if (!key) return null;
+  return key.replace(/away$/, 'team1').replace(/home$/, 'team2');
+};
+
+export const normalizeBracketSlotRule = (slot: BracketSlotRule): BracketSlotRule => ({
+  ...slot,
+  slot_key: canonicalSlotKey(slot.slot_key) ?? slot.slot_key,
+  choice_ref: canonicalSlotKey(slot.choice_ref),
+  matchup_ref: slot.matchup_ref ? (canonicalSlotKey(slot.matchup_ref) ?? slot.matchup_ref) : null,
+});
+
+export const getSeasonGroupTeamIds = (
+  groups: SeasonGroupRecord[],
+  groupId: string,
+): Set<string> => {
+  const ids = new Set<string>();
+  const groupMatches = (group: SeasonGroupRecord, id: string) =>
+    group.id === id || group.stable_key === `legacy:${id}`;
+  const collect = (gid: string) => {
+    const group = groups.find((candidate) => groupMatches(candidate, gid));
+    if (!group) return;
+    group.teams.forEach((team) => ids.add(team.id));
+    groups
+      .filter((candidate) => candidate.parent_id === group.id)
+      .forEach((child) => collect(child.id));
+  };
+  collect(groupId);
+  return ids;
+};
 
 // ── Bracket structure derivation ──────────────────────────────────────────────
 
@@ -717,6 +748,8 @@ interface Props {
   playoffFormat: PlayoffFormatRule[] | null;
   bestOfPlayoff: number | null;
   leagueBestOfPlayoff: number;
+  standings: TeamStandingRecord[];
+  standingsLoading: boolean;
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
 }
 
@@ -732,6 +765,8 @@ const SeasonPlayoffsTab = ({
   playoffFormat,
   bestOfPlayoff,
   leagueBestOfPlayoff,
+  standings,
+  standingsLoading,
   updateSeason,
 }: Props) => {
   const {
@@ -747,8 +782,6 @@ const SeasonPlayoffsTab = ({
   const { ruleSets, fetchRuleSet } = useBracketRuleSets(leagueId);
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
 
-  const { standings } = useSeasonStandings(seasonId);
-
   // ── Active rule set slots (needed to compute advanceable slots) ───────────────
   const [activeRuleSetSlots, setActiveRuleSetSlots] = useState<BracketSlotRule[]>([]);
   useEffect(() => {
@@ -756,7 +789,9 @@ const SeasonPlayoffsTab = ({
       setActiveRuleSetSlots([]);
       return;
     }
-    fetchRuleSet(bracketRuleSetId).then((rs) => setActiveRuleSetSlots(rs?.slots ?? []));
+    fetchRuleSet(bracketRuleSetId).then((rs) =>
+      setActiveRuleSetSlots(rs?.slots.map(normalizeBracketSlotRule) ?? []),
+    );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [bracketRuleSetId]);
 
@@ -863,24 +898,12 @@ const SeasonPlayoffsTab = ({
   };
 
   const handleSimulate = async () => {
-    if (!bracketRuleSetId) return;
+    if (!bracketRuleSetId || standingsLoading || standings.length === 0) return;
     setSimulating(true);
     try {
       const ruleSet = await fetchRuleSet(bracketRuleSetId);
       if (!ruleSet) return;
-
-      // Recursively collect all team IDs belonging to a group and its children.
-      const getGroupTeamIds = (groupId: string): Set<string> => {
-        const ids = new Set<string>();
-        const collect = (gid: string) => {
-          const g = groups.find((gr) => gr.id === gid);
-          if (!g) return;
-          g.teams.forEach((t) => ids.add(t.id));
-          groups.filter((gr) => gr.parent_id === gid).forEach((child) => collect(child.id));
-        };
-        collect(groupId);
-        return ids;
-      };
+      const ruleSlots = ruleSet.slots.map(normalizeBracketSlotRule);
 
       // First pass — resolve all 'seed' slots; leave everything else null for now.
       const scopedStandings = (
@@ -888,7 +911,7 @@ const SeasonPlayoffsTab = ({
         groupId?: string | null,
       ) => {
         if ((scope === 'specific_conference' || scope === 'specific_division') && groupId) {
-          const ids = getGroupTeamIds(groupId);
+          const ids = getSeasonGroupTeamIds(groups, groupId);
           return standings.filter((s) => ids.has(s.team_id));
         }
         return standings;
@@ -906,7 +929,7 @@ const SeasonPlayoffsTab = ({
       const result: Record<string, string | null> = {};
       const resultTeamIds: Record<string, string | null> = {};
       const assignedTeamIds = new Set<string>();
-      for (const slot of ruleSet.slots) {
+      for (const slot of ruleSlots) {
         if (slot.rule_type !== 'seed') {
           result[slot.slot_key] = null;
           resultTeamIds[slot.slot_key] = null;
@@ -925,7 +948,7 @@ const SeasonPlayoffsTab = ({
       }
 
       // Check whether any slots require a human pick.
-      const choiceSlots = ruleSet.slots.filter((s) => s.rule_type === 'choice');
+      const choiceSlots = ruleSlots.filter((s) => s.rule_type === 'choice');
       if (choiceSlots.length === 0) {
         if (playoffsStarted) {
           await commitRound1Matchups(result, resultTeamIds);
@@ -969,7 +992,7 @@ const SeasonPlayoffsTab = ({
       setPartialSimResult(result);
       setPartialSimResultTeamIds(resultTeamIds);
       setPendingChoices(choices);
-      setPendingRuleSlots(ruleSet.slots);
+      setPendingRuleSlots(ruleSlots);
       setPickModalOpen(true);
     } finally {
       setSimulating(false);
@@ -1072,6 +1095,14 @@ const SeasonPlayoffsTab = ({
   const canSeedMatchups =
     !!bracketStructure && !!bracketRuleSetId && playoffsStarted && !hasRoundOneSeries;
   const showBracketAction = canSimulateFirstRound || canSeedMatchups;
+  const simulationStandingsUnavailable = standingsLoading || standings.length === 0;
+  const simulateTooltip = standingsLoading
+    ? 'Loading standings'
+    : simulationStandingsUnavailable
+      ? 'Standings are required to seed matchups'
+      : canSimulateFirstRound
+        ? 'Uses current standings from final regular-season games'
+        : undefined;
 
   return (
     <>
@@ -1113,12 +1144,8 @@ const SeasonPlayoffsTab = ({
                     intent="success"
                     icon="play_arrow"
                     size="sm"
-                    tooltip={
-                      canSimulateFirstRound
-                        ? 'Uses current standings from final regular-season games'
-                        : undefined
-                    }
-                    disabled={simulating || pickModalOpen}
+                    tooltip={simulateTooltip}
+                    disabled={simulating || pickModalOpen || simulationStandingsUnavailable}
                     onClick={handleSimulate}
                   >
                     {canSeedMatchups ? 'Seed Matchups' : 'Simulate First Round'}

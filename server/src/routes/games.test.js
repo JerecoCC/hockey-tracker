@@ -424,6 +424,27 @@ describe('DELETE /api/admin/games/:id', () => {
 
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/games/playoff-series
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/games/playoff-series', () => {
+  it('resolves team names using the season date-aware team iteration range', async () => {
+    sql.mockResolvedValueOnce([SERIES]);
+
+    const res = await request(app).get('/api/admin/games/playoff-series?season_id=season-1');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].home_team_name).toBe('Sharks');
+
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('JOIN seasons s ON s.id = ps.season_id');
+    expect(queryText).toContain('ti.start_season_id');
+    expect(queryText).toContain('ti.latest_season_id');
+    expect(queryText).toContain('ss.start_date <= s.start_date');
+    expect(queryText).toContain('ls.start_date >= s.start_date');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // POST /api/admin/games/playoff-series
 // ---------------------------------------------------------------------------
 describe('POST /api/admin/games/playoff-series', () => {

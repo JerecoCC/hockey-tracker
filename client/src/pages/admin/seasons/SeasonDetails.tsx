@@ -174,11 +174,13 @@ const SeasonDetailsPage = () => {
   const hasVisitedStatsTab = visitedTabs.has(SEASON_TAB_INDEX.STATS);
   const hasVisitedStandingsTab = visitedTabs.has(SEASON_TAB_INDEX.STANDINGS);
   const hasVisitedAwardsTab = visitedTabs.has(SEASON_TAB_INDEX.AWARDS);
+  const hasVisitedPlayoffsTab = visitedTabs.has(SEASON_TAB_INDEX.PLAYOFFS);
   const shouldFetchSummaryStats = hasVisitedStatsTab || hasVisitedAwardsTab;
   const shouldFetchForwardStats = hasVisitedStatsTab && visitedStatsSubTabs.has('Forwards');
   const shouldFetchDefenseStats = hasVisitedStatsTab && visitedStatsSubTabs.has('Defense');
   const shouldFetchGoalieStats = hasVisitedStatsTab && visitedStatsSubTabs.has('Goalies');
-  const shouldFetchStandings = hasVisitedStandingsTab || hasVisitedAwardsTab;
+  const shouldFetchStandings =
+    hasVisitedStandingsTab || hasVisitedAwardsTab || hasVisitedPlayoffsTab;
 
   const {
     season,
@@ -192,7 +194,7 @@ const SeasonDetailsPage = () => {
     startPlayoffs,
     endSeason,
     updateSeason,
-  } = useSeasonDetails(id);
+  } = useSeasonDetails(id, { leagueId });
   const loading =
     detailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
@@ -1298,6 +1300,8 @@ const SeasonDetailsPage = () => {
                 playoffFormat={season.playoff_format ?? null}
                 bestOfPlayoff={season.best_of_playoff ?? null}
                 leagueBestOfPlayoff={season.league_best_of_playoff}
+                standings={standings}
+                standingsLoading={standingsLoading}
                 updateSeason={updateSeason}
               />
             ),

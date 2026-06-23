@@ -9,6 +9,7 @@ import useTabState from '@/hooks/useTabState';
 import SeasonDetails from './SeasonDetails';
 
 const mockNavigate = jest.fn();
+const mockSeasonPlayoffsTab = jest.fn(() => null);
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -65,7 +66,7 @@ jest.mock('@/components/TeamLogo/TeamLogo', () => () => <span>logo</span>);
 jest.mock('./SeasonEndModal', () => () => null);
 jest.mock('./SeasonFormModal', () => () => null);
 jest.mock('./SeasonGamesTab', () => () => null);
-jest.mock('./SeasonPlayoffsTab', () => () => null);
+jest.mock('./SeasonPlayoffsTab', () => (props: any) => mockSeasonPlayoffsTab(props));
 jest.mock('./SeasonTeamsCard', () => () => null);
 
 const mockUseLeagueDetails = useLeagueDetails as jest.Mock;
@@ -241,6 +242,36 @@ describe('SeasonDetails standings tab', () => {
 
     expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', { enabled: false });
     expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: true });
+  });
+
+  it('enables cached standings and passes them to playoffs when the playoffs tab is active', () => {
+    const standings = [makeStanding('team-1', 'Toronto Maple Leafs', 112)];
+    mockUseTabState.mockReturnValue([6, jest.fn()]);
+    mockUseSeasonStandings.mockReturnValue({
+      standings,
+      loading: false,
+    });
+
+    render(<SeasonDetails />);
+
+    expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: true });
+    expect(mockSeasonPlayoffsTab).toHaveBeenCalledWith(
+      expect.objectContaining({
+        standings,
+        standingsLoading: false,
+      }),
+    );
+  });
+
+  it('passes the route league id into season details so team context can load immediately', () => {
+    mockUseLeagues.mockReturnValue({
+      leagues: [{ id: 'league-db-id', name: 'League 1', code: 'league-1' }],
+      loading: false,
+    });
+
+    render(<SeasonDetails />);
+
+    expect(mockUseSeasonDetails).toHaveBeenCalledWith('season-1', { leagueId: 'league-db-id' });
   });
 
   it('shows the standings loading spinner inside the card', () => {
