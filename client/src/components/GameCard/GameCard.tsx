@@ -249,13 +249,16 @@ const GameCard = ({
   const isOpenable = canOpen ?? isWatched;
   const timeLabel =
     timeLabelProp === undefined
-      ? fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref)
+      ? game.scheduled_time
+        ? fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref)
+        : ''
       : (timeLabelProp ?? '');
   const originalDateLabel =
     originalDateLabelProp === undefined
       ? getOriginalGameDateLabel(game, tzPref)
       : originalDateLabelProp;
-  const primaryMetaLabel = [originalDateLabel, timeLabel || getStatusLabel(game)]
+  const primaryFallbackLabel = game.status === 'scheduled' ? 'TBD' : getStatusLabel(game);
+  const primaryMetaLabel = [originalDateLabel, timeLabel || primaryFallbackLabel]
     .filter(Boolean)
     .join(' \u00b7 ');
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);

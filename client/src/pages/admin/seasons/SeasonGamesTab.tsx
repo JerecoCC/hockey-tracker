@@ -50,7 +50,7 @@ import styles from './SeasonGamesTab.module.scss';
 const API = import.meta.env.VITE_API_URL || '/api';
 const SEASON_WEEK_SUMMARY_STICKY_TOP = '52px';
 const SEASON_WEEK_SUMMARY_STICKY_TOP_PX = 52;
-const SEASON_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 12;
+const SEASON_WEEK_SUMMARY_ACTIVE_MARKER_OFFSET_PX = 8;
 const SEASON_WEEK_SUMMARY_SCROLL_SETTLE_MS = 180;
 
 const getSeasonWeekSummaryActiveMarker = (summaryCard: HTMLDivElement | null): number =>

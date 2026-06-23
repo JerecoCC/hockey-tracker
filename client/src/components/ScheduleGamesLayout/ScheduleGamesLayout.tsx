@@ -210,26 +210,34 @@ export const ScheduleWeekSummary = <T,>({
                 : `Jump to ${formatHeading(dateKey)}: ${dayGames.length} games`
             }
           >
-            <span className={styles.weekSummaryDate}>{formatDate(dateKey)}</span>
-            <span className={styles.weekSummaryWeekday}>{formatWeekday(dateKey)}</span>
-            <span className={styles.weekSummaryCount}>
-              {loading ? (
-                <Skeleton
-                  type="text"
-                  className={styles.weekSummaryCountSkeleton}
+            <span className={styles.weekSummaryDayRow}>
+              <span className={styles.weekSummaryDate}>{formatDate(dateKey)}</span>
+              <span className={styles.weekSummaryWeekday}>{formatWeekday(dateKey)}</span>
+            </span>
+            <span
+              className={[styles.weekSummaryDayRow, styles.weekSummaryCountRow]
+                .filter(Boolean)
+                .join(' ')}
+            >
+              <span className={styles.weekSummaryCount}>
+                {loading ? (
+                  <Skeleton
+                    type="text"
+                    className={styles.weekSummaryCountSkeleton}
+                  />
+                ) : (
+                  <>
+                    {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
+                  </>
+                )}
+              </span>
+              {isActive && (
+                <Icon
+                  name="calendar_today"
+                  className={styles.weekSummaryIcon}
                 />
-              ) : (
-                <>
-                  {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
-                </>
               )}
             </span>
-            {isActive && (
-              <Icon
-                name="calendar_today"
-                className={styles.weekSummaryIcon}
-              />
-            )}
           </button>
         );
       })}
@@ -290,7 +298,7 @@ interface ScheduleWeekDaySkeletonsProps {
 
 export const ScheduleWeekDaySkeletons = ({ dateLabel }: ScheduleWeekDaySkeletonsProps) => (
   <div
-    className={styles.list}
+    className={styles.weekGameSkeletonGrid}
     aria-label={`Loading games for ${dateLabel}`}
   >
     {Array.from({ length: 3 }).map((_, index) => (
