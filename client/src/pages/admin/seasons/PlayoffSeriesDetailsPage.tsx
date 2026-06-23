@@ -23,7 +23,7 @@ import {
   UUID_PATTERN,
 } from '@/lib/routeSlugs';
 import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
-import GameListItem from './GameListItem';
+import GameListItem from '@/components/GameListItem';
 import styles from './PlayoffSeriesDetailsPage.module.scss';
 
 const STATUS_LABEL: Record<GameStatus, string> = {
