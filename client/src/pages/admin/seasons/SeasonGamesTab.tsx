@@ -1032,6 +1032,24 @@ const SeasonGamesTab = ({
           }
           action={
             <ScheduleGamesActions>
+              {!isEnded && (
+                <>
+                  <Button
+                    variant="outlined"
+                    intent="accent"
+                    icon="playlist_add"
+                    onClick={() => setBulkDate('')}
+                  >
+                    Bulk Create
+                  </Button>
+                  <Button
+                    icon="add"
+                    onClick={() => handleAdd()}
+                  >
+                    Create Game
+                  </Button>
+                </>
+              )}
               <SegmentedControl
                 value={view}
                 onChange={(value) => handleViewChange(value as SeasonGamesView)}
@@ -1051,24 +1069,6 @@ const SeasonGamesTab = ({
                   },
                 ]}
               />
-              {!isEnded && (
-                <>
-                  <Button
-                    variant="outlined"
-                    intent="accent"
-                    icon="playlist_add"
-                    onClick={() => setBulkDate('')}
-                  >
-                    Bulk Create
-                  </Button>
-                  <Button
-                    icon="add"
-                    onClick={() => handleAdd()}
-                  >
-                    Create Game
-                  </Button>
-                </>
-              )}
               <ToggleButton
                 variant="switch"
                 active={filtersVisible}

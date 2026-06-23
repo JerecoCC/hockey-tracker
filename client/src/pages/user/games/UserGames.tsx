@@ -10,7 +10,6 @@ import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGame
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
-import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import Modal from '@/components/Modal/Modal';
 import {
@@ -35,7 +34,6 @@ import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord, type GameStatus } from '@/hooks/useGames';
-import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import styles from './UserGames.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -830,7 +828,6 @@ const UserGames = () => {
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
   const [scheduleDate, setScheduleDate] = useState('');
   const [scheduleBusy, setScheduleBusy] = useState(false);
-  const [exportingMonthImage, setExportingMonthImage] = useState(false);
   const hasSeededTeamFilterRef = useRef(false);
   const calendarGridRef = useRef<HTMLDivElement>(null);
 
@@ -1314,24 +1311,6 @@ const UserGames = () => {
     setView(nextView);
   };
 
-  const handleDownloadMonthImage = async () => {
-    const calendarNode = calendarGridRef.current;
-    if (exportingMonthImage || view !== 'calendar' || scheduledGames.length === 0 || !calendarNode)
-      return;
-    setExportingMonthImage(true);
-    try {
-      await downloadMonthScheduleImage({
-        calendarNode,
-        calendarMonth,
-        filenamePrefix: 'user-games',
-      });
-    } catch {
-      toast.error('Failed to generate schedule image');
-    } finally {
-      setExportingMonthImage(false);
-    }
-  };
-
   const renderUserGameListItem = (game: GameRecord) => {
     const watched = !!game.watched_by_user;
     const skipped = !!game.skipped_by_user;
@@ -1467,6 +1446,15 @@ const UserGames = () => {
         action={
           <ScheduleGamesActions>
             <div className={styles.viewFilterControls}>
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="image"
+                aria-label="Generate Score Image"
+                onClick={() => setScoreImageOpen(true)}
+              >
+                Generate Score Image
+              </Button>
               <SegmentedControl
                 value={view}
                 onChange={(value) => handleViewChange(value as 'list' | 'calendar')}
@@ -1495,26 +1483,6 @@ const UserGames = () => {
                 activeTooltip="Hide filters"
                 inactiveTooltip="Show filters"
                 className={styles.filterVisibilitySwitch}
-              />
-              <MoreActionsMenu
-                size="md"
-                items={[
-                  {
-                    label: 'Generate Score Image',
-                    icon: 'image',
-                    onClick: () => setScoreImageOpen(true),
-                  },
-                  ...(view === 'calendar' && scheduledGames.length > 0
-                    ? [
-                        {
-                          label: 'Download Month Image',
-                          icon: 'download',
-                          disabled: exportingMonthImage,
-                          onClick: () => void handleDownloadMonthImage(),
-                        },
-                      ]
-                    : []),
-                ]}
               />
             </div>
           </ScheduleGamesActions>

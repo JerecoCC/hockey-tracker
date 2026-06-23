@@ -2,9 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { toPng } from 'html-to-image';
 import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
-import monthCalendarStyles from '@/components/MonthCalendar/MonthCalendar.module.scss';
 import scheduleLayoutStyles from '@/components/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
@@ -26,7 +24,6 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
-jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
 jest.mock(
   '@/components/Modal/Modal',
   () =>
@@ -92,12 +89,12 @@ jest.mock('@/components/Icon/Icon', () => ({ name }: any) => <span>{name}</span>
 jest.mock(
   '@/components/Button/Button',
   () =>
-    ({ children, tooltip, icon, onClick, disabled }: any) => (
+    ({ children, tooltip, icon, onClick, disabled, 'aria-label': ariaLabel }: any) => (
       <button
         type="button"
         onClick={onClick}
         disabled={disabled}
-        aria-label={tooltip ?? icon}
+        aria-label={ariaLabel ?? tooltip ?? icon}
       >
         {children ?? tooltip ?? icon}
       </button>
@@ -167,7 +164,6 @@ jest.mock('@/components/MultiSelect/MultiSelect', () => ({
 const mockUseQuery = useQuery as jest.Mock;
 const mockUseQueryClient = useQueryClient as jest.Mock;
 const mockAxios = axios as jest.Mocked<typeof axios>;
-const mockToPng = toPng as jest.Mock;
 
 const currentDate = new Date(2026, 4, 15, 12, 0, 0);
 const dateOffset = (days: number) => new Date(currentDate.getTime() + days * 86_400_000);
@@ -424,7 +420,6 @@ beforeEach(() => {
   mockAxios.post.mockResolvedValue({ data: {} } as any);
   mockAxios.delete.mockResolvedValue({ data: {} } as any);
   mockAxios.put.mockResolvedValue({ data: {} } as any);
-  mockToPng.mockResolvedValue('data:image/png;base64,test');
   mockUseQuery.mockImplementation(({ queryKey }: any) => {
     if (queryKey[0] === 'user-leagues')
       return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
@@ -721,7 +716,6 @@ describe('UserGames schedule views', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
     await user.click(screen.getByRole('button', { name: /Generate Score Image/ }));
 
     expect(screen.getByText('Generate Score Card')).toBeInTheDocument();
@@ -738,48 +732,6 @@ describe('UserGames schedule views', () => {
     expect(screen.getByText('OPP @ HOM')).toBeInTheDocument();
     expect(screen.getByText('Score 1-2')).toBeInTheDocument();
     expect(screen.getByText((content) => content.startsWith('Suffix'))).toBeInTheDocument();
-  });
-
-  it('downloads the current calendar month as an image from Month view', async () => {
-    const user = userEvent.setup();
-    const originalCreateElement = document.createElement.bind(document);
-    const clickMock = jest.fn();
-    let createdAnchor: HTMLAnchorElement | null = null;
-    const createElementSpy = jest.spyOn(document, 'createElement').mockImplementation((tagName) => {
-      const element = originalCreateElement(tagName);
-      if (String(tagName).toLowerCase() === 'a') {
-        createdAnchor = element as HTMLAnchorElement;
-        Object.defineProperty(element, 'click', { value: clickMock });
-      }
-      return element;
-    });
-
-    render(<UserGames />);
-    await user.click(screen.getByRole('button', { name: 'Month view' }));
-
-    await user.click(screen.getByRole('button', { name: 'More actions' }));
-    expect(screen.getByRole('button', { name: /Download Month Image/ })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /Download Month Image/ }));
-
-    await waitFor(() => expect(clickMock).toHaveBeenCalled());
-    const capturedNode = mockToPng.mock.calls[0][0] as HTMLElement;
-    expect(mockToPng).toHaveBeenCalledWith(
-      expect.objectContaining({ dataset: expect.objectContaining({ calendarExport: 'true' }) }),
-      expect.objectContaining({
-        backgroundColor: expect.any(String),
-        cacheBust: true,
-        pixelRatio: 2,
-      }),
-    );
-    expect(capturedNode.textContent).toContain(
-      new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(currentDate),
-    );
-    expect(capturedNode.querySelector(`.${monthCalendarStyles.grid}`)).not.toBeNull();
-    expect(createdAnchor?.download).toContain('user-games-');
-    expect(createdAnchor?.href).toBe('data:image/png;base64,test');
-
-    createElementSpy.mockRestore();
   });
 
   it('shows playoff series dots once a playoff game has been watched', async () => {
