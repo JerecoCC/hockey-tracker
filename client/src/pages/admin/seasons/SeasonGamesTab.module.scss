@@ -35,6 +35,18 @@
 
 .viewSegmentedControl {
   width: fit-content;
+  height: 40px;
+  box-sizing: border-box;
+
+  > span,
+  button {
+    height: 100%;
+  }
+
+  button {
+    padding: 0 $space-lg;
+    font-size: $font-base;
+  }
 
   svg {
     width: 1.15rem;
@@ -56,6 +68,13 @@
     max-height 0.25s ease,
     opacity 0.25s ease,
     margin-top 0.25s ease;
+
+  &::before {
+    content: "";
+    flex: 0 0 100%;
+    height: 1px;
+    background: $border;
+  }
 
   > *:not(.teamFilter) {
     flex: 1 0 130px;

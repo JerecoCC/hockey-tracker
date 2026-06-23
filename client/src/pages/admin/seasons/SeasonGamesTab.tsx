@@ -314,24 +314,12 @@ const SeasonGamesTab = ({
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
-  const viewKey = `season-games-view:${seasonId}`;
-  const [view, setView] = useState<SeasonGamesView>(() =>
-    sessionStorage.getItem(`season-games-view:${seasonId}`) === 'calendar' ? 'calendar' : 'list',
-  );
+  const [view, setView] = useState<SeasonGamesView>('list');
   const calendarMonthKey = `season-games-calendar-month:${seasonId}`;
   const [calendarMonth, setCalendarMonthState] = useState<Date>(() => {
     const stored = sessionStorage.getItem(`season-games-calendar-month:${seasonId}`);
     return stored ? fromMonthPickerValue(stored) : monthStart(new Date());
   });
-
-  useEffect(() => {
-    const stored = sessionStorage.getItem(viewKey);
-    setView(stored === 'calendar' ? 'calendar' : 'list');
-  }, [viewKey]);
-
-  useEffect(() => {
-    sessionStorage.setItem(viewKey, view);
-  }, [viewKey, view]);
 
   useEffect(() => {
     const stored = sessionStorage.getItem(calendarMonthKey);
@@ -1054,10 +1042,10 @@ const SeasonGamesTab = ({
               </>
             )}
             <ToggleButton
+              variant="switch"
               active={filtersVisible}
               onClick={() => setFiltersVisible((v) => !v)}
               icon="filter_list"
-              iconHeight="button"
               activeTooltip="Hide filters"
               inactiveTooltip="Show filters"
             />
