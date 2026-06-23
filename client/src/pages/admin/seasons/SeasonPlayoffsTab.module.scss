@@ -502,10 +502,10 @@
 // ── Bracket grid ─────────────────────────────────────────────────────────────
 
 .bracketGrid {
-  display: flex;
-  gap: $space-lg;
+  position: relative;
+  isolation: isolate;
   overflow-x: auto;
-  align-items: stretch;
+  overflow-y: hidden;
   padding-bottom: $space-xs;
   scrollbar-width: thin;
   scrollbar-color: $border transparent;
@@ -515,7 +515,19 @@
   }
 }
 
+.bracketCanvas {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  gap: $space-lg;
+  width: max-content;
+  min-width: 100%;
+  isolation: isolate;
+}
+
 .bracketRound {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
   min-width: 168px;
@@ -525,7 +537,7 @@
 .bracketRoundLabel {
   font-size: $font-xs;
   font-weight: 600;
-  color: $text-dim;
+  color: $text-light;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   text-align: center;
@@ -536,6 +548,7 @@
 }
 
 .bracketSlots {
+  position: relative;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -544,9 +557,30 @@
 }
 
 .bracketSlot {
+  position: relative;
   border-radius: $radius-md;
-  overflow: hidden;
+  overflow: visible;
   min-height: 82px;
+  z-index: 1;
+}
+
+.bracketConnectorOverlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.bracketConnectorPath {
+  fill: none;
+  stroke: color-mix(in srgb, #{$accent-light} 78%, #{$bg-page});
+  stroke-width: 2;
+  stroke-linecap: square;
+  stroke-linejoin: miter;
+  shape-rendering: crispEdges;
+  vector-effect: non-scaling-stroke;
 }
 
 // Simulated matchup: solid border, accent tint — not clickable
@@ -603,7 +637,7 @@
 
 .slotFilled {
   position: relative;
-  background: transparent;
+  background: $bg-card;
   border: 1px solid $border;
   display: flex;
   flex-direction: column;

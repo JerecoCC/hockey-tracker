@@ -1,4 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Link } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
 import Badge from '@/components/Badge/Badge';
@@ -450,6 +457,7 @@ interface BracketSlotProps {
   series: PlayoffSeriesRecord | null;
   busy: string | null;
   seriesHref?: string;
+  slotRef?: (node: HTMLDivElement | null) => void;
   /** Simulated team name for Team 1 (home ice). Only shown when series is null. */
   simulatedTeam1?: string | null;
   simulatedTeam1Details?: SimulatedSlotTeam | null;
@@ -471,6 +479,7 @@ const BracketSlot = ({
   series,
   busy,
   seriesHref,
+  slotRef,
   simulatedTeam1,
   simulatedTeam1Details,
   simulatedTeam2,
@@ -498,6 +507,7 @@ const BracketSlot = ({
 
     return (
       <div
+        ref={slotRef}
         className={[
           styles.bracketSlot,
           styles.slotFilled,
@@ -571,7 +581,10 @@ const BracketSlot = ({
   const showOverlay = canStart || canAdvanceWinner;
 
   return (
-    <div className={`${styles.bracketSlot} ${styles.slotFilled}`}>
+    <div
+      ref={slotRef}
+      className={`${styles.bracketSlot} ${styles.slotFilled}`}
+    >
       {seriesHref && (
         <Link
           to={seriesHref}
@@ -678,6 +691,11 @@ interface Props {
   updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
 }
 
+interface BracketConnectorPath {
+  id: string;
+  d: string;
+}
+
 const SeasonPlayoffsTab = ({
   seasonId,
   leagueId,
@@ -710,6 +728,28 @@ const SeasonPlayoffsTab = ({
     bracketRuleSetId,
   );
   const [savingBracketRuleSet, setSavingBracketRuleSet] = useState(false);
+  const bracketCanvasRef = useRef<HTMLDivElement | null>(null);
+  const bracketSlotRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const [bracketConnectorPaths, setBracketConnectorPaths] = useState<BracketConnectorPath[]>([]);
+  const [bracketOverlaySize, setBracketOverlaySize] = useState({ width: 0, height: 0 });
+
+  const clearBracketConnectors = useCallback(() => {
+    setBracketConnectorPaths((prev) => (prev.length === 0 ? prev : []));
+    setBracketOverlaySize((prev) =>
+      prev.width === 0 && prev.height === 0 ? prev : { width: 0, height: 0 },
+    );
+  }, []);
+
+  const registerBracketSlot = useCallback(
+    (slotKey: string) => (node: HTMLDivElement | null) => {
+      if (node) {
+        bracketSlotRefs.current[slotKey] = node;
+      } else {
+        delete bracketSlotRefs.current[slotKey];
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     setDraftBracketRuleSetId(bracketRuleSetId);
@@ -1083,6 +1123,106 @@ const SeasonPlayoffsTab = ({
       homeTeamCode: s.home_team_code,
     });
 
+  const measureBracketConnectors = useCallback(() => {
+    const canvas = bracketCanvasRef.current;
+    if (!canvas || !bracketStructure) {
+      clearBracketConnectors();
+      return;
+    }
+
+    const canvasRect = canvas.getBoundingClientRect();
+    const slotUnderlap = 6;
+    const nextPaths: BracketConnectorPath[] = [];
+
+    const slotPoint = (slotKey: string, side: 'left' | 'right') => {
+      const node = bracketSlotRefs.current[slotKey];
+      if (!node) return null;
+
+      const rect = node.getBoundingClientRect();
+      return {
+        x: (side === 'right' ? rect.right : rect.left) - canvasRect.left,
+        y: rect.top - canvasRect.top + rect.height / 2,
+      };
+    };
+
+    bracketStructure.rounds.slice(0, -1).forEach((roundInfo, roundIndex) => {
+      const nextRound = bracketStructure.rounds[roundIndex + 1];
+      if (!nextRound) return;
+
+      Array.from({ length: Math.floor(roundInfo.series / 2) }, (_, pairIndex) => {
+        const topKey = `r${roundInfo.round}m${pairIndex * 2}`;
+        const bottomKey = `r${roundInfo.round}m${pairIndex * 2 + 1}`;
+        const nextKey = `r${nextRound.round}m${pairIndex}`;
+        const top = slotPoint(topKey, 'right');
+        const bottom = slotPoint(bottomKey, 'right');
+        const next = slotPoint(nextKey, 'left');
+        if (!top || !bottom || !next) return;
+
+        const joinX = top.x + (next.x - top.x) / 2;
+        nextPaths.push({
+          id: `${topKey}-${bottomKey}-${nextKey}`,
+          d: [
+            `M ${top.x - slotUnderlap} ${top.y} H ${joinX}`,
+            `M ${bottom.x - slotUnderlap} ${bottom.y} H ${joinX}`,
+            `M ${joinX} ${top.y} V ${bottom.y}`,
+            `M ${joinX} ${next.y} H ${next.x + slotUnderlap}`,
+          ].join(' '),
+        });
+      });
+    });
+
+    setBracketOverlaySize((prev) => {
+      const next = {
+        width: canvas.getBoundingClientRect().width,
+        height: canvas.getBoundingClientRect().height,
+      };
+      return prev.width === next.width && prev.height === next.height ? prev : next;
+    });
+    setBracketConnectorPaths((prev) => {
+      const same =
+        prev.length === nextPaths.length &&
+        prev.every((path, index) => path.id === nextPaths[index]?.id && path.d === nextPaths[index]?.d);
+      return same ? prev : nextPaths;
+    });
+  }, [bracketStructure, clearBracketConnectors]);
+
+  useLayoutEffect(() => {
+    const canvas = bracketCanvasRef.current;
+    if (!canvas || !bracketStructure) {
+      clearBracketConnectors();
+      return;
+    }
+
+    let frame = 0;
+    const scheduleMeasure = () => {
+      if (frame) cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(measureBracketConnectors);
+    };
+
+    scheduleMeasure();
+    window.addEventListener('resize', scheduleMeasure, { passive: true });
+
+    const observer =
+      typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(scheduleMeasure);
+    if (observer) {
+      observer.observe(canvas);
+      Object.values(bracketSlotRefs.current).forEach((node) => {
+        if (node) observer.observe(node);
+      });
+    }
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      window.removeEventListener('resize', scheduleMeasure);
+      observer?.disconnect();
+    };
+  }, [
+    bracketStructure,
+    clearBracketConnectors,
+    measureBracketConnectors,
+    seriesLoading,
+  ]);
+
   return (
     <>
       {playoffsStarted && !isEnded && series.length === 0 && !seriesLoading && (
@@ -1137,7 +1277,28 @@ const SeasonPlayoffsTab = ({
               <p className={styles.emptyState}>Loading…</p>
             ) : bracketStructure ? (
               <div className={styles.bracketGrid}>
-                {bracketStructure.rounds.map((roundInfo) => {
+                <div
+                  ref={bracketCanvasRef}
+                  className={styles.bracketCanvas}
+                >
+                  {bracketConnectorPaths.length > 0 && (
+                    <svg
+                      className={styles.bracketConnectorOverlay}
+                      width={bracketOverlaySize.width}
+                      height={bracketOverlaySize.height}
+                      viewBox={`0 0 ${bracketOverlaySize.width} ${bracketOverlaySize.height}`}
+                      aria-hidden="true"
+                    >
+                      {bracketConnectorPaths.map((path) => (
+                        <path
+                          key={path.id}
+                          className={styles.bracketConnectorPath}
+                          d={path.d}
+                        />
+                      ))}
+                    </svg>
+                  )}
+                  {bracketStructure.rounds.map((roundInfo) => {
                   // Sort by bracket_slot_key matchup index so auto-advanced series
                   // always appear in the correct bracket position.
                   const roundSeries = [...(seriesByRound[roundInfo.round] ?? [])].sort(
@@ -1192,6 +1353,7 @@ const SeasonPlayoffsTab = ({
                               series={s}
                               busy={seriesBusy}
                               seriesHref={s ? seriesDetailsPath(s) : undefined}
+                              slotRef={registerBracketSlot(slotKey)}
                               simulatedTeam1={
                                 simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
                               }
@@ -1219,7 +1381,8 @@ const SeasonPlayoffsTab = ({
                       </div>
                     </div>
                   );
-                })}
+                  })}
+                </div>
               </div>
             ) : series.length === 0 ? (
               <p className={styles.emptyState}>
