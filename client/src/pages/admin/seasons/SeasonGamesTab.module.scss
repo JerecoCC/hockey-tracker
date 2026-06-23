@@ -35,19 +35,6 @@
 
 .viewSegmentedControl {
   width: fit-content;
-  height: 40px;
-  box-sizing: border-box;
-
-  > span,
-  button {
-    height: 100%;
-  }
-
-  button {
-    padding: 0 $space-lg;
-    font-size: $font-base;
-  }
-
 }
 
 // ── Filters row ───────────────────────────────────────────────────────

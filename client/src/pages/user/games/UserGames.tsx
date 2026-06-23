@@ -1373,12 +1373,14 @@ const UserGames = () => {
                 ]}
               />
               <ToggleButton
+                variant="switch"
                 active={filtersVisible}
                 onClick={() => setFiltersVisible((visible) => !visible)}
-                icon="filter_list"
-                iconHeight="button"
+                activeIcon="filter_list"
+                inactiveIcon="filter_list"
                 activeTooltip="Hide filters"
                 inactiveTooltip="Show filters"
+                className={styles.filterVisibilitySwitch}
               />
               <MoreActionsMenu
                 size="md"

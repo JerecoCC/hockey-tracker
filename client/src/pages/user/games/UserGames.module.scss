@@ -43,11 +43,7 @@
 
 .viewSegmentedControl {
   width: fit-content;
-  align-self: stretch;
-
-  button {
-    padding: $space-md;
-  }
+  align-self: center;
 }
 
 // ── Toolbar (week nav + filter selects) ───────────────────────────────
@@ -164,6 +160,10 @@
 
 .watchFilterSwitch {
   flex: 0 0 auto !important;
+  align-self: center;
+}
+
+.filterVisibilitySwitch {
   align-self: center;
 }
 

@@ -5,6 +5,9 @@
   --segmented-control-border: #{$text-dim};
 
   display: flex;
+  align-items: stretch;
+  height: 40px;
+  box-sizing: border-box;
   border: 1px solid var(--segmented-control-border);
   border-radius: $radius-md;
   overflow: visible;
@@ -16,6 +19,7 @@
   flex: 1;
   display: flex;
   min-width: 0;
+  height: 100%;
 
   &:has(.option:focus-visible) {
     z-index: 2;
@@ -25,7 +29,9 @@
 .option {
   position: relative;
   flex: 1;
-  padding: $space-sm $space-md;
+  min-height: 0;
+  height: 100%;
+  padding: 0 $space-lg;
   background: transparent;
   border: none;
   border-right: 1px solid var(--segmented-control-border);
