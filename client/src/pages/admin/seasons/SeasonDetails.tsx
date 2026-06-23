@@ -1,7 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import { useNavigate, useParams } from 'react-router-dom';
-import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -72,6 +71,15 @@ type StandingDisplayRow = TeamStandingRecord & {
 };
 
 const PAGE_SIZE = 10;
+const SEASON_TAB_INDEX = {
+  INFO: 0,
+  TEAMS: 1,
+  GAMES: 2,
+  STATS: 3,
+  STANDINGS: 4,
+  AWARDS: 5,
+  PLAYOFFS: 6,
+} as const;
 const DEFAULT_WILDCARD_FORMAT: PlayoffFormatRule[] = [
   { scope: 'division', method: 'top', count: 3 },
   { scope: 'conference', method: 'wildcard', count: 2 },
@@ -131,6 +139,46 @@ const SeasonDetailsPage = () => {
   const id = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
   const [activeTab, handleTabChange] = useTabState('tab:season-details');
   const [statsSubTab, setStatsSubTab] = useState('Summary');
+  const [visitedTabs, setVisitedTabs] = useState<Set<number>>(() => new Set([activeTab]));
+  const [visitedStatsSubTabs, setVisitedStatsSubTabs] = useState<Set<string>>(() => new Set());
+
+  useEffect(() => {
+    setVisitedTabs((current) => {
+      if (current.has(activeTab)) return current;
+      const next = new Set(current);
+      next.add(activeTab);
+      return next;
+    });
+  }, [activeTab]);
+
+  useEffect(() => {
+    if (!visitedTabs.has(SEASON_TAB_INDEX.STATS)) return;
+    setVisitedStatsSubTabs((current) => {
+      if (current.has(statsSubTab)) return current;
+      const next = new Set(current);
+      next.add(statsSubTab);
+      return next;
+    });
+  }, [statsSubTab, visitedTabs]);
+
+  const handleStatsSubTabChange = (value: string) => {
+    setStatsSubTab(value);
+    setVisitedStatsSubTabs((current) => {
+      if (current.has(value)) return current;
+      const next = new Set(current);
+      next.add(value);
+      return next;
+    });
+  };
+
+  const hasVisitedStatsTab = visitedTabs.has(SEASON_TAB_INDEX.STATS);
+  const hasVisitedStandingsTab = visitedTabs.has(SEASON_TAB_INDEX.STANDINGS);
+  const hasVisitedAwardsTab = visitedTabs.has(SEASON_TAB_INDEX.AWARDS);
+  const shouldFetchSummaryStats = hasVisitedStatsTab || hasVisitedAwardsTab;
+  const shouldFetchForwardStats = hasVisitedStatsTab && visitedStatsSubTabs.has('Forwards');
+  const shouldFetchDefenseStats = hasVisitedStatsTab && visitedStatsSubTabs.has('Defense');
+  const shouldFetchGoalieStats = hasVisitedStatsTab && visitedStatsSubTabs.has('Goalies');
+  const shouldFetchStandings = hasVisitedStandingsTab || hasVisitedAwardsTab;
 
   const {
     season,
@@ -158,8 +206,12 @@ const SeasonDetailsPage = () => {
     };
   }, [season?.league_code, season?.name]);
 
-  const { skaters, goalies, loading: statsLoading } = useSeasonStats(id);
-  const { standings, loading: standingsLoading } = useSeasonStandings(id);
+  const { skaters, goalies, loading: statsLoading } = useSeasonStats(id, {
+    enabled: shouldFetchSummaryStats,
+  });
+  const { standings, loading: standingsLoading } = useSeasonStandings(id, {
+    enabled: shouldFetchStandings,
+  });
 
   const hasUnfinishedRegularGames = season?.has_unfinished_regular_games ?? false;
 
@@ -267,6 +319,7 @@ const SeasonDetailsPage = () => {
     pageSize: PAGE_SIZE,
     sortKey: fwdSort.key,
     sortDir: fwdSort.dir,
+    enabled: shouldFetchForwardStats,
   });
   const {
     items: defenseStatItems,
@@ -279,6 +332,7 @@ const SeasonDetailsPage = () => {
     pageSize: PAGE_SIZE,
     sortKey: defSort.key,
     sortDir: defSort.dir,
+    enabled: shouldFetchDefenseStats,
   });
   const {
     items: goalieStatItems,
@@ -291,6 +345,7 @@ const SeasonDetailsPage = () => {
     pageSize: PAGE_SIZE,
     sortKey: goalieSort.key,
     sortDir: goalieSort.dir,
+    enabled: shouldFetchGoalieStats,
   });
 
   const sortSkaterTable = (arr: SkaterStatRecord[], sort: { key: string; dir: 'asc' | 'desc' }) =>
@@ -908,7 +963,7 @@ const SeasonDetailsPage = () => {
               <div className={styles.statsSubTabs}>
                 <SegmentedControl
                   value={statsSubTab}
-                  onChange={setStatsSubTab}
+                  onChange={handleStatsSubTabChange}
                   options={[
                     { value: 'Summary', label: 'Summary' },
                     { value: 'Forwards', label: 'Forwards' },
@@ -947,7 +1002,7 @@ const SeasonDetailsPage = () => {
                           getFeaturedStat={(s) => s[summarySkaterStat] ?? 0}
                           getRowStat={(s) => s[summarySkaterStat] ?? 0}
                           onSelectItem={navigateToPlayer}
-                          onAllLeaders={() => setStatsSubTab('Forwards')}
+                          onAllLeaders={() => handleStatsSubTabChange('Forwards')}
                         />
                       ) : (
                         !statsLoading && (
@@ -984,7 +1039,7 @@ const SeasonDetailsPage = () => {
                           getFeaturedStat={(s) => s[summaryDefStat] ?? 0}
                           getRowStat={(s) => s[summaryDefStat] ?? 0}
                           onSelectItem={navigateToPlayer}
-                          onAllLeaders={() => setStatsSubTab('Defense')}
+                          onAllLeaders={() => handleStatsSubTabChange('Defense')}
                         />
                       ) : (
                         !statsLoading && (
@@ -1021,7 +1076,7 @@ const SeasonDetailsPage = () => {
                           getFeaturedStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
                           getRowStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
                           onSelectItem={navigateToPlayer}
-                          onAllLeaders={() => setStatsSubTab('Goalies')}
+                          onAllLeaders={() => handleStatsSubTabChange('Goalies')}
                         />
                       ) : (
                         !statsLoading && (
@@ -1269,7 +1324,7 @@ const SeasonDetailsPage = () => {
           const ok = await startPlayoffs();
           if (ok) {
             setShowStartPlayoffsConfirm(false);
-            handleTabChange(5); // index of 'Playoffs' tab
+            handleTabChange(SEASON_TAB_INDEX.PLAYOFFS);
           }
         }}
       />

@@ -479,6 +479,7 @@ const SeasonGamesTab = ({
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<GameRecord | null>(null);
   const [autofillDay, setAutofillDay] = useState<string | null>(null);
+  const [autofillingGameIds, setAutofillingGameIds] = useState<Set<string>>(() => new Set());
   const todayKey = dateToISO(toDay(new Date()));
   const initialSummaryDay = groupedByDate.some(([dateKey]) => dateKey === todayKey)
     ? todayKey
@@ -588,6 +589,21 @@ const SeasonGamesTab = ({
 
   const describeGame = (game: GameRecord) => `${game.away_team.code} @ ${game.home_team.code}`;
 
+  const revealAutofilledGame = (gameId: string) => {
+    setAutofillingGameIds((current) => {
+      const next = new Set(current);
+      next.delete(gameId);
+      return next;
+    });
+  };
+
+  const refreshAutofilledGame = async (gameId: string) => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['games', gameId] }),
+      queryClient.refetchQueries({ queryKey: ['games'], type: 'active' }),
+    ]);
+  };
+
   const handleAutofillDay = async (dateKey: string, dayGames: GameRecord[]) => {
     const candidates = getDayAutofillCandidates(dayGames);
     if (candidates.length === 0) {
@@ -596,6 +612,7 @@ const SeasonGamesTab = ({
     }
 
     setAutofillDay(dateKey);
+    setAutofillingGameIds(new Set(candidates.map((game) => game.id)));
     const failures: string[] = [];
     let filled = 0;
     const dayLabel = fmtDayHeading(dateKey);
@@ -679,13 +696,14 @@ const SeasonGamesTab = ({
             index + 2,
             `Skipped ${describeGame(game)} (${index + 1}/${candidates.length}).`,
           );
+          revealAutofilledGame(game.id);
           continue;
         }
 
         try {
           await autofillGameFromNhlGamecenter(game, nhlGameId);
           filled += 1;
-          await queryClient.invalidateQueries({ queryKey: ['games', game.id] });
+          await refreshAutofilledGame(game.id);
           updateProgressToast(
             index + 2,
             `Auto-filled ${describeGame(game)} (${index + 1}/${candidates.length}).`,
@@ -698,6 +716,8 @@ const SeasonGamesTab = ({
             index + 2,
             `Skipped ${describeGame(game)} (${index + 1}/${candidates.length}).`,
           );
+        } finally {
+          revealAutofilledGame(game.id);
         }
       }
 
@@ -727,6 +747,7 @@ const SeasonGamesTab = ({
       finishProgressToast('error', getErrorMessage(err, 'Failed to load the NHL schedule for this day.'));
     } finally {
       setAutofillDay(null);
+      setAutofillingGameIds(new Set());
     }
   };
 
@@ -868,7 +889,22 @@ const SeasonGamesTab = ({
     </div>
   );
 
+  const renderWeekGameAutofillSkeleton = (game: GameRecord) => (
+    <li
+      key={game.id}
+      className={styles.weekGameSkeletonItem}
+      aria-label={`Auto-filling ${describeGame(game)}`}
+    >
+      <Skeleton
+        type="block"
+        className={styles.weekGameSkeleton}
+      />
+    </li>
+  );
+
   const renderGameListItem = (game: GameRecord) => {
+    if (autofillingGameIds.has(game.id)) return renderWeekGameAutofillSkeleton(game);
+
     return (
       <GameListItem
         key={game.id}

@@ -95,7 +95,7 @@ const MultiSelect = ({
   useEffect(() => {
     if (!open || focusedIdx < 0 || !menuRef.current) return;
     const items = menuRef.current.querySelectorAll<HTMLElement>('[role="option"]');
-    items[focusedIdx]?.scrollIntoView({ block: 'nearest' });
+    items[focusedIdx]?.scrollIntoView?.({ block: 'nearest' });
   }, [focusedIdx, open]);
 
   const closeMenu = () => {
@@ -152,7 +152,13 @@ const MultiSelect = ({
       className={styles.wrapper}
       ref={wrapperRef}
       onBlur={(e) => {
-        if (!wrapperRef.current?.contains(e.relatedTarget as Node)) closeMenu();
+        const nextTarget = e.relatedTarget as Node | null;
+        if (
+          !wrapperRef.current?.contains(nextTarget) &&
+          !menuRef.current?.contains(nextTarget)
+        ) {
+          closeMenu();
+        }
       }}
     >
       <div
@@ -266,6 +272,7 @@ const MultiSelect = ({
                       focusedIdx === idx && styles.optionFocused,
                     )}
                     onClick={() => toggle(opt.value)}
+                    onMouseDown={(e) => e.preventDefault()}
                     onMouseEnter={() => setFocusedIdx(idx)}
                   >
                     <span

@@ -127,7 +127,10 @@ beforeEach(() => {
   jest.clearAllMocks();
   mockUseTabState.mockReturnValue([4, jest.fn()]);
   mockUseLeagues.mockReturnValue({ leagues: [], loading: false });
-  mockUseLeagueDetails.mockReturnValue({ seasons: [], loading: false });
+  mockUseLeagueDetails.mockReturnValue({
+    seasons: [{ id: 'season-1', name: 'season-1' }],
+    loading: false,
+  });
   mockUseSeasonStats.mockReturnValue({
     skaters: [
       {
@@ -212,6 +215,34 @@ beforeEach(() => {
 });
 
 describe('SeasonDetails standings tab', () => {
+  it('defers season stats and standings until their tabs need them', () => {
+    mockUseTabState.mockReturnValue([2, jest.fn()]);
+
+    render(<SeasonDetails />);
+
+    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', { enabled: false });
+    expect(mockUseSeasonStats).toHaveBeenCalledWith(
+      'season-1',
+      expect.objectContaining({ group: 'forwards', enabled: false }),
+    );
+    expect(mockUseSeasonStats).toHaveBeenCalledWith(
+      'season-1',
+      expect.objectContaining({ group: 'defense', enabled: false }),
+    );
+    expect(mockUseSeasonStats).toHaveBeenCalledWith(
+      'season-1',
+      expect.objectContaining({ group: 'goalies', enabled: false }),
+    );
+    expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: false });
+  });
+
+  it('enables standings without enabling stats when the standings tab is active', () => {
+    render(<SeasonDetails />);
+
+    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', { enabled: false });
+    expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: true });
+  });
+
   it('shows the standings loading spinner inside the card', () => {
     mockUseSeasonStandings.mockReturnValue({
       standings: [],
@@ -358,6 +389,27 @@ describe('SeasonDetails standings tab', () => {
 });
 
 describe('SeasonDetails stats tab', () => {
+  it('enables summary stats without enabling standings when the stats tab is active', () => {
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+
+    render(<SeasonDetails />);
+
+    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', { enabled: true });
+    expect(mockUseSeasonStats).toHaveBeenCalledWith(
+      'season-1',
+      expect.objectContaining({ group: 'forwards', enabled: false }),
+    );
+    expect(mockUseSeasonStats).toHaveBeenCalledWith(
+      'season-1',
+      expect.objectContaining({ group: 'defense', enabled: false }),
+    );
+    expect(mockUseSeasonStats).toHaveBeenCalledWith(
+      'season-1',
+      expect.objectContaining({ group: 'goalies', enabled: false }),
+    );
+    expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: false });
+  });
+
   it('navigates to the player details page when a summary leader is clicked', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([3, jest.fn()]);

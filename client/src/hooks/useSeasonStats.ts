@@ -58,6 +58,7 @@ interface UseSeasonStatsOptions {
   pageSize?: number;
   sortKey?: string;
   sortDir?: 'asc' | 'desc';
+  enabled?: boolean;
 }
 
 interface PaginatedSeasonStatsResponse {
@@ -68,20 +69,21 @@ interface PaginatedSeasonStatsResponse {
 }
 
 const useSeasonStats = (seasonId: string | undefined, options: UseSeasonStatsOptions = {}) => {
-  const isPaginated = !!options.group;
+  const { enabled = true, ...queryOptions } = options;
+  const isPaginated = !!queryOptions.group;
 
   const { data, isFetching, isLoading } = useQuery<
     SeasonStatsResponse | PaginatedSeasonStatsResponse
   >({
-    queryKey: ['season-stats', seasonId, options],
+    queryKey: ['season-stats', seasonId, queryOptions],
     queryFn: async () => {
       try {
         const params: Record<string, string> = {};
-        if (options.group) params.group = options.group;
-        if (options.page !== undefined) params.page = String(options.page);
-        if (options.pageSize !== undefined) params.page_size = String(options.pageSize);
-        if (options.sortKey) params.sort_key = options.sortKey;
-        if (options.sortDir) params.sort_dir = options.sortDir;
+        if (queryOptions.group) params.group = queryOptions.group;
+        if (queryOptions.page !== undefined) params.page = String(queryOptions.page);
+        if (queryOptions.pageSize !== undefined) params.page_size = String(queryOptions.pageSize);
+        if (queryOptions.sortKey) params.sort_key = queryOptions.sortKey;
+        if (queryOptions.sortDir) params.sort_dir = queryOptions.sortDir;
 
         const { data } = await axios.get<SeasonStatsResponse | PaginatedSeasonStatsResponse>(
           `${API}/admin/seasons/${seasonId}/stats`,
@@ -91,11 +93,16 @@ const useSeasonStats = (seasonId: string | undefined, options: UseSeasonStatsOpt
       } catch {
         toast.error('Failed to load season stats');
         return isPaginated
-          ? { items: [], total: 0, page: options.page ?? 1, page_size: options.pageSize ?? 10 }
+          ? {
+              items: [],
+              total: 0,
+              page: queryOptions.page ?? 1,
+              page_size: queryOptions.pageSize ?? 10,
+            }
           : { skaters: [], goalies: [] };
       }
     },
-    enabled: !!seasonId,
+    enabled: !!seasonId && enabled,
     placeholderData: keepPreviousData,
   });
 
