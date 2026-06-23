@@ -799,6 +799,21 @@ const SeasonGamesTab = ({
     </Card>
   );
 
+  const renderWeekDayLoadingSkeletons = (dateKey: string) => (
+    <div
+      className={styles.list}
+      aria-label={`Loading games for ${fmtDayHeading(dateKey)}`}
+    >
+      {Array.from({ length: 3 }).map((_, index) => (
+        <Skeleton
+          key={index}
+          type="block"
+          className={styles.weekGameSkeleton}
+        />
+      ))}
+    </div>
+  );
+
   const renderGameListItem = (game: GameRecord) => {
     return (
       <GameListItem
@@ -943,14 +958,14 @@ const SeasonGamesTab = ({
                 {
                   value: 'list',
                   label: <Icon name="view_list" />,
-                  tooltip: 'List view',
-                  ariaLabel: 'List view',
+                  tooltip: 'Week view',
+                  ariaLabel: 'Week view',
                 },
                 {
                   value: 'calendar',
                   label: <Icon name="calendar_month" />,
-                  tooltip: 'Calendar view',
-                  ariaLabel: 'Calendar view',
+                  tooltip: 'Month view',
+                  ariaLabel: 'Month view',
                 },
               ]}
             />
@@ -1008,7 +1023,7 @@ const SeasonGamesTab = ({
       </Card>
 
       {/* ── Day cards ── */}
-      {!loading && view === 'list' && (
+      {view === 'list' && (
         <Card
           className={styles.weekSummaryCard}
           noHeaderMargin
@@ -1022,12 +1037,25 @@ const SeasonGamesTab = ({
                   type="button"
                   className={`${styles.weekSummaryDay}${isActive ? ` ${styles.weekSummaryDayActive}` : ''}`}
                   onClick={() => scrollToDay(dateKey)}
-                  aria-label={`Jump to ${fmtDayHeading(dateKey)}: ${dayGames.length} games`}
+                  aria-label={
+                    loading
+                      ? `Loading games for ${fmtDayHeading(dateKey)}`
+                      : `Jump to ${fmtDayHeading(dateKey)}: ${dayGames.length} games`
+                  }
                 >
                   <span className={styles.weekSummaryDate}>{fmtDaySummaryDate(dateKey)}</span>
                   <span className={styles.weekSummaryWeekday}>{fmtDaySummaryWeekday(dateKey)}</span>
                   <span className={styles.weekSummaryCount}>
-                    {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
+                    {loading ? (
+                      <Skeleton
+                        type="text"
+                        className={styles.weekSummaryCountSkeleton}
+                      />
+                    ) : (
+                      <>
+                        {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
+                      </>
+                    )}
                   </span>
                   {isActive && (
                     <Icon
@@ -1044,8 +1072,6 @@ const SeasonGamesTab = ({
 
       {loading && view === 'calendar' ? (
         renderCalendarLoading()
-      ) : loading ? (
-        <p className={styles.empty}>Loading…</p>
       ) : view === 'calendar' ? (
         <Card
           className={styles.calendarCard}
@@ -1112,7 +1138,9 @@ const SeasonGamesTab = ({
                   )
                 }
               >
-                {dayGames.length === 0 ? (
+                {loading ? (
+                  renderWeekDayLoadingSkeletons(dateKey)
+                ) : dayGames.length === 0 ? (
                   <p className={styles.dayEmpty}>
                     {hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'}
                   </p>

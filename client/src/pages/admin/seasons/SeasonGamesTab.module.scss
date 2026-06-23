@@ -130,7 +130,7 @@
   padding: $space-md;
   border: 1px solid $border;
   border-radius: $radius-md;
-  background: rgba($bg-input, 0.8);
+  background: transparent;
   color: $text-body;
   cursor: pointer;
   text-align: left;
@@ -140,8 +140,7 @@
     color $transition-fast ease;
 
   &:hover {
-    border-color: rgba($accent, 0.65);
-    background: rgba($accent, 0.07);
+    background: rgba(255, 255, 255, 0.04);
   }
 
   &:focus-visible {
@@ -172,6 +171,16 @@
   color: $text-bright;
   font-size: $font-sm;
   font-weight: 800;
+}
+
+.weekSummaryCountSkeleton.weekSummaryCountSkeleton {
+  width: 64px;
+}
+
+.weekGameSkeleton.weekGameSkeleton {
+  height: 6rem;
+  min-height: 6rem;
+  border-radius: $radius-md;
 }
 
 .weekSummaryIcon {
