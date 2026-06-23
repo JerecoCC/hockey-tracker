@@ -131,7 +131,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                             initials={initials}
                             primaryColor={p.primary_color}
                             textColor={p.text_color}
-                            size={40}
+                            size={48}
                           />
                         }
                         name={`${p.first_name} ${p.last_name}${playerDataIndicator(p)}`}

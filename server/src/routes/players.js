@@ -185,12 +185,24 @@ router.get('/', async (req, res) => {
                 LEFT JOIN LATERAL (
                   SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
                   WHERE team_id = t.id
-                    AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-                    AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-                  ORDER BY start_date DESC NULLS LAST, recorded_at DESC
+                  ORDER BY
+                    CASE
+                      WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                       AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                      THEN 0
+                      WHEN end_date IS NULL THEN 1
+                      ELSE 2
+                    END,
+                    start_date DESC NULLS LAST,
+                    recorded_at DESC
                   LIMIT 1
                 ) ti ON TRUE
-                ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT *
@@ -247,13 +259,29 @@ router.get('/', async (req, res) => {
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
                                     AND t.league_id   = ${league_id}
+                JOIN seasons      s  ON s.id          = pt.season_id
                 LEFT JOIN LATERAL (
                   SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
                   WHERE team_id = t.id
-                  ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+                  ORDER BY
+                    CASE
+                      WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                       AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                      THEN 0
+                      WHEN end_date IS NULL THEN 1
+                      ELSE 2
+                    END,
+                    start_date DESC NULLS LAST,
+                    recorded_at DESC
                   LIMIT 1
                 ) ti ON TRUE
-                ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+                  s.start_date DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT *
@@ -284,7 +312,12 @@ router.get('/', async (req, res) => {
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
                                     AND t.league_id   = ${league_id}
-                ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT COUNT(*)::int AS total
@@ -310,7 +343,14 @@ router.get('/', async (req, res) => {
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
                                     AND t.league_id   = ${league_id}
-                ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                JOIN seasons      s  ON s.id          = pt.season_id
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+                  s.start_date DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT COUNT(*)::int AS total
@@ -378,12 +418,24 @@ router.get('/', async (req, res) => {
             LEFT JOIN LATERAL (
               SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
               WHERE team_id = t.id
-                AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-                AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-              ORDER BY start_date DESC NULLS LAST, recorded_at DESC
+              ORDER BY
+                CASE
+                  WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                   AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                  THEN 0
+                  WHEN end_date IS NULL THEN 1
+                  ELSE 2
+                END,
+                start_date DESC NULLS LAST,
+                recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+            ORDER BY
+              p.id,
+              CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+              COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+              pt.created_at DESC,
+              pt.id DESC
           ) sub
           ORDER BY last_name, first_name
         `
@@ -430,13 +482,29 @@ router.get('/', async (req, res) => {
                                 AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
+            JOIN seasons      s  ON s.id          = pt.season_id
             LEFT JOIN LATERAL (
               SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+              ORDER BY
+                CASE
+                  WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                   AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                  THEN 0
+                  WHEN end_date IS NULL THEN 1
+                  ELSE 2
+                END,
+                start_date DESC NULLS LAST,
+                recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+            ORDER BY
+              p.id,
+              CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+              COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+              s.start_date DESC NULLS LAST,
+              pt.created_at DESC,
+              pt.id DESC
           ) sub
           ORDER BY last_name, first_name
         `
