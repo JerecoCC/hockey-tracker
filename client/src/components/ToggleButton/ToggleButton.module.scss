@@ -19,13 +19,14 @@
 }
 
 .switchToggle {
-  --switch-track-width: 78px;
   --switch-track-height: 40px;
   --switch-thumb-size: 30px;
   --switch-inset: 4px;
-  --switch-thumb-travel: calc(
-    var(--switch-track-width) - var(--switch-thumb-size) - (var(--switch-inset) * 2) - 2px
+  --switch-track-inner-width: calc(var(--switch-thumb-size) * 2);
+  --switch-track-width: calc(
+    var(--switch-track-inner-width) + (var(--switch-inset) * 2) + 2px
   );
+  --switch-thumb-travel: var(--switch-thumb-size);
 
   position: relative;
   display: inline-flex;
@@ -34,11 +35,11 @@
   height: var(--switch-track-height);
   flex: 0 0 auto;
   padding: 0;
-  border: 1px solid color-mix(in srgb, #{$text-dim} 42%, transparent);
+  border: 1px solid $text-dim;
   border-radius: $radius-md;
   box-sizing: border-box;
-  background: color-mix(in srgb, #{$border} 76%, #{$bg-input});
-  color: $text-body;
+  background: transparent;
+  color: $text-light;
   font: inherit;
   cursor: pointer;
   transition:
@@ -46,7 +47,8 @@
     border-color $transition-fast;
 
   &:hover:not(:disabled) {
-    border-color: color-mix(in srgb, #{$text-light} 72%, transparent);
+    border-color: $text-light;
+    color: $text-bright;
   }
 
   &:focus-visible {
@@ -61,8 +63,13 @@
 }
 
 .switchToggleActive {
-  border-color: color-mix(in srgb, #{$accent} 84%, #{$text-bright});
+  border-color: $accent;
   background: $accent;
+
+  &:hover:not(:disabled) {
+    border-color: $accent-hover;
+    background: $accent-hover;
+  }
 }
 
 .switchThumb {
@@ -75,9 +82,8 @@
   width: var(--switch-thumb-size);
   height: var(--switch-thumb-size);
   border-radius: $radius-md;
-  background: color-mix(in srgb, #{$text-bright} 80%, #{$bg-input});
-  color: color-mix(in srgb, #{$text-dim} 86%, #{$bg-input});
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+  background: $text-body;
+  color: $border;
   transition:
     color $transition-fast,
     background $transition-fast,
