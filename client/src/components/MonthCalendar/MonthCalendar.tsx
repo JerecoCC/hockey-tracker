@@ -26,6 +26,10 @@ export interface MonthCalendarDayArgs {
   day: number;
 }
 
+export interface MonthCalendarEmptyCellArgs {
+  index: number;
+}
+
 interface Props {
   month: Date;
   dayLabels?: string[];
@@ -40,6 +44,8 @@ interface Props {
   getDayLabelSuffix?: (args: MonthCalendarDayArgs) => ReactNode;
   getDayHeaderRight?: (args: MonthCalendarDayArgs) => ReactNode;
   getDayProps?: (args: MonthCalendarDayArgs) => HTMLAttributes<HTMLDivElement>;
+  renderEmptyCellPlaceholder?: (args: MonthCalendarEmptyCellArgs) => ReactNode;
+  renderDayPlaceholder?: (args: MonthCalendarDayArgs) => ReactNode;
   renderDayContent: (args: MonthCalendarDayArgs) => ReactNode;
 }
 
@@ -165,6 +171,8 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
       getDayLabelSuffix,
       getDayHeaderRight,
       getDayProps,
+      renderEmptyCellPlaceholder,
+      renderDayPlaceholder,
       renderDayContent,
     },
     ref,
@@ -191,6 +199,19 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
         ))}
         {cells.map((day, index) => {
           if (day === null) {
+            if (renderEmptyCellPlaceholder) {
+              return (
+                <div
+                  key={`blank-${index}`}
+                  className={[styles.dayCell, styles.dayPlaceholderCell, emptyCellClassName]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  {renderEmptyCellPlaceholder({ index })}
+                </div>
+              );
+            }
+
             return (
               <div
                 key={`blank-${index}`}
@@ -202,6 +223,27 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
           const args = { dateKey: monthDayKey(month, day), day };
           const dayProps = getDayProps?.(args) ?? {};
           const { className: dayPropsClassName, ...rootProps } = dayProps;
+
+          if (renderDayPlaceholder) {
+            return (
+              <div
+                {...rootProps}
+                key={args.dateKey}
+                className={[
+                  styles.dayCell,
+                  styles.dayPlaceholderCell,
+                  dayCellClassName,
+                  getDayClassName?.(args),
+                  dayPropsClassName,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              >
+                {renderDayPlaceholder(args)}
+              </div>
+            );
+          }
+
           const content = renderDayContent(args);
 
           return (

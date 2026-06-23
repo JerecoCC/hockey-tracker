@@ -21,3 +21,42 @@ export const toEasternDateKey = (iso: string) => {
   const easternDate = `${value('year')}-${value('month')}-${value('day')}`;
   return /^\d{4}-\d{2}-\d{2}$/.test(easternDate) ? easternDate : (rawDate ?? iso);
 };
+
+export const firstWeekStartForMonth = (month: Date) =>
+  new Date(month.getFullYear(), month.getMonth(), 1);
+
+export const isSameCalendarMonth = (left: Date, right: Date) =>
+  left.getFullYear() === right.getFullYear() && left.getMonth() === right.getMonth();
+
+export const majorityMonthForWeek = (weekStart: Date) => {
+  type MonthCount = { count: number; month: Date };
+  const counts = new Map<string, MonthCount>();
+
+  for (let offset = 0; offset < 7; offset += 1) {
+    const date = new Date(
+      weekStart.getFullYear(),
+      weekStart.getMonth(),
+      weekStart.getDate() + offset,
+    );
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    const current = counts.get(key);
+    if (current) {
+      current.count += 1;
+    } else {
+      counts.set(key, {
+        count: 1,
+        month: new Date(date.getFullYear(), date.getMonth(), 1),
+      });
+    }
+  }
+
+  let majority: MonthCount | undefined;
+  for (const candidate of counts.values()) {
+    if (!majority || candidate.count > majority.count) majority = candidate;
+  }
+
+  return majority?.month ?? firstWeekStartForMonth(weekStart);
+};
+
+export const weekBelongsToCalendarMonth = (weekStart: Date, month: Date) =>
+  isSameCalendarMonth(majorityMonthForWeek(weekStart), month);

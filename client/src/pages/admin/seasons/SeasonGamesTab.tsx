@@ -24,7 +24,12 @@ import GameFormModal from './GameFormModal';
 import { autofillGameFromNhlGamecenter } from '@/pages/admin/games/game-details/nhlGameAutofill';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import Icon from '@/components/Icon/Icon';
-import { toEasternDateKey } from './seasonDateUtils';
+import {
+  firstWeekStartForMonth,
+  majorityMonthForWeek,
+  toEasternDateKey,
+  weekBelongsToCalendarMonth,
+} from './seasonDateUtils';
 import styles from './SeasonGamesTab.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -296,6 +301,8 @@ interface Props {
   isEnded: boolean;
 }
 
+type SeasonGamesView = 'list' | 'calendar';
+
 const SeasonGamesTab = ({
   leagueId,
   leagueCode,
@@ -308,7 +315,7 @@ const SeasonGamesTab = ({
   const queryClient = useQueryClient();
 
   const viewKey = `season-games-view:${seasonId}`;
-  const [view, setView] = useState<'list' | 'calendar'>(() =>
+  const [view, setView] = useState<SeasonGamesView>(() =>
     sessionStorage.getItem(`season-games-view:${seasonId}`) === 'calendar' ? 'calendar' : 'list',
   );
   const calendarMonthKey = `season-games-calendar-month:${seasonId}`;
@@ -353,6 +360,18 @@ const SeasonGamesTab = ({
       sessionStorage.setItem(weekKey, dateToISO(next));
       return next;
     });
+  };
+
+  const handleViewChange = (nextView: SeasonGamesView) => {
+    if (nextView === view) return;
+    if (nextView === 'list') {
+      if (!weekBelongsToCalendarMonth(weekStart, calendarMonth)) {
+        setWeekStart(firstWeekStartForMonth(calendarMonth));
+      }
+    } else {
+      setCalendarMonth(majorityMonthForWeek(weekStart));
+    }
+    setView(nextView);
   };
 
   // ── Filter state (with sessionStorage persistence) ────────────────────────
@@ -750,6 +769,36 @@ const SeasonGamesTab = ({
     </div>
   );
 
+  const renderCalendarLoading = () => (
+    <Card
+      className={styles.calendarCard}
+      noHeaderMargin
+    >
+      <div className={styles.calendarWrap}>
+        <div className={styles.calendarScroll}>
+          <MonthCalendar
+            month={calendarMonth}
+            renderEmptyCellPlaceholder={({ index }) => (
+              <Skeleton
+                type="block"
+                className={styles.calendarDaySkeleton}
+                aria-label={`Loading calendar slot ${index + 1}`}
+              />
+            )}
+            renderDayPlaceholder={({ dateKey }) => (
+              <Skeleton
+                type="block"
+                className={styles.calendarDaySkeleton}
+                aria-label={`Loading games for ${dateKey}`}
+              />
+            )}
+            renderDayContent={() => null}
+          />
+        </div>
+      </div>
+    </Card>
+  );
+
   const renderGameListItem = (game: GameRecord) => {
     return (
       <GameListItem
@@ -888,7 +937,7 @@ const SeasonGamesTab = ({
           <div className={styles.actionsRow}>
             <SegmentedControl
               value={view}
-              onChange={(value) => setView(value as 'list' | 'calendar')}
+              onChange={(value) => handleViewChange(value as SeasonGamesView)}
               className={styles.viewSegmentedControl}
               options={[
                 {
@@ -993,7 +1042,9 @@ const SeasonGamesTab = ({
         </Card>
       )}
 
-      {loading ? (
+      {loading && view === 'calendar' ? (
+        renderCalendarLoading()
+      ) : loading ? (
         <p className={styles.empty}>Loading…</p>
       ) : view === 'calendar' ? (
         <Card

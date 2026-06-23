@@ -85,6 +85,11 @@
   scrollbar-gutter: stable;
 }
 
+.dayPlaceholderCell {
+  border: 0;
+  background: transparent;
+}
+
 .dayContent {
   display: flex;
   flex: 1 0 auto;
