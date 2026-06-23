@@ -226,6 +226,17 @@ const nhlScheduleDateKeys = (game: GameRecord) => {
   return Array.from(new Set([easternDate].filter((dateKey): dateKey is string => !!dateKey)));
 };
 
+const compareOptionalStringAsc = (
+  left: string | null | undefined,
+  right: string | null | undefined,
+) => {
+  if (!left && !right) return 0;
+  if (!left) return 1;
+  if (!right) return -1;
+  if (left === right) return 0;
+  return left < right ? -1 : 1;
+};
+
 const dateToISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
@@ -424,14 +435,13 @@ const SeasonGamesTab = ({
         return true;
       })
       .sort((a, b) => {
-        if (!a.scheduled_at && !b.scheduled_at) return 0;
-        if (!a.scheduled_at) return 1;
-        if (!b.scheduled_at) return -1;
-        if (a.scheduled_at !== b.scheduled_at) return a.scheduled_at < b.scheduled_at ? -1 : 1;
-        if (!a.scheduled_time && !b.scheduled_time) return 0;
-        if (!a.scheduled_time) return 1;
-        if (!b.scheduled_time) return -1;
-        return a.scheduled_time < b.scheduled_time ? -1 : 1;
+        const scheduledAtOrder = compareOptionalStringAsc(a.scheduled_at, b.scheduled_at);
+        if (scheduledAtOrder !== 0) return scheduledAtOrder;
+        const scheduledTimeOrder = compareOptionalStringAsc(a.scheduled_time, b.scheduled_time);
+        if (scheduledTimeOrder !== 0) return scheduledTimeOrder;
+        const startTimeOrder = compareOptionalStringAsc(a.time_start, b.time_start);
+        if (startTimeOrder !== 0) return startTimeOrder;
+        return compareOptionalStringAsc(a.time_end, b.time_end);
       });
   }, [games, teamFilter]);
 
