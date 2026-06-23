@@ -50,6 +50,8 @@ const SegmentedControl = ({
           className={[
             styles.option,
             value === opt.value ? (opt.activeClassName ?? styles.active) : '',
+            i === 0 ? styles.firstOption : '',
+            i === options.length - 1 ? styles.lastOption : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -66,6 +68,7 @@ const SegmentedControl = ({
         <Tooltip
           key={opt.value}
           text={opt.tooltip}
+          className={styles.optionWrapper}
         >
           {btn}
         </Tooltip>
