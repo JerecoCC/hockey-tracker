@@ -659,8 +659,7 @@ const SeasonGamesTab = ({
 
   const buildDayActions = (dateKey: string, dayGames: GameRecord[]) => {
     const candidates = getDayAutofillCandidates(dayGames);
-    const showNhlAutofill =
-      normalizeCode(leagueCode) === 'NHL' || dayGames.some((game) => isNhlGame(game, leagueCode));
+    const showNhlAutofill = candidates.length > 0;
 
     return [
       {
@@ -678,7 +677,7 @@ const SeasonGamesTab = ({
             {
               label: autofillDay === dateKey ? 'Auto-filling NHL Games' : 'Auto-fill NHL Games',
               icon: 'sports_hockey',
-              disabled: autofillDay !== null || candidates.length === 0,
+              disabled: autofillDay !== null,
               onClick: () => {
                 void handleAutofillDay(dateKey, dayGames);
               },

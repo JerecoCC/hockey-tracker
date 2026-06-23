@@ -73,7 +73,10 @@ const MonthCalendarDay = ({
   const [bodyScrollable, setBodyScrollable] = useState(false);
 
   useLayoutEffect(() => {
+    let animationFrame = 0;
+
     const updateScrollable = () => {
+      animationFrame = 0;
       const body = bodyRef.current;
       const contentElement = contentRef.current;
 
@@ -88,14 +91,19 @@ const MonthCalendarDay = ({
       );
     };
 
+    const scheduleUpdate = () => {
+      if (animationFrame) return;
+      animationFrame = requestAnimationFrame(updateScrollable);
+    };
+
     updateScrollable();
-    const animationFrame = requestAnimationFrame(updateScrollable);
+    scheduleUpdate();
 
     if (typeof ResizeObserver === 'undefined') {
       return () => cancelAnimationFrame(animationFrame);
     }
 
-    const observer = new ResizeObserver(updateScrollable);
+    const observer = new ResizeObserver(scheduleUpdate);
     if (bodyRef.current != null) observer.observe(bodyRef.current);
     if (contentRef.current != null) observer.observe(contentRef.current);
     const renderedContent = contentRef.current?.firstElementChild;

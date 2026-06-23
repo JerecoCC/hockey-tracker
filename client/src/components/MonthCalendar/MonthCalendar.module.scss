@@ -58,10 +58,9 @@
   overflow-x: hidden;
   overflow-y: auto;
   padding: var(--month-calendar-cell-padding);
-  padding-right: 0;
   box-sizing: border-box;
   scrollbar-color: $border transparent;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   scrollbar-width: thin;
 
   &::-webkit-scrollbar {
@@ -79,6 +78,11 @@
     border-radius: $radius-md;
     min-height: 1.25rem;
   }
+}
+
+.dayBodyScrollable {
+  padding-right: 0;
+  scrollbar-gutter: stable;
 }
 
 .dayContent {
