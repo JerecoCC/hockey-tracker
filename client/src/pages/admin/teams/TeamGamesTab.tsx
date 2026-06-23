@@ -3,16 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
+import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import useSeasons from '@/hooks/useSeasons';
 import GameFormModal, { type GameFormTeam } from '@/pages/admin/seasons/GameFormModal';
-import GameListItem from '@/pages/admin/seasons/GameListItem';
+import GameListItem from '@/components/GameListItem';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import seasonStyles from '@/pages/admin/seasons/SeasonGamesTab.module.scss';
@@ -456,33 +456,14 @@ const TeamGamesTab = ({
               Games
               <span className={seasonStyles.titleDivider} />
               <span className={seasonStyles.weekNav}>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_left"
-                  size="sm"
-                  tooltip="Previous week"
-                  aria-label="Previous week"
-                  onClick={() => setWeekStart((current) => addDays(current, -7))}
-                />
-                <div className={seasonStyles.datePicker}>
-                  <DatePicker
-                    value={dateToISO(weekStart)}
-                    onChange={(value) =>
-                      setWeekStart(value ? fromISODate(value) : toDay(new Date()))
-                    }
-                    triggerLabel={fmtWeekRange(weekStart, weekEnd)}
-                    triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
-                  />
-                </div>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_right"
-                  size="sm"
-                  tooltip="Next week"
-                  aria-label="Next week"
-                  onClick={() => setWeekStart((current) => addDays(current, 7))}
+                <PeriodPicker
+                  value={dateToISO(weekStart)}
+                  label={fmtWeekRange(weekStart, weekEnd)}
+                  onChange={(value) =>
+                    setWeekStart(value ? fromISODate(value) : toDay(new Date()))
+                  }
+                  onPrevious={() => setWeekStart((current) => addDays(current, -7))}
+                  onNext={() => setWeekStart((current) => addDays(current, 7))}
                 />
               </span>
             </>
@@ -531,32 +512,13 @@ const TeamGamesTab = ({
           <div className={styles.calendarWrap}>
             <div className={styles.calendarToolbar}>
               <div className={styles.calendarToolbarControls}>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_left"
-                  size="sm"
-                  tooltip="Previous month"
-                  aria-label="Previous month"
-                  onClick={() => setCalendarMonth((current) => addMonths(current, -1))}
-                />
-                <div className={styles.calendarMonthPicker}>
-                  <DatePicker
-                    value={toMonthPickerValue(calendarMonth)}
-                    onChange={changeCalendarMonth}
-                    granularity="month"
-                    triggerLabel={MONTH_LABEL_FMT.format(calendarMonth)}
-                    triggerAriaLabel={`Select month: ${MONTH_LABEL_FMT.format(calendarMonth)}`}
-                  />
-                </div>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_right"
-                  size="sm"
-                  tooltip="Next month"
-                  aria-label="Next month"
-                  onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
+                <PeriodPicker
+                  kind="month"
+                  value={toMonthPickerValue(calendarMonth)}
+                  label={MONTH_LABEL_FMT.format(calendarMonth)}
+                  onChange={changeCalendarMonth}
+                  onPrevious={() => setCalendarMonth((current) => addMonths(current, -1))}
+                  onNext={() => setCalendarMonth((current) => addMonths(current, 1))}
                 />
               </div>
               <Button

@@ -1,7 +1,8 @@
-import type { CSSProperties, ReactNode } from 'react';
+import { forwardRef } from 'react';
+import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react';
 import styles from './Card.module.scss';
 
-interface CardProps {
+interface CardProps extends Omit<ComponentPropsWithoutRef<'div'>, 'title'> {
   /** Visual theme. 'admin' = dark bg + border. 'light' = white bg + shadow. */
   variant?: 'admin' | 'light';
   /** Renders a header row with a title at the start. Accepts a string or any ReactNode. */
@@ -16,14 +17,25 @@ interface CardProps {
   children: ReactNode;
 }
 
-const Card = (props: CardProps) => {
-  const { variant = 'admin', title, action, className, style, noHeaderMargin, children } = props;
+const Card = forwardRef<HTMLDivElement, CardProps>((props, ref) => {
+  const {
+    variant = 'admin',
+    title,
+    action,
+    className,
+    style,
+    noHeaderMargin,
+    children,
+    ...rest
+  } = props;
   const classes = [styles.card, variant === 'light' ? styles.light : styles.admin, className]
     .filter(Boolean)
     .join(' ');
 
   return (
     <div
+      ref={ref}
+      {...rest}
       className={classes}
       style={style}
     >
@@ -40,6 +52,8 @@ const Card = (props: CardProps) => {
       {children}
     </div>
   );
-};
+});
+
+Card.displayName = 'Card';
 
 export default Card;

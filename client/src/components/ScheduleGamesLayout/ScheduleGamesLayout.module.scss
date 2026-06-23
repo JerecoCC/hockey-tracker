@@ -1,0 +1,285 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.titleDivider {
+  display: inline-block;
+  width: 1px;
+  height: 1.2em;
+  background: $border;
+  align-self: center;
+  flex-shrink: 0;
+}
+
+.weekNav {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: initial;
+  font-weight: initial;
+}
+
+.actionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  flex: 0 0 auto;
+  gap: $space-sm;
+}
+
+.viewSegmentedControl.viewSegmentedControl {
+  flex: 0 0 auto;
+  width: fit-content;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-md;
+  justify-content: flex-end;
+  overflow: visible;
+  max-height: 200px;
+  opacity: 1;
+  margin-top: $space-xl;
+  transition:
+    max-height 0.25s ease,
+    opacity 0.25s ease,
+    margin-top 0.25s ease;
+
+  &::before {
+    content: "";
+    flex: 0 0 100%;
+    height: 1px;
+    background: $border;
+  }
+
+  > *:not(.filterSlotWide):not(.filterSlotFixed) {
+    flex: 1 0 130px;
+  }
+}
+
+.filtersHidden {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  overflow: hidden;
+}
+
+.filterSlotWide {
+  flex: 3 0 220px;
+  max-width: 480px;
+}
+
+.filterSlotFixed {
+  flex: 0 0 auto !important;
+  align-self: center;
+}
+
+.dayList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  margin-top: $space-md;
+}
+
+.dayEmpty {
+  margin: 0;
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
+.list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.empty {
+  color: $text-dim;
+  font-size: $font-sm;
+  padding: $space-lg 0;
+  text-align: center;
+}
+
+.weekSummaryCard {
+  --week-summary-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
+  --week-summary-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
+
+  position: sticky;
+  top: var(--week-summary-sticky-top, 52px);
+  z-index: 4;
+  width: 100%;
+  margin-inline: 0;
+  margin-top: 0;
+  padding: $space-sm !important;
+  transition:
+    border-color $transition-layout ease,
+    border-radius $transition-layout ease,
+    box-shadow $transition-layout ease;
+}
+
+.weekSummaryCardStuck {
+  width: calc(
+    100% + var(--week-summary-main-inline-padding) + var(--week-summary-main-inline-padding)
+  );
+  margin-inline: var(--week-summary-main-inline-padding-offset);
+  border-radius: 0 0 $radius-lg $radius-lg !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.weekSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(136px, 1fr));
+  gap: $space-sm;
+  overflow-x: auto;
+  padding-bottom: 2px;
+}
+
+.weekSummaryDay {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-rows: auto 1fr auto;
+  min-height: 108px;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $text-body;
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color $transition-fast ease,
+    background $transition-fast ease,
+    color $transition-fast ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
+.weekSummaryDayActive {
+  border-color: $accent;
+  background: rgba($accent, 0.08);
+}
+
+.weekSummaryDate {
+  color: $text-bright;
+  font-size: $font-sm;
+}
+
+.weekSummaryWeekday {
+  color: $text-body;
+  font-size: $font-xs;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.weekSummaryCount {
+  align-self: end;
+  color: $text-bright;
+  font-size: $font-sm;
+  font-weight: 800;
+}
+
+.weekSummaryCountSkeleton.weekSummaryCountSkeleton {
+  width: 64px;
+}
+
+.weekGameSkeleton.weekGameSkeleton {
+  height: 6rem;
+  min-height: 6rem;
+  border-radius: $radius-md;
+}
+
+.weekSummaryIcon {
+  align-self: end;
+  justify-self: end;
+  color: $text-dim;
+  font-size: 1.2rem;
+}
+
+.dayCardAnchor {
+  scroll-margin-top: 190px;
+}
+
+.calendarCard {
+  margin-top: $space-md;
+}
+
+.calendarWrap {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.calendarScroll {
+  overflow-x: auto;
+}
+
+.calendarGameList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+  width: 100%;
+
+  > :last-child {
+    margin-bottom: $space-sm;
+  }
+}
+
+.calendarDaySkeleton.calendarDaySkeleton {
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  border-radius: $radius-md;
+}
+
+.calendarDayCount {
+  margin-left: $space-xs;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.calendarDayActionButton.calendarDayActionButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1em;
+  height: 1em;
+  min-width: 0;
+  padding: 0;
+  line-height: 1;
+
+  svg {
+    font-size: 1em;
+  }
+}
+
+@media (max-width: 768px) {
+  .weekSummaryCard {
+    position: static;
+    top: auto;
+    z-index: auto;
+  }
+
+  .weekSummaryGrid {
+    grid-template-columns: repeat(7, minmax(124px, 1fr));
+  }
+
+  .dayCardAnchor {
+    scroll-margin-top: 110px;
+  }
+}
