@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
+import gameCardStyles from '@/components/GameCard/GameCard.module.scss';
 import scheduleLayoutStyles from '@/components/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
@@ -459,7 +460,7 @@ describe('UserGames schedule views', () => {
       document.querySelectorAll(`.${scheduleLayoutStyles.calendarDaySkeleton}`).length,
     ).toBeGreaterThan(0);
   });
-  it('shows team filtering with favorite teams first and uses season-style rows in Week view', async () => {
+  it('shows team filtering with favorite teams first and uses dashboard cards in Week view', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
@@ -476,31 +477,27 @@ describe('UserGames schedule views', () => {
       'Toggle Idle Team',
     ]);
 
-    const firstGameRow = screen.getAllByText('AWY')[0].closest('li');
-    expect(firstGameRow).not.toBeNull();
-    expect(within(firstGameRow as HTMLElement).getByText('Final')).toBeInTheDocument();
-    expect(within(firstGameRow as HTMLElement).queryByText('11')).not.toBeInTheDocument();
-    expect(within(firstGameRow as HTMLElement).queryByText('7')).not.toBeInTheDocument();
+    const firstGameCard = screen.getAllByText('AWY')[0].closest(`.${gameCardStyles.card}`);
+    expect(firstGameCard).not.toBeNull();
+    expect(within(firstGameCard as HTMLElement).getByText('FINAL')).toBeInTheDocument();
+    expect(within(firstGameCard as HTMLElement).queryByText('11')).not.toBeInTheDocument();
+    expect(within(firstGameCard as HTMLElement).queryByText('7')).not.toBeInTheDocument();
     expect(
-      within(firstGameRow as HTMLElement).queryByText(
+      within(firstGameCard as HTMLElement).queryByText(
         `Watching ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(dateOffset(0))}`,
       ),
     ).not.toBeInTheDocument();
     expect(
-      within(firstGameRow as HTMLElement).getByText((content) =>
+      within(firstGameCard as HTMLElement).getByText((content) =>
         content.includes(formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate)),
       ),
     ).toBeInTheDocument();
+    expect(within(firstGameCard as HTMLElement).getByText('R2 - G3')).toBeInTheDocument();
     expect(
-      within(firstGameRow as HTMLElement).getByText(
-        (content) => content.includes('Round 2') && content.includes('Game 3'),
-      ),
-    ).toBeInTheDocument();
-    expect(
-      within(firstGameRow as HTMLElement).queryByRole('button', { name: 'View game details' }),
+      within(firstGameCard as HTMLElement).queryByRole('button', { name: 'View game details' }),
     ).not.toBeInTheDocument();
     expect(
-      within(firstGameRow as HTMLElement).getByRole('button', { name: 'Mark as watched' }),
+      within(firstGameCard as HTMLElement).getByRole('button', { name: 'Mark as watched' }),
     ).toBeInTheDocument();
 
     const scheduledDayCard = screen.getByText(formatHeading(scheduledWatchDate)).parentElement;
@@ -513,17 +510,17 @@ describe('UserGames schedule views', () => {
       ).queryByText('AWY'),
     ).not.toBeInTheDocument();
 
-    const watchedGameRow = screen.getAllByText('OPP')[0].closest('li');
-    expect(watchedGameRow).not.toBeNull();
-    expect(within(watchedGameRow as HTMLElement).getByText('2')).toBeInTheDocument();
-    expect(within(watchedGameRow as HTMLElement).getByText('1')).toBeInTheDocument();
+    const watchedGameCard = screen.getAllByText('OPP')[0].closest(`.${gameCardStyles.card}`);
+    expect(watchedGameCard).not.toBeNull();
+    expect(within(watchedGameCard as HTMLElement).getByText('2')).toBeInTheDocument();
+    expect(within(watchedGameCard as HTMLElement).getByText('1')).toBeInTheDocument();
     expect(
-      within(watchedGameRow as HTMLElement).queryByText(
+      within(watchedGameCard as HTMLElement).queryByText(
         `Watched ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(dateOffset(1))}`,
       ),
     ).not.toBeInTheDocument();
     expect(
-      within(watchedGameRow as HTMLElement).getByRole('button', { name: 'View game details' }),
+      within(watchedGameCard as HTMLElement).getByRole('button', { name: 'View game details' }),
     ).toBeInTheDocument();
     expect(
       screen.getAllByRole('button', { name: 'Mark as watched' }).length,

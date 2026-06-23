@@ -8,6 +8,7 @@ import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import GameCard from '@/components/GameCard/GameCard';
+import UserGameActions from '@/components/GameCard/UserGameActions';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import { useAuth } from '@/context/AuthContext';
@@ -408,21 +409,35 @@ const UserDashboard = () => {
           <p className={styles.empty}>No games scheduled for today.</p>
         ) : (
           <div className={styles.todayGamesGrid}>
-            {todayGames.map((game) => (
-              <GameCard
-                key={game.id}
-                game={game}
-                tzPref={tzPref}
-                busy={actionGameId === game.id}
-                useLeagueColors
-                onOpen={() => navigate(`/games/${game.id}`)}
-                onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
-                onMarkWatched={() => void markGameWatched(game.id)}
-                onUnwatch={() => void unwatchGame(game.id)}
-                onSchedule={() => openScheduleModal(game)}
-                onSkip={() => setConfirmSkipGame(game)}
-              />
-            ))}
+            {todayGames.map((game) => {
+              const watched = !!game.watched_by_user;
+              const skipped = !!game.skipped_by_user;
+              const busy = actionGameId === game.id;
+              return (
+                <GameCard
+                  key={game.id}
+                  game={game}
+                  tzPref={tzPref}
+                  useLeagueColors
+                  onOpen={() => navigate(`/games/${game.id}`)}
+                  actions={
+                    <UserGameActions
+                      watched={watched}
+                      skipped={skipped}
+                      scheduled={!!game.scheduled_for}
+                      busy={busy}
+                      onView={() => navigate(`/games/${game.id}`)}
+                      onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
+                      onMarkWatched={() => markGameWatched(game.id)}
+                      onUnwatch={() => unwatchGame(game.id)}
+                      onUndoSkip={() => unwatchGame(game.id)}
+                      onSchedule={() => openScheduleModal(game)}
+                      onSkip={() => setConfirmSkipGame(game)}
+                    />
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </Card>

@@ -18,14 +18,21 @@
   margin-top: -$space-md;
 }
 
+.weekGameCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: $space-md;
+  padding: $space-xs 0;
+}
+
 .weekGameSkeleton.weekGameSkeleton {
-  height: 6rem;
-  min-height: 6rem;
+  height: 176px;
+  min-height: 176px;
   border-radius: $radius-md;
 }
 
 .weekGameSkeletonItem {
-  list-style: none;
+  display: block;
 }
 
 .dayAutofillProgressBar.dayAutofillProgressBar {

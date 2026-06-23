@@ -18,7 +18,6 @@ import {
   ScheduleCalendarLoading,
   ScheduleFilters,
   ScheduleFilterSlot,
-  ScheduleGameList,
   ScheduleGamesActions,
   ScheduleGamesTitle,
   ScheduleWeekList,
@@ -30,7 +29,7 @@ import {
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import useGames, { type GameRecord, type GameStatus, type GameType } from '@/hooks/useGames';
-import GameListItem from '@/components/GameListItem';
+import GameCard from '@/components/GameCard/GameCard';
 import Select from '@/components/Select/Select';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
 import { type SeasonTeam } from '@/hooks/useSeasonDetails';
@@ -121,36 +120,10 @@ const formatGameTime = (game: GameRecord): string | undefined => {
   return game.scheduled_time ? formatTime(game.scheduled_time, game.scheduled_at) : undefined;
 };
 
-const STATUS_LABEL: Record<GameStatus, string> = {
-  scheduled: 'Scheduled',
-  in_progress: 'In Progress',
-  final: 'Final',
-  postponed: 'Postponed',
-  cancelled: 'Cancelled',
-};
-
-const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'info',
-  in_progress: 'warning',
-  final: 'success',
-  postponed: 'warning',
-  cancelled: 'danger',
-};
-
 const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
 });
-
-const formatStatusLabel = (game: GameRecord): string => {
-  if (game.status !== 'final') return STATUS_LABEL[game.status];
-  // Prefer period_scores (source of truth) but fall back to stored columns for
-  // legacy games that were created before goal tracking was introduced.
-  if (game.shootout || game.period_scores.some((ps) => ps.period === 'SO')) return 'Final/SO';
-  if ((game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT'))
-    return 'Final/OT';
-  return 'Final';
-};
 
 const shouldShowGameScore = (game: GameRecord) =>
   game.status === 'final' ||
@@ -913,7 +886,7 @@ const SeasonGamesTab = ({
   );
 
   const renderWeekGameAutofillSkeleton = (game: GameRecord) => (
-    <li
+    <div
       key={game.id}
       className={styles.weekGameSkeletonItem}
       aria-label={`Auto-filling ${describeGame(game)}`}
@@ -922,81 +895,84 @@ const SeasonGamesTab = ({
         type="block"
         className={styles.weekGameSkeleton}
       />
-    </li>
+    </div>
   );
 
-  const renderGameListItem = (game: GameRecord) => {
+  const renderGameCardActions = (game: GameRecord) => (
+    <>
+      <Button
+        type="button"
+        variant="outlined"
+        intent="neutral"
+        icon="open_in_new"
+        size="sm"
+        tooltip="View game"
+        onClick={(event) => {
+          event.stopPropagation();
+          openGame(game);
+        }}
+      />
+      {!isEnded && (
+        <>
+          <Button
+            type="button"
+            variant="outlined"
+            intent="neutral"
+            icon="edit"
+            size="sm"
+            tooltip="Edit game"
+            disabled={busy === game.id}
+            onClick={(event) => {
+              event.stopPropagation();
+              handleEdit(game);
+            }}
+          />
+          {game.status === 'scheduled' && (
+            <Button
+              type="button"
+              variant="outlined"
+              intent="danger"
+              icon="delete"
+              size="sm"
+              tooltip="Delete game"
+              disabled={busy === game.id}
+              onClick={(event) => {
+                event.stopPropagation();
+                setConfirmDelete(game);
+              }}
+            />
+          )}
+        </>
+      )}
+    </>
+  );
+
+  const renderGameCard = (game: GameRecord) => {
     if (autofillingGameIds.has(game.id)) return renderWeekGameAutofillSkeleton(game);
 
     return (
-      <GameListItem
+      <GameCard
         key={game.id}
-        href={gameDetailsPath(game)}
-        awayTeam={{
-          logo: game.away_team.logo,
-          code: game.away_team.code,
-          primaryColor: game.away_team.primary_color,
-          textColor: game.away_team.text_color,
-        }}
-        homeTeam={{
-          logo: game.home_team.logo,
-          code: game.home_team.code,
-          primaryColor: game.home_team.primary_color,
-          textColor: game.home_team.text_color,
-        }}
-        awayScore={game.away_score}
-        homeScore={game.home_score}
+        game={game}
+        tzPref="ET"
+        canOpen
+        originalDateLabel={null}
+        timeLabel={formatGameTime(game) ?? null}
         showScore={shouldShowGameScore(game)}
-        isFinal={game.status === 'final'}
-        statusLabel={formatStatusLabel(game)}
-        statusIntent={STATUS_INTENT[game.status]}
-        gameType={game.game_type}
-        time={formatGameTime(game)}
-        venue={game.venue ?? undefined}
-        round={game.playoff_round}
-        roundLabel={
-          game.playoff_round != null
-            ? (game.playoff_round_names?.[game.playoff_round] ?? null)
-            : null
-        }
-        gameNumberInSeries={game.game_number_in_series}
-        gameNumber={game.game_number}
-        actions={[
-          {
-            icon: 'open_in_new',
-            intent: 'neutral',
-            tooltip: 'View game',
-            onClick: () => openGame(game),
-          },
-          ...(!isEnded
-            ? [
-                {
-                  icon: 'edit',
-                  intent: 'neutral' as const,
-                  tooltip: 'Edit game',
-                  onClick: () => handleEdit(game),
-                },
-                game.status === 'scheduled' && {
-                  icon: 'delete',
-                  intent: 'danger' as const,
-                  tooltip: 'Delete game',
-                  onClick: () => setConfirmDelete(game),
-                },
-              ]
-            : []),
-        ]}
+        onOpen={() => openGame(game)}
+        actions={renderGameCardActions(game)}
       />
     );
   };
 
   const renderWeekGameList = (dateKey: string, dayGames: GameRecord[]) => {
-    if (autofillDay !== dateKey) return dayGames.map((game) => renderGameListItem(game));
+    if (autofillDay !== dateKey) return dayGames.map((game) => renderGameCard(game));
 
     const revealedGames = dayGames.filter((game) => !autofillingGameIds.has(game.id));
     const loadingGames = dayGames.filter((game) => autofillingGameIds.has(game.id));
 
     return [
-      ...revealedGames.map((game) => renderGameListItem(game)),
+      ...revealedGames.map((game) => renderGameCard(game)),
       ...loadingGames.map((game) => renderWeekGameAutofillSkeleton(game)),
     ];
   };
@@ -1181,7 +1157,9 @@ const SeasonGamesTab = ({
                 hasActiveFilters ? 'No games match the filters.' : 'No games scheduled.'
               }
               renderDayContent={(dateKey, dayGames) => (
-                <ScheduleGameList>{renderWeekGameList(dateKey, dayGames)}</ScheduleGameList>
+                <div className={styles.weekGameCards}>
+                  {renderWeekGameList(dateKey, dayGames)}
+                </div>
               )}
             />
           </div>

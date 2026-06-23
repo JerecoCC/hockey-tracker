@@ -8,6 +8,8 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@/components/DatePicker/DatePicker';
+import GameCard from '@/components/GameCard/GameCard';
+import UserGameActions from '@/components/GameCard/UserGameActions';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import MultiSelect, { type MultiSelectOption } from '@/components/MultiSelect/MultiSelect';
@@ -19,7 +21,6 @@ import {
   ScheduleCalendarLoading,
   ScheduleFilters,
   ScheduleFilterSlot,
-  ScheduleGameList,
   ScheduleGamesActions,
   ScheduleGamesTitle,
   ScheduleWeekList,
@@ -27,13 +28,12 @@ import {
   scheduleViewSegmentedControlClassName,
   useScheduleWeekSummaryStuck,
 } from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
-import GameListItem, { type GameListItemAction } from '@/components/GameListItem';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
-import { type GameRecord, type GameStatus } from '@/hooks/useGames';
+import { type GameRecord } from '@/hooks/useGames';
 import styles from './UserGames.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -66,22 +66,6 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'scheduled', label: 'Upcoming' },
   { value: 'final', label: 'Final' },
 ];
-
-const STATUS_LABEL: Record<GameStatus, string> = {
-  scheduled: 'Scheduled',
-  in_progress: 'In Progress',
-  final: 'Final',
-  postponed: 'Postponed',
-  cancelled: 'Cancelled',
-};
-
-const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
-  scheduled: 'info',
-  in_progress: 'warning',
-  final: 'success',
-  postponed: 'warning',
-  cancelled: 'danger',
-};
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -417,151 +401,11 @@ const getOvertimeSuffix = (game: GameRecord) => {
   return '';
 };
 
-const formatStatusLabel = (game: GameRecord) =>
-  game.status === 'final' ? `Final${getOvertimeSuffix(game)}` : STATUS_LABEL[game.status];
-
 const getScoreCardGame = (game: GameRecord): GameRecord => ({
   ...game,
   series_home_wins: game.series_home_wins_at_game ?? null,
   series_away_wins: game.series_away_wins_at_game ?? null,
 });
-
-interface GameActionsProps {
-  watched: boolean;
-  skipped: boolean;
-  scheduled: boolean;
-  busy: boolean;
-  onView: () => void;
-  onDownloadScoreCard: () => void;
-  onMarkWatched: () => void;
-  onUnwatch: () => void;
-  onUndoSkip: () => void;
-  onSchedule: () => void;
-  onSkip: () => void;
-}
-
-const GameHoverActions = ({
-  watched,
-  skipped,
-  scheduled,
-  busy,
-  onView,
-  onDownloadScoreCard,
-  onMarkWatched,
-  onUnwatch,
-  onUndoSkip,
-  onSchedule,
-  onSkip,
-}: GameActionsProps) => (
-  <span
-    className={styles.gameActions}
-    data-calendar-game-actions
-  >
-    {(watched || skipped) && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="open_in_new"
-        size="sm"
-        tooltip="View game details"
-        onClick={(e) => {
-          e.stopPropagation();
-          onView();
-        }}
-      />
-    )}
-    {skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="warning"
-        icon="undo"
-        size="sm"
-        tooltip="Undo skip"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          void onUndoSkip();
-        }}
-      />
-    )}
-    {watched && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="download"
-        size="sm"
-        tooltip="Download score card"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDownloadScoreCard();
-        }}
-      />
-    )}
-    {watched && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="danger"
-        icon="visibility_off"
-        size="sm"
-        tooltip="Unwatch"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          void onUnwatch();
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="warning"
-        icon="remove_circle_outline"
-        size="sm"
-        tooltip="Skip game"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          void onSkip();
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="calendar_month"
-        size="sm"
-        tooltip={scheduled ? 'Edit watch schedule' : 'Schedule watch'}
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSchedule();
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="accent"
-        icon="visibility"
-        size="sm"
-        tooltip="Mark as watched"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          void onMarkWatched();
-        }}
-      />
-    )}
-  </span>
-);
 
 // ── Playoff series markers ───────────────────────────────────────────────────
 
@@ -787,19 +631,24 @@ const CalendarGameCard = ({
         ) : undefined,
       }}
     >
-      <GameHoverActions
-        watched={!!game.watched_by_user}
-        skipped={!!game.skipped_by_user}
-        scheduled={!!game.scheduled_for}
-        busy={busy}
-        onView={onOpen}
-        onDownloadScoreCard={onDownloadScoreCard}
-        onMarkWatched={onMarkWatched}
-        onUnwatch={onUnwatch}
-        onUndoSkip={onUnwatch}
-        onSchedule={onSchedule}
-        onSkip={onSkip}
-      />
+      <span
+        className={styles.gameActions}
+        data-calendar-game-actions
+      >
+        <UserGameActions
+          watched={!!game.watched_by_user}
+          skipped={!!game.skipped_by_user}
+          scheduled={!!game.scheduled_for}
+          busy={busy}
+          onView={onOpen}
+          onDownloadScoreCard={onDownloadScoreCard}
+          onMarkWatched={onMarkWatched}
+          onUnwatch={onUnwatch}
+          onUndoSkip={onUnwatch}
+          onSchedule={onSchedule}
+          onSkip={onSkip}
+        />
+      </span>
     </CalendarGameListItem>
   );
 };
@@ -1316,98 +1165,30 @@ const UserGames = () => {
     const skipped = !!game.skipped_by_user;
     const canOpen = watched || skipped;
     const busy = actionGameId === game.id;
-    const actions: (GameListItemAction | false)[] = [
-      canOpen && {
-        icon: 'open_in_new',
-        intent: 'neutral',
-        tooltip: 'View game details',
-        onClick: () => openGame(game.id),
-      },
-      skipped && {
-        icon: 'undo',
-        intent: 'warning',
-        tooltip: 'Undo skip',
-        disabled: busy,
-        onClick: () => void unwatchGame(game.id),
-      },
-      watched && {
-        icon: 'download',
-        intent: 'neutral',
-        tooltip: 'Download score card',
-        onClick: () => openScoreCardModal(game),
-      },
-      watched && {
-        icon: 'visibility_off',
-        intent: 'danger',
-        tooltip: 'Unwatch',
-        disabled: busy,
-        onClick: () => void unwatchGame(game.id),
-      },
-      !watched &&
-        !skipped && {
-          icon: 'remove_circle_outline',
-          intent: 'warning',
-          tooltip: 'Skip game',
-          disabled: busy,
-          onClick: () => void skipGame(game.id),
-        },
-      !watched &&
-        !skipped && {
-          icon: 'calendar_month',
-          intent: 'neutral',
-          tooltip: game.scheduled_for ? 'Edit watch schedule' : 'Schedule watch',
-          disabled: busy,
-          onClick: () => openScheduleModal(game),
-        },
-      !watched &&
-        !skipped && {
-          icon: 'visibility',
-          intent: 'accent',
-          tooltip: 'Mark as watched',
-          disabled: busy,
-          onClick: () => void markGameWatched(game.id),
-        },
-    ];
 
     return (
-      <GameListItem
+      <GameCard
         key={game.id}
-        href={canOpen ? `/games/${game.id}` : undefined}
-        awayTeam={{
-          logo: game.away_team.logo,
-          code: game.away_team.code,
-          primaryColor: game.away_team.primary_color,
-          textColor: game.away_team.text_color,
-        }}
-        homeTeam={{
-          logo: game.home_team.logo,
-          code: game.home_team.code,
-          primaryColor: game.home_team.primary_color,
-          textColor: game.home_team.text_color,
-        }}
-        awayScore={game.away_score}
-        homeScore={game.home_score}
-        showScore={shouldShowWatchedScore(game)}
-        isFinal={game.status === 'final'}
-        statusLabel={formatStatusLabel(game)}
-        statusIntent={STATUS_INTENT[game.status]}
-        date={getOriginalGameDateLabel(game, tzPref) ?? undefined}
-        time={
-          game.scheduled_time
-            ? fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref)
-            : undefined
+        game={game}
+        tzPref={tzPref}
+        canOpen={canOpen}
+        useLeagueColors
+        onOpen={() => openGame(game.id)}
+        actions={
+          <UserGameActions
+            watched={watched}
+            skipped={skipped}
+            scheduled={!!game.scheduled_for}
+            busy={busy}
+            onView={() => openGame(game.id)}
+            onDownloadScoreCard={() => openScoreCardModal(game)}
+            onMarkWatched={() => markGameWatched(game.id)}
+            onUnwatch={() => unwatchGame(game.id)}
+            onUndoSkip={() => unwatchGame(game.id)}
+            onSchedule={() => openScheduleModal(game)}
+            onSkip={() => skipGame(game.id)}
+          />
         }
-        venue={game.venue ?? undefined}
-        round={game.playoff_round}
-        roundLabel={
-          game.playoff_round != null
-            ? (game.playoff_round_names?.[game.playoff_round] ?? null)
-            : null
-        }
-        gameNumberInSeries={game.game_number_in_series}
-        gameNumber={game.game_number}
-        gameType={game.game_type}
-        actions={actions}
       />
     );
   };
@@ -1552,9 +1333,9 @@ const UserGames = () => {
             dayRefs={dayRefs}
             formatHeading={fmtDayHeading}
             renderDayContent={(_dateKey, dayGames) => (
-              <ScheduleGameList>
+              <div className={styles.weekGameCards}>
                 {dayGames.map((game) => renderUserGameListItem(game))}
-              </ScheduleGameList>
+              </div>
             )}
           />
         </div>

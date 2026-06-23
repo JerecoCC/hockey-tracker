@@ -1,5 +1,4 @@
 import type { CSSProperties, ReactNode } from 'react';
-import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
@@ -9,32 +8,18 @@ export type GameCardTimezone = 'ET' | 'local';
 
 type MaybePromise = void | Promise<void>;
 
-export interface GameCardActions {
-  onOpen: () => MaybePromise;
-  onDownloadScoreCard: () => MaybePromise;
-  onMarkWatched: () => MaybePromise;
-  onUnwatch: () => MaybePromise;
-  onSchedule: () => MaybePromise;
-  onSkip: () => MaybePromise;
-  onUndoSkip?: () => MaybePromise;
-}
-
-interface GameCardProps extends GameCardActions {
+interface GameCardProps {
   game: GameRecord;
   tzPref: GameCardTimezone;
-  busy: boolean;
+  onOpen: () => MaybePromise;
   canOpen?: boolean;
   className?: string;
   useLeagueColors?: boolean;
   originalDateLabel?: string | null;
   bottomLabel?: ReactNode;
-}
-
-interface GameActionsProps extends GameCardActions {
-  watched: boolean;
-  skipped: boolean;
-  scheduled: boolean;
-  busy: boolean;
+  actions?: ReactNode;
+  showScore?: boolean;
+  timeLabel?: string | null;
 }
 
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
@@ -219,126 +204,6 @@ const getLeagueStyle = (game: GameRecord) =>
     '--game-league-text': game.league_text_color ?? '#ffffff',
   }) as CSSProperties;
 
-const GameHoverActions = ({
-  watched,
-  skipped,
-  scheduled,
-  busy,
-  onOpen,
-  onDownloadScoreCard,
-  onMarkWatched,
-  onUnwatch,
-  onUndoSkip,
-  onSchedule,
-  onSkip,
-}: GameActionsProps) => (
-  <span className={styles.gameActions}>
-    {(watched || skipped) && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="open_in_new"
-        size="sm"
-        tooltip="View game details"
-        onClick={(e) => {
-          e.stopPropagation();
-          run(onOpen);
-        }}
-      />
-    )}
-    {skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="warning"
-        icon="undo"
-        size="sm"
-        tooltip="Undo skip"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          run(onUndoSkip ?? onUnwatch);
-        }}
-      />
-    )}
-    {watched && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="download"
-        size="sm"
-        tooltip="Download score card"
-        onClick={(e) => {
-          e.stopPropagation();
-          run(onDownloadScoreCard);
-        }}
-      />
-    )}
-    {watched && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="danger"
-        icon="visibility_off"
-        size="sm"
-        tooltip="Unwatch"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          run(onUnwatch);
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="warning"
-        icon="remove_circle_outline"
-        size="sm"
-        tooltip="Skip game"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          run(onSkip);
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="calendar_month"
-        size="sm"
-        tooltip={scheduled ? 'Edit watch schedule' : 'Schedule watch'}
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          run(onSchedule);
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="accent"
-        icon="visibility"
-        size="sm"
-        tooltip="Mark as watched"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          run(onMarkWatched);
-        }}
-      />
-    )}
-  </span>
-);
-
 const TeamLine = ({
   team,
   score,
@@ -365,28 +230,27 @@ const TeamLine = ({
 const GameCard = ({
   game,
   tzPref,
-  busy,
   canOpen,
   className,
   useLeagueColors = false,
   originalDateLabel: originalDateLabelProp,
   bottomLabel,
+  actions,
+  showScore: showScoreProp,
+  timeLabel: timeLabelProp,
   onOpen,
-  onDownloadScoreCard,
-  onMarkWatched,
-  onUnwatch,
-  onUndoSkip,
-  onSchedule,
-  onSkip,
 }: GameCardProps) => {
-  const showScore = shouldShowWatchedScore(game);
+  const showScore = showScoreProp ?? shouldShowWatchedScore(game);
   const homeScore = showScore ? game.home_score : '-';
   const awayScore = showScore ? game.away_score : '-';
   const awayDim = showScore && game.away_score < game.home_score;
   const homeDim = showScore && game.home_score < game.away_score;
   const isWatched = !!game.watched_by_user;
   const isOpenable = canOpen ?? isWatched;
-  const timeLabel = fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref);
+  const timeLabel =
+    timeLabelProp === undefined
+      ? fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref)
+      : (timeLabelProp ?? '');
   const originalDateLabel =
     originalDateLabelProp === undefined
       ? getOriginalGameDateLabel(game, tzPref)
@@ -423,19 +287,7 @@ const GameCard = ({
           : undefined
       }
     >
-      <GameHoverActions
-        watched={isWatched}
-        skipped={!!game.skipped_by_user}
-        scheduled={!!game.scheduled_for}
-        busy={busy}
-        onOpen={onOpen}
-        onDownloadScoreCard={onDownloadScoreCard}
-        onMarkWatched={onMarkWatched}
-        onUnwatch={onUnwatch}
-        onUndoSkip={onUndoSkip}
-        onSchedule={onSchedule}
-        onSkip={onSkip}
-      />
+      {actions && <span className={styles.gameActions}>{actions}</span>}
       {isWatched && (
         <span
           className={styles.watchedRibbon}
