@@ -13,7 +13,6 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
-import InfoItem from '@/components/InfoItem/InfoItem';
 import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import {
@@ -137,87 +136,11 @@ const deriveBracketStructure = (
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const BEST_OF_PLAYOFF_OPTIONS = (leagueDefault: number) => [
-  { value: '', label: `Use league default (Best of ${leagueDefault})` },
+const BEST_OF_PLAYOFF_OPTIONS = [
   { value: '3', label: 'Best of 3' },
   { value: '5', label: 'Best of 5' },
   { value: '7', label: 'Best of 7' },
 ];
-
-// ── Playoff Settings Modal ─────────────────────────────────────────────────────
-
-interface PlayoffSettingsFormValues {
-  best_of_playoff: string;
-}
-
-interface PlayoffSettingsModalProps {
-  open: boolean;
-  bestOfPlayoff: number | null;
-  leagueBestOfPlayoff: number;
-  seasonId: string;
-  updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
-  onClose: () => void;
-}
-
-const PlayoffSettingsModal = ({
-  open,
-  bestOfPlayoff,
-  leagueBestOfPlayoff,
-  seasonId,
-  updateSeason,
-  onClose,
-}: PlayoffSettingsModalProps) => {
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting, isDirty, isValid },
-  } = useForm<PlayoffSettingsFormValues>({
-    defaultValues: { best_of_playoff: '' },
-    mode: 'onChange',
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    reset({
-      best_of_playoff: bestOfPlayoff != null ? String(bestOfPlayoff) : '',
-    });
-  }, [open, bestOfPlayoff, reset]);
-
-  const onSubmit = handleSubmit(async (data) => {
-    const ok = await updateSeason(seasonId, {
-      best_of_playoff: data.best_of_playoff ? parseInt(data.best_of_playoff, 10) : null,
-    });
-    if (ok) onClose();
-  });
-
-  return (
-    <Modal
-      open={open}
-      title="Playoff Settings"
-      onClose={onClose}
-      confirmLabel={isSubmitting ? 'Saving…' : 'Save Changes'}
-      confirmForm="playoff-settings-form"
-      confirmDisabled={isSubmitting || !isDirty || !isValid}
-      busy={isSubmitting}
-    >
-      <form
-        id="playoff-settings-form"
-        className={styles.modalForm}
-        onSubmit={onSubmit}
-      >
-        <Field
-          type="select"
-          label="Playoff Series Format"
-          control={control}
-          name="best_of_playoff"
-          options={BEST_OF_PLAYOFF_OPTIONS(leagueBestOfPlayoff)}
-          disabled={isSubmitting}
-        />
-      </form>
-    </Modal>
-  );
-};
 
 // ── Playoff Format Modal ──────────────────────────────────────────────────────
 
@@ -724,6 +647,11 @@ const SeasonPlayoffsTab = ({
 
   const { ruleSets, fetchRuleSet } = useBracketRuleSets(leagueId);
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
+  const currentPlayoffSeriesFormatValue = String(bestOfPlayoff ?? leagueBestOfPlayoff);
+  const [draftBestOfPlayoff, setDraftBestOfPlayoff] = useState(
+    currentPlayoffSeriesFormatValue,
+  );
+  const [savingPlayoffSeriesFormat, setSavingPlayoffSeriesFormat] = useState(false);
   const [draftBracketRuleSetId, setDraftBracketRuleSetId] = useState<string | null>(
     bracketRuleSetId,
   );
@@ -750,6 +678,10 @@ const SeasonPlayoffsTab = ({
     },
     [],
   );
+
+  useEffect(() => {
+    setDraftBestOfPlayoff(currentPlayoffSeriesFormatValue);
+  }, [currentPlayoffSeriesFormatValue]);
 
   useEffect(() => {
     setDraftBracketRuleSetId(bracketRuleSetId);
@@ -1044,7 +976,6 @@ const SeasonPlayoffsTab = ({
   );
 
   // ── Modal state ───────────────────────────────────────────────────────────────
-  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [formatModalOpen, setFormatModalOpen] = useState(false);
 
   // ── Series state ─────────────────────────────────────────────────────────────
@@ -1062,6 +993,28 @@ const SeasonPlayoffsTab = ({
 
   const handleStartSeries = (s: PlayoffSeriesRecord) => startSeries(s.id);
   const hasRoundOneSeries = series.some((s) => s.round === 1);
+  const playoffSeriesFormatLocked = isEnded || playoffsStarted;
+  const playoffSeriesFormatLabel =
+    bestOfPlayoff != null
+      ? `Best of ${bestOfPlayoff}`
+      : `Best of ${leagueBestOfPlayoff} (league default)`;
+  const playoffSeriesFormatLockedTitle = playoffsStarted
+    ? 'Playoff series format cannot be changed after playoffs start.'
+    : 'Playoff series format cannot be changed after the season ends.';
+  const hasDraftPlayoffSeriesFormatChange =
+    draftBestOfPlayoff !== currentPlayoffSeriesFormatValue;
+  const handleSavePlayoffSeriesFormat = async () => {
+    if (!hasDraftPlayoffSeriesFormatChange) return;
+    const playoffValue = parseInt(draftBestOfPlayoff, 10);
+    setSavingPlayoffSeriesFormat(true);
+    try {
+      await updateSeason(seasonId, {
+        best_of_playoff: playoffValue !== leagueBestOfPlayoff ? playoffValue : null,
+      });
+    } finally {
+      setSavingPlayoffSeriesFormat(false);
+    }
+  };
   const bracketRuleSetLocked = isEnded || playoffsStarted;
   const bracketRuleSetLabel =
     ruleSetOptions.find((option) => option.value === bracketRuleSetId)?.label ??
@@ -1504,6 +1457,7 @@ const SeasonPlayoffsTab = ({
                   intent="accent"
                   iconHeight="field"
                   tooltip="Save bracket rule set"
+                  tooltipClassName={styles.ruleSetSaveAction}
                   disabled={savingBracketRuleSet || !draftBracketRuleSetId}
                   onClick={handleSaveBracketRuleSet}
                 />
@@ -1518,32 +1472,44 @@ const SeasonPlayoffsTab = ({
             </div>
           </Card>
 
-          {/* ── Playoff Settings ── */}
-          <Card
-            title="Playoff Settings"
-            action={
-              !playoffsStarted ? (
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit playoff settings"
-                  disabled={isEnded}
-                  onClick={() => setSettingsModalOpen(true)}
-                />
-              ) : null
-            }
-          >
-            <div className={styles.settingsGrid}>
-              <InfoItem
-                label="Playoff Series Format"
-                data={
-                  bestOfPlayoff != null
-                    ? `Best of ${bestOfPlayoff}`
-                    : `Best of ${leagueBestOfPlayoff} (league default)`
-                }
-              />
+          {/* ── Playoff Series Format ── */}
+          <Card title="Playoff Series Format">
+            <div className={styles.ruleSetSelector}>
+              {playoffSeriesFormatLocked ? (
+                <div
+                  className={styles.readonlyRuleSetBox}
+                  title={playoffSeriesFormatLockedTitle}
+                >
+                  <span className={styles.readonlyRuleSetLabel}>
+                    {playoffSeriesFormatLabel}
+                  </span>
+                </div>
+              ) : (
+                <div className={styles.ruleSetControl}>
+                  <div className={styles.ruleSetSelectField}>
+                    <Select
+                      value={draftBestOfPlayoff}
+                      options={BEST_OF_PLAYOFF_OPTIONS}
+                      onChange={setDraftBestOfPlayoff}
+                      disabled={savingPlayoffSeriesFormat}
+                    />
+                  </div>
+                  {hasDraftPlayoffSeriesFormatChange && (
+                    <Button
+                      type="button"
+                      icon="save"
+                      size="sm"
+                      variant="filled"
+                      intent="accent"
+                      iconHeight="field"
+                      tooltip="Save playoff series format"
+                      tooltipClassName={styles.ruleSetSaveAction}
+                      disabled={savingPlayoffSeriesFormat}
+                      onClick={handleSavePlayoffSeriesFormat}
+                    />
+                  )}
+                </div>
+              )}
             </div>
           </Card>
 
@@ -1608,15 +1574,6 @@ const SeasonPlayoffsTab = ({
           seasonId={seasonId}
           updateSeason={updateSeason}
           onClose={() => setFormatModalOpen(false)}
-        />
-
-        <PlayoffSettingsModal
-          open={settingsModalOpen}
-          bestOfPlayoff={bestOfPlayoff}
-          leagueBestOfPlayoff={leagueBestOfPlayoff}
-          seasonId={seasonId}
-          updateSeason={updateSeason}
-          onClose={() => setSettingsModalOpen(false)}
         />
 
         <ChoicePickModal
