@@ -486,6 +486,8 @@ const SeasonGamesTab = ({
     : groupedByDate[0]?.[0];
   const [activeSummaryDay, setActiveSummaryDay] = useState<string | undefined>(initialSummaryDay);
   const dayRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const weekSummarySentinelRef = useRef<HTMLDivElement>(null);
+  const [isWeekSummaryStuck, setIsWeekSummaryStuck] = useState(false);
 
   useEffect(() => {
     setActiveSummaryDay((current) => {
@@ -495,6 +497,42 @@ const SeasonGamesTab = ({
         : groupedByDate[0]?.[0];
     });
   }, [groupedByDate, todayKey]);
+
+  useEffect(() => {
+    if (view !== 'list') {
+      setIsWeekSummaryStuck(false);
+      return;
+    }
+    const sentinel = weekSummarySentinelRef.current;
+    if (!sentinel) return;
+
+    const isMobile = () => window.innerWidth <= 768;
+    const headerHeight = () => (isMobile() ? 88 : 52);
+    const scrollEl = getScrollParent(sentinel);
+
+    const check = () => {
+      if (isMobile()) {
+        setIsWeekSummaryStuck(false);
+        return;
+      }
+      const summaryCard = sentinel.nextElementSibling as HTMLElement | null;
+      const summaryCardTopOffset = summaryCard
+        ? parseFloat(getComputedStyle(summaryCard).marginTop) || 0
+        : 0;
+      setIsWeekSummaryStuck(
+        sentinel.getBoundingClientRect().top + summaryCardTopOffset <= headerHeight(),
+      );
+    };
+
+    scrollEl.addEventListener('scroll', check, { passive: true });
+    window.addEventListener('resize', check, { passive: true });
+    check();
+
+    return () => {
+      scrollEl.removeEventListener('scroll', check);
+      window.removeEventListener('resize', check);
+    };
+  }, [view]);
 
   const scrollToDay = (dateKey: string) => {
     setActiveSummaryDay(dateKey);
@@ -966,6 +1004,18 @@ const SeasonGamesTab = ({
     );
   };
 
+  const renderWeekGameList = (dateKey: string, dayGames: GameRecord[]) => {
+    if (autofillDay !== dateKey) return dayGames.map((game) => renderGameListItem(game));
+
+    const revealedGames = dayGames.filter((game) => !autofillingGameIds.has(game.id));
+    const loadingGames = dayGames.filter((game) => autofillingGameIds.has(game.id));
+
+    return [
+      ...revealedGames.map((game) => renderGameListItem(game)),
+      ...loadingGames.map((game) => renderWeekGameAutofillSkeleton(game)),
+    ];
+  };
+
   return (
     <>
       <Card
@@ -1114,50 +1164,58 @@ const SeasonGamesTab = ({
 
       {/* ── Day cards ── */}
       {view === 'list' && (
-        <Card
-          className={styles.weekSummaryCard}
-          noHeaderMargin
-        >
-          <div className={styles.weekSummaryGrid}>
-            {groupedByDate.map(([dateKey, dayGames]) => {
-              const isActive = activeSummaryDay === dateKey;
-              return (
-                <button
-                  key={dateKey}
-                  type="button"
-                  className={`${styles.weekSummaryDay}${isActive ? ` ${styles.weekSummaryDayActive}` : ''}`}
-                  onClick={() => scrollToDay(dateKey)}
-                  aria-label={
-                    loading
-                      ? `Loading games for ${fmtDayHeading(dateKey)}`
-                      : `Jump to ${fmtDayHeading(dateKey)}: ${dayGames.length} games`
-                  }
-                >
-                  <span className={styles.weekSummaryDate}>{fmtDaySummaryDate(dateKey)}</span>
-                  <span className={styles.weekSummaryWeekday}>{fmtDaySummaryWeekday(dateKey)}</span>
-                  <span className={styles.weekSummaryCount}>
-                    {loading ? (
-                      <Skeleton
-                        type="text"
-                        className={styles.weekSummaryCountSkeleton}
+        <>
+          <div
+            ref={weekSummarySentinelRef}
+            style={{ height: 0 }}
+          />
+          <Card
+            className={[styles.weekSummaryCard, isWeekSummaryStuck ? styles.weekSummaryCardStuck : '']
+              .filter(Boolean)
+              .join(' ')}
+            noHeaderMargin
+          >
+            <div className={styles.weekSummaryGrid}>
+              {groupedByDate.map(([dateKey, dayGames]) => {
+                const isActive = activeSummaryDay === dateKey;
+                return (
+                  <button
+                    key={dateKey}
+                    type="button"
+                    className={`${styles.weekSummaryDay}${isActive ? ` ${styles.weekSummaryDayActive}` : ''}`}
+                    onClick={() => scrollToDay(dateKey)}
+                    aria-label={
+                      loading
+                        ? `Loading games for ${fmtDayHeading(dateKey)}`
+                        : `Jump to ${fmtDayHeading(dateKey)}: ${dayGames.length} games`
+                    }
+                  >
+                    <span className={styles.weekSummaryDate}>{fmtDaySummaryDate(dateKey)}</span>
+                    <span className={styles.weekSummaryWeekday}>{fmtDaySummaryWeekday(dateKey)}</span>
+                    <span className={styles.weekSummaryCount}>
+                      {loading ? (
+                        <Skeleton
+                          type="text"
+                          className={styles.weekSummaryCountSkeleton}
+                        />
+                      ) : (
+                        <>
+                          {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
+                        </>
+                      )}
+                    </span>
+                    {isActive && (
+                      <Icon
+                        name="calendar_today"
+                        className={styles.weekSummaryIcon}
                       />
-                    ) : (
-                      <>
-                        {dayGames.length} {dayGames.length === 1 ? 'Game' : 'Games'}
-                      </>
                     )}
-                  </span>
-                  {isActive && (
-                    <Icon
-                      name="calendar_today"
-                      className={styles.weekSummaryIcon}
-                    />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </Card>
+                  </button>
+                );
+              })}
+            </div>
+          </Card>
+        </>
       )}
 
       {loading && view === 'calendar' ? (
@@ -1236,7 +1294,7 @@ const SeasonGamesTab = ({
                   </p>
                 ) : (
                   <ul className={styles.list}>
-                    {dayGames.map((game) => renderGameListItem(game))}
+                    {renderWeekGameList(dateKey, dayGames)}
                   </ul>
                 )}
               </Card>

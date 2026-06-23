@@ -125,11 +125,32 @@
 }
 
 .weekSummaryCard {
+  --week-summary-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
+  --week-summary-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
+
   position: sticky;
-  top: calc(52px + #{$space-sm});
-  z-index: 3;
+  top: 52px;
+  z-index: 4;
+  width: 100%;
+  margin-inline: 0;
   margin-top: $space-md;
   padding: $space-sm !important;
+  transition:
+    border-color $transition-layout ease,
+    border-radius $transition-layout ease,
+    box-shadow $transition-layout ease,
+    margin-inline $transition-layout ease,
+    width $transition-layout ease;
+}
+
+.weekSummaryCardStuck {
+  width: calc(
+    100% + var(--week-summary-main-inline-padding) + var(--week-summary-main-inline-padding)
+  );
+  margin-inline: var(--week-summary-main-inline-padding-offset);
+  border-radius: 0 0 $radius-lg $radius-lg !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 .weekSummaryGrid {
@@ -207,7 +228,8 @@
 }
 
 .dayAutofillProgressBar.dayAutofillProgressBar {
-  background: $accent;
+  background: $accent !important;
+  background-color: $accent !important;
 }
 
 .weekSummaryIcon {
@@ -294,7 +316,9 @@
 
 @media (max-width: 768px) {
   .weekSummaryCard {
-    top: calc(88px + #{$space-sm});
+    position: static;
+    top: auto;
+    z-index: auto;
   }
 
   .weekSummaryGrid {
@@ -302,6 +326,6 @@
   }
 
   .dayCardAnchor {
-    scroll-margin-top: 210px;
+    scroll-margin-top: 110px;
   }
 }
