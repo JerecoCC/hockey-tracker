@@ -11,19 +11,17 @@ import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import {
   type PlayoffSeriesRecord,
-  type SeriesGame,
   type SeriesStatus,
   usePlayoffSeries,
 } from '@/hooks/useGames';
-import Tooltip from '@/components/Tooltip/Tooltip';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
 import Select from '@/components/Select/Select';
 import useBracketRuleSets, { type BracketSlotRule } from '@/hooks/useBracketRuleSets';
 import { type TeamStandingRecord } from '@/hooks/useSeasonStandings';
-import { buildGameDetailsPath } from '@/lib/routeSlugs';
-import BracketRulesModal, {
+import { buildPlayoffSeriesDetailsPath } from '@/lib/routeSlugs';
+import {
   type BracketStructure,
   deriveBracketStructureFromSize,
   getRoundLabel,
@@ -32,12 +30,6 @@ import BracketRulesModal, {
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
-const DATE_FMT = new Intl.DateTimeFormat('en-US', {
-  month: 'short',
-  day: 'numeric',
-  year: 'numeric',
-});
 
 const SCOPE_OPTIONS = [
   { value: 'league' as PlayoffFormatRule['scope'], label: 'Whole League' },
@@ -457,10 +449,7 @@ const ChoicePickModal = ({
 interface BracketSlotProps {
   series: PlayoffSeriesRecord | null;
   busy: string | null;
-  leagueId: string;
-  leagueCode: string | null | undefined;
-  seasonId: string;
-  seasonName: string | null | undefined;
+  seriesHref?: string;
   /** Simulated team name for Team 1 (home ice). Only shown when series is null. */
   simulatedTeam1?: string | null;
   simulatedTeam1Details?: SimulatedSlotTeam | null;
@@ -481,10 +470,7 @@ interface BracketSlotProps {
 const BracketSlot = ({
   series,
   busy,
-  leagueId,
-  leagueCode,
-  seasonId,
-  seasonName,
+  seriesHref,
   simulatedTeam1,
   simulatedTeam1Details,
   simulatedTeam2,
@@ -495,10 +481,21 @@ const BracketSlot = ({
   onAdvance,
   onForceAdvance,
 }: BracketSlotProps) => {
+  const WinCount = ({ wins, show = true }: { wins: number; show?: boolean }) =>
+    show ? (
+      <span
+        className={styles.slotWinCount}
+        aria-label={`${wins} ${wins === 1 ? 'win' : 'wins'}`}
+      >
+        {wins}
+      </span>
+    ) : null;
+
   if (!series) {
     const team1Name = simulatedTeam1Details?.name ?? simulatedTeam1 ?? null;
     const team2Name = simulatedTeam2Details?.name ?? simulatedTeam2 ?? null;
     const isSimulated = team1Name != null || team2Name != null;
+
     return (
       <div
         className={[
@@ -536,6 +533,10 @@ const BracketSlot = ({
             />
           )}
           <span className={styles.slotTeamName}>{team1Name ?? 'TBD'}</span>
+          <WinCount
+            wins={0}
+            show={!!team1Name}
+          />
         </div>
         <div className={styles.slotDivider} />
         <div className={`${styles.slotTeam} ${!team2Name ? styles.slotTeamTbd : ''}`}>
@@ -551,6 +552,10 @@ const BracketSlot = ({
             />
           )}
           <span className={styles.slotTeamName}>{team2Name ?? 'TBD'}</span>
+          <WinCount
+            wins={0}
+            show={!!team2Name}
+          />
         </div>
       </div>
     );
@@ -560,89 +565,6 @@ const BracketSlot = ({
   const awayWon = series.winner_team_id === series.away_team_id;
   const isComplete = series.status === 'complete';
 
-  const gameHref = (gameId: string) =>
-    buildGameDetailsPath({
-      leagueCode,
-      leagueId,
-      seasonName,
-      seasonId,
-      gameId,
-      awayTeamCode: series?.away_team_code,
-      homeTeamCode: series?.home_team_code,
-      scheduledAt: series?.games.find((game) => game.id === gameId)?.scheduled_at,
-    });
-
-  // Returns win games (0-indexed) for a given team, sorted by game number.
-  const winGamesFor = (teamId: string): SeriesGame[] =>
-    (series.games ?? [])
-      .filter(
-        (g) =>
-          g.status === 'final' &&
-          ((g.home_team_id === teamId && g.home_goals > g.away_goals) ||
-            (g.away_team_id === teamId && g.away_goals > g.home_goals)),
-      )
-      .sort((a, b) => a.game_number_in_series - b.game_number_in_series);
-
-  const makeDotTooltip = (g: SeriesGame) => {
-    // Resolve codes relative to this specific game's home/away assignment
-    const gameHomeCode =
-      g.home_team_id === series.home_team_id ? series.home_team_code : series.away_team_code;
-    const gameAwayCode =
-      g.away_team_id === series.away_team_id ? series.away_team_code : series.home_team_code;
-
-    return (
-      <div className={styles.winDotTooltip}>
-        <span className={styles.winDotTooltipGame}>Game {g.game_number_in_series}</span>
-        {g.scheduled_at && (
-          <span className={styles.winDotTooltipDate}>
-            {DATE_FMT.format(new Date(g.scheduled_at))}
-          </span>
-        )}
-        {g.status === 'final' && (
-          <span className={styles.winDotTooltipScore}>
-            {gameAwayCode} {g.away_goals}
-            <span className={styles.winDotTooltipDash}>–</span>
-            {g.home_goals} {gameHomeCode}
-          </span>
-        )}
-      </div>
-    );
-  };
-
-  const WinDots = ({ teamId, wins }: { teamId: string; wins: number }) => {
-    const winGames = winGamesFor(teamId);
-    return (
-      <span className={styles.slotWinDots}>
-        {Array.from({ length: series.games_to_win }, (_, i) => {
-          const game = winGames[i];
-          const filled = i < wins;
-          const cls = `${styles.slotWinDot} ${filled ? styles.slotWinDotFilled : ''}`;
-          return game ? (
-            <Tooltip
-              key={i}
-              content={makeDotTooltip(game)}
-            >
-              <Link
-                to={gameHref(game.id)}
-                className={cls}
-              >
-                <Icon
-                  name="check"
-                  size="10px"
-                />
-              </Link>
-            </Tooltip>
-          ) : (
-            <span
-              key={i}
-              className={cls}
-            />
-          );
-        })}
-      </span>
-    );
-  };
-
   const hasNoGames = (series.games ?? []).length === 0;
   const bothTeamsSet = !!series.home_team_id && !!series.away_team_id;
   const canStart = hasNoGames && series.status === 'upcoming' && bothTeamsSet;
@@ -650,6 +572,13 @@ const BracketSlot = ({
 
   return (
     <div className={`${styles.bracketSlot} ${styles.slotFilled}`}>
+      {seriesHref && (
+        <Link
+          to={seriesHref}
+          className={styles.slotLink}
+          aria-label={`View ${series.away_team_code ?? 'away'} vs ${series.home_team_code ?? 'home'} series`}
+        />
+      )}
       {showOverlay && (
         <div className={styles.slotActions}>
           {canStart && (
@@ -695,12 +624,10 @@ const BracketSlot = ({
           />
         )}
         <span className={styles.slotTeamName}>{series.home_team_name ?? 'TBD'}</span>
-        {series.home_team_id && (
-          <WinDots
-            teamId={series.home_team_id}
-            wins={series.home_wins}
-          />
-        )}
+        <WinCount
+          wins={series.home_wins}
+          show={!!series.home_team_id}
+        />
       </div>
       <div className={styles.slotDivider} />
       <div
@@ -722,12 +649,10 @@ const BracketSlot = ({
           />
         )}
         <span className={styles.slotTeamName}>{series.away_team_name ?? 'TBD'}</span>
-        {series.away_team_id && (
-          <WinDots
-            teamId={series.away_team_id}
-            wins={series.away_wins}
-          />
-        )}
+        <WinCount
+          wins={series.away_wins}
+          show={!!series.away_team_id}
+        />
       </div>
     </div>
   );
@@ -781,6 +706,14 @@ const SeasonPlayoffsTab = ({
 
   const { ruleSets, fetchRuleSet } = useBracketRuleSets(leagueId);
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
+  const [draftBracketRuleSetId, setDraftBracketRuleSetId] = useState<string | null>(
+    bracketRuleSetId,
+  );
+  const [savingBracketRuleSet, setSavingBracketRuleSet] = useState(false);
+
+  useEffect(() => {
+    setDraftBracketRuleSetId(bracketRuleSetId);
+  }, [bracketRuleSetId]);
 
   // ── Active rule set slots (needed to compute advanceable slots) ───────────────
   const [activeRuleSetSlots, setActiveRuleSetSlots] = useState<BracketSlotRule[]>([]);
@@ -1073,7 +1006,6 @@ const SeasonPlayoffsTab = ({
   // ── Modal state ───────────────────────────────────────────────────────────────
   const [settingsModalOpen, setSettingsModalOpen] = useState(false);
   const [formatModalOpen, setFormatModalOpen] = useState(false);
-  const [bracketRulesModalOpen, setBracketRulesModalOpen] = useState(false);
 
   // ── Series state ─────────────────────────────────────────────────────────────
   const seriesByRound = series.reduce<Record<number, PlayoffSeriesRecord[]>>((acc, s) => {
@@ -1090,12 +1022,49 @@ const SeasonPlayoffsTab = ({
 
   const handleStartSeries = (s: PlayoffSeriesRecord) => startSeries(s.id);
   const hasRoundOneSeries = series.some((s) => s.round === 1);
+  const bracketRuleSetLocked = isEnded || playoffsStarted;
+  const bracketRuleSetLabel =
+    ruleSetOptions.find((option) => option.value === bracketRuleSetId)?.label ??
+    'No rule set assigned';
+  const bracketRuleSetLockedTitle = playoffsStarted
+    ? 'Bracket rule set cannot be changed after playoffs start.'
+    : 'Bracket rule set cannot be changed after the season ends.';
+  const hasDraftBracketRuleSetChange = draftBracketRuleSetId !== bracketRuleSetId;
+  const handleSaveBracketRuleSet = async () => {
+    if (!hasDraftBracketRuleSetChange || !draftBracketRuleSetId) return;
+    setSavingBracketRuleSet(true);
+    try {
+      await updateSeason(seasonId, { bracket_rule_set_id: draftBracketRuleSetId });
+    } finally {
+      setSavingBracketRuleSet(false);
+    }
+  };
   const canSimulateFirstRound =
     !!bracketStructure && !!bracketRuleSetId && !playoffsStarted && !hasRoundOneSeries;
   const canSeedMatchups =
     !!bracketStructure && !!bracketRuleSetId && playoffsStarted && !hasRoundOneSeries;
   const showBracketAction = canSimulateFirstRound || canSeedMatchups;
   const simulationStandingsUnavailable = standingsLoading || standings.length === 0;
+  const playoffWinner = useMemo(() => {
+    if (series.length === 0) return null;
+
+    const finalRound =
+      bracketStructure?.rounds[bracketStructure.rounds.length - 1]?.round ??
+      Math.max(...series.map((s) => s.round));
+    const finalSeries = series.find(
+      (s) => s.round === finalRound && s.status === 'complete' && s.winner_team_id,
+    );
+    if (!finalSeries?.winner_team_id) return null;
+
+    const winnerIsHome = finalSeries.winner_team_id === finalSeries.home_team_id;
+    return {
+      name: (winnerIsHome ? finalSeries.home_team_name : finalSeries.away_team_name) ?? 'TBD',
+      code: (winnerIsHome ? finalSeries.home_team_code : finalSeries.away_team_code) ?? '',
+      logo: winnerIsHome ? finalSeries.home_team_logo : finalSeries.away_team_logo,
+      wins: winnerIsHome ? finalSeries.home_wins : finalSeries.away_wins,
+      opponentWins: winnerIsHome ? finalSeries.away_wins : finalSeries.home_wins,
+    };
+  }, [bracketStructure, series]);
   const simulateTooltip = standingsLoading
     ? 'Loading standings'
     : simulationStandingsUnavailable
@@ -1103,6 +1072,16 @@ const SeasonPlayoffsTab = ({
       : canSimulateFirstRound
         ? 'Uses current standings from final regular-season games'
         : undefined;
+  const seriesDetailsPath = (s: PlayoffSeriesRecord) =>
+    buildPlayoffSeriesDetailsPath({
+      leagueCode,
+      leagueId,
+      seasonName,
+      seasonId,
+      seriesId: s.id,
+      awayTeamCode: s.away_team_code,
+      homeTeamCode: s.home_team_code,
+    });
 
   return (
     <>
@@ -1212,10 +1191,7 @@ const SeasonPlayoffsTab = ({
                               key={slotIndex}
                               series={s}
                               busy={seriesBusy}
-                              leagueId={leagueId}
-                              leagueCode={leagueCode}
-                              seasonId={seasonId}
-                              seasonName={seasonName}
+                              seriesHref={s ? seriesDetailsPath(s) : undefined}
                               simulatedTeam1={
                                 simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
                               }
@@ -1266,6 +1242,11 @@ const SeasonPlayoffsTab = ({
                             key={s.id}
                             className={styles.seriesRow}
                           >
+                            <Link
+                              to={seriesDetailsPath(s)}
+                              className={styles.seriesRowLink}
+                              aria-label={`View ${s.away_team_code ?? 'away'} vs ${s.home_team_code ?? 'home'} series`}
+                            />
                             <span className={styles.seriesTeams}>
                               {s.away_team_name} @ {s.home_team_name}
                               {s.series_letter && <> &nbsp;({s.series_letter})</>}
@@ -1302,38 +1283,71 @@ const SeasonPlayoffsTab = ({
 
         {/* ── Right column — Settings + Qualification ── */}
         <div className={styles.layoutRight}>
-          {/* ── Bracket Rule Set ── */}
-          <Card
-            title="Bracket Rule Set"
-            action={
-              bracketRuleSetId && !playoffsStarted ? (
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit bracket rules"
-                  disabled={isEnded}
-                  onClick={() => setBracketRulesModalOpen(true)}
+          <Card title="Playoff Winner">
+            {seriesLoading ? (
+              <p className={styles.playoffWinnerPending}>Loading...</p>
+            ) : playoffWinner ? (
+              <div className={styles.playoffWinnerShowcase}>
+                <TeamLogo
+                  logo={playoffWinner.logo}
+                  code={playoffWinner.code}
+                  size={96}
+                  shape="square"
+                  className={styles.playoffWinnerLogo}
                 />
-              ) : null
-            }
-          >
+                <div className={styles.playoffWinnerDetails}>
+                  <span className={styles.playoffWinnerName}>{playoffWinner.name}</span>
+                  <span className={styles.playoffWinnerMeta}>
+                    Champion - Final {playoffWinner.wins}-{playoffWinner.opponentWins}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <p className={styles.playoffWinnerPending}>No winner yet.</p>
+            )}
+          </Card>
+
+          {/* ── Bracket Rule Set ── */}
+          <Card title="Bracket Rule Set">
             <div className={styles.ruleSetSelector}>
+              {bracketRuleSetLocked ? (
+                <div
+                  className={styles.readonlyRuleSetBox}
+                  title={bracketRuleSetLockedTitle}
+                >
+                  <span className={styles.readonlyRuleSetLabel}>{bracketRuleSetLabel}</span>
+                </div>
+              ) : (
+              <div className={styles.ruleSetControl}>
+                <div className={styles.ruleSetSelectField}>
               <Select
-                value={bracketRuleSetId}
+                value={draftBracketRuleSetId}
                 options={ruleSetOptions}
                 placeholder={
                   ruleSetOptions.length === 0
                     ? 'No rule sets — create one in the league Playoffs tab'
                     : 'Select a rule set…'
                 }
-                onChange={async (id) => {
-                  await updateSeason(seasonId, { bracket_rule_set_id: id });
-                }}
-                disabled={isEnded || playoffsStarted || ruleSetOptions.length === 0}
+                onChange={setDraftBracketRuleSetId}
+                disabled={savingBracketRuleSet || ruleSetOptions.length === 0}
               />
-              {!bracketRuleSetId && ruleSetOptions.length > 0 && (
+                </div>
+              {hasDraftBracketRuleSetChange && (
+                <Button
+                  type="button"
+                  icon="save"
+                  size="sm"
+                  variant="filled"
+                  intent="accent"
+                  iconHeight="field"
+                  tooltip="Save bracket rule set"
+                  disabled={savingBracketRuleSet || !draftBracketRuleSetId}
+                  onClick={handleSaveBracketRuleSet}
+                />
+              )}
+              </div>
+              )}
+              {!draftBracketRuleSetId && ruleSetOptions.length > 0 && (
                 <p className={styles.ruleSetHint}>
                   Select a rule set to configure the playoff bracket structure.
                 </p>
@@ -1425,20 +1439,6 @@ const SeasonPlayoffsTab = ({
 
       {/* ── Modals ── */}
       <>
-        <BracketRulesModal
-          open={bracketRulesModalOpen}
-          leagueId={leagueId}
-          ruleSetId={bracketRuleSetId}
-          bracketStructure={bracketStructure}
-          groups={groups}
-          onSave={async (savedId) => {
-            if (savedId !== bracketRuleSetId) {
-              await updateSeason(seasonId, { bracket_rule_set_id: savedId });
-            }
-          }}
-          onClose={() => setBracketRulesModalOpen(false)}
-        />
-
         <PlayoffFormatModal
           open={formatModalOpen}
           playoffFormat={playoffFormat}

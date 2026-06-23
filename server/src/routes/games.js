@@ -664,13 +664,23 @@ router.get('/playoff-series', async (req, res) => {
         ps.home_team_id, ps.away_team_id,
         ps.games_to_win, ps.home_wins, ps.away_wins,
         ps.status, ps.winner_team_id, ps.bracket_slot_key, ps.created_at,
+        brs.round_names AS playoff_round_names,
         ht.name AS home_team_name, ht.code AS home_team_code,
         ht.logo AS home_team_logo, ht.logo_dark AS home_team_logo_dark, ht.logo_light AS home_team_logo_light,
+        th.primary_color AS home_team_primary_color,
+        th.secondary_color AS home_team_secondary_color,
+        th.text_color AS home_team_text_color,
         at.name AS away_team_name, at.code AS away_team_code,
         at.logo AS away_team_logo, at.logo_dark AS away_team_logo_dark, at.logo_light AS away_team_logo_light,
+        ta.primary_color AS away_team_primary_color,
+        ta.secondary_color AS away_team_secondary_color,
+        ta.text_color AS away_team_text_color,
         sg.games
       FROM playoff_series ps
       JOIN seasons s ON s.id = ps.season_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
+      LEFT JOIN teams th ON th.id = ps.home_team_id
+      LEFT JOIN teams ta ON ta.id = ps.away_team_id
       LEFT JOIN LATERAL (
         (SELECT
             ti.name,
@@ -735,8 +745,12 @@ router.get('/playoff-series', async (req, res) => {
               'game_number_in_series', g.game_number_in_series,
               'status',               g.status,
               'scheduled_at',         g.scheduled_at,
+              'scheduled_time',       g.scheduled_time,
+              'venue',                g.venue,
               'home_team_id',         g.home_team_id,
               'away_team_id',         g.away_team_id,
+              'overtime_periods',     g.overtime_periods,
+              'shootout',             g.shootout,
               'home_goals', (SELECT COUNT(*) FROM goals go WHERE go.game_id = g.id AND go.team_id = g.home_team_id),
               'away_goals', (SELECT COUNT(*) FROM goals go WHERE go.game_id = g.id AND go.team_id = g.away_team_id)
             )

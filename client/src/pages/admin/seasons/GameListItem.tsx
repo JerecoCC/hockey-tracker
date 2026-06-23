@@ -98,7 +98,9 @@ const GameListItem = ({
   // Playoff games: "Quarterfinals · Game 3" (or "Round 1 · Game 3")  Regular games: "Game 12"
   const resolvedRoundLabel = round != null ? (roundLabel ?? `Round ${round}`) : null;
   const metaLine =
-    resolvedRoundLabel != null && gameNumberInSeries != null
+    resolvedRoundLabel == null && gameNumberInSeries != null
+      ? `Game ${gameNumberInSeries}`
+      : resolvedRoundLabel != null && gameNumberInSeries != null
       ? `${resolvedRoundLabel} · Game ${gameNumberInSeries}`
       : resolvedRoundLabel != null && round != null
         ? resolvedRoundLabel

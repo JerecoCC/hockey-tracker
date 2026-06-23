@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Badge from '@/components/Badge/Badge';
 import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import type { GameRecord, GameStatus } from '@/hooks/useGames';
+import type { GameStatus, TeamInfo } from '@/hooks/useGames';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import {
   DATE_FMT_LONG,
@@ -33,8 +33,19 @@ const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warnin
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+interface ScoreboardGame {
+  status: GameStatus;
+  scheduled_at: string | null;
+  scheduled_time?: string | null;
+  playoff_round?: number | null;
+  playoff_round_names?: Record<string, string> | null;
+  game_number_in_series?: number | null;
+  home_team: TeamInfo;
+  away_team: TeamInfo;
+}
+
 interface Props {
-  game: GameRecord;
+  game: ScoreboardGame;
   isFinal: boolean;
   isInProgress: boolean;
   isEditMode?: boolean;
@@ -81,8 +92,8 @@ function teamTextShadow(textHex: string, bgHex: string, threshold = 3): string {
   return contrastRatio(textHex, bgHex) < threshold ? 'rgba(0,0,0,0.75)' : 'transparent';
 }
 
-const teamPlaceLabel = (team: GameRecord['home_team']) => team.place_name?.trim() || '';
-const teamNameLabel = (team: GameRecord['home_team']) =>
+const teamPlaceLabel = (team: TeamInfo) => team.place_name?.trim() || '';
+const teamNameLabel = (team: TeamInfo) =>
   team.team_name?.trim() || team.name?.trim() || team.code;
 
 // ── Component ─────────────────────────────────────────────────────────────────

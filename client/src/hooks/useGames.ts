@@ -150,10 +150,14 @@ export interface GameRecord {
 export interface SeriesGame {
   id:                    string;
   game_number_in_series: number;
-  status:                string;
+  status:                GameStatus;
   scheduled_at:          string | null;
+  scheduled_time:        string | null;
+  venue:                 string | null;
   home_team_id:          string;
   away_team_id:          string;
+  overtime_periods:      number | null;
+  shootout:              boolean;
   home_goals:            number;
   away_goals:            number;
 }
@@ -163,6 +167,7 @@ export interface PlayoffSeriesRecord {
   season_id:      string;
   round:          number;
   series_letter:  string | null;
+  playoff_round_names?: Record<string, string> | null;
   /** Null when the team has not yet been determined (partial series shell). */
   home_team_id:   string | null;
   home_team_name: string | null;
@@ -170,6 +175,9 @@ export interface PlayoffSeriesRecord {
   home_team_logo: string | null;
   home_team_logo_dark?: string | null;
   home_team_logo_light?: string | null;
+  home_team_primary_color?: string | null;
+  home_team_secondary_color?: string | null;
+  home_team_text_color?: string | null;
   /** Null when the team has not yet been determined (partial series shell). */
   away_team_id:   string | null;
   away_team_name: string | null;
@@ -177,6 +185,9 @@ export interface PlayoffSeriesRecord {
   away_team_logo: string | null;
   away_team_logo_dark?: string | null;
   away_team_logo_light?: string | null;
+  away_team_primary_color?: string | null;
+  away_team_secondary_color?: string | null;
+  away_team_text_color?: string | null;
   games_to_win:   number;
   home_wins:      number;
   away_wins:      number;

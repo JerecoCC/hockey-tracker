@@ -15,6 +15,7 @@ import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
 import TeamDetailsPage from './pages/admin/teams/TeamDetails';
 import SeasonDetailsPage from './pages/admin/seasons/SeasonDetails';
+import PlayoffSeriesDetailsPage from './pages/admin/seasons/PlayoffSeriesDetailsPage';
 import GameDetailsPage from './pages/admin/games/game-details/GameDetailsPage';
 import PlayerDetailsPage from './pages/admin/players/PlayerDetails';
 import AuthCallbackPage from './pages/auth/callback/AuthCallback';
@@ -129,6 +130,10 @@ const router = createBrowserRouter([
       { path: '/admin/leagues/:leagueSlug', element: <LeagueDetailsPage /> },
       { path: '/admin/leagues/:leagueSlug/teams/:teamSlug', element: <TeamDetailsPage /> },
       { path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug', element: <SeasonDetailsPage /> },
+      {
+        path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/playoffs/:seriesSlug',
+        element: <PlayoffSeriesDetailsPage />,
+      },
       {
         path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/games/:gameDateSlug/:gameSlug',
         element: <GameDetailsPage />,

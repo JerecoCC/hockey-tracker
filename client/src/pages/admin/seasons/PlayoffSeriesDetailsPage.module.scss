@@ -1,0 +1,25 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xl;
+}
+
+.gameList {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: 0;
+  padding: 0;
+}
+
+.emptyState {
+  margin: 0;
+  padding: $space-lg 0;
+  color: $text-dim;
+  font-size: $font-sm;
+  font-style: italic;
+  text-align: center;
+}

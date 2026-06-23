@@ -47,12 +47,92 @@
   gap: $space-xl;
 }
 
+.playoffWinnerShowcase {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-xs;
+  padding: $space-md $space-sm;
+  text-align: center;
+}
+
+.playoffWinnerLogo {
+  margin-bottom: $space-xs;
+}
+
+.playoffWinnerDetails {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  width: 100%;
+}
+
+.playoffWinnerName {
+  font-size: $font-lg;
+  font-weight: 700;
+  color: $text-bright;
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.playoffWinnerMeta {
+  font-size: $font-xs;
+  font-weight: 600;
+  color: $text-dim;
+}
+
+.playoffWinnerPending {
+  font-size: $font-sm;
+  color: $text-dim;
+  font-style: italic;
+}
+
 // ── Bracket rule set selector card ───────────────────────────────────────────
 
 .ruleSetSelector {
   display: flex;
   flex-direction: column;
   gap: $space-sm;
+}
+
+.ruleSetControl {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  width: 100%;
+}
+
+.ruleSetSelectField {
+  flex: 1;
+  min-width: 0;
+}
+
+.readonlyRuleSetBox {
+  display: inline-flex;
+  align-items: center;
+  min-height: 42px;
+  width: 100%;
+  min-width: 0;
+  padding: 0 $space-lg;
+  border: 1px solid rgba($text-dim, 0.2);
+  border-radius: $radius-sm;
+  background: rgba(255, 255, 255, 0.03);
+  color: $text-dim;
+  font-size: $font-base;
+  line-height: 1.4;
+  cursor: default;
+}
+
+.readonlyRuleSetLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ruleSetHint {
@@ -115,7 +195,7 @@
   display: flex;
   flex-direction: column;
   gap: $space-xs;
-  background: $bg-page;
+  background: transparent;
   border: 1px solid $border;
   border-radius: $radius-md;
   padding: $space-sm $space-md;
@@ -246,7 +326,7 @@
   display: flex;
   align-items: center;
   gap: $space-md;
-  background: $bg-page;
+  background: transparent;
   border: 1px solid $border;
   border-radius: $radius-md;
   padding: $space-sm $space-md;
@@ -297,7 +377,7 @@
   display: flex;
   align-items: center;
   gap: $space-sm;
-  background: $bg-page;
+  background: transparent;
   border: 1px solid $border;
   border-radius: $radius-md;
   padding: 6px $space-sm;
@@ -476,11 +556,16 @@
 
 // Empty matchup: same card structure as filled, but dashed border and TBD rows
 .slotEmptyMatchup {
+  background: color-mix(in srgb, #{$bg-card} 82%, #{$border});
+  border-color: color-mix(in srgb, #{$border} 78%, #{$text-light});
   border-style: dashed;
   cursor: pointer;
-  transition: border-color $transition-fast;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
 
   &:hover {
+    background: color-mix(in srgb, #{$bg-card} 76%, #{$border});
     border-color: $accent;
 
     .slotTeamTbd .slotTeamName {
@@ -496,10 +581,16 @@
 
 .slotEmptyDisabled {
   cursor: default;
-  opacity: 0.35;
+  background: color-mix(in srgb, #{$bg-card} 88%, #{$border});
+  border-color: color-mix(in srgb, #{$border} 70%, transparent);
 
   &:hover {
-    border-color: $border;
+    background: color-mix(in srgb, #{$bg-card} 88%, #{$border});
+    border-color: color-mix(in srgb, #{$border} 70%, transparent);
+  }
+
+  .slotTeamTbd .slotTeamName {
+    color: color-mix(in srgb, #{$text-dim} 82%, #{$text-body});
   }
 }
 
@@ -512,10 +603,23 @@
 
 .slotFilled {
   position: relative;
-  background: $bg-page;
+  background: transparent;
   border: 1px solid $border;
   display: flex;
   flex-direction: column;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast,
+    box-shadow $transition-fast,
+    transform $transition-fast;
+
+  &:hover,
+  &:focus-within {
+    background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
+    border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
+    box-shadow: 0 8px 20px rgba($accent, 0.12);
+    transform: translateY(-1px);
+  }
 
   .slotActions {
     position: absolute;
@@ -526,7 +630,12 @@
     gap: $space-xs;
     background: rgba(0, 0, 0, 0.45);
     border-radius: inherit;
-    z-index: 1;
+    pointer-events: none;
+    z-index: 2;
+
+    > * {
+      pointer-events: auto;
+    }
   }
 
   &:hover .slotActions {
@@ -534,7 +643,22 @@
   }
 }
 
+.slotLink {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
 .slotTeam {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
   display: flex;
   align-items: center;
   gap: $space-xs;
@@ -553,7 +677,7 @@
   width: 20px;
   height: 20px;
   border-radius: $radius-sm;
-  background: $bg-input;
+  background: color-mix(in srgb, #{$bg-card} 70%, #{$border});
   border: 1px solid $border;
   display: flex;
   align-items: center;
@@ -575,90 +699,20 @@
   text-overflow: ellipsis;
 }
 
-.slotWinDots {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.slotWinDot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1.5px solid $text-dim;
-  flex-shrink: 0;
-  display: flex;
+.slotWinCount {
+  align-self: stretch;
+  min-width: 28px;
+  margin-left: $space-xs;
+  padding-left: $space-sm;
+  border-left: 1px solid color-mix(in srgb, #{$border} 78%, transparent);
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: transparent; // icon hidden on empty dots
-  transition:
-    background $transition-fast,
-    border-color $transition-fast,
-    opacity $transition-fast;
-
-  // When rendered as a <Link> (anchor element)
-  &:is(a) {
-    cursor: pointer;
-
-    &:hover {
-      opacity: 0.75;
-      border-color: $accent;
-    }
-
-    &:focus-visible {
-      outline: 2px solid $accent;
-      outline-offset: 2px;
-    }
-  }
-}
-
-.slotWinDotFilled {
-  background: $success;
-  border-color: $success;
-  color: #fff; // makes the check icon visible
-}
-
-// ── Win dot tooltip content ───────────────────────────────────────────────────
-
-.winDotTooltip {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-  text-align: center;
-}
-
-.winDotTooltipGame {
-  font-weight: 600;
-  color: $text-bright;
-  width: 100%;
-  text-align: center;
-}
-
-.winDotTooltipDate {
-  color: $text-dim;
-  font-size: $font-xs;
-  width: 100%;
-  text-align: center;
-}
-
-.winDotTooltipScore {
-  color: $text-bright;
+  flex-shrink: 0;
+  font-size: $font-sm;
   font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.winDotTooltipDash {
-  color: $text-dim;
-  font-weight: 400;
-  flex: 1;
-  text-align: center;
+  line-height: 1;
+  color: $text-bright;
 }
 
 .slotTeamWinner {
@@ -673,16 +727,16 @@
     opacity: 0.55;
   }
 
-  .slotWinDot {
-    opacity: 0.35;
-  }
-
-  .slotWinDotFilled {
+  .slotWinCount {
+    color: $text-dim;
     opacity: 0.6;
   }
 }
 
 .slotDivider {
+  position: relative;
+  z-index: 1;
+  pointer-events: none;
   height: 1px;
   background: $border;
   margin: 0 $space-sm;
@@ -709,22 +763,52 @@
 }
 
 .seriesRow {
+  position: relative;
   display: flex;
   align-items: center;
   gap: $space-md;
-  background: $bg-page;
+  background: transparent;
   border: 1px solid $border;
   border-radius: $radius-md;
   padding: $space-sm $space-md;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast,
+    box-shadow $transition-fast,
+    transform $transition-fast;
+
+  &:hover,
+  &:focus-within {
+    background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
+    border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
+    box-shadow: 0 8px 20px rgba($accent, 0.12);
+    transform: translateY(-1px);
+  }
+}
+
+.seriesRowLink {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
 }
 
 .seriesTeams {
+  position: relative;
+  z-index: 1;
   flex: 1;
   font-size: $font-sm;
   font-weight: 500;
   color: $text-body;
 }
 .seriesScore {
+  position: relative;
+  z-index: 1;
   font-size: $font-sm;
   font-weight: 600;
   color: $text-body;
@@ -732,6 +816,8 @@
   text-align: center;
 }
 .seriesRowActions {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: $space-xs;
