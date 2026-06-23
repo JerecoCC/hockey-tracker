@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
@@ -7,10 +7,9 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
-import Icon from '@/components/Icon/Icon';
+import GameCard from '@/components/GameCard/GameCard';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import { type GameRecord } from '@/hooks/useGames';
@@ -28,20 +27,6 @@ const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
 
 type TzPref = 'ET' | 'local';
 const USER_TIMEZONE: TzPref = 'local';
-
-interface GameActionsProps {
-  watched: boolean;
-  skipped: boolean;
-  scheduled: boolean;
-  busy: boolean;
-  onView: () => void;
-  onDownloadScoreCard: () => void;
-  onMarkWatched: () => void;
-  onUnwatch: () => void;
-  onUndoSkip: () => void;
-  onSchedule: () => void;
-  onSkip: () => void;
-}
 
 const dateToISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -74,11 +59,6 @@ const fmtDayHeading = (key: string) => {
     month: 'long',
     day: 'numeric',
   });
-};
-
-const dateKeyToDate = (key: string) => {
-  const [year, month, day] = key.split('-').map(Number);
-  return new Date(year, month - 1, day);
 };
 
 const getEtAbbrForDateKey = (dateKey: string): string =>
@@ -122,27 +102,6 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
   return new Date(`${etDatePart}T${scheduledTime}:00${offset}`);
 };
 
-const fmtGameTime = (
-  scheduledAt: string | null,
-  scheduledTime: string | null,
-  tzPref: TzPref,
-): string => {
-  const instant = getScheduledInstant(scheduledAt, scheduledTime);
-  if (!instant) return '';
-
-  if (tzPref === 'ET') {
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-      timeZoneName: 'short',
-    }).format(instant);
-  }
-
-  return instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-};
-
 const getScheduledWatchDateKey = (value: string | null | undefined) => {
   if (!value) return null;
   if (DATE_ONLY_RE.test(value)) return value;
@@ -179,9 +138,6 @@ const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   return a.scheduled_time.localeCompare(b.scheduled_time);
 };
 
-const shouldShowWatchedScore = (game: GameRecord) =>
-  !!game.watched_by_user && (game.status === 'final' || game.status === 'in_progress');
-
 const getOvertimeSuffix = (game: GameRecord) => {
   if (game.shootout || game.period_scores.some((ps) => ps.period === 'SO')) return '/SO';
   if ((game.overtime_periods ?? 0) > 0 || game.period_scores.some((ps) => ps.period === 'OT')) {
@@ -196,32 +152,6 @@ const getScoreCardGame = (game: GameRecord): GameRecord => ({
   series_away_wins: game.series_away_wins_at_game ?? null,
 });
 
-const getLeagueStyle = (game: GameRecord) =>
-  ({
-    '--game-league-primary': game.league_primary_color ?? '#334155',
-    '--game-league-text': game.league_text_color ?? '#ffffff',
-  }) as CSSProperties;
-
-const ORIGINAL_GAME_DATE_FMT = new Intl.DateTimeFormat('en-US', {
-  month: '2-digit',
-  day: '2-digit',
-  year: 'numeric',
-});
-
-const getOriginalGameDateLabel = (game: GameRecord, tzPref: TzPref) => {
-  const watchDateKey = getScheduledWatchDateKey(game.scheduled_for);
-  if (!watchDateKey) return null;
-  const originalDateKey = getOriginalGameDateKey(game, tzPref);
-  if (!originalDateKey || originalDateKey === watchDateKey) return null;
-  return ORIGINAL_GAME_DATE_FMT.format(dateKeyToDate(originalDateKey));
-};
-
-const getStatusLabel = (game: GameRecord) => {
-  if (game.status === 'in_progress') return 'LIVE';
-  if (game.status === 'final') return `FINAL${getOvertimeSuffix(game)}`;
-  return game.status.replace(/_/g, ' ').toUpperCase();
-};
-
 const TeamChip = ({ team }: { team: TeamRecord }) => (
   <ListItem
     className={styles.favoriteTeam}
@@ -233,244 +163,6 @@ const TeamChip = ({ team }: { team: TeamRecord }) => (
     textColor={team.text_color}
   />
 );
-
-const GameHoverActions = ({
-  watched,
-  skipped,
-  scheduled,
-  busy,
-  onView,
-  onDownloadScoreCard,
-  onMarkWatched,
-  onUnwatch,
-  onUndoSkip,
-  onSchedule,
-  onSkip,
-}: GameActionsProps) => (
-  <span className={styles.gameActions}>
-    {(watched || skipped) && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="open_in_new"
-        size="sm"
-        tooltip="View game details"
-        onClick={(e) => {
-          e.stopPropagation();
-          onView();
-        }}
-      />
-    )}
-    {skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="warning"
-        icon="undo"
-        size="sm"
-        tooltip="Undo skip"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          onUndoSkip();
-        }}
-      />
-    )}
-    {watched && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="download"
-        size="sm"
-        tooltip="Download score card"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDownloadScoreCard();
-        }}
-      />
-    )}
-    {watched && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="danger"
-        icon="visibility_off"
-        size="sm"
-        tooltip="Unwatch"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          onUnwatch();
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="warning"
-        icon="remove_circle_outline"
-        size="sm"
-        tooltip="Skip game"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSkip();
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="calendar_month"
-        size="sm"
-        tooltip={scheduled ? 'Edit watch schedule' : 'Schedule watch'}
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSchedule();
-        }}
-      />
-    )}
-    {!watched && !skipped && (
-      <Button
-        type="button"
-        variant="outlined"
-        intent="accent"
-        icon="visibility"
-        size="sm"
-        tooltip="Mark as watched"
-        disabled={busy}
-        onClick={(e) => {
-          e.stopPropagation();
-          onMarkWatched();
-        }}
-      />
-    )}
-  </span>
-);
-
-const TeamLine = ({
-  team,
-  score,
-  dim,
-}: {
-  team: GameRecord['home_team'];
-  score: number | string;
-  dim: boolean;
-}) => (
-  <div className={[styles.teamLine, dim ? styles.teamLineDim : ''].filter(Boolean).join(' ')}>
-    <TeamLogo
-      logo={team.logo}
-      code={team.code}
-      primaryColor={team.primary_color}
-      textColor={team.text_color}
-      size={34}
-      shape={team.logo ? 'square' : 'circle'}
-    />
-    <span className={styles.teamCode}>{team.code}</span>
-    <span className={styles.teamScore}>{score}</span>
-  </div>
-);
-
-const TodayGameTile = ({
-  game,
-  tzPref,
-  busy,
-  onOpen,
-  onDownloadScoreCard,
-  onMarkWatched,
-  onUnwatch,
-  onSchedule,
-  onSkip,
-}: {
-  game: GameRecord;
-  tzPref: TzPref;
-  busy: boolean;
-  onOpen: () => void;
-  onDownloadScoreCard: () => void;
-  onMarkWatched: () => void;
-  onUnwatch: () => void;
-  onSchedule: () => void;
-  onSkip: () => void;
-}) => {
-  const showScore = shouldShowWatchedScore(game);
-  const homeScore = showScore ? game.home_score : '-';
-  const awayScore = showScore ? game.away_score : '-';
-  const awayDim = showScore && game.away_score < game.home_score;
-  const homeDim = showScore && game.home_score < game.away_score;
-  const isWatched = !!game.watched_by_user;
-  const timeLabel = fmtGameTime(game.scheduled_at, game.scheduled_time, tzPref);
-  const originalDateLabel = getOriginalGameDateLabel(game, tzPref);
-  const primaryMetaLabel = [originalDateLabel, timeLabel || getStatusLabel(game)]
-    .filter(Boolean)
-    .join(' · ');
-
-  return (
-    <div
-      className={[
-        styles.todayGame,
-        game.status === 'in_progress' ? styles.todayGameLive : '',
-        game.skipped_by_user ? styles.todayGameSkipped : '',
-        isWatched ? styles.todayGameClickable : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={getLeagueStyle(game)}
-      role={isWatched ? 'button' : undefined}
-      tabIndex={isWatched ? 0 : undefined}
-      onClick={isWatched ? onOpen : undefined}
-      onKeyDown={
-        isWatched
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') onOpen();
-            }
-          : undefined
-      }
-    >
-      <GameHoverActions
-        watched={isWatched}
-        skipped={!!game.skipped_by_user}
-        scheduled={!!game.scheduled_for}
-        busy={busy}
-        onView={onOpen}
-        onDownloadScoreCard={onDownloadScoreCard}
-        onMarkWatched={onMarkWatched}
-        onUnwatch={onUnwatch}
-        onUndoSkip={onUnwatch}
-        onSchedule={onSchedule}
-        onSkip={onSkip}
-      />
-      {isWatched && (
-        <span className={styles.watchedMarker} aria-label="Watched">
-          <Icon name="visibility" size="0.9rem" />
-        </span>
-      )}
-      <div className={styles.gameMeta}>
-        <span>{primaryMetaLabel}</span>
-        {game.season_name && <span>{game.season_name}</span>}
-      </div>
-      <TeamLine
-        team={game.away_team}
-        score={awayScore}
-        dim={awayDim}
-      />
-      <TeamLine
-        team={game.home_team}
-        score={homeScore}
-        dim={homeDim}
-      />
-      <div className={styles.gameFooter}>
-        <span>{getStatusLabel(game)}</span>
-        {game.league_code && <span>{game.league_code}</span>}
-      </div>
-    </div>
-  );
-};
 
 const UserDashboard = () => {
   const { user } = useAuth();
@@ -717,11 +409,12 @@ const UserDashboard = () => {
         ) : (
           <div className={styles.todayGamesGrid}>
             {todayGames.map((game) => (
-              <TodayGameTile
+              <GameCard
                 key={game.id}
                 game={game}
                 tzPref={tzPref}
                 busy={actionGameId === game.id}
+                useLeagueColors
                 onOpen={() => navigate(`/games/${game.id}`)}
                 onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
                 onMarkWatched={() => void markGameWatched(game.id)}
