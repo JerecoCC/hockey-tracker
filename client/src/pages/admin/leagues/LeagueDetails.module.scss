@@ -109,6 +109,143 @@
   gap: $space-2xl;
 }
 
+.breadcrumbSkeleton {
+  width: 72px;
+  height: 16px;
+}
+
+.infoSkeletonHeader {
+  display: flex;
+  align-items: center;
+  gap: $space-xl;
+  margin-bottom: $space-2xl;
+  padding-bottom: $space-2xl;
+  border-bottom: 1px solid $border;
+
+  @media (max-width: 720px) {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+
+.infoSkeletonLogo {
+  width: 80px;
+  height: 80px;
+  border-radius: $radius-lg;
+}
+
+.infoSkeletonNameBlock {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.infoSkeletonTitle {
+  width: min(320px, 68%);
+  height: 28px;
+
+  @media (max-width: 720px) {
+    width: min(280px, 100%);
+  }
+}
+
+.infoSkeletonCode {
+  width: 64px;
+  height: 14px;
+}
+
+.infoSkeletonRightCol {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: $space-md;
+
+  @media (max-width: 720px) {
+    align-items: flex-start;
+    width: 100%;
+  }
+}
+
+.infoSkeletonSwatches {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: $space-xl;
+
+  @media (max-width: 720px) {
+    justify-content: flex-start;
+  }
+}
+
+.infoSkeletonSwatch {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+}
+
+.infoSkeletonSwatchDot {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+}
+
+.infoSkeletonSwatchLabel {
+  width: 54px;
+  height: 12px;
+}
+
+.infoSkeletonItem {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.infoSkeletonItemFull {
+  grid-column: 1 / -1;
+}
+
+.infoSkeletonLabel,
+.infoSkeletonLabelLong {
+  height: 10px;
+}
+
+.infoSkeletonLabel {
+  width: 118px;
+}
+
+.infoSkeletonLabelLong {
+  width: 96px;
+}
+
+.infoSkeletonValue {
+  width: min(180px, 76%);
+  height: 16px;
+}
+
+.infoSkeletonDescription {
+  display: flex;
+  max-width: 720px;
+  flex-direction: column;
+  gap: $space-sm;
+}
+
+.infoSkeletonDescriptionLine,
+.infoSkeletonDescriptionLineShort {
+  height: 16px;
+}
+
+.infoSkeletonDescriptionLine {
+  width: 100%;
+}
+
+.infoSkeletonDescriptionLineShort {
+  width: 58%;
+}
+
 .playoffFormatList {
   margin: 0;
   padding-left: 1.25rem;

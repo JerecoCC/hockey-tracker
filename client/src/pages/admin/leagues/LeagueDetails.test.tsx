@@ -66,9 +66,9 @@ jest.mock('../../../hooks/useGroupAlignmentSets', () => ({
 jest.mock('./BulkAddPlayersModal', () => () => null);
 
 // ── Heavy / portal-incompatible child components ───────────────────────
-jest.mock('../../../components/RichTextEditor/RichTextEditor', () => () => (
-  <div data-testid="rte" />
-));
+jest.mock('../../../components/RichTextEditor/RichTextEditor', () => function MockRichTextEditor() {
+  return <div data-testid="rte" />;
+});
 jest.mock('./LeagueFormModal', () => () => null);
 jest.mock('./PlayerFormModal', () => () => null);
 jest.mock('../teams/TeamFormModal', () => () => null);
@@ -171,6 +171,15 @@ describe('LeagueDetailsPage – loading', () => {
   it('shows the loading text while fetching', () => {
     setup({ loading: true });
     expect(screen.getByText('Loading league…')).toBeInTheDocument();
+  });
+
+  it('renders the Info tab skeleton while fetching', () => {
+    const { container } = setup({ loading: true });
+    expect(
+      screen.getByRole('status', { name: /loading league information/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'true');
+    expect(container.querySelector('.breadcrumbSkeleton')).toBeInTheDocument();
   });
 
   it('does not show the league name while loading', () => {

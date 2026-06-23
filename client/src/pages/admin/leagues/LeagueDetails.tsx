@@ -4,7 +4,7 @@ import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import LeagueAlignmentsTab from './LeagueAlignmentsTab';
 import LeagueAwardsTab from './LeagueAwardsTab';
 import LeagueEditModal from './LeagueEditModal';
-import LeagueInfoCard from './LeagueInfoCard';
+import LeagueInfoCard, { LeagueInfoCardSkeleton } from './LeagueInfoCard';
 import LeaguePlayersTab from './LeaguePlayersTab';
 import LeaguePlayoffsTab from './LeaguePlayoffsTab';
 import LeagueTeamsTab from './LeagueTeamsTab';
@@ -13,6 +13,7 @@ import BulkAddPlayersModal from './BulkAddPlayersModal';
 import PlayerFormModal from './PlayerFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import Tabs from '@/components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -65,6 +66,7 @@ const LeagueDetailsPage = () => {
     deleteSeason,
   } = useLeagueDetails(id);
   useDocumentIcon(league?.icon);
+  const leagueLoading = loading || (!isLegacyIdRoute && leaguesLoading);
   useEffect(() => {
     if (!league?.code) return;
     document.title = league.code;
@@ -91,14 +93,27 @@ const LeagueDetailsPage = () => {
   const [playersSearch, setPlayersSearch] = useState('');
 
   usePageBreadcrumbs(
-    loading || (!isLegacyIdRoute && leaguesLoading)
-      ? null
+    leagueLoading
+      ? {
+          backPath: '/admin/leagues',
+          backLabel: 'Back to Leagues',
+          items: [
+            {
+              label: (
+                <Skeleton
+                  type="text"
+                  className={styles.breadcrumbSkeleton}
+                />
+              ),
+            },
+          ],
+        }
       : {
           backPath: '/admin/leagues',
           backLabel: 'Back to Leagues',
           items: [league ? { label: league.code } : { label: 'Not Found' }],
         },
-    [loading, leaguesLoading, isLegacyIdRoute, league?.name, league?.code],
+    [leagueLoading, league?.name, league?.code],
   );
 
   useEffect(() => {
@@ -113,9 +128,9 @@ const LeagueDetailsPage = () => {
   }, [isLegacyIdRoute, league, leagueSlug, navigate]);
 
   useEffect(() => {
-    if (loading || (!isLegacyIdRoute && leaguesLoading) || league) return;
+    if (leagueLoading || league) return;
     navigate('/admin/leagues', { replace: true });
-  }, [isLegacyIdRoute, league, leaguesLoading, loading, navigate]);
+  }, [league, leagueLoading, navigate]);
 
   useEffect(() => {
     if (selectedSeasonId === null && seasons.length > 0) {
@@ -237,12 +252,24 @@ const LeagueDetailsPage = () => {
     ],
   );
 
-  if (loading || (!isLegacyIdRoute && leaguesLoading)) {
+  if (leagueLoading) {
     return (
-      <div className={styles.loaderWrapper}>
-        <span className={styles.spinner} />
-        <p className={styles.loaderText}>Loading league…</p>
-      </div>
+      <Tabs
+        activeIndex={0}
+        onTabChange={() => undefined}
+        disabled
+        tabs={[
+          {
+            label: 'Info',
+            icon: 'info',
+            content: (
+              <div className={styles.grid}>
+                <LeagueInfoCardSkeleton className={styles.col12} />
+              </div>
+            ),
+          },
+        ]}
+      />
     );
   }
 

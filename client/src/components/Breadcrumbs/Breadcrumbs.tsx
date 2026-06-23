@@ -1,11 +1,12 @@
 import { useNavigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
 import Icon from '../Icon/Icon';
 import styles from './Breadcrumbs.module.scss';
 
 export interface BreadcrumbItem {
-  label: string;
+  label: ReactNode;
   /** Shown instead of `label` on mobile (≤ 768 px). Useful for long names like league names. */
-  shortLabel?: string;
+  shortLabel?: ReactNode;
   path?: string;
 }
 
