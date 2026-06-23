@@ -55,10 +55,7 @@ export const buildSeasonDetailsPath = ({
   seasonName: string | null | undefined;
   seasonId?: string | null;
 }) =>
-  `${buildLeagueDetailsPath({ leagueCode, leagueId })}/seasons/${slugOrId(
-    seasonName,
-    seasonId,
-  )}`;
+  `${buildLeagueDetailsPath({ leagueCode, leagueId })}/seasons/${slugOrId(seasonName, seasonId)}`;
 
 export const gameRouteSlug = ({
   awayTeamCode,
@@ -71,8 +68,34 @@ export const gameRouteSlug = ({
   return `${toRouteSlug(awayTeamCode)}-vs-${toRouteSlug(homeTeamCode)}`;
 };
 
-export const gameDateRouteSlug = (scheduledAt: string | null | undefined) => {
-  const datePart = scheduledAt?.slice(0, 10);
+const easternDatePart = (value: string | null | undefined) => {
+  if (!value) return null;
+  const rawDate = value.slice(0, 10);
+  if (!value.includes('T')) return rawDate;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return rawDate;
+
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+  const year = parts.find((part) => part.type === 'year')?.value;
+  const month = parts.find((part) => part.type === 'month')?.value;
+  const day = parts.find((part) => part.type === 'day')?.value;
+  return year && month && day ? `${year}-${month}-${day}` : rawDate;
+};
+
+export const gameDateRouteSlug = (
+  scheduledAt: string | null | undefined,
+  options: { leagueCode?: string | null } = {},
+) => {
+  const datePart =
+    toRouteSlug(options.leagueCode) === 'nhl'
+      ? easternDatePart(scheduledAt)
+      : scheduledAt?.slice(0, 10);
   const [year, month, day] = datePart?.split('-') ?? [];
   if (!year || !month || !day) return '';
   return `${month}-${day}-${year}`;
@@ -97,7 +120,7 @@ export const buildGameDetailsPath = ({
   homeTeamCode?: string | null;
   scheduledAt?: string | null;
 }) => {
-  const dateSlug = gameDateRouteSlug(scheduledAt);
+  const dateSlug = gameDateRouteSlug(scheduledAt, { leagueCode });
   const matchupSlug = gameRouteSlug({ awayTeamCode, homeTeamCode });
   return `${buildSeasonDetailsPath({ leagueCode, leagueId, seasonName, seasonId })}/games/${
     dateSlug && matchupSlug ? `${dateSlug}/${matchupSlug}` : gameId

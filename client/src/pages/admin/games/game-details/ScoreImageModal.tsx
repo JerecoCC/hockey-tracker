@@ -23,6 +23,7 @@ import Select, { type SelectOption } from '@/components/Select/Select';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import { formatScheduledDate } from './formatUtils';
 import styles from './ScoreImageModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -46,6 +47,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   day: 'numeric',
   year: 'numeric',
+  timeZone: 'America/New_York',
 });
 const DATE_KEY_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
 
@@ -1041,7 +1043,11 @@ const ScoreImageModal = ({
           ctx.fillStyle = 'rgba(226,232,240,0.88)';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-          ctx.fillText(DATE_FMT.format(new Date(drawGame.scheduled_at)), W / 2, BOT_Y + 69);
+          ctx.fillText(
+            formatScheduledDate(drawGame.scheduled_at, DATE_FMT) ?? '',
+            W / 2,
+            BOT_Y + 69,
+          );
         }
 
         // Playoff indicator — only rendered for playoff games
@@ -1548,7 +1554,7 @@ const ScoreImageModal = ({
                 <strong className={styles.scoreCardFooterLeagueCode}>{footerLeagueCode}</strong>
               )}
               {showDate && drawGame?.scheduled_at && (
-                <span>{DATE_FMT.format(new Date(drawGame.scheduled_at))}</span>
+                <span>{formatScheduledDate(drawGame.scheduled_at, DATE_FMT)}</span>
               )}
               {showLeagueSeason && leagueLine && <span>{leagueLine}</span>}
             </footer>

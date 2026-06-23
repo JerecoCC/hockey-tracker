@@ -24,4 +24,17 @@ describe('buildGameDetailsPath', () => {
       }),
     ).toBe('/admin/leagues/pwhl/seasons/2025-26/games/game-1');
   });
+
+  it('uses the Eastern game date for NHL dated routes', () => {
+    expect(
+      buildGameDetailsPath({
+        leagueCode: 'NHL',
+        seasonName: '2025-26',
+        gameId: 'game-1',
+        awayTeamCode: 'NYR',
+        homeTeamCode: 'BOS',
+        scheduledAt: '2025-12-02T00:00:00.000Z',
+      }),
+    ).toBe('/admin/leagues/nhl/seasons/2025-26/games/12-01-2025/nyr-vs-bos');
+  });
 });

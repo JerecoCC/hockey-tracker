@@ -5,7 +5,12 @@ import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, GameStatus } from '@/hooks/useGames';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
-import { DATE_FMT_LONG, formatScheduledDateLocal } from './formatUtils';
+import {
+  DATE_FMT_LONG,
+  LOCAL_DATE_FMT_LONG,
+  formatScheduledDate,
+  formatScheduledDateLocal,
+} from './formatUtils';
 import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -277,9 +282,9 @@ const ScoreboardCard = ({
                   ? formatScheduledDateLocal(
                       game.scheduled_at,
                       game.scheduled_time,
-                      DATE_FMT_LONG,
+                      LOCAL_DATE_FMT_LONG,
                     )
-                  : DATE_FMT_LONG.format(new Date(game.scheduled_at))}
+                  : formatScheduledDate(game.scheduled_at, DATE_FMT_LONG)}
               </span>
             )}
           </div>

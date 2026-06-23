@@ -4,9 +4,24 @@ export const DATE_FMT_SHORT = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
   year: 'numeric',
+  timeZone: 'America/New_York',
 });
 
 export const DATE_FMT_LONG = new Intl.DateTimeFormat('en-US', {
+  weekday: 'long',
+  month: 'long',
+  day: 'numeric',
+  year: 'numeric',
+  timeZone: 'America/New_York',
+});
+
+export const LOCAL_DATE_FMT_SHORT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+export const LOCAL_DATE_FMT_LONG = new Intl.DateTimeFormat('en-US', {
   weekday: 'long',
   month: 'long',
   day: 'numeric',
@@ -30,6 +45,14 @@ const ET_TZ_NAME_FMT = new Intl.DateTimeFormat('en-US', {
 export const todayETDate = (): string => ET_DATE_FMT.format(new Date());
 
 export const isoToETDate = (iso: string): string => ET_DATE_FMT.format(new Date(iso));
+
+export const scheduledDateInputValue = (scheduledAt?: string | null): string => {
+  if (!scheduledAt) return '';
+  if (DATE_ONLY_RE.test(scheduledAt)) return scheduledAt;
+  const date = new Date(scheduledAt);
+  if (Number.isNaN(date.getTime())) return extractDatePart(scheduledAt) ?? '';
+  return isoToETDate(scheduledAt);
+};
 
 /** Converts an ISO timestamp to "HH:mm" in Eastern Time. */
 export const isoToETHHMM = (iso: string): string => {
@@ -60,6 +83,8 @@ const localDateFromDateKey = (dateKey: string): Date => {
   return new Date(year, month - 1, day);
 };
 
+const etNoonFromDateKey = (dateKey: string): Date => new Date(`${dateKey}T12:00:00Z`);
+
 /**
  * Returns 'EST' or 'EDT' for an ET calendar date.
  *
@@ -70,9 +95,7 @@ const localDateFromDateKey = (dateKey: string): Date => {
 export const etAbbrForDate = (etDateStr?: string | null): string => {
   const etDate = extractDatePart(etDateStr) ?? todayETDate();
   const probe = new Date(`${etDate}T12:00:00-05:00`);
-  return (
-    ET_TZ_NAME_FMT.formatToParts(probe).find((p) => p.type === 'timeZoneName')?.value ?? 'EST'
-  );
+  return ET_TZ_NAME_FMT.formatToParts(probe).find((p) => p.type === 'timeZoneName')?.value ?? 'EST';
 };
 
 export const etOffsetForDate = (etDateStr?: string | null): '-04:00' | '-05:00' =>
@@ -104,7 +127,11 @@ const getScheduledInstantForDisplay = (
   const isMidnightPlaceholder =
     scheduledTime !== '00:00' && !!rawDateKey && ISO_MIDNIGHT_RE.test(scheduledAt);
 
-  if (!DATE_ONLY_RE.test(scheduledAt) && !isMidnightPlaceholder && !Number.isNaN(direct.getTime())) {
+  if (
+    !DATE_ONLY_RE.test(scheduledAt) &&
+    !isMidnightPlaceholder &&
+    !Number.isNaN(direct.getTime())
+  ) {
     return direct;
   }
 
@@ -115,10 +142,27 @@ const getScheduledInstantForDisplay = (
 export const formatScheduledDateLocal = (
   scheduledAt?: string | null,
   scheduledTime?: string | null,
-  formatter: Intl.DateTimeFormat = DATE_FMT_SHORT,
+  formatter: Intl.DateTimeFormat = LOCAL_DATE_FMT_SHORT,
 ): string | null => {
   const instant = getScheduledInstantForDisplay(scheduledAt, scheduledTime);
   return instant ? formatter.format(instant) : null;
+};
+
+export const formatScheduledDate = (
+  scheduledAt?: string | null,
+  formatter: Intl.DateTimeFormat = DATE_FMT_SHORT,
+): string | null => {
+  if (!scheduledAt) return null;
+  const rawDateKey = extractDatePart(scheduledAt);
+  if (DATE_ONLY_RE.test(scheduledAt) || (rawDateKey && ISO_MIDNIGHT_RE.test(scheduledAt))) {
+    return formatter.format(etNoonFromDateKey(rawDateKey));
+  }
+
+  const instant = new Date(scheduledAt);
+  if (Number.isNaN(instant.getTime())) {
+    return rawDateKey ? formatter.format(etNoonFromDateKey(rawDateKey)) : null;
+  }
+  return formatter.format(instant);
 };
 
 export const formatScheduledTimeLocal = (
@@ -127,7 +171,9 @@ export const formatScheduledTimeLocal = (
 ): string | null => {
   if (!scheduledTime) return null;
   const instant = getScheduledInstantForDisplay(scheduledAt, scheduledTime);
-  return instant ? instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : null;
+  return instant
+    ? instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+    : null;
 };
 
 export const formatTimestampTimeLocal = (value?: string | null): string | null => {
@@ -162,7 +208,7 @@ export const formatEndTime = (timeEnd: string, timeStart?: string | null): strin
   const formatted = TIME_FMT.format(new Date(timeEnd));
   if (!timeStart) return formatted;
   const startDay = ET_DATE_FMT.format(new Date(timeStart));
-  const endDay   = ET_DATE_FMT.format(new Date(timeEnd));
+  const endDay = ET_DATE_FMT.format(new Date(timeEnd));
   return startDay !== endDay ? `${formatted} (+1)` : formatted;
 };
 

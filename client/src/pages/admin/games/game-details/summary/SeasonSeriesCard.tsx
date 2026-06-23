@@ -4,6 +4,7 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, PreviousMeeting } from '@/hooks/useGames';
 import styles from './SeasonSeriesCard.module.scss';
 import { PERIOD_SUFFIX } from '../constants';
+import { formatScheduledDate } from '../formatUtils';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -19,6 +20,7 @@ interface Props {
 const DATE_FMT_SERIES = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: 'numeric',
+  timeZone: 'America/New_York',
 });
 
 const formatStatusLabel = (status: GameRecord['status'], suffix: string | null) => {
@@ -162,7 +164,7 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
                 <span className={styles.gameStatus}>{formatStatusLabel(status, suffix)}</span>
                 {pm.scheduled_at && (
                   <span className={styles.prevMeetingDate}>
-                    {DATE_FMT_SERIES.format(new Date(pm.scheduled_at))}
+                    {formatScheduledDate(pm.scheduled_at, DATE_FMT_SERIES)}
                   </span>
                 )}
               </div>

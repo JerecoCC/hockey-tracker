@@ -350,6 +350,7 @@ export async function autofillGameFromNhlGamecenter(
   const reportTimes = rosterReport
     ? inferReportTimes(rosterReport, boxscore.gameDate ?? game.scheduled_at, boxscore.startTimeUTC)
     : {};
+  const gameStartIso = reportTimes.startIso ?? validIsoOrUndefined(boxscore.startTimeUTC);
 
   await apiPatch(`/admin/games/${game.id}`, {
     scheduled_at: boxscore.gameDate ?? undefined,
@@ -358,7 +359,7 @@ export async function autofillGameFromNhlGamecenter(
     status: 'in_progress',
     current_period: '1',
     shootout: shootoutGame,
-    time_start: reportTimes.startIso ?? undefined,
+    time_start: gameStartIso,
   });
 
   await emitProgress({
@@ -541,7 +542,7 @@ export async function autofillGameFromNhlGamecenter(
     overtime_periods: getOvertimePeriods(boxscore, goals),
     shootout: shootoutGame,
     shootout_first_team_id: shootoutGame ? shootoutAttempts[0]?.team_id : undefined,
-    time_start: reportTimes.startIso ?? undefined,
+    time_start: gameStartIso,
     time_end: reportTimes.endIso ?? undefined,
     star_1_id: stars[0] ?? undefined,
     star_2_id: stars[1] ?? undefined,
@@ -560,7 +561,7 @@ export async function autofillGameFromNhlGamecenter(
   if (!rosterReport) {
     warnings.push('NHL roster report was unavailable, so roster data came from the GameCenter boxscore.');
   } else if (!reportTimes.startIso || !reportTimes.endIso) {
-    warnings.push('NHL roster report was found, but actual start/end times could not be parsed.');
+    warnings.push('NHL roster report was found, but actual start/end times could not both be parsed.');
   }
   if (shootoutGame && !shootoutReport) {
     warnings.push('NHL shootout report was unavailable or empty.');
@@ -924,10 +925,10 @@ async function ensureReportPlayersRostered(
 
 function assertGameMatches(game: GameRecord, boxscore: any) {
   const nhlDate = typeof boxscore?.gameDate === 'string' ? boxscore.gameDate.slice(0, 10) : null;
-  const localDate = nhlLocalDate(game.scheduled_at);
-  if (nhlDate && localDate && nhlDate !== localDate) {
+  const localDates = nhlLocalDateCandidates(game.scheduled_at);
+  if (nhlDate && localDates.length > 0 && !localDates.includes(nhlDate)) {
     throw new Error(
-      `NHL game is scheduled for ${nhlDate}, but this page is scheduled for ${localDate}.`,
+      `NHL game is scheduled for ${nhlDate}, but this page is scheduled for ${localDates.join(' or ')}.`,
     );
   }
 
@@ -958,6 +959,14 @@ function nhlLocalDate(value: string | null | undefined) {
   const month = parts.find((part) => part.type === 'month')?.value;
   const day = parts.find((part) => part.type === 'day')?.value;
   return year && month && day ? `${year}-${month}-${day}` : rawDate;
+}
+
+function nhlLocalDateCandidates(value: string | null | undefined) {
+  if (!value) return [];
+  const rawDate = value.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? null;
+  return Array.from(
+    new Set([nhlLocalDate(value), rawDate].filter((date): date is string => !!date)),
+  );
 }
 
 function isShootoutGame(boxscore: any) {
@@ -2145,6 +2154,12 @@ function easternScheduledTime(startTimeUTC: string) {
   const hour = parts.find((part) => part.type === 'hour')?.value ?? '00';
   const minute = parts.find((part) => part.type === 'minute')?.value ?? '00';
   return `${hour}:${minute}`;
+}
+
+function validIsoOrUndefined(value: string | null | undefined) {
+  if (!value) return undefined;
+  const time = Date.parse(value);
+  return Number.isFinite(time) ? new Date(time).toISOString() : undefined;
 }
 
 const REPORT_TIMEZONE_OFFSETS: Record<string, string> = {

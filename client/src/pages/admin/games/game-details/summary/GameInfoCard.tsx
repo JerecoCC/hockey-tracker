@@ -10,6 +10,7 @@ import {
   TIME_FMT,
   formatEndTime,
   formatEndTimeLocal,
+  formatScheduledDate,
   formatScheduledDateLocal,
   formatScheduledTime,
   formatScheduledTimeLocal,
@@ -71,9 +72,7 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
             data={
               useLocalTimezone
                 ? formatScheduledDateLocal(game.scheduled_at, game.scheduled_time)
-                : game.scheduled_at
-                  ? DATE_FMT_SHORT.format(new Date(game.scheduled_at))
-                  : null
+                : formatScheduledDate(game.scheduled_at, DATE_FMT_SHORT)
             }
           />
           <InfoItem

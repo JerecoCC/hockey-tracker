@@ -18,7 +18,7 @@ import ScoreboardCard from './ScoreboardCard';
 import styles from './GameDetailsPage.module.scss';
 
 import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
-import { DATE_FMT_SHORT } from './formatUtils';
+import { DATE_FMT_SHORT, formatScheduledDate } from './formatUtils';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
@@ -41,17 +41,14 @@ const HEAD_DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: '2-digit',
   year: 'numeric',
+  timeZone: 'America/New_York',
 });
 
 const teamTitleName = (team?: { name: string; team_name?: string | null }) =>
   team?.team_name?.trim() || team?.name || '';
 
 const formatHeadDate = (scheduledAt?: string | null) => {
-  if (!scheduledAt) return null;
-  const match = scheduledAt.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return HEAD_DATE_FMT.format(new Date(scheduledAt));
-  const [, year, month, day] = match;
-  return HEAD_DATE_FMT.format(new Date(Number(year), Number(month) - 1, Number(day)));
+  return formatScheduledDate(scheduledAt, HEAD_DATE_FMT);
 };
 
 const GameDetailsPage = ({ mode = 'admin' }: Props) => {
@@ -147,11 +144,17 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     };
   }, [game]);
 
+  const waitingForRouteGameId =
+    shouldResolveGameRoute &&
+    !routeGameId &&
+    !routeGameLookupNotFound &&
+    !routeGameLookupFailed;
   const loading =
     gameDetailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
     (!isLegacySeasonRoute && leagueDetailsLoading) ||
-    routeGameLookupLoading;
+    routeGameLookupLoading ||
+    waitingForRouteGameId;
   const gameHasStarted = !!game && game.status !== 'scheduled';
   const hasShootout = !!game?.shootout;
   const shouldFetchShootoutAttempts =
@@ -171,8 +174,9 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
-  const [gameAutofillProgress, setGameAutofillProgress] =
-    useState<NhlAutofillProgress | null>(null);
+  const [gameAutofillProgress, setGameAutofillProgress] = useState<NhlAutofillProgress | null>(
+    null,
+  );
   const isGameAutofilling = !!gameAutofillProgress;
   const isEditMode = isAdminView;
 
@@ -322,14 +326,50 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const gameCrumbLabel = game
     ? [
         `${game.away_team.code} @ ${game.home_team.code}`,
-        game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
+        formatScheduledDate(game.scheduled_at, DATE_FMT_SHORT),
       ]
         .filter(Boolean)
         .join(' · ')
     : 'Not Found';
+  const canonicalGameSlug = game
+    ? gameRouteSlug({
+        awayTeamCode: game.away_team.code,
+        homeTeamCode: game.home_team.code,
+      })
+    : '';
+  const canonicalDateSlug = game
+    ? gameDateRouteSlug(game.scheduled_at, {
+        leagueCode: game.league_code,
+      })
+    : '';
+  const canonicalPath =
+    game && gameId
+      ? buildGameDetailsPath({
+          leagueCode: game.league_code,
+          leagueId: game.league_id,
+          seasonName: game.season_name,
+          seasonId: game.season_id,
+          gameId,
+          awayTeamCode: game.away_team.code,
+          homeTeamCode: game.home_team.code,
+          scheduledAt: game.scheduled_at,
+        })
+      : '';
+  const needsCanonicalRedirect =
+    isAdminView &&
+    !!game &&
+    !!gameId &&
+    !!canonicalPath &&
+    (leagueSlug !== toRouteSlug(game.league_code) ||
+      seasonSlug !== toRouteSlug(game.season_name) ||
+      gameSlug !== canonicalGameSlug ||
+      gameDateSlug !== canonicalDateSlug);
+  const suppressCanonicalRedirectFrame =
+    needsCanonicalRedirect && !isLegacyLeagueRoute && !isLegacySeasonRoute && isDatedGameRoute;
+  const pageLoading = loading || suppressCanonicalRedirectFrame;
 
   usePageBreadcrumbs(
-    loading
+    pageLoading
       ? null
       : {
           backPath: isAdminView ? seasonHref : '/games',
@@ -342,42 +382,29 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
               ]
             : [],
         },
-    [loading, isAdminView, seasonHref, seasonName, leagueHref, leagueCrumbLabel, gameCrumbLabel],
+    [
+      pageLoading,
+      isAdminView,
+      seasonHref,
+      seasonName,
+      leagueHref,
+      leagueCrumbLabel,
+      gameCrumbLabel,
+    ],
   );
 
   useEffect(() => {
-    if (!isAdminView || !game || !gameId) return;
-    const canonicalPath = buildGameDetailsPath({
-      leagueCode: game.league_code,
-      leagueId: game.league_id,
-      seasonName: game.season_name,
-      seasonId: game.season_id,
-      gameId,
-      awayTeamCode: game.away_team.code,
-      homeTeamCode: game.home_team.code,
-      scheduledAt: game.scheduled_at,
-    });
-    if (
-      leagueSlug !== toRouteSlug(game.league_code) ||
-      seasonSlug !== toRouteSlug(game.season_name) ||
-      gameSlug !==
-        gameRouteSlug({
-          awayTeamCode: game.away_team.code,
-          homeTeamCode: game.home_team.code,
-        }) ||
-      gameDateSlug !== gameDateRouteSlug(game.scheduled_at)
-    ) {
-      navigate(canonicalPath, { replace: true });
-    }
-  }, [game, gameDateSlug, gameId, gameSlug, isAdminView, leagueSlug, navigate, seasonSlug]);
+    if (!needsCanonicalRedirect || !canonicalPath) return;
+    navigate(canonicalPath, { replace: true });
+  }, [canonicalPath, navigate, needsCanonicalRedirect]);
 
   useEffect(() => {
-    if (loading || game) return;
+    if (pageLoading || game) return;
     if (!gameNotFound && !routeGameLookupNotFound) return;
     navigate(fallbackHref, { replace: true });
-  }, [fallbackHref, game, gameNotFound, loading, navigate, routeGameLookupNotFound]);
+  }, [fallbackHref, game, gameNotFound, navigate, pageLoading, routeGameLookupNotFound]);
 
-  if (loading) {
+  if (pageLoading) {
     return (
       <LoadingSpinner
         message="Loading game..."

@@ -1,6 +1,6 @@
 import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
 import type { LastFiveGame } from '@/hooks/useGames';
-import { DATE_FMT_SHORT } from '../formatUtils';
+import { DATE_FMT_SHORT, formatScheduledDate } from '../formatUtils';
 import { PERIOD_PAREN_SUFFIX } from '../constants';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -39,7 +39,7 @@ export default function LastGameSquare({ lg, teamPrimary, teamText, onNavigate }
         textColor: teamText,
       }}
       detail={detail}
-      topLabel={lg.scheduled_at ? DATE_FMT_SHORT.format(new Date(lg.scheduled_at)) : undefined}
+      topLabel={formatScheduledDate(lg.scheduled_at, DATE_FMT_SHORT) ?? undefined}
       topLabelAlign="center"
       topLabelWeight="normal"
       homePrimaryColor={teamPrimary}

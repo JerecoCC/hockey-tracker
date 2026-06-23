@@ -210,6 +210,22 @@
   }
 }
 
+.calendarAutofillSkeletonList {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: $space-xs;
+  min-height: 0;
+  width: 100%;
+}
+
+.calendarAutofillSkeleton.calendarAutofillSkeleton {
+  flex: 1 1 0;
+  min-height: 0;
+  height: auto;
+  border-radius: $radius-sm;
+}
+
 .calendarDayCount {
   margin-left: $space-xs;
   color: $text-dim;

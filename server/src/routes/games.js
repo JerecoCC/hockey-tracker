@@ -20,6 +20,17 @@ const homeTeam = alias(teams, 't_home');
 const awayTeam = alias(teams, 't_away');
 
 const resultRows = (result) => (Array.isArray(result) ? result : result?.rows ?? []);
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+const normalizeAdminScheduledAt = (value) => {
+  if (typeof value !== 'string') return value ?? null;
+  const trimmed = value.trim();
+  if (!DATE_ONLY_RE.test(trimmed)) return trimmed || null;
+
+  // Admin-entered game dates are ET calendar dates. Store a stable midday
+  // timestamp so ET formatting always lands on the selected date.
+  return `${trimmed}T12:00:00Z`;
+};
 
 const teamIdentityJson = (teamIdColumn, teamTable) => ormSql`
   json_build_object(
@@ -969,6 +980,8 @@ router.get('/route-lookup', async (req, res) => {
     const rows = resultRows(await db.execute(ormSql`
       SELECT g.id AS game_id
       FROM games g
+      JOIN seasons s ON s.id = g.season_id
+      JOIN leagues l ON l.id = s.league_id
       LEFT JOIN LATERAL (
         SELECT code
         FROM team_iterations
@@ -984,7 +997,15 @@ router.get('/route-lookup', async (req, res) => {
         LIMIT 1
       ) home_identity ON true
       WHERE g.season_id = ${season_id}::uuid
-        AND (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
+        AND (
+          CASE
+            WHEN lower(l.code) = 'nhl' THEN (
+              (g.scheduled_at AT TIME ZONE 'America/New_York')::date = ${gameDate}::date
+              OR (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
+            )
+            ELSE (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
+          END
+        )
         AND CONCAT(
           regexp_replace(
             regexp_replace(lower(COALESCE(away_identity.code, '')), '[^a-z0-9]+', '-', 'g'),
@@ -1407,6 +1428,8 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: 'home_team_id and away_team_id must be different' });
   }
 
+  const normalizedScheduledAt = normalizeAdminScheduledAt(scheduled_at);
+
   try {
     const rows = await sql`
       INSERT INTO games (
@@ -1416,7 +1439,7 @@ router.post('/', async (req, res) => {
         playoff_series_id, notes
       ) VALUES (
         ${season_id}, ${home_team_id}, ${away_team_id},
-        ${scheduled_at}, ${scheduled_time}, ${venue}, ${game_type}, ${status},
+        ${normalizedScheduledAt}, ${scheduled_time}, ${venue}, ${game_type}, ${status},
         ${overtime_periods}, ${shootout},
         ${playoff_series_id}, ${notes}
       )
@@ -1581,6 +1604,9 @@ router.patch('/:id', async (req, res) => {
   const effectivePeriod = status === 'in_progress' && current_period === undefined
     ? '1'
     : (current_period ?? null);
+  const normalizedScheduledAt = scheduled_at === undefined
+    ? undefined
+    : normalizeAdminScheduledAt(scheduled_at);
 
   try {
     const existing = await sql`SELECT id, playoff_series_id FROM games WHERE id = ${id}`;
@@ -1595,7 +1621,7 @@ router.patch('/:id', async (req, res) => {
       UPDATE games SET
         home_team_id             = COALESCE(${home_team_id             ?? null}::uuid, home_team_id),
         away_team_id             = COALESCE(${away_team_id             ?? null}::uuid, away_team_id),
-        scheduled_at          = COALESCE(${scheduled_at          ?? null}, scheduled_at),
+        scheduled_at          = COALESCE(${normalizedScheduledAt ?? null}, scheduled_at),
         scheduled_time        = COALESCE(${scheduled_time        ?? null}, scheduled_time),
         venue                 = COALESCE(${venue                 ?? null}, venue),
         game_type             = COALESCE(${game_type             ?? null}, game_type),

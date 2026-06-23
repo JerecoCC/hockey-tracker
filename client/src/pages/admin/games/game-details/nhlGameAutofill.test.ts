@@ -745,6 +745,31 @@ describe('autofillGameFromNhlGamecenter', () => {
     );
   });
 
+  it('falls back to the GameCenter scheduled start when roster report times are unavailable', async () => {
+    await autofillGameFromNhlGamecenter(game, '317');
+    const startPatch = mockedAxios.patch.mock.calls.find(
+      ([url, payload]) =>
+        String(url).endsWith('/admin/games/game-1') &&
+        (payload as Record<string, unknown>)?.status === 'in_progress',
+    );
+    const finalPatch = mockedAxios.patch.mock.calls.find(
+      ([url, payload]) =>
+        String(url).endsWith('/admin/games/game-1') &&
+        (payload as Record<string, unknown>)?.status === 'final',
+    );
+
+    expect(startPatch?.[1]).toEqual(
+      expect.objectContaining({
+        time_start: '2025-11-20T02:30:00.000Z',
+      }),
+    );
+    expect(finalPatch?.[1]).toEqual(
+      expect.objectContaining({
+        time_start: '2025-11-20T02:30:00.000Z',
+      }),
+    );
+  });
+
   it('writes multi-goalie NHL games through native goalie stints with parsed entry times', async () => {
     boxscoreData = {
       ...boxscore,

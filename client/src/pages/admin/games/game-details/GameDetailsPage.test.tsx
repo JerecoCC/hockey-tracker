@@ -220,6 +220,67 @@ describe('GameDetailsPage', () => {
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
   });
 
+  it('keeps dated slug routes in the loading state until route lookup resolves', () => {
+    mockUseParams.mockReturnValue({
+      leagueSlug: 'nhl',
+      seasonSlug: '2024-25',
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'awy-vs-hom',
+    });
+    mockUseLeagues.mockReturnValue({
+      leagues: [{ id: 'league-1', code: 'NHL', name: 'National Hockey League' }],
+      loading: false,
+    });
+    mockUseLeagueDetails.mockReturnValue({
+      seasons: [{ id: 'season-1', name: '2024-25' }],
+      loading: false,
+    });
+    mockUseGameRouteLookup.mockReturnValue({
+      gameId: null,
+      loading: false,
+      notFound: false,
+      failed: false,
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(screen.getByRole('status', { name: /loading game/i })).toBeInTheDocument();
+    expect(screen.queryByText('scoreboard')).not.toBeInTheDocument();
+    expect(mockUseGameDetails).toHaveBeenCalledWith(undefined, { mode: 'admin' });
+  });
+
+  it('does not flash game content before replacing a noncanonical dated route', () => {
+    mockUseParams.mockReturnValue({
+      leagueSlug: 'nhl',
+      seasonSlug: '2024-25',
+      gameDateSlug: '10-09-2024',
+      gameSlug: 'awy-vs-hom',
+    });
+    mockUseLeagues.mockReturnValue({
+      leagues: [{ id: 'league-1', code: 'NHL', name: 'National Hockey League' }],
+      loading: false,
+    });
+    mockUseLeagueDetails.mockReturnValue({
+      seasons: [{ id: 'season-1', name: '2024-25' }],
+      loading: false,
+    });
+    mockUseGameRouteLookup.mockReturnValue({
+      gameId: 'game-1',
+      loading: false,
+      notFound: false,
+      failed: false,
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(screen.getByRole('status', { name: /loading game/i })).toBeInTheDocument();
+    expect(screen.queryByText('scoreboard')).not.toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/admin/leagues/nhl/seasons/2024-25/games/10-10-2024/awy-vs-hom',
+      { replace: true },
+    );
+  });
+
   it('treats no-date admin game routes as direct game id routes', () => {
     mockUseParams.mockReturnValue({
       leagueSlug: 'nhl',

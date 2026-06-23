@@ -4,7 +4,7 @@ import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { type GameRecord, type GameType, type UpdateGameInfoData } from '@/hooks/useGames';
 import styles from './GameDetailsPage.module.scss';
-import { etHHMMtoISO, isoToETHHMM } from './formatUtils';
+import { etHHMMtoISO, isoToETHHMM, scheduledDateInputValue } from './formatUtils';
 
 const GAME_TYPE_OPTIONS: { value: GameType; label: string }[] = [
   { value: 'preseason', label: 'Preseason' },
@@ -42,7 +42,7 @@ const GameInfoEditModal = ({ open, game, isSaving, disabled, onClose, onSave }: 
   const formValues = useMemo<FormValues>(
     () => ({
       venue: game.venue ?? '',
-      scheduled_date: game.scheduled_at ? game.scheduled_at.slice(0, 10) : '',
+      scheduled_date: scheduledDateInputValue(game.scheduled_at),
       scheduled_time: game.scheduled_time ?? '',
       game_type: game.game_type,
       playoff_round: game.playoff_round != null ? String(game.playoff_round) : '',

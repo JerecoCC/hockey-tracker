@@ -15,6 +15,7 @@ import SetLineupModal from './SetLineupModal';
 import RemoveFromLineupModal from './RemoveFromLineupModal';
 import styles from '../GameDetailsPage.module.scss';
 import { playerDataComplete } from '../gameUtils';
+import { scheduledDateInputValue } from '../formatUtils';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -464,7 +465,7 @@ const GameLineupsTab = ({
           onClose={() => setLineupAddTeam(null)}
           teamId={lineupAddTeam === 'away' ? game.away_team.id : game.home_team.id}
           seasonId={seasonId!}
-          gameDate={game.scheduled_at?.slice(0, 10)}
+          gameDate={scheduledDateInputValue(game.scheduled_at)}
           teamName={lineupAddTeam === 'away' ? game.away_team.name : game.home_team.name}
           existingPlayerIds={
             new Set((lineupAddTeam === 'away' ? awayRoster : homeRoster).map((e) => e.player_id))

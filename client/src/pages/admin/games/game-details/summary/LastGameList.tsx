@@ -1,6 +1,6 @@
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { LastFiveGame } from '@/hooks/useGames';
-import { DATE_FMT_SHORT } from '../formatUtils';
+import { DATE_FMT_SHORT, formatScheduledDate } from '../formatUtils';
 import { PERIOD_PAREN_SUFFIX } from '../constants';
 import { lastFiveOpponentLogo } from '../gameUtils';
 import styles from './LastFiveCard.module.scss';
@@ -58,7 +58,7 @@ export default function LastGameList({ lg, onNavigate }: Props) {
       </span>
       {lg.scheduled_at && (
         <span className={styles.lastFiveListDate}>
-          {DATE_FMT_SHORT.format(new Date(lg.scheduled_at))}
+          {formatScheduledDate(lg.scheduled_at, DATE_FMT_SHORT)}
         </span>
       )}
     </div>

@@ -10,6 +10,7 @@ import useGames, {
   type GameStatus,
   type GameType,
 } from '@/hooks/useGames';
+import { scheduledDateInputValue } from '@/pages/admin/games/game-details/formatUtils';
 import styles from './GameFormModal.module.scss';
 
 export interface GameFormTeam {
@@ -81,7 +82,7 @@ const GameFormModal = ({
         opponent_team_id: opponentTeamId,
         game_type: editTarget.game_type,
         status: editTarget.status,
-        scheduled_date: editTarget.scheduled_at ? editTarget.scheduled_at.slice(0, 10) : '',
+        scheduled_date: scheduledDateInputValue(editTarget.scheduled_at),
         scheduled_time: editTarget.scheduled_time ?? '',
         venue: editTarget.venue ?? '',
         overtime_periods:
