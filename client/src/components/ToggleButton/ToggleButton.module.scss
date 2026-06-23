@@ -64,11 +64,12 @@
 
 .switchToggleActive {
   border-color: $accent;
-  background: $accent;
+  background: rgba($accent, 0.1);
+  color: $accent-light;
 
   &:hover:not(:disabled) {
     border-color: $accent-hover;
-    background: $accent-hover;
+    background: rgba($accent, 0.16);
   }
 }
 
@@ -82,16 +83,24 @@
   width: var(--switch-thumb-size);
   height: var(--switch-thumb-size);
   border-radius: $radius-md;
-  background: $text-body;
-  color: $border;
+  background: $border;
+  color: $text-body;
+  border: 1px solid $border;
   transition:
     color $transition-fast,
     background $transition-fast,
+    border-color $transition-fast,
     transform $transition-fast;
 }
 
 .switchToggleActive .switchThumb {
-  background: #fff;
-  color: $accent;
+  background: $accent;
+  color: #fff;
+  border-color: $accent;
   transform: translateX(var(--switch-thumb-travel));
+}
+
+.switchToggleActive:hover:not(:disabled) .switchThumb {
+  background: $accent-hover;
+  border-color: $accent-hover;
 }
