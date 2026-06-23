@@ -312,6 +312,25 @@ describe('UserDashboard', () => {
     expect(screen.getByText(`${originalDateLabel} · ${timeLabel}`)).toBeInTheDocument();
   });
 
+  it('shows playoff metadata in the season label slot', () => {
+    mockUseQuery.mockReturnValue({
+      data: [
+        makeGame({
+          game_type: 'playoff',
+          playoff_round: 2,
+          game_number_in_series: 3,
+          playoff_round_names: { 2: 'Round 2' },
+        }),
+      ],
+      isLoading: false,
+    });
+
+    render(<UserDashboard />);
+
+    expect(screen.getByText('R2 - G3')).toBeInTheDocument();
+    expect(screen.queryByText('2025-26')).not.toBeInTheDocument();
+  });
+
   it('opens watched-game hover actions for details and score image', () => {
     mockUseQuery.mockReturnValue({
       data: [makeGame({ status: 'final', watched_by_user: true, home_score: 4, away_score: 2 })],

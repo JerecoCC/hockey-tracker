@@ -5,6 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toPng } from 'html-to-image';
 import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
 import monthCalendarStyles from '@/components/MonthCalendar/MonthCalendar.module.scss';
+import scheduleLayoutStyles from '@/components/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
 import UserGames from './UserGames';
 import styles from './UserGames.module.scss';
 
@@ -12,7 +13,17 @@ const mockNavigate = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockSetQueriesData = jest.fn();
 
-jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
+jest.mock('react-router-dom', () => ({
+  Link: ({ to, children, ...props }: any) => (
+    <a
+      href={to}
+      {...props}
+    >
+      {children}
+    </a>
+  ),
+  useNavigate: () => mockNavigate,
+}));
 jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
@@ -46,13 +57,19 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@/components/Card/Card', () => ({ title, action, children, className }: any) => (
-  <section className={className}>
-    {title && <div>{title}</div>}
-    {action}
-    {children}
-  </section>
-));
+jest.mock('@/components/Card/Card', () => {
+  const React = require('react');
+  return React.forwardRef(({ title, action, children, className }: any, ref: any) => (
+    <section
+      ref={ref}
+      className={className}
+    >
+      {title && <div>{title}</div>}
+      {action}
+      {children}
+    </section>
+  ));
+});
 jest.mock(
   '@/components/DatePicker/DatePicker',
   () => (props: any) =>
@@ -419,8 +436,8 @@ beforeEach(() => {
   });
 });
 
-describe('UserGames calendar view', () => {
-  it('shows loading spinner inside a card section for calendar and list views', async () => {
+describe('UserGames schedule views', () => {
+  it('shows schedule skeletons for calendar and Week views', async () => {
     const user = userEvent.setup();
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
       if (queryKey[0] === 'user-leagues')
@@ -433,29 +450,23 @@ describe('UserGames calendar view', () => {
 
     render(<UserGames />);
 
-    const calendarLoadingSection = screen
-      .getByRole('status', { name: 'Loading games...' })
-      .closest('section');
-    expect(calendarLoadingSection).toHaveClass(styles.calendarCard, styles.loadingCard);
+    expect(
+      screen
+        .getAllByLabelText(/^Loading games for /)
+        .filter((element) => element.tagName.toLowerCase() === 'div'),
+    ).toHaveLength(7);
+    expect(document.querySelectorAll(`.${scheduleLayoutStyles.weekGameSkeleton}`)).toHaveLength(21);
 
-    await user.click(screen.getByRole('button', { name: 'List view' }));
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    const listLoadingSection = screen
-      .getByRole('status', { name: 'Loading games...' })
-      .closest('section');
-    expect(listLoadingSection).toHaveClass(styles.loadingCard);
-    expect(listLoadingSection?.parentElement).toHaveClass(styles.gamesList);
+    expect(document.querySelector(`.${scheduleLayoutStyles.calendarCard}`)).toBeInTheDocument();
+    expect(
+      document.querySelectorAll(`.${scheduleLayoutStyles.calendarDaySkeleton}`).length,
+    ).toBeGreaterThan(0);
   });
-
-  it('shows team filtering with favorite teams first and hides status text in list view', async () => {
+  it('shows team filtering with favorite teams first and uses season-style rows in Week view', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
-
-    const calendarGameItem = screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`);
-    expect(calendarGameItem).toHaveClass(styles.calendarGameLeagueTint);
-    expect(calendarGameItem).toHaveStyle('--game-league-primary: #0a4fa3');
-
-    await user.click(screen.getByRole('button', { name: 'List view' }));
 
     const teamFilter = screen.getByRole('combobox', { name: 'Teams' });
     expect(teamFilter).toBeInTheDocument();
@@ -470,72 +481,83 @@ describe('UserGames calendar view', () => {
       'Toggle Idle Team',
     ]);
 
-    const firstGameCard = screen.getAllByText('Away Team')[0].closest('[style]');
-    expect(within(firstGameCard as HTMLElement).queryByText('Upcoming')).not.toBeInTheDocument();
-    expect(within(firstGameCard as HTMLElement).queryByText('Final')).not.toBeInTheDocument();
-    expect(within(firstGameCard as HTMLElement).queryByText('11')).not.toBeInTheDocument();
-    expect(within(firstGameCard as HTMLElement).queryByText('7')).not.toBeInTheDocument();
-    expect(within(firstGameCard as HTMLElement).getAllByText('–').length).toBeGreaterThanOrEqual(3);
+    const firstGameRow = screen.getAllByText('AWY')[0].closest('li');
+    expect(firstGameRow).not.toBeNull();
+    expect(within(firstGameRow as HTMLElement).getByText('Final')).toBeInTheDocument();
+    expect(within(firstGameRow as HTMLElement).queryByText('11')).not.toBeInTheDocument();
+    expect(within(firstGameRow as HTMLElement).queryByText('7')).not.toBeInTheDocument();
     expect(
-      within(firstGameCard as HTMLElement).queryByText(
+      within(firstGameRow as HTMLElement).queryByText(
         `Watching ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(dateOffset(0))}`,
       ),
     ).not.toBeInTheDocument();
     expect(
-      within(firstGameCard as HTMLElement).getByText(
-        formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
+      within(firstGameRow as HTMLElement).getByText((content) =>
+        content.includes(formatNumericDate(localDateKeyForGame(games[0]) ?? scheduledWatchDate)),
       ),
     ).toBeInTheDocument();
-    expect(within(firstGameCard as HTMLElement).getByText('R2 - G3')).toHaveClass(
-      styles.playoffGameMeta,
-    );
-    expect(firstGameCard).toHaveStyle('--game-league-primary: #0a4fa3');
+    expect(
+      within(firstGameRow as HTMLElement).getByText(
+        (content) => content.includes('Round 2') && content.includes('Game 3'),
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(firstGameRow as HTMLElement).queryByRole('button', { name: 'View game details' }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(firstGameRow as HTMLElement).getByRole('button', { name: 'Mark as watched' }),
+    ).toBeInTheDocument();
 
     const scheduledDayCard = screen.getByText(formatHeading(scheduledWatchDate)).parentElement;
-    expect(within(scheduledDayCard as HTMLElement).getByText('Away Team')).toBeInTheDocument();
+    expect(within(scheduledDayCard as HTMLElement).getAllByText('AWY').length).toBeGreaterThan(0);
     expect(
       within(
         screen.getByText(
           formatHeading(localDateKeyForGame(games[0]) ?? scheduledWatchDate),
         ).parentElement as HTMLElement,
-      ).queryByText('Away Team'),
+      ).queryByText('AWY'),
     ).not.toBeInTheDocument();
 
-    const watchedGameCard = screen.getAllByText('Opponent')[0].closest('[role="button"]');
-    expect(within(watchedGameCard as HTMLElement).getByText('2')).toBeInTheDocument();
-    expect(within(watchedGameCard as HTMLElement).getByText('1')).toBeInTheDocument();
+    const watchedGameRow = screen.getAllByText('OPP')[0].closest('li');
+    expect(watchedGameRow).not.toBeNull();
+    expect(within(watchedGameRow as HTMLElement).getByText('2')).toBeInTheDocument();
+    expect(within(watchedGameRow as HTMLElement).getByText('1')).toBeInTheDocument();
     expect(
-      within(watchedGameCard as HTMLElement).queryByText(
+      within(watchedGameRow as HTMLElement).queryByText(
         `Watched ${new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).format(dateOffset(1))}`,
       ),
     ).not.toBeInTheDocument();
     expect(
-      within(firstGameCard as HTMLElement).queryByRole('button', { name: 'View game details' }),
-    ).not.toBeInTheDocument();
-    expect(
-      within(watchedGameCard as HTMLElement).getByRole('button', { name: 'View game details' }),
+      within(watchedGameRow as HTMLElement).getByRole('button', { name: 'View game details' }),
     ).toBeInTheDocument();
     expect(
       screen.getAllByRole('button', { name: 'Mark as watched' }).length,
     ).toBeGreaterThanOrEqual(1);
-  });
 
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
+    const calendarGameItem = screen.getAllByText('AWY')[0].closest(`.${calendarItemStyles.item}`);
+    expect(calendarGameItem).toHaveClass(styles.calendarGameLeagueTint);
+    expect(calendarGameItem).toHaveStyle('--game-league-primary: #0a4fa3');
+  });
   it('shows skipped games when the filter switch is enabled', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
+
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     expect(screen.queryByText('SKP')).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('switch', { name: 'Show skipped games' }));
 
     expect(screen.getByRole('switch', { name: 'Hide skipped games' })).toBeInTheDocument();
-    expect(screen.getByText('SKP')).toBeInTheDocument();
-    expect(screen.getByText('SKP').closest(`.${calendarItemStyles.item}`)).toHaveClass(
-      styles.calendarGameSkipped,
-    );
-    const skippedCard = screen.getByText('SKP').closest(`.${calendarItemStyles.item}`);
-    expect(within(skippedCard as HTMLElement).getByRole('button', { name: 'View game details' })).toBeInTheDocument();
-    expect(within(skippedCard as HTMLElement).getByRole('button', { name: 'Undo skip' })).toBeInTheDocument();
+    const skippedCard = screen.getAllByText('SKP')[0].closest(`.${calendarItemStyles.item}`);
+    expect(skippedCard).toHaveClass(styles.calendarGameSkipped);
+    expect(
+      within(skippedCard as HTMLElement).getByRole('button', { name: 'View game details' }),
+    ).toBeInTheDocument();
+    expect(
+      within(skippedCard as HTMLElement).getByRole('button', { name: 'Undo skip' }),
+    ).toBeInTheDocument();
     expect(
       within(skippedCard as HTMLElement).queryByRole('button', { name: 'Schedule watch' }),
     ).not.toBeInTheDocument();
@@ -550,11 +572,17 @@ describe('UserGames calendar view', () => {
     ).not.toBeInTheDocument();
     expect(mockUseQuery).toHaveBeenCalledWith(
       expect.objectContaining({
-        queryKey: ['user-games', 'all', 'all', true],
+        queryKey: [
+          'user-games',
+          'all',
+          'all',
+          true,
+          '',
+          `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
+        ],
       }),
     );
   });
-
   it('shows a scheduled watch game original date in the user timezone', async () => {
     const user = userEvent.setup();
     const originalEtDate = localDateString(1);
@@ -575,23 +603,28 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
-    await user.click(screen.getByRole('button', { name: 'List view' }));
 
     expect(
-      screen.getByText(formatNumericDate(localDateKeyForEtDateTime(originalEtDate, '23:30'))),
-    ).toHaveClass(styles.originalGameDate);
+      screen.getByText((content) =>
+        content.includes(formatNumericDate(localDateKeyForEtDateTime(originalEtDate, '23:30'))),
+      ),
+    ).toBeInTheDocument();
   });
 
-  it('shows playoff round metadata on calendar cards but hides series dots until watched', () => {
+  it('shows playoff round metadata on calendar cards but hides series dots until watched', async () => {
+    const user = userEvent.setup();
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     expect(screen.getByText('R2 - G3')).toHaveClass(calendarItemStyles.bottomLabel);
     expect(screen.queryByLabelText('Series record 1 of 4')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 2 of 4')).not.toBeInTheDocument();
   });
 
-  it('shows watched calendar scores differently for winners and losers', () => {
+  it('shows watched calendar scores differently for winners and losers', async () => {
+    const user = userEvent.setup();
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     const watchedCard = screen
       .getByRole('button', { name: 'Download score card' })
@@ -610,7 +643,8 @@ describe('UserGames calendar view', () => {
     expect(loserScore).toHaveClass(calendarItemStyles.scoreLose);
   });
 
-  it('shows muted dash score boxes for watched games without recorded scores', () => {
+  it('shows muted dash score boxes for watched games without recorded scores', async () => {
+    const user = userEvent.setup();
     const watchedMissingScoreGame = {
       ...games[0],
       id: 'game-watched-missing-score',
@@ -632,6 +666,7 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     const watchedCard = screen.getByText('MSA').closest(`.${calendarItemStyles.item}`);
     const missingScores = within(watchedCard as HTMLElement)
@@ -644,7 +679,8 @@ describe('UserGames calendar view', () => {
     }
   });
 
-  it('puts watched games first within each calendar day list', () => {
+  it('puts watched games first within each calendar day list', async () => {
+    const user = userEvent.setup();
     const unwatchedSameDayGame = {
       ...games[0],
       id: 'game-same-day-unwatched',
@@ -672,6 +708,7 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     const watchedItem = screen.getByText('SDW').closest(`.${calendarItemStyles.item}`);
     const unwatchedItem = screen.getByText('SDA').closest(`.${calendarItemStyles.item}`);
@@ -703,7 +740,7 @@ describe('UserGames calendar view', () => {
     expect(screen.getByText((content) => content.startsWith('Suffix'))).toBeInTheDocument();
   });
 
-  it('downloads the current calendar month as an image from calendar view', async () => {
+  it('downloads the current calendar month as an image from Month view', async () => {
     const user = userEvent.setup();
     const originalCreateElement = document.createElement.bind(document);
     const clickMock = jest.fn();
@@ -718,6 +755,7 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     await user.click(screen.getByRole('button', { name: 'More actions' }));
     expect(screen.getByRole('button', { name: /Download Month Image/ })).toBeInTheDocument();
@@ -744,7 +782,8 @@ describe('UserGames calendar view', () => {
     createElementSpy.mockRestore();
   });
 
-  it('shows playoff series dots once a playoff game has been watched', () => {
+  it('shows playoff series dots once a playoff game has been watched', async () => {
+    const user = userEvent.setup();
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
       if (queryKey[0] === 'user-leagues')
         return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
@@ -765,13 +804,15 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     expect(screen.getByLabelText('Series record 1 of 4')).toBeInTheDocument();
     expect(screen.getByLabelText('Series record 2 of 4')).toBeInTheDocument();
     expect(screen.queryByLabelText('Series record 3 of 4')).not.toBeInTheDocument();
   });
 
-  it('uses the game-specific series score for a watched game 1 instead of the final series total', () => {
+  it('uses the game-specific series score for a watched game 1 instead of the final series total', async () => {
+    const user = userEvent.setup();
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
       if (queryKey[0] === 'user-leagues')
         return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
@@ -798,6 +839,7 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     expect(screen.getByLabelText('Series record 1 of 4')).toBeInTheDocument();
     expect(screen.getByLabelText('Series record 0 of 4')).toBeInTheDocument();
@@ -825,12 +867,11 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
-    await user.click(screen.getByRole('button', { name: 'List view' }));
 
     const expectedDateKey = localDateKeyForGame(dateOnlyGame) ?? dateOnlyKey;
     const daySection = screen.getByText(formatHeading(expectedDateKey)).parentElement;
     expect(daySection).not.toBeNull();
-    expect(within(daySection as HTMLElement).getByText('Date Only Team')).toBeInTheDocument();
+    expect(within(daySection as HTMLElement).getAllByText('DOT').length).toBeGreaterThan(0);
   });
 
   it('keeps local date placement correct for midnight-UTC scheduled_at placeholders', async () => {
@@ -855,21 +896,16 @@ describe('UserGames calendar view', () => {
     });
 
     render(<UserGames />);
-    await user.click(screen.getByRole('button', { name: 'List view' }));
 
     const expectedDateKey = localDateKeyForGame(midnightPlaceholderGame) ?? intendedEtDate;
     const intendedDaySection = screen.getByText(formatHeading(expectedDateKey)).parentElement;
     expect(intendedDaySection).not.toBeNull();
-    expect(
-      within(intendedDaySection as HTMLElement).getByText('Midnight Placeholder'),
-    ).toBeInTheDocument();
+    expect(within(intendedDaySection as HTMLElement).getAllByText('MDN').length).toBeGreaterThan(0);
 
     for (const key of [localDateString(0), localDateString(1)]) {
       if (key === expectedDateKey) continue;
       const daySection = screen.getByText(formatHeading(key)).parentElement;
-      expect(
-        within(daySection as HTMLElement).queryByText('Midnight Placeholder'),
-      ).not.toBeInTheDocument();
+      expect(within(daySection as HTMLElement).queryByText('MDN')).not.toBeInTheDocument();
     }
   });
 
@@ -877,11 +913,10 @@ describe('UserGames calendar view', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'List view' }));
     await user.click(screen.getByRole('button', { name: 'Toggle Home Team' }));
 
-    expect(screen.queryByText('Away Team')).not.toBeInTheDocument();
-    expect(screen.getByText('Opponent')).toBeInTheDocument();
+    expect(screen.queryByText('AWY')).not.toBeInTheDocument();
+    expect(screen.getAllByText('OPP').length).toBeGreaterThan(0);
   });
 
   it('lets watched non-favorite teams be selected from the team filter', async () => {
@@ -937,14 +972,15 @@ describe('UserGames calendar view', () => {
 
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'List view' }));
-    expect(screen.queryByText('Extra Home')).not.toBeInTheDocument();
+    expect(screen.queryByText('EXH')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Toggle Extra Home' }));
-    expect(screen.getByText('Extra Home')).toBeInTheDocument();
+    expect(screen.getAllByText('EXH').length).toBeGreaterThan(0);
   });
 
   it('allows dragging a calendar game to another date to schedule it', async () => {
+    const user = userEvent.setup();
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     const originalDate = localDateKeyForGame(games[0]) ?? scheduledWatchDate;
     const targetDate = localDateString(3);
@@ -994,7 +1030,9 @@ describe('UserGames calendar view', () => {
   });
 
   it('clears the schedule when dragging a game back to its original date', async () => {
+    const user = userEvent.setup();
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     const originalDate = localDateKeyForGame(games[0]) ?? scheduledWatchDate;
     const sourceCard = screen.getByText('AWY').closest('[draggable="true"]');
@@ -1187,7 +1225,7 @@ describe('UserGames calendar view', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'Calendar view' }));
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
@@ -1205,6 +1243,7 @@ describe('UserGames calendar view', () => {
   it('keeps the selected calendar month after marking a scheduled game as watched', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     const monthLabel = new Intl.DateTimeFormat('en-US', { month: 'short', year: 'numeric' }).format(
       new Date(currentDate.getFullYear(), currentDate.getMonth(), 1),
@@ -1215,11 +1254,11 @@ describe('UserGames calendar view', () => {
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
   });
 
-  it('keeps the selected week after marking a scheduled game as watched in list view', async () => {
+  it('keeps the selected week after marking a scheduled game as watched in Week view', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'List view' }));
+    await user.click(screen.getByRole('button', { name: 'Week view' }));
 
     const weekLabel = formatWeekRange(currentDate, dateOffset(6));
     await user.click(screen.getAllByRole('button', { name: 'Mark as watched' })[0]);
@@ -1231,7 +1270,7 @@ describe('UserGames calendar view', () => {
     const user = userEvent.setup();
     const { unmount } = render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'List view' }));
+    await user.click(screen.getByRole('button', { name: 'Week view' }));
     await user.click(screen.getByRole('button', { name: 'Next week' }));
 
     const expectedWeekStart = localDateString(7);
@@ -1241,17 +1280,18 @@ describe('UserGames calendar view', () => {
 
     unmount();
     render(<UserGames />);
-    await user.click(screen.getByRole('button', { name: 'List view' }));
+    await user.click(screen.getByRole('button', { name: 'Week view' }));
 
     expect(
       screen.getByRole('button', { name: `Select week: ${expectedWeekLabel}` }),
     ).toBeInTheDocument();
   });
 
-  it('stores and restores the selected month in session storage', async () => {
+  it('stores the selected month in session storage', async () => {
     const user = userEvent.setup();
-    const { unmount } = render(<UserGames />);
+    render(<UserGames />);
 
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
     await user.click(screen.getByRole('button', { name: 'Next month' }));
 
     const nextMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
@@ -1262,10 +1302,6 @@ describe('UserGames calendar view', () => {
     }).format(nextMonth);
 
     expect(window.sessionStorage.getItem('user-games-calendar-month')).toBe(expectedMonthValue);
-
-    unmount();
-    render(<UserGames />);
-
     expect(
       screen.getByRole('button', { name: `Select month: ${expectedMonthLabel}` }),
     ).toBeInTheDocument();
@@ -1275,7 +1311,7 @@ describe('UserGames calendar view', () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
-    await user.click(screen.getByRole('button', { name: 'Calendar view' }));
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
 
     expect(
       screen.getByRole('button', {
@@ -1322,10 +1358,10 @@ describe('UserGames calendar view', () => {
       localDateKeyForGame(timezoneSensitiveGame) ?? localDateString(1),
     );
 
-    await user.click(screen.getByRole('button', { name: 'List view' }));
+    await user.click(screen.getByRole('button', { name: 'Week view' }));
     expect(screen.getByText(localHeading)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Calendar view' }));
+    await user.click(screen.getByRole('button', { name: 'Month view' }));
     expect(screen.getByRole('button', { name: `Select month: ${monthLabel}` })).toBeInTheDocument();
   });
 });

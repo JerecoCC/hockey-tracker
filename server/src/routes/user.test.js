@@ -134,6 +134,43 @@ describe('GET /api/user/games', () => {
     expect(res.status).toBe(200);
     expect(res.body[0].id).toBe('game-1');
   });
+
+  it('filters games by week start using the effective user date', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/user/games?week=2024-10-07');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toContain('2024-10-07');
+    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain("INTERVAL '1 day'");
+    expect(queryText).toContain("INTERVAL '8 days'");
+  });
+
+  it('filters games by month using the effective user date', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/user/games?month=2024-10');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toContain('2024-10');
+    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain("INTERVAL '1 day'");
+    expect(queryText).toContain("INTERVAL '1 month'");
+  });
+
+  it('rejects invalid week and month query values', async () => {
+    const weekRes = await request(app).get('/api/user/games?week=October-7');
+    const monthRes = await request(app).get('/api/user/games?month=2024-October');
+
+    expect(weekRes.status).toBe(400);
+    expect(weekRes.body.error).toMatch(/week must be/i);
+    expect(monthRes.status).toBe(400);
+    expect(monthRes.body.error).toMatch(/month must be/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
 });
 
 describe('GET /api/user/games/:id', () => {

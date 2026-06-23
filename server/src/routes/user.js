@@ -227,7 +227,8 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games  – read-only game list for authenticated users
-// Query params: season_id, league_id, team_id, game_type, status, include_skipped, date
+// Query params: season_id, league_id, team_id, game_type, status, include_skipped,
+// date, week (YYYY-MM-DD week start), month (YYYY-MM)
 // `date` (YYYY-MM-DD) filters to games whose effective user date matches — the
 // user's personal scheduled_for if set, otherwise the game's Eastern-time date.
 // Results are scoped to games involving the user's favourite teams.
@@ -236,6 +237,16 @@ router.get('/games', async (req, res) => {
   const userId = req.user.id;
   const { season_id, league_id, team_id, game_type, status } = req.query;
   const includeSkipped = req.query.include_skipped === 'true' || req.query.include_skipped === '1';
+  const week = req.query.week ?? req.query.week_start ?? null;
+  const month = req.query.month ?? null;
+  if (week && !/^\d{4}-\d{2}-\d{2}$/.test(String(week))) {
+    return res.status(400).json({ error: 'week must be a YYYY-MM-DD date' });
+  }
+  if (month && !/^\d{4}-\d{2}$/.test(String(month))) {
+    return res.status(400).json({ error: 'month must be a YYYY-MM value' });
+  }
+  const weekFilter = week ? String(week) : null;
+  const monthFilter = month ? String(month) : null;
   const dateFilter =
     typeof req.query.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(req.query.date)
       ? req.query.date
@@ -482,6 +493,34 @@ router.get('/games', async (req, res) => {
                uwg.scheduled_for,
                (g.scheduled_at AT TIME ZONE 'America/New_York')::date
              ) = ${dateFilter}::date
+        )
+        AND (
+          ${weekFilter}::date IS NULL
+          OR COALESCE(
+               uwg.scheduled_for,
+               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+             ) >= (${weekFilter}::date - INTERVAL '1 day')
+        )
+        AND (
+          ${weekFilter}::date IS NULL
+          OR COALESCE(
+               uwg.scheduled_for,
+               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+             ) < (${weekFilter}::date + INTERVAL '8 days')
+        )
+        AND (
+          ${monthFilter}::text IS NULL
+          OR COALESCE(
+               uwg.scheduled_for,
+               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+             ) >= ((${monthFilter} || '-01')::date - INTERVAL '1 day')
+        )
+        AND (
+          ${monthFilter}::text IS NULL
+          OR COALESCE(
+               uwg.scheduled_for,
+               (g.scheduled_at AT TIME ZONE 'America/New_York')::date
+             ) < ((${monthFilter} || '-01')::date + INTERVAL '1 month' + INTERVAL '1 day')
         )
       ORDER BY
         CASE g.status WHEN 'in_progress' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END,

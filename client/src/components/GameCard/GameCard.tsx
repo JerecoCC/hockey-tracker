@@ -179,6 +179,37 @@ const getStatusLabel = (game: GameRecord) => {
   return game.status.replace(/_/g, ' ').toUpperCase();
 };
 
+const getPlayoffRoundShortLabel = (game: GameRecord) => {
+  if (game.game_type !== 'playoff' || game.playoff_round == null) return null;
+  const customLabel = game.playoff_round_names?.[game.playoff_round] ?? null;
+  if (!customLabel) return `R${game.playoff_round}`;
+
+  const trimmed = customLabel.trim();
+  if (!trimmed) return `R${game.playoff_round}`;
+
+  const roundNumber = trimmed.match(/^round\s+([0-9]+)$/i);
+  if (roundNumber) return `R${roundNumber[1]}`;
+
+  const shortRound = trimmed.match(/^r([0-9]+)$/i);
+  if (shortRound) return `R${shortRound[1]}`;
+
+  const initials = trimmed
+    .split(/\s+/)
+    .map((word) => word[0]?.toUpperCase())
+    .join('');
+  return initials || `R${game.playoff_round}`;
+};
+
+const getPlayoffGameMetaLabel = (game: GameRecord) => {
+  if (game.game_type !== 'playoff') return null;
+  const round = getPlayoffRoundShortLabel(game);
+  const gameNumber = game.game_number_in_series ?? game.game_number;
+  if (!round && gameNumber == null) return null;
+  if (!round) return `G${gameNumber}`;
+  if (gameNumber == null) return round;
+  return `${round} - G${gameNumber}`;
+};
+
 const shouldShowWatchedScore = (game: GameRecord) =>
   !!game.watched_by_user && (game.status === 'final' || game.status === 'in_progress');
 
@@ -363,6 +394,7 @@ const GameCard = ({
   const primaryMetaLabel = [originalDateLabel, timeLabel || getStatusLabel(game)]
     .filter(Boolean)
     .join(' \u00b7 ');
+  const playoffMetaLabel = getPlayoffGameMetaLabel(game);
 
   return (
     <div
@@ -432,7 +464,7 @@ const GameCard = ({
       {bottomLabel && <div className={styles.bottomLabel}>{bottomLabel}</div>}
       <div className={styles.gameFooter}>
         <span>{getStatusLabel(game)}</span>
-        {game.season_name && <span>{game.season_name}</span>}
+        {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
       </div>
     </div>
   );
