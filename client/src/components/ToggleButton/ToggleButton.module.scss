@@ -19,15 +19,24 @@
 }
 
 .switchToggle {
+  --switch-track-width: 78px;
+  --switch-track-height: 40px;
+  --switch-thumb-size: 30px;
+  --switch-inset: 4px;
+  --switch-thumb-travel: calc(
+    var(--switch-track-width) - var(--switch-thumb-size) - (var(--switch-inset) * 2) - 2px
+  );
+
   position: relative;
   display: inline-flex;
   align-items: center;
-  width: 78px;
-  height: 42px;
+  width: var(--switch-track-width);
+  height: var(--switch-track-height);
   flex: 0 0 auto;
   padding: 0;
   border: 1px solid color-mix(in srgb, #{$text-dim} 42%, transparent);
-  border-radius: $radius-sm;
+  border-radius: $radius-md;
+  box-sizing: border-box;
   background: color-mix(in srgb, #{$border} 76%, #{$bg-input});
   color: $text-body;
   font: inherit;
@@ -58,14 +67,14 @@
 
 .switchThumb {
   position: absolute;
-  top: 4px;
-  left: 4px;
+  top: var(--switch-inset);
+  left: var(--switch-inset);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: $radius-sm;
+  width: var(--switch-thumb-size);
+  height: var(--switch-thumb-size);
+  border-radius: $radius-md;
   background: color-mix(in srgb, #{$text-bright} 80%, #{$bg-input});
   color: color-mix(in srgb, #{$text-dim} 86%, #{$bg-input});
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
@@ -78,5 +87,5 @@
 .switchToggleActive .switchThumb {
   background: #fff;
   color: $accent;
-  transform: translateX(38px);
+  transform: translateX(var(--switch-thumb-travel));
 }
