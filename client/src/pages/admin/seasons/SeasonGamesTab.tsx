@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
+import { toast, type Id, type TypeOptions } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
@@ -610,6 +610,49 @@ const SeasonGamesTab = ({
     setAutofillDay(dateKey);
     const failures: string[] = [];
     let filled = 0;
+    const dayLabel = fmtDayHeading(dateKey);
+    const totalProgressSteps = candidates.length + 1;
+    const progressToastId = toast.loading(`Auto-filling NHL games for ${dayLabel}: loading schedule...`, {
+      autoClose: false,
+      closeButton: false,
+      closeOnClick: false,
+      draggable: false,
+      hideProgressBar: false,
+      pauseOnHover: false,
+      progress: 0,
+      progressClassName: styles.dayAutofillProgressBar,
+    });
+
+    const updateProgressToast = (completedSteps: number, message: string) => {
+      toast.update(progressToastId, {
+        render: message,
+        isLoading: true,
+        autoClose: false,
+        closeButton: false,
+        closeOnClick: false,
+        draggable: false,
+        hideProgressBar: false,
+        pauseOnHover: false,
+        progress: Math.min(completedSteps / totalProgressSteps, 0.98),
+        progressClassName: styles.dayAutofillProgressBar,
+      });
+    };
+
+    const finishProgressToast = (type: TypeOptions, message: string) => {
+      toast.update(progressToastId, {
+        render: message,
+        type,
+        isLoading: false,
+        autoClose: 4000,
+        closeButton: true,
+        closeOnClick: true,
+        draggable: true,
+        hideProgressBar: true,
+        pauseOnHover: true,
+        progress: 1,
+        progressClassName: styles.dayAutofillProgressBar,
+      });
+    };
 
     try {
       const scheduleDates = Array.from(
@@ -620,8 +663,16 @@ const SeasonGamesTab = ({
       for (const index of scheduleIndexes) {
         for (const entry of index) scheduleIndex.set(entry[0], entry[1]);
       }
+      updateProgressToast(
+        1,
+        `Auto-filling NHL games for ${dayLabel}: schedule loaded. 0/${candidates.length} games processed.`,
+      );
 
-      for (const game of candidates) {
+      for (const [index, game] of candidates.entries()) {
+        updateProgressToast(
+          index + 1,
+          `Auto-filling ${describeGame(game)} (${index + 1}/${candidates.length})...`,
+        );
         const scheduleKeys = nhlScheduleDateKeys(game).map((candidateDateKey) =>
           nhlScheduleKey(candidateDateKey, game.away_team.code, game.home_team.code),
         );
@@ -636,6 +687,10 @@ const SeasonGamesTab = ({
               dateKeys.length > 0 ? ` for ${dateKeys.join(' or ')}` : ''
             }`,
           );
+          updateProgressToast(
+            index + 2,
+            `Skipped ${describeGame(game)} (${index + 1}/${candidates.length}).`,
+          );
           continue;
         }
 
@@ -643,10 +698,18 @@ const SeasonGamesTab = ({
           await autofillGameFromNhlGamecenter(game, nhlGameId);
           filled += 1;
           await queryClient.invalidateQueries({ queryKey: ['games', game.id] });
+          updateProgressToast(
+            index + 2,
+            `Auto-filled ${describeGame(game)} (${index + 1}/${candidates.length}).`,
+          );
         } catch (err) {
           const message = getErrorMessage(err, 'Auto-fill failed');
           failures.push(`${describeGame(game)}: ${message}`);
           console.warn(`NHL day auto-fill skipped ${describeGame(game)}`, err);
+          updateProgressToast(
+            index + 2,
+            `Skipped ${describeGame(game)} (${index + 1}/${candidates.length}).`,
+          );
         }
       }
 
@@ -657,20 +720,23 @@ const SeasonGamesTab = ({
       }
 
       if (failures.length === 0) {
-        toast.success(
-          `Auto-filled ${filled} NHL game${filled === 1 ? '' : 's'} for ${fmtDayHeading(dateKey)}.`,
+        finishProgressToast(
+          'success',
+          `Auto-filled ${filled} NHL game${filled === 1 ? '' : 's'} for ${dayLabel}.`,
         );
       } else if (filled > 0) {
-        toast.info(
+        finishProgressToast(
+          'info',
           `Auto-filled ${filled} NHL game${filled === 1 ? '' : 's'}; skipped ${failures.length}. First skipped: ${failures[0]}`,
         );
       } else {
-        toast.error(
+        finishProgressToast(
+          'error',
           `No NHL games were auto-filled. First skipped: ${failures[0] ?? 'check the console for details.'}`,
         );
       }
     } catch (err) {
-      toast.error(getErrorMessage(err, 'Failed to load the NHL schedule for this day.'));
+      finishProgressToast('error', getErrorMessage(err, 'Failed to load the NHL schedule for this day.'));
     } finally {
       setAutofillDay(null);
     }

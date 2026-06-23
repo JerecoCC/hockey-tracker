@@ -183,6 +183,10 @@
   border-radius: $radius-md;
 }
 
+.dayAutofillProgressBar.dayAutofillProgressBar {
+  background: $accent;
+}
+
 .weekSummaryIcon {
   align-self: end;
   justify-self: end;
