@@ -20,6 +20,7 @@ export interface LeagueAwardRecord {
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
+  uses_team_selection: boolean;
   sort_order: number;
   active: boolean;
   created_at: string;
@@ -34,6 +35,7 @@ export interface LeagueAwardPayload {
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
+  uses_team_selection: boolean;
   sort_order?: number | null;
 }
 

@@ -44,6 +44,7 @@ export interface SeasonAwardRecord {
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
+  uses_team_selection: boolean;
   sort_order: number;
   season_award_id: string | null;
   awarded_at: string | null;
@@ -61,6 +62,7 @@ export interface CreateSeasonAwardPayload {
   awarded_after_playoffs?: boolean;
   uses_nominees?: boolean;
   allow_multiple_winners?: boolean;
+  uses_team_selection?: boolean;
   awarded_at?: string | null;
   notes?: string | null;
 }

@@ -350,6 +350,7 @@ describe('LeagueDetailsPage – loading', () => {
       awarded_after_playoffs: true,
       uses_nominees: false,
       allow_multiple_winners: false,
+      uses_team_selection: false,
       sort_order: 0,
       active: true,
       created_at: '2024-01-01T00:00:00Z',
@@ -373,6 +374,50 @@ describe('LeagueDetailsPage – loading', () => {
 
     expect(screen.queryByRole('heading', { name: 'Remove Award Definition' })).not.toBeInTheDocument();
     expect(deleteAward).not.toHaveBeenCalled();
+  });
+
+  it('does not label award definitions as regular season just because they are not playoff-gated', () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const awards = [
+      {
+        id: 'award-1',
+        league_id: 'lg1',
+        name: 'Art Ross Trophy',
+        description: null,
+        recipient_type: 'player',
+        selection_method: 'automatic',
+        stat_key: 'points',
+        awarded_after_playoffs: false,
+        uses_nominees: false,
+        allow_multiple_winners: false,
+        uses_team_selection: false,
+        sort_order: 0,
+        active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      {
+        id: 'award-2',
+        league_id: 'lg1',
+        name: 'Conn Smythe Trophy',
+        description: null,
+        recipient_type: 'player',
+        selection_method: 'playoff',
+        stat_key: null,
+        awarded_after_playoffs: true,
+        uses_nominees: false,
+        allow_multiple_winners: false,
+        uses_team_selection: false,
+        sort_order: 1,
+        active: true,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+    ];
+    setup({ league: mockLeague }, {}, null, {}, {}, { awards });
+
+    expect(screen.getByText('Automatic')).toBeInTheDocument();
+    expect(screen.getByText('Player Points')).toBeInTheDocument();
+    expect(screen.getByText('Playoff award')).toBeInTheDocument();
+    expect(screen.queryByText('Regular season')).not.toBeInTheDocument();
   });
 
   it('does not show the league name while loading', () => {

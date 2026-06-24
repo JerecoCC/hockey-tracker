@@ -584,7 +584,6 @@
   &Header {
     box-sizing: border-box;
     gap: $space-md;
-    height: var(--award-header-height);
     min-height: var(--award-header-height);
     align-items: center;
     padding-top: 0;
@@ -599,23 +598,13 @@
     width: 100%;
 
     h4 {
-      display: flex;
-      align-items: center;
-      gap: $space-xs;
-      flex-wrap: wrap;
+      display: block;
       margin: 0;
       color: $text-bright;
       font-size: $font-lg;
       line-height: 1.2;
       overflow-wrap: anywhere;
       white-space: normal;
-
-      > span:first-child {
-        min-width: 0;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-      }
     }
 
     p {
@@ -624,6 +613,19 @@
       font-size: $font-sm;
       line-height: 1.45;
     }
+  }
+
+  &TitleText {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+
+  &TitleInfo {
+    display: inline-flex;
+    align-items: center;
+    margin-left: $space-xs;
+    vertical-align: -0.1em;
+    white-space: nowrap;
   }
 
   &Actions {

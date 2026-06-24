@@ -63,6 +63,7 @@ const makeAward = (overrides: Partial<SeasonAwardRecord> = {}): SeasonAwardRecor
   awarded_after_playoffs: true,
   uses_nominees: false,
   allow_multiple_winners: false,
+  uses_team_selection: false,
   sort_order: 0,
   season_award_id: 'season-award-1',
   awarded_at: null,
@@ -183,6 +184,30 @@ describe('SeasonAwardsTab', () => {
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
   });
 
+  it('uses the grouped team selection flow only when the award definition is flagged', () => {
+    renderTab(
+      makeAward({
+        name: 'First All-Star Team',
+        uses_team_selection: true,
+      }),
+    );
+
+    expect(screen.getByRole('button', { name: 'Set team' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
+  });
+
+  it('does not use grouped team selection based on award name alone', () => {
+    renderTab(
+      makeAward({
+        name: 'First All-Star Team',
+        allow_multiple_winners: true,
+      }),
+    );
+
+    expect(screen.getByRole('button', { name: 'Award Player' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Set team' })).not.toBeInTheDocument();
+  });
+
   it('uses readable award selection subtitles without recorded status', async () => {
     const user = userEvent.setup();
     renderTab(
@@ -205,9 +230,11 @@ describe('SeasonAwardsTab', () => {
 
     await user.click(screen.getByRole('button', { name: 'Update Awards' }));
 
-    expect(screen.getByText('Team | Playoff | Playoff Champion')).toBeInTheDocument();
+    expect(screen.getByText('Team | Automatic | Playoff Champion | Playoff award')).toBeInTheDocument();
     expect(screen.queryByText(/playoff_champion/i)).not.toBeInTheDocument();
-    expect(screen.queryByText('Team | Playoff | Playoff Champion | Recorded')).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('Team | Automatic | Playoff Champion | Playoff award | Recorded'),
+    ).not.toBeInTheDocument();
   });
 
   it('hides the set winner action for automatic awards after a winner is recorded', () => {

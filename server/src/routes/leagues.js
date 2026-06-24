@@ -245,7 +245,7 @@ router.get('/:id/awards', async (req, res) => {
     const awards = await sql`
       SELECT id, league_id, name, description, recipient_type, selection_method,
              stat_key, awarded_after_playoffs, uses_nominees, allow_multiple_winners,
-             active, sort_order, created_at
+             uses_team_selection, active, sort_order, created_at
       FROM league_awards
       WHERE league_id = ${id} AND active = true
       ORDER BY sort_order ASC, name ASC
@@ -271,6 +271,7 @@ router.post('/:id/awards', async (req, res) => {
     awarded_after_playoffs = true,
     uses_nominees = selection_method === 'voted',
     allow_multiple_winners = false,
+    uses_team_selection = false,
     sort_order = 0,
   } = req.body;
 
@@ -288,7 +289,8 @@ router.post('/:id/awards', async (req, res) => {
     const rows = await sql`
       INSERT INTO league_awards (
         league_id, name, description, recipient_type, selection_method, stat_key,
-        awarded_after_playoffs, uses_nominees, allow_multiple_winners, sort_order, active
+        awarded_after_playoffs, uses_nominees, allow_multiple_winners, uses_team_selection,
+        sort_order, active
       )
       VALUES (
         ${id},
@@ -300,6 +302,7 @@ router.post('/:id/awards', async (req, res) => {
         ${!!awarded_after_playoffs},
         ${!!uses_nominees},
         ${!!allow_multiple_winners},
+        ${!!uses_team_selection},
         ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0},
         true
       )
@@ -311,6 +314,7 @@ router.post('/:id/awards', async (req, res) => {
         awarded_after_playoffs = EXCLUDED.awarded_after_playoffs,
         uses_nominees = EXCLUDED.uses_nominees,
         allow_multiple_winners = EXCLUDED.allow_multiple_winners,
+        uses_team_selection = EXCLUDED.uses_team_selection,
         sort_order = EXCLUDED.sort_order,
         active = true
       RETURNING *
@@ -337,6 +341,7 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
     awarded_after_playoffs,
     uses_nominees,
     allow_multiple_winners,
+    uses_team_selection,
     sort_order,
   } = req.body;
 
@@ -358,6 +363,7 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
   const awardedAfterInBody = 'awarded_after_playoffs' in req.body;
   const usesNomineesInBody = 'uses_nominees' in req.body;
   const allowMultipleWinnersInBody = 'allow_multiple_winners' in req.body;
+  const usesTeamSelectionInBody = 'uses_team_selection' in req.body;
   const sortOrderInBody = 'sort_order' in req.body;
 
   try {
@@ -372,6 +378,7 @@ router.patch('/:id/awards/:awardId', async (req, res) => {
         awarded_after_playoffs = CASE WHEN ${awardedAfterInBody} THEN ${!!awarded_after_playoffs} ELSE awarded_after_playoffs END,
         uses_nominees = CASE WHEN ${usesNomineesInBody} THEN ${!!uses_nominees} ELSE uses_nominees END,
         allow_multiple_winners = CASE WHEN ${allowMultipleWinnersInBody} THEN ${!!allow_multiple_winners} ELSE allow_multiple_winners END,
+        uses_team_selection = CASE WHEN ${usesTeamSelectionInBody} THEN ${!!uses_team_selection} ELSE uses_team_selection END,
         sort_order = CASE WHEN ${sortOrderInBody} THEN ${Number.isFinite(Number(sort_order)) ? Number(sort_order) : 0} ELSE sort_order END,
         active = true
       WHERE id = ${awardId} AND league_id = ${id}

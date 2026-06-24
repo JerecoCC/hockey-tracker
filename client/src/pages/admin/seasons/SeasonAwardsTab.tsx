@@ -29,13 +29,14 @@ import {
   buildPlayerDetailsPath,
   buildTeamDetailsPath,
 } from '@/lib/routeSlugs';
+import {
+  awardSelectionSourceLabel,
+  getAwardCompetitionScope,
+  getAwardRecordingGate,
+  getAwardSelectionSource,
+  getAwardWinnerMode,
+} from '@/lib/awardDefinitions';
 import styles from './SeasonDetails.module.scss';
-
-const TEAM_SELECTION_AWARD_NAMES = new Set([
-  'First All-Star Team',
-  'Second All-Star Team',
-  'All-Rookie Team',
-]);
 
 const POSITION_LABELS: Record<string, string> = {
   F: 'Forward',
@@ -157,22 +158,28 @@ interface Props {
 const playerName = (player: Pick<SkaterStatRecord, 'first_name' | 'last_name'>) =>
   [player.first_name, player.last_name].filter(Boolean).join(' ');
 
-const titleCase = (value: string) =>
-  value ? `${value.slice(0, 1).toUpperCase()}${value.slice(1)}` : value;
-
 const statLabel = (statKey: string | null | undefined) =>
   statKey ? (STAT_LABELS[statKey] ?? statKey) : null;
 
-const awardSelectionSubtitle = (award: SeasonAwardRecord) =>
-  [
+const awardSelectionSubtitle = (award: SeasonAwardRecord) => {
+  const competitionScope = getAwardCompetitionScope(award);
+  const winnerMode = getAwardWinnerMode(award);
+
+  return [
     award.recipient_type === 'player' ? 'Player' : 'Team',
-    titleCase(award.selection_method),
+    awardSelectionSourceLabel(getAwardSelectionSource(award)),
     statLabel(award.stat_key),
-    award.uses_nominees ? 'Nominees' : null,
-    award.allow_multiple_winners ? 'Multiple winners' : null,
+    competitionScope === 'playoffs' ? 'Playoff award' : null,
+    award.uses_nominees && winnerMode !== 'team_selection' ? 'Nominees' : null,
+    winnerMode === 'team_selection'
+      ? 'Team selection'
+      : winnerMode === 'multiple'
+        ? 'Multiple winners'
+        : null,
   ]
     .filter(Boolean)
     .join(' | ');
+};
 
 const numericFieldValue = (record: object, field: string | null | undefined) => {
   if (!field) return null;
@@ -181,16 +188,17 @@ const numericFieldValue = (record: object, field: string | null | undefined) => 
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const isTeamSelectionAward = (awardName: string) => TEAM_SELECTION_AWARD_NAMES.has(awardName);
+const isTeamSelectionAward = (award: SeasonAwardRecord) =>
+  getAwardWinnerMode(award) === 'team_selection';
 
 const supportsNominees = (award: SeasonAwardRecord) =>
-  award.uses_nominees && !isTeamSelectionAward(award.name);
+  award.uses_nominees && !isTeamSelectionAward(award);
 
 const usesWinnerChecklist = (award: SeasonAwardRecord) =>
-  !isTeamSelectionAward(award.name) && award.allow_multiple_winners;
+  getAwardWinnerMode(award) === 'multiple';
 
 const canAwardWinners = (award: SeasonAwardRecord, playoffsStarted: boolean) =>
-  !award.awarded_after_playoffs || playoffsStarted;
+  getAwardRecordingGate(award) === 'anytime' || playoffsStarted;
 
 const playoffChampionSuggestion = (
   series: PlayoffSeriesRecord[],
@@ -1027,7 +1035,7 @@ const SeasonAwardsTab = ({
                 return !recipientId || !winnerRecipientIds.has(recipientId);
               });
               const suggestion = suggestions.get(award.award_id);
-              const isGroupedAward = isTeamSelectionAward(award.name);
+              const isGroupedAward = isTeamSelectionAward(award);
               const canManageNominees = supportsNominees(award);
               const awardRequiresNominees = canManageNominees && nominees.length === 0;
               const awardRecipientLabel =
@@ -1052,12 +1060,14 @@ const SeasonAwardsTab = ({
               const awardLabel = (
                 <div className={styles.awardTitleBlock}>
                   <h4>
-                    <span>{award.name}</span>
+                    <span className={styles.awardTitleText}>{award.name}</span>
                     {award.description && (
-                      <InfoTooltip
-                        text={award.description}
-                        size="0.9rem"
-                      />
+                      <span className={styles.awardTitleInfo}>
+                        <InfoTooltip
+                          text={award.description}
+                          size="0.9rem"
+                        />
+                      </span>
                     )}
                   </h4>
                 </div>

@@ -2115,6 +2115,7 @@ router.get('/:id/awards', async (req, res) => {
         la.awarded_after_playoffs,
         la.uses_nominees,
         la.allow_multiple_winners,
+        la.uses_team_selection,
         la.sort_order,
         sa.id AS season_award_id,
         sa.awarded_at::text AS awarded_at,

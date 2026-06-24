@@ -585,6 +585,7 @@ async function initSchema() {
       awarded_after_playoffs  BOOLEAN NOT NULL DEFAULT true,
       uses_nominees           BOOLEAN NOT NULL DEFAULT false,
       allow_multiple_winners  BOOLEAN NOT NULL DEFAULT false,
+      uses_team_selection     BOOLEAN NOT NULL DEFAULT false,
       active                  BOOLEAN NOT NULL DEFAULT true,
       sort_order              INT NOT NULL DEFAULT 0,
       created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -598,6 +599,7 @@ async function initSchema() {
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS awarded_after_playoffs BOOLEAN NOT NULL DEFAULT true`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_nominees BOOLEAN NOT NULL DEFAULT false`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS allow_multiple_winners BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_team_selection BOOLEAN NOT NULL DEFAULT false`;
   await sql`
     CREATE TABLE IF NOT EXISTS _migrations (
       name       TEXT PRIMARY KEY,
@@ -616,6 +618,21 @@ async function initSchema() {
           AND uses_nominees = false;
 
         INSERT INTO _migrations (name) VALUES ('backfill_league_award_uses_nominees_v1');
+      END IF;
+    END $$
+  `;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_league_award_uses_team_selection_v1'
+      ) THEN
+        UPDATE league_awards
+        SET uses_team_selection = true,
+            allow_multiple_winners = false
+        WHERE name IN ('First All-Star Team', 'Second All-Star Team', 'All-Rookie Team');
+
+        INSERT INTO _migrations (name) VALUES ('backfill_league_award_uses_team_selection_v1');
       END IF;
     END $$
   `;

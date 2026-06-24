@@ -14,6 +14,13 @@ import useLeagueAwards, {
   type LeagueAwardRecord,
 } from '@/hooks/useLeagueAwards';
 import type { AwardRecipientType, AwardSelectionMethod } from '@/hooks/useSeasonAwards';
+import {
+  awardSelectionSourceLabel,
+  getAwardCompetitionScope,
+  getAwardRecordingGate,
+  getAwardSelectionSource,
+  getAwardWinnerMode,
+} from '@/lib/awardDefinitions';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
@@ -51,6 +58,7 @@ interface FormValues {
   awarded_after_playoffs: boolean;
   uses_nominees: boolean;
   allow_multiple_winners: boolean;
+  uses_team_selection: boolean;
   sort_order: string;
 }
 
@@ -68,11 +76,9 @@ const emptyValues: FormValues = {
   awarded_after_playoffs: true,
   uses_nominees: false,
   allow_multiple_winners: false,
+  uses_team_selection: false,
   sort_order: '',
 };
-
-const methodLabel = (method: string) =>
-  METHOD_OPTIONS.find((option) => option.value === method)?.label ?? method;
 
 const statLabel = (statKey: string | null) =>
   statKey ? (STAT_OPTIONS.find((option) => option.value === statKey)?.label ?? statKey) : null;
@@ -89,6 +95,7 @@ const toPayload = (values: FormValues): LeagueAwardPayload => ({
   awarded_after_playoffs: values.awarded_after_playoffs,
   uses_nominees: values.uses_nominees,
   allow_multiple_winners: values.allow_multiple_winners,
+  uses_team_selection: values.uses_team_selection,
   sort_order: values.sort_order.trim() === '' ? null : Number(values.sort_order),
 });
 
@@ -101,6 +108,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const awardedAfterPlayoffsLabelId = useId();
   const usesNomineesLabelId = useId();
   const allowMultipleWinnersLabelId = useId();
+  const usesTeamSelectionLabelId = useId();
 
   const openCreate = () => {
     setEditTarget(null);
@@ -119,6 +127,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
       awarded_after_playoffs: award.awarded_after_playoffs,
       uses_nominees: award.uses_nominees,
       allow_multiple_winners: award.allow_multiple_winners,
+      uses_team_selection: award.uses_team_selection,
       sort_order: award.sort_order ? String(award.sort_order) : '',
     });
     setModalOpen(true);
@@ -137,7 +146,11 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   });
 
   const toggleBooleanField = (
-    field: 'awarded_after_playoffs' | 'uses_nominees' | 'allow_multiple_winners',
+    field:
+      | 'awarded_after_playoffs'
+      | 'uses_nominees'
+      | 'allow_multiple_winners'
+      | 'uses_team_selection',
   ) => {
     form.setValue(field, !form.getValues(field), {
       shouldDirty: true,
@@ -147,6 +160,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const awardedAfterPlayoffs = form.watch('awarded_after_playoffs');
   const usesNominees = form.watch('uses_nominees');
   const allowMultipleWinners = form.watch('allow_multiple_winners');
+  const usesTeamSelection = form.watch('uses_team_selection');
 
   if (loading) return <LeagueAwardsTabSkeleton className={className} />;
 
@@ -174,6 +188,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             <ul className={styles.awardDefinitionList}>
               {awards.map((award) => {
                 const stat = statLabel(award.stat_key);
+                const competitionScope = getAwardCompetitionScope(award);
+                const recordingGate = getAwardRecordingGate(award);
+                const selectionSource = getAwardSelectionSource(award);
+                const winnerMode = getAwardWinnerMode(award);
 
                 return (
                   <ListItem
@@ -206,7 +224,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                       >
                         <Tag label={recipientTypeLabel(award.recipient_type)} />
                         <Tag
-                          label={methodLabel(award.selection_method)}
+                          label={awardSelectionSourceLabel(selectionSource)}
                           intent="info"
                         />
                         {stat && (
@@ -215,19 +233,34 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                             intent="accent"
                           />
                         )}
-                        <Tag
-                          label={award.awarded_after_playoffs ? 'After playoffs' : 'Regular season'}
-                          intent={award.awarded_after_playoffs ? 'success' : 'neutral'}
-                        />
-                        {award.uses_nominees && (
+                        {competitionScope === 'playoffs' && (
                           <Tag
-                            label="Uses nominees"
+                            label="Playoff award"
+                            intent="success"
+                          />
+                        )}
+                        {recordingGate === 'after_playoffs_start' &&
+                          competitionScope !== 'playoffs' && (
+                            <Tag
+                              label="After playoffs start"
+                              intent="success"
+                            />
+                          )}
+                        {award.uses_nominees && winnerMode !== 'team_selection' && (
+                          <Tag
+                            label="Nominees"
                             intent="info"
                           />
                         )}
-                        {award.allow_multiple_winners && (
+                        {winnerMode === 'multiple' && (
                           <Tag
                             label="Multiple winners"
+                            intent="accent"
+                          />
+                        )}
+                        {winnerMode === 'team_selection' && (
+                          <Tag
+                            label="Team selection"
                             intent="accent"
                           />
                         )}
@@ -315,7 +348,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
               onChange={() => toggleBooleanField('awarded_after_playoffs')}
               ariaLabelledBy={awardedAfterPlayoffsLabelId}
             />
-            <span id={awardedAfterPlayoffsLabelId}>Awarded after playoffs</span>
+            <span id={awardedAfterPlayoffsLabelId}>Lock until playoffs start</span>
           </div>
           <div className={styles.awardDefinitionCheckboxGrid}>
             <div
@@ -339,6 +372,17 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                 ariaLabelledBy={allowMultipleWinnersLabelId}
               />
               <span id={allowMultipleWinnersLabelId}>Multiple winners</span>
+            </div>
+            <div
+              className={styles.awardDefinitionCheckbox}
+              onClick={() => toggleBooleanField('uses_team_selection')}
+            >
+              <Checkbox
+                checked={usesTeamSelection}
+                onChange={() => toggleBooleanField('uses_team_selection')}
+                ariaLabelledBy={usesTeamSelectionLabelId}
+              />
+              <span id={usesTeamSelectionLabelId}>Team selection</span>
             </div>
           </div>
         </form>
