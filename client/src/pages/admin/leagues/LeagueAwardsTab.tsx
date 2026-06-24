@@ -304,12 +304,12 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
           </>
         }
         confirmLabel="Remove"
-        confirmIntent="danger"
+        variant="danger"
         onConfirm={async () => {
           if (confirmDelete) await deleteAward(confirmDelete.id);
           setConfirmDelete(null);
         }}
-        onClose={() => setConfirmDelete(null)}
+        onCancel={() => setConfirmDelete(null)}
       />
     </>
   );

@@ -336,6 +336,43 @@ describe('LeagueDetailsPage – loading', () => {
     expect(screen.queryByText(/No award definitions yet/i)).not.toBeInTheDocument();
   });
 
+  it('closes the remove award confirmation from cancel and close controls', () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    const deleteAward = jest.fn(async () => true);
+    const award = {
+      id: 'award-1',
+      league_id: 'lg1',
+      name: 'Most Valuable Player',
+      description: 'Top player',
+      recipient_type: 'player',
+      selection_method: 'manual',
+      stat_key: null,
+      awarded_after_playoffs: true,
+      sort_order: 0,
+      active: true,
+      created_at: '2024-01-01T00:00:00Z',
+    };
+    setup({ league: mockLeague }, {}, null, {}, {}, { awards: [award], deleteAward });
+
+    const clickRemoveAward = () => {
+      fireEvent.click(
+        screen.getByRole('tooltip', { name: /remove award/i }).previousElementSibling as Element,
+      );
+    };
+
+    clickRemoveAward();
+    expect(screen.getByRole('heading', { name: 'Remove Award Definition' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('heading', { name: 'Remove Award Definition' })).not.toBeInTheDocument();
+
+    clickRemoveAward();
+    const dialog = screen.getByRole('heading', { name: 'Remove Award Definition' }).closest('.modal');
+    fireEvent.click(dialog?.querySelector('.closeBtn') as Element);
+
+    expect(screen.queryByRole('heading', { name: 'Remove Award Definition' })).not.toBeInTheDocument();
+    expect(deleteAward).not.toHaveBeenCalled();
+  });
+
   it('does not show the league name while loading', () => {
     setup({ loading: true });
     expect(screen.queryByRole('heading', { name: 'Test League' })).not.toBeInTheDocument();
