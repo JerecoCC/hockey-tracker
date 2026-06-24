@@ -1353,12 +1353,8 @@ $league-tab-list-gap: $space-md;
     gap: $space-sm;
     min-height: 42px;
     color: $text-body;
+    cursor: pointer;
     font-size: $font-sm;
-
-    input {
-      width: 16px;
-      height: 16px;
-      accent-color: $accent;
-    }
+    user-select: none;
   }
 }

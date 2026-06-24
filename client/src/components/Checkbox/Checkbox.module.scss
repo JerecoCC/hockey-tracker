@@ -2,21 +2,26 @@
 @use "styles/mixins" as *;
 
 .checkbox {
-  width: 18px;
-  height: 18px;
+  width: 22px;
+  height: 22px;
   flex-shrink: 0;
   border: 2px solid $border;
-  border-radius: 4px;
+  border-radius: $radius-sm;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: $bg-card;
+  color: #fff;
   transition:
     background $transition-fast,
     border-color $transition-fast;
 
+  &:focus-visible {
+    outline: 2px solid $accent-light;
+    outline-offset: 2px;
+  }
+
   &.checked {
-    background: $text-bright;
-    border-color: $text-bright;
+    background: $accent;
+    border-color: $accent;
   }
 }

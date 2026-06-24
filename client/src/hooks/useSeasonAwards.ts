@@ -72,6 +72,11 @@ export interface AddAwardRecipientPayload {
   notes?: string | null;
 }
 
+interface AwardMutationOptions {
+  silent?: boolean;
+  refresh?: boolean;
+}
+
 const useSeasonAwards = (seasonId: string | undefined) => {
   const queryClient = useQueryClient();
   const queryKey = ['season-awards', seasonId];
@@ -129,6 +134,7 @@ const useSeasonAwards = (seasonId: string | undefined) => {
   const addRecipient = async (
     seasonAwardId: string,
     payload: AddAwardRecipientPayload,
+    options: AwardMutationOptions = {},
   ): Promise<boolean> => {
     try {
       await axios.post(
@@ -136,8 +142,10 @@ const useSeasonAwards = (seasonId: string | undefined) => {
         payload,
         { headers: authHeaders() },
       );
-      toast.success(payload.role === 'winner' ? 'Winner recorded' : 'Nominee added');
-      refresh();
+      if (!options.silent) {
+        toast.success(payload.role === 'winner' ? 'Winner recorded' : 'Nominee added');
+      }
+      if (options.refresh !== false) refresh();
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to save award recipient'));
@@ -148,14 +156,15 @@ const useSeasonAwards = (seasonId: string | undefined) => {
   const deleteRecipient = async (
     seasonAwardId: string,
     recipientId: string,
+    options: AwardMutationOptions = {},
   ): Promise<boolean> => {
     try {
       await axios.delete(
         `${API}/admin/seasons/${seasonId}/awards/${seasonAwardId}/recipients/${recipientId}`,
         { headers: authHeaders() },
       );
-      toast.success('Recipient removed');
-      refresh();
+      if (!options.silent) toast.success('Recipient removed');
+      if (options.refresh !== false) refresh();
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to remove recipient'));
@@ -170,6 +179,7 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     updateSeasonAward,
     addRecipient,
     deleteRecipient,
+    refresh,
   };
 };
 

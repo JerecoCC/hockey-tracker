@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 // ── Page loader ────────────────────────────────────────────────────────────────
 .loaderWrapper {
@@ -257,7 +257,7 @@
     transition: background $transition-fast;
 
     &:hover,
-    &[data-selected="true"] {
+    &[data-selected='true'] {
       background: rgba(255, 255, 255, 0.05);
     }
   }
@@ -276,7 +276,7 @@
       background $transition-fast,
       border-color $transition-fast;
 
-    &[data-checked="true"] {
+    &[data-checked='true'] {
       background: $text-bright;
       border-color: $text-bright;
     }
@@ -730,6 +730,172 @@
       opacity: 1;
       pointer-events: auto;
     }
+  }
+
+  &TeamSelection {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &TeamSelectionGroup {
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: $space-md;
+    align-items: start;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+      gap: $space-xs;
+    }
+  }
+
+  &TeamSelectionGroupTitle {
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 36px;
+    text-transform: uppercase;
+  }
+
+  &TeamSelectionSlots {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    min-width: 0;
+  }
+
+  &TeamSelectionSlot,
+  &TeamSelectionSlotEmpty {
+    min-height: 38px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
+    background: rgba(0, 0, 0, 0.14);
+  }
+
+  &TeamSelectionSlot {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-xs $space-xs $space-xs $space-sm;
+  }
+
+  &TeamSelectionSlotEmpty {
+    display: flex;
+    align-items: center;
+    padding: 0 $space-sm;
+    color: $text-muted;
+    font-size: $font-sm;
+    font-style: italic;
+  }
+
+  &TeamSelectionText {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+      color: $text-body;
+      font-size: $font-sm;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      min-height: 14px;
+      color: $text-muted;
+      font-size: $font-xs;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &TeamSelectionForm {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &TeamSelectionFieldset {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    min-width: 0;
+    margin: 0;
+    padding: $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+
+    legend {
+      padding: 0 $space-xs;
+      color: $text-dim;
+      font-size: $font-xs;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+  }
+
+  &TeamSelectionFields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: $space-md;
+  }
+
+  &TeamSelectionError {
+    margin: 0;
+    color: $danger-light;
+    font-size: $font-sm;
+  }
+
+  &NomineeManager {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &NomineeDraftList {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &NomineeDraftRow {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: $space-sm;
+    align-items: center;
+  }
+
+  &NomineeDraftCount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    min-height: 42px;
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  &NomineeAddRow {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: $space-sm;
+    align-items: center;
+  }
+
+  &NomineeAddButton {
+    grid-column: 2 / -1;
+    width: 100%;
   }
 
   &RecipientList {

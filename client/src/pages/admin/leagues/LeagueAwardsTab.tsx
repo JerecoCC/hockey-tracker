@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import Checkbox from '@/components/Checkbox/Checkbox';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
@@ -91,6 +92,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const [editTarget, setEditTarget] = useState<LeagueAwardRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LeagueAwardRecord | null>(null);
   const form = useForm<FormValues>({ defaultValues: emptyValues, mode: 'onChange' });
+  const awardedAfterPlayoffsLabelId = useId();
 
   const openCreate = () => {
     setEditTarget(null);
@@ -123,6 +125,14 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     const ok = editTarget ? await updateAward(editTarget.id, payload) : await createAward(payload);
     if (ok) closeModal();
   });
+
+  const toggleAwardedAfterPlayoffs = () => {
+    form.setValue('awarded_after_playoffs', !form.getValues('awarded_after_playoffs'), {
+      shouldDirty: true,
+      shouldValidate: true,
+    });
+  };
+  const awardedAfterPlayoffs = form.watch('awarded_after_playoffs');
 
   if (loading) return <LeagueAwardsTabSkeleton className={className} />;
 
@@ -211,7 +221,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
         onClose={closeModal}
         confirmForm="league-award-form"
         confirmLabel={
-          form.formState.isSubmitting ? 'Savingâ€¦' : editTarget ? 'Save Changes' : 'Create Award'
+          form.formState.isSubmitting ? 'Saving...' : editTarget ? 'Save Changes' : 'Create Award'
         }
         confirmIcon="save"
         confirmDisabled={
@@ -270,19 +280,17 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             label="Description"
             rows={3}
           />
-          <label className={styles.awardDefinitionCheckbox}>
-            <input
-              type="checkbox"
-              checked={form.watch('awarded_after_playoffs')}
-              onChange={(e) =>
-                form.setValue('awarded_after_playoffs', e.target.checked, {
-                  shouldDirty: true,
-                  shouldValidate: true,
-                })
-              }
+          <div
+            className={styles.awardDefinitionCheckbox}
+            onClick={toggleAwardedAfterPlayoffs}
+          >
+            <Checkbox
+              checked={awardedAfterPlayoffs}
+              onChange={toggleAwardedAfterPlayoffs}
+              ariaLabelledBy={awardedAfterPlayoffsLabelId}
             />
-            <span>Awarded after playoffs</span>
-          </label>
+            <span id={awardedAfterPlayoffsLabelId}>Awarded after playoffs</span>
+          </div>
         </form>
       </Modal>
 
