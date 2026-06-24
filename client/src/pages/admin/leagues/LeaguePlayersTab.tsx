@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
@@ -28,6 +28,43 @@ interface Props {
   className?: string;
 }
 
+const PLAYER_SKELETON_ROW_COUNT = 15;
+
+const playerSkeletonRow = (key: number) => (
+  <li
+    key={key}
+    className={[styles.tabSkeletonRow, styles.tabSkeletonRowBordered].join(' ')}
+  >
+    <Skeleton className={styles.tabSkeletonLeadingLogo} />
+    <Skeleton type="avatar" />
+    <Skeleton className={styles.tabSkeletonJersey} />
+    <span className={styles.tabSkeletonTextStack}>
+      <Skeleton
+        type="text"
+        className={styles.tabSkeletonName}
+      />
+      <Skeleton
+        type="subtitle"
+        className={styles.tabSkeletonEyebrow}
+      />
+    </span>
+    <Skeleton
+      type="tag"
+      className={styles.tabSkeletonTag}
+    />
+  </li>
+);
+
+const LeaguePlayerRowsSkeleton = ({
+  rowCount = PLAYER_SKELETON_ROW_COUNT,
+}: {
+  rowCount?: number;
+}) => (
+  <ul className={styles.tabSkeletonStack}>
+    {Array.from({ length: rowCount }, (_, index) => playerSkeletonRow(index))}
+  </ul>
+);
+
 const LeaguePlayersTab = ({ className }: Props) => {
   const { league, players: playersContext } = useLeagueDetailsContext();
   const {
@@ -52,7 +89,15 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [paginationFetchPage, setPaginationFetchPage] = useState<number | null>(null);
+  const [seasonFetchId, setSeasonFetchId] = useState<string | null>(null);
+  const paginationFetchStartedRef = useRef(false);
+  const seasonFetchStartedRef = useRef(false);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const showPaginationSkeleton = fetching && paginationFetchPage === page;
+  const showSeasonSkeleton =
+    fetching && seasonFetchId !== null && seasonFetchId === selectedSeasonId;
+  const showListSkeleton = showPaginationSkeleton || showSeasonSkeleton;
   const playerDataIndicator = (player: PlayerRecord) => {
     const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;
     if (!player.has_games || !hasMissingData) return '';
@@ -62,6 +107,40 @@ const LeaguePlayersTab = ({ className }: Props) => {
   useEffect(() => {
     if (!loading && total > 0 && page > pageCount) onPageChange(pageCount);
   }, [loading, page, pageCount, total, onPageChange]);
+
+  useEffect(() => {
+    if (showPaginationSkeleton) {
+      paginationFetchStartedRef.current = true;
+      return;
+    }
+
+    if (!fetching && paginationFetchStartedRef.current) {
+      paginationFetchStartedRef.current = false;
+      setPaginationFetchPage(null);
+    }
+  }, [fetching, showPaginationSkeleton]);
+
+  useEffect(() => {
+    if (showSeasonSkeleton) {
+      seasonFetchStartedRef.current = true;
+      return;
+    }
+
+    if (!fetching && seasonFetchStartedRef.current) {
+      seasonFetchStartedRef.current = false;
+      setSeasonFetchId(null);
+    }
+  }, [fetching, showSeasonSkeleton]);
+
+  const handlePageChange = (nextPage: number) => {
+    if (nextPage !== page) setPaginationFetchPage(nextPage);
+    onPageChange(nextPage);
+  };
+
+  const handleSeasonChange = (seasonId: string) => {
+    if (seasonId !== selectedSeasonId) setSeasonFetchId(seasonId);
+    onSeasonChange(seasonId);
+  };
 
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
@@ -87,9 +166,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                   value: s.id,
                   label: s.is_current ? `${s.name} ✦` : s.name,
                 }))}
-                onChange={(value) => {
-                  onSeasonChange(value);
-                }}
+                onChange={handleSeasonChange}
               />
             ) : undefined
           }
@@ -108,6 +185,20 @@ const LeaguePlayersTab = ({ className }: Props) => {
               );
             }}
             renderItems={(filtered) => {
+              if (showListSkeleton) {
+                return (
+                  <>
+                    <LeaguePlayerRowsSkeleton />
+                    <Pagination
+                      page={page}
+                      pageSize={pageSize}
+                      total={total}
+                      onPageChange={handlePageChange}
+                    />
+                  </>
+                );
+              }
+
               return (
                 <>
                   <ul className={styles.rosterList}>
@@ -186,7 +277,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                     page={page}
                     pageSize={pageSize}
                     total={total}
-                    onPageChange={onPageChange}
+                    onPageChange={handlePageChange}
                   />
                 </>
               );
@@ -197,15 +288,9 @@ const LeaguePlayersTab = ({ className }: Props) => {
             disableClientFilter
             actions={
               <>
-                {fetching && (
-                  <span
-                    className={styles.listSpinner}
-                    aria-label="Loading players"
-                  />
-                )}
                 <Button
                   variant="outlined"
-                  intent="neutral"
+                  intent="accent"
                   icon="group_add"
                   size="sm"
                   onClick={onBulkAdd}
@@ -267,38 +352,14 @@ export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
       <div className={styles.tabSkeletonControls}>
         <Skeleton
           type="text"
-          className={styles.tabSkeletonSearch}
+          className={[styles.tabSkeletonSearch, styles.tabSkeletonSearchFull].join(' ')}
         />
         <span className={styles.tabSkeletonActions}>
           <TabActionSkeleton width="118px" />
           <TabActionSkeleton width="124px" />
         </span>
       </div>
-      <ul className={styles.tabSkeletonStack}>
-        {Array.from({ length: 5 }, (_, index) => (
-          <li
-            key={index}
-            className={styles.tabSkeletonRow}
-          >
-            <Skeleton type="picture" />
-            <Skeleton type="avatar" />
-            <span className={styles.tabSkeletonTextStack}>
-              <Skeleton
-                type="text"
-                className={styles.tabSkeletonName}
-              />
-              <Skeleton
-                type="subtitle"
-                className={styles.tabSkeletonEyebrow}
-              />
-            </span>
-            <Skeleton
-              type="text"
-              className={styles.tabSkeletonTag}
-            />
-          </li>
-        ))}
-      </ul>
+      <LeaguePlayerRowsSkeleton />
     </Card>
   </div>
 );

@@ -10,7 +10,8 @@ export type SkeletonType =
   | 'circle'
   | 'card'
   | 'block'
-  | 'code';
+  | 'code'
+  | 'tag';
 
 interface Props extends HTMLAttributes<HTMLSpanElement> {
   type?: SkeletonType;

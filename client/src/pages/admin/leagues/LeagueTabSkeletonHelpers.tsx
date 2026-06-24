@@ -42,7 +42,7 @@ export const LeagueListRowSkeleton = ({
     {code && <Skeleton type="code" />}
     {tag && (
       <Skeleton
-        type="text"
+        type="tag"
         className={styles.tabSkeletonTag}
       />
     )}

@@ -33,6 +33,8 @@ import {
 import { LeagueDetailsProvider } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 
+const PLAYERS_PAGE_SIZE = 15;
+
 const LeagueDetailsPage = () => {
   const navigate = useNavigate();
   const { leagueSlug: routeLeagueSlug, id: legacyLeagueId } = useParams<{
@@ -151,7 +153,7 @@ const LeagueDetailsPage = () => {
     deletePlayer,
   } = useLeaguePlayers(id, selectedSeasonId ?? undefined, {
     page: playersPage,
-    pageSize: 20,
+    pageSize: PLAYERS_PAGE_SIZE,
     search: playersSearch,
   });
   const leagueContextValue = useMemo(
@@ -167,7 +169,7 @@ const LeagueDetailsPage = () => {
               players,
               total: playersTotal,
               page: playersPage,
-              pageSize: 20,
+              pageSize: PLAYERS_PAGE_SIZE,
               search: playersSearch,
               seasons,
               selectedSeasonId,

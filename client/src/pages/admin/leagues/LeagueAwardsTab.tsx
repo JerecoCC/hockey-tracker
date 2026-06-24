@@ -314,7 +314,7 @@ export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
                 {Array.from({ length: 3 }, (_, chipIndex) => (
                   <Skeleton
                     key={chipIndex}
-                    type="text"
+                    type="tag"
                     className={styles.tabSkeletonChip}
                   />
                 ))}

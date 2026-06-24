@@ -234,6 +234,7 @@ const setup = (
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.HTMLElement.prototype.scrollIntoView = jest.fn();
   window.scrollTo = jest.fn();
   sessionStorage.clear();
 });
@@ -284,6 +285,16 @@ describe('LeagueDetailsPage – loading', () => {
     expect(screen.getByRole('heading', { name: 'Seasons' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading seasons/i })).toBeInTheDocument();
     expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(5);
+  });
+
+  it('renders fifteen player row skeletons while loading the Players tab', () => {
+    sessionStorage.setItem('tab:league-details', '4');
+    const { container } = setup({ loading: true });
+
+    expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Players' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading players/i })).toBeInTheDocument();
+    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(15);
   });
 
   it('keeps the static Alignments header visible while loading', () => {
@@ -903,6 +914,104 @@ describe('LeagueDetailsPage – players tab', () => {
 
     const row = screen.getByText('John Smith').closest('li');
     expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
+  });
+
+  it('shows player list skeleton rows only after pagination controls start fetching', () => {
+    const { container } = setup({ league: mockLeague }, {}, null, {
+      players: [
+        {
+          id: 'player-1',
+          first_name: 'John',
+          last_name: 'Smith',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+      ],
+      total: 21,
+      fetching: true,
+    });
+    clickPlayersTab();
+
+    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(0);
+
+    const nextTooltip = screen.getByRole('tooltip', { name: /next page/i });
+    fireEvent.click(nextTooltip.previousElementSibling as HTMLElement);
+
+    expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(15);
+    expect(screen.getByText('16-21 of 21')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
+  });
+
+  it('shows player list skeleton rows after changing the season while fetching', async () => {
+    const seasons = [
+      {
+        id: 'season-1',
+        name: 'Spring 2024',
+        league_id: 'lg1',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+        is_current: true,
+        is_ended: false,
+        created_at: '',
+      },
+      {
+        id: 'season-2',
+        name: 'Winter 2025',
+        league_id: 'lg1',
+        start_date: '2025-01-01',
+        end_date: '2025-03-31',
+        is_current: false,
+        is_ended: false,
+        created_at: '',
+      },
+    ];
+    const { container } = setup({ league: mockLeague, seasons }, {}, null, {
+      players: [
+        {
+          id: 'player-1',
+          first_name: 'John',
+          last_name: 'Smith',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+      ],
+      total: 1,
+      fetching: true,
+    });
+    clickPlayersTab();
+
+    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(0);
+
+    await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('Spring 2024'));
+    fireEvent.click(screen.getByRole('combobox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Winter 2025' }));
+
+    expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(15);
+    expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
   it('shows missing data indicators only for players with associated games', () => {

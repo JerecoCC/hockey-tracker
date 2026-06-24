@@ -352,6 +352,16 @@ $league-tab-list-gap: $space-md;
     height: 10px;
   }
 
+  &LeadingLogo {
+    width: 34px;
+    height: 34px;
+  }
+
+  &Jersey {
+    width: 32px;
+    height: 32px;
+  }
+
   &Name {
     width: min(180px, 65%);
     height: 14px;
@@ -435,16 +445,6 @@ $league-tab-list-gap: $space-md;
   display: flex;
   flex-direction: column;
   gap: $league-tab-list-gap;
-}
-
-.listSpinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid $border;
-  border-top-color: $accent;
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
-  flex-shrink: 0;
 }
 
 // ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
