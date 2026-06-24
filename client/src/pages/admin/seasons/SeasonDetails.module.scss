@@ -848,11 +848,11 @@
   &PlayerListScroller {
     display: flex;
     gap: $space-sm;
-    width: 100%;
     min-width: 0;
     box-sizing: border-box;
-    margin: 0;
-    padding: 0 0 var(--award-horizontal-scroll-padding);
+    margin: 0 calc(var(--award-content-padding) * -1);
+    padding: 0 var(--award-content-padding) var(--award-horizontal-scroll-padding);
+    width: calc(100% + (var(--award-content-padding) * 2));
     overflow-x: auto;
     overflow-y: hidden;
     list-style: none;
@@ -881,6 +881,7 @@
     flex-wrap: nowrap;
     height: 100%;
     max-height: 100%;
+    margin: 0;
     width: 100%;
     overflow-x: hidden;
     overflow-y: auto;
