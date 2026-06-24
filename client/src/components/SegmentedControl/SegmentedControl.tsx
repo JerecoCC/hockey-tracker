@@ -24,6 +24,8 @@ interface SegmentedControlProps {
   disabled?: boolean;
   /** Moves focus to the first option button on mount. */
   autoFocus?: boolean;
+  /** Field treatment for usage inside labeled form controls. */
+  variant?: 'default' | 'field';
   /** Extra CSS class applied to the root wrapper (e.g. for width overrides). */
   className?: string;
 }
@@ -39,9 +41,14 @@ const SegmentedControl = ({
   options,
   disabled = false,
   autoFocus = false,
+  variant = 'default',
   className,
 }: SegmentedControlProps) => (
-  <div className={[styles.segmentedControl, className].filter(Boolean).join(' ')}>
+  <div
+    className={[styles.segmentedControl, variant === 'field' ? styles.field : '', className]
+      .filter(Boolean)
+      .join(' ')}
+  >
     {options.map((opt, i) => {
       const btn = (
         <button
@@ -58,7 +65,6 @@ const SegmentedControl = ({
           disabled={disabled}
           onClick={() => onChange(opt.value)}
           aria-label={opt.ariaLabel}
-          // eslint-disable-next-line jsx-a11y/no-autofocus
           autoFocus={autoFocus && i === 0}
         >
           {opt.label}

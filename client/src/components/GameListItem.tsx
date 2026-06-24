@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
-import Badge from '@/components/Badge/Badge';
-import type { BadgeIntent } from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
+import type { TagIntent } from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import type { ButtonIntent } from '@/components/Button/Button';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -36,7 +36,7 @@ interface Props {
   /** When true winner/loser dimming is applied based on score comparison. */
   isFinal: boolean;
   statusLabel: string;
-  statusIntent: BadgeIntent;
+  statusIntent: TagIntent;
   /** Formatted date string e.g. "Oct 5, 2024" */
   date?: string;
   /** Time string as stored e.g. "19:30" */
@@ -101,12 +101,12 @@ const GameListItem = ({
     resolvedRoundLabel == null && gameNumberInSeries != null
       ? `Game ${gameNumberInSeries}`
       : resolvedRoundLabel != null && gameNumberInSeries != null
-      ? `${resolvedRoundLabel} · Game ${gameNumberInSeries}`
-      : resolvedRoundLabel != null && round != null
-        ? resolvedRoundLabel
-        : gameNumber != null
-          ? `Game ${gameNumber}`
-          : null;
+        ? `${resolvedRoundLabel} · Game ${gameNumberInSeries}`
+        : resolvedRoundLabel != null && round != null
+          ? resolvedRoundLabel
+          : gameNumber != null
+            ? `Game ${gameNumber}`
+            : null;
 
   const itemClass = [styles.item, gameType && GAME_TYPE_CLASS[gameType]].filter(Boolean).join(' ');
 
@@ -166,7 +166,7 @@ const GameListItem = ({
       </div>
 
       {/* Status badge — rightmost */}
-      <Badge
+      <Tag
         label={statusLabel}
         intent={statusIntent}
       />

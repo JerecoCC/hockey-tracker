@@ -1,25 +1,14 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm, useFieldArray } from 'react-hook-form';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import {
-  type PlayoffSeriesRecord,
-  type SeriesStatus,
-  usePlayoffSeries,
-} from '@/hooks/useGames';
+import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type CreateSeasonData } from '@/hooks/useSeasons';
@@ -648,9 +637,7 @@ const SeasonPlayoffsTab = ({
   const { ruleSets, fetchRuleSet } = useBracketRuleSets(leagueId);
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
   const currentPlayoffSeriesFormatValue = String(bestOfPlayoff ?? leagueBestOfPlayoff);
-  const [draftBestOfPlayoff, setDraftBestOfPlayoff] = useState(
-    currentPlayoffSeriesFormatValue,
-  );
+  const [draftBestOfPlayoff, setDraftBestOfPlayoff] = useState(currentPlayoffSeriesFormatValue);
   const [savingPlayoffSeriesFormat, setSavingPlayoffSeriesFormat] = useState(false);
   const [draftBracketRuleSetId, setDraftBracketRuleSetId] = useState<string | null>(
     bracketRuleSetId,
@@ -745,9 +732,10 @@ const SeasonPlayoffsTab = ({
 
   // ── Simulation state ──────────────────────────────────────────────────────────
   const [simulatedSlots, setSimulatedSlots] = useState<Record<string, string | null> | null>(null);
-  const [simulatedSlotTeams, setSimulatedSlotTeams] = useState<
-    Record<string, SimulatedSlotTeam | null> | null
-  >(null);
+  const [simulatedSlotTeams, setSimulatedSlotTeams] = useState<Record<
+    string,
+    SimulatedSlotTeam | null
+  > | null>(null);
   const [simulating, setSimulating] = useState(false);
 
   // State for the opponent-pick step (used when 'choice' slots are present).
@@ -913,9 +901,7 @@ const SeasonPlayoffsTab = ({
   const finalizeSimulation = async (picks: ChoicePick[]) => {
     const result = { ...partialSimResult };
     const resultTeamIds = { ...partialSimResultTeamIds };
-    const assigned = new Set(
-      Object.values(resultTeamIds).filter((v): v is string => v !== null),
-    );
+    const assigned = new Set(Object.values(resultTeamIds).filter((v): v is string => v !== null));
 
     // Apply each picker's choice.
     for (const pick of picks) {
@@ -1001,8 +987,7 @@ const SeasonPlayoffsTab = ({
   const playoffSeriesFormatLockedTitle = playoffsStarted
     ? 'Playoff series format cannot be changed after playoffs start.'
     : 'Playoff series format cannot be changed after the season ends.';
-  const hasDraftPlayoffSeriesFormatChange =
-    draftBestOfPlayoff !== currentPlayoffSeriesFormatValue;
+  const hasDraftPlayoffSeriesFormatChange = draftBestOfPlayoff !== currentPlayoffSeriesFormatValue;
   const handleSavePlayoffSeriesFormat = async () => {
     if (!hasDraftPlayoffSeriesFormatChange) return;
     const playoffValue = parseInt(draftBestOfPlayoff, 10);
@@ -1134,7 +1119,9 @@ const SeasonPlayoffsTab = ({
     setBracketConnectorPaths((prev) => {
       const same =
         prev.length === nextPaths.length &&
-        prev.every((path, index) => path.id === nextPaths[index]?.id && path.d === nextPaths[index]?.d);
+        prev.every(
+          (path, index) => path.id === nextPaths[index]?.id && path.d === nextPaths[index]?.d,
+        );
       return same ? prev : nextPaths;
     });
   }, [bracketStructure, clearBracketConnectors]);
@@ -1169,12 +1156,7 @@ const SeasonPlayoffsTab = ({
       window.removeEventListener('resize', scheduleMeasure);
       observer?.disconnect();
     };
-  }, [
-    bracketStructure,
-    clearBracketConnectors,
-    measureBracketConnectors,
-    seriesLoading,
-  ]);
+  }, [bracketStructure, clearBracketConnectors, measureBracketConnectors, seriesLoading]);
 
   return (
     <>
@@ -1252,88 +1234,92 @@ const SeasonPlayoffsTab = ({
                     </svg>
                   )}
                   {bracketStructure.rounds.map((roundInfo) => {
-                  // Sort by bracket_slot_key matchup index so auto-advanced series
-                  // always appear in the correct bracket position.
-                  const roundSeries = [...(seriesByRound[roundInfo.round] ?? [])].sort(
-                    (a, b) => matchupIndex(a) - matchupIndex(b),
-                  );
+                    // Sort by bracket_slot_key matchup index so auto-advanced series
+                    // always appear in the correct bracket position.
+                    const roundSeries = [...(seriesByRound[roundInfo.round] ?? [])].sort(
+                      (a, b) => matchupIndex(a) - matchupIndex(b),
+                    );
 
-                  // Fallback for legacy series without bracket_slot_key:
-                  // an empty slot is advanceable when all previous-round series are complete.
-                  const prevRound = seriesByRound[roundInfo.round - 1] ?? [];
-                  const prevRoundAllComplete =
-                    prevRound.length > 0 && prevRound.every((ps) => ps.status === 'complete');
+                    // Fallback for legacy series without bracket_slot_key:
+                    // an empty slot is advanceable when all previous-round series are complete.
+                    const prevRound = seriesByRound[roundInfo.round - 1] ?? [];
+                    const prevRoundAllComplete =
+                      prevRound.length > 0 && prevRound.every((ps) => ps.status === 'complete');
 
-                  // Is there a later round? Used to suppress the advance button on the final.
-                  const hasNextRound = bracketStructure.rounds.some(
-                    (r) => r.round > roundInfo.round,
-                  );
+                    // Is there a later round? Used to suppress the advance button on the final.
+                    const hasNextRound = bracketStructure.rounds.some(
+                      (r) => r.round > roundInfo.round,
+                    );
 
-                  return (
-                    <div
-                      key={roundInfo.round}
-                      className={styles.bracketRound}
-                    >
-                      <p className={styles.bracketRoundLabel}>
-                        {getRoundLabel(roundInfo.round, bracketStructure.rounds.length, roundNames)}
-                      </p>
-                      <div className={styles.bracketSlots}>
-                        {Array.from({ length: roundInfo.series }, (_, slotIndex) => {
-                          const slotKey = `r${roundInfo.round}m${slotIndex}`;
-                          const s = roundSeries[slotIndex] ?? null;
+                    return (
+                      <div
+                        key={roundInfo.round}
+                        className={styles.bracketRound}
+                      >
+                        <p className={styles.bracketRoundLabel}>
+                          {getRoundLabel(
+                            roundInfo.round,
+                            bracketStructure.rounds.length,
+                            roundNames,
+                          )}
+                        </p>
+                        <div className={styles.bracketSlots}>
+                          {Array.from({ length: roundInfo.series }, (_, slotIndex) => {
+                            const slotKey = `r${roundInfo.round}m${slotIndex}`;
+                            const s = roundSeries[slotIndex] ?? null;
 
-                          // canAdvance: slot-key match OR legacy round-based fallback
-                          const canAdvance =
-                            advanceableSlots.has(slotKey) ||
-                            (!s && roundInfo.round > 1 && prevRoundAllComplete);
+                            // canAdvance: slot-key match OR legacy round-based fallback
+                            const canAdvance =
+                              advanceableSlots.has(slotKey) ||
+                              (!s && roundInfo.round > 1 && prevRoundAllComplete);
 
-                          // canAdvanceWinner: show on completed series when there's a next round
-                          // and the winner hasn't already been placed in a next-round series.
-                          const nextRoundSeries = seriesByRound[roundInfo.round + 1] ?? [];
-                          const winnerAlreadyAdvanced =
-                            !!s?.winner_team_id &&
-                            nextRoundSeries.some(
-                              (ns) =>
-                                ns.home_team_id === s.winner_team_id ||
-                                ns.away_team_id === s.winner_team_id,
+                            // canAdvanceWinner: show on completed series when there's a next round
+                            // and the winner hasn't already been placed in a next-round series.
+                            const nextRoundSeries = seriesByRound[roundInfo.round + 1] ?? [];
+                            const winnerAlreadyAdvanced =
+                              !!s?.winner_team_id &&
+                              nextRoundSeries.some(
+                                (ns) =>
+                                  ns.home_team_id === s.winner_team_id ||
+                                  ns.away_team_id === s.winner_team_id,
+                              );
+                            const canAdvanceWinner =
+                              s?.status === 'complete' && hasNextRound && !winnerAlreadyAdvanced;
+
+                            return (
+                              <BracketSlot
+                                key={slotIndex}
+                                series={s}
+                                busy={seriesBusy}
+                                seriesHref={s ? seriesDetailsPath(s) : undefined}
+                                slotRef={registerBracketSlot(slotKey)}
+                                simulatedTeam1={
+                                  simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
+                                }
+                                simulatedTeam1Details={
+                                  simulatedSlotTeams?.[
+                                    makeSlotKey(roundInfo.round, slotIndex, 'team1')
+                                  ]
+                                }
+                                simulatedTeam2={
+                                  simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team2')]
+                                }
+                                simulatedTeam2Details={
+                                  simulatedSlotTeams?.[
+                                    makeSlotKey(roundInfo.round, slotIndex, 'team2')
+                                  ]
+                                }
+                                canAdvance={canAdvance}
+                                canAdvanceWinner={canAdvanceWinner}
+                                onStart={handleStartSeries}
+                                onAdvance={advanceBracket}
+                                onForceAdvance={s ? () => forceAdvance(s.id) : undefined}
+                              />
                             );
-                          const canAdvanceWinner =
-                            s?.status === 'complete' && hasNextRound && !winnerAlreadyAdvanced;
-
-                          return (
-                            <BracketSlot
-                              key={slotIndex}
-                              series={s}
-                              busy={seriesBusy}
-                              seriesHref={s ? seriesDetailsPath(s) : undefined}
-                              slotRef={registerBracketSlot(slotKey)}
-                              simulatedTeam1={
-                                simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
-                              }
-                              simulatedTeam1Details={
-                                simulatedSlotTeams?.[
-                                  makeSlotKey(roundInfo.round, slotIndex, 'team1')
-                                ]
-                              }
-                              simulatedTeam2={
-                                simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team2')]
-                              }
-                              simulatedTeam2Details={
-                                simulatedSlotTeams?.[
-                                  makeSlotKey(roundInfo.round, slotIndex, 'team2')
-                                ]
-                              }
-                              canAdvance={canAdvance}
-                              canAdvanceWinner={canAdvanceWinner}
-                              onStart={handleStartSeries}
-                              onAdvance={advanceBracket}
-                              onForceAdvance={s ? () => forceAdvance(s.id) : undefined}
-                            />
-                          );
-                        })}
+                          })}
+                        </div>
                       </div>
-                    </div>
-                  );
+                    );
                   })}
                 </div>
               </div>
@@ -1370,7 +1356,7 @@ const SeasonPlayoffsTab = ({
                             <span className={styles.seriesScore}>
                               {s.away_wins}–{s.home_wins}
                             </span>
-                            <Badge
+                            <Tag
                               label={STATUS_LABEL[s.status]}
                               intent={STATUS_INTENT[s.status]}
                             />
@@ -1434,35 +1420,35 @@ const SeasonPlayoffsTab = ({
                   <span className={styles.readonlyRuleSetLabel}>{bracketRuleSetLabel}</span>
                 </div>
               ) : (
-              <div className={styles.ruleSetControl}>
-                <div className={styles.ruleSetSelectField}>
-              <Select
-                value={draftBracketRuleSetId}
-                options={ruleSetOptions}
-                placeholder={
-                  ruleSetOptions.length === 0
-                    ? 'No rule sets — create one in the league Playoffs tab'
-                    : 'Select a rule set…'
-                }
-                onChange={setDraftBracketRuleSetId}
-                disabled={savingBracketRuleSet || ruleSetOptions.length === 0}
-              />
+                <div className={styles.ruleSetControl}>
+                  <div className={styles.ruleSetSelectField}>
+                    <Select
+                      value={draftBracketRuleSetId}
+                      options={ruleSetOptions}
+                      placeholder={
+                        ruleSetOptions.length === 0
+                          ? 'No rule sets — create one in the league Playoffs tab'
+                          : 'Select a rule set…'
+                      }
+                      onChange={setDraftBracketRuleSetId}
+                      disabled={savingBracketRuleSet || ruleSetOptions.length === 0}
+                    />
+                  </div>
+                  {hasDraftBracketRuleSetChange && (
+                    <Button
+                      type="button"
+                      icon="save"
+                      size="sm"
+                      variant="filled"
+                      intent="accent"
+                      iconHeight="field"
+                      tooltip="Save bracket rule set"
+                      tooltipClassName={styles.ruleSetSaveAction}
+                      disabled={savingBracketRuleSet || !draftBracketRuleSetId}
+                      onClick={handleSaveBracketRuleSet}
+                    />
+                  )}
                 </div>
-              {hasDraftBracketRuleSetChange && (
-                <Button
-                  type="button"
-                  icon="save"
-                  size="sm"
-                  variant="filled"
-                  intent="accent"
-                  iconHeight="field"
-                  tooltip="Save bracket rule set"
-                  tooltipClassName={styles.ruleSetSaveAction}
-                  disabled={savingBracketRuleSet || !draftBracketRuleSetId}
-                  onClick={handleSaveBracketRuleSet}
-                />
-              )}
-              </div>
               )}
               {!draftBracketRuleSetId && ruleSetOptions.length > 0 && (
                 <p className={styles.ruleSetHint}>
@@ -1480,9 +1466,7 @@ const SeasonPlayoffsTab = ({
                   className={styles.readonlyRuleSetBox}
                   title={playoffSeriesFormatLockedTitle}
                 >
-                  <span className={styles.readonlyRuleSetLabel}>
-                    {playoffSeriesFormatLabel}
-                  </span>
+                  <span className={styles.readonlyRuleSetLabel}>{playoffSeriesFormatLabel}</span>
                 </div>
               ) : (
                 <div className={styles.ruleSetControl}>
@@ -1543,7 +1527,7 @@ const SeasonPlayoffsTab = ({
                         ? `Top ${r.count}`
                         : `${r.count} wildcard${r.count !== 1 ? 's' : ''}`}
                     </span>
-                    <Badge
+                    <Tag
                       label={
                         {
                           league: 'League',

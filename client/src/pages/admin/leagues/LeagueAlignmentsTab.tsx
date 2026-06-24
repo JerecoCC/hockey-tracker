@@ -2,16 +2,19 @@ import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Accordion from '@/components/Accordion/Accordion';
+import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
+import Icon from '@/components/Icon/Icon';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import SearchField from '@/components/SearchField/SearchField';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Skeleton from '@/components/Skeleton/Skeleton';
+import Tooltip from '@/components/Tooltip/Tooltip';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import useGroupAlignmentSets, {
   type AlignmentGroupRecord,
@@ -54,6 +57,25 @@ interface DraftAlignmentDetails {
 }
 
 const ROLE_LABELS: Record<string, string> = { conference: 'Conference', division: 'Division' };
+const ALIGNMENT_TITLE_TOOLTIP = 'Define reusable team lists and group structures for seasons.';
+
+const AlignmentCardTitle = () => (
+  <>
+    Team Alignments
+    <Tooltip text={ALIGNMENT_TITLE_TOOLTIP}>
+      <span
+        className={styles.alignmentTitleInfo}
+        aria-label={ALIGNMENT_TITLE_TOOLTIP}
+        tabIndex={0}
+      >
+        <Icon
+          name="info"
+          size="0.95rem"
+        />
+      </span>
+    </Tooltip>
+  </>
+);
 
 const countGroupTeams = (group: DraftAlignmentGroup, allGroups: DraftAlignmentGroup[]) => {
   const teamIds = new Set<string>();
@@ -130,6 +152,7 @@ const AlignmentStructureField = ({
       <div className={styles.alignmentBooleanField}>
         <SegmentedControl
           className={styles.alignmentStructureSegmented}
+          variant="field"
           value={value}
           options={[
             { value: 'groups', label: 'Yes', tooltip: 'Organize teams into groups' },
@@ -467,9 +490,10 @@ const AlignmentGroupNode = ({
         }
         headerRight={
           roleLabel ? (
-            <span className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}>
-              {roleLabel}
-            </span>
+            <Tag
+              label={roleLabel}
+              intent={group.role === 'division' ? 'success' : 'info'}
+            />
           ) : null
         }
         hoverActions={
@@ -515,7 +539,7 @@ const AlignmentGroupNode = ({
         }
       >
         {isLeaf && group.teams.length > 0 && (
-          <ul className={styles.teamList}>
+          <ul className={styles.alignmentTeamList}>
             {group.teams.map((team) => (
               <ListItem
                 key={team.id}
@@ -546,7 +570,7 @@ const AlignmentGroupNode = ({
         )}
         {children.length > 0 && (
           <div className={styles.groupNestedList}>
-            <ul className={styles.groupList}>
+            <ul className={styles.alignmentGroupList}>
               {children.map((child) => (
                 <AlignmentGroupNode
                   key={child.id}
@@ -684,8 +708,9 @@ const AlignmentPanel = ({
   });
 
   useEffect(() => {
+    if (!editMode) return;
     onLoadDetails(alignmentSet.id);
-  }, [alignmentSet.id, onLoadDetails]);
+  }, [alignmentSet.id, editMode, onLoadDetails]);
 
   useEffect(() => {
     reset({
@@ -876,177 +901,165 @@ const AlignmentPanel = ({
     setDraftDirty(true);
   };
 
+  const editorBody = (
+    <div className={styles.alignmentPanelBody}>
+      <form
+        className={styles.alignmentEditRow}
+        onSubmit={onSubmit}
+      >
+        <div className={styles.alignmentEditNameRow}>
+          <Field
+            label="Name"
+            control={control}
+            name="name"
+            disabled={busy === alignmentSet.id || detailsLoading}
+            rules={{ required: 'Name is required' }}
+          />
+        </div>
+        <div className={styles.alignmentEditControlsRow}>
+          <AlignmentStructureField
+            control={control}
+            value={structureType}
+            disabled={busy === alignmentSet.id || detailsLoading}
+            onChange={handleStructureTypeChange}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outlined"
+            intent="accent"
+            icon={alignmentActionIcon}
+            disabled={busy === alignmentSet.id || detailsLoading}
+            onClick={handleAlignmentAction}
+          >
+            {alignmentActionTooltip}
+          </Button>
+        </div>
+        <Button
+          type="submit"
+          size="sm"
+          icon="save"
+          className={styles.srOnly}
+          disabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
+        >
+          Save
+        </Button>
+      </form>
+
+      {details === null ? (
+        <div
+          className={styles.tabSkeletonStack}
+          role="status"
+          aria-busy="true"
+          aria-label="Loading alignment details"
+        >
+          {Array.from({ length: 3 }, (_, index) => (
+            <Skeleton
+              key={index}
+              type="text"
+              className={
+                index === 2
+                  ? styles.infoSkeletonDescriptionLineShort
+                  : styles.infoSkeletonDescriptionLine
+              }
+            />
+          ))}
+        </div>
+      ) : structureType === 'league' ? (
+        flatTeams.length === 0 ? (
+          <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
+        ) : (
+          <ul className={styles.alignmentTeamList}>
+            {flatTeams.map((team) => (
+              <ListItem
+                key={team.id}
+                image={team.logo}
+                eyebrow={team.place_name || ''}
+                name={team.team_name || team.name}
+                rightContent={{ type: 'code', value: team.code }}
+                primaryColor={team.primary_color}
+                textColor={team.text_color}
+                actions={[
+                  {
+                    icon: 'close',
+                    tooltip: 'Remove team',
+                    intent: 'danger',
+                    disabled: busy === alignmentSet.id,
+                    onClick: () => handleRemoveDraftAlignmentTeam(team.id),
+                  },
+                ]}
+              />
+            ))}
+          </ul>
+        )
+      ) : roots.length === 0 ? (
+        <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
+      ) : (
+        <ul className={styles.alignmentGroupList}>
+          {roots.map((group) => (
+            <AlignmentGroupNode
+              key={group.id}
+              group={group}
+              allGroups={groups}
+              leagueTeams={leagueTeams}
+              busy={busy}
+              editMode={editMode}
+              onAddSubgroup={(parentGroup, payload) => handleAddDraftGroup(parentGroup, payload)}
+              onUpdateGroup={handleUpdateDraftGroup}
+              onDeleteGroup={handleDeleteDraftGroup}
+              onSetGroupTeams={handleSetDraftGroupTeams}
+            />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+
   return (
     <>
-      <li
-        className={[styles.alignmentCard, editMode ? styles.alignmentCardExpanded : '']
-          .filter(Boolean)
-          .join(' ')}
-      >
+      <li className={styles.alignmentCard}>
         <div className={styles.alignmentCardHeader}>
           <div className={styles.ruleSetName}>
             <span>{alignmentSet.name}</span>
             <span className={styles.alignmentSetMeta}>{headerMeta}</span>
           </div>
-          {editMode ? (
-            <div className={styles.alignmentCardActions}>
-              <Button
-                type="button"
-                size="sm"
-                variant="outlined"
-                intent="neutral"
-                icon="close"
-                tooltip="Cancel editing"
-                disabled={busy === alignmentSet.id}
-                onClick={handleCancelEdit}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outlined"
-                intent="accent"
-                icon={alignmentActionIcon}
-                tooltip={alignmentActionTooltip}
-                disabled={busy === alignmentSet.id || detailsLoading}
-                onClick={handleAlignmentAction}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="filled"
-                intent="accent"
-                icon="save"
-                tooltip="Save alignment"
-                disabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
-                onClick={onSubmit}
-              />
-            </div>
-          ) : (
-            <ActionOverlay className={styles.alignmentCardHoverActions}>
-              <Button
-                type="button"
-                size="sm"
-                variant="outlined"
-                intent="neutral"
-                icon="edit"
-                tooltip="Edit alignment"
-                disabled={busy === alignmentSet.id || editLocked}
-                onClick={onStartEdit}
-              />
-              <Button
-                type="button"
-                size="sm"
-                variant="outlined"
-                intent="danger"
-                icon="delete"
-                tooltip="Delete alignment"
-                disabled={busy === alignmentSet.id || editLocked}
-                onClick={onDelete}
-              />
-            </ActionOverlay>
-          )}
+          <ActionOverlay className={styles.alignmentCardHoverActions}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outlined"
+              intent="neutral"
+              icon="edit"
+              tooltip="Edit alignment"
+              disabled={busy === alignmentSet.id || editLocked}
+              onClick={onStartEdit}
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outlined"
+              intent="danger"
+              icon="delete"
+              tooltip="Delete alignment"
+              disabled={busy === alignmentSet.id || editLocked}
+              onClick={onDelete}
+            />
+          </ActionOverlay>
         </div>
-        {editMode && (
-          <div className={styles.alignmentPanelBody}>
-            <form
-              className={styles.alignmentEditRow}
-              onSubmit={onSubmit}
-            >
-              <AlignmentStructureField
-                control={control}
-                value={structureType}
-                disabled={busy === alignmentSet.id || detailsLoading}
-                onChange={handleStructureTypeChange}
-              />
-              <Field
-                label="Name"
-                control={control}
-                name="name"
-                disabled={busy === alignmentSet.id || detailsLoading}
-                rules={{ required: 'Name is required' }}
-              />
-              <Button
-                type="submit"
-                size="sm"
-                icon="save"
-                className={styles.srOnly}
-                disabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
-              >
-                Save
-              </Button>
-            </form>
-
-            {details === null ? (
-              <div
-                className={styles.tabSkeletonStack}
-                role="status"
-                aria-busy="true"
-                aria-label="Loading alignment details"
-              >
-                {Array.from({ length: 3 }, (_, index) => (
-                  <Skeleton
-                    key={index}
-                    type="text"
-                    className={
-                      index === 2
-                        ? styles.infoSkeletonDescriptionLineShort
-                        : styles.infoSkeletonDescriptionLine
-                    }
-                  />
-                ))}
-              </div>
-            ) : structureType === 'league' ? (
-              flatTeams.length === 0 ? (
-                <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
-              ) : (
-                <ul className={styles.alignmentTeamGrid}>
-                  {flatTeams.map((team) => (
-                    <ListItem
-                      key={team.id}
-                      image={team.logo}
-                      eyebrow={team.place_name || ''}
-                      name={team.team_name || team.name}
-                      rightContent={{ type: 'code', value: team.code }}
-                      primaryColor={team.primary_color}
-                      textColor={team.text_color}
-                      actions={[
-                        {
-                          icon: 'close',
-                          tooltip: 'Remove team',
-                          intent: 'danger',
-                          disabled: busy === alignmentSet.id,
-                          onClick: () => handleRemoveDraftAlignmentTeam(team.id),
-                        },
-                      ]}
-                    />
-                  ))}
-                </ul>
-              )
-            ) : roots.length === 0 ? (
-              <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
-            ) : (
-              <ul className={styles.groupList}>
-                {roots.map((group) => (
-                  <AlignmentGroupNode
-                    key={group.id}
-                    group={group}
-                    allGroups={groups}
-                    leagueTeams={leagueTeams}
-                    busy={busy}
-                    editMode={editMode}
-                    onAddSubgroup={(parentGroup, payload) =>
-                      handleAddDraftGroup(parentGroup, payload)
-                    }
-                    onUpdateGroup={handleUpdateDraftGroup}
-                    onDeleteGroup={handleDeleteDraftGroup}
-                    onSetGroupTeams={handleSetDraftGroupTeams}
-                  />
-                ))}
-              </ul>
-            )}
-          </div>
-        )}
       </li>
+      <Modal
+        open={editMode}
+        title={`Edit Alignment - ${alignmentSet.name}`}
+        onClose={handleCancelEdit}
+        onConfirm={onSubmit}
+        confirmLabel={busy === alignmentSet.id ? 'Saving...' : 'Save Alignment'}
+        confirmIcon="save"
+        confirmDisabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
+        busy={busy === alignmentSet.id}
+        size="md"
+      >
+        {editorBody}
+      </Modal>
       <ConfirmModal
         open={confirmCancelOpen}
         title="Discard Alignment Edits"
@@ -1124,6 +1137,7 @@ const LeagueAlignmentsTab = (props: Props) => {
     mode: 'onChange',
   });
   const selectedStructure = watch('structure_type');
+  const createAlignmentFormId = 'new-alignment-form';
 
   useEffect(() => {
     if (!createModalOpen) return;
@@ -1184,13 +1198,8 @@ const LeagueAlignmentsTab = (props: Props) => {
         <div className={[styles.alignmentCards, styles.col12, className].filter(Boolean).join(' ')}>
           <Card
             className={styles.alignmentHeaderCard}
-            noHeaderMargin
-          >
-            <div className={styles.alignmentViewHeader}>
-              <div>
-                <h3>Team Alignments</h3>
-                <p>Define reusable team lists and group structures for seasons.</p>
-              </div>
+            title={<AlignmentCardTitle />}
+            action={
               <Button
                 icon="add"
                 size="sm"
@@ -1198,8 +1207,9 @@ const LeagueAlignmentsTab = (props: Props) => {
               >
                 New Alignment
               </Button>
-            </div>
-
+            }
+            noHeaderMargin
+          >
             {alignmentSets.length === 0 ? (
               <div className={styles.alignmentEmptyState}>
                 <p className={styles.emptyMsg}>No alignment sets yet.</p>
@@ -1242,31 +1252,41 @@ const LeagueAlignmentsTab = (props: Props) => {
         open={createModalOpen}
         title="New Alignment"
         onClose={() => setCreateModalOpen(false)}
-        confirmLabel={isSubmitting || !!alignmentBusy ? 'Creating...' : 'Create'}
+        confirmForm={createAlignmentFormId}
+        confirmLabel={isSubmitting || !!alignmentBusy ? 'Creating...' : 'Create Alignment'}
+        confirmIcon="save"
         confirmDisabled={isSubmitting || !!alignmentBusy || !isValid}
         busy={isSubmitting || !!alignmentBusy}
-        onConfirm={onCreateAlignment}
+        size="md"
       >
-        <div className={styles.alignmentSetForm}>
-          <AlignmentStructureField
-            control={control}
-            value={selectedStructure}
-            disabled={isSubmitting || !!alignmentBusy}
-            onChange={(value) => {
-              const next = value as GroupAlignmentStructureType;
-              setValue('structure_type', next, { shouldDirty: true, shouldValidate: true });
-              if (!watch('name').trim()) setValue('name', defaultName(next));
-            }}
-          />
-          <Field
-            label="Name"
-            control={control}
-            name="name"
-            placeholder={defaultName(selectedStructure)}
-            disabled={isSubmitting || !!alignmentBusy}
-            autoFocus
-          />
-        </div>
+        <form
+          id={createAlignmentFormId}
+          className={styles.alignmentEditRow}
+          onSubmit={onCreateAlignment}
+        >
+          <div className={styles.alignmentEditNameRow}>
+            <Field
+              label="Name"
+              control={control}
+              name="name"
+              placeholder={defaultName(selectedStructure)}
+              disabled={isSubmitting || !!alignmentBusy}
+              autoFocus
+            />
+          </div>
+          <div className={styles.alignmentEditControlsRow}>
+            <AlignmentStructureField
+              control={control}
+              value={selectedStructure}
+              disabled={isSubmitting || !!alignmentBusy}
+              onChange={(value) => {
+                const next = value as GroupAlignmentStructureType;
+                setValue('structure_type', next, { shouldDirty: true, shouldValidate: true });
+                if (!watch('name').trim()) setValue('name', defaultName(next));
+              }}
+            />
+          </div>
+        </form>
       </Modal>
 
       <ConfirmModal
@@ -1301,18 +1321,13 @@ export const LeagueAlignmentsTabSkeleton = ({ className }: TabSkeletonProps) => 
     <div className={[styles.alignmentCards, styles.col12, className].filter(Boolean).join(' ')}>
       <Card
         className={styles.alignmentHeaderCard}
+        title={<AlignmentCardTitle />}
+        action={<TabActionSkeleton width="122px" />}
         noHeaderMargin
         role="status"
         aria-busy="true"
         aria-label="Loading alignments"
       >
-        <div className={styles.alignmentViewHeader}>
-          <div>
-            <h3>Team Alignments</h3>
-            <p>Define reusable team lists and group structures for seasons.</p>
-          </div>
-          <TabActionSkeleton width="122px" />
-        </div>
         <ul className={styles.alignmentSetStack}>
           {Array.from({ length: 5 }, (_, index) => (
             <li

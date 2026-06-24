@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import Card from '@/components/Card/Card';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import { PaginatedTable } from '@/components/Pagination/Pagination';
 import Table, { type Column } from '@/components/Table/Table';
@@ -208,7 +208,11 @@ const SeasonDetailsPage = () => {
     };
   }, [season?.league_code, season?.name]);
 
-  const { skaters, goalies, loading: statsLoading } = useSeasonStats(id, {
+  const {
+    skaters,
+    goalies,
+    loading: statsLoading,
+  } = useSeasonStats(id, {
     enabled: shouldFetchSummaryStats,
   });
   const { standings, loading: standingsLoading } = useSeasonStandings(id, {
@@ -697,13 +701,13 @@ const SeasonDetailsPage = () => {
           )}
           {row.team_name ?? row.team_code ?? '—'}
           {clinchedIds.has(row.team_id) && (
-            <Badge
+            <Tag
               label="x"
               intent="success"
             />
           )}
           {!clinchedIds.has(row.team_id) && eliminatedIds.has(row.team_id) && (
-            <Badge
+            <Tag
               label="e"
               intent="danger"
             />
@@ -832,19 +836,19 @@ const SeasonDetailsPage = () => {
                   nameAccessory={
                     <>
                       {season.is_current && !season.playoffs_started && (
-                        <Badge
+                        <Tag
                           label="Current"
                           intent="success"
                         />
                       )}
                       {season.is_current && season.playoffs_started && (
-                        <Badge
+                        <Tag
                           label="Playoffs"
                           intent="accent"
                         />
                       )}
                       {season.is_ended && (
-                        <Badge
+                        <Tag
                           label="Ended"
                           intent="neutral"
                         />

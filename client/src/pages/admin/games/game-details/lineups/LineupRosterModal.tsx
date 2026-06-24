@@ -3,7 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
@@ -303,8 +303,7 @@ const LineupRosterModal = ({
                 name="info"
                 size="0.85em"
               />
-              Already in lineup:{' '}
-              {alreadyAdded.map((p) => `#${p.number} ${p.name}`).join(', ')}
+              Already in lineup: {alreadyAdded.map((p) => `#${p.number} ${p.name}`).join(', ')}
             </p>
           )}
           {prospectMatches.length > 0 && (
@@ -375,7 +374,7 @@ const LineupRosterModal = ({
                 imageTextColor={p.text_color}
                 subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
                 name={`${p.last_name}, ${p.first_name}`}
-                rightContent={p.is_prospect ? <Badge label="Prospect" /> : undefined}
+                rightContent={p.is_prospect ? <Tag label="Prospect" /> : undefined}
                 disabled={controlsDisabled}
                 actions={[
                   p.is_prospect

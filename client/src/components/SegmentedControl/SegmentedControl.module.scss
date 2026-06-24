@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .segmentedControl {
   --segmented-control-border: #{$text-dim};
@@ -12,6 +12,12 @@
   border-radius: $radius-md;
   overflow: visible;
   width: 100%;
+}
+
+.field {
+  --segmented-control-border: #{$border};
+
+  background: $bg-input;
 }
 
 .optionWrapper {

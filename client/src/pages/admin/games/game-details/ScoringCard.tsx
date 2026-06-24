@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
@@ -233,7 +233,7 @@ const ScoringCard = ({
               </div>
               {primaryBadge && (
                 <Tooltip text={primaryBadge.tooltip}>
-                  <Badge
+                  <Tag
                     label={primaryBadge.label}
                     intent={primaryBadge.intent}
                   />
@@ -241,7 +241,7 @@ const ScoringCard = ({
               )}
               {showEN && (
                 <Tooltip text="Empty Net">
-                  <Badge
+                  <Tag
                     label="EN"
                     intent="neutral"
                   />
@@ -249,7 +249,7 @@ const ScoringCard = ({
               )}
               {showPS && (
                 <Tooltip text="Penalty Shot">
-                  <Badge
+                  <Tag
                     label="PS"
                     intent="success"
                   />

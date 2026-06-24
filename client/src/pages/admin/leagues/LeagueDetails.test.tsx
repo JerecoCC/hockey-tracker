@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
@@ -8,6 +8,7 @@ import useLeagueGroups from '@/hooks/useLeagueGroups';
 import useLeaguePlayers from '@/hooks/useLeaguePlayers';
 import useBracketRuleSets from '@/hooks/useBracketRuleSets';
 import useLeagueAwards from '@/hooks/useLeagueAwards';
+import useGroupAlignmentSets from '@/hooks/useGroupAlignmentSets';
 import LeagueDetailsPage from './LeagueDetails';
 
 // ── Router ─────────────────────────────────────────────────────────────
@@ -160,6 +161,22 @@ const baseAwardsHook = {
   deleteAward: jest.fn(async () => true),
 };
 
+const baseGroupAlignmentSetsHook = {
+  alignmentSets: [],
+  loading: false,
+  busy: null,
+  fetchAlignmentSet: jest.fn(async () => null),
+  createAlignmentSet: jest.fn(async () => null),
+  updateAlignmentSet: jest.fn(async () => true),
+  saveAlignmentConfig: jest.fn(async () => null),
+  deleteAlignmentSet: jest.fn(async () => true),
+  addGroup: jest.fn(async () => true),
+  updateGroup: jest.fn(async () => true),
+  deleteGroup: jest.fn(async () => true),
+  setGroupTeams: jest.fn(async () => true),
+  setAlignmentTeams: jest.fn(async () => true),
+};
+
 const mockLeague = {
   id: 'lg1',
   name: 'Test League',
@@ -191,6 +208,7 @@ const setup = (
   playerOverrides = {},
   bracketRuleSetOverrides = {},
   awardOverrides = {},
+  groupAlignmentSetOverrides = {},
 ) => {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   (useParams as jest.Mock).mockReturnValue({ id: 'lg1' });
@@ -203,6 +221,10 @@ const setup = (
     ...bracketRuleSetOverrides,
   });
   (useLeagueAwards as jest.Mock).mockReturnValue({ ...baseAwardsHook, ...awardOverrides });
+  (useGroupAlignmentSets as jest.Mock).mockReturnValue({
+    ...baseGroupAlignmentSetsHook,
+    ...groupAlignmentSetOverrides,
+  });
   return render(
     <BreadcrumbHarness>
       <LeagueDetailsPage />
@@ -212,6 +234,7 @@ const setup = (
 
 beforeEach(() => {
   jest.clearAllMocks();
+  window.scrollTo = jest.fn();
   sessionStorage.clear();
 });
 
@@ -265,16 +288,19 @@ describe('LeagueDetailsPage – loading', () => {
 
   it('keeps the static Alignments header visible while loading', () => {
     sessionStorage.setItem('tab:league-details', '3');
-    setup({ loading: true });
+    const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Alignments' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    expect(screen.getByRole('heading', { name: 'Team Alignments' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /Team Alignments/ })).toBeInTheDocument();
     expect(
-      screen.getByText('Define reusable team lists and group structures for seasons.'),
+      screen.getByRole('tooltip', {
+        name: 'Define reusable team lists and group structures for seasons.',
+      }),
     ).toBeInTheDocument();
+    expect(container.querySelector('.alignmentViewHeader')).not.toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading alignments/i })).toBeInTheDocument();
   });
 
@@ -417,6 +443,155 @@ describe('LeagueDetailsPage – tabs', () => {
     setup({ league: mockLeague });
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'false');
+  });
+
+  it('renders the Alignments card title with an info tooltip', async () => {
+    sessionStorage.setItem('tab:league-details', '3');
+    const { container } = setup({ league: mockLeague });
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /Team Alignments/ })).toBeInTheDocument();
+    });
+    expect(
+      screen.getByRole('tooltip', {
+        name: 'Define reusable team lists and group structures for seasons.',
+      }),
+    ).toBeInTheDocument();
+    expect(container.querySelector('.alignmentViewHeader')).not.toBeInTheDocument();
+  });
+
+  it('opens alignment editing in a modal instead of expanding the list row', async () => {
+    sessionStorage.setItem('tab:league-details', '3');
+    const alignmentSet = {
+      id: 'align-1',
+      league_id: 'lg1',
+      name: 'Current Groups',
+      structure_type: 'groups',
+      team_count: 0,
+      conference_count: 0,
+      division_count: 0,
+      created_at: '',
+      groups: [],
+      teams: [],
+    };
+    const fetchAlignmentSet = jest.fn(async () => alignmentSet);
+    const { container } = setup(
+      { league: mockLeague },
+      {},
+      null,
+      {},
+      {},
+      {},
+      {
+        alignmentSets: [alignmentSet],
+        fetchAlignmentSet,
+      },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /new alignment/i })).toBeEnabled(),
+    );
+    const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
+    fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
+
+    expect(
+      await screen.findByRole('heading', { name: 'Edit Alignment - Current Groups' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Uses groups?')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create group/i })).toBeInTheDocument();
+    expect(container.querySelector('.alignmentEditNameRow')).toBeInTheDocument();
+    expect(container.querySelector('.alignmentEditControlsRow')).toBeInTheDocument();
+    expect(container.querySelector('.alignmentCardExpanded')).not.toBeInTheDocument();
+    expect(container.querySelector('.modalXl')).not.toBeInTheDocument();
+    await waitFor(() => expect(fetchAlignmentSet).toHaveBeenCalledWith('align-1'));
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /save alignment/i })).toBeDisabled(),
+    );
+  });
+
+  it('uses the alignment editor field layout for the new alignment modal', async () => {
+    sessionStorage.setItem('tab:league-details', '3');
+    const { container } = setup({ league: mockLeague });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /new alignment/i })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /new alignment/i }));
+
+    expect(await screen.findByRole('heading', { name: 'New Alignment' })).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
+    );
+    expect(container.querySelector('.alignmentEditRow')).toBeInTheDocument();
+    expect(container.querySelector('.alignmentEditNameRow')).toBeInTheDocument();
+    expect(container.querySelector('.alignmentEditControlsRow')).toBeInTheDocument();
+    expect(container.querySelector('.modalXl')).not.toBeInTheDocument();
+  });
+
+  it('renders league alignment teams as a single-column list item stack', async () => {
+    sessionStorage.setItem('tab:league-details', '3');
+    const teams = [
+      {
+        id: 'team-1',
+        name: 'Seattle Wolves',
+        place_name: 'Seattle',
+        team_name: 'Wolves',
+        code: 'SEA',
+        logo: '',
+        primary_color: '#123456',
+        text_color: '#ffffff',
+      },
+      {
+        id: 'team-2',
+        name: 'Portland Bears',
+        place_name: 'Portland',
+        team_name: 'Bears',
+        code: 'POR',
+        logo: '',
+        primary_color: '#654321',
+        text_color: '#ffffff',
+      },
+    ];
+    const alignmentSet = {
+      id: 'align-league',
+      league_id: 'lg1',
+      name: 'League Teams',
+      structure_type: 'league',
+      team_count: teams.length,
+      conference_count: 0,
+      division_count: 0,
+      created_at: '',
+      groups: [],
+      teams,
+    };
+    const fetchAlignmentSet = jest.fn(async () => alignmentSet);
+    const { container } = setup(
+      { league: mockLeague },
+      {},
+      null,
+      {},
+      {},
+      {},
+      {
+        alignmentSets: [alignmentSet],
+        fetchAlignmentSet,
+      },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /new alignment/i })).toBeEnabled(),
+    );
+    const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
+    fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
+
+    expect(await screen.findByText('Wolves')).toBeInTheDocument();
+    expect(screen.getByText('Bears')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /update teams/i })).toBeInTheDocument();
+
+    const teamList = container.querySelector('.alignmentTeamList');
+    expect(teamList).toBeInTheDocument();
+    expect(teamList?.querySelectorAll('li')).toHaveLength(2);
+    expect(container.querySelector('.alignmentTeamGrid')).not.toBeInTheDocument();
   });
 });
 

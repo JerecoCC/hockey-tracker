@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameStatus, TeamInfo } from '@/hooks/useGames';
@@ -93,8 +93,7 @@ function teamTextShadow(textHex: string, bgHex: string, threshold = 3): string {
 }
 
 const teamPlaceLabel = (team: TeamInfo) => team.place_name?.trim() || '';
-const teamNameLabel = (team: TeamInfo) =>
-  team.team_name?.trim() || team.name?.trim() || team.code;
+const teamNameLabel = (team: TeamInfo) => team.team_name?.trim() || team.name?.trim() || team.code;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -277,12 +276,12 @@ const ScoreboardCard = ({
               </span>
             )}
             {isFinal ? (
-              <Badge
+              <Tag
                 label={`Final${overtimeSuffix}`}
                 intent="success"
               />
             ) : (
-              <Badge
+              <Tag
                 label={STATUS_LABEL[game.status]}
                 intent={STATUS_INTENT[game.status]}
               />

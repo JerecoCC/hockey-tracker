@@ -3,7 +3,7 @@ import { useParams } from 'react-router-dom';
 import Card from '@/components/Card/Card';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
-import type { BadgeIntent } from '@/components/Badge/Badge';
+import type { TagIntent } from '@/components/Tag/Tag';
 import useLeagues from '@/hooks/useLeagues';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
@@ -34,7 +34,7 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   cancelled: 'Cancelled',
 };
 
-const STATUS_INTENT: Record<GameStatus, BadgeIntent> = {
+const STATUS_INTENT: Record<GameStatus, TagIntent> = {
   scheduled: 'info',
   in_progress: 'warning',
   final: 'success',
@@ -99,10 +99,7 @@ const seriesStatusToGameStatus = (status: PlayoffSeriesRecord['status']): GameSt
   return 'scheduled';
 };
 
-const teamInfoFromSeries = (
-  series: PlayoffSeriesRecord,
-  side: 'home' | 'away',
-): TeamInfo => {
+const teamInfoFromSeries = (series: PlayoffSeriesRecord, side: 'home' | 'away'): TeamInfo => {
   const isHome = side === 'home';
   const id = isHome ? series.home_team_id : series.away_team_id;
   const name = isHome ? series.home_team_name : series.away_team_name;
@@ -124,7 +121,11 @@ const teamInfoFromSeries = (
 };
 
 const PlayoffSeriesDetailsPage = () => {
-  const { leagueSlug = '', seasonSlug = '', seriesSlug = '' } = useParams<{
+  const {
+    leagueSlug = '',
+    seasonSlug = '',
+    seriesSlug = '',
+  } = useParams<{
     leagueSlug?: string;
     seasonSlug?: string;
     seriesSlug?: string;

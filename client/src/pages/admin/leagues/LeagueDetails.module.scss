@@ -529,27 +529,18 @@
   gap: $space-md;
 }
 
-.alignmentViewHeader {
-  display: flex;
+.alignmentTitleInfo {
+  display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
+  color: $text-dim;
+  cursor: help;
+  line-height: 1;
+  transition: color $transition-fast;
 
-  h3 {
-    margin: 0;
-    color: $text-body;
-    font-size: $font-lg;
-  }
-
-  p {
-    margin: 3px 0 0;
-    color: $text-dim;
-    font-size: $font-sm;
-  }
-
-  @media (max-width: 640px) {
-    align-items: flex-start;
-    flex-direction: column;
+  &:hover,
+  &:focus-visible {
+    color: $text-bright;
+    outline: none;
   }
 }
 
@@ -580,8 +571,8 @@
     background $transition-fast,
     border-color $transition-fast;
 
-  &:not(.alignmentCardExpanded):hover,
-  &:not(.alignmentCardExpanded):focus-within {
+  &:hover,
+  &:focus-within {
     background: rgba(255, 255, 255, 0.04);
 
     .alignmentCardHoverActions {
@@ -602,26 +593,6 @@
   }
 }
 
-.alignmentCardExpanded {
-  .alignmentCardHeader {
-    padding-bottom: $space-md;
-    margin-bottom: $space-md;
-    border-bottom: 1px solid $border;
-  }
-}
-
-.alignmentCardActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-xs;
-  flex-shrink: 0;
-
-  @media (max-width: 640px) {
-    justify-content: flex-start;
-  }
-}
-
 .alignmentCardHoverActions {
   z-index: 2;
 }
@@ -629,31 +600,50 @@
 .alignmentPanelBody {
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: $space-lg;
 }
 
-.alignmentTeamGrid {
+.alignmentTeamList,
+.alignmentGroupList {
   list-style: none;
   margin: 0;
   padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.alignmentTeamList {
+  gap: $space-sm;
+}
+
+.alignmentGroupList {
+  gap: $space-md;
+}
+
+.alignmentEditRow {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+}
+
+.alignmentEditNameRow {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: 1fr;
+}
+
+.alignmentEditControlsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
   gap: $space-md;
 
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
-  }
-}
-
-.alignmentEditRow {
-  display: grid;
-  grid-template-columns: minmax(150px, 220px) minmax(180px, 1fr);
-  align-items: end;
-  gap: $space-md;
-
-  @media (max-width: 720px) {
-    grid-template-columns: 1fr;
     align-items: stretch;
+  }
+
+  > :only-child {
+    grid-column: 1 / -1;
   }
 }
 
@@ -693,13 +683,9 @@
 .alignmentBooleanField {
   display: flex;
   align-items: center;
-  height: 42px;
 }
 
 .alignmentStructureSegmented {
-  max-width: 220px;
-  height: 42px;
-
   > button,
   > span {
     flex: 1;
@@ -1090,31 +1076,6 @@
   font-weight: 600;
   color: $text-dim;
   white-space: nowrap;
-}
-
-// Small pill badge indicating a group's playoff role
-.groupRoleBadge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 7px;
-  border-radius: $radius-sm;
-  font-size: $font-xs;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: rgba($text-dim, 0.15);
-  color: $text-dim;
-  white-space: nowrap;
-}
-
-.groupRoleBadge_conference {
-  background: rgba(#6366f1, 0.18);
-  color: #a5b4fc;
-}
-
-.groupRoleBadge_division {
-  background: rgba(#10b981, 0.18);
-  color: #6ee7b7;
 }
 
 // Always-visible footer row inside each group node

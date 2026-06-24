@@ -36,7 +36,7 @@ jest.mock('@/components/Card/Card', () => (props: any) => (
   </div>
 ));
 jest.mock('@/components/ConfirmModal/ConfirmModal', () => () => null);
-jest.mock('@/components/Badge/Badge', () => (props: any) => <span>{props.label}</span>);
+jest.mock('@/components/Tag/Tag', () => (props: any) => <span>{props.label}</span>);
 jest.mock('@/components/MoreActionsMenu/MoreActionsMenu', () => () => null);
 jest.mock('@/components/SegmentedControl/SegmentedControl', () => (props: any) => (
   <div>
