@@ -41,8 +41,8 @@
 }
 
 .leadingLogo {
-  width: 34px;
-  height: 34px;
+  width: var(--selectable-list-item-leading-logo-size, 34px);
+  height: var(--selectable-list-item-leading-logo-size, 34px);
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
@@ -52,8 +52,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: var(--selectable-list-item-leading-logo-placeholder-size, 24px);
+    height: var(--selectable-list-item-leading-logo-placeholder-size, 24px);
     border-radius: $radius-sm;
     background: $border;
     font-size: $font-xs;
@@ -66,12 +66,13 @@
 
 .image {
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
+  width: var(--selectable-list-item-image-size, 32px);
+  height: var(--selectable-list-item-image-size, 32px);
   background: rgba(255, 255, 255, 0.08);
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: var(--selectable-list-item-image-font-size, #{$font-sm});
   font-weight: 500;
   color: $text-dim;
   overflow: hidden;

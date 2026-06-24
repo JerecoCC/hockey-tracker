@@ -566,7 +566,6 @@
     padding: $space-md;
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.02);
   }
 
   &Header {
@@ -645,16 +644,18 @@
     line-height: 30px;
   }
 
-  &WinnerSection {
-    display: flex;
-    flex-direction: column;
-    gap: $space-sm;
-  }
-
-  &WinnerGrid {
+  &WinnerCards {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: $space-md;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  &WinnerCardsMultiple {
+    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+    gap: $space-sm;
   }
 
   &WinnerCard {
@@ -665,11 +666,17 @@
     gap: $space-sm;
     min-height: 186px;
     padding: $space-md;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid $border;
     border-radius: $radius-md;
-    background: rgba(0, 0, 0, 0.16);
+    background: rgba(255, 255, 255, 0.02);
     overflow: hidden;
     text-align: center;
+  }
+
+  &WinnerCardsMultiple &WinnerCard {
+    min-height: 132px;
+    padding: $space-sm;
+    gap: $space-xs;
   }
 
   &WinnerImageWrap {
@@ -679,6 +686,11 @@
     justify-content: center;
     width: 112px;
     height: 112px;
+  }
+
+  &WinnerCardsMultiple &WinnerImageWrap {
+    width: 72px;
+    height: 72px;
   }
 
   &WinnerTeamLogo {
@@ -711,6 +723,68 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
+  }
+
+  &WinnerList {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    max-height: 220px;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  &WinnerListItem {
+    --list-item-logo-size: 40px;
+    --list-item-jersey-size: 28px;
+    --list-item-jersey-font-size: #{$font-xs};
+
+    padding: $space-sm;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  &Nominees {
+    padding-top: $space-md;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  &NomineeList {
+    display: flex;
+    gap: $space-sm;
+    margin: 0;
+    padding: 0;
+    overflow-x: auto;
+    list-style: none;
+  }
+
+  &NomineeItem {
+    flex: 0 0 min(260px, 82vw);
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  &RecipientMeta {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
+    min-width: 0;
+    color: $text-dim;
+    font-size: $font-xs;
+    line-height: 1.25;
+    white-space: nowrap;
+  }
+
+  &WinnerMeta {
+    justify-content: center;
+    width: 100%;
+  }
+
+  &RecipientMetaTeam {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
   }
 
   &WinnerOverlay {
@@ -887,6 +961,49 @@
     font-weight: 700;
     letter-spacing: 0.04em;
     text-transform: uppercase;
+  }
+
+  &PlayerChecklist {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &PlayerChecklistControls {
+    display: flex;
+    gap: $space-md;
+    align-items: center;
+    margin-bottom: $space-lg;
+
+    @media (max-width: $bp-tablet) {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  }
+
+  &PlayerChecklistSearch {
+    flex: 1;
+  }
+
+  &PlayerChecklistList {
+    --selectable-list-item-image-size: 48px;
+    --selectable-list-item-image-font-size: #{$font-base};
+
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-height: min(70vh, 680px);
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+    list-style: none;
+  }
+
+  &PlayerChecklistEmpty {
+    padding: $space-2xl 0;
+    color: $text-dim;
+    font-size: $font-base;
+    font-style: italic;
+    text-align: center;
   }
 
   &NomineeManager {

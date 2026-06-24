@@ -22,6 +22,9 @@
 }
 
 .list {
+  --selectable-list-item-image-size: 48px;
+  --selectable-list-item-image-font-size: #{$font-base};
+
   list-style: none;
   margin: 0;
   padding: 0;
