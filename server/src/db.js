@@ -583,6 +583,8 @@ async function initSchema() {
       selection_method        TEXT NOT NULL DEFAULT 'manual',
       stat_key                TEXT,
       awarded_after_playoffs  BOOLEAN NOT NULL DEFAULT true,
+      uses_nominees           BOOLEAN NOT NULL DEFAULT false,
+      allow_multiple_winners  BOOLEAN NOT NULL DEFAULT false,
       active                  BOOLEAN NOT NULL DEFAULT true,
       sort_order              INT NOT NULL DEFAULT 0,
       created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -594,6 +596,29 @@ async function initSchema() {
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS selection_method TEXT NOT NULL DEFAULT 'manual'`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS stat_key TEXT`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS awarded_after_playoffs BOOLEAN NOT NULL DEFAULT true`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS uses_nominees BOOLEAN NOT NULL DEFAULT false`;
+  await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS allow_multiple_winners BOOLEAN NOT NULL DEFAULT false`;
+  await sql`
+    CREATE TABLE IF NOT EXISTS _migrations (
+      name       TEXT PRIMARY KEY,
+      applied_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+  await sql`
+    DO $$
+    BEGIN
+      IF NOT EXISTS (
+        SELECT 1 FROM _migrations WHERE name = 'backfill_league_award_uses_nominees_v1'
+      ) THEN
+        UPDATE league_awards
+        SET uses_nominees = true
+        WHERE selection_method = 'voted'
+          AND uses_nominees = false;
+
+        INSERT INTO _migrations (name) VALUES ('backfill_league_award_uses_nominees_v1');
+      END IF;
+    END $$
+  `;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true`;
   await sql`ALTER TABLE league_awards ADD COLUMN IF NOT EXISTS sort_order INT NOT NULL DEFAULT 0`;
 

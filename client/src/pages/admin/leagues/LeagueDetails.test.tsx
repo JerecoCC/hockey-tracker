@@ -348,6 +348,8 @@ describe('LeagueDetailsPage – loading', () => {
       selection_method: 'manual',
       stat_key: null,
       awarded_after_playoffs: true,
+      uses_nominees: false,
+      allow_multiple_winners: false,
       sort_order: 0,
       active: true,
       created_at: '2024-01-01T00:00:00Z',

@@ -49,6 +49,8 @@ interface FormValues {
   selection_method: AwardSelectionMethod;
   stat_key: string;
   awarded_after_playoffs: boolean;
+  uses_nominees: boolean;
+  allow_multiple_winners: boolean;
   sort_order: string;
 }
 
@@ -64,6 +66,8 @@ const emptyValues: FormValues = {
   selection_method: 'manual',
   stat_key: '',
   awarded_after_playoffs: true,
+  uses_nominees: false,
+  allow_multiple_winners: false,
   sort_order: '',
 };
 
@@ -83,6 +87,8 @@ const toPayload = (values: FormValues): LeagueAwardPayload => ({
   selection_method: values.selection_method,
   stat_key: values.stat_key || null,
   awarded_after_playoffs: values.awarded_after_playoffs,
+  uses_nominees: values.uses_nominees,
+  allow_multiple_winners: values.allow_multiple_winners,
   sort_order: values.sort_order.trim() === '' ? null : Number(values.sort_order),
 });
 
@@ -93,6 +99,8 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const [confirmDelete, setConfirmDelete] = useState<LeagueAwardRecord | null>(null);
   const form = useForm<FormValues>({ defaultValues: emptyValues, mode: 'onChange' });
   const awardedAfterPlayoffsLabelId = useId();
+  const usesNomineesLabelId = useId();
+  const allowMultipleWinnersLabelId = useId();
 
   const openCreate = () => {
     setEditTarget(null);
@@ -109,6 +117,8 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
       selection_method: award.selection_method,
       stat_key: award.stat_key ?? '',
       awarded_after_playoffs: award.awarded_after_playoffs,
+      uses_nominees: award.uses_nominees,
+      allow_multiple_winners: award.allow_multiple_winners,
       sort_order: award.sort_order ? String(award.sort_order) : '',
     });
     setModalOpen(true);
@@ -126,13 +136,17 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     if (ok) closeModal();
   });
 
-  const toggleAwardedAfterPlayoffs = () => {
-    form.setValue('awarded_after_playoffs', !form.getValues('awarded_after_playoffs'), {
+  const toggleBooleanField = (
+    field: 'awarded_after_playoffs' | 'uses_nominees' | 'allow_multiple_winners',
+  ) => {
+    form.setValue(field, !form.getValues(field), {
       shouldDirty: true,
       shouldValidate: true,
     });
   };
   const awardedAfterPlayoffs = form.watch('awarded_after_playoffs');
+  const usesNominees = form.watch('uses_nominees');
+  const allowMultipleWinners = form.watch('allow_multiple_winners');
 
   if (loading) return <LeagueAwardsTabSkeleton className={className} />;
 
@@ -205,6 +219,18 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                           label={award.awarded_after_playoffs ? 'After playoffs' : 'Regular season'}
                           intent={award.awarded_after_playoffs ? 'success' : 'neutral'}
                         />
+                        {award.uses_nominees && (
+                          <Tag
+                            label="Uses nominees"
+                            intent="info"
+                          />
+                        )}
+                        {award.allow_multiple_winners && (
+                          <Tag
+                            label="Multiple winners"
+                            intent="accent"
+                          />
+                        )}
                       </div>
                     </div>
                   </ListItem>
@@ -282,14 +308,38 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
           />
           <div
             className={styles.awardDefinitionCheckbox}
-            onClick={toggleAwardedAfterPlayoffs}
+            onClick={() => toggleBooleanField('awarded_after_playoffs')}
           >
             <Checkbox
               checked={awardedAfterPlayoffs}
-              onChange={toggleAwardedAfterPlayoffs}
+              onChange={() => toggleBooleanField('awarded_after_playoffs')}
               ariaLabelledBy={awardedAfterPlayoffsLabelId}
             />
             <span id={awardedAfterPlayoffsLabelId}>Awarded after playoffs</span>
+          </div>
+          <div className={styles.awardDefinitionCheckboxGrid}>
+            <div
+              className={styles.awardDefinitionCheckbox}
+              onClick={() => toggleBooleanField('uses_nominees')}
+            >
+              <Checkbox
+                checked={usesNominees}
+                onChange={() => toggleBooleanField('uses_nominees')}
+                ariaLabelledBy={usesNomineesLabelId}
+              />
+              <span id={usesNomineesLabelId}>Uses nominees</span>
+            </div>
+            <div
+              className={styles.awardDefinitionCheckbox}
+              onClick={() => toggleBooleanField('allow_multiple_winners')}
+            >
+              <Checkbox
+                checked={allowMultipleWinners}
+                onChange={() => toggleBooleanField('allow_multiple_winners')}
+                ariaLabelledBy={allowMultipleWinnersLabelId}
+              />
+              <span id={allowMultipleWinnersLabelId}>Multiple winners</span>
+            </div>
           </div>
         </form>
       </Modal>

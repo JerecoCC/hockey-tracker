@@ -1357,4 +1357,14 @@ $league-tab-list-gap: $space-md;
     font-size: $font-sm;
     user-select: none;
   }
+
+  &CheckboxGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-md;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
 }

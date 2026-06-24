@@ -169,6 +169,8 @@ const leagueAwards = pgTable('league_awards', {
   selectionMethod: text('selection_method').notNull().default('manual'),
   statKey: text('stat_key'),
   awardedAfterPlayoffs: boolean('awarded_after_playoffs').notNull().default(true),
+  usesNominees: boolean('uses_nominees').notNull().default(false),
+  allowMultipleWinners: boolean('allow_multiple_winners').notNull().default(false),
   active: boolean('active').notNull().default(true),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: createdAt(),
