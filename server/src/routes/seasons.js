@@ -2141,7 +2141,11 @@ router.get('/:id/awards', async (req, res) => {
         sar.notes,
         p.first_name,
         p.last_name,
-        COALESCE(ptr.photo, p.photo) AS player_photo,
+        COALESCE(
+          NULLIF(ptr.photo, ''),
+          best_player_photo(p.id, ${id}, ptr.team_id),
+          NULLIF(p.photo, '')
+        ) AS player_photo,
         COALESCE(ptr.position, p.position) AS position,
         ptr.jersey_number,
         ti.name AS team_name,

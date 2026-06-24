@@ -119,6 +119,32 @@ describe('GET /api/admin/seasons/:id/stats', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/seasons/:id/awards
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/seasons/:id/awards', () => {
+  it('uses the shared player photo helper for award recipients', async () => {
+    sql
+      .mockResolvedValueOnce([
+        {
+          award_id: 'award-1',
+          league_id: 'league-1',
+          name: 'Second All-Star Team',
+          recipient_type: 'player',
+          season_award_id: 'season-award-1',
+        },
+      ])
+      .mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/admin/seasons/season-1/awards');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+    const recipientQueryText = sql.mock.calls[1][0].join('');
+    expect(recipientQueryText).toContain('best_player_photo');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/seasons/:id/standings
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/seasons/:id/standings', () => {

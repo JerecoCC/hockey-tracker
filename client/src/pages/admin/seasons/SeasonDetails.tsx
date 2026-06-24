@@ -1281,6 +1281,9 @@ const SeasonDetailsPage = () => {
             content: (
               <SeasonAwardsTab
                 seasonId={id!}
+                leagueCode={season.league_code}
+                leagueId={season.league_id}
+                seasonName={season.name}
                 seasonTeams={effectiveSeasonTeams}
                 skaters={skaters}
                 goalies={goalies}

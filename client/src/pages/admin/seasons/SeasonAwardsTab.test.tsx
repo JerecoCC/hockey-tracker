@@ -1,9 +1,11 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter } from 'react-router-dom';
 import useSeasonAwards, {
   type SeasonAwardRecipient,
   type SeasonAwardRecord,
 } from '@/hooks/useSeasonAwards';
+import { usePlayoffSeries } from '@/hooks/useGames';
 import SeasonAwardsTab from './SeasonAwardsTab';
 
 jest.mock('@/hooks/useSeasonAwards', () => ({
@@ -11,7 +13,13 @@ jest.mock('@/hooks/useSeasonAwards', () => ({
   default: jest.fn(),
 }));
 
+jest.mock('@/hooks/useGames', () => ({
+  __esModule: true,
+  usePlayoffSeries: jest.fn(),
+}));
+
 const mockUseSeasonAwards = useSeasonAwards as jest.Mock;
+const mockUsePlayoffSeries = usePlayoffSeries as jest.Mock;
 
 const skater = {
   player_id: 'player-1',
@@ -88,7 +96,11 @@ const makeWinner = (
   team_text_color: '#ffffff',
 });
 
-const renderTab = (award: SeasonAwardRecord, addRecipient = jest.fn(async () => true)) => {
+const renderTab = (
+  award: SeasonAwardRecord,
+  addRecipient = jest.fn(async () => true),
+  playoffSeries: unknown[] = [],
+) => {
   mockUseSeasonAwards.mockReturnValue({
     awards: [award],
     loading: false,
@@ -97,15 +109,31 @@ const renderTab = (award: SeasonAwardRecord, addRecipient = jest.fn(async () => 
     deleteRecipient: jest.fn(async () => true),
     refresh: jest.fn(),
   });
+  mockUsePlayoffSeries.mockReturnValue({
+    series: playoffSeries,
+    loading: false,
+    busy: null,
+    createSeries: jest.fn(),
+    updateSeries: jest.fn(),
+    deleteSeries: jest.fn(),
+    startSeries: jest.fn(),
+    advanceBracket: jest.fn(),
+    forceAdvance: jest.fn(),
+  });
 
   return render(
-    <SeasonAwardsTab
-      seasonId="season-1"
-      seasonTeams={[team]}
-      skaters={[skater]}
-      goalies={[]}
-      standings={[]}
-    />,
+    <MemoryRouter>
+      <SeasonAwardsTab
+        seasonId="season-1"
+        leagueCode="PWHL"
+        leagueId="league-1"
+        seasonName="2025-26"
+        seasonTeams={[team]}
+        skaters={[skater]}
+        goalies={[]}
+        standings={[]}
+      />
+    </MemoryRouter>,
   );
 };
 
@@ -139,6 +167,77 @@ describe('SeasonAwardsTab', () => {
     expect(container.querySelector('.awardWinnerCards')).not.toBeInTheDocument();
     expect(screen.getByText('John Smith')).toBeInTheDocument();
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+  });
+
+  it('uses readable award selection subtitles without recorded status', async () => {
+    const user = userEvent.setup();
+    renderTab(
+      makeAward({
+        name: 'Walter Cup Winner',
+        recipient_type: 'team',
+        selection_method: 'playoff',
+        stat_key: 'playoff_champion',
+        recipients: [
+          {
+            ...makeWinner('winner-1', 'player-1', 'Toronto'),
+            recipient_type: 'team',
+            player_id: null,
+            team_id: 'team-1',
+            player_name: null,
+          },
+        ],
+      }),
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Update Awards' }));
+
+    expect(screen.getByText('Team | Playoff | Playoff Champion')).toBeInTheDocument();
+    expect(screen.queryByText(/playoff_champion/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('Team | Playoff | Playoff Champion | Recorded')).not.toBeInTheDocument();
+  });
+
+  it('hides the set winner action for automatic awards after a winner is recorded', () => {
+    renderTab(
+      makeAward({
+        selection_method: 'automatic',
+        stat_key: 'points',
+        recipients: [makeWinner('winner-1', 'player-1', 'John Smith')],
+      }),
+    );
+
+    expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
+  });
+
+  it('hides the set winner action for recorded playoff champion awards', () => {
+    renderTab(
+      makeAward({
+        name: 'Walter Cup Winner',
+        recipient_type: 'team',
+        selection_method: 'playoff',
+        stat_key: 'playoff_champion',
+        recipients: [
+          {
+            ...makeWinner('winner-1', 'player-1', 'Toronto'),
+            recipient_type: 'team',
+            player_id: null,
+            team_id: 'team-1',
+            player_name: null,
+          },
+        ],
+      }),
+    );
+
+    expect(screen.queryByRole('button', { name: 'Award Team' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the set winner action for non-automatic awards after a winner is recorded', () => {
+    renderTab(
+      makeAward({
+        recipients: [makeWinner('winner-1', 'player-1', 'John Smith')],
+      }),
+    );
+
+    expect(screen.getByRole('button', { name: 'Award Player' })).toBeInTheDocument();
   });
 
   it('fills the single-winner nominee select with the current winner', async () => {
@@ -184,6 +283,87 @@ describe('SeasonAwardsTab', () => {
         silent: true,
         refresh: false,
       },
+    );
+  });
+
+  it('shows an awardee card skeleton while saving a suggested playoff champion winner', async () => {
+    const user = userEvent.setup();
+    let resolveAddRecipient: (value: boolean) => void = () => {};
+    const addRecipient = jest.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveAddRecipient = resolve;
+        }),
+    );
+    const { container } = renderTab(
+      makeAward({
+        name: 'Walter Cup Winner',
+        recipient_type: 'team',
+        selection_method: 'playoff',
+        stat_key: 'playoff_champion',
+      }),
+      addRecipient,
+      [
+        {
+          id: 'series-1',
+          season_id: 'season-1',
+          round: 1,
+          series_letter: 'A',
+          home_team_id: 'team-2',
+          home_team_name: 'Montreal',
+          home_team_code: 'MTL',
+          away_team_id: 'team-3',
+          away_team_name: 'Boston',
+          away_team_code: 'BOS',
+          games_to_win: 3,
+          home_wins: 3,
+          away_wins: 1,
+          status: 'complete',
+          winner_team_id: 'team-2',
+          bracket_slot_key: null,
+          created_at: '2026-01-01T00:00:00.000Z',
+          games: [],
+        },
+        {
+          id: 'series-2',
+          season_id: 'season-1',
+          round: 2,
+          series_letter: 'F',
+          home_team_id: 'team-1',
+          home_team_name: 'Toronto',
+          home_team_code: 'TOR',
+          away_team_id: 'team-2',
+          away_team_name: 'Montreal',
+          away_team_code: 'MTL',
+          games_to_win: 3,
+          home_wins: 3,
+          away_wins: 2,
+          status: 'complete',
+          winner_team_id: 'team-1',
+          bracket_slot_key: null,
+          created_at: '2026-01-01T00:00:00.000Z',
+          games: [],
+        },
+      ],
+    );
+
+    expect(
+      screen.queryByRole('button', { name: 'Use suggested winner: Toronto' }),
+    ).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Award Team' }));
+
+    expect(container.querySelector('.awardWinnerSkeleton')).toBeInTheDocument();
+    expect(addRecipient).toHaveBeenCalledWith('season-award-1', {
+      recipient_type: 'team',
+      player_id: null,
+      team_id: 'team-1',
+      role: 'winner',
+    });
+
+    resolveAddRecipient(true);
+    await waitFor(() =>
+      expect(container.querySelector('.awardWinnerSkeleton')).not.toBeInTheDocument(),
     );
   });
 });

@@ -725,6 +725,25 @@
     justify-content: center;
   }
 
+  &WinnerCardClickable {
+    cursor: pointer;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+      border-color: rgba($accent, 0.5);
+    }
+  }
+
+  &WinnerCardLink {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    border-radius: inherit;
+  }
+
   &WinnerImageWrap {
     position: relative;
     display: flex;
@@ -741,6 +760,18 @@
 
   &WinnerTeamLogo {
     filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+  }
+
+  &WinnerSkeleton {
+    pointer-events: none;
+  }
+
+  &WinnerSkeletonInfo {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+    width: 100%;
   }
 
   &WinnerInfo {
