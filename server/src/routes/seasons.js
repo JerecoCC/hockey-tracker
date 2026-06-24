@@ -2275,6 +2275,36 @@ router.patch('/:id/awards/:seasonAwardId', async (req, res) => {
   }
 });
 
+router.delete('/:id/awards/:seasonAwardId', async (req, res) => {
+  const { id, seasonAwardId } = req.params;
+  try {
+    const awards = await sql`
+      SELECT
+        sa.id,
+        COUNT(sar.id)::int AS recipient_count
+      FROM season_awards sa
+      LEFT JOIN season_award_recipients sar ON sar.season_award_id = sa.id
+      WHERE sa.id = ${seasonAwardId} AND sa.season_id = ${id}
+      GROUP BY sa.id
+    `;
+    if (awards.length === 0) return res.status(404).json({ error: 'Award not found' });
+    if (awards[0].recipient_count > 0) {
+      return res.status(409).json({
+        error: 'Remove nominees and winners before removing this award from the season',
+      });
+    }
+
+    await sql`
+      DELETE FROM season_awards
+      WHERE id = ${seasonAwardId} AND season_id = ${id}
+    `;
+    return res.status(204).send();
+  } catch (err) {
+    console.error('season award delete error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 router.post('/:id/awards/:seasonAwardId/recipients', async (req, res) => {
   const { id, seasonAwardId } = req.params;
   const {

@@ -5,6 +5,8 @@ import Card from '@/components/Card/Card';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
+import SearchField from '@/components/SearchField/SearchField';
+import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
@@ -102,6 +104,19 @@ interface Props {
 const playerName = (player: Pick<SkaterStatRecord, 'first_name' | 'last_name'>) =>
   [player.first_name, player.last_name].filter(Boolean).join(' ');
 
+const titleCase = (value: string) =>
+  value ? `${value.slice(0, 1).toUpperCase()}${value.slice(1)}` : value;
+
+const awardSelectionSubtitle = (award: SeasonAwardRecord) =>
+  [
+    award.recipient_type === 'player' ? 'Player' : 'Team',
+    titleCase(award.selection_method),
+    award.stat_key,
+    award.recipients.length > 0 ? 'Recorded' : null,
+  ]
+    .filter(Boolean)
+    .join(' | ');
+
 const numericFieldValue = (record: object, field: string | null | undefined) => {
   if (!field) return null;
   const value = (record as Record<string, unknown>)[field];
@@ -149,8 +164,12 @@ const recipientTeamSelectionGroup = (recipient: SeasonAwardRecipient): AwardTeam
 };
 
 const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }: Props) => {
-  const { awards, loading, createAward, addRecipient, deleteRecipient, refresh } =
+  const { awards, loading, updateTrackedAwards, addRecipient, deleteRecipient, refresh } =
     useSeasonAwards(seasonId);
+  const [awardSelectionOpen, setAwardSelectionOpen] = useState(false);
+  const [awardSelectionDraftIds, setAwardSelectionDraftIds] = useState<string[]>([]);
+  const [awardSelectionQuery, setAwardSelectionQuery] = useState('');
+  const [awardSelectionSaving, setAwardSelectionSaving] = useState(false);
   const [recipientAward, setRecipientAward] = useState<SeasonAwardRecord | null>(null);
   const [nomineeAward, setNomineeAward] = useState<SeasonAwardRecord | null>(null);
   const [nomineeDrafts, setNomineeDrafts] = useState<NomineeDraft[]>([]);
@@ -310,12 +329,65 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
     return byAward;
   }, [awards, goalies, skaters, standings]);
 
+  const trackedAwards = useMemo(
+    () => awards.filter((award) => award.season_award_id),
+    [awards],
+  );
+  const trackedAwardIds = trackedAwards.map((award) => award.award_id);
+  const sortedTrackedAwardIds = [...trackedAwardIds].sort().join('|');
+  const sortedAwardSelectionDraftIds = [...awardSelectionDraftIds].sort().join('|');
+  const awardSelectionHasChanges = sortedTrackedAwardIds !== sortedAwardSelectionDraftIds;
+  const awardSelectionCountLabel =
+    awardSelectionDraftIds.length === 1 ? '1 award selected' : `${awardSelectionDraftIds.length} awards selected`;
+  const filteredAwardSelectionAwards = awards.filter((award) => {
+    const query = awardSelectionQuery.trim().toLowerCase();
+    if (!query) return true;
+    return (
+      award.name.toLowerCase().includes(query) ||
+      award.description?.toLowerCase().includes(query) ||
+      award.selection_method.toLowerCase().includes(query) ||
+      award.recipient_type.toLowerCase().includes(query)
+    );
+  });
+
   const activeRecipientAward = recipientAward
     ? (awards.find((award) => award.award_id === recipientAward.award_id) ?? recipientAward)
     : null;
   const activeNomineeAward = nomineeAward
     ? (awards.find((award) => award.award_id === nomineeAward.award_id) ?? nomineeAward)
     : null;
+
+  const openAwardSelectionModal = () => {
+    setAwardSelectionDraftIds(trackedAwardIds);
+    setAwardSelectionQuery('');
+    setAwardSelectionOpen(true);
+  };
+
+  const closeAwardSelectionModal = () => {
+    setAwardSelectionOpen(false);
+    setAwardSelectionDraftIds([]);
+    setAwardSelectionQuery('');
+    setAwardSelectionSaving(false);
+  };
+
+  const toggleAwardSelection = (award: SeasonAwardRecord) => {
+    const selected = awardSelectionDraftIds.includes(award.award_id);
+    const locked = selected && !!award.season_award_id && award.recipients.length > 0;
+    if (locked) return;
+    setAwardSelectionDraftIds((draftIds) =>
+      selected
+        ? draftIds.filter((awardId) => awardId !== award.award_id)
+        : [...draftIds, award.award_id],
+    );
+  };
+
+  const saveAwardSelection = async () => {
+    if (!awardSelectionHasChanges || awardSelectionSaving) return;
+    setAwardSelectionSaving(true);
+    const ok = await updateTrackedAwards(awardSelectionDraftIds);
+    setAwardSelectionSaving(false);
+    if (ok) closeAwardSelectionModal();
+  };
 
   const openRecipientModal = (award: SeasonAwardRecord) => {
     setRecipientAward(award);
@@ -476,9 +548,6 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
     });
   };
 
-  const attachAwardToSeason = (award: SeasonAwardRecord) =>
-    createAward({ award_id: award.award_id });
-
   const submitTeamSelection = teamSelectionForm.handleSubmit(async (values) => {
     if (
       !teamSelectionAward?.season_award_id ||
@@ -534,14 +603,32 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
 
   return (
     <>
-      <Card title="Awards">
+      <Card
+        title="Awards"
+        action={
+          !loading && awards.length > 0 ? (
+            <Button
+              type="button"
+              size="sm"
+              variant="outlined"
+              intent="accent"
+              icon="playlist_add"
+              onClick={openAwardSelectionModal}
+            >
+              Update Awards
+            </Button>
+          ) : null
+        }
+      >
         {loading ? (
           <p className={styles.tabPlaceholder}>Loading awards...</p>
         ) : awards.length === 0 ? (
           <p className={styles.tabPlaceholder}>No league award definitions yet.</p>
+        ) : trackedAwards.length === 0 ? (
+          <p className={styles.tabPlaceholder}>No awards tracked for this season.</p>
         ) : (
           <div className={styles.awardsList}>
-            {awards.map((award) => {
+            {trackedAwards.map((award) => {
               const winners = award.recipients.filter((recipient) => recipient.role === 'winner');
               const nominees = award.recipients.filter((recipient) => recipient.role === 'nominee');
               const suggestion = suggestions.get(award.award_id);
@@ -571,66 +658,52 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
                       )}
                     </div>
                     <div className={styles.awardActions}>
-                      {!award.season_award_id ? (
+                      {suggestion && (
                         <Button
                           size="sm"
                           variant="outlined"
-                          intent="neutral"
-                          icon="playlist_add"
-                          tooltip="Track award"
-                          aria-label="Track award"
-                          onClick={() => attachAwardToSeason(award)}
+                          intent="success"
+                          icon="stars"
+                          tooltip={`Use suggested winner: ${suggestion.label}`}
+                          aria-label={`Use suggested winner: ${suggestion.label}`}
+                          onClick={() => addSuggestedWinner(award, suggestion)}
                         />
-                      ) : (
-                        <>
-                          {suggestion && (
-                            <Button
-                              size="sm"
-                              variant="outlined"
-                              intent="success"
-                              icon="stars"
-                              tooltip={`Use suggested winner: ${suggestion.label}`}
-                              aria-label={`Use suggested winner: ${suggestion.label}`}
-                              onClick={() => addSuggestedWinner(award, suggestion)}
-                            />
-                          )}
-                          <div className={styles.awardRecipientActions}>
-                            {canManageNominees && (
-                              <Button
-                                size="sm"
-                                variant="outlined"
-                                intent="neutral"
-                                icon="person_add"
-                                tooltip="Nominees"
-                                aria-label="Nominees"
-                                onClick={() => openNomineesModal(award)}
-                              />
-                            )}
-                            {isGroupedAward ? (
-                              <Button
-                                size="sm"
-                                icon="groups"
-                                tooltip="Set team"
-                                aria-label="Set team"
-                                onClick={() => openTeamSelectionModal(award)}
-                              />
-                            ) : (
-                              <Button
-                                size="sm"
-                                icon="emoji_events"
-                                tooltip={
-                                  awardRequiresNominees
-                                    ? 'Add nominees before awarding'
-                                    : awardRecipientLabel
-                                }
-                                aria-label={awardRecipientLabel}
-                                disabled={awardRequiresNominees}
-                                onClick={() => openRecipientModal(award)}
-                              />
-                            )}
-                          </div>
-                        </>
                       )}
+                      <div className={styles.awardRecipientActions}>
+                        {canManageNominees && (
+                          <Button
+                            size="sm"
+                            variant="outlined"
+                            intent="neutral"
+                            icon="person_add"
+                            tooltip="Nominees"
+                            aria-label="Nominees"
+                            onClick={() => openNomineesModal(award)}
+                          />
+                        )}
+                        {isGroupedAward ? (
+                          <Button
+                            size="sm"
+                            icon="groups"
+                            tooltip="Set team"
+                            aria-label="Set team"
+                            onClick={() => openTeamSelectionModal(award)}
+                          />
+                        ) : (
+                          <Button
+                            size="sm"
+                            icon="emoji_events"
+                            tooltip={
+                              awardRequiresNominees
+                                ? 'Add nominees before awarding'
+                                : awardRecipientLabel
+                            }
+                            aria-label={awardRecipientLabel}
+                            disabled={awardRequiresNominees}
+                            onClick={() => openRecipientModal(award)}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -662,6 +735,52 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
           </div>
         )}
       </Card>
+
+      <Modal
+        open={awardSelectionOpen}
+        title="Update Awards"
+        onClose={closeAwardSelectionModal}
+        onConfirm={saveAwardSelection}
+        confirmLabel={awardSelectionSaving ? 'Saving...' : 'Save Awards'}
+        confirmIcon="save"
+        confirmDisabled={awardSelectionSaving || !awardSelectionHasChanges}
+        busy={awardSelectionSaving}
+        footerStart={<span>{awardSelectionCountLabel}</span>}
+      >
+        <div className={styles.awardSelectionModal}>
+          <SearchField
+            value={awardSelectionQuery}
+            onChange={setAwardSelectionQuery}
+            placeholder="Search awards"
+          />
+          <ul className={styles.awardSelectionList}>
+            {filteredAwardSelectionAwards.length === 0 ? (
+              <li className={styles.awardSelectionEmpty}>No awards found.</li>
+            ) : (
+              filteredAwardSelectionAwards.map((award) => {
+                const checked = awardSelectionDraftIds.includes(award.award_id);
+                const locked = checked && !!award.season_award_id && award.recipients.length > 0;
+                return (
+                  <SelectableListItem
+                    key={award.award_id}
+                    checked={checked}
+                    onToggle={() => toggleAwardSelection(award)}
+                    hideImage
+                    disabled={awardSelectionSaving || locked}
+                    name={award.name}
+                    subtitle={awardSelectionSubtitle(award)}
+                    rightContent={
+                      locked ? (
+                        <span className={styles.awardSelectionLocked}>Recorded</span>
+                      ) : undefined
+                    }
+                  />
+                );
+              })
+            )}
+          </ul>
+        </div>
+      </Modal>
 
       <Modal
         open={!!recipientAward}

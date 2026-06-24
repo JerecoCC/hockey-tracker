@@ -100,16 +100,74 @@ const useSeasonAwards = (seasonId: string | undefined) => {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey });
 
-  const createAward = async (payload: CreateSeasonAwardPayload): Promise<boolean> => {
+  const createAward = async (
+    payload: CreateSeasonAwardPayload,
+    options: AwardMutationOptions = {},
+  ): Promise<boolean> => {
     try {
       await axios.post(`${API}/admin/seasons/${seasonId}/awards`, payload, {
         headers: authHeaders(),
       });
-      toast.success(payload.award_id ? 'Award added to season' : 'Award created');
-      refresh();
+      if (!options.silent) {
+        toast.success(payload.award_id ? 'Award added to season' : 'Award created');
+      }
+      if (options.refresh !== false) refresh();
       return true;
     } catch (err) {
       toast.error(apiError(err, 'Failed to save award'));
+      return false;
+    }
+  };
+
+  const deleteSeasonAward = async (
+    seasonAwardId: string,
+    options: AwardMutationOptions = {},
+  ): Promise<boolean> => {
+    try {
+      await axios.delete(`${API}/admin/seasons/${seasonId}/awards/${seasonAwardId}`, {
+        headers: authHeaders(),
+      });
+      if (!options.silent) toast.success('Award removed from season');
+      if (options.refresh !== false) refresh();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to remove award from season'));
+      return false;
+    }
+  };
+
+  const updateTrackedAwards = async (selectedAwardIds: string[]): Promise<boolean> => {
+    const selected = new Set(selectedAwardIds);
+    const trackedAwards = data.filter((award) => award.season_award_id);
+    const awardsToRemove = trackedAwards.filter((award) => !selected.has(award.award_id));
+    const lockedAward = awardsToRemove.find((award) => award.recipients.length > 0);
+    if (lockedAward) {
+      toast.error('Remove nominees and winners before removing this award from the season');
+      return false;
+    }
+
+    const awardsToAdd = data.filter(
+      (award) => selected.has(award.award_id) && !award.season_award_id,
+    );
+
+    try {
+      for (const award of awardsToRemove) {
+        await axios.delete(`${API}/admin/seasons/${seasonId}/awards/${award.season_award_id}`, {
+          headers: authHeaders(),
+        });
+      }
+      for (const award of awardsToAdd) {
+        await axios.post(
+          `${API}/admin/seasons/${seasonId}/awards`,
+          { award_id: award.award_id },
+          { headers: authHeaders() },
+        );
+      }
+      toast.success('Season awards updated');
+      refresh();
+      return true;
+    } catch (err) {
+      toast.error(apiError(err, 'Failed to update season awards'));
       return false;
     }
   };
@@ -176,6 +234,8 @@ const useSeasonAwards = (seasonId: string | undefined) => {
     awards: data,
     loading: isLoading,
     createAward,
+    deleteSeasonAward,
+    updateTrackedAwards,
     updateSeasonAward,
     addRecipient,
     deleteRecipient,

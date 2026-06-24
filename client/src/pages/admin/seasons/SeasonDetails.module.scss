@@ -855,6 +855,40 @@
     font-size: $font-sm;
   }
 
+  &SelectionModal {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &SelectionList {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    max-height: min(52vh, 440px);
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow-y: auto;
+  }
+
+  &SelectionEmpty {
+    list-style: none;
+    color: $text-muted;
+    font-size: $font-sm;
+    padding: $space-md;
+    text-align: center;
+  }
+
+  &SelectionLocked {
+    flex-shrink: 0;
+    color: $text-muted;
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
   &NomineeManager {
     display: flex;
     flex-direction: column;
