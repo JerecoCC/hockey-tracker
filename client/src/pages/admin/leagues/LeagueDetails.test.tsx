@@ -489,8 +489,11 @@ describe('LeagueDetailsPage – tabs', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /new alignment/i })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
     );
+    const alignmentRow = container.querySelector('.alignmentSetStack > .item');
+    expect(alignmentRow).toBeInTheDocument();
+    expect(alignmentRow).not.toHaveClass('alignmentCard');
     const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
     fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
 
@@ -509,23 +512,88 @@ describe('LeagueDetailsPage – tabs', () => {
     );
   });
 
-  it('uses the alignment editor field layout for the new alignment modal', async () => {
+  it('uses the alignment editor field layout for the create alignment modal', async () => {
     sessionStorage.setItem('tab:league-details', '3');
     const { container } = setup({ league: mockLeague });
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /new alignment/i })).toBeEnabled(),
-    );
-    fireEvent.click(screen.getByRole('button', { name: /new alignment/i }));
-
-    expect(await screen.findByRole('heading', { name: 'New Alignment' })).toBeInTheDocument();
-    await waitFor(() =>
       expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
     );
+    fireEvent.click(screen.getByRole('button', { name: /create alignment/i }));
+
+    expect(await screen.findByRole('heading', { name: 'Create Alignment' })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('');
+    const createAlignmentButtons = screen.getAllByRole('button', { name: /create alignment/i });
+    expect(createAlignmentButtons[createAlignmentButtons.length - 1]).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Yes' }));
+    expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('');
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('button', { name: /create alignment/i })[
+          createAlignmentButtons.length - 1
+        ],
+      ).toBeDisabled(),
+    );
+    fireEvent.change(screen.getByRole('textbox', { name: /Name/ }), {
+      target: { value: 'Custom Alignment' },
+    });
+    await waitFor(() =>
+      expect(
+        screen.getAllByRole('button', { name: /create alignment/i })[
+          createAlignmentButtons.length - 1
+        ],
+      ).toBeEnabled(),
+    );
+    expect(screen.getByRole('button', { name: /create group/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /create group/i }));
+    expect(await screen.findByRole('heading', { name: 'Create Group' })).toBeInTheDocument();
     expect(container.querySelector('.alignmentEditRow')).toBeInTheDocument();
     expect(container.querySelector('.alignmentEditNameRow')).toBeInTheDocument();
     expect(container.querySelector('.alignmentEditControlsRow')).toBeInTheDocument();
     expect(container.querySelector('.modalXl')).not.toBeInTheDocument();
+  });
+
+  it('lets create alignment update teams before saving the new alignment', async () => {
+    sessionStorage.setItem('tab:league-details', '3');
+    const teams = [
+      {
+        id: 'team-1',
+        name: 'Seattle Wolves',
+        place_name: 'Seattle',
+        team_name: 'Wolves',
+        code: 'SEA',
+        logo: '',
+        primary_color: '#123456',
+        text_color: '#ffffff',
+      },
+      {
+        id: 'team-2',
+        name: 'Portland Bears',
+        place_name: 'Portland',
+        team_name: 'Bears',
+        code: 'POR',
+        logo: '',
+        primary_color: '#654321',
+        text_color: '#ffffff',
+      },
+    ];
+    setup({ league: mockLeague, teams });
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
+    );
+    fireEvent.click(screen.getByRole('button', { name: /create alignment/i }));
+    expect(await screen.findByRole('heading', { name: 'Create Alignment' })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'No' }));
+
+    expect(screen.getByRole('textbox', { name: /Name/ })).toHaveValue('');
+    expect(screen.getByRole('button', { name: /update teams/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /update teams/i }));
+    expect(await screen.findByRole('heading', { name: 'Alignment Teams' })).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Search teams...')).toBeInTheDocument();
+    expect(screen.getByText('Wolves')).toBeInTheDocument();
+    expect(screen.getByText('Bears')).toBeInTheDocument();
   });
 
   it('renders league alignment teams as a single-column list item stack', async () => {
@@ -579,7 +647,7 @@ describe('LeagueDetailsPage – tabs', () => {
     );
 
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: /new alignment/i })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
     );
     const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
     fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
