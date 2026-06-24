@@ -34,16 +34,16 @@
   &.rowCollapsed {
     border-bottom: none;
   }
-}
 
-.rowWithActions {
-  &:hover,
-  &:focus-within {
-    --accordion-current-header-bg: color-mix(in srgb, var(--accordion-header-bg), white 6%);
+  &WithActions {
+    &:hover,
+    &:focus-within {
+      --accordion-current-header-bg: color-mix(in srgb, var(--accordion-header-bg), white 6%);
 
-    .hoverActions {
-      opacity: 1;
-      pointer-events: auto;
+      .hoverActions {
+        opacity: 1;
+        pointer-events: auto;
+      }
     }
   }
 }
@@ -89,45 +89,45 @@
     outline: 2px solid $accent;
     outline-offset: 2px;
   }
-}
 
-.toggleDisabled {
-  opacity: 0;
-  pointer-events: none;
-  cursor: default;
-}
+  &Disabled {
+    opacity: 0;
+    pointer-events: none;
+    cursor: default;
+  }
 
-.toggleIcon {
-  transition: transform $transition-base;
-  transform: rotate(-90deg);
-}
+  &Icon {
+    transition: transform $transition-base;
+    transform: rotate(-90deg);
+  }
 
-.toggleIconOpen {
-  transition: transform $transition-base;
-  transform: rotate(0deg);
+  &IconOpen {
+    transition: transform $transition-base;
+    transform: rotate(0deg);
+  }
 }
 
 // ── Label area ────────────────────────────────────────────────────────────────
 
-.labelWrap {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
 .label {
+  &Wrap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
+
   min-width: 0;
   font-size: $font-lg;
   font-weight: 500;
   color: $text-body;
-}
 
-.labelMeta {
-  display: inline-flex;
-  align-items: center;
-  flex-shrink: 0;
+  &Meta {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
 }
 
 // ── Always-visible right-side header content ──────────────────────────────────

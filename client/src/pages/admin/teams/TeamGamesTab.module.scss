@@ -17,45 +17,47 @@
   width: fit-content;
 }
 
-.calendarWrap {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+.calendar {
+  &Wrap {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
 
-.calendarToolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  flex-wrap: wrap;
-}
+  &Toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-sm;
+    flex-wrap: wrap;
+  }
 
-.calendarToolbarControls {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
+  &ToolbarControls {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
 
-.calendarExportButton {
-  flex-shrink: 0;
-}
+  &ExportButton {
+    flex-shrink: 0;
+  }
 
-.calendarScroll {
-  overflow-x: auto;
-}
+  &Scroll {
+    overflow-x: auto;
+  }
 
-.calendarDayGamesFilled {
-  width: 100%;
-  height: 100%;
-}
+  &DayGamesFilled {
+    width: 100%;
+    height: 100%;
+  }
 
-.calendarDayGameCell {
-  --accordion-header-bg: var(--team-calendar-day-accent);
-  --accordion-border-color: var(--team-calendar-day-accent);
-  --month-calendar-day-bg: color-mix(in srgb, var(--team-calendar-day-accent) 9%, #{$bg-card});
-  --month-calendar-day-number-color: var(--team-calendar-day-text);
+  &DayGameCell {
+    --accordion-header-bg: var(--team-calendar-day-accent);
+    --accordion-border-color: var(--team-calendar-day-accent);
+    --month-calendar-day-bg: color-mix(in srgb, var(--team-calendar-day-accent) 9%, #{$bg-card});
+    --month-calendar-day-number-color: var(--team-calendar-day-text);
 
-  border-color: var(--team-calendar-day-accent);
+    border-color: var(--team-calendar-day-accent);
+  }
 }
 

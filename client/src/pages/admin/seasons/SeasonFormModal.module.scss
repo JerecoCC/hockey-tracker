@@ -23,12 +23,12 @@
   @media (max-width: 760px) {
     grid-template-columns: 1fr;
   }
-}
 
-.settingsGridCompact {
-  min-width: 0;
-}
+  &Compact {
+    min-width: 0;
+  }
 
-.settingsGridFull {
-  min-width: 0;
+  &Full {
+    min-width: 0;
+  }
 }

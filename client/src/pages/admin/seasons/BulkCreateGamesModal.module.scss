@@ -4,21 +4,23 @@
 // Date | Time | Away | Home | Venue | delete
 $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
 
-.headerRow {
-  display: grid;
-  grid-template-columns: $cols;
-  gap: $space-md;
-  padding: 0 0 $space-xs;
-  border-bottom: 1px solid $border;
-  margin-bottom: $space-xs;
-}
+.header {
+  &Row {
+    display: grid;
+    grid-template-columns: $cols;
+    gap: $space-md;
+    padding: 0 0 $space-xs;
+    border-bottom: 1px solid $border;
+    margin-bottom: $space-xs;
+  }
 
-.headerCell {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  &Cell {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 }
 
 .required {
@@ -26,31 +28,33 @@ $cols: 0.9fr 0.8fr 1.1fr 1.1fr 1.2fr 2rem;
   margin-left: $space-xs;
 }
 
-.gameList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  max-height: 420px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  padding-right: $space-xs;
-  margin-right: -#{$space-xs};
+.game {
+  &List {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    max-height: 420px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    padding-right: $space-xs;
+    margin-right: -#{$space-xs};
 
-  &:hover {
-    scrollbar-color: $border transparent;
+    &:hover {
+      scrollbar-color: $border transparent;
+    }
   }
-}
 
-.gameRow {
-  display: grid;
-  grid-template-columns: $cols;
-  gap: $space-md;
-  align-items: start;
-  padding: $space-xs 0;
+  &Row {
+    display: grid;
+    grid-template-columns: $cols;
+    gap: $space-md;
+    align-items: start;
+    padding: $space-xs 0;
 
-  &:not(:last-child) {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    &:not(:last-child) {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
   }
 }
 

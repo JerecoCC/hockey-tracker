@@ -44,21 +44,23 @@
   gap: $space-sm;
 }
 
-.quickAddWrap {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
+.quickAdd {
+  &Wrap {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
 
-  > label {
-    flex: 1;
-    margin-bottom: 0;
+    > label {
+      flex: 1;
+      margin-bottom: 0;
+    }
   }
-}
 
-.quickAddField {
-  min-height: 36px;
-  padding-top: $space-sm;
-  padding-bottom: $space-sm;
+  &Field {
+    min-height: 36px;
+    padding-top: $space-sm;
+    padding-bottom: $space-sm;
+  }
 }
 
 .controlsDivider {
@@ -72,19 +74,21 @@
   font-size: $font-sm;
 }
 
-.searchRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
+.search {
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
 
-  > label {
-    flex: 1;
-    margin-bottom: 0;
+    > label {
+      flex: 1;
+      margin-bottom: 0;
+    }
   }
-}
 
-.searchField {
-  min-height: 42px;
+  &Field {
+    min-height: 42px;
+  }
 }
 
 .list {
@@ -114,17 +118,19 @@
   color: $danger;
 }
 
-.footerActions {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-}
+.footer {
+  &Actions {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+  }
 
-.footerSummary {
-  margin-right: auto;
-  color: $text-dim;
-  font-size: $font-sm;
+  &Summary {
+    margin-right: auto;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
 }
 
 @media (max-width: 768px) {
@@ -134,29 +140,31 @@
     gap: $space-xs;
   }
 
-  .footerActions {
-    flex-wrap: wrap;
-    gap: $space-sm;
-  }
+  .footer {
+    &Actions {
+      flex-wrap: wrap;
+      gap: $space-sm;
+    }
 
-  .footerSummary {
-    order: 0;
-    width: 100%;
-    margin-right: 0;
-  }
+    &Summary {
+      order: 0;
+      width: 100%;
+      margin-right: 0;
+    }
 
-  .footerClear {
-    order: 1;
-    flex: 1;
-  }
+    &Clear {
+      order: 1;
+      flex: 1;
+    }
 
-  .footerSave {
-    order: 2;
-    flex: 1;
-  }
+    &Save {
+      order: 2;
+      flex: 1;
+    }
 
-  .footerCancel {
-    order: 3;
-    width: 100%;
+    &Cancel {
+      order: 3;
+      width: 100%;
+    }
   }
 }

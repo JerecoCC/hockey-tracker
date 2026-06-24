@@ -13,11 +13,11 @@
   &:focus-within {
     border-color: $accent;
   }
-}
 
-.wrapperDisabled {
-  border-color: $border;
-  opacity: 0.6;
+  &Disabled {
+    border-color: $border;
+    opacity: 0.6;
+  }
 }
 
 // ── Toolbar ───────────────────────────────────────────────────────────
@@ -28,37 +28,37 @@
   padding: $space-xs $space-sm;
   border-bottom: 1px solid $border;
   background: $bg-card;
-}
 
-.toolbarBtn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: $text-dim;
-  padding: $space-xs $space-sm;
-  border-radius: $radius-sm;
-  font-size: $font-sm;
-  font-family: inherit;
-  line-height: 1;
-  user-select: none;
-  transition:
-    background $transition-fast,
-    color $transition-fast;
+  &Btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $text-dim;
+    padding: $space-xs $space-sm;
+    border-radius: $radius-sm;
+    font-size: $font-sm;
+    font-family: inherit;
+    line-height: 1;
+    user-select: none;
+    transition:
+      background $transition-fast,
+      color $transition-fast;
 
-  &:hover:not(:disabled) {
+    &:hover:not(:disabled) {
+      background: $border;
+      color: $text-bright;
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &BtnActive {
     background: $border;
-    color: $text-bright;
+    color: $accent-light;
   }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-}
-
-.toolbarBtnActive {
-  background: $border;
-  color: $accent-light;
 }
 
 .divider {
@@ -69,16 +69,16 @@
 }
 
 // ── Editor content ────────────────────────────────────────────────────
-.editorContentDisabled {
-  cursor: not-allowed;
-
-  :global(.tiptap) {
-    pointer-events: none;
-    user-select: none;
-  }
-}
-
 .editorContent {
+  &Disabled {
+    cursor: not-allowed;
+
+    :global(.tiptap) {
+      pointer-events: none;
+      user-select: none;
+    }
+  }
+
   padding: $space-md;
 
   :global(.tiptap) {

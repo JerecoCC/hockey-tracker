@@ -22,25 +22,27 @@
 }
 
 // ── Optional card header (title + action row) ─────────────────────────
-.cardHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  flex-wrap: wrap;
-  margin-bottom: $space-xl;
-}
+.card {
+  &Header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    flex-wrap: wrap;
+    margin-bottom: $space-xl;
+  }
 
-.cardHeaderNoMargin {
-  margin-bottom: 0;
-}
+  &HeaderNoMargin {
+    margin-bottom: 0;
+  }
 
-.cardTitle {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  font-size: $font-xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
+  &Title {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    font-size: $font-xl;
+    font-weight: 700;
+    color: $text-bright;
+    margin: 0;
+  }
 }

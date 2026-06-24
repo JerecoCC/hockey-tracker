@@ -20,19 +20,19 @@
   background: $bg-input;
 }
 
-.optionWrapper {
-  position: relative;
-  flex: 1;
-  display: flex;
-  min-width: 0;
-  height: 100%;
-
-  &:has(.option:focus-visible) {
-    z-index: 2;
-  }
-}
-
 .option {
+  &Wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    height: 100%;
+
+    &:has(.option:focus-visible) {
+      z-index: 2;
+    }
+  }
+
   position: relative;
   flex: 1;
   min-height: 0;

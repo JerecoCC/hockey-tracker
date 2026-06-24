@@ -172,64 +172,64 @@
     color: $text-bright;
     font-weight: 600;
   }
-}
 
-.optionInner {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  min-width: 0;
-  font-size: $font-base;
-  line-height: 1.4;
-  font-weight: 400;
-  color: $text-body;
-  text-transform: none;
-  letter-spacing: 0;
-}
+  &Inner {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    min-width: 0;
+    font-size: $font-base;
+    line-height: 1.4;
+    font-weight: 400;
+    color: $text-body;
+    text-transform: none;
+    letter-spacing: 0;
+  }
 
-.optionLabel {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  line-height: 1.4;
-}
+  &Label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
+  }
 
-.optionIndicator {
-  flex-shrink: 0;
-  margin-left: auto;
-  padding: 2px $space-xs;
-  border: 1px solid rgba($success, 0.38);
-  border-radius: $radius-sm;
-  color: $success-light;
-  background: rgba($success, 0.12);
-  font-size: $font-xs;
-  font-weight: 700;
-  line-height: 1;
-  text-transform: uppercase;
-  letter-spacing: 0;
-}
+  &Indicator {
+    flex-shrink: 0;
+    margin-left: auto;
+    padding: 2px $space-xs;
+    border: 1px solid rgba($success, 0.38);
+    border-radius: $radius-sm;
+    color: $success-light;
+    background: rgba($success, 0.12);
+    font-size: $font-xs;
+    font-weight: 700;
+    line-height: 1;
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
 
-.optionLogo {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-}
+  &Logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+  }
 
-.optionNoLogo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: $radius-sm;
-  background: $border;
-  flex-shrink: 0;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  letter-spacing: 0;
+  &NoLogo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-sm;
+    background: $border;
+    flex-shrink: 0;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
 }

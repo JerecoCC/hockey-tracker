@@ -28,29 +28,29 @@
   &:hover {
     border-color: color.adjust($border, $lightness: 10%);
   }
-}
 
-.triggerDisabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
-}
-
-.clockIconBtn {
-  display: flex;
-  align-items: center;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  flex-shrink: 0;
-
-  &:focus {
-    outline: none;
+  &Disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
   }
 }
 
 .clockIcon {
+  &Btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
   color: $text-dim;
 }
 
@@ -110,23 +110,23 @@
   align-items: stretch;
 }
 
-.columnWrap {
-  display: flex;
-  flex-direction: column;
-  width: 68px;
-}
-
-.columnLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-align: center;
-  padding-bottom: $space-sm;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .column {
+  &Wrap {
+    display: flex;
+    flex-direction: column;
+    width: 68px;
+  }
+
+  &Label {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-align: center;
+    padding-bottom: $space-sm;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   display: flex;
   flex-direction: column;
   max-height: 192px;
@@ -142,13 +142,13 @@
     background: $border;
     border-radius: 2px;
   }
-}
 
-.columnDivider {
-  width: 1px;
-  background: $border;
-  margin: 0 $space-sm;
-  align-self: stretch;
+  &Divider {
+    width: 1px;
+    background: $border;
+    margin: 0 $space-sm;
+    align-self: stretch;
+  }
 }
 
 .timeBtn {
@@ -190,24 +190,24 @@
   margin-top: $space-md;
   padding-top: $space-md;
   border-top: 1px solid $border;
-}
 
-.footerBtn {
-  background: none;
-  border: none;
-  color: $accent-light;
-  font-size: $font-sm;
-  font-family: inherit;
-  cursor: pointer;
-  padding: 0 $space-xs;
-  border-radius: $radius-sm;
-  transition: color $transition-fast;
+  &Btn {
+    background: none;
+    border: none;
+    color: $accent-light;
+    font-size: $font-sm;
+    font-family: inherit;
+    cursor: pointer;
+    padding: 0 $space-xs;
+    border-radius: $radius-sm;
+    transition: color $transition-fast;
 
-  &:hover {
-    color: $text-bright;
+    &:hover {
+      color: $text-bright;
+    }
   }
-}
 
-.footerBtnClear {
-  color: $text-dim;
+  &BtnClear {
+    color: $text-dim;
+  }
 }

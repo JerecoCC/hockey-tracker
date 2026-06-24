@@ -87,61 +87,65 @@ table {
   padding: 0 !important; // button inside provides padding
 }
 
-.sortBtn {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  width: 100%;
-  padding: $space-md $space-lg;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: $text-dim;
-  font-weight: 600;
-  font-size: inherit;
-  font-family: inherit;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  white-space: nowrap;
-  transition: color $transition-fast;
+.sort {
+  &Btn {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    width: 100%;
+    padding: $space-md $space-lg;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: $text-dim;
+    font-weight: 600;
+    font-size: inherit;
+    font-family: inherit;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    white-space: nowrap;
+    transition: color $transition-fast;
 
-  &:hover {
-    color: $text-body;
+    &:hover {
+      color: $text-body;
+    }
   }
-}
 
-.sortIcon {
-  font-size: 0.8em;
-  opacity: 0.35;
-  flex-shrink: 0;
+  &Icon {
+    font-size: 0.8em;
+    opacity: 0.35;
+    flex-shrink: 0;
 
-  &.sortActive {
-    opacity: 1;
-    color: $accent-light;
+    &.sortActive {
+      opacity: 1;
+      color: $accent-light;
+    }
   }
 }
 
 // ── Logo column ────────────────────────────────────────────────────────
-.logoThumb {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
-}
+.logo {
+  &Thumb {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+  }
 
-.logoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  cursor: auto;
-  user-select: none;
+  &Placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    text-transform: uppercase;
+    cursor: auto;
+    user-select: none;
+  }
 }

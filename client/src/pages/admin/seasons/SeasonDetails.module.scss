@@ -50,24 +50,26 @@
 }
 
 // ── Info grid ──────────────────────────────────────────────────────────────────
-.standingsPlace {
-  font-weight: 700;
-  color: $text-dim;
-}
-
-.standingsQualifierRow {
-  background: rgba($accent, 0.08);
-
-  &:hover {
-    background: rgba($accent, 0.13) !important;
+.standings {
+  &Place {
+    font-weight: 700;
+    color: $text-dim;
   }
 
-  td:first-child {
-    box-shadow: inset 3px 0 0 rgba($accent, 0.75);
-  }
+  &QualifierRow {
+    background: rgba($accent, 0.08);
 
-  .standingsPlace {
-    color: $accent-light;
+    &:hover {
+      background: rgba($accent, 0.13) !important;
+    }
+
+    td:first-child {
+      box-shadow: inset 3px 0 0 rgba($accent, 0.75);
+    }
+
+    .standingsPlace {
+      color: $accent-light;
+    }
   }
 }
 
@@ -100,15 +102,15 @@
 .groupItem {
   display: flex;
   flex-direction: column;
-}
 
-.groupItemNew {
-  margin: $space-sm;
-}
+  &New {
+    margin: $space-sm;
+  }
 
-.groupItemNewRoot {
-  margin-left: 0;
-  margin-right: 0;
+  &NewRoot {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 // Passed as className to Accordion to tint the border for nested sub-groups.
@@ -169,47 +171,49 @@
 }
 
 // Exists so .teamListItem:hover can reference it
-.teamActions {
-  flex-shrink: 0;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
-}
+.team {
+  &Actions {
+    flex-shrink: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity $transition-fast;
+  }
 
-.teamListName {
-  font-size: $font-base;
-  color: $text-body;
-}
+  &ListName {
+    font-size: $font-base;
+    color: $text-body;
+  }
 
-.teamCode {
-  font-size: $font-xs;
-  color: $text-dim;
-  margin-left: auto;
-  white-space: nowrap;
-}
+  &Code {
+    font-size: $font-xs;
+    color: $text-dim;
+    margin-left: auto;
+    white-space: nowrap;
+  }
 
-.teamLogoThumb {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
-}
+  &LogoThumb {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+  }
 
-.teamLogoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  flex-shrink: 0;
+  &LogoPlaceholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
 }
 
 .emptyMsg {
@@ -220,60 +224,62 @@
 }
 
 // ── Modal team selector ────────────────────────────────────────────────────────
-.teamSearch {
-  margin-bottom: $space-sm;
-}
-
-.teamSelectList {
-  list-style: none;
-  margin: 0 0 $space-lg;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  max-height: 360px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-
-  &:hover {
-    scrollbar-color: $border transparent;
+.team {
+  &Search {
+    margin-bottom: $space-sm;
   }
-}
 
-.teamSelectItem {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  cursor: pointer;
-  user-select: none;
-  transition: background $transition-fast;
+  &SelectList {
+    list-style: none;
+    margin: 0 0 $space-lg;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    max-height: 360px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
 
-  &:hover,
-  &[data-selected="true"] {
-    background: rgba(255, 255, 255, 0.05);
+    &:hover {
+      scrollbar-color: $border transparent;
+    }
   }
-}
 
-.teamCheckbox {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border: 2px solid $border;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: $bg-card;
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
+  &SelectItem {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    padding: $space-sm $space-md;
+    border-radius: $radius-md;
+    cursor: pointer;
+    user-select: none;
+    transition: background $transition-fast;
 
-  &[data-checked="true"] {
-    background: $text-bright;
-    border-color: $text-bright;
+    &:hover,
+    &[data-selected="true"] {
+      background: rgba(255, 255, 255, 0.05);
+    }
+  }
+
+  &Checkbox {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 2px solid $border;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $bg-card;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &[data-checked="true"] {
+      background: $text-bright;
+      border-color: $text-bright;
+    }
   }
 }
 
@@ -285,57 +291,59 @@
 }
 
 // ── Inline group name add / edit ───────────────────────────────────────────────
-.groupInlineRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-sm $space-md;
-  border-bottom: 1px solid $border;
-}
+.groupInline {
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-sm $space-md;
+    border-bottom: 1px solid $border;
+  }
 
-.groupInlineInput {
-  flex: 1;
-  background: transparent;
-  border: none;
-  border-bottom: 2px solid $accent;
-  outline: none;
-  font-size: $font-lg;
-  color: $text-body;
-  padding: 2px 0;
+  &Input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid $accent;
+    outline: none;
+    font-size: $font-lg;
+    color: $text-body;
+    padding: 2px 0;
 
-  &::placeholder {
+    &::placeholder {
+      color: $text-dim;
+    }
+  }
+
+  &Btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.06);
+    color: $text-body;
+    cursor: pointer;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &BtnCancel {
     color: $text-dim;
   }
-}
-
-.groupInlineBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  flex-shrink: 0;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: rgba(255, 255, 255, 0.06);
-  color: $text-body;
-  cursor: pointer;
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.12);
-  }
-
-  &:disabled {
-    opacity: 0.4;
-    cursor: not-allowed;
-  }
-}
-
-.groupInlineBtnCancel {
-  color: $text-dim;
 }
 
 // ── Modal form layout ─────────────────────────────────────────────────────────
@@ -348,37 +356,39 @@
 
 // ── Group label + role badge ───────────────────────────────────────────────────
 
-.groupLabel {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
+.group {
+  &Label {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
 
-.groupRoleBadge {
-  display: inline-block;
-  flex-shrink: 0;
-  padding: 1px 7px;
-  border-radius: $radius-sm;
-  font-size: $font-xs;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  line-height: 1.6;
-}
+  &RoleBadge {
+    display: inline-block;
+    flex-shrink: 0;
+    padding: 1px 7px;
+    border-radius: $radius-sm;
+    font-size: $font-xs;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.6;
+  }
 
-.groupRoleBadge_conference {
-  background: rgba($accent, 0.18);
-  color: $accent-light;
-  border: 1px solid rgba($accent, 0.3);
-}
+  &RoleBadge_conference {
+    background: rgba($accent, 0.18);
+    color: $accent-light;
+    border: 1px solid rgba($accent, 0.3);
+  }
 
-.groupRoleBadge_division {
-  background: rgba($success, 0.18);
-  color: $success-light;
-  border: 1px solid rgba($success, 0.3);
+  &RoleBadge_division {
+    background: rgba($success, 0.18);
+    color: $success-light;
+    border: 1px solid rgba($success, 0.3);
+  }
 }
 
 // Spans full grid width so the inline-add row fills the row
@@ -440,79 +450,81 @@
 }
 
 // Leader list inside Summary cards
-.statsLeaderList {
-  display: flex;
-  flex-direction: column;
-}
-
-.statsLeaderRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  transition: background $transition-fast;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.03);
+.stats {
+  &LeaderList {
+    display: flex;
+    flex-direction: column;
   }
-}
 
-.statsLeaderRank {
-  flex-shrink: 0;
-  width: 20px;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-dim;
-  text-align: right;
-}
+  &LeaderRow {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-sm $space-md;
+    border-radius: $radius-md;
+    transition: background $transition-fast;
 
-.statsLeaderStat {
-  margin-left: auto;
-  flex-shrink: 0;
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-bright;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
+    &:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+  }
 
-.statsPlayerCell {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  min-width: 0;
-}
+  &LeaderRank {
+    flex-shrink: 0;
+    width: 20px;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-dim;
+    text-align: right;
+  }
 
-.statsPlayerName {
-  font-size: $font-sm;
-  color: $text-body;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  &LeaderStat {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: $font-sm;
+    font-weight: 700;
+    color: $text-bright;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
 
-.statsTeamLogo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.15));
-}
+  &PlayerCell {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    min-width: 0;
+  }
 
-.statsTeamLogoPlaceholder {
-  width: 24px;
-  height: 24px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-dim;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  text-transform: uppercase;
+  &PlayerName {
+    font-size: $font-sm;
+    color: $text-body;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &TeamLogo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.15));
+  }
+
+  &TeamLogoPlaceholder {
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-dim;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-transform: uppercase;
+  }
 }
 
 // ── Summary leader layout ─────────────────────────────────────────────────────
@@ -545,252 +557,254 @@
   align-items: stretch;
 }
 
-.awardItem {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  padding: $space-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.awardHeader {
-  display: flex;
-  justify-content: space-between;
-  gap: $space-md;
-  align-items: flex-start;
-}
-
-.awardTitleBlock {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-  width: 100%;
-
-  h4 {
-    margin: 0;
-    color: $text-bright;
-    font-size: $font-lg;
-    line-height: 1.2;
-    overflow-wrap: anywhere;
-    white-space: normal;
+.award {
+  &Item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    padding: $space-md;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
   }
 
-  p {
-    margin: 0;
-    color: $text-dim;
-    font-size: $font-sm;
-    line-height: 1.45;
+  &Header {
+    display: flex;
+    justify-content: space-between;
+    gap: $space-md;
+    align-items: flex-start;
   }
-}
 
-.awardTitleTooltip {
-  display: inline;
-}
-
-.awardActions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: $space-sm;
-}
-
-.awardRecipientActions {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-wrap: nowrap;
-}
-
-.awardRecipients {
-  display: grid;
-  grid-template-columns: 88px 1fr;
-  gap: $space-md;
-  align-items: start;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+  &TitleBlock {
+    display: flex;
+    flex-direction: column;
     gap: $space-xs;
-  }
-}
+    min-width: 0;
+    width: 100%;
 
-.awardRecipientsTitle {
-  color: $text-dim;
-  font-size: $font-xs;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 30px;
-  text-transform: uppercase;
-}
+    h4 {
+      margin: 0;
+      color: $text-bright;
+      font-size: $font-lg;
+      line-height: 1.2;
+      overflow-wrap: anywhere;
+      white-space: normal;
+    }
 
-.awardEmpty {
-  color: $text-muted;
-  font-size: $font-sm;
-  line-height: 30px;
-}
-
-.awardWinnerSection {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.awardWinnerGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: $space-md;
-}
-
-.awardWinnerCard {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-sm;
-  min-height: 186px;
-  padding: $space-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: $radius-md;
-  background: rgba(0, 0, 0, 0.16);
-  overflow: hidden;
-  text-align: center;
-}
-
-.awardWinnerImageWrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 112px;
-  height: 112px;
-}
-
-.awardWinnerTeamLogo {
-  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
-}
-
-.awardWinnerInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  width: 100%;
-  min-width: 0;
-
-  strong {
-    color: $text-bright;
-    font-size: $font-sm;
-    line-height: 1.25;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    p {
+      margin: 0;
+      color: $text-dim;
+      font-size: $font-sm;
+      line-height: 1.45;
+    }
   }
 
-  span,
-  em {
+  &TitleTooltip {
+    display: inline;
+  }
+
+  &Actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: $space-sm;
+  }
+
+  &RecipientActions {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-wrap: nowrap;
+  }
+
+  &Recipients {
+    display: grid;
+    grid-template-columns: 88px 1fr;
+    gap: $space-md;
+    align-items: start;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+      gap: $space-xs;
+    }
+  }
+
+  &RecipientsTitle {
     color: $text-dim;
     font-size: $font-xs;
-    font-style: normal;
-    line-height: 1.25;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 30px;
+    text-transform: uppercase;
+  }
+
+  &Empty {
+    color: $text-muted;
+    font-size: $font-sm;
+    line-height: 30px;
+  }
+
+  &WinnerSection {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &WinnerGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: $space-md;
+  }
+
+  &WinnerCard {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-sm;
+    min-height: 186px;
+    padding: $space-md;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
+    background: rgba(0, 0, 0, 0.16);
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-align: center;
   }
-}
 
-.awardWinnerOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.58);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity $transition-fast;
-
-  .awardWinnerCard:hover &,
-  .awardWinnerCard:focus-within & {
-    opacity: 1;
-    pointer-events: auto;
+  &WinnerImageWrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 112px;
+    height: 112px;
   }
-}
 
-.awardRecipientList {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-sm;
-}
+  &WinnerTeamLogo {
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+  }
 
-.awardRecipient {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-sm;
-  min-height: 34px;
-  max-width: 100%;
-  padding: 3px 4px 3px 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: $radius-md;
-  background: rgba(0, 0, 0, 0.14);
-}
+  &WinnerInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    width: 100%;
+    min-width: 0;
 
-.awardRecipientText {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+    strong {
+      color: $text-bright;
+      font-size: $font-sm;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
 
-  strong {
+    span,
+    em {
+      color: $text-dim;
+      font-size: $font-xs;
+      font-style: normal;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &WinnerOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.58);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity $transition-fast;
+
+    .awardWinnerCard:hover &,
+    .awardWinnerCard:focus-within & {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  &RecipientList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-sm;
+  }
+
+  &Recipient {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-sm;
+    min-height: 34px;
+    max-width: 100%;
+    padding: 3px 4px 3px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
+    background: rgba(0, 0, 0, 0.14);
+  }
+
+  &RecipientText {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+
+    strong {
+      color: $text-body;
+      font-size: $font-sm;
+      line-height: 1.25;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    span {
+      min-height: 14px;
+      color: $text-muted;
+      font-size: $font-xs;
+      line-height: 1.2;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &Form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &FormGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-md;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &Checkbox {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    min-height: 42px;
+    margin-top: 22px;
     color: $text-body;
     font-size: $font-sm;
-    line-height: 1.25;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
 
-  span {
-    min-height: 14px;
-    color: $text-muted;
-    font-size: $font-xs;
-    line-height: 1.2;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-}
-
-.awardForm {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.awardFormGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-md;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
-  }
-}
-
-.awardCheckbox {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  min-height: 42px;
-  margin-top: 22px;
-  color: $text-body;
-  font-size: $font-sm;
-
-  input {
-    width: 16px;
-    height: 16px;
-    accent-color: $accent;
+    input {
+      width: 16px;
+      height: 16px;
+      accent-color: $accent;
+    }
   }
 }
 
@@ -800,23 +814,25 @@
   }
 }
 
-.alignmentControls {
-  display: grid;
-  grid-template-columns: minmax(220px, 1fr);
-  align-items: center;
-  gap: $space-sm;
-  margin-bottom: $space-md;
-}
+.alignment {
+  &Controls {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr);
+    align-items: center;
+    gap: $space-sm;
+    margin-bottom: $space-md;
+  }
 
-.alignmentSelect {
-  min-width: 0;
-}
+  &Select {
+    min-width: 0;
+  }
 
-.alignmentHint {
-  grid-column: 1 / -1;
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-sm;
+  &Hint {
+    grid-column: 1 / -1;
+    margin: 0;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
 }
 
 @media (max-width: 640px) {

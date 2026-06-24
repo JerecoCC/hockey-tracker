@@ -114,105 +114,107 @@
   height: 16px;
 }
 
-.infoSkeletonHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-xl;
-  margin-bottom: $space-2xl;
-  padding-bottom: $space-2xl;
-  border-bottom: 1px solid $border;
+.infoSkeleton {
+  &Header {
+    display: flex;
+    align-items: center;
+    gap: $space-xl;
+    margin-bottom: $space-2xl;
+    padding-bottom: $space-2xl;
+    border-bottom: 1px solid $border;
 
-  @media (max-width: 720px) {
-    align-items: flex-start;
+    @media (max-width: 720px) {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  &Logo {
+    width: 80px;
+    height: 80px;
+    border-radius: $radius-lg;
+  }
+
+  &NameBlock {
+    flex: 1;
+    min-width: 0;
+    display: flex;
     flex-direction: column;
+    gap: $space-sm;
   }
-}
 
-.infoSkeletonLogo {
-  width: 80px;
-  height: 80px;
-  border-radius: $radius-lg;
-}
+  &Title {
+    width: min(320px, 68%);
+    height: 28px;
 
-.infoSkeletonNameBlock {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.infoSkeletonTitle {
-  width: min(320px, 68%);
-  height: 28px;
-
-  @media (max-width: 720px) {
-    width: min(280px, 100%);
+    @media (max-width: 720px) {
+      width: min(280px, 100%);
+    }
   }
-}
 
-.infoSkeletonCode {
-  width: 64px;
-  height: 14px;
-}
-
-.infoSkeletonRightCol {
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: $space-md;
-
-  @media (max-width: 720px) {
-    align-items: flex-start;
-    width: 100%;
+  &Code {
+    width: 64px;
+    height: 14px;
   }
-}
 
-.infoSkeletonButton {
-  width: 86px;
-  height: 38px;
-  border-radius: $radius-md;
-}
+  &RightCol {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: $space-md;
 
-.infoSkeletonSwatches {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: $space-xl;
-
-  @media (max-width: 720px) {
-    justify-content: flex-start;
+    @media (max-width: 720px) {
+      align-items: flex-start;
+      width: 100%;
+    }
   }
-}
 
-.infoSkeletonSwatch {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-md;
-}
+  &Button {
+    width: 86px;
+    height: 38px;
+    border-radius: $radius-md;
+  }
 
-.infoSkeletonSwatchDot {
-  width: $space-2xl;
-  height: $space-2xl;
-  border-radius: $radius-sm;
-}
+  &Swatches {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: $space-xl;
 
-.infoSkeletonSwatchLabel {
-  width: 54px;
-  height: 12px;
-}
+    @media (max-width: 720px) {
+      justify-content: flex-start;
+    }
+  }
 
-.infoSkeletonItem {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  gap: $space-xs;
-}
+  &Swatch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-md;
+  }
 
-.infoSkeletonItemFull {
-  grid-column: 1 / -1;
+  &SwatchDot {
+    width: $space-2xl;
+    height: $space-2xl;
+    border-radius: $radius-sm;
+  }
+
+  &SwatchLabel {
+    width: 54px;
+    height: 12px;
+  }
+
+  &Item {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &ItemFull {
+    grid-column: 1 / -1;
+  }
 }
 
 .infoSkeletonLabel,
@@ -220,24 +222,26 @@
   height: 10px;
 }
 
-.infoSkeletonLabel {
-  width: 118px;
-}
+.infoSkeleton {
+  &Label {
+    width: 118px;
+  }
 
-.infoSkeletonLabelLong {
-  width: 96px;
-}
+  &LabelLong {
+    width: 96px;
+  }
 
-.infoSkeletonValue {
-  width: min(180px, 76%);
-  height: 16px;
-}
+  &Value {
+    width: min(180px, 76%);
+    height: 16px;
+  }
 
-.infoSkeletonDescription {
-  display: flex;
-  max-width: 720px;
-  flex-direction: column;
-  gap: $space-sm;
+  &Description {
+    display: flex;
+    max-width: 720px;
+    flex-direction: column;
+    gap: $space-sm;
+  }
 }
 
 .infoSkeletonDescriptionLine,
@@ -247,49 +251,51 @@
 
 .infoSkeletonDescriptionLine {
   width: 100%;
+
+  &Short {
+    width: 58%;
+  }
 }
 
-.infoSkeletonDescriptionLineShort {
-  width: 58%;
-}
+.tabSkeleton {
+  &Title {
+    height: 18px;
+  }
 
-.tabSkeletonTitle {
-  height: 18px;
-}
+  &Button {
+    height: 34px;
+    border-radius: $radius-md;
+  }
 
-.tabSkeletonButton {
-  height: 34px;
-  border-radius: $radius-md;
-}
+  &Controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: $space-md;
+    margin-bottom: $space-xl;
+  }
 
-.tabSkeletonControls {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: $space-md;
-  margin-bottom: $space-xl;
-}
+  &Search {
+    flex: 1;
+    min-width: min(240px, 100%);
+    max-width: 380px;
+    height: 38px;
+    border-radius: $radius-md;
+  }
 
-.tabSkeletonSearch {
-  flex: 1;
-  min-width: min(240px, 100%);
-  max-width: 380px;
-  height: 38px;
-  border-radius: $radius-md;
-}
+  &SearchFull {
+    width: 100%;
+    max-width: none;
+  }
 
-.tabSkeletonSearchFull {
-  width: 100%;
-  max-width: none;
-}
-
-.tabSkeletonActions {
-  display: inline-flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-xs;
-  flex-shrink: 0;
+  &Actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-xs;
+    flex-shrink: 0;
+  }
 }
 
 .tabSkeletonStack,
@@ -299,102 +305,104 @@
   padding: 0;
 }
 
-.tabSkeletonStack {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.tabSkeletonGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: $space-md;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+.tabSkeleton {
+  &Stack {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
   }
-}
 
-.tabSkeletonRow {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  min-height: 72px;
-  padding: $space-md;
-  border-radius: $radius-md;
-  opacity: 0.65;
-}
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: $space-md;
 
-.tabSkeletonRowBordered {
-  border: 1px solid $border;
-  background: rgba(255, 255, 255, 0.02);
-}
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
 
-.tabSkeletonTextStack {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  gap: $space-xs;
-}
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    min-height: 72px;
+    padding: $space-md;
+    border-radius: $radius-md;
+    opacity: 0.65;
+  }
 
-.tabSkeletonEyebrow {
-  width: min(96px, 35%);
-  height: 10px;
-}
+  &RowBordered {
+    border: 1px solid $border;
+    background: rgba(255, 255, 255, 0.02);
+  }
 
-.tabSkeletonName {
-  width: min(180px, 65%);
-  height: 14px;
-}
+  &TextStack {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.tabSkeletonTag {
-  width: 70px;
-  height: 20px;
-}
+  &Eyebrow {
+    width: min(96px, 35%);
+    height: 10px;
+  }
 
-.tabSkeletonHeadingBlock {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  gap: $space-xs;
-}
+  &Name {
+    width: min(180px, 65%);
+    height: 14px;
+  }
 
-.tabSkeletonHeading {
-  width: min(190px, 70%);
-  height: 18px;
-}
+  &Tag {
+    width: 70px;
+    height: 20px;
+  }
 
-.tabSkeletonSubheading {
-  width: min(420px, 100%);
-  height: 13px;
-}
+  &HeadingBlock {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.tabSkeletonMetaLine {
-  width: min(150px, 50%);
-  height: 11px;
-}
+  &Heading {
+    width: min(190px, 70%);
+    height: 18px;
+  }
 
-.tabSkeletonChipRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-xs;
-}
+  &Subheading {
+    width: min(420px, 100%);
+    height: 13px;
+  }
 
-.tabSkeletonChip {
-  width: 86px;
-  height: 20px;
-}
+  &MetaLine {
+    width: min(150px, 50%);
+    height: 11px;
+  }
 
-.tabSkeletonAwardName {
-  width: min(220px, 70%);
-  height: 16px;
-}
+  &ChipRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-xs;
+  }
 
-.tabSkeletonDescription {
-  width: min(420px, 100%);
-  height: 13px;
+  &Chip {
+    width: 86px;
+    height: 20px;
+  }
+
+  &AwardName {
+    width: min(220px, 70%);
+    height: 16px;
+  }
+
+  &Description {
+    width: min(420px, 100%);
+    height: 13px;
+  }
 }
 
 .playoffFormatList {
@@ -439,64 +447,68 @@
 
 // ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
 
-.ruleSetList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.ruleSetItem {
-  position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: $space-md;
-  overflow: hidden;
-  padding: $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &:hover,
-  &:focus-within {
-    background: rgba(255, 255, 255, 0.04);
+.ruleSet {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
   }
-}
 
-.ruleSetName {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  font-size: $font-sm;
-  color: $text-body;
-  font-weight: 500;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  &Item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-md;
+    overflow: hidden;
+    padding: $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
 
-  > span {
+    &:hover,
+    &:focus-within {
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  &Name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: $font-sm;
+    color: $text-body;
+    font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+
+    > span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
   }
 }
 
-.alignmentSetMeta {
-  color: $text-dim;
-  font-size: $font-xs;
-  font-weight: 400;
-}
+.alignmentSet {
+  &Meta {
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 400;
+  }
 
-.alignmentSetForm {
-  display: grid;
-  gap: $space-md;
+  &Form {
+    display: grid;
+    gap: $space-md;
+  }
 }
 
 .teamsTabStack {
@@ -523,84 +535,86 @@
   }
 }
 
-.alignmentCards {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.alignmentTitleInfo {
-  display: inline-flex;
-  align-items: center;
-  color: $text-dim;
-  cursor: help;
-  line-height: 1;
-  transition: color $transition-fast;
-
-  &:hover,
-  &:focus-visible {
-    color: $text-bright;
-    outline: none;
+.alignment {
+  &Cards {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
   }
-}
 
-.alignmentSetStack {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+  &TitleInfo {
+    display: inline-flex;
+    align-items: center;
+    color: $text-dim;
+    cursor: help;
+    line-height: 1;
+    transition: color $transition-fast;
 
-.alignmentHeaderCard {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xl;
-  padding: $space-lg $space-xl !important;
-}
-
-.alignmentCard {
-  position: relative;
-  overflow: hidden;
-  padding: $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &:hover,
-  &:focus-within {
-    background: rgba(255, 255, 255, 0.04);
-
-    .alignmentCardHoverActions {
-      opacity: 1;
-      pointer-events: auto;
+    &:hover,
+    &:focus-visible {
+      color: $text-bright;
+      outline: none;
     }
   }
-}
 
-.alignmentCardHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: $space-md;
-
-  @media (max-width: 640px) {
+  &SetStack {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
     flex-direction: column;
+    gap: $space-md;
   }
-}
 
-.alignmentCardHoverActions {
-  z-index: 2;
-}
+  &HeaderCard {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xl;
+    padding: $space-lg $space-xl !important;
+  }
 
-.alignmentPanelBody {
-  display: flex;
-  flex-direction: column;
-  gap: $space-lg;
+  &Card {
+    position: relative;
+    overflow: hidden;
+    padding: $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &:hover,
+    &:focus-within {
+      background: rgba(255, 255, 255, 0.04);
+
+      .alignmentCardHoverActions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+  }
+
+  &CardHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-md;
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
+  }
+
+  &CardHoverActions {
+    z-index: 2;
+  }
+
+  &PanelBody {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+  }
 }
 
 .alignmentTeamList,
@@ -612,167 +626,169 @@
   flex-direction: column;
 }
 
-.alignmentTeamList {
-  gap: $space-sm;
-}
+.alignment {
+  &TeamList {
+    gap: $space-sm;
+  }
 
-.alignmentGroupList {
-  gap: $space-md;
-}
+  &GroupList {
+    gap: $space-md;
+  }
 
-.alignmentEditRow {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+  &EditRow {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
 
-.alignmentEditNameRow {
-  display: grid;
-  grid-template-columns: 1fr;
-}
-
-.alignmentEditControlsRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: $space-md;
-
-  @media (max-width: 640px) {
+  &EditNameRow {
+    display: grid;
     grid-template-columns: 1fr;
-    align-items: stretch;
   }
 
-  > :only-child {
-    grid-column: 1 / -1;
-  }
-}
+  &EditControlsRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: $space-md;
 
-.alignmentEditLabel {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-  color: $text-dim;
-  font-size: $font-xs;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
 
-  input,
-  select {
-    min-height: 38px;
-    width: 100%;
-    border: 1px solid $border;
-    border-radius: $radius-md;
-    background: rgba(0, 0, 0, 0.18);
-    color: $text-body;
-    font-size: $font-sm;
-    font-weight: 500;
-    letter-spacing: 0;
-    padding: 0 $space-sm;
-    text-transform: none;
-
-    &:focus {
-      outline: none;
-      border-color: $accent-light;
-      box-shadow: 0 0 0 2px rgba($accent, 0.18);
+    > :only-child {
+      grid-column: 1 / -1;
     }
   }
-}
 
-.alignmentBooleanField {
-  display: flex;
-  align-items: center;
-}
-
-.alignmentStructureSegmented {
-  > button,
-  > span {
-    flex: 1;
-    min-width: 0;
-    height: 100%;
-  }
-
-  > span {
+  &EditLabel {
     display: flex;
-  }
-
-  > button,
-  > span > button {
-    min-height: 0;
-    height: 100%;
-    width: 100%;
-    padding-top: 0;
-    padding-bottom: 0;
-  }
-}
-
-.alignmentCardMeta {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-wrap: wrap;
-}
-
-.alignmentExpanded {
-  margin-top: $space-md;
-}
-
-.alignmentGroupTools {
-  display: flex;
-  justify-content: flex-end;
-  padding: $space-sm $space-md 0;
-}
-
-.alignmentTeamModalControls {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  margin-bottom: $space-lg;
-
-  @media (max-width: $bp-tablet) {
-    align-items: stretch;
     flex-direction: column;
+    gap: $space-xs;
+    min-width: 0;
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    input,
+    select {
+      min-height: 38px;
+      width: 100%;
+      border: 1px solid $border;
+      border-radius: $radius-md;
+      background: rgba(0, 0, 0, 0.18);
+      color: $text-body;
+      font-size: $font-sm;
+      font-weight: 500;
+      letter-spacing: 0;
+      padding: 0 $space-sm;
+      text-transform: none;
+
+      &:focus {
+        outline: none;
+        border-color: $accent-light;
+        box-shadow: 0 0 0 2px rgba($accent, 0.18);
+      }
+    }
   }
-}
 
-.alignmentTeamModalSearch {
-  flex: 1;
-}
+  &BooleanField {
+    display: flex;
+    align-items: center;
+  }
 
-.alignmentTeamModalList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  max-height: min(70vh, 680px);
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+  &StructureSegmented {
+    > button,
+    > span {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+    }
 
-.alignmentTeamModalCode {
-  align-self: center;
-  color: $text-dim;
-  flex-shrink: 0;
-  font-size: $font-xs;
-  letter-spacing: 0;
-}
+    > span {
+      display: flex;
+    }
 
-.alignmentTeamModalEmpty {
-  color: $text-dim;
-  font-size: $font-base;
-  font-style: italic;
-  margin: 0;
-  padding: $space-2xl 0;
-  text-align: center;
-}
+    > button,
+    > span > button {
+      min-height: 0;
+      height: 100%;
+      width: 100%;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+  }
 
-.alignmentEmptyState {
-  display: flex;
-  align-items: flex-start;
-  flex-direction: column;
-  gap: $space-md;
+  &CardMeta {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-wrap: wrap;
+  }
+
+  &Expanded {
+    margin-top: $space-md;
+  }
+
+  &GroupTools {
+    display: flex;
+    justify-content: flex-end;
+    padding: $space-sm $space-md 0;
+  }
+
+  &TeamModalControls {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    margin-bottom: $space-lg;
+
+    @media (max-width: $bp-tablet) {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
+
+  &TeamModalSearch {
+    flex: 1;
+  }
+
+  &TeamModalList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: min(70vh, 680px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &TeamModalCode {
+    align-self: center;
+    color: $text-dim;
+    flex-shrink: 0;
+    font-size: $font-xs;
+    letter-spacing: 0;
+  }
+
+  &TeamModalEmpty {
+    color: $text-dim;
+    font-size: $font-base;
+    font-style: italic;
+    margin: 0;
+    padding: $space-2xl 0;
+    text-align: center;
+  }
+
+  &EmptyState {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: $space-md;
+  }
 }
 
 // Applied only when teams.length > 5 — caps height and enables scrolling
@@ -812,19 +828,21 @@
   }
 }
 
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: $space-md;
-  grid-column: 1 / -1;
-}
+.empty {
+  &State {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-md;
+    grid-column: 1 / -1;
+  }
 
-.emptyMsg {
-  font-size: $font-sm;
-  color: $text-dim;
-  font-style: italic;
-  margin: 0;
+  &Msg {
+    font-size: $font-sm;
+    color: $text-dim;
+    font-style: italic;
+    margin: 0;
+  }
 }
 
 .groupEmptyMsg {
@@ -892,13 +910,13 @@
   display: flex;
   flex-direction: column;
   gap: $space-md;
-}
 
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-md;
-  margin-top: $space-sm;
+  &Actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-md;
+    margin-top: $space-sm;
+  }
 }
 
 // ── Inline league edit form ───────────────────────────────────────────────
@@ -939,11 +957,11 @@
 // Child groups are indented and separated from siblings
 .groupItemNew {
   margin: $space-sm;
-}
 
-.groupItemNewRoot {
-  margin-left: 0;
-  margin-right: 0;
+  &Root {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 // Passed as className to Accordion to tint the border for nested sub-groups.
@@ -957,34 +975,36 @@
 }
 
 // Team chips inline in the row
-.groupTeams {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-wrap: wrap;
-  min-width: 0;
-}
+.group {
+  &Teams {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
 
-.groupTeamThumb {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2));
-}
+  &TeamThumb {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2));
+  }
 
-.groupTeamDot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  flex-shrink: 0;
+  &TeamDot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    flex-shrink: 0;
+  }
 }
 
 // ── Group "add team" selector list (used inside modal) ───────────────────
@@ -1006,76 +1026,80 @@
 }
 
 // ── Inline add / edit row ─────────────────────────────────────────────────
-.groupInlineRow {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: $space-sm $space-md;
-}
-
-.groupInlineInput {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid $border;
-  color: $text-body;
-  font-size: $font-lg;
-  font-weight: 500;
-  padding: $space-xs 0;
-  outline: none;
-
-  &:focus {
-    border-bottom-color: $text-bright;
+.groupInline {
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    padding: $space-sm $space-md;
   }
 
-  &::placeholder {
+  &Input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid $border;
+    color: $text-body;
+    font-size: $font-lg;
+    font-weight: 500;
+    padding: $space-xs 0;
+    outline: none;
+
+    &:focus {
+      border-bottom-color: $text-bright;
+    }
+
+    &::placeholder {
+      color: $text-dim;
+    }
+  }
+
+  &Btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $text-bright;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+      background $transition-fast,
+      color $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+
+  &BtnCancel {
     color: $text-dim;
   }
 }
 
-.groupInlineBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: transparent;
-  color: $text-bright;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    background $transition-fast,
-    color $transition-fast;
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-}
-
-.groupInlineBtnCancel {
-  color: $text-dim;
-}
-
 // Group label with optional role badge
-.groupLabel {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
+.group {
+  &Label {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
 
-.groupTeamCount {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  white-space: nowrap;
+  &TeamCount {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    white-space: nowrap;
+  }
 }
 
 // Always-visible footer row inside each group node
@@ -1087,93 +1111,95 @@
 }
 
 // League award definitions
-.awardDefinitionList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.awardDefinitionItem {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: $space-lg;
-  padding: $space-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
-
-  @media (max-width: 720px) {
+.awardDefinition {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
     flex-direction: column;
+    gap: $space-sm;
   }
-}
 
-.awardDefinitionMain {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-}
+  &Item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-lg;
+    padding: $space-md;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
 
-.awardDefinitionName {
-  color: $text-bright;
-  font-size: $font-base;
-  font-weight: 700;
-}
+    @media (max-width: 720px) {
+      flex-direction: column;
+    }
+  }
 
-.awardDefinitionMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-xs;
+  &Main {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    min-width: 0;
+  }
 
-  span {
-    padding: 2px 8px;
-    border-radius: $radius-sm;
-    background: rgba(255, 255, 255, 0.06);
+  &Name {
+    color: $text-bright;
+    font-size: $font-base;
+    font-weight: 700;
+  }
+
+  &Meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-xs;
+
+    span {
+      padding: 2px 8px;
+      border-radius: $radius-sm;
+      background: rgba(255, 255, 255, 0.06);
+      color: $text-dim;
+      font-size: $font-xs;
+      line-height: 1.6;
+      text-transform: capitalize;
+    }
+  }
+
+  &Description {
+    margin: 0;
     color: $text-dim;
-    font-size: $font-xs;
-    line-height: 1.6;
-    text-transform: capitalize;
+    font-size: $font-sm;
+    line-height: 1.45;
   }
-}
 
-.awardDefinitionDescription {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-sm;
-  line-height: 1.45;
-}
-
-.awardDefinitionForm {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.awardDefinitionFormGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-md;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+  &Form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
   }
-}
 
-.awardDefinitionCheckbox {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  min-height: 42px;
-  color: $text-body;
-  font-size: $font-sm;
+  &FormGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-md;
 
-  input {
-    width: 16px;
-    height: 16px;
-    accent-color: $accent;
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &Checkbox {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    min-height: 42px;
+    color: $text-body;
+    font-size: $font-sm;
+
+    input {
+      width: 16px;
+      height: 16px;
+      accent-color: $accent;
+    }
   }
 }

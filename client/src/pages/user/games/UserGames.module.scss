@@ -32,38 +32,44 @@
   margin-bottom: $space-md - ($space-2xl * 2);
 }
 
-.scheduleContentBlock {
-  display: flex;
-  flex-direction: column;
-  margin-top: -$space-2xl;
+.schedule {
+  &ContentBlock {
+    display: flex;
+    flex-direction: column;
+    margin-top: -$space-2xl;
+  }
 }
 
-.weekGameCards {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: $space-md;
-  padding: $space-xs 0;
+.weekGame {
+  &Cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: $space-md;
+    padding: $space-xs 0;
+  }
 }
 
 // ── Empty / loading ────────────────────────────────────────────────────
 // ── Games list ─────────────────────────────────────────────────────────
-.calendarGameSkipped {
-  border-style: dashed;
-  border-color: rgba($danger, 0.68);
-  background: rgba($danger, 0.07);
-  box-shadow: inset 3px 0 0 rgba($danger, 0.75);
+.calendarGame {
+  &Skipped {
+    border-style: dashed;
+    border-color: rgba($danger, 0.68);
+    background: rgba($danger, 0.07);
+    box-shadow: inset 3px 0 0 rgba($danger, 0.75);
 
-  &:hover {
-    border-color: rgba($danger, 0.86);
-    background: rgba($danger, 0.11);
+    &:hover {
+      border-color: rgba($danger, 0.86);
+      background: rgba($danger, 0.11);
+    }
   }
-}
 
-.calendarGameLeagueTint {
-  background: color-mix(in srgb, var(--game-league-primary, #334155) 16%, #{$bg-card});
+  &LeagueTint {
+    background: color-mix(in srgb, var(--game-league-primary, #334155) 16%, #{$bg-card});
 
-  &:hover {
-    background: color-mix(in srgb, var(--game-league-primary, #334155) 22%, #{$bg-card});
+    &:hover {
+      background: color-mix(in srgb, var(--game-league-primary, #334155) 22%, #{$bg-card});
+    }
   }
 }
 
@@ -79,23 +85,25 @@
   }
 }
 
-.playoffDots {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
+.playoff {
+  &Dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
 
-.playoffDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  border: 1.5px solid color-mix(in srgb, #{$text-dim} 56%, transparent);
-  background: transparent;
-}
+  &Dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    border: 1.5px solid color-mix(in srgb, #{$text-dim} 56%, transparent);
+    background: transparent;
 
-.playoffDotFilled {
-  border-color: $success;
-  background: $success;
+    &Filled {
+      border-color: $success;
+      background: $success;
+    }
+  }
 }
 
 // ── Calendar game actions ──────────────────────────────────────────────
@@ -116,20 +124,22 @@
 }
 
 // ── Schedule modal ────────────────────────────────────────────────────
-.scheduleModalBody {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+.scheduleModal {
+  &Body {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
 
-.scheduleModalCopy {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-sm;
-}
+  &Copy {
+    margin: 0;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
 
-.scheduleModalError {
-  margin: 0;
-  color: $danger-light;
-  font-size: $font-sm;
+  &Error {
+    margin: 0;
+    color: $danger-light;
+    font-size: $font-sm;
+  }
 }

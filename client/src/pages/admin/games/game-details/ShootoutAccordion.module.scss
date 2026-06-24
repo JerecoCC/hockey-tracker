@@ -10,126 +10,128 @@
 
 // ── Attempt grid ──────────────────────────────────────────────────────────────
 
-.soAttemptGrid {
-  display: flex;
-  flex-direction: column;
-}
+.soAttempt {
+  &Grid {
+    display: flex;
+    flex-direction: column;
+  }
 
-.soAttemptHeaderRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  padding: 0;
-  border-bottom: 1px solid $border;
-  gap: 0;
-}
+  &HeaderRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+    padding: 0;
+    border-bottom: 1px solid $border;
+    gap: 0;
+  }
 
-.soAttemptColHeader {
-  flex: 1 1 0;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-xs;
-  padding: $space-xs $space-md;
-  font-size: $font-xs;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: $text-dim;
+  &ColHeader {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-xs;
+    padding: $space-xs $space-md;
+    font-size: $font-xs;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-dim;
 
-  &:first-child {
+    &:first-child {
+      border-right: 1px solid #334155;
+    }
+  }
+
+  &ColTeam {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
+  }
+
+  &HeaderGoalCount {
+    font-size: $font-sm;
+    color: $text-dim;
+    font-weight: 700;
+  }
+
+  &ColHeaderAway {
+    flex-direction: row-reverse;
+    justify-content: space-between;
+  }
+
+  &ColLogo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  &ColLogoPlaceholder {
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-xs;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  &Row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: stretch;
+    gap: 0;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &RoundCell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: $space-xs $space-sm;
+  }
+
+  &RoundLabel {
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-dim;
+  }
+
+  &Cell {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-xs $space-md;
     border-right: 1px solid #334155;
-  }
-}
 
-.soAttemptColTeam {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-xs;
-}
+    &:hover .goalActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
 
-.soAttemptHeaderGoalCount {
-  font-size: $font-sm;
-  color: $text-dim;
-  font-weight: 700;
-}
-
-.soAttemptColHeaderAway {
-  flex-direction: row-reverse;
-  justify-content: space-between;
-}
-
-.soAttemptColLogo {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.soAttemptColLogoPlaceholder {
-  width: 20px;
-  height: 20px;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xs;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.soAttemptRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: stretch;
-  gap: 0;
-
-  &:last-child {
-    border-bottom: none;
-  }
-}
-
-.soAttemptRoundCell {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: $space-xs $space-sm;
-}
-
-.soAttemptRoundLabel {
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-dim;
-}
-
-.soAttemptCell {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-xs $space-md;
-  border-right: 1px solid #334155;
-
-  &:hover .goalActions {
-    opacity: 1;
-    pointer-events: auto;
+    &:last-child {
+      border-right: none;
+    }
   }
 
-  &:last-child {
-    border-right: none;
+  &CellAway {
+    justify-content: flex-end;
   }
-}
 
-.soAttemptCellAway {
-  justify-content: flex-end;
-}
+  &Spacer {
+    min-height: 48px;
+    border-right: 1px solid #334155;
 
-.soAttemptSpacer {
-  min-height: 48px;
-  border-right: 1px solid #334155;
-
-  &:last-child {
-    border-right: none;
+    &:last-child {
+      border-right: none;
+    }
   }
 }
 
@@ -138,57 +140,59 @@
 }
 
 // Applied alongside .soAttemptCell — only overrides justify-content
-.soAttemptCellEmpty {
-  justify-content: space-between;
-}
-
-.soAttemptEmptyDash {
-  font-size: $font-sm;
-  color: $text-dim;
-}
-
-.soAttemptEmptySquare {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 30px;
-  aspect-ratio: 1;
-  border-radius: $radius-sm;
-  border: 1px solid $border;
-  background: transparent;
-  flex-shrink: 0;
-}
-
-.soAttemptPlayerInfo {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-width: 0;
-}
-
-.soAttemptPlayerInfoAway {
-  align-items: flex-end;
-  text-align: right;
-}
-
-.soAttemptJersey {
-  font-size: $font-xs;
-  color: $text-dim;
-  line-height: 1.2;
-}
-
-.soAttemptName {
-  font-size: $font-sm;
-  font-weight: 500;
-  color: $text-body;
-  text-decoration: none;
-  white-space: nowrap;
-  overflow: hidden;
-
-  &:hover {
-    text-decoration: underline;
+.soAttempt {
+  &CellEmpty {
+    justify-content: space-between;
   }
-  text-overflow: ellipsis;
+
+  &EmptyDash {
+    font-size: $font-sm;
+    color: $text-dim;
+  }
+
+  &EmptySquare {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 30px;
+    aspect-ratio: 1;
+    border-radius: $radius-sm;
+    border: 1px solid $border;
+    background: transparent;
+    flex-shrink: 0;
+  }
+
+  &PlayerInfo {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &PlayerInfoAway {
+    align-items: flex-end;
+    text-align: right;
+  }
+
+  &Jersey {
+    font-size: $font-xs;
+    color: $text-dim;
+    line-height: 1.2;
+  }
+
+  &Name {
+    font-size: $font-sm;
+    font-weight: 500;
+    color: $text-body;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+
+    &:hover {
+      text-decoration: underline;
+    }
+    text-overflow: ellipsis;
+  }
 }
 
 .soResultBadge {
@@ -204,44 +208,46 @@
   line-height: 1;
   border: 1px solid $border-light;
   cursor: default;
+
+  &Scored {
+    background: rgba($success, 0.5);
+    border-color: $success;
+    color: $text-bright;
+  }
+
+  &Missed {
+    background: rgba($danger, 0.5);
+    border-color: $danger;
+    color: $text-bright;
+  }
 }
 
-.soResultBadgeScored {
-  background: rgba($success, 0.5);
-  border-color: $success;
-  color: $text-bright;
-}
+.soAttempt {
+  &TotalsRow {
+    display: grid;
+    grid-template-columns: 2.5rem 1fr 1fr;
+    align-items: center;
+    border-top: 2px solid $border;
+    background: rgba(255, 255, 255, 0.03);
+  }
 
-.soResultBadgeMissed {
-  background: rgba($danger, 0.5);
-  border-color: $danger;
-  color: $text-bright;
-}
+  &TotalsLabel {
+    font-size: $font-xs;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-dim;
+  }
 
-.soAttemptTotalsRow {
-  display: grid;
-  grid-template-columns: 2.5rem 1fr 1fr;
-  align-items: center;
-  border-top: 2px solid $border;
-  background: rgba(255, 255, 255, 0.03);
-}
+  &TotalCell {
+    padding: $space-sm $space-md;
+    font-size: $font-sm;
+    font-weight: 700;
+    color: $text-body;
+    border-right: 1px solid $border;
 
-.soAttemptTotalsLabel {
-  font-size: $font-xs;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: $text-dim;
-}
-
-.soAttemptTotalCell {
-  padding: $space-sm $space-md;
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-body;
-  border-right: 1px solid $border;
-
-  &:last-child {
-    border-right: none;
+    &:last-child {
+      border-right: none;
+    }
   }
 }

@@ -11,6 +11,19 @@
   display: flex;
   align-items: center;
   gap: $space-lg;
+
+  &Name {
+    margin: 0 0 $space-xs;
+    font-size: $font-2xl;
+    font-weight: 700;
+    color: $text-bright;
+  }
+
+  &Email {
+    margin: 0;
+    font-size: $font-base;
+    color: $text-dim;
+  }
 }
 
 .avatar {
@@ -22,19 +35,6 @@
   flex-shrink: 0;
 }
 
-.welcomeName {
-  margin: 0 0 $space-xs;
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: $text-bright;
-}
-
-.welcomeEmail {
-  margin: 0;
-  font-size: $font-base;
-  color: $text-dim;
-}
-
 .empty {
   margin: 0;
   font-size: $font-base;
@@ -42,86 +42,94 @@
   padding: $space-lg 0;
 }
 
-.favoriteScroller {
-  margin: 0;
-  display: flex;
-  align-items: stretch;
-  gap: $space-md;
-  overflow-x: auto;
-  padding: $space-xs 0 $space-sm;
-  scrollbar-gutter: stable;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
+.favorite {
+  &Scroller {
+    margin: 0;
+    display: flex;
+    align-items: stretch;
+    gap: $space-md;
+    overflow-x: auto;
+    padding: $space-xs 0 $space-sm;
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
 
-  &:hover,
-  &:focus-within {
-    scrollbar-color: $border transparent;
-  }
+    &:hover,
+    &:focus-within {
+      scrollbar-color: $border transparent;
+    }
 
-  &::-webkit-scrollbar {
-    height: 4px;
-  }
+    &::-webkit-scrollbar {
+      height: 4px;
+    }
 
-  &::-webkit-scrollbar-track {
-    background: transparent;
-  }
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
 
-  &::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: $radius-md;
-  }
+    &::-webkit-scrollbar-thumb {
+      background: transparent;
+      border-radius: $radius-md;
+    }
 
-  &:hover::-webkit-scrollbar-thumb,
-  &:focus-within::-webkit-scrollbar-thumb {
-    background: $border;
+    &:hover::-webkit-scrollbar-thumb,
+    &:focus-within::-webkit-scrollbar-thumb {
+      background: $border;
 
-    &:hover {
-      background: $text-dim;
+      &:hover {
+        background: $text-dim;
+      }
     }
   }
+
+  &Team {
+    flex: 0 0 230px;
+  }
 }
 
-.favoriteTeam {
-  flex: 0 0 230px;
+.todayGames {
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: $space-md;
+    padding: $space-xs 0;
+  }
 }
 
-.todayGamesGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: $space-md;
-  padding: $space-xs 0;
+.scheduleModal {
+  &Body {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &Copy {
+    margin: 0;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
+
+  &Error {
+    margin: 0;
+    color: $danger-light;
+    font-size: $font-sm;
+  }
 }
 
-.scheduleModalBody {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+.testDate {
+  &Control {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
 
-.scheduleModalCopy {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-sm;
-}
-
-.scheduleModalError {
-  margin: 0;
-  color: $danger-light;
-  font-size: $font-sm;
-}
-
-.testDateControl {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
-.testDateLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: $text-dim;
+  &Label {
+    font-size: $font-xs;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: $text-dim;
+  }
 }
 
 @media (max-width: 640px) {
@@ -129,11 +137,15 @@
     align-items: flex-start;
   }
 
-  .favoriteTeam {
-    flex-basis: 210px;
+  .favorite {
+    &Team {
+      flex-basis: 210px;
+    }
   }
 
-  .todayGamesGrid {
-    grid-template-columns: 1fr;
+  .todayGames {
+    &Grid {
+      grid-template-columns: 1fr;
+    }
   }
 }

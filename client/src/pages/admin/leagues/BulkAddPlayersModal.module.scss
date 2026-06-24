@@ -19,21 +19,23 @@
 }
 
 // ── Column header row ─────────────────────────────────────────────────────
-.headerRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr 1fr 2rem;
-  gap: $space-md;
-  padding: 0 0 $space-xs;
-  border-bottom: 1px solid $border;
-  margin-bottom: $space-xs;
-}
+.header {
+  &Row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr 2rem;
+    gap: $space-md;
+    padding: 0 0 $space-xs;
+    border-bottom: 1px solid $border;
+    margin-bottom: $space-xs;
+  }
 
-.headerCell {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  &Cell {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 }
 
 // ── Player row ────────────────────────────────────────────────────────────

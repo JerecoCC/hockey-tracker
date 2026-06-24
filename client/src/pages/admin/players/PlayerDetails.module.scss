@@ -64,33 +64,35 @@
   }
 }
 
-.heroInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
+.hero {
+  &Info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.heroName {
-  font-size: $font-3xl;
-  font-weight: 700;
-  color: $text-bright;
-  margin: 0;
-}
+  &Name {
+    font-size: $font-3xl;
+    font-weight: 700;
+    color: $text-bright;
+    margin: 0;
+  }
 
-.heroMeta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: $space-md;
-  font-size: $font-sm;
-  color: $text-dim;
+  &Meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-md;
+    font-size: $font-sm;
+    color: $text-dim;
 
-  > span + span::before {
-    content: "•";
-    margin-right: $space-md;
-    color: $border;
+    > span + span::before {
+      content: "•";
+      margin-right: $space-md;
+      color: $border;
+    }
   }
 }
 
@@ -101,24 +103,26 @@
   gap: $space-xs;
 }
 
-.statusBadge {
-  flex-shrink: 0;
-  padding: $space-xs $space-md;
-  border-radius: $radius-pill;
-  font-size: $font-xs;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
+.status {
+  &Badge {
+    flex-shrink: 0;
+    padding: $space-xs $space-md;
+    border-radius: $radius-pill;
+    font-size: $font-xs;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 
-.statusActive {
-  background: rgba(34, 197, 94, 0.15);
-  color: #4ade80;
-}
+  &Active {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+  }
 
-.statusInactive {
-  background: rgba(100, 116, 139, 0.15);
-  color: $text-dim;
+  &Inactive {
+    background: rgba(100, 116, 139, 0.15);
+    color: $text-dim;
+  }
 }
 
 .heroActions {
@@ -161,35 +165,37 @@
   }
 }
 
-.infoGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: $space-xl;
-}
+.info {
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: $space-xl;
+  }
 
-.infoCell {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
+  &Cell {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.infoCellLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
+  &CellLabel {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
 
-.infoCellValue {
-  font-size: $font-body;
-  color: $text-body;
-}
+  &CellValue {
+    font-size: $font-body;
+    color: $text-body;
+  }
 
-.infoCellMuted {
-  font-size: $font-body;
-  color: $text-dim;
-  font-style: italic;
+  &CellMuted {
+    font-size: $font-body;
+    color: $text-dim;
+    font-style: italic;
+  }
 }
 
 // ── Placeholder ───────────────────────────────────────────────────────────
@@ -202,64 +208,66 @@
 }
 
 // ── Team history stint list ───────────────────────────────────────────────
-.stintList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+.stint {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
 
-.stintItem {
-  --list-item-logo-size: 40px;
-  --list-item-jersey-size: 32px;
+  &Item {
+    --list-item-logo-size: 40px;
+    --list-item-jersey-size: 32px;
 
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid $border;
-  border-radius: $radius-md;
-}
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $border;
+    border-radius: $radius-md;
+  }
 
-.stintLogo {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.15));
-}
+  &Logo {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.15));
+  }
 
-.stintLogoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
+  &LogoPlaceholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
 
-.stintInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
+  &Info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.stintTeam {
-  font-size: $font-body;
-  font-weight: 600;
-  color: $text-bright;
-}
+  &Team {
+    font-size: $font-body;
+    font-weight: 600;
+    color: $text-bright;
+  }
 
-.stintMeta {
-  font-size: $font-sm;
-  color: $text-dim;
+  &Meta {
+    font-size: $font-sm;
+    color: $text-dim;
+  }
 }
 
 // ── Current-season stats cards ────────────────────────────────────────────
@@ -276,17 +284,19 @@
   }
 }
 
-.opponentCell {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-xs;
-  font-weight: 600;
-  color: $text-body;
-}
+.opponent {
+  &Cell {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-xs;
+    font-weight: 600;
+    color: $text-body;
+  }
 
-.opponentPrefix {
-  color: $text-dim;
-  font-weight: 500;
+  &Prefix {
+    color: $text-dim;
+    font-weight: 500;
+  }
 }
 
 .teamCodeCell {
@@ -298,41 +308,45 @@
   color: $text-bright;
 }
 
-.gameLogFilters {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  flex-wrap: wrap;
-}
+.gameLog {
+  &Filters {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    flex-wrap: wrap;
+  }
 
-.gameLogSeasonSelect {
-  width: 180px;
-}
+  &SeasonSelect {
+    width: 180px;
+  }
 
-.gameLogTypeControl {
-  width: 260px;
-}
-
-.paginationBar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  margin-top: $space-lg;
-  color: $text-dim;
-  font-size: $font-sm;
-
-  @media (max-width: 640px) {
-    align-items: stretch;
-    flex-direction: column;
+  &TypeControl {
+    width: 260px;
   }
 }
 
-.paginationActions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-md;
+.pagination {
+  &Bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    margin-top: $space-lg;
+    color: $text-dim;
+    font-size: $font-sm;
+
+    @media (max-width: 640px) {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
+
+  &Actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-md;
+  }
 }
 
 .paginationSummary,
@@ -340,40 +354,42 @@
   white-space: nowrap;
 }
 
-.statGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
-  gap: $space-md $space-lg;
-}
+.stat {
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    gap: $space-md $space-lg;
+  }
 
-.statGridGoalie {
-  grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
-}
+  &GridGoalie {
+    grid-template-columns: repeat(auto-fit, minmax(64px, 1fr));
+  }
 
-.statCell {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-xs;
-  text-align: center;
-}
+  &Cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+    text-align: center;
+  }
 
-.statCellLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
+  &CellLabel {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
 
-.statCellValue {
-  font-size: $font-xl;
-  font-weight: 700;
-  color: $text-bright;
-}
+  &CellValue {
+    font-size: $font-xl;
+    font-weight: 700;
+    color: $text-bright;
+  }
 
-.statCellMuted {
-  font-size: $font-xl;
-  font-weight: 700;
-  color: $text-dim;
+  &CellMuted {
+    font-size: $font-xl;
+    font-weight: 700;
+    color: $text-dim;
+  }
 }

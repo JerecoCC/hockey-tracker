@@ -22,14 +22,14 @@
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.5);
   display: flex;
   flex-direction: column;
-}
 
-.modalLg {
-  max-width: 800px;
-}
+  &Lg {
+    max-width: 800px;
+  }
 
-.modalXl {
-  max-width: 1100px;
+  &Xl {
+    max-width: 1100px;
+  }
 }
 
 .header {
@@ -71,25 +71,25 @@
   padding-top: $space-xl;
   border-top: 1px solid $border;
   margin-top: 0;
-}
 
-.footerRow {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: $space-md;
-}
+  &Row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-md;
+  }
 
-.footerStart {
-  flex: 1;
-  font-size: $font-sm;
-  color: $text-dim;
-}
+  &Start {
+    flex: 1;
+    font-size: $font-sm;
+    color: $text-dim;
+  }
 
-.footerActions {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
+  &Actions {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+  }
 }
 
 .title {
@@ -140,15 +140,17 @@
     animation: fadeOutOverlay $transition-layout ease forwards;
   }
 
-  .modal,
-  .modalLg,
-  .modalXl {
-    max-width: 100%;
-    width: 100%;
-    border-radius: $radius-xl $radius-xl 0 0;
-    border-bottom: none;
-    max-height: 100dvh;
-    animation: slideUpSheet $transition-layout ease;
+  .modal {
+    &,
+    &Lg,
+    &Xl {
+      max-width: 100%;
+      width: 100%;
+      border-radius: $radius-xl $radius-xl 0 0;
+      border-bottom: none;
+      max-height: 100dvh;
+      animation: slideUpSheet $transition-layout ease;
+    }
   }
 
   .closing {
@@ -158,22 +160,22 @@
   // Extra bottom padding for home-bar / thumb comfort
   .footer {
     padding-bottom: $space-4xl;
-  }
 
-  // Keep footer actions stacked full-width for easier tapping
-  .footerRow {
-    flex-direction: column-reverse;
-    align-items: stretch;
-    gap: $space-sm;
-  }
+    // Keep footer actions stacked full-width for easier tapping
+    &Row {
+      flex-direction: column-reverse;
+      align-items: stretch;
+      gap: $space-sm;
+    }
 
-  .footerActions {
-    flex-direction: column-reverse;
-    align-items: stretch;
-    gap: $space-sm;
-  }
+    &Actions {
+      flex-direction: column-reverse;
+      align-items: stretch;
+      gap: $space-sm;
+    }
 
-  .footerStart {
-    text-align: center;
+    &Start {
+      text-align: center;
+    }
   }
 }

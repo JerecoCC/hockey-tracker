@@ -20,19 +20,19 @@
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
-}
 
-.goalTeamLogoPlaceholder {
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  text-transform: uppercase;
+  &Placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-sm;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
 }
 
 // Flex row: team logo + player photo + info column
@@ -45,29 +45,31 @@
 }
 
 // Text column: scorer name + assists
-.goalInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
+.goal {
+  &Info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
 
-.goalScorer {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-body;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  &Scorer {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-body;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-.goalAssists {
-  font-size: $font-sm;
-  color: $text-dim;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  &Assists {
+    font-size: $font-sm;
+    color: $text-dim;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 // ── Score goal form ───────────────────────────────────────────────────────────
@@ -78,15 +80,17 @@
   gap: $space-lg;
 }
 
-.formGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  row-gap: $space-lg;
-  column-gap: $space-md;
-}
+.form {
+  &Grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    row-gap: $space-lg;
+    column-gap: $space-md;
+  }
 
-.formFieldFull {
-  grid-column: 1 / -1;
+  &FieldFull {
+    grid-column: 1 / -1;
+  }
 }
 
 // Result segmented control — icon matching soResultBadge character style
@@ -98,14 +102,16 @@
 
 // Result segmented control — per-option active colours
 // !important ensures these win over .option { background: transparent } regardless of bundle order
-.resultOptionMissActive {
-  background: $danger !important;
-  color: $text-bright !important;
-}
+.resultOption {
+  &MissActive {
+    background: $danger !important;
+    color: $text-bright !important;
+  }
 
-.resultOptionGoalActive {
-  background: $success !important;
-  color: $text-bright !important;
+  &GoalActive {
+    background: $success !important;
+    color: $text-bright !important;
+  }
 }
 
 // Team logo inside SegmentedControl options
@@ -115,34 +121,36 @@
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
-}
 
-.teamSegmentLogoPlaceholder {
-  width: 20px;
-  height: 20px;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xs;
-  font-weight: 700;
-  text-transform: uppercase;
+  &Placeholder {
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-xs;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
 }
 
 // Individual form field (label + input/select)
-.goalFormField {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
+.goalForm {
+  &Field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.goalFormLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
+  &Label {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
 }
 
 .required {
@@ -159,22 +167,24 @@
 
 // Period time field — fixed narrow width so it doesn't grow and the clear
 // button appearing/disappearing never shifts the layout
-.goalPeriodTimeField {
-  flex-shrink: 0;
-  width: 128px;
-}
+.goal {
+  &PeriodTimeField {
+    flex-shrink: 0;
+    width: 128px;
+  }
 
-.goalPeriodTimeError {
-  font-size: $font-xs;
-  color: $danger;
-  margin-top: $space-xs;
-}
+  &PeriodTimeError {
+    font-size: $font-xs;
+    color: $danger;
+    margin-top: $space-xs;
+  }
 
-.goalFormError {
-  display: block;
-  font-size: $font-xs;
-  color: $danger;
-  margin-top: -$space-xs;
+  &FormError {
+    display: block;
+    font-size: $font-xs;
+    color: $danger;
+    margin-top: -$space-xs;
+  }
 }
 
 // Goal type field inside goalFormTimeRow — expands to fill remaining space
@@ -223,13 +233,13 @@
     opacity: 0.5;
     cursor: not-allowed;
   }
-}
 
-.emptyNetToggleOn {
-  border-color: $accent;
-  color: $accent;
-  background: rgba($accent, 0.08);
-  box-shadow: inset 0 0 0 1px rgba($accent, 0.24);
+  &On {
+    border-color: $accent;
+    color: $accent;
+    background: rgba($accent, 0.08);
+    box-shadow: inset 0 0 0 1px rgba($accent, 0.24);
+  }
 }
 
 // ── Tab content wrapper ────────────────────────────────────────────────────────
@@ -248,116 +258,118 @@
   text-align: center;
 }
 
-.gameAutofillStatus {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  // Stay visible while scrolling, pinned just below the sticky scoreboard
-  // (its dynamic height sets `top` inline; this is the pre-measurement fallback).
-  // Sits beneath the scoreboard (z-index 4) so it never overlaps on top of it.
-  position: sticky;
-  top: 52px;
-  z-index: 3;
-  margin: -$space-sm 0 $space-xl;
-  padding: $space-lg $space-xl;
-  border: 2px solid rgba($info-light, 0.9);
-  border-radius: $radius-lg;
-  overflow: hidden;
-  background:
-    linear-gradient(90deg, rgba($info, 0.34), rgba($bg-card, 0.98) 42%),
-    $bg-card;
-  box-shadow:
-    0 0 0 1px rgba($info-light, 0.16),
-    0 16px 34px rgba(0, 0, 0, 0.36),
-    0 0 28px rgba($info, 0.22);
+.gameAutofill {
+  &Status {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    // Stay visible while scrolling, pinned just below the sticky scoreboard
+    // (its dynamic height sets `top` inline; this is the pre-measurement fallback).
+    // Sits beneath the scoreboard (z-index 4) so it never overlaps on top of it.
+    position: sticky;
+    top: 52px;
+    z-index: 3;
+    margin: -$space-sm 0 $space-xl;
+    padding: $space-lg $space-xl;
+    border: 2px solid rgba($info-light, 0.9);
+    border-radius: $radius-lg;
+    overflow: hidden;
+    background:
+      linear-gradient(90deg, rgba($info, 0.34), rgba($bg-card, 0.98) 42%),
+      $bg-card;
+    box-shadow:
+      0 0 0 1px rgba($info-light, 0.16),
+      0 16px 34px rgba(0, 0, 0, 0.36),
+      0 0 28px rgba($info, 0.22);
 
-  &::before {
-    content: "";
-    position: absolute;
-    inset: 0 auto 0 0;
-    width: 5px;
-    border-radius: $radius-lg 0 0 $radius-lg;
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 5px;
+      border-radius: $radius-lg 0 0 $radius-lg;
+      background: $info-light;
+      box-shadow: 0 0 16px rgba($info-light, 0.7);
+    }
+  }
+
+  &StatusHeader {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    min-width: 0;
+  }
+
+  &Pulse {
+    width: 14px;
+    height: 14px;
+    border-radius: 999px;
     background: $info-light;
-    box-shadow: 0 0 16px rgba($info-light, 0.7);
-  }
-}
-
-.gameAutofillStatusHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  min-width: 0;
-}
-
-.gameAutofillPulse {
-  width: 14px;
-  height: 14px;
-  border-radius: 999px;
-  background: $info-light;
-  box-shadow: 0 0 0 0 rgba($info-light, 0.55);
-  animation: gameAutofillPulse 1.4s ease-out infinite;
-  flex-shrink: 0;
-}
-
-.gameAutofillStatusText {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-
-  strong {
-    color: $text-bright;
-    font-size: $font-lg;
-    font-weight: 700;
-    line-height: 1.2;
+    box-shadow: 0 0 0 0 rgba($info-light, 0.55);
+    animation: gameAutofillPulse 1.4s ease-out infinite;
+    flex-shrink: 0;
   }
 
-  span {
-    color: $text-body;
-    font-size: $font-base;
-    line-height: 1.25;
-    overflow-wrap: anywhere;
+  &StatusText {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+
+    strong {
+      color: $text-bright;
+      font-size: $font-lg;
+      font-weight: 700;
+      line-height: 1.2;
+    }
+
+    span {
+      color: $text-body;
+      font-size: $font-base;
+      line-height: 1.25;
+      overflow-wrap: anywhere;
+    }
   }
-}
 
-.gameAutofillProgress {
-  width: 100%;
-  height: 10px;
-  overflow: hidden;
-  border: 1px solid rgba($info-light, 0.35);
-  border-radius: 999px;
-  background: rgba($bg-page, 0.95);
-  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
-
-  &::-webkit-progress-bar {
+  &Progress {
+    width: 100%;
+    height: 10px;
+    overflow: hidden;
+    border: 1px solid rgba($info-light, 0.35);
+    border-radius: 999px;
     background: rgba($bg-page, 0.95);
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.35);
+
+    &::-webkit-progress-bar {
+      background: rgba($bg-page, 0.95);
+    }
+
+    &::-webkit-progress-value {
+      border-radius: 999px;
+      background: linear-gradient(90deg, $info-light, $accent-light);
+      box-shadow: 0 0 12px rgba($info-light, 0.55);
+    }
+
+    &::-moz-progress-bar {
+      border-radius: 999px;
+      background: linear-gradient(90deg, $info-light, $accent-light);
+      box-shadow: 0 0 12px rgba($info-light, 0.55);
+    }
   }
 
-  &::-webkit-progress-value {
-    border-radius: 999px;
-    background: linear-gradient(90deg, $info-light, $accent-light);
-    box-shadow: 0 0 12px rgba($info-light, 0.55);
-  }
+  &LockedRegion {
+    opacity: 0.62;
 
-  &::-moz-progress-bar {
-    border-radius: 999px;
-    background: linear-gradient(90deg, $info-light, $accent-light);
-    box-shadow: 0 0 12px rgba($info-light, 0.55);
-  }
-}
+    :is(button, a, input, select, textarea, [role="button"]) {
+      pointer-events: none;
+    }
 
-.gameAutofillLockedRegion {
-  opacity: 0.62;
-
-  :is(button, a, input, select, textarea, [role="button"]) {
-    pointer-events: none;
-  }
-
-  button,
-  input,
-  select,
-  textarea {
-    cursor: not-allowed;
+    button,
+    input,
+    select,
+    textarea {
+      cursor: not-allowed;
+    }
   }
 }
 
@@ -467,141 +479,149 @@
 // ── Lineup tab ────────────────────────────────────────────────────────────────
 
 // Two-column grid inside the Card body — each column is a static Accordion
-.lineupGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-lg;
+.lineup {
+  &Grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-lg;
 
-  @media (max-width: 720px) {
-    grid-template-columns: 1fr;
+    @media (max-width: 720px) {
+      grid-template-columns: 1fr;
+    }
   }
-}
 
-.lineupTeamPanel {
-  min-width: 0;
-}
+  &TeamPanel {
+    min-width: 0;
+  }
 
-.lineupTeamPanelMobileHidden {
-  @media (max-width: 720px) {
+  &TeamPanelMobileHidden {
+    @media (max-width: 720px) {
+      display: none;
+    }
+  }
+
+  &MobileToggle {
     display: none;
+
+    @media (max-width: 720px) {
+      display: flex;
+      align-items: center;
+    }
   }
-}
 
-.lineupMobileToggle {
-  display: none;
-
-  @media (max-width: 720px) {
-    display: flex;
-    align-items: center;
+  &MobileToggleControl {
+    width: 156px;
   }
-}
-
-.lineupMobileToggleControl {
-  width: 156px;
 }
 
 // Player list rendered inside the static Accordion body
-.lineupPlayerList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
+.lineupPlayer {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
 
-.lineupPlayerItem {
-  --list-item-logo-size: 32px;
-  --list-item-jersey-size: 32px;
-  --list-item-jersey-font-size: #{$font-base};
+  &Item {
+    --list-item-logo-size: 32px;
+    --list-item-jersey-size: 32px;
+    --list-item-jersey-font-size: #{$font-base};
 
-  padding: $space-sm $space-md;
-  border: 0;
-  background: transparent;
+    padding: $space-sm $space-md;
+    border: 0;
+    background: transparent;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
   }
 }
 
 // ── Starting lineup slot grid ──────────────────────────────────────────────────
 
-.lineupSlots {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  padding: $space-sm 0;
-}
+.lineup {
+  &Slots {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    padding: $space-sm 0;
+  }
 
-.lineupSlotsHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding-bottom: $space-xs;
-}
+  &SlotsHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: $space-xs;
+  }
 
-.lineupSlotsTitle {
-  font-size: $font-xs;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: $text-dim;
-}
+  &SlotsTitle {
+    font-size: $font-xs;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: $text-dim;
+  }
 
-.lineupSlotRow {
-  display: grid;
-  grid-template-columns: 9rem 1fr;
-  align-items: center;
-  gap: $space-md;
-}
+  &SlotRow {
+    display: grid;
+    grid-template-columns: 9rem 1fr;
+    align-items: center;
+    gap: $space-md;
+  }
 
-.lineupSlotLabel {
-  font-size: $font-sm;
-  color: $text-dim;
-  white-space: nowrap;
-}
+  &SlotLabel {
+    font-size: $font-sm;
+    color: $text-dim;
+    white-space: nowrap;
+  }
 
-.lineupDivider {
-  height: 1px;
-  background: rgba(255, 255, 255, 0.07);
-  border: none;
-  margin: $space-sm 0;
+  &Divider {
+    height: 1px;
+    background: rgba(255, 255, 255, 0.07);
+    border: none;
+    margin: $space-sm 0;
+  }
 }
 
 // Accordion header label with team logo
-.accordionTeamLabel {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
+.accordionTeam {
+  &Label {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
 
-.accordionTeamCount {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-}
+  &Count {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+  }
 
-.accordionTeamLogo {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
+  &Logo {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
 
-.accordionTeamLogoPlaceholder {
-  width: 24px;
-  height: 24px;
-  border-radius: 4px;
-  background: $bg-card;
-  border: 1px solid $border;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  flex-shrink: 0;
-  line-height: 1;
+  &LogoPlaceholder {
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    background: $bg-card;
+    border: 1px solid $border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    flex-shrink: 0;
+    line-height: 1;
+  }
 }
 
 // ── Summary two-column grid ────────────────────────────────────────────────────
@@ -631,38 +651,40 @@
   flex-wrap: wrap;
 }
 
-.starItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-xs;
-  text-align: center;
-  min-width: 80px;
-}
+.star {
+  &Item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+    text-align: center;
+    min-width: 80px;
+  }
 
-.starIcons {
-  display: flex;
-  gap: 2px;
-  color: $accent;
-  font-size: 0.85rem;
-}
+  &Icons {
+    display: flex;
+    gap: 2px;
+    color: $accent;
+    font-size: 0.85rem;
+  }
 
-.starName {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-bright;
-  line-height: 1.2;
-}
+  &Name {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-bright;
+    line-height: 1.2;
+  }
 
-.starTeam {
-  font-size: $font-xs;
-  color: $text-dim;
-}
+  &Team {
+    font-size: $font-xs;
+    color: $text-dim;
+  }
 
-.starStats {
-  font-size: $font-xs;
-  color: $text-dim;
-  font-variant-numeric: tabular-nums;
+  &Stats {
+    font-size: $font-xs;
+    color: $text-dim;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 // Right column — Game Info + Linescore stacked
@@ -684,144 +706,152 @@
 }
 
 // ── Linescore team cell ────────────────────────────────────────────────────────
-.linescoreTeam {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
+.linescore {
+  &Team {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
 
-.linescoreLogo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
+  &Logo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
 
-.linescoreLogoPlaceholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  flex-shrink: 0;
-}
+  &LogoPlaceholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
 
-.linescoreCode {
-  font-weight: 600;
-  color: $text-body;
-  font-size: $font-sm;
+  &Code {
+    font-weight: 600;
+    color: $text-body;
+    font-size: $font-sm;
+  }
 }
 
 // ── Record Shots modal ───────────────────────────────────────────────────────
-.shotsModalBody {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
+.shots {
+  &ModalBody {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
 
-.shotsTeamRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-xs 0;
-}
+  &TeamRow {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-xs 0;
+  }
 
-.shotsTeamInfo {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  flex: 1;
-  min-width: 0;
-}
+  &TeamInfo {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    flex: 1;
+    min-width: 0;
+  }
 
-.shotsTeamLogo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
+  &TeamLogo {
+    width: 32px;
+    height: 32px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
 
-.shotsTeamLogoPlaceholder {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xs;
-  font-weight: 700;
-  flex-shrink: 0;
-}
+  &TeamLogoPlaceholder {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-xs;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
 
-.shotsTeamName {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-body;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  &TeamName {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-body;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-.shotsFieldWrap {
-  width: 80px;
-  flex-shrink: 0;
+  &FieldWrap {
+    width: 80px;
+    flex-shrink: 0;
 
-  // Remove the label wrapper margin so the number input sits flush in the row
-  label {
-    margin-bottom: 0;
+    // Remove the label wrapper margin so the number input sits flush in the row
+    label {
+      margin-bottom: 0;
+    }
   }
 }
 
 // Column label row above per-stint data rows in GoalieStatsEditModal.
 // Padding matches .goalieStintRow so labels align with their inputs.
-.shotsGoalieHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: 0 $space-sm;
+.shotsGoalie {
+  &Header {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: 0 $space-sm;
 
-  // "Window" label fills the remaining space
-  > span:first-child {
-    flex: 1;
+    // "Window" label fills the remaining space
+    > span:first-child {
+      flex: 1;
+    }
   }
-}
 
-.shotsGoalieColLabel {
-  width: 56px;
-  text-align: center;
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
+  &ColLabel {
+    width: 56px;
+    text-align: center;
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+  }
 }
 
 // Column header above the SOG number input in the Period Shots section.
 // Width matches .shotsFieldWrap so the label sits directly above the input.
-.shotsSectionColLabel {
-  width: 80px;
-  flex-shrink: 0;
-  text-align: center;
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
+.shots {
+  &SectionColLabel {
+    width: 80px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
 
-.shotsGoalieRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-xs $space-sm;
-  border-radius: $radius-sm;
-}
+  &GoalieRow {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-xs $space-sm;
+    border-radius: $radius-sm;
+  }
 
-.shotsGoalieRowStarter {
-  border: 1px solid rgba($info, 0.4);
-  background: rgba($info, 0.07);
+  &GoalieRowStarter {
+    border: 1px solid rgba($info, 0.4);
+    background: rgba($info, 0.07);
+  }
 }
 
 // Small label used between sections in GoalieSwitchModal / GoalieStatsEditModal.
@@ -872,22 +902,24 @@
 }
 
 // Divider between goalie groups in GoalieStatsEditModal.
-.goalieGroupDivider {
-  border: none;
-  border-top: 1px solid $border;
-  margin: $space-xs 0 0;
-}
+.goalie {
+  &GroupDivider {
+    border: none;
+    border-top: 1px solid $border;
+    margin: $space-xs 0 0;
+  }
 
-.goalieSubRow {
-  display: flex;
-  gap: $space-sm;
-  align-items: center;
-  padding: $space-xs 0 $space-sm;
-  margin-top: -$space-xs;
+  &SubRow {
+    display: flex;
+    gap: $space-sm;
+    align-items: center;
+    padding: $space-xs 0 $space-sm;
+    margin-top: -$space-xs;
 
-  // Push the delete button to the right end
-  > button:last-child {
-    margin-left: auto;
+    // Push the delete button to the right end
+    > button:last-child {
+      margin-left: auto;
+    }
   }
 }
 
@@ -929,163 +961,163 @@
   display: flex;
   flex-direction: column;
   gap: $space-md;
-}
 
-.goalieStatsEditorActions {
-  display: flex;
-  justify-content: flex-end;
-}
+  &Actions {
+    display: flex;
+    justify-content: flex-end;
+  }
 
-.goalieStatsEditorAddPanel {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  padding: $space-sm;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: $bg-input;
-}
+  &AddPanel {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    padding: $space-sm;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-input;
+  }
 
-.goalieStatsEditorAddHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  min-width: 0;
-}
+  &AddHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    min-width: 0;
+  }
 
-.goalieStatsEditorAddSelectors {
-  display: grid;
-  grid-template-columns: 168px minmax(200px, 280px);
-  gap: $space-sm;
-  align-items: end;
-  flex: 1;
-  min-width: 0;
-}
+  &AddSelectors {
+    display: grid;
+    grid-template-columns: 168px minmax(200px, 280px);
+    gap: $space-sm;
+    align-items: end;
+    flex: 1;
+    min-width: 0;
+  }
 
-.goalieStatsEditorAddField {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
+  &AddField {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
 
-  > span {
+    > span {
+      color: $text-dim;
+      font-size: $font-xs;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+  }
+
+  &AddButtons {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex-shrink: 0;
+    justify-self: center;
+  }
+
+  &WindowFields {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  &WindowRow {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    gap: $space-xs;
+    align-items: end;
+    min-width: 0;
+
+    .goalieStatsEditorAddField:first-child {
+      width: 96px;
+    }
+
+    .goalieStatsEditorAddField:last-child {
+      width: 128px;
+    }
+  }
+
+  &Group {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    padding: $space-sm;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-input;
+  }
+
+  &GroupMulti {
+    border-color: rgba($info, 0.4);
+    background: rgba($info, 0.07);
+  }
+
+  &Header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    min-width: 0;
+  }
+
+  &Identity {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &NameLine {
+    display: inline-flex;
+    align-items: center;
+    max-width: 100%;
+  }
+
+  &PlayerName {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &Totals {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    flex-shrink: 0;
+
+    b {
+      color: $text-body;
+      font-size: $font-sm;
+    }
+  }
+
+  &TotalPill {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 4px;
+    min-width: 48px;
+    justify-content: center;
+    padding: 4px $space-sm;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
     color: $text-dim;
     font-size: $font-xs;
     font-weight: 700;
-    text-transform: uppercase;
-  }
-}
-
-.goalieStatsEditorAddButtons {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
-  flex-shrink: 0;
-  justify-self: center;
-}
-
-.goalieStatsEditorWindowFields {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.goalieStatsEditorWindowRow {
-  display: grid;
-  grid-template-columns: max-content max-content;
-  gap: $space-xs;
-  align-items: end;
-  min-width: 0;
-
-  .goalieStatsEditorAddField:first-child {
-    width: 96px;
   }
 
-  .goalieStatsEditorAddField:last-child {
-    width: 128px;
+  &Table {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: $bg-card;
+    overflow: hidden;
   }
-}
-
-.goalieStatsEditorGroup {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  padding: $space-sm;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: $bg-input;
-}
-
-.goalieStatsEditorGroupMulti {
-  border-color: rgba($info, 0.4);
-  background: rgba($info, 0.07);
-}
-
-.goalieStatsEditorHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  min-width: 0;
-}
-
-.goalieStatsEditorIdentity {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  flex: 1;
-  min-width: 0;
-}
-
-.goalieStatsEditorNameLine {
-  display: inline-flex;
-  align-items: center;
-  max-width: 100%;
-}
-
-.goalieStatsEditorPlayerName {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.goalieStatsEditorTotals {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  flex-shrink: 0;
-
-  b {
-    color: $text-body;
-    font-size: $font-sm;
-  }
-}
-
-.goalieStatsEditorTotalPill {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 4px;
-  min-width: 48px;
-  justify-content: center;
-  padding: 4px $space-sm;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  color: $text-dim;
-  font-size: $font-xs;
-  font-weight: 700;
-}
-
-.goalieStatsEditorTable {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: $bg-card;
-  overflow: hidden;
 }
 
 .goalieStatsEditorHead,
@@ -1096,75 +1128,77 @@
   align-items: center;
 }
 
-.goalieStatsEditorHead {
-  padding: $space-xs $space-sm;
-  border-bottom: 1px solid $border;
-  color: $text-dim;
-  font-size: $font-xs;
-  font-weight: 700;
-  text-transform: uppercase;
-
-  > span:not(:first-child) {
-    text-align: center;
-  }
-}
-
-.goalieStatsEditorStint {
-  min-height: 48px;
-  padding: $space-xs $space-sm;
-
-  + .goalieStatsEditorStint {
-    border-top: 1px solid $border;
-  }
-
-  label {
-    margin-bottom: 0;
-    justify-self: center;
-    display: flex;
-    justify-content: center;
-  }
-
-  .goalieStintInfo {
-    color: $text-body;
+.goalieStatsEditor {
+  &Head {
+    padding: $space-xs $space-sm;
+    border-bottom: 1px solid $border;
+    color: $text-dim;
     font-size: $font-xs;
-    font-weight: 400;
-    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    text-transform: uppercase;
+
+    > span:not(:first-child) {
+      text-align: center;
+    }
   }
 
-  input[type="number"] {
-    width: 56px;
-    min-width: 0;
-    text-align: center;
-    padding-left: $space-xs;
-    padding-right: $space-xs;
+  &Stint {
+    min-height: 48px;
+    padding: $space-xs $space-sm;
+
+    + .goalieStatsEditorStint {
+      border-top: 1px solid $border;
+    }
+
+    label {
+      margin-bottom: 0;
+      justify-self: center;
+      display: flex;
+      justify-content: center;
+    }
+
+    .goalieStintInfo {
+      color: $text-body;
+      font-size: $font-xs;
+      font-weight: 400;
+      font-variant-numeric: tabular-nums;
+    }
+
+    input[type="number"] {
+      width: 56px;
+      min-width: 0;
+      text-align: center;
+      padding-left: $space-xs;
+      padding-right: $space-xs;
+    }
+
+    > button {
+      justify-self: center;
+    }
   }
 
-  > button {
+  &GaOverrideField {
     justify-self: center;
+    width: 72px;
+
+    input {
+      width: 100%;
+      min-width: 0;
+      text-align: center;
+      padding-left: $space-xs;
+      padding-right: $space-xs;
+    }
   }
-}
 
-.goalieStatsEditorGaOverrideField {
-  justify-self: center;
-  width: 72px;
-
-  input {
-    width: 100%;
-    min-width: 0;
-    text-align: center;
-    padding-left: $space-xs;
-    padding-right: $space-xs;
+  &Value {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: $text-body;
+    font-size: $font-sm;
+    font-weight: 700;
   }
-}
-
-.goalieStatsEditorValue {
-  min-height: 36px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: $text-body;
-  font-size: $font-sm;
-  font-weight: 700;
 }
 
 // NHL API goalie switch checker modal.
@@ -1172,73 +1206,73 @@
   display: flex;
   flex-direction: column;
   gap: $space-md;
-}
 
-.nhlGoalieCheckerForm {
-  width: 100%;
-}
-
-.nhlGoalieCheckerStatus {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-sm;
-}
-
-.nhlGoalieCheckerError {
-  color: $danger;
-}
-
-.nhlGoalieCheckerResults {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.nhlGoalieCheckerSummary {
-  display: flex;
-  justify-content: space-between;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: rgba($bg-page, 0.4);
-  color: $text-dim;
-  font-size: $font-sm;
-
-  strong {
-    color: $text-body;
+  &Form {
+    width: 100%;
   }
-}
 
-.nhlGoalieCheckerTeams {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+  &Status {
+    margin: 0;
+    color: $text-dim;
+    font-size: $font-sm;
+  }
 
-.nhlGoalieCheckerTeam {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  padding: $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: rgba($bg-card, 0.62);
-}
+  &Error {
+    color: $danger;
+  }
 
-.nhlGoalieCheckerTeamHeader {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  font-size: $font-sm;
-  .nhlGoalieCheckerTeamInfo {
+  &Results {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &Summary {
+    display: flex;
+    justify-content: space-between;
+    gap: $space-md;
+    padding: $space-sm $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba($bg-page, 0.4);
+    color: $text-dim;
+    font-size: $font-sm;
+
+    strong {
+      color: $text-body;
+    }
+  }
+
+  &Teams {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &Team {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    padding: $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba($bg-card, 0.62);
+  }
+
+  &TeamHeader {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: $space-sm;
-    strong {
-      color: white;
+    font-size: $font-sm;
+    .nhlGoalieCheckerTeamInfo {
+      display: flex;
+      align-items: center;
+      gap: $space-sm;
+      strong {
+        color: white;
+      }
     }
   }
 }
@@ -1251,67 +1285,69 @@
   font-weight: 700;
 }
 
-.nhlGoalieCheckerSwitchDetected {
-  background: rgba($warning, 0.16);
-  color: $warning;
-}
-
-.nhlGoalieCheckerNoSwitch {
-  background: rgba($success, 0.14);
-  color: $success;
-}
-
-.nhlGoalieCheckerStints {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.nhlGoalieCheckerStint {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  padding: $space-xs $space-sm;
-  border-radius: $radius-sm;
-  background: rgba($bg-page, 0.42);
-  color: $text-dim;
-  font-size: $font-xs;
-}
-
-.nhlGoalieCheckerStintInfo {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.nhlGoalieCheckerGoalie {
-  min-width: 0;
-  color: $text-body;
-  font-weight: 700;
-  overflow-wrap: anywhere;
-}
-
-.nhlGoalieCheckerStats {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-shrink: 0;
-  color: $text-body;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-
-  span {
-    padding: 2px 6px;
-    border-radius: $radius-sm;
-    background: rgba($bg-card, 0.7);
+.nhlGoalieChecker {
+  &SwitchDetected {
+    background: rgba($warning, 0.16);
+    color: $warning;
   }
-}
 
-.nhlGoalieCheckerToi {
-  color: $text-body;
-  font-variant-numeric: tabular-nums;
+  &NoSwitch {
+    background: rgba($success, 0.14);
+    color: $success;
+  }
+
+  &Stints {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &Stint {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-sm;
+    padding: $space-xs $space-sm;
+    border-radius: $radius-sm;
+    background: rgba($bg-page, 0.42);
+    color: $text-dim;
+    font-size: $font-xs;
+  }
+
+  &StintInfo {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &Goalie {
+    min-width: 0;
+    color: $text-body;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+
+  &Stats {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-shrink: 0;
+    color: $text-body;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+
+    span {
+      padding: 2px 6px;
+      border-radius: $radius-sm;
+      background: rgba($bg-card, 0.7);
+    }
+  }
+
+  &Toi {
+    color: $text-body;
+    font-variant-numeric: tabular-nums;
+  }
 }
 
 .emptyAPIData {
@@ -1321,25 +1357,27 @@
 }
 
 @media (max-width: 720px) {
-  .goalieStatsEditorHeader {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .goalieStatsEditorTotals {
-    width: 100%;
-
-    .goalieStatsEditorTotalPill {
-      flex: 1;
+  .goalieStatsEditor {
+    &Header {
+      align-items: flex-start;
+      flex-direction: column;
     }
-  }
 
-  .goalieStatsEditorTable {
-    overflow-x: auto;
-  }
+    &Totals {
+      width: 100%;
 
-  .goalieStatsEditorAddPanel {
-    min-width: 540px;
+      .goalieStatsEditorTotalPill {
+        flex: 1;
+      }
+    }
+
+    &Table {
+      overflow-x: auto;
+    }
+
+    &AddPanel {
+      min-width: 540px;
+    }
   }
 
   .goalieStatsEditorHead,
@@ -1358,12 +1396,14 @@
     align-items: flex-start;
   }
 
-  .nhlGoalieCheckerStint {
-    align-items: flex-start;
-    flex-direction: column;
-  }
+  .nhlGoalieChecker {
+    &Stint {
+      align-items: flex-start;
+      flex-direction: column;
+    }
 
-  .nhlGoalieCheckerStats {
-    flex-wrap: wrap;
+    &Stats {
+      flex-wrap: wrap;
+    }
   }
 }

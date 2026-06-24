@@ -42,20 +42,20 @@
       pointer-events: auto;
     }
   }
-}
 
-.itemLive {
-  border-color: rgba($success, 0.65);
-  background: rgba($success, 0.08);
-}
+  &Live {
+    border-color: rgba($success, 0.65);
+    background: rgba($success, 0.08);
+  }
 
-.itemDraggable {
-  cursor: grab;
-}
+  &Draggable {
+    cursor: grab;
+  }
 
-.itemDragging {
-  opacity: 0.55;
-  cursor: grabbing;
+  &Dragging {
+    opacity: 0.55;
+    cursor: grabbing;
+  }
 }
 
 .topLabel {
@@ -92,20 +92,20 @@
   display: flex;
   align-items: center;
   min-width: 0;
-}
 
-.logoSlotAway {
-  grid-column: 1;
-  justify-self: start;
-}
+  &Away {
+    grid-column: 1;
+    justify-self: start;
+  }
 
-.logoSlotHome {
-  grid-column: 5;
-  justify-self: end;
-}
+  &Home {
+    grid-column: 5;
+    justify-self: end;
+  }
 
-.logoSlotDimmed {
-  opacity: 0.5;
+  &Dimmed {
+    opacity: 0.5;
+  }
 }
 
 .score,
@@ -127,31 +127,31 @@
   color: $text-body;
   font-variant-numeric: tabular-nums;
   text-align: center;
-}
 
-.scoreAway {
-  grid-column: 2;
-}
+  &Away {
+    grid-column: 2;
+  }
 
-.scoreHome {
-  grid-column: 4;
-}
+  &Home {
+    grid-column: 4;
+  }
 
-.scoreWin {
-  border-color: rgba($success, 0.45);
-  background: rgba($success, 0.16);
-}
+  &Win {
+    border-color: rgba($success, 0.45);
+    background: rgba($success, 0.16);
+  }
 
-.scoreLose {
-  border-color: rgba($danger, 0.38);
-  background: rgba($danger, 0.12);
-  color: color-mix(in srgb, #{$text-body} 72%, transparent);
-}
+  &Lose {
+    border-color: rgba($danger, 0.38);
+    background: rgba($danger, 0.12);
+    color: color-mix(in srgb, #{$text-body} 72%, transparent);
+  }
 
-.scoreMissing {
-  border-color: color-mix(in srgb, #{$text-dim} 46%, #{$border});
-  background: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
-  color: $text-dim;
+  &Missing {
+    border-color: color-mix(in srgb, #{$text-dim} 46%, #{$border});
+    background: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
+    color: $text-dim;
+  }
 }
 
 .center {
@@ -164,18 +164,18 @@
   color: $text-dim;
   gap: 2px;
   line-height: 1;
-}
 
-.centerLabel {
-  max-width: 100%;
-  color: $text-dim;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-transform: uppercase;
-  white-space: nowrap;
+  &Label {
+    max-width: 100%;
+    color: $text-dim;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
 }
 
 .metaRow {

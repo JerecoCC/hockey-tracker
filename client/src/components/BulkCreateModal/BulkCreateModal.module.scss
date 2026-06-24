@@ -19,20 +19,22 @@
   }
 }
 
-.headerRow {
-  display: grid;
-  gap: $space-md;
-  padding: 0 0 $space-xs;
-  border-bottom: 1px solid $border;
-  margin-bottom: $space-xs;
-}
+.header {
+  &Row {
+    display: grid;
+    gap: $space-md;
+    padding: 0 0 $space-xs;
+    border-bottom: 1px solid $border;
+    margin-bottom: $space-xs;
+  }
 
-.headerCell {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
+  &Cell {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
 }
 
 .required {
@@ -40,24 +42,24 @@
   margin-left: $space-xs;
 }
 
-.rowList {
-  display: flex;
-  min-height: 0;
-  flex-direction: column;
-  gap: $space-xs;
-  max-height: calc(100dvh - 17rem);
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  padding-right: $space-xs;
-  margin-right: -#{$space-xs};
-
-  &:hover {
-    scrollbar-color: $border transparent;
-  }
-}
-
 .row {
+  &List {
+    display: flex;
+    min-height: 0;
+    flex-direction: column;
+    gap: $space-xs;
+    max-height: calc(100dvh - 17rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    padding-right: $space-xs;
+    margin-right: -#{$space-xs};
+
+    &:hover {
+      scrollbar-color: $border transparent;
+    }
+  }
+
   display: grid;
   gap: $space-md;
   align-items: start;

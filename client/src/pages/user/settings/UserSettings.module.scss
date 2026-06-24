@@ -8,53 +8,55 @@
   container-type: inline-size;
 }
 
-.accountCard {
-  width: 100%;
-}
-
-.accountHero {
-  display: flex;
-  align-items: center;
-  gap: $space-lg;
-  margin-bottom: $space-xl;
-
-  @container (max-width: 560px) {
-    align-items: flex-start;
+.account {
+  &Card {
+    width: 100%;
   }
-}
 
-.accountAvatar {
-  box-shadow:
-    0 0 0 1px rgba($border, 0.85),
-    0 10px 24px rgba(#000, 0.18);
-}
+  &Hero {
+    display: flex;
+    align-items: center;
+    gap: $space-lg;
+    margin-bottom: $space-xl;
 
-.accountTitle {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  min-width: 0;
-}
+    @container (max-width: 560px) {
+      align-items: flex-start;
+    }
+  }
 
-.accountName {
-  margin: 0;
-  font-size: $font-2xl;
-  line-height: 1.1;
-  color: $text-bright;
-  letter-spacing: 0;
-}
+  &Avatar {
+    box-shadow:
+      0 0 0 1px rgba($border, 0.85),
+      0 10px 24px rgba(#000, 0.18);
+  }
 
-.accountBadge {
-  align-self: flex-start;
-  border: 1px solid rgba($accent, 0.35);
-  border-radius: $radius-sm;
-  background: rgba($accent, 0.12);
-  color: $accent;
-  font-size: $font-xs;
-  font-weight: 700;
-  line-height: 1;
-  padding: $space-xs $space-sm;
-  text-transform: uppercase;
+  &Title {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    min-width: 0;
+  }
+
+  &Name {
+    margin: 0;
+    font-size: $font-2xl;
+    line-height: 1.1;
+    color: $text-bright;
+    letter-spacing: 0;
+  }
+
+  &Badge {
+    align-self: flex-start;
+    border: 1px solid rgba($accent, 0.35);
+    border-radius: $radius-sm;
+    background: rgba($accent, 0.12);
+    color: $accent;
+    font-size: $font-xs;
+    font-weight: 700;
+    line-height: 1;
+    padding: $space-xs $space-sm;
+    text-transform: uppercase;
+  }
 }
 
 .infoGrid {
@@ -102,53 +104,63 @@
   margin-bottom: $space-lg;
 }
 
-.leagueHeader {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-}
-
-.leagueText {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-}
-
-.leagueName {
-  font-size: $font-base;
-  font-weight: 600;
-  color: $text-bright;
-  @include truncate;
-}
-
-.leagueCode,
-.leagueCount {
-  font-size: $font-xs;
-  color: $text-dim;
-}
-
-.leagueCount {
-  white-space: nowrap;
-}
-
-.leagueBody {
-  padding: $space-lg;
-}
-
-.teamList {
-  margin: 0;
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: $space-md;
-  padding: 0;
-
-  @container (max-width: 1120px) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+.league {
+  &Header {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
   }
 
-  @container (max-width: 720px) {
-    grid-template-columns: 1fr;
+  &Text {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    min-width: 0;
+  }
+
+  &Name {
+    font-size: $font-base;
+    font-weight: 600;
+    color: $text-bright;
+    @include truncate;
+  }
+
+  &Code,
+  &Count {
+    font-size: $font-xs;
+    color: $text-dim;
+  }
+
+  &Count {
+    white-space: nowrap;
+  }
+
+  &Body {
+    padding: $space-lg;
+  }
+}
+
+.team {
+  &List {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: $space-md;
+    padding: 0;
+
+    @container (max-width: 1120px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @container (max-width: 720px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &ItemFavorited {
+    border-color: $warning;
+    background: rgba($warning, 0.08);
+    box-shadow: inset 3px 0 0 $warning;
   }
 }
 
@@ -158,10 +170,4 @@
   flex-direction: column;
   gap: $space-md;
   padding: 0;
-}
-
-.teamItemFavorited {
-  border-color: $warning;
-  background: rgba($warning, 0.08);
-  box-shadow: inset 3px 0 0 $warning;
 }

@@ -68,194 +68,200 @@
   border-radius: $radius-sm;
   aspect-ratio: 1 / 1;
   line-height: 1;
-}
 
-.iconOnlyButton {
-  border-radius: $radius-md;
-  aspect-ratio: 1 / 1;
-  line-height: 1;
-}
+  &Button {
+    border-radius: $radius-md;
+    aspect-ratio: 1 / 1;
+    line-height: 1;
+  }
 
-.iconOnlyField {
-  border-radius: $radius-md;
-  width: 42px;
-  height: 42px;
-  line-height: 1;
-  padding: 0;
+  &Field {
+    border-radius: $radius-md;
+    width: 42px;
+    height: 42px;
+    line-height: 1;
+    padding: 0;
+  }
 }
 
 // ── Filled ────────────────────────────────────────────────────────────
-.filledAccent {
-  background: $accent;
-  color: #fff;
-  border: 1px solid $accent;
-  &:hover:not(:disabled) {
-    background: $accent-hover;
-    border-color: $accent-hover;
+.filled {
+  &Accent {
+    background: $accent;
+    color: #fff;
+    border: 1px solid $accent;
+    &:hover:not(:disabled) {
+      background: $accent-hover;
+      border-color: $accent-hover;
+    }
   }
-}
 
-.filledSuccess {
-  background: $success;
-  color: #fff;
-  border: 1px solid $success;
-  &:hover:not(:disabled) {
-    background: $success-hover;
-    border-color: $success-hover;
+  &Success {
+    background: $success;
+    color: #fff;
+    border: 1px solid $success;
+    &:hover:not(:disabled) {
+      background: $success-hover;
+      border-color: $success-hover;
+    }
   }
-}
 
-.filledWarning {
-  background: $warning;
-  color: #fff;
-  border: 1px solid $warning;
-  &:hover:not(:disabled) {
-    background: $warning-hover;
-    border-color: $warning-hover;
+  &Warning {
+    background: $warning;
+    color: #fff;
+    border: 1px solid $warning;
+    &:hover:not(:disabled) {
+      background: $warning-hover;
+      border-color: $warning-hover;
+    }
   }
-}
 
-.filledDanger {
-  background: $danger;
-  color: #fff;
-  border: 1px solid $danger;
-  &:hover:not(:disabled) {
-    opacity: 0.85;
+  &Danger {
+    background: $danger;
+    color: #fff;
+    border: 1px solid $danger;
+    &:hover:not(:disabled) {
+      opacity: 0.85;
+    }
   }
-}
 
-.filledInfo {
-  background: $info;
-  color: #fff;
-  border: 1px solid $info;
-  &:hover:not(:disabled) {
-    opacity: 0.85;
+  &Info {
+    background: $info;
+    color: #fff;
+    border: 1px solid $info;
+    &:hover:not(:disabled) {
+      opacity: 0.85;
+    }
   }
-}
 
-.filledNeutral {
-  background: $border;
-  color: $text-body;
-  border: 1px solid $border;
-  &:hover:not(:disabled) {
-    background: $text-dim;
-    border-color: $text-dim;
+  &Neutral {
+    background: $border;
+    color: $text-body;
+    border: 1px solid $border;
+    &:hover:not(:disabled) {
+      background: $text-dim;
+      border-color: $text-dim;
+    }
   }
 }
 
 // ── Outlined ──────────────────────────────────────────────────────────
-.outlinedAccent {
-  background: transparent;
-  color: $accent-light;
-  border: 1px solid $accent;
-  &:hover:not(:disabled) {
-    background: rgba($accent, 0.15);
-    border-color: $accent-hover;
+.outlined {
+  &Accent {
+    background: transparent;
+    color: $accent-light;
+    border: 1px solid $accent;
+    &:hover:not(:disabled) {
+      background: rgba($accent, 0.15);
+      border-color: $accent-hover;
+    }
   }
-}
 
-.outlinedSuccess {
-  background: transparent;
-  color: $success-light;
-  border: 1px solid $success;
-  &:hover:not(:disabled) {
-    background: rgba($success, 0.15);
-    border-color: $success-hover;
+  &Success {
+    background: transparent;
+    color: $success-light;
+    border: 1px solid $success;
+    &:hover:not(:disabled) {
+      background: rgba($success, 0.15);
+      border-color: $success-hover;
+    }
   }
-}
 
-.outlinedWarning {
-  background: transparent;
-  color: $warning-light;
-  border: 1px solid $warning;
-  &:hover:not(:disabled) {
-    background: rgba($warning, 0.15);
-    border-color: $warning-hover;
+  &Warning {
+    background: transparent;
+    color: $warning-light;
+    border: 1px solid $warning;
+    &:hover:not(:disabled) {
+      background: rgba($warning, 0.15);
+      border-color: $warning-hover;
+    }
   }
-}
 
-.outlinedDanger {
-  background: transparent;
-  color: $danger-light;
-  border: 1px solid $danger;
-  &:hover:not(:disabled) {
-    background: rgba($danger, 0.15);
-    border-color: $danger;
+  &Danger {
+    background: transparent;
+    color: $danger-light;
+    border: 1px solid $danger;
+    &:hover:not(:disabled) {
+      background: rgba($danger, 0.15);
+      border-color: $danger;
+    }
   }
-}
 
-.outlinedInfo {
-  background: transparent;
-  color: $info-light;
-  border: 1px solid $info;
-  &:hover:not(:disabled) {
-    background: rgba($info, 0.15);
-    border-color: $info;
+  &Info {
+    background: transparent;
+    color: $info-light;
+    border: 1px solid $info;
+    &:hover:not(:disabled) {
+      background: rgba($info, 0.15);
+      border-color: $info;
+    }
   }
-}
 
-.outlinedNeutral {
-  background: transparent;
-  color: $text-light;
-  border: 1px solid $text-dim;
-  &:hover:not(:disabled) {
-    color: $text-bright;
-    border-color: $text-light;
+  &Neutral {
+    background: transparent;
+    color: $text-light;
+    border: 1px solid $text-dim;
+    &:hover:not(:disabled) {
+      color: $text-bright;
+      border-color: $text-light;
+    }
   }
 }
 
 // ── Ghost (no border, no background) ──────────────────────────────────
-.ghostAccent {
-  background: transparent;
-  color: $accent-light;
-  border: none;
-  &:hover:not(:disabled) {
-    background: rgba($accent, 0.12);
+.ghost {
+  &Accent {
+    background: transparent;
+    color: $accent-light;
+    border: none;
+    &:hover:not(:disabled) {
+      background: rgba($accent, 0.12);
+    }
   }
-}
 
-.ghostSuccess {
-  background: transparent;
-  color: $success-light;
-  border: none;
-  &:hover:not(:disabled) {
-    background: rgba($success, 0.12);
+  &Success {
+    background: transparent;
+    color: $success-light;
+    border: none;
+    &:hover:not(:disabled) {
+      background: rgba($success, 0.12);
+    }
   }
-}
 
-.ghostWarning {
-  background: transparent;
-  color: $warning-light;
-  border: none;
-  &:hover:not(:disabled) {
-    background: rgba($warning, 0.12);
+  &Warning {
+    background: transparent;
+    color: $warning-light;
+    border: none;
+    &:hover:not(:disabled) {
+      background: rgba($warning, 0.12);
+    }
   }
-}
 
-.ghostDanger {
-  background: transparent;
-  color: $danger-light;
-  border: none;
-  &:hover:not(:disabled) {
-    background: rgba($danger, 0.12);
+  &Danger {
+    background: transparent;
+    color: $danger-light;
+    border: none;
+    &:hover:not(:disabled) {
+      background: rgba($danger, 0.12);
+    }
   }
-}
 
-.ghostInfo {
-  background: transparent;
-  color: $info-light;
-  border: none;
-  &:hover:not(:disabled) {
-    background: rgba($info, 0.12);
+  &Info {
+    background: transparent;
+    color: $info-light;
+    border: none;
+    &:hover:not(:disabled) {
+      background: rgba($info, 0.12);
+    }
   }
-}
 
-.ghostNeutral {
-  background: transparent;
-  color: $text-dim;
-  border: none;
-  &:hover:not(:disabled) {
-    color: $text-bright;
-    background: rgba($border, 0.4);
+  &Neutral {
+    background: transparent;
+    color: $text-dim;
+    border: none;
+    &:hover:not(:disabled) {
+      color: $text-bright;
+      background: rgba($border, 0.4);
+    }
   }
 }

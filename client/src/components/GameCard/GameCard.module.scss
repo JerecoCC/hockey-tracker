@@ -131,29 +131,31 @@
   font-weight: 600;
 }
 
-.teamLine {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  font-weight: 700;
-}
+.team {
+  &Line {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    font-weight: 700;
+  }
 
-.teamLineDim {
-  opacity: 0.55;
-}
+  &LineDim {
+    opacity: 0.55;
+  }
 
-.teamCode {
-  min-width: 0;
-  color: $text-body;
-  @include truncate;
-}
+  &Code {
+    min-width: 0;
+    color: $text-body;
+    @include truncate;
+  }
 
-.teamScore {
-  margin-left: auto;
-  min-width: 30px;
-  text-align: right;
-  font-size: $font-2xl;
-  color: $text-bright;
+  &Score {
+    margin-left: auto;
+    min-width: 30px;
+    text-align: right;
+    font-size: $font-2xl;
+    color: $text-bright;
+  }
 }
 
 .bottomLabel {

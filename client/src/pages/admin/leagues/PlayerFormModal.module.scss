@@ -27,148 +27,152 @@
   row-gap: $space-md;
 }
 
-.playerInfoVitalsRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  column-gap: 0.75rem;
-  row-gap: $space-md;
-  align-items: flex-start;
+.playerInfo {
+  &VitalsRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 0.75rem;
+    row-gap: $space-md;
+    align-items: flex-start;
 
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
   }
-}
 
-.playerInfoBirthRow {
-  display: grid;
-  grid-template-columns: minmax(0, 2.5fr) minmax(7.5rem, 1fr);
-  column-gap: 0.75rem;
-  row-gap: $space-md;
+  &BirthRow {
+    display: grid;
+    grid-template-columns: minmax(0, 2.5fr) minmax(7.5rem, 1fr);
+    column-gap: 0.75rem;
+    row-gap: $space-md;
 
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
   }
 }
 
 // Height group: shared "Height" label above two compact ft / in inputs
-.heightGroup {
-  // flex: 1 + min-width: 0 come from .row > * — no override needed
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  min-width: 0;
-}
-
-.heightGroupLabel {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.heightInputs {
-  display: flex;
-  column-gap: 0.75rem;
-  row-gap: $space-md;
-
-  > * {
-    flex: 1;
+.height {
+  &Group {
+    // flex: 1 + min-width: 0 come from .row > * — no override needed
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
     min-width: 0;
   }
-}
 
-.heightSegmentedField {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  overflow: hidden;
-  width: 100%;
-  min-width: 0;
-  background: $bg-input;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  transition: border-color $transition-base;
-
-  &:focus-within {
-    border-color: $accent;
-  }
-}
-
-.heightSegmentedFieldDisabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-
-  &:focus-within {
-    border-color: $border;
+  &GroupLabel {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
-  .heightSegment {
+  &Inputs {
+    display: flex;
+    column-gap: 0.75rem;
+    row-gap: $space-md;
+
+    > * {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &SegmentedField {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    overflow: hidden;
+    width: 100%;
+    min-width: 0;
+    background: $bg-input;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    transition: border-color $transition-base;
+
+    &:focus-within {
+      border-color: $accent;
+    }
+  }
+
+  &SegmentedFieldDisabled {
+    opacity: 0.4;
     cursor: not-allowed;
 
-    input:disabled {
-      opacity: 1;
+    &:focus-within {
+      border-color: $border;
+    }
+
+    .heightSegment {
+      cursor: not-allowed;
+
+      input:disabled {
+        opacity: 1;
+      }
+
+      span {
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &Segment {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    border-right: 1px solid $border;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    input {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      background: transparent;
+      border: none;
+      color: $text-body;
+      font-size: $font-base;
+      padding: $space-md $space-xs $space-md $space-lg;
+      outline: none;
+      -moz-appearance: textfield;
+
+      &::placeholder {
+        color: $text-dim;
+      }
+
+      &:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
+
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
     }
 
     span {
-      cursor: not-allowed;
-    }
-  }
-}
-
-.heightSegment {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-  border-right: 1px solid $border;
-
-  &:last-child {
-    border-right: none;
-  }
-
-  input {
-    flex: 1;
-    min-width: 0;
-    width: 100%;
-    background: transparent;
-    border: none;
-    color: $text-body;
-    font-size: $font-base;
-    padding: $space-md $space-xs $space-md $space-lg;
-    outline: none;
-    -moz-appearance: textfield;
-
-    &::placeholder {
+      flex-shrink: 0;
+      padding-right: $space-lg;
       color: $text-dim;
-    }
-
-    &:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-    }
-
-    &::-webkit-outer-spin-button,
-    &::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
+      font-size: $font-xs;
+      font-weight: 700;
+      letter-spacing: 0.04em;
     }
   }
 
-  span {
-    flex-shrink: 0;
-    padding-right: $space-lg;
-    color: $text-dim;
-    font-size: $font-xs;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-  }
-}
+  &SegmentError {
+    box-shadow: inset 0 0 0 1px $danger-light;
 
-.heightSegmentError {
-  box-shadow: inset 0 0 0 1px $danger-light;
-
-  input,
-  span {
-    color: $danger-light;
+    input,
+    span {
+      color: $danger-light;
+    }
   }
 }
 
@@ -208,62 +212,66 @@
 }
 
 // Jersey number history list shown inside ChangeJerseyModal
-.historySection {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
+.history {
+  &Section {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &Label {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &List {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &Entry {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    font-size: $font-sm;
+    color: $text-dim;
+    padding: $space-xs $space-sm;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+  }
+
+  &EntryNumber {
+    font-weight: 700;
+    color: $text-body;
+    min-width: 2.5rem;
+  }
+
+  &EntryDates {
+    flex: 1;
+  }
 }
 
-.historyLabel {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
+.photoInheritance {
+  &Notice {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    padding: $space-sm $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.02);
+    color: $text-dim;
+    font-size: $font-sm;
+    line-height: 1.4;
+  }
 
-.historyList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.historyEntry {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  font-size: $font-sm;
-  color: $text-dim;
-  padding: $space-xs $space-sm;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-}
-
-.historyEntryNumber {
-  font-weight: 700;
-  color: $text-body;
-  min-width: 2.5rem;
-}
-
-.historyEntryDates {
-  flex: 1;
-}
-
-.photoInheritanceNotice {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  padding: $space-sm $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: rgba(255, 255, 255, 0.02);
-  color: $text-dim;
-  font-size: $font-sm;
-  line-height: 1.4;
-}
-
-.photoInheritanceLabel {
-  color: $text-body;
-  font-weight: 700;
+  &Label {
+    color: $text-body;
+    font-weight: 700;
+  }
 }

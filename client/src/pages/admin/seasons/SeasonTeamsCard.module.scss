@@ -1,45 +1,49 @@
 @use 'styles/colors' as *;
 @use 'styles/mixins' as *;
 
-.alignmentHeaderControl {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  width: min(320px, 100%);
-  min-width: 240px;
+.alignment {
+  &HeaderControl {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    width: min(320px, 100%);
+    min-width: 240px;
 
-  @media (max-width: 640px) {
-    width: 100%;
+    @media (max-width: 640px) {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+
+  &SelectField {
+    flex: 1;
     min-width: 0;
   }
 }
 
-.alignmentSelectField {
-  flex: 1;
-  min-width: 0;
-}
+.readonlyAlignment {
+  &Box {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    width: 100%;
+    min-width: 0;
+    padding: 0 $space-lg;
+    border: 1px solid rgba($text-dim, 0.2);
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.03);
+    color: $text-dim;
+    font-size: $font-base;
+    line-height: 1.4;
+    cursor: default;
+  }
 
-.readonlyAlignmentBox {
-  display: inline-flex;
-  align-items: center;
-  min-height: 42px;
-  width: 100%;
-  min-width: 0;
-  padding: 0 $space-lg;
-  border: 1px solid rgba($text-dim, 0.2);
-  border-radius: $radius-sm;
-  background: rgba(255, 255, 255, 0.03);
-  color: $text-dim;
-  font-size: $font-base;
-  line-height: 1.4;
-  cursor: default;
-}
-
-.readonlyAlignmentLabel {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  &Label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .emptyMsg {
@@ -71,135 +75,139 @@
   gap: $space-xs;
 }
 
-.skeletonTeamList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
+.skeleton {
+  &TeamList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.skeletonTeamItem {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-md;
-  min-height: 74px;
-  opacity: 0.55;
-}
+  &TeamItem {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    padding: $space-md;
+    min-height: 74px;
+    opacity: 0.55;
+  }
 
-.skeletonTextStack {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  flex-direction: column;
-  gap: $space-xs;
-}
+  &TextStack {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: $space-xs;
+  }
 
-.skeletonEyebrow {
-  width: min(92px, 35%);
-  height: 10px;
-}
+  &Eyebrow {
+    width: min(92px, 35%);
+    height: 10px;
+  }
 
-.skeletonName {
-  width: min(180px, 65%);
-  height: 14px;
-}
+  &Name {
+    width: min(180px, 65%);
+    height: 14px;
+  }
 
-.skeletonGroupList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-md;
+  &GroupList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-md;
 
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &GroupItem {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    min-height: 50px;
+    padding: $space-sm $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+    opacity: 0.55;
+  }
+
+  &GroupTitle {
+    width: min(180px, 70%);
+    height: 14px;
   }
 }
 
-.skeletonGroupItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  min-height: 50px;
-  padding: $space-sm $space-md;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
-  opacity: 0.55;
-}
+.group {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-md;
 
-.skeletonGroupTitle {
-  width: min(180px, 70%);
-  height: 14px;
-}
-
-.groupList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: $space-md;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
+    @media (max-width: 900px) {
+      grid-template-columns: 1fr;
+    }
   }
-}
 
-.groupNestedList {
-  padding: $space-sm $space-md $space-md;
+  &NestedList {
+    padding: $space-sm $space-md $space-md;
 
-  > .groupList {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    > .groupList {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
   }
-}
 
-.groupItem {
-  display: flex;
-  flex-direction: column;
-}
+  &Item {
+    display: flex;
+    flex-direction: column;
+  }
 
-.groupLabel {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
+  &Label {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
 
-.groupTeamCount {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  white-space: nowrap;
-}
+  &TeamCount {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    white-space: nowrap;
+  }
 
-.groupRoleBadge {
-  display: inline-block;
-  flex-shrink: 0;
-  padding: 1px 7px;
-  border-radius: $radius-sm;
-  font-size: $font-xs;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  line-height: 1.6;
-  text-transform: uppercase;
-}
+  &RoleBadge {
+    display: inline-block;
+    flex-shrink: 0;
+    padding: 1px 7px;
+    border-radius: $radius-sm;
+    font-size: $font-xs;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    line-height: 1.6;
+    text-transform: uppercase;
+  }
 
-.groupRoleBadge_conference {
-  background: rgba($accent, 0.18);
-  color: $accent-light;
-  border: 1px solid rgba($accent, 0.3);
-}
+  &RoleBadge_conference {
+    background: rgba($accent, 0.18);
+    color: $accent-light;
+    border: 1px solid rgba($accent, 0.3);
+  }
 
-.groupRoleBadge_division {
-  background: rgba($success, 0.18);
-  color: $success-light;
-  border: 1px solid rgba($success, 0.3);
+  &RoleBadge_division {
+    background: rgba($success, 0.18);
+    color: $success-light;
+    border: 1px solid rgba($success, 0.3);
+  }
 }

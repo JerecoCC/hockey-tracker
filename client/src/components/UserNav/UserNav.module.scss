@@ -47,15 +47,15 @@ $nav-collapsed-width: 56px;
 }
 
 // ── Brand row ──────────────────────────────────────────────────────────
-.brandRow {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  padding: 0 $space-xl;
-  min-height: $space-3xl;
-}
-
 .brand {
+  &Row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 0 $space-xl;
+    min-height: $space-3xl;
+  }
+
   font-size: $font-xl;
   font-weight: 700;
   color: $text-bright;

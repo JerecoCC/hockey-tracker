@@ -71,16 +71,16 @@
   font-size: $font-sm;
   font-weight: 700;
   line-height: 1;
-}
 
-.topLabelCenter {
-  align-self: center;
-  width: 100%;
-  text-align: center;
-}
+  &Center {
+    align-self: center;
+    width: 100%;
+    text-align: center;
+  }
 
-.topLabelNormal {
-  font-weight: 400;
+  &Normal {
+    font-weight: 400;
+  }
 }
 
 .body {
