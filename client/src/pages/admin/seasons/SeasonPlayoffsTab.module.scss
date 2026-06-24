@@ -187,6 +187,10 @@
   }
 
   &RulesRoundLabel {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    margin: 0;
     font-size: $font-xs;
     font-weight: 600;
     color: $text-dim;
@@ -194,6 +198,21 @@
     letter-spacing: 0.07em;
     padding-bottom: $space-xs;
     border-bottom: 1px solid $border;
+  }
+
+  &RulesRoundInfo {
+    display: inline-flex;
+    align-items: center;
+    color: $text-dim;
+    cursor: help;
+    line-height: 1;
+    transition: color $transition-fast;
+
+    &:hover,
+    &:focus-visible {
+      color: $text-bright;
+      outline: none;
+    }
   }
 
   &RulesMatchups {
@@ -205,31 +224,28 @@
   &RulesMatchup {
     display: flex;
     flex-direction: column;
-    gap: $space-xs;
+    gap: $space-sm;
+    margin: 0;
     background: transparent;
     border: 1px solid $border;
     border-radius: $radius-md;
-    padding: $space-sm $space-md;
+    padding: $space-md;
   }
 
   &RulesMatchupLabel {
-    font-size: $font-xs;
+    padding: 0 $space-xs;
+    font-size: $font-sm;
     font-weight: 600;
-    color: $text-body;
-    margin-bottom: $space-xs;
-  }
-
-  &RulesAutoNote {
-    font-size: $font-xs;
     color: $text-dim;
-    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
   }
 
   &RulesSlotRow {
     display: flex;
-    align-items: flex-start;
+    flex-direction: column;
     gap: $space-sm;
-    padding: $space-xs 0;
+    padding: 0 0 $space-sm;
 
     &:not(:last-child) {
       border-bottom: 1px solid rgba($border, 0.4);
@@ -237,11 +253,18 @@
   }
 
   &RulesSlotLabel {
-    font-size: $font-xs;
+    font-size: $font-sm;
     color: $text-dim;
-    font-weight: 500;
-    min-width: 3.5rem;
-    padding-top: 11px; // vertically centres against 42px Field height
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  &RulesSlotFieldRows {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    min-width: 0;
   }
 
   &RulesSlotFields {
@@ -251,12 +274,16 @@
     gap: $space-xs;
     flex: 1;
   }
+
+  &RulesSlotGroupField {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 // Rule type selector — fixed width, wide enough for "Choice Pick"
 .slotTypeField {
-  width: 9.5rem;
-  flex-shrink: 0;
+  width: 100%;
 }
 
 // Rank selector — narrow, just for #1–#16

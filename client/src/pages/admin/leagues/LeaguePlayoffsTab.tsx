@@ -61,7 +61,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
               size="sm"
               onClick={openCreate}
             >
-              New Rule Set
+              Create Rule Set
             </Button>
           }
         >
@@ -152,10 +152,6 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
                 type="text"
                 className={styles.tabSkeletonMetaLine}
               />
-            </span>
-            <span className={styles.tabSkeletonActions}>
-              <Skeleton type="circle" />
-              <Skeleton type="circle" />
             </span>
           </li>
         ))}

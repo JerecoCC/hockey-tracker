@@ -5,6 +5,7 @@ import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import Select from '@/components/Select/Select';
+import Tooltip from '@/components/Tooltip/Tooltip';
 /** Minimal group shape used for scope filtering — satisfied by both SeasonGroupRecord and GroupRecord. */
 export interface GroupEntry {
   id: string;
@@ -54,6 +55,8 @@ const BRACKET_SIZE_OPTIONS = [
   { value: '16', label: '16 teams' },
   { value: '32', label: '32 teams' },
 ];
+
+const AUTO_ADVANCE_TOOLTIP = 'Rounds 2 and beyond automatically advance winners in bracket order.';
 
 // ── Bracket structure ─────────────────────────────────────────────────────────
 
@@ -345,8 +348,14 @@ const SingleSlotEditor = ({
   choiceSlotOptions,
   prevRoundMatchupOptions,
 }: SingleSlotEditorProps) => {
-  const ruleType = useWatch({ control, name: `slots.${slotIndex}.type` }) as string;
-  const scope = useWatch({ control, name: `slots.${slotIndex}.scope` }) as string;
+  const watchedRuleType = useWatch({ control, name: `slots.${slotIndex}.type` }) as
+    | string
+    | undefined;
+  const watchedScope = useWatch({ control, name: `slots.${slotIndex}.scope` }) as
+    | string
+    | undefined;
+  const ruleType = watchedRuleType ?? 'none';
+  const scope = watchedScope ?? 'league';
 
   const ruleTypeOptions = round === 1 ? ROUND1_RULE_TYPE_OPTIONS : LATER_RULE_TYPE_OPTIONS;
   const needsGroup = ruleType === 'seed' && SPECIFIC_SCOPES.has(scope);
@@ -373,7 +382,7 @@ const SingleSlotEditor = ({
   return (
     <div className={styles.bracketRulesSlotRow}>
       <span className={styles.bracketRulesSlotLabel}>{label}</span>
-      <div className={styles.bracketRulesSlotFields}>
+      <div className={styles.bracketRulesSlotFieldRows}>
         <div className={styles.slotTypeField}>
           <Field
             type="select"
@@ -383,68 +392,71 @@ const SingleSlotEditor = ({
             onChange={handleTypeChange}
           />
         </div>
-
-        {ruleType === 'winner' && (
-          <div className={styles.slotScopeField}>
-            <Field
-              type="select"
-              control={control}
-              name={`slots.${slotIndex}.matchupRef`}
-              options={prevRoundMatchupOptions}
-              placeholder="Select matchup…"
-            />
-          </div>
-        )}
-
-        {ruleType === 'seed' && (
-          <>
-            <div className={styles.slotRankField}>
-              <Field
-                type="select"
-                control={control}
-                name={`slots.${slotIndex}.rank`}
-                options={RANK_OPTIONS}
-              />
-            </div>
-            <div className={styles.slotScopeField}>
-              <Field
-                type="select"
-                control={control}
-                name={`slots.${slotIndex}.scope`}
-                options={SLOT_SCOPE_OPTIONS}
-                onChange={handleScopeChange}
-              />
-            </div>
-            {needsGroup && (
+        {ruleType !== 'none' && (
+          <div className={styles.bracketRulesSlotFields}>
+            {ruleType === 'winner' && (
               <div className={styles.slotScopeField}>
                 <Field
                   type="select"
                   control={control}
-                  name={`slots.${slotIndex}.groupId`}
-                  options={groupOptions}
-                  placeholder="Select…"
+                  name={`slots.${slotIndex}.matchupRef`}
+                  options={prevRoundMatchupOptions}
+                  placeholder="Select matchup..."
                 />
               </div>
             )}
-          </>
-        )}
 
-        {ruleType === 'choice' && (
-          <PoolEditor
-            control={control}
-            slotIndex={slotIndex}
-            groups={groups}
-          />
-        )}
+            {ruleType === 'seed' && (
+              <>
+                <div className={styles.slotRankField}>
+                  <Field
+                    type="select"
+                    control={control}
+                    name={`slots.${slotIndex}.rank`}
+                    options={RANK_OPTIONS}
+                  />
+                </div>
+                <div className={styles.slotScopeField}>
+                  <Field
+                    type="select"
+                    control={control}
+                    name={`slots.${slotIndex}.scope`}
+                    options={SLOT_SCOPE_OPTIONS}
+                    onChange={handleScopeChange}
+                  />
+                </div>
+              </>
+            )}
 
-        {ruleType === 'unchosen' && (
-          <div className={styles.slotScopeField}>
+            {ruleType === 'choice' && (
+              <PoolEditor
+                control={control}
+                slotIndex={slotIndex}
+                groups={groups}
+              />
+            )}
+
+            {ruleType === 'unchosen' && (
+              <div className={styles.slotScopeField}>
+                <Field
+                  type="select"
+                  control={control}
+                  name={`slots.${slotIndex}.choiceRef`}
+                  options={choiceSlotOptions}
+                  placeholder="Select choice slot..."
+                />
+              </div>
+            )}
+          </div>
+        )}
+        {ruleType === 'seed' && needsGroup && (
+          <div className={styles.bracketRulesSlotGroupField}>
             <Field
               type="select"
               control={control}
-              name={`slots.${slotIndex}.choiceRef`}
-              options={choiceSlotOptions}
-              placeholder="Select choice slot…"
+              name={`slots.${slotIndex}.groupId`}
+              options={groupOptions}
+              placeholder="Select..."
             />
           </div>
         )}
@@ -602,13 +614,14 @@ const BracketRulesModal = ({
     onClose();
   });
 
+  const actionLabel = ruleSetId ? 'Edit Rule Set' : 'Create Rule Set';
+
   return (
     <Modal
       open={open}
-      title="Bracket Rules"
-      size="lg"
+      title={actionLabel}
       onClose={onClose}
-      confirmLabel={isSubmitting ? 'Saving…' : 'Save'}
+      confirmLabel={isSubmitting ? 'Saving...' : actionLabel}
       onConfirm={onSubmit}
       confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
@@ -653,14 +666,28 @@ const BracketRulesModal = ({
           if (!round1) return null;
           return (
             <div className={styles.bracketRulesRound}>
-              <p className={styles.bracketRulesRoundLabel}>{round1.label}</p>
+              <div className={styles.bracketRulesRoundLabel}>
+                <span>{round1.label}</span>
+                <Tooltip text={AUTO_ADVANCE_TOOLTIP}>
+                  <span
+                    className={styles.bracketRulesRoundInfo}
+                    aria-label={AUTO_ADVANCE_TOOLTIP}
+                    tabIndex={0}
+                  >
+                    <Icon
+                      name="info"
+                      size="0.9rem"
+                    />
+                  </span>
+                </Tooltip>
+              </div>
               <div className={styles.bracketRulesMatchups}>
                 {Array.from({ length: round1.series }, (_, mi) => (
-                  <div
+                  <fieldset
                     key={mi}
                     className={styles.bracketRulesMatchup}
                   >
-                    <span className={styles.bracketRulesMatchupLabel}>Matchup {mi + 1}</span>
+                    <legend className={styles.bracketRulesMatchupLabel}>Matchup {mi + 1}</legend>
                     <SingleSlotEditor
                       label="Team 1"
                       slotIndex={slotIndexMap[makeSlotKey(1, mi, 'team1')] ?? 0}
@@ -681,17 +708,12 @@ const BracketRulesModal = ({
                       choiceSlotOptions={choiceSlotOptions}
                       prevRoundMatchupOptions={[]}
                     />
-                  </div>
+                  </fieldset>
                 ))}
               </div>
             </div>
           );
         })()}
-        {effectiveStructure.rounds.length > 1 && (
-          <p className={styles.bracketRulesAutoNote}>
-            Rounds 2 and beyond automatically advance winners in bracket order.
-          </p>
-        )}
       </div>
     </Modal>
   );

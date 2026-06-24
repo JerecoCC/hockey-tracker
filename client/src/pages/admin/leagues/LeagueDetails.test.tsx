@@ -317,12 +317,13 @@ describe('LeagueDetailsPage – loading', () => {
 
   it('uses the Playoffs tab skeleton when playoff rule sets are loading', () => {
     sessionStorage.setItem('tab:league-details', '5');
-    setup({ league: mockLeague }, {}, null, {}, { loading: true });
+    const { container } = setup({ league: mockLeague }, {}, null, {}, { loading: true });
 
     expect(screen.getByRole('tab', { name: 'Playoffs' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Playoff Rule Sets' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading playoff rule sets/i })).toBeInTheDocument();
     expect(screen.queryByText(/No rule sets yet/i)).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.circle')).toHaveLength(0);
   });
 
   it('uses the Awards tab skeleton when award definitions are loading', () => {
@@ -711,6 +712,7 @@ describe('LeagueDetailsPage - playoffs tab', () => {
     );
 
     const row = screen.getByText('Standard Bracket').closest('li');
+    expect(screen.getByRole('button', { name: /create rule set/i })).toBeInTheDocument();
     expect(screen.getByText('4-team bracket')).toBeInTheDocument();
     expect(row).toHaveClass('item');
     expect(row).not.toHaveClass('ruleSetItem');
