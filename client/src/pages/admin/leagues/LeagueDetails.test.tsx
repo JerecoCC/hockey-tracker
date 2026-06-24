@@ -751,6 +751,36 @@ describe('LeagueDetailsPage – seasons card', () => {
     expect(screen.getByText('Winter 2024')).toBeInTheDocument();
   });
 
+  it('renders readable season date subtitles', () => {
+    const seasons = [
+      {
+        id: 's1',
+        name: 'Winter 2024',
+        league_id: 'lg1',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+        is_current: false,
+        is_ended: true,
+        created_at: '',
+      },
+      {
+        id: 's2',
+        name: 'Spring 2024',
+        league_id: 'lg1',
+        start_date: '2024-04-01',
+        end_date: null,
+        is_current: true,
+        is_ended: false,
+        created_at: '',
+      },
+    ];
+    setup({ league: mockLeague, seasons });
+    clickSeasonsTab();
+
+    expect(screen.getByText('January 1, 2024 - March 31, 2024')).toBeInTheDocument();
+    expect(screen.getByText('April 1, 2024 - Present')).toBeInTheDocument();
+  });
+
   it('renders season rows as links to season details', () => {
     const seasons = [
       {

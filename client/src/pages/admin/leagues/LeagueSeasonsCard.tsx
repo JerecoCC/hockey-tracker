@@ -17,9 +17,12 @@ const parseLocal = (iso: string) => {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   return new Date(y, m - 1, d);
 };
-const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : 'â€”');
+const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : 'Unknown');
 const formatEndDate = (d: string | null, isCurrent: boolean) =>
-  d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : '?';
+  d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : 'Unknown';
+
+const formatSeasonSubtitle = (start: string | null, end: string | null, isCurrent: boolean) =>
+  start || end ? `${formatDate(start)} - ${formatEndDate(end, isCurrent)}` : 'No dates';
 
 const LeagueSeasonsCard = (props: Props) => {
   const { className } = props;
@@ -51,11 +54,7 @@ const LeagueSeasonsCard = (props: Props) => {
               hideImage
               name={s.name}
               href={getSeasonHref(s)}
-              subtitle={
-                s.start_date || s.end_date
-                  ? `${formatDate(s.start_date)} â€“ ${formatEndDate(s.end_date, s.is_current)}`
-                  : 'No dates'
-              }
+              subtitle={formatSeasonSubtitle(s.start_date, s.end_date, s.is_current)}
               rightContent={
                 s.is_current ? { type: 'tag', label: 'Current', intent: 'success' } : undefined
               }
