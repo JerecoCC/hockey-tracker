@@ -144,7 +144,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                           textColor={p.text_color ?? undefined}
                           href={playerHref}
                           jerseyNumber={p.jersey_number}
-                          variant="plain"
+                          variant="framed"
                           subtitle={
                             p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined
                           }

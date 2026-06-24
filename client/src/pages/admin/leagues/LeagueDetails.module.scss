@@ -2,6 +2,8 @@
 @use 'styles/mixins' as *;
 @use 'sass:color';
 
+$league-tab-list-gap: $space-md;
+
 // ── Section title ──────────────────────────────────────────────────────
 // ── Page loader ────────────────────────────────────────────────────────
 .srOnly {
@@ -309,13 +311,13 @@
   &Stack {
     display: flex;
     flex-direction: column;
-    gap: $space-xs;
+    gap: $league-tab-list-gap;
   }
 
   &Grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: $space-md;
+    gap: $league-tab-list-gap;
 
     @media (max-width: 640px) {
       grid-template-columns: 1fr;
@@ -419,7 +421,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: $space-md;
+  gap: $league-tab-list-gap;
 
   @media (max-width: 640px) {
     grid-template-columns: 1fr;
@@ -432,7 +434,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
+  gap: $league-tab-list-gap;
 }
 
 .listSpinner {
@@ -454,7 +456,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: $space-md;
+    gap: $league-tab-list-gap;
   }
 
   &Item {
@@ -563,7 +565,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: $space-md;
+    gap: $league-tab-list-gap;
   }
 
   &HeaderCard {
@@ -628,11 +630,11 @@
 
 .alignment {
   &TeamList {
-    gap: $space-sm;
+    gap: $league-tab-list-gap;
   }
 
   &GroupList {
-    gap: $space-md;
+    gap: $league-tab-list-gap;
   }
 
   &EditRow {
@@ -793,7 +795,7 @@
 
 // Applied only when teams.length > 5 — caps height and enables scrolling
 .teamListLimited {
-  max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$space-md});
+  max-height: calc(5 * (40px + #{$space-sm * 2}) + 4 * #{$league-tab-list-gap});
   overflow-y: auto;
   scrollbar-gutter: stable;
 
@@ -865,12 +867,12 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: $league-tab-list-gap;
 }
 
 // Applied only when seasons.length > 5 — caps height and enables scrolling
 .seasonListLimited {
-  max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$space-md});
+  max-height: calc(5 * (#{$font-lg} + #{$space-sm * 2}) + 4 * #{$league-tab-list-gap});
   overflow-y: auto;
   scrollbar-gutter: stable;
 
@@ -936,7 +938,7 @@
   grid-auto-flow: row;
   grid-template-columns: repeat(2, 1fr);
   align-items: start;
-  gap: $space-md;
+  gap: $league-tab-list-gap;
 
   @media (max-width: 1024px) {
     grid-template-columns: 1fr;
@@ -1118,7 +1120,7 @@
     padding: 0;
     display: flex;
     flex-direction: column;
-    gap: $space-sm;
+    gap: $league-tab-list-gap;
   }
 
   &Item {
