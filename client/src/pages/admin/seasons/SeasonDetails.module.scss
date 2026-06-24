@@ -560,28 +560,30 @@
 .award {
   &Item {
     --award-winner-card-height: 186px;
+    --award-header-height: 52px;
     --award-player-row-height: 82px;
     --award-scrollbar-size: 8px;
     --award-divider-gap: #{$space-sm};
+    --award-content-padding: #{$space-md};
+    --accordion-header-bg: rgba(255, 255, 255, 0.03);
+    --accordion-border-color: rgba(255, 255, 255, 0.08);
     --award-content-height: calc(
-      var(--award-winner-card-height) + var(--award-divider-gap) + #{$space-md} + 1px +
-        var(--award-player-row-height) + var(--award-scrollbar-size)
+      var(--award-winner-card-height) + var(--award-player-row-height) +
+        var(--award-scrollbar-size) + (var(--award-divider-gap) * 3) + 1px +
+        (var(--award-content-padding) * 2)
     );
 
     position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: $space-md;
-    padding: $space-md;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: $radius-md;
   }
 
   &Header {
-    display: flex;
-    justify-content: space-between;
+    box-sizing: border-box;
     gap: $space-md;
-    align-items: flex-start;
+    height: var(--award-header-height);
+    min-height: var(--award-header-height);
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
   }
 
   &TitleBlock {
@@ -602,6 +604,13 @@
       line-height: 1.2;
       overflow-wrap: anywhere;
       white-space: normal;
+
+      > span:first-child {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
     }
 
     p {
@@ -630,6 +639,7 @@
     min-height: var(--award-content-height);
     max-height: var(--award-content-height);
     min-width: 0;
+    padding: var(--award-content-padding);
     overflow: hidden;
   }
 
@@ -644,19 +654,21 @@
   }
 
   &ContentInner > &PlayerListDivided {
-    margin-top: auto;
+    margin-top: var(--award-divider-gap);
   }
 
   &ContentInnerNoNominees {
     > .awardWinnerCards {
-      flex: 1;
+      flex: 1 1 auto;
       height: 100%;
       min-height: 100%;
+      align-items: stretch;
     }
 
     .awardWinnerCard {
+      height: 100%;
       min-height: 100%;
-      max-height: 100%;
+      max-height: none;
     }
   }
 
@@ -815,7 +827,8 @@
 
   &PlayerListDivided {
     min-height: calc(
-      var(--award-player-row-height) + var(--award-scrollbar-size) + var(--award-divider-gap) + 1px
+      var(--award-player-row-height) + var(--award-scrollbar-size) +
+        (var(--award-divider-gap) * 2) + 1px
     );
     padding-top: var(--award-divider-gap);
     border-top: 1px solid rgba(255, 255, 255, 0.08);

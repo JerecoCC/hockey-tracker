@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
+import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Field from '@/components/Field/Field';
@@ -1014,111 +1015,116 @@ const SeasonAwardsTab = ({
               const hideRecordedAutomaticAction =
                 hasAutomaticWinnerAction && !award.allow_multiple_winners && winners.length > 0;
               const showAwardAction = !hideRecordedAutomaticAction;
-              return (
-                <section
-                  key={award.award_id}
-                  className={styles.awardItem}
-                >
-                  <div className={styles.awardHeader}>
-                    <div className={styles.awardTitleBlock}>
-                      <h4>
-                        <span>{award.name}</span>
-                        {award.description && (
-                          <InfoTooltip
-                            text={award.description}
-                            size="0.9rem"
-                          />
-                        )}
-                      </h4>
-                    </div>
-                    <div className={styles.awardActions}>
-                      <div className={styles.awardRecipientActions}>
-                        {canManageNominees && (
-                          <Button
-                            size="sm"
-                            variant="outlined"
-                            intent="neutral"
-                            icon="person_add"
-                            tooltip="Nominees"
-                            aria-label="Nominees"
-                            onClick={() => openNomineesModal(award)}
-                          />
-                        )}
-                        {showAwardAction && isGroupedAward ? (
-                          <Button
-                            size="sm"
-                            icon="groups"
-                            tooltip="Set team"
-                            aria-label="Set team"
-                            onClick={() => openTeamSelectionModal(award)}
-                          />
-                        ) : showAwardAction ? (
-                          <Button
-                            size="sm"
-                            icon="emoji_events"
-                            tooltip="Set Winner"
-                            aria-label={awardRecipientLabel}
-                            disabled={awardRequiresNominees || isSuggestedWinnerSaving}
-                            onClick={() =>
-                              suggestion
-                                ? addSuggestedWinner(award, suggestion)
-                                : openRecipientModal(award)
-                            }
-                          />
-                        ) : (
-                          null
-                        )}
-                      </div>
-                    </div>
+              const awardLabel = (
+                <div className={styles.awardTitleBlock}>
+                  <h4>
+                    <span>{award.name}</span>
+                    {award.description && (
+                      <InfoTooltip
+                        text={award.description}
+                        size="0.9rem"
+                      />
+                    )}
+                  </h4>
+                </div>
+              );
+              const awardActions = canManageNominees || showAwardAction ? (
+                <div className={styles.awardActions}>
+                  <div className={styles.awardRecipientActions}>
+                    {canManageNominees && (
+                      <Button
+                        size="sm"
+                        variant="outlined"
+                        intent="neutral"
+                        icon="person_add"
+                        tooltip="Nominees"
+                        aria-label="Nominees"
+                        onClick={() => openNomineesModal(award)}
+                      />
+                    )}
+                    {showAwardAction && isGroupedAward ? (
+                      <Button
+                        size="sm"
+                        icon="groups"
+                        tooltip="Set team"
+                        aria-label="Set team"
+                        onClick={() => openTeamSelectionModal(award)}
+                      />
+                    ) : showAwardAction ? (
+                      <Button
+                        size="sm"
+                        icon="emoji_events"
+                        tooltip="Set Winner"
+                        aria-label={awardRecipientLabel}
+                        disabled={awardRequiresNominees || isSuggestedWinnerSaving}
+                        onClick={() => {
+                          if (suggestion) {
+                            void addSuggestedWinner(award, suggestion);
+                            return;
+                          }
+                          openRecipientModal(award);
+                        }}
+                      />
+                    ) : null}
                   </div>
+                </div>
+              ) : null;
 
-                  <div className={styles.awardContent}>
-                    <div
-                      className={[
-                        styles.awardContentInner,
-                        !canManageNominees && !isGroupedAward
-                          ? styles.awardContentInnerNoNominees
-                          : '',
-                      ]
-                        .filter(Boolean)
-                        .join(' ')}
-                    >
-                      {isSuggestedWinnerSaving ? (
-                        <AwardWinnerListSkeleton />
-                      ) : isGroupedAward ? (
-                        <AwardPlayerList
+              return (
+                <Accordion
+                  key={award.award_id}
+                  variant="static"
+                  className={styles.awardItem}
+                  rowClassName={styles.awardHeader}
+                  bodyClassName={styles.awardContent}
+                  label={awardLabel}
+                  headerRight={awardActions}
+                >
+                  <div
+                    className={[
+                      styles.awardContentInner,
+                      !canManageNominees && !isGroupedAward
+                        ? styles.awardContentInnerNoNominees
+                        : '',
+                    ]
+                      .filter(Boolean)
+                      .join(' ')}
+                  >
+                    {isSuggestedWinnerSaving ? (
+                      <AwardWinnerListSkeleton />
+                    ) : isGroupedAward ? (
+                      <AwardPlayerList
+                        recipients={winners}
+                        empty="No team recorded."
+                        layout="column"
+                        getRecipientHref={recipientHref}
+                      />
+                    ) : !canManageNominees && award.allow_multiple_winners ? (
+                      <AwardPlayerList
+                        recipients={winners}
+                        empty="No winners recorded."
+                        layout="column"
+                        getRecipientHref={recipientHref}
+                      />
+                    ) : (
+                      <>
+                        <AwardWinnerList
                           recipients={winners}
-                          empty="No team recorded."
-                          layout="column"
+                          empty={winnerEmptyMessage}
                           getRecipientHref={recipientHref}
                         />
-                      ) : !canManageNominees && award.allow_multiple_winners ? (
-                        <AwardPlayerList
-                          recipients={winners}
-                          empty="No winners recorded."
-                          layout="column"
-                          getRecipientHref={recipientHref}
-                        />
-                      ) : (
-                        <>
-                          <AwardWinnerList
-                            recipients={winners}
-                            empty={winnerEmptyMessage}
+                        {canManageNominees && (
+                          <AwardPlayerList
+                            recipients={visibleNominees}
+                            empty="No nominees recorded."
+                            divided
                             getRecipientHref={recipientHref}
                           />
-                          {canManageNominees && (
-                            <AwardPlayerList
-                              recipients={visibleNominees}
-                              empty="No nominees recorded."
-                              divided
-                              getRecipientHref={recipientHref}
-                            />
-                          )}
-                        </>
-                      )}
-                    </div>
+                        )}
+                      </>
+                    )}
                   </div>
-                </section>
+                </Accordion>
               );
             })}
           </div>
@@ -1611,6 +1617,7 @@ const AwardPlayerList = ({
                     initials={recipientInitials(recipient)}
                     primaryColor={recipient.team_primary_color}
                     textColor={recipient.team_text_color}
+                    ringColor={recipient.team_primary_color}
                     size={48}
                   />
                 )
