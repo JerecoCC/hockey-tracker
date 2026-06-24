@@ -837,24 +837,26 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
                     </div>
                   </div>
 
-                  {isGroupedAward ? (
-                    <AwardTeamSelectionList
-                      recipients={winners}
-                      seasonAwardId={award.season_award_id}
-                      onDelete={deleteRecipient}
-                    />
-                  ) : (
-                    <>
-                      <AwardWinnerList
-                        recipients={winners}
-                        seasonAwardId={award.season_award_id}
-                        onDelete={deleteRecipient}
-                      />
-                      {visibleNominees.length > 0 && (
-                        <AwardNomineeList recipients={visibleNominees} />
+                  <div className={styles.awardContent}>
+                    <div className={styles.awardContentInner}>
+                      {isGroupedAward ? (
+                        <AwardPlayerList
+                          recipients={winners}
+                          empty="No team recorded."
+                          layout="column"
+                        />
+                      ) : (
+                        <>
+                          <AwardWinnerList recipients={winners} />
+                          <AwardPlayerList
+                            recipients={visibleNominees}
+                            empty="No nominees recorded."
+                            divided
+                          />
+                        </>
                       )}
-                    </>
-                  )}
+                    </div>
+                  </div>
                 </section>
               );
             })}
@@ -1146,18 +1148,8 @@ const SeasonAwardsTab = ({ seasonId, seasonTeams, skaters, goalies, standings }:
   );
 };
 
-interface RecipientListProps {
-  title: string;
-  empty: string;
-  recipients: SeasonAwardRecord['recipients'];
-  seasonAwardId: string | null;
-  onDelete: (seasonAwardId: string, recipientId: string) => Promise<boolean>;
-}
-
 interface WinnerListProps {
   recipients: SeasonAwardRecipient[];
-  seasonAwardId: string | null;
-  onDelete: (seasonAwardId: string, recipientId: string) => Promise<boolean>;
 }
 
 const recipientName = (recipient: SeasonAwardRecipient) =>
@@ -1168,15 +1160,6 @@ const recipientInitials = (recipient: SeasonAwardRecipient) => {
   const parts = name.split(' ').filter(Boolean);
   return parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : name.slice(0, 2);
 };
-
-const recipientMeta = (recipient: SeasonAwardRecipient) =>
-  [
-    recipient.jersey_number != null ? `#${recipient.jersey_number}` : null,
-    recipientPositionLabel(recipient),
-    recipient.team_code,
-  ]
-    .filter(Boolean)
-    .join(' | ');
 
 const recipientPositionLabel = (recipient: SeasonAwardRecipient) =>
   recipient.position ? (POSITION_LABELS[recipient.position] ?? recipient.position) : undefined;
@@ -1221,145 +1204,8 @@ const AwardRecipientMeta = ({
   );
 };
 
-const AwardTeamSelectionList = ({ recipients, seasonAwardId, onDelete }: WinnerListProps) => {
-  const byGroup = new Map<AwardTeamSelectionGroup, SeasonAwardRecipient[]>();
-  recipients.forEach((recipient) => {
-    const group = recipientTeamSelectionGroup(recipient);
-    const list = byGroup.get(group) ?? [];
-    list.push(recipient);
-    byGroup.set(group, list);
-  });
-
-  for (const list of byGroup.values()) {
-    list.sort((a, b) => (a.rank ?? 99) - (b.rank ?? 99));
-  }
-
-  const assignedIds = new Set<string>();
-
-  return (
-    <div className={styles.awardTeamSelection}>
-      {TEAM_SELECTION_GROUPS.map((group) => {
-        const groupRecipients = byGroup.get(group.group) ?? [];
-        const slots = Array.from({ length: group.count }, (_, index) => {
-          const recipient = groupRecipients[index] ?? null;
-          if (recipient) assignedIds.add(recipient.id);
-          return recipient;
-        });
-
-        return (
-          <div
-            key={group.group}
-            className={styles.awardTeamSelectionGroup}
-          >
-            <span className={styles.awardTeamSelectionGroupTitle}>{group.label}</span>
-            <div className={styles.awardTeamSelectionSlots}>
-              {slots.map((recipient, index) =>
-                recipient ? (
-                  <div
-                    key={recipient.id}
-                    className={styles.awardTeamSelectionSlot}
-                  >
-                    <PlayerAvatar
-                      photo={recipient.player_photo}
-                      initials={recipientInitials(recipient)}
-                      primaryColor={recipient.team_primary_color ?? undefined}
-                      textColor={recipient.team_text_color ?? undefined}
-                      ringColor={recipient.team_primary_color ?? undefined}
-                      size={34}
-                    />
-                    <div className={styles.awardTeamSelectionText}>
-                      <strong>{recipientName(recipient)}</strong>
-                      <span>
-                        {[
-                          recipient.position,
-                          recipient.jersey_number != null ? `#${recipient.jersey_number}` : null,
-                          recipient.team_code,
-                        ]
-                          .filter(Boolean)
-                          .join(' | ')}
-                      </span>
-                    </div>
-                    {seasonAwardId && (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        intent="danger"
-                        icon="delete"
-                        tooltip="Remove"
-                        onClick={() => onDelete(seasonAwardId, recipient.id)}
-                      />
-                    )}
-                  </div>
-                ) : (
-                  <div
-                    key={`${group.group}-${index}`}
-                    className={styles.awardTeamSelectionSlotEmpty}
-                  >
-                    Empty {group.group.toLowerCase()} slot
-                  </div>
-                ),
-              )}
-            </div>
-          </div>
-        );
-      })}
-      {recipients.some((recipient) => !assignedIds.has(recipient.id)) && (
-        <AwardRecipientList
-          title="Additional"
-          empty=""
-          recipients={recipients.filter((recipient) => !assignedIds.has(recipient.id))}
-          seasonAwardId={seasonAwardId}
-          onDelete={onDelete}
-        />
-      )}
-    </div>
-  );
-};
-
-const AwardWinnerList = ({ recipients, seasonAwardId, onDelete }: WinnerListProps) => {
-  const useCompactList = recipients.length > 3;
+const AwardWinnerList = ({ recipients }: WinnerListProps) => {
   const cardImageSize = recipients.length > 1 ? 64 : 88;
-
-  if (recipients.length === 0) return <span className={styles.awardEmpty}>No winner recorded.</span>;
-
-  if (useCompactList) {
-    return (
-      <ul className={styles.awardWinnerList}>
-        {recipients.map((recipient) => (
-          <ListItem
-            key={recipient.id}
-            image={recipient.recipient_type === 'team' ? recipient.team_logo : recipient.player_photo}
-            image_shape={recipient.recipient_type === 'team' ? 'square' : 'circle'}
-            placeholder={
-              recipient.recipient_type === 'team'
-                ? (recipient.team_code ?? 'T')
-                : recipientInitials(recipient)
-            }
-            primaryColor={recipient.team_primary_color}
-            textColor={recipient.team_text_color}
-            jerseyNumber={recipient.recipient_type === 'player' ? recipient.jersey_number : undefined}
-            name={recipientName(recipient)}
-            className={styles.awardWinnerListItem}
-            actions={
-              seasonAwardId
-                ? [
-                    {
-                      icon: 'delete',
-                      intent: 'danger',
-                      tooltip: 'Remove winner',
-                      onClick: () => onDelete(seasonAwardId, recipient.id),
-                    },
-                  ]
-                : undefined
-            }
-          >
-            {recipient.recipient_type === 'player' && <AwardRecipientMeta recipient={recipient} />}
-          </ListItem>
-        ))}
-      </ul>
-    );
-  }
 
   return (
     <ul
@@ -1370,7 +1216,11 @@ const AwardWinnerList = ({ recipients, seasonAwardId, onDelete }: WinnerListProp
         .filter(Boolean)
         .join(' ')}
     >
-      {recipients.map((recipient) => (
+      {recipients.length === 0 ? (
+        <li className={[styles.awardWinnerCard, styles.awardWinnerCardEmpty].join(' ')}>
+          <span className={styles.awardEmptyMessage}>No winners recorded.</span>
+        </li>
+      ) : recipients.map((recipient) => (
         <li
           key={recipient.id}
           className={styles.awardWinnerCard}
@@ -1405,29 +1255,46 @@ const AwardWinnerList = ({ recipients, seasonAwardId, onDelete }: WinnerListProp
               />
             )}
           </div>
-          {seasonAwardId && (
-            <div className={styles.awardWinnerOverlay}>
-              <Button
-                type="button"
-                size="sm"
-                intent="danger"
-                icon="delete"
-                tooltip="Remove winner"
-                onClick={() => onDelete(seasonAwardId, recipient.id)}
-              />
-            </div>
-          )}
         </li>
       ))}
     </ul>
   );
 };
 
-const AwardNomineeList = ({ recipients }: { recipients: SeasonAwardRecipient[] }) => (
-  <div className={styles.awardNominees}>
-    <ul className={styles.awardNomineeList}>
-      {recipients.map((recipient) => {
-        return (
+const AwardPlayerList = ({
+  recipients,
+  empty,
+  divided = false,
+  layout = 'row',
+}: {
+  recipients: SeasonAwardRecipient[];
+  empty?: string;
+  divided?: boolean;
+  layout?: 'row' | 'column';
+}) => (
+  <div
+    className={[
+      styles.awardPlayerList,
+      divided ? styles.awardPlayerListDivided : '',
+      layout === 'column' ? styles.awardPlayerListColumn : '',
+    ]
+      .filter(Boolean)
+      .join(' ')}
+  >
+    {recipients.length === 0 ? (
+      empty ? (
+        <span className={styles.awardEmptyMessage}>{empty}</span>
+      ) : null
+    ) : (
+      <ul
+        className={[
+          styles.awardPlayerListScroller,
+          layout === 'column' ? styles.awardPlayerListScrollerColumn : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        {recipients.map((recipient) => (
           <ListItem
             key={recipient.id}
             imageNode={
@@ -1440,61 +1307,12 @@ const AwardNomineeList = ({ recipients }: { recipients: SeasonAwardRecipient[] }
               />
             }
             name={recipientName(recipient)}
-            className={styles.awardNomineeItem}
+            className={styles.awardPlayerListItem}
           >
             <AwardRecipientMeta recipient={recipient} />
           </ListItem>
-        );
-      })}
-    </ul>
-  </div>
-);
-
-const AwardRecipientList = ({
-  title,
-  empty,
-  recipients,
-  seasonAwardId,
-  onDelete,
-}: RecipientListProps) => (
-  <div className={styles.awardRecipients}>
-    <span className={styles.awardRecipientsTitle}>{title}</span>
-    {recipients.length === 0 ? (
-      empty ? (
-        <span className={styles.awardEmpty}>{empty}</span>
-      ) : null
-    ) : (
-      <div className={styles.awardRecipientList}>
-        {recipients.map((recipient) => (
-          <div
-            key={recipient.id}
-            className={styles.awardRecipient}
-          >
-            {recipient.recipient_type === 'team' && (
-              <TeamLogo
-                logo={recipient.team_logo}
-                code={recipient.team_code ?? 'T'}
-                size={28}
-              />
-            )}
-            <div className={styles.awardRecipientText}>
-              <strong>{recipient.player_name ?? recipient.team_name ?? 'Unknown'}</strong>
-              {recipientMeta(recipient) && <span>{recipientMeta(recipient)}</span>}
-            </div>
-            {seasonAwardId && (
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                intent="danger"
-                icon="delete"
-                tooltip="Remove"
-                onClick={() => onDelete(seasonAwardId, recipient.id)}
-              />
-            )}
-          </div>
         ))}
-      </div>
+      </ul>
     )}
   </div>
 );
