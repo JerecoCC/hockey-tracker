@@ -295,23 +295,22 @@ const PoolEditor = ({ control, slotIndex, groups }: PoolEditorProps) => {
                 />
               </div>
             )}
-            <button
+            <Button
               type="button"
-              className={styles.poolSeedRemove}
-              onClick={() => remove(i)}
+              variant="outlined"
+              intent="danger"
+              icon="delete"
+              iconHeight="field"
+              tooltip="Remove position"
               aria-label="Remove position"
-            >
-              <Icon
-                name="delete"
-                size="1em"
-              />
-            </button>
+              onClick={() => remove(i)}
+            />
           </div>
         );
       })}
       <Button
         type="button"
-        variant="ghost"
+        variant="outlined"
         intent="neutral"
         icon="add"
         size="sm"

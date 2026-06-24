@@ -327,28 +327,6 @@
     flex: 1;
     min-width: 9rem;
   }
-
-  &Remove {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 2rem;
-    height: 2rem;
-    flex-shrink: 0;
-    border: none;
-    background: transparent;
-    color: $text-dim;
-    border-radius: $radius-sm;
-    cursor: pointer;
-    transition:
-      color $transition-fast,
-      background $transition-fast;
-
-    &:hover {
-      color: $danger;
-      background: rgba($danger, 0.1);
-    }
-  }
 }
 
 // ── Choice picks modal ───────────────────────────────────────────────────────
