@@ -179,6 +179,12 @@ describe('LeagueDetailsPage – loading', () => {
       screen.getByRole('status', { name: /loading league information/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('tab', { name: 'Seasons' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Teams' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Alignments' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Players' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Playoffs' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Awards' })).toBeInTheDocument();
     expect(container.querySelector('.breadcrumbSkeleton')).toBeInTheDocument();
   });
 

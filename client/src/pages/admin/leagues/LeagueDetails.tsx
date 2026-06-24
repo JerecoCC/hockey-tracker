@@ -268,6 +268,12 @@ const LeagueDetailsPage = () => {
               </div>
             ),
           },
+          { label: 'Seasons', icon: 'calendar_month', content: null },
+          { label: 'Teams', icon: 'group', content: null },
+          { label: 'Alignments', icon: 'account_tree', content: null },
+          { label: 'Players', icon: 'groups', content: null },
+          { label: 'Playoffs', icon: 'emoji_events', content: null },
+          { label: 'Awards', icon: 'workspace_premium', content: null },
         ]}
       />
     );
