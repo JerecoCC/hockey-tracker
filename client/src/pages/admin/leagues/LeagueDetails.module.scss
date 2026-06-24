@@ -1292,18 +1292,17 @@ $league-tab-list-gap: $space-md;
   }
 
   &Item {
-    display: flex;
     align-items: flex-start;
-    justify-content: space-between;
-    gap: $space-lg;
-    padding: $space-md;
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.02);
+  }
 
-    @media (max-width: 720px) {
-      flex-direction: column;
-    }
+  &Details {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    width: 100%;
+    margin-top: $space-sm;
+    padding-top: $space-sm;
+    border-top: 1px solid rgba($border, 0.72);
   }
 
   &Main {
@@ -1323,16 +1322,6 @@ $league-tab-list-gap: $space-md;
     display: flex;
     flex-wrap: wrap;
     gap: $space-xs;
-
-    span {
-      padding: 2px 8px;
-      border-radius: $radius-sm;
-      background: rgba(255, 255, 255, 0.06);
-      color: $text-dim;
-      font-size: $font-xs;
-      line-height: 1.6;
-      text-transform: capitalize;
-    }
   }
 
   &Description {

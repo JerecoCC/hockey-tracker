@@ -331,7 +331,7 @@ describe('LeagueDetailsPage – loading', () => {
     setup({ league: mockLeague }, {}, null, {}, {}, { loading: true });
 
     expect(screen.getByRole('tab', { name: 'Awards' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('heading', { name: 'Award Definitions' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Awards' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading awards/i })).toBeInTheDocument();
     expect(screen.queryByText(/No award definitions yet/i)).not.toBeInTheDocument();
   });

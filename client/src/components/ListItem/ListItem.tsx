@@ -76,6 +76,8 @@ interface Props {
   /** When provided, the entire row becomes a stretched link (z-index 0) so action buttons (z-index 1) still intercept their own clicks. */
   href?: string;
   className?: string;
+  /** Optional custom content rendered below the built-in text lines. */
+  children?: ReactNode;
 }
 
 const ListItem = ({
@@ -101,6 +103,7 @@ const ListItem = ({
   actions,
   href,
   className,
+  children,
 }: Props) => {
   const hasExtra = !!subtitle || !!note;
   const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
@@ -200,6 +203,7 @@ const ListItem = ({
             {note && <span className={styles.note}>{note}</span>}
           </>
         )}
+        {children}
       </div>
 
       {/* Right content — Tag or code badge */}

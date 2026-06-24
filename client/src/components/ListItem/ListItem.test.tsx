@@ -27,6 +27,14 @@ describe('ListItem – basics', () => {
     renderItem({ name: 'Leafs', className: 'my-custom-class' });
     expect(screen.getByRole('listitem')).toHaveClass('my-custom-class');
   });
+
+  it('renders custom child content inside the info column', () => {
+    renderItem({ name: 'Leafs', children: <span>Extra details</span> });
+    const extra = screen.getByText('Extra details');
+
+    expect(extra).toBeInTheDocument();
+    expect(extra.closest('.info')).toBeInTheDocument();
+  });
 });
 
 // ---------------------------------------------------------------------------
