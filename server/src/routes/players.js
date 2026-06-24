@@ -701,6 +701,171 @@ router.get('/:id/stats', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/awards - winner awards for one player.
+// ---------------------------------------------------------------------------
+router.get('/:id/awards', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const rows = await sql`
+      WITH winning_awards AS (
+        SELECT
+          sar.id,
+          la.id AS award_id,
+          sa.id AS season_award_id,
+          la.name AS award_name,
+          s.id AS season_id,
+          s.name AS season_name,
+          sa.awarded_at::text AS awarded_at,
+          t.id AS team_id,
+          ti.name AS team_name,
+          ti.code AS team_code,
+          ti.logo AS team_logo,
+          t.primary_color AS team_primary_color,
+          t.text_color AS team_text_color,
+          s.start_date AS season_start_date,
+          s.created_at AS season_created_at,
+          sa.awarded_at AS awarded_date,
+          la.sort_order,
+          0 AS source_order
+        FROM season_award_recipients sar
+        JOIN season_awards sa ON sa.id = sar.season_award_id
+        JOIN league_awards la ON la.id = sa.award_id
+        JOIN seasons s ON s.id = sa.season_id
+        LEFT JOIN LATERAL (
+          SELECT team_id, start_date, end_date, created_at
+          FROM player_teams pt
+          WHERE pt.player_id = sar.player_id
+            AND pt.season_id = s.id
+          ORDER BY
+            CASE
+              WHEN sa.awarded_at IS NOT NULL
+               AND (pt.start_date IS NULL OR pt.start_date <= sa.awarded_at)
+               AND (pt.end_date IS NULL OR pt.end_date >= sa.awarded_at)
+              THEN 0
+              WHEN pt.end_date IS NULL THEN 1
+              ELSE 2
+            END,
+            COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+            pt.created_at DESC,
+            pt.id DESC
+          LIMIT 1
+        ) ptr ON TRUE
+        LEFT JOIN teams t ON t.id = COALESCE(sar.team_id, ptr.team_id)
+        LEFT JOIN LATERAL (
+          SELECT
+            name,
+            code,
+            team_logo_default(logo_dark, logo_light) AS logo
+          FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY
+            CASE
+              WHEN (start_date IS NULL OR start_date <= COALESCE(sa.awarded_at, s.end_date, s.start_date, CURRENT_DATE))
+               AND (end_date IS NULL OR end_date >= COALESCE(sa.awarded_at, s.start_date, CURRENT_DATE))
+              THEN 0
+              WHEN end_date IS NULL THEN 1
+              ELSE 2
+            END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC
+          LIMIT 1
+        ) ti ON TRUE
+        WHERE sar.recipient_type = 'player'
+          AND sar.role = 'winner'
+          AND sar.player_id = ${id}
+
+        UNION ALL
+
+        SELECT
+          sar.id,
+          la.id AS award_id,
+          sa.id AS season_award_id,
+          la.name AS award_name,
+          s.id AS season_id,
+          s.name AS season_name,
+          sa.awarded_at::text AS awarded_at,
+          t.id AS team_id,
+          ti.name AS team_name,
+          ti.code AS team_code,
+          ti.logo AS team_logo,
+          t.primary_color AS team_primary_color,
+          t.text_color AS team_text_color,
+          s.start_date AS season_start_date,
+          s.created_at AS season_created_at,
+          sa.awarded_at AS awarded_date,
+          la.sort_order,
+          1 AS source_order
+        FROM season_award_recipients sar
+        JOIN season_awards sa ON sa.id = sar.season_award_id
+        JOIN league_awards la ON la.id = sa.award_id
+        JOIN seasons s ON s.id = sa.season_id
+        JOIN LATERAL (
+          SELECT team_id
+          FROM player_teams pt
+          WHERE pt.player_id = ${id}
+            AND pt.season_id = s.id
+          ORDER BY
+            CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+            COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+            pt.created_at DESC,
+            pt.id DESC
+          LIMIT 1
+        ) latest_pt ON latest_pt.team_id = sar.team_id
+        LEFT JOIN teams t ON t.id = sar.team_id
+        LEFT JOIN LATERAL (
+          SELECT
+            name,
+            code,
+            team_logo_default(logo_dark, logo_light) AS logo
+          FROM team_iterations
+          WHERE team_id = t.id
+          ORDER BY
+            CASE
+              WHEN (start_date IS NULL OR start_date <= COALESCE(sa.awarded_at, s.end_date, s.start_date, CURRENT_DATE))
+               AND (end_date IS NULL OR end_date >= COALESCE(sa.awarded_at, s.start_date, CURRENT_DATE))
+              THEN 0
+              WHEN end_date IS NULL THEN 1
+              ELSE 2
+            END,
+            start_date DESC NULLS LAST,
+            recorded_at DESC
+          LIMIT 1
+        ) ti ON TRUE
+        WHERE sar.recipient_type = 'team'
+          AND sar.role = 'winner'
+      )
+      SELECT
+        id,
+        award_id,
+        season_award_id,
+        award_name,
+        season_id,
+        season_name,
+        awarded_at,
+        team_id,
+        team_name,
+        team_code,
+        team_logo,
+        team_primary_color,
+        team_text_color
+      FROM winning_awards
+      ORDER BY
+        season_start_date DESC NULLS LAST,
+        season_created_at DESC,
+        awarded_date DESC NULLS LAST,
+        source_order ASC,
+        sort_order ASC,
+        award_name ASC,
+        id ASC
+    `;
+    return res.json(rows);
+  } catch (err) {
+    console.error('players awards error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/players/:id/latest-season-stats
 // (Also accepts the legacy /current-season-stats path.)
 // Returns the player's stats for the latest season in which they actually

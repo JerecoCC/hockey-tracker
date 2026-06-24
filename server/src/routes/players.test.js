@@ -206,6 +206,66 @@ describe('GET /api/admin/players/route-lookup', () => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/admin/players/:id/awards
+// ---------------------------------------------------------------------------
+describe('GET /api/admin/players/:id/awards', () => {
+  it('returns direct player awards and team awards won by the player season team', async () => {
+    const playerAward = {
+      id: 'recipient-1',
+      award_id: 'award-1',
+      season_award_id: 'season-award-1',
+      award_name: 'Forward of the Year',
+      season_id: 'season-1',
+      season_name: '2025-26',
+      awarded_at: '2026-05-01',
+      team_id: 'team-1',
+      team_name: 'Oilers',
+      team_code: 'EDM',
+      team_logo: 'oilers.png',
+      team_primary_color: '#ff4500',
+      team_text_color: '#ffffff',
+    };
+    const teamAward = {
+      id: 'recipient-2',
+      award_id: 'award-2',
+      season_award_id: 'season-award-2',
+      award_name: 'Walter Cup Winner',
+      season_id: 'season-1',
+      season_name: '2025-26',
+      awarded_at: '2026-05-20',
+      team_id: 'team-1',
+      team_name: 'Oilers',
+      team_code: 'EDM',
+      team_logo: 'oilers.png',
+      team_primary_color: '#ff4500',
+      team_text_color: '#ffffff',
+    };
+    sql.mockResolvedValueOnce([playerAward, teamAward]);
+
+    const res = await request(app).get('/api/admin/players/player-1/awards');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual([playerAward, teamAward]);
+    expect(sql).toHaveBeenCalledTimes(1);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('WITH winning_awards');
+    expect(queryText).toContain("sar.role = 'winner'");
+    expect(queryText).toContain("sar.recipient_type = 'player'");
+    expect(queryText).toContain("sar.recipient_type = 'team'");
+    expect(queryText).toContain('sar.player_id');
+    expect(queryText).toContain('latest_pt.team_id = sar.team_id');
+    expect(queryText).toContain('season_awards');
+    expect(queryText).toContain('league_awards');
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+    const res = await request(app).get('/api/admin/players/player-1/awards');
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/admin/players/:id/latest-season-stats
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/players/:id/latest-season-stats', () => {

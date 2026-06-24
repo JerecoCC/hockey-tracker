@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import usePlayerDetails, {
+  usePlayerAwards,
   usePlayerCurrentSeasonStats,
   usePlayerGameLogs,
   usePlayerLastFiveGames,
@@ -34,6 +35,7 @@ jest.mock('react-router-dom', () => ({
 jest.mock('@/hooks/usePlayerDetails', () => ({
   __esModule: true,
   default: jest.fn(),
+  usePlayerAwards: jest.fn(),
   usePlayerCurrentSeasonStats: jest.fn(),
   usePlayerGameLogs: jest.fn(),
   usePlayerLastFiveGames: jest.fn(),
@@ -95,6 +97,7 @@ jest.mock('./ChangeJerseyModal', () => () => null);
 jest.mock('@/components/ImagePreviewModal/ImagePreviewModal', () => () => null);
 
 const mockUsePlayerDetails = usePlayerDetails as jest.Mock;
+const mockUsePlayerAwards = usePlayerAwards as jest.Mock;
 const mockUsePlayerCurrentSeasonStats = usePlayerCurrentSeasonStats as jest.Mock;
 const mockUsePlayerGameLogs = usePlayerGameLogs as jest.Mock;
 const mockUsePlayerLastFiveGames = usePlayerLastFiveGames as jest.Mock;
@@ -109,6 +112,10 @@ const mockUsePlayerPhotoHistory = usePlayerPhotoHistory as jest.Mock;
 const mockUseStintActions = useStintActions as jest.Mock;
 
 beforeAll(() => {
+  Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  });
   Object.defineProperty(window, 'matchMedia', {
     writable: true,
     value: jest
@@ -160,6 +167,7 @@ beforeEach(() => {
     stats: [],
     loading: false,
   });
+  mockUsePlayerAwards.mockReturnValue({ awards: [], loading: false });
   mockUsePlayerCurrentSeasonStats.mockReturnValue({
     currentSeasonStats: {
       season_id: 'season-2',
@@ -322,6 +330,59 @@ describe('PlayerDetails info tab', () => {
     fireEvent.change(inches, { target: { value: '12' } });
 
     expect(inches).toHaveValue(1);
+  });
+});
+
+describe('PlayerDetails awards tab', () => {
+  it('renders player awards with the winning team and season tag', () => {
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUsePlayerAwards.mockReturnValue({
+      awards: [
+        {
+          id: 'recipient-1',
+          award_id: 'award-1',
+          season_award_id: 'season-award-1',
+          award_name: 'Forward of the Year',
+          season_id: 'season-1',
+          season_name: '2025-26',
+          awarded_at: '2026-05-01',
+          team_id: 'team-1',
+          team_name: 'Toronto Maple Leafs',
+          team_code: 'TOR',
+          team_logo: null,
+          team_primary_color: '#003e7e',
+          team_text_color: '#ffffff',
+        },
+        {
+          id: 'recipient-2',
+          award_id: 'award-2',
+          season_award_id: 'season-award-2',
+          award_name: 'Walter Cup Winner',
+          season_id: 'season-1',
+          season_name: '2025-26',
+          awarded_at: '2026-05-20',
+          team_id: 'team-1',
+          team_name: 'Toronto Maple Leafs',
+          team_code: 'TOR',
+          team_logo: null,
+          team_primary_color: '#003e7e',
+          team_text_color: '#ffffff',
+        },
+      ],
+      loading: false,
+    });
+
+    render(<PlayerDetails />);
+
+    const awardItem = screen.getByText('Forward of the Year').closest('li');
+
+    expect(screen.getByText('Awards')).toBeInTheDocument();
+    expect(awardItem).not.toBeNull();
+    expect(awardItem).toHaveClass('itemPlain');
+    expect(within(awardItem as HTMLElement).getByText('Forward of the Year')).toBeInTheDocument();
+    expect(within(awardItem as HTMLElement).getByText('Toronto Maple Leafs')).toBeInTheDocument();
+    expect(within(awardItem as HTMLElement).getByText('2025-26')).toBeInTheDocument();
+    expect(screen.getByText('Walter Cup Winner')).toBeInTheDocument();
   });
 });
 

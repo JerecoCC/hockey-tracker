@@ -16,6 +16,7 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import usePlayerDetails, {
+  usePlayerAwards,
   usePlayerCurrentSeasonStats,
   usePlayerGameLogs,
   usePlayerLastFiveGames,
@@ -314,6 +315,7 @@ const PlayerDetailsPage = () => {
   const teamId = isLegacyIdRoute ? routeTeamCode : routeLookup?.team_id;
   const { player, stats, loading: playerDetailsLoading } = usePlayerDetails(id);
   const loading = routeLookupLoading || playerDetailsLoading;
+  const { awards: playerAwards, loading: playerAwardsLoading } = usePlayerAwards(id);
   const { currentSeasonStats: latestSeasonStats } = usePlayerCurrentSeasonStats(id);
   const { lastFiveGames, loading: lastFiveGamesLoading } = usePlayerLastFiveGames(id);
   const { team: teamDetails } = useTeamDetails(teamId);
@@ -856,6 +858,37 @@ const PlayerDetailsPage = () => {
     </Card>
   );
 
+  const awardsCard = (
+    <Card title="Awards">
+      {playerAwardsLoading ? (
+        <p className={styles.placeholder}>Loading awards...</p>
+      ) : playerAwards.length === 0 ? (
+        <p className={styles.placeholder}>No awards recorded yet.</p>
+      ) : (
+        <ul className={styles.awardList}>
+          {playerAwards.map((award) => (
+            <ListItem
+              key={award.id}
+              variant="plain"
+              image={award.team_logo}
+              image_shape="square"
+              name={award.award_name}
+              placeholder={teamCode(award.team_code, award.team_name)}
+              primaryColor={award.team_primary_color}
+              textColor={award.team_text_color}
+              subtitle={award.team_name ?? 'Team not recorded'}
+              rightContent={{
+                type: 'tag',
+                label: award.season_name,
+                intent: 'info',
+              }}
+            />
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+
   return (
     <>
       {/* Hero card */}
@@ -977,6 +1010,10 @@ const PlayerDetailsPage = () => {
                   />
                 </Card>
               ),
+            },
+            {
+              label: 'Awards',
+              content: awardsCard,
             },
             {
               label: 'Team History',

@@ -25,6 +25,22 @@ export interface PlayerCareerStatRecord {
   text_color: string | null;
 }
 
+export interface PlayerAwardRecord {
+  id: string;
+  award_id: string;
+  season_award_id: string;
+  award_name: string;
+  season_id: string;
+  season_name: string;
+  awarded_at: string | null;
+  team_id: string | null;
+  team_name: string | null;
+  team_code: string | null;
+  team_logo: string | null;
+  team_primary_color: string | null;
+  team_text_color: string | null;
+}
+
 // ── Single player fetch ─────────────────────────────────────────────────────
 export const usePlayer = (playerId: string | null | undefined) => {
   const { data: player = null, isLoading: loading } = useQuery<PlayerRecord | null>({
@@ -65,6 +81,26 @@ export const usePlayerCareerStats = (playerId: string | null | undefined) => {
     enabled: !!playerId,
   });
   return { stats, loading };
+};
+
+export const usePlayerAwards = (playerId: string | null | undefined) => {
+  const { data: awards = [], isLoading: loading } = useQuery<PlayerAwardRecord[]>({
+    queryKey: ['player-awards', playerId],
+    queryFn: async () => {
+      try {
+        const { data } = await axios.get<PlayerAwardRecord[]>(
+          `${API}/admin/players/${playerId}/awards`,
+          { headers: authHeaders() },
+        );
+        return data;
+      } catch {
+        toast.error('Failed to load player awards');
+        return [];
+      }
+    },
+    enabled: !!playerId,
+  });
+  return { awards, loading };
 };
 
 // ── Latest played season stats returned by GET /players/:id/latest-season-stats ─
