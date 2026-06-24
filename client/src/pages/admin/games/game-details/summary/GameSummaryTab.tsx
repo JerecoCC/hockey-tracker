@@ -7,6 +7,7 @@ import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import StartGameModal from '../StartGameModal';
+import NhlGameAutofillModal from '../NhlGameAutofillModal';
 import ThreeStarsModal from '../ThreeStarsModal';
 import ScoreGoalModal from '../ScoreGoalModal';
 import ShootoutAttemptModal from '../ShootoutAttemptModal';
@@ -32,9 +33,11 @@ import GameInfoCard from './GameInfoCard';
 import LastFiveCard from './LastFiveCard';
 import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
-import { PERIOD, otPeriodId } from '../constants';
+import { PERIOD, PERIOD_TITLE_LABEL, otPeriodId } from '../constants';
+import { formatPlayerName } from '../formatUtils';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
+import type { NhlAutofillProgress } from '../nhlGameAutofill';
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
@@ -43,9 +46,9 @@ interface Props {
   isFinal: boolean;
   isInProgress: boolean;
   isEditMode: boolean;
-  setIsEditMode: (value: boolean) => void;
   editable?: boolean;
   showPlayerDataStatus?: boolean;
+  useLocalTimezone?: boolean;
   busy: string | null;
   leagueId: string;
   seasonId: string;
@@ -85,8 +88,8 @@ interface Props {
   updateStars: (stars: { star1: string; star2: string; star3: string }) => Promise<boolean>;
   updateGameInfo: (data: UpdateGameInfoData) => Promise<boolean>;
   updatePeriodShots: (period: string, home_shots: number, away_shots: number) => Promise<boolean>;
-  revertToEditMode: (lastPeriod: CurrentPeriod) => Promise<boolean>;
   deleteGame: () => Promise<boolean>;
+  onGameAutofillChange?: (progress: NhlAutofillProgress | null) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -96,9 +99,9 @@ const GameSummaryTab = ({
   isFinal,
   isInProgress,
   isEditMode,
-  setIsEditMode,
   editable = true,
   showPlayerDataStatus = false,
+  useLocalTimezone = false,
   busy,
   leagueId,
   seasonId,
@@ -129,8 +132,8 @@ const GameSummaryTab = ({
   updateStars,
   updateGameInfo,
   updatePeriodShots,
-  revertToEditMode,
   deleteGame,
+  onGameAutofillChange,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -330,8 +333,7 @@ const GameSummaryTab = ({
     setDeletingAttemptId(null);
   };
 
-  // Treat the game as in-progress for all edit controls when edit mode is on.
-  const isEditInProgress = editable && (isInProgress || isEditMode);
+  const canUseEditControls = editable && (isInProgress || isEditMode);
 
   // ── End Game / 3-stars modal ─────────────────────────────────────────────
   const [starsModalOpen, setStarsModalOpen] = useState(false);
@@ -346,6 +348,7 @@ const GameSummaryTab = ({
 
   // ── Start Game modal ─────────────────────────────────────────────────────
   const [startGameModalOpen, setStartGameModalOpen] = useState(false);
+  const [nhlAutofillModalOpen, setNhlAutofillModalOpen] = useState(false);
   const openStartGameModal = () => setStartGameModalOpen(true);
   const handleStartGame = async (isoTime: string) => {
     const started = await startGame(isoTime);
@@ -420,6 +423,23 @@ const GameSummaryTab = ({
     setEditGoal(null);
   };
 
+  // ── Delete Goal confirm ──────────────────────────────────────────────────
+  const [confirmDeleteGoal, setConfirmDeleteGoal] = useState<GoalRecord | null>(null);
+  const [deletingGoal, setDeletingGoal] = useState(false);
+  const requestDeleteGoal = (goalId: string) => {
+    setConfirmDeleteGoal(goals.find((goal) => goal.id === goalId) ?? null);
+  };
+  const handleConfirmDeleteGoal = async () => {
+    if (!confirmDeleteGoal) return;
+    setDeletingGoal(true);
+    try {
+      await deleteGoal(confirmDeleteGoal.id);
+    } finally {
+      setDeletingGoal(false);
+      setConfirmDeleteGoal(null);
+    }
+  };
+
   const handleAddGoal = useCallback(
     async (data: PostGoalData) => {
       setGoalSavingPeriod(data.period);
@@ -480,7 +500,9 @@ const GameSummaryTab = ({
   }, [busy, focusCurrentPeriodAction]);
 
   const hasStars = isFinal && !!(game.star_1_id && game.star_2_id && game.star_3_id);
-  const showGoalieSwitchReport = editable && game.league_code?.toUpperCase() === 'NHL';
+  const showNhlAdminTools = editable && game.league_code?.toUpperCase() === 'NHL';
+  const showGoalieSwitchReport = showNhlAdminTools;
+  const canAutofillNhlGame = showNhlAdminTools && game.status !== 'final';
 
   // For edit-mode revert: use current_period if set (retained after endGame), else
   // fall back to the highest period that has a score recorded.
@@ -529,8 +551,8 @@ const GameSummaryTab = ({
             <ScoringCard
               game={game}
               goals={goals}
-              isFinal={isFinal && !isEditMode}
-              isInProgress={isEditInProgress}
+              isFinal={isFinal}
+              isInProgress={isInProgress}
               isEditMode={isEditMode}
               busy={busy}
               goalSavingPeriod={goalSavingPeriod}
@@ -546,14 +568,14 @@ const GameSummaryTab = ({
               setAccordionRef={editable ? setAccordionRef : undefined}
               onScoreGoal={editable ? openGoalModal : undefined}
               onEditGoal={editable ? openEditGoalModal : undefined}
-              onDeleteGoal={editable ? deleteGoal : undefined}
+              onDeleteGoal={editable ? requestDeleteGoal : undefined}
               onOpenShotsModal={editable ? openShotsModal : undefined}
               onAddAttempt={editable ? openAttemptModal : undefined}
               onEditAttempt={editable ? openEditAttemptModal : undefined}
               onDeleteAttempt={editable ? handleDeleteAttempt : undefined}
-              onGoBackPeriod={isEditInProgress ? (prev) => advancePeriod(prev) : undefined}
+              onGoBackPeriod={canUseEditControls ? (prev) => advancePeriod(prev) : undefined}
               onGoBackOTPeriod={
-                isEditInProgress ? (targetNum) => revertOTPeriod(targetNum) : undefined
+                canUseEditControls ? (targetNum) => revertOTPeriod(targetNum) : undefined
               }
               getPlayerHref={
                 playerHrefBuilder
@@ -612,7 +634,6 @@ const GameSummaryTab = ({
             <LinescoreCard
               game={game}
               isFinal={isFinal}
-              isEditMode={isEditMode}
               busy={busy}
               liveAwayScore={liveAwayScore}
               liveHomeScore={liveHomeScore}
@@ -632,6 +653,9 @@ const GameSummaryTab = ({
                 (game.current_period !== PERIOD.THIRD || liveAwayScore !== liveHomeScore)
               }
               onStartGame={editable ? openStartGameModal : undefined}
+              onAutofillGame={
+                canAutofillNhlGame ? () => setNhlAutofillModalOpen(true) : undefined
+              }
               onReschedule={editable ? () => updateStatus('postponed') : undefined}
               onCancel={editable ? () => updateStatus('cancelled') : undefined}
               onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
@@ -651,18 +675,7 @@ const GameSummaryTab = ({
                     }
                   : undefined
               }
-              onFinishEditing={editable ? () => setIsEditMode(false) : undefined}
               onDownloadScoreCard={() => setScoreImageOpen(true)}
-              onEnterEditMode={
-                editable
-                  ? () => {
-                      setIsEditMode(true);
-                      setEndGameReadyForStars(false);
-                      if (!game.current_period) revertToEditMode(lastPlayedPeriod);
-                    }
-                  : undefined
-              }
-              onExitEditMode={editable ? () => setIsEditMode(false) : undefined}
             />
 
             {/* ── Shots breakdown card ── */}
@@ -755,12 +768,15 @@ const GameSummaryTab = ({
               </Card>
             )}
 
-            {showGoalieSwitchReport && <GoalieSwitchReportCard game={game} />}
+            {showGoalieSwitchReport && (
+              <GoalieSwitchReportCard game={game} />
+            )}
 
             {/* ── Game Info card ── */}
             <GameInfoCard
               game={game}
               busy={busy}
+              useLocalTimezone={useLocalTimezone}
               updateGameInfo={
                 editable && (isEditMode || game.status === 'scheduled') ? updateGameInfo : undefined
               }
@@ -816,6 +832,15 @@ const GameSummaryTab = ({
         />
       )}
 
+      {canAutofillNhlGame && (
+        <NhlGameAutofillModal
+          open={nhlAutofillModalOpen}
+          game={game}
+          onClose={() => setNhlAutofillModalOpen(false)}
+          onAutofillChange={onGameAutofillChange}
+        />
+      )}
+
       {/* ── 3 Stars modal ── */}
       {editable && (
         <ThreeStarsModal
@@ -852,7 +877,6 @@ const GameSummaryTab = ({
             const ok = await endGame(payload);
             if (ok) {
               setEndGameReadyForStars(false);
-              setIsEditMode(false);
             }
             return ok;
           }}
@@ -938,6 +962,30 @@ const GameSummaryTab = ({
               setConfirmDeleteOpen(false);
             }
           }}
+        />
+      )}
+
+      {/* ── Delete Goal confirm ── */}
+      {editable && confirmDeleteGoal && (
+        <ConfirmModal
+          open={!!confirmDeleteGoal}
+          title="Delete Goal"
+          body={`Delete the ${
+            confirmDeleteGoal.team_id === game.away_team.id ? game.away_team.code : game.home_team.code
+          } goal by ${formatPlayerName(
+            confirmDeleteGoal.scorer_first_name,
+            confirmDeleteGoal.scorer_last_name,
+          )}${
+            confirmDeleteGoal.period_time
+              ? ` at ${PERIOD_TITLE_LABEL[confirmDeleteGoal.period] ?? confirmDeleteGoal.period} ${confirmDeleteGoal.period_time}`
+              : ''
+          }? This cannot be undone.`}
+          confirmLabel="Delete"
+          confirmIcon="delete"
+          variant="danger"
+          busy={deletingGoal}
+          onCancel={() => setConfirmDeleteGoal(null)}
+          onConfirm={handleConfirmDeleteGoal}
         />
       )}
     </>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useMobileTabs } from '@/context/MobileTabsContext';
+import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './PageHeader.module.scss';
 
@@ -10,6 +11,7 @@ const EXACT_TITLES: Record<string, string> = {
   '/admin/users': 'Users',
   '/dashboard': 'Dashboard',
   '/games': 'Games',
+  '/settings': 'Settings',
 };
 
 const getTitle = (pathname: string): string => {
@@ -17,6 +19,8 @@ const getTitle = (pathname: string): string => {
   if (/\/admin\/leagues\/[^/]+\/teams\/[^/]+\/players\/[^/]+/.test(pathname))
     return 'Player Details';
   if (/\/admin\/leagues\/[^/]+\/teams\//.test(pathname)) return 'Team Details';
+  if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/playoffs\//.test(pathname))
+    return 'Series Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\/[^/]+\/games\//.test(pathname)) return 'Game Details';
   if (/\/admin\/leagues\/[^/]+\/seasons\//.test(pathname)) return 'Season Details';
   if (/\/admin\/leagues\/[^/]+/.test(pathname)) return 'League Details';
@@ -55,6 +59,8 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
   const routePrefix = routeTitle.split(' ')[0]; // "League Details" → "League"
   const mobileTabTitle = activeTabLabel ? `${routePrefix} ${activeTabLabel}` : null;
   const title = routeTitle;
+  const showAdminPanelButton = user?.role === 'admin' && !pathname.startsWith('/admin');
+  const showUserViewButton = user?.role === 'admin' && pathname.startsWith('/admin');
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -95,6 +101,30 @@ const PageHeader = ({ onMenuToggle, mobileTitleLeftRef }: PageHeaderProps) => {
         </div>
 
         <div className={styles.right}>
+          {showUserViewButton && (
+            <Button
+              variant="ghost"
+              intent="neutral"
+              icon="apps"
+              iconHeight="button"
+              className={styles.adminPanelButton}
+              aria-label="User View"
+              tooltip="User View"
+              onClick={() => navigate('/dashboard')}
+            />
+          )}
+          {showAdminPanelButton && (
+            <Button
+              variant="ghost"
+              intent="neutral"
+              icon="shield"
+              iconHeight="button"
+              className={styles.adminPanelButton}
+              aria-label="Admin Panel"
+              tooltip="Admin Panel"
+              onClick={() => navigate('/admin/leagues')}
+            />
+          )}
           {user && (
             <div
               className={styles.profileChip}

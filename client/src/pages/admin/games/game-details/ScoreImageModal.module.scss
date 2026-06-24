@@ -3,185 +3,187 @@
 
 // ── Upload zone ───────────────────────────────────────────────────────────────
 
-.uploadAreaWrap {
-  display: flex;
-  justify-content: center;
-}
-
-.uploadArea {
-  // Height drives the size; width is derived from the hero aspect ratio (1440 × 1307).
-  // Default (with form): 36vh keeps total modal height reasonable.
-  height: 36vh;
-  width: calc(36vh * (1440 / 1307));
-
-  // When there is no form (game-context download), restore the original larger height.
-  &.uploadAreaLarge {
-    height: 48vh;
-    width: calc(48vh * (1440 / 1307));
+.upload {
+  &AreaWrap {
+    display: flex;
+    justify-content: center;
   }
-  max-width: 100%;
-  flex-shrink: 0;
-  border-radius: $radius-md;
-  overflow: hidden;
-}
 
-.uploadLabel {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: $space-sm;
-  width: 100%;
-  height: 100%;
-  background: $bg-input;
-  border: 1.5px dashed $border;
-  border-radius: $radius-md;
-  color: $text-dim;
-  cursor: pointer;
-  padding: $space-md;
-  text-align: center;
-  transition:
-    border-color $transition-base,
-    color $transition-base;
+  &Area {
+    // Height drives the size; width is derived from the hero aspect ratio (1440 × 1307).
+    // Default (with form): 36vh keeps total modal height reasonable.
+    height: 36vh;
+    width: calc(36vh * (1440 / 1307));
 
-  &:hover {
-    border-color: $accent;
-    color: $text-bright;
+    // When there is no form (game-context download), restore the original larger height.
+    &.uploadAreaLarge {
+      height: 48vh;
+      width: calc(48vh * (1440 / 1307));
+    }
+    max-width: 100%;
+    flex-shrink: 0;
+    border-radius: $radius-md;
+    overflow: hidden;
   }
-}
 
-.uploadInput {
-  display: none;
-}
+  &Label {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $space-sm;
+    width: 100%;
+    height: 100%;
+    background: $bg-input;
+    border: 1.5px dashed $border;
+    border-radius: $radius-md;
+    color: $text-dim;
+    cursor: pointer;
+    padding: $space-md;
+    text-align: center;
+    transition:
+      border-color $transition-base,
+      color $transition-base;
 
-.uploadLabelPrimary {
-  font-size: $font-body;
-  font-weight: 600;
-  color: $text-body;
-}
-
-.uploadLabelSub {
-  font-size: $font-base;
-  color: $text-dim;
-}
-
-.uploadPreview {
-  position: relative;
-  width: 100%;
-  height: 100%;
-  border-radius: $radius-md;
-  overflow: hidden;
-  cursor: grab;
-  user-select: none;
-}
-
-.uploadPreviewDragging {
-  cursor: grabbing;
-}
-
-.uploadPreviewImg {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  // objectPosition and transform are set via inline style
-  pointer-events: none;
-  user-select: none;
-  transition: transform 0.1s ease;
-}
-
-.uploadClear {
-  position: absolute;
-  top: $space-sm;
-  right: $space-sm;
-  z-index: 2;
-  width: 28px;
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  border-radius: 50%;
-  color: #fff;
-  font-size: 13px;
-  cursor: pointer;
-  transition: background $transition-base;
-
-  &:hover {
-    background: rgba(239, 68, 68, 0.85);
+    &:hover {
+      border-color: $accent;
+      color: $text-bright;
+    }
   }
-}
 
-.uploadZoomBar {
-  position: absolute;
-  bottom: $space-md;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: 6px 14px;
-  background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
-}
+  &Input {
+    display: none;
+  }
 
-.uploadZoomIcon {
-  color: rgba(255, 255, 255, 0.75);
-  font-size: 16px;
-  line-height: 1;
-  font-weight: 300;
-  user-select: none;
-}
+  &LabelPrimary {
+    font-size: $font-body;
+    font-weight: 600;
+    color: $text-body;
+  }
 
-.uploadZoomSlider {
-  width: 120px;
-  height: 4px;
-  appearance: none;
-  background: rgba(255, 255, 255, 0.25);
-  border-radius: 2px;
-  cursor: pointer;
-  outline: none;
+  &LabelSub {
+    font-size: $font-base;
+    color: $text-dim;
+  }
 
-  &::-webkit-slider-thumb {
+  &Preview {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: $radius-md;
+    overflow: hidden;
+    cursor: grab;
+    user-select: none;
+  }
+
+  &PreviewDragging {
+    cursor: grabbing;
+  }
+
+  &PreviewImg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    // objectPosition and transform are set via inline style
+    pointer-events: none;
+    user-select: none;
+    transition: transform 0.1s ease;
+  }
+
+  &Clear {
+    position: absolute;
+    top: $space-sm;
+    right: $space-sm;
+    z-index: 2;
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 50%;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background $transition-base;
+
+    &:hover {
+      background: rgba(239, 68, 68, 0.85);
+    }
+  }
+
+  &ZoomBar {
+    position: absolute;
+    bottom: $space-md;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: 6px 14px;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 999px;
+  }
+
+  &ZoomIcon {
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 16px;
+    line-height: 1;
+    font-weight: 300;
+    user-select: none;
+  }
+
+  &ZoomSlider {
+    width: 120px;
+    height: 4px;
     appearance: none;
-    width: 14px;
-    height: 14px;
-    border-radius: 50%;
-    background: #fff;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 2px;
     cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
-  }
+    outline: none;
 
-  &::-moz-range-thumb {
-    width: 14px;
-    height: 14px;
-    border: none;
-    border-radius: 50%;
-    background: #fff;
-    cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    &::-webkit-slider-thumb {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
+
+    &::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border: none;
+      border-radius: 50%;
+      background: #fff;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.4);
+    }
   }
 }
 
 // ── Downloaded score card HTML export ─────────────────────────────────────────
 
-.scoreCardExportShell {
-  position: fixed;
-  left: -10000px;
-  top: 0;
-  width: 1440px;
-  height: 2560px;
-  overflow: hidden;
-  pointer-events: none;
-  z-index: -1;
-}
-
 .scoreCardExport {
+  &Shell {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 1440px;
+    height: 2560px;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+  }
+
   position: relative;
   overflow: hidden;
   background:
@@ -207,216 +209,218 @@
   color: #f8fafc;
 }
 
-.scoreCardTopBar {
-  height: 178px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 30px;
-  padding: 0 170px;
-  box-sizing: border-box;
-}
-
-.scoreCardTopLine {
-  height: 3px;
-  background: linear-gradient(90deg, transparent, rgba(248, 250, 252, 0.74));
-
-  &:last-child {
-    background: linear-gradient(90deg, rgba(248, 250, 252, 0.74), transparent);
-  }
-}
-
-.scoreCardEvent {
-  display: flex;
-  align-items: baseline;
-  gap: 18px;
-  white-space: nowrap;
-  text-transform: uppercase;
-  letter-spacing: -0.02em;
-}
-
-.scoreCardEventMuted {
-  max-width: 370px;
-  overflow: hidden;
-  color: #aeb4bd;
-  font-size: 54px;
-  font-weight: 900;
-  text-overflow: ellipsis;
-}
-
-.scoreCardEventMain {
-  color: #fff;
-  font-size: 62px;
-  font-weight: 950;
-}
-
-.scoreCardEventYear {
-  color: #cbd5e1;
-  font-size: 33px;
-  font-weight: 800;
-}
-
-.scoreCardHero {
-  position: relative;
-  height: 1250px;
-  overflow: hidden;
-  background:
-    radial-gradient(ellipse 78% 106% at 4% 50%, var(--away-primary), transparent 76%),
-    radial-gradient(ellipse 78% 106% at 96% 50%, var(--home-primary), transparent 76%), #0f172a;
-}
-
-.scoreCardHeroImg {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: var(--hero-x) var(--hero-y);
-  transform: scale(var(--hero-zoom));
-  transform-origin: var(--hero-x) var(--hero-y);
-}
-
-.scoreCardHeroShade {
-  position: absolute;
-  inset: 0;
-  background:
-    linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 35%, rgba(0, 0, 0, 0.18)),
-    linear-gradient(90deg, rgba(0, 0, 0, 0.18), transparent 35%, rgba(0, 0, 0, 0.18));
-}
-
-.scoreCardHeroFallback {
-  position: relative;
-  isolation: isolate;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  color: rgba(248, 250, 252, 0.28);
-  font-size: 140px;
-  font-weight: 950;
-
-  > span {
-    position: relative;
-    z-index: 2;
-    color: rgba(248, 250, 252, 0.34);
-    text-shadow: 0 18px 52px rgba(0, 0, 0, 0.42);
+.scoreCard {
+  &TopBar {
+    height: 178px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 30px;
+    padding: 0 170px;
+    box-sizing: border-box;
   }
 
-  > .scoreCardLogoImg,
-  > .scoreCardLogoPlaceholder {
-    position: absolute;
-    top: 50%;
-    z-index: 0;
-    width: auto;
-    height: 100%;
-    max-width: none;
-    opacity: 0.22;
-    filter: saturate(0.85) contrast(1.08) drop-shadow(0 34px 54px rgba(0, 0, 0, 0.28));
-    mix-blend-mode: screen;
-    transform: translateY(-50%);
-  }
-
-  > .scoreCardLogoPlaceholder {
-    width: auto;
-    aspect-ratio: 1;
-    font-size: 220px;
-  }
-
-  > :first-child {
-    left: 0;
-    transform: translate(-50%, -50%);
-  }
-
-  > :last-child {
-    right: 0;
-    transform: translate(50%, -50%);
-  }
-}
-
-.scoreCardHeroText {
-  position: absolute;
-  left: 90px;
-  right: 90px;
-  bottom: 88px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 18px;
-  color: #fff;
-  text-align: center;
-  text-shadow: 0 8px 36px rgba(0, 0, 0, 0.72);
-  text-transform: uppercase;
-
-  strong {
-    font-size: 96px;
-    font-weight: 950;
-    line-height: 0.95;
-  }
-
-  span {
-    color: rgba(241, 245, 249, 0.88);
-    font-size: 42px;
-    font-weight: 700;
-  }
-}
-
-.scoreCardScoreRibbon {
-  position: relative;
-  z-index: 1;
-  height: 98px;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
-  align-items: center;
-  gap: 44px;
-  padding: 0 52px;
-  box-sizing: border-box;
-  box-shadow:
-    0 -1px 0 var(--league-band, #111214),
-    0 1px 0 var(--league-band, #111214);
-
-  span {
+  &TopLine {
     height: 3px;
-    background: linear-gradient(90deg, transparent, rgba(248, 250, 252, 0.72));
+    background: linear-gradient(90deg, transparent, rgba(248, 250, 252, 0.74));
 
     &:last-child {
-      background: linear-gradient(90deg, rgba(248, 250, 252, 0.72), transparent);
+      background: linear-gradient(90deg, rgba(248, 250, 252, 0.74), transparent);
     }
   }
 
-  strong {
-    color: #fff;
-    font-size: 42px;
-    font-weight: 950;
-    letter-spacing: 0.34em;
-    text-transform: uppercase;
+  &Event {
+    display: flex;
+    align-items: baseline;
+    gap: 18px;
     white-space: nowrap;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
   }
-}
 
-.scoreCardScoreGrid {
-  height: 520px;
-  display: grid;
-  grid-template-columns: 350px 1fr 350px;
-  background: linear-gradient(90deg, var(--away-primary) 0 25%, transparent 25% 75%, var(--home-primary) 75%), #f8fafc;
-}
+  &EventMuted {
+    max-width: 370px;
+    overflow: hidden;
+    color: #aeb4bd;
+    font-size: 54px;
+    font-weight: 900;
+    text-overflow: ellipsis;
+  }
 
-.scoreCardTeamPanel {
-  position: relative;
-  overflow: hidden;
+  &EventMain {
+    color: #fff;
+    font-size: 62px;
+    font-weight: 950;
+  }
 
-  &::before {
-    content: "";
+  &EventYear {
+    color: #cbd5e1;
+    font-size: 33px;
+    font-weight: 800;
+  }
+
+  &Hero {
+    position: relative;
+    height: 1250px;
+    overflow: hidden;
+    background:
+      radial-gradient(ellipse 78% 106% at 4% 50%, var(--away-primary), transparent 76%),
+      radial-gradient(ellipse 78% 106% at 96% 50%, var(--home-primary), transparent 76%), #0f172a;
+  }
+
+  &HeroImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: var(--hero-x) var(--hero-y);
+    transform: scale(var(--hero-zoom));
+    transform-origin: var(--hero-x) var(--hero-y);
+  }
+
+  &HeroShade {
     position: absolute;
     inset: 0;
-    background: radial-gradient(circle at center, rgba(255, 255, 255, 0.16), transparent 58%), rgba(0, 0, 0, 0.08);
+    background:
+      linear-gradient(180deg, rgba(0, 0, 0, 0.12), transparent 35%, rgba(0, 0, 0, 0.18)),
+      linear-gradient(90deg, rgba(0, 0, 0, 0.18), transparent 35%, rgba(0, 0, 0, 0.18));
   }
-}
 
-.scoreCardTeamPanelAway {
-  background: var(--away-primary);
-}
+  &HeroFallback {
+    position: relative;
+    isolation: isolate;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    color: rgba(248, 250, 252, 0.28);
+    font-size: 140px;
+    font-weight: 950;
 
-.scoreCardTeamPanelHome {
-  background: var(--home-primary);
+    > span {
+      position: relative;
+      z-index: 2;
+      color: rgba(248, 250, 252, 0.34);
+      text-shadow: 0 18px 52px rgba(0, 0, 0, 0.42);
+    }
+
+    > .scoreCardLogoImg,
+    > .scoreCardLogoPlaceholder {
+      position: absolute;
+      top: 50%;
+      z-index: 0;
+      width: auto;
+      height: 100%;
+      max-width: none;
+      opacity: 0.22;
+      filter: saturate(0.85) contrast(1.08) drop-shadow(0 34px 54px rgba(0, 0, 0, 0.28));
+      mix-blend-mode: screen;
+      transform: translateY(-50%);
+    }
+
+    > .scoreCardLogoPlaceholder {
+      width: auto;
+      aspect-ratio: 1;
+      font-size: 220px;
+    }
+
+    > :first-child {
+      left: 0;
+      transform: translate(-50%, -50%);
+    }
+
+    > :last-child {
+      right: 0;
+      transform: translate(50%, -50%);
+    }
+  }
+
+  &HeroText {
+    position: absolute;
+    left: 90px;
+    right: 90px;
+    bottom: 88px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 18px;
+    color: #fff;
+    text-align: center;
+    text-shadow: 0 8px 36px rgba(0, 0, 0, 0.72);
+    text-transform: uppercase;
+
+    strong {
+      font-size: 96px;
+      font-weight: 950;
+      line-height: 0.95;
+    }
+
+    span {
+      color: rgba(241, 245, 249, 0.88);
+      font-size: 42px;
+      font-weight: 700;
+    }
+  }
+
+  &ScoreRibbon {
+    position: relative;
+    z-index: 1;
+    height: 98px;
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 44px;
+    padding: 0 52px;
+    box-sizing: border-box;
+    box-shadow:
+      0 -1px 0 var(--league-band, #111214),
+      0 1px 0 var(--league-band, #111214);
+
+    span {
+      height: 3px;
+      background: linear-gradient(90deg, transparent, rgba(248, 250, 252, 0.72));
+
+      &:last-child {
+        background: linear-gradient(90deg, rgba(248, 250, 252, 0.72), transparent);
+      }
+    }
+
+    strong {
+      color: #fff;
+      font-size: 42px;
+      font-weight: 950;
+      letter-spacing: 0.34em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+  }
+
+  &ScoreGrid {
+    height: 520px;
+    display: grid;
+    grid-template-columns: 350px 1fr 350px;
+    background: linear-gradient(90deg, var(--away-primary) 0 25%, transparent 25% 75%, var(--home-primary) 75%), #f8fafc;
+  }
+
+  &TeamPanel {
+    position: relative;
+    overflow: hidden;
+
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(255, 255, 255, 0.16), transparent 58%), rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  &TeamPanelAway {
+    background: var(--away-primary);
+  }
+
+  &TeamPanelHome {
+    background: var(--home-primary);
+  }
 }
 
 .scoreCardLogoImg,
@@ -429,280 +433,286 @@
   filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.34));
 }
 
-.scoreCardTeamPanel {
-  .scoreCardLogoImg,
-  .scoreCardLogoPlaceholder {
-    position: absolute;
-    top: 94px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
-}
-
-.scoreCardLogoPlaceholder {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  font-size: 58px;
-  font-weight: 950;
-}
-
-.scoreCardTeamName {
-  position: absolute;
-  top: 366px;
-  left: 34px;
-  right: 34px;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  color: rgba(255, 255, 255, 0.82);
-  text-align: center;
-  text-transform: uppercase;
-
-  span {
-    font-size: 23px;
-    font-weight: 900;
-    letter-spacing: 0.18em;
-    line-height: 1;
-    overflow-wrap: anywhere;
+.scoreCard {
+  &TeamPanel {
+    .scoreCardLogoImg,
+    .scoreCardLogoPlaceholder {
+      position: absolute;
+      top: 94px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
   }
 
-  strong {
-    color: #fff;
-    font-size: 34px;
-    font-weight: 950;
-    letter-spacing: 0.08em;
-    line-height: 1;
-    overflow-wrap: anywhere;
-  }
-}
-
-.scoreCardScorePanel {
-  position: relative;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr);
-  align-items: center;
-  z-index: 1;
-  margin: 0 -1px;
-  background:
-    linear-gradient(90deg, transparent calc(50% - 3px), rgba(239, 68, 68, 0.88) calc(50% - 3px) calc(50% + 3px), transparent calc(50% + 3px)),
-    radial-gradient(circle at center, rgba(56, 189, 248, 0.1), transparent 24%), #f8fafc;
-
-}
-
-.scoreCardScoreBlock {
-  position: relative;
-  height: 100%;
-  display: grid;
-  min-width: 0;
-  place-items: center;
-
-  strong {
-    position: relative;
-    z-index: 1;
-    color: #151515;
-    font-size: 210px;
-    font-weight: 950;
-    line-height: 1;
-    text-align: center;
-  }
-}
-
-.scoreCardWinnerMarker {
-  position: absolute;
-  top: -1px;
-  left: 50%;
-  z-index: 2;
-  width: 64px;
-  height: 46px;
-  background: var(--league-band, #111214);
-  clip-path: polygon(0 0, 100% 0, 50% 100%);
-  transform: translateX(-50%);
-}
-
-.scoreCardWinnerScore {
-  color: #000 !important;
-  text-shadow: 0 0 0 #000;
-}
-
-.scoreCardResultBadge {
-  position: relative;
-  isolation: isolate;
-  width: 136px;
-  height: 136px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  justify-self: center;
-  box-sizing: border-box;
-  border: 6px solid #1769a8;
-  border-radius: 50%;
-  background: transparent;
-  color: #111827;
-  font-size: 39px;
-  font-weight: 950;
-  letter-spacing: 0.04em;
-  line-height: 1;
-  text-transform: uppercase;
-  // box-shadow:
-  //   0 0 0 7px rgba(255, 255, 255, 0.75),
-  //   0 10px 24px rgba(15, 23, 42, 0.18);
-
-  &::before {
-    content: "";
-    position: absolute;
-    top: -6px;
-    bottom: -6px;
-    left: 50%;
-    z-index: 1;
-    width: 6px;
-    background: rgba(239, 68, 68, 0.95);
-    transform: translateX(-50%);
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    z-index: 2;
-    width: 26px;
-    height: 26px;
+  &LogoPlaceholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
     border-radius: 50%;
-    background: #1769a8;
-    transform: translate(-50%, -50%);
-  }
-
-  .scoreCardResultLabel {
-    position: relative;
-    z-index: 3;
-    padding: 10px 13px;
-    border-radius: 12px;
-    background: #f8fafc;
-    font-size: 45px;
-    text-shadow:
-      2px 0 #f8fafc,
-      -2px 0 #f8fafc,
-      0 2px #f8fafc,
-      0 -2px #f8fafc,
-      0 0 8px #f8fafc;
-  }
-}
-
-.scoreCardResultBadgeOvertime {
-  &::after {
-    display: none;
-  }
-
-  .scoreCardResultLabel {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr);
-    width: 96px;
-    place-items: center;
-    background: transparent;
-    font-size: 42px;
-    letter-spacing: 0;
-    text-shadow: none;
-  }
-}
-
-.scoreCardResultLetter {
-  padding: 0;
-  background: transparent;
-  border-radius: 0;
-  font-weight: 950;
-  text-shadow: none;
-  transform-origin: center;
-
-  &:first-child {
-    justify-self: end;
-  }
-
-  &:last-child {
-    grid-column: 3;
-    justify-self: start;
-  }
-}
-
-.scoreCardResultLetterWide {
-  transform: scaleX(1.18);
-  transform-origin: right center;
-}
-
-.scoreCardSeriesBar {
-  height: 98px;
-  display: grid;
-  grid-template-columns: 350px minmax(0, 1fr) 350px;
-  align-items: center;
-  gap: 0;
-  padding: 0;
-  box-sizing: border-box;
-  transform: translateY(-1px);
-
-  strong {
-    color: #f8fafc;
-    font-size: 33px;
+    font-size: 58px;
     font-weight: 950;
-    letter-spacing: 0.28em;
+  }
+
+  &TeamName {
+    position: absolute;
+    top: 366px;
+    left: 34px;
+    right: 34px;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    color: rgba(255, 255, 255, 0.82);
     text-align: center;
     text-transform: uppercase;
-    white-space: nowrap;
+
+    span {
+      font-size: 23px;
+      font-weight: 900;
+      letter-spacing: 0.18em;
+      line-height: 1;
+      overflow-wrap: anywhere;
+    }
+
+    strong {
+      color: #fff;
+      font-size: 34px;
+      font-weight: 950;
+      letter-spacing: 0.08em;
+      line-height: 1;
+      overflow-wrap: anywhere;
+    }
   }
-}
 
-.scoreCardSeriesDots {
-  display: flex;
-  justify-content: center;
-  gap: 28px;
+  &ScorePanel {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 0 minmax(0, 1fr);
+    align-items: center;
+    z-index: 1;
+    margin: 0 -1px;
+    background:
+      linear-gradient(
+        90deg,
+        transparent calc(50% - 3px),
+        rgba(239, 68, 68, 0.88) calc(50% - 3px) calc(50% + 3px),
+        transparent calc(50% + 3px)
+      ),
+      radial-gradient(circle at center, rgba(56, 189, 248, 0.1), transparent 24%), #f8fafc;
+  }
 
-  span {
-    width: 32px;
-    height: 32px;
+  &ScoreBlock {
+    position: relative;
+    height: 100%;
+    display: grid;
+    min-width: 0;
+    place-items: center;
+
+    strong {
+      position: relative;
+      z-index: 1;
+      color: #151515;
+      font-size: 210px;
+      font-weight: 950;
+      line-height: 1;
+      text-align: center;
+    }
+  }
+
+  &WinnerMarker {
+    position: absolute;
+    top: -1px;
+    left: 50%;
+    z-index: 2;
+    width: 64px;
+    height: 46px;
+    background: var(--league-band, #111214);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    transform: translateX(-50%);
+  }
+
+  &WinnerScore {
+    color: #000 !important;
+    text-shadow: 0 0 0 #000;
+  }
+
+  &ResultBadge {
+    position: relative;
+    isolation: isolate;
+    width: 136px;
+    height: 136px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    justify-self: center;
     box-sizing: border-box;
-    border: 3px solid rgba(255, 255, 255, 0.9);
+    border: 6px solid #0d78c0;
     border-radius: 50%;
     background: transparent;
+    color: #111827;
+    font-size: 39px;
+    font-weight: 950;
+    letter-spacing: 0.04em;
+    line-height: 1;
+    text-transform: uppercase;
+    // box-shadow:
+    //   0 0 0 7px rgba(255, 255, 255, 0.75),
+    //   0 10px 24px rgba(15, 23, 42, 0.18);
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: -6px;
+      bottom: -6px;
+      left: 50%;
+      z-index: 1;
+      width: 6px;
+      background: rgba(239, 68, 68, 0.95);
+      transform: translateX(-50%);
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: 2;
+      width: 26px;
+      height: 26px;
+      border-radius: 50%;
+      background: #0d78c0;
+      transform: translate(-50%, -50%);
+    }
+
+    .scoreCardResultLabel {
+      position: relative;
+      z-index: 3;
+      padding: 10px 13px;
+      border-radius: 12px;
+      background: #f8fafc;
+      font-size: 45px;
+      text-shadow:
+        2px 0 #f8fafc,
+        -2px 0 #f8fafc,
+        0 2px #f8fafc,
+        0 -2px #f8fafc,
+        0 0 8px #f8fafc;
+    }
   }
-}
 
-.scoreCardSeriesDotFilled {
-  border-color: #22c55e !important;
-  background: #22c55e !important;
-}
+  &ResultBadgeOvertime {
+    &::after {
+      display: none;
+    }
 
-.scoreCardFooter {
-  height: 416px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 34px;
-  padding: 0 80px;
-  box-sizing: border-box;
-  color: #111827;
-  text-transform: uppercase;
-
-  span {
-    padding-left: 34px;
-    border-left: 2px solid rgba(15, 23, 42, 0.22);
-    font-size: 30px;
-    font-weight: 800;
-    letter-spacing: 0.02em;
+    .scoreCardResultLabel {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 10px minmax(0, 1fr);
+      width: 96px;
+      place-items: center;
+      background: transparent;
+      font-size: 42px;
+      letter-spacing: 0;
+      text-shadow: none;
+    }
   }
-}
 
-.scoreCardFooterLeagueCode {
-  font-size: 48px;
-  font-weight: 950;
-  letter-spacing: -0.03em;
-}
+  &ResultLetter {
+    padding: 0;
+    background: transparent;
+    border-radius: 0;
+    font-weight: 950;
+    text-shadow: none;
+    transform-origin: center;
 
-.scoreCardFooterLeagueLogo {
-  width: 196px;
-  height: 126px;
-  object-fit: contain;
-  filter: drop-shadow(0 12px 12px rgba(15, 23, 42, 0.16));
+    &:first-child {
+      justify-self: end;
+    }
+
+    &:last-child {
+      grid-column: 3;
+      justify-self: start;
+    }
+  }
+
+  &ResultLetterWide {
+    transform: scaleX(1.18);
+    transform-origin: right center;
+  }
+
+  &SeriesBar {
+    height: 98px;
+    display: grid;
+    grid-template-columns: 350px minmax(0, 1fr) 350px;
+    align-items: center;
+    gap: 0;
+    padding: 0;
+    box-sizing: border-box;
+    transform: translateY(-1px);
+
+    strong {
+      color: #f8fafc;
+      font-size: 33px;
+      font-weight: 950;
+      letter-spacing: 0.28em;
+      text-align: center;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+  }
+
+  &SeriesDots {
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+
+    span {
+      width: 32px;
+      height: 32px;
+      box-sizing: border-box;
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      background: transparent;
+    }
+  }
+
+  &SeriesDotFilled {
+    border-color: #22c55e !important;
+    background: #22c55e !important;
+  }
+
+  &Footer {
+    height: 416px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 34px;
+    padding: 0 80px;
+    box-sizing: border-box;
+    color: #111827;
+    text-transform: uppercase;
+
+    span {
+      padding-left: 34px;
+      border-left: 2px solid rgba(15, 23, 42, 0.22);
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+    }
+  }
+
+  &FooterLeagueCode {
+    font-size: 48px;
+    font-weight: 950;
+    letter-spacing: -0.03em;
+  }
+
+  &FooterLeagueLogo {
+    width: 196px;
+    height: 126px;
+    object-fit: contain;
+    filter: drop-shadow(0 12px 12px rgba(15, 23, 42, 0.16));
+  }
 }
 
 // ── Hidden canvas (used only for PNG export) ─────────────────────────────────
@@ -717,110 +727,114 @@
 
 // ── Image options form ────────────────────────────────────────────────────────
 
-.formSection {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  padding-top: $space-lg;
-  border-top: 1px solid $border;
-  margin-top: $space-lg;
-}
+.form {
+  &Section {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    padding-top: $space-lg;
+    border-top: 1px solid $border;
+    margin-top: $space-lg;
+  }
 
-.formRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-md;
-}
+  &Row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-md;
+  }
 
-.formField {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
+  &Field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 
-.formLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.formInput {
-  background: $bg-input;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  color: $text-body;
-  font-size: $font-base;
-  font-family: inherit;
-  height: 42px;
-  padding: 0 $space-md;
-  box-sizing: border-box;
-  outline: none;
-  transition: border-color $transition-base;
-
-  &::placeholder {
+  &Label {
+    font-size: $font-xs;
+    font-weight: 600;
     color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
   }
 
-  &:focus {
-    border-color: $accent;
+  &Input {
+    background: $bg-input;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    color: $text-body;
+    font-size: $font-base;
+    font-family: inherit;
+    height: 42px;
+    padding: 0 $space-md;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color $transition-base;
+
+    &::placeholder {
+      color: $text-dim;
+    }
+
+    &:focus {
+      border-color: $accent;
+    }
+
+    &[type="number"] {
+      appearance: textfield;
+    }
+
+    &[type="number"]::-webkit-outer-spin-button,
+    &[type="number"]::-webkit-inner-spin-button {
+      appearance: none;
+      margin: 0;
+    }
   }
 
-  &[type="number"] {
-    appearance: textfield;
+  &Row3 {
+    display: grid;
+    grid-template-columns: 1fr 110px 110px;
+    gap: $space-md;
   }
 
-  &[type="number"]::-webkit-outer-spin-button,
-  &[type="number"]::-webkit-inner-spin-button {
-    appearance: none;
-    margin: 0;
+  &CheckboxRow {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-sm;
+    cursor: pointer;
+    width: fit-content;
+
+    &:hover .formCheckboxLabel {
+      color: $text-bright;
+    }
   }
-}
 
-.formRow3 {
-  display: grid;
-  grid-template-columns: 1fr 110px 110px;
-  gap: $space-md;
-}
-
-.formCheckboxRow {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-sm;
-  cursor: pointer;
-  width: fit-content;
-
-  &:hover .formCheckboxLabel {
-    color: $text-bright;
+  &CheckboxLabel {
+    font-size: $font-base;
+    color: $text-body;
+    user-select: none;
   }
 }
 
-.formCheckboxLabel {
-  font-size: $font-base;
-  color: $text-body;
-  user-select: none;
-}
+.playoff {
+  &Section {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    padding: $space-md;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $border;
+    border-radius: $radius-md;
+  }
 
-.playoffSection {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  padding: $space-md;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid $border;
-  border-radius: $radius-md;
-}
+  &FieldsRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
+    gap: $space-md;
+    align-items: end;
+  }
 
-.playoffFieldsRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1.8fr) repeat(3, minmax(0, 1fr));
-  gap: $space-md;
-  align-items: end;
-}
-
-.playoffRoundField {
-  min-width: 0;
+  &RoundField {
+    min-width: 0;
+  }
 }
 
 @media (max-width: 960px) {

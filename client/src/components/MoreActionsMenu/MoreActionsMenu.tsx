@@ -17,11 +17,19 @@ interface Props {
   disabled?: boolean;
   /** Size of the trigger button. Defaults to 'sm'. */
   size?: 'sm' | 'md';
+  /** Visual style of the trigger button. Defaults to 'outlined'. */
+  variant?: 'filled' | 'outlined' | 'ghost';
   /** Extra className forwarded to the trigger Button (e.g. to override border-radius). */
   buttonClassName?: string;
 }
 
-const MoreActionsMenu = ({ items, disabled = false, size = 'sm', buttonClassName }: Props) => {
+const MoreActionsMenu = ({
+  items,
+  disabled = false,
+  size = 'sm',
+  variant = 'outlined',
+  buttonClassName,
+}: Props) => {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
@@ -42,13 +50,13 @@ const MoreActionsMenu = ({ items, disabled = false, size = 'sm', buttonClassName
       ref={wrapperRef}
     >
       <Button
-        variant="outlined"
+        variant={variant}
         intent="neutral"
         icon="more_vert"
         size={size}
         tooltip="More actions"
         disabled={disabled}
-        className={buttonClassName}
+        className={[styles.trigger, buttonClassName].filter(Boolean).join(' ')}
         onClick={() => setOpen((o) => !o)}
       />
 

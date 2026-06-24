@@ -67,6 +67,31 @@ describe('Tabs – switching (uncontrolled)', () => {
     expect(screen.getByText('Alpha content')).toBeInTheDocument();
     expect(screen.queryByText('Gamma content')).not.toBeInTheDocument();
   });
+
+  it('keeps inactive tab content mounted when requested', () => {
+    render(
+      <Tabs
+        tabs={tabs}
+        keepMounted
+      />,
+    );
+
+    expect(screen.getByText('Alpha content')).toBeInTheDocument();
+    expect(screen.getByText('Beta content')).toBeInTheDocument();
+    expect(screen.getByText('Beta content').closest('[role="tabpanel"]')).toHaveAttribute(
+      'hidden',
+    );
+
+    fireEvent.click(screen.getByRole('tab', { name: 'Beta' }));
+
+    expect(screen.getByText('Alpha content')).toBeInTheDocument();
+    expect(screen.getByText('Alpha content').closest('[role="tabpanel"]')).toHaveAttribute(
+      'hidden',
+    );
+    expect(screen.getByText('Beta content').closest('[role="tabpanel"]')).not.toHaveAttribute(
+      'hidden',
+    );
+  });
 });
 
 describe('Tabs – onTabChange callback', () => {

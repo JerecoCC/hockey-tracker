@@ -28,7 +28,7 @@ jest.mock('@/pages/admin/seasons/GameFormModal', () => ({
   default: (props: { open: boolean; defaultDate?: string; teamContext?: { teamId: string } }) =>
     mockGameFormModal(props),
 }));
-jest.mock('@/pages/admin/seasons/GameListItem', () => {
+jest.mock('@/components/GameListItem', () => {
   interface MockGameListItemProps {
     awayTeam: { code: string };
     homeTeam: { code: string };

@@ -41,7 +41,7 @@ jest.mock('@/components/Field/Field', () => {
     label: string;
     placeholder?: string;
     disabled?: boolean;
-    options?: Array<{ value: string; label: string }>;
+    options?: Array<{ value: string; label: string; logo?: string; code?: string | null }>;
   }
 
   const MockField = (props: MockFieldProps) => (
@@ -89,7 +89,23 @@ const teams = [
   {
     id: 'team-sjs',
     name: 'San Jose Sharks',
+    code: 'SJS',
+    logo: null,
     league_id: 'league-1',
+  },
+  {
+    id: 'team-ana',
+    name: 'Anaheim Ducks',
+    code: 'ANA',
+    logo: '/ducks.png',
+    league_id: 'league-1',
+  },
+  {
+    id: 'team-bos',
+    name: 'Boston Bruins',
+    code: 'BOS',
+    logo: null,
+    league_id: 'league-2',
   },
 ] as unknown as TeamRecord[];
 
@@ -105,6 +121,75 @@ const seasons = [
 ] as unknown as SeasonRecord[];
 
 describe('StintEditModal', () => {
+  it('records a new stint with move-style defaults and jersey number', async () => {
+    const user = userEvent.setup();
+    const createStint = jest.fn().mockResolvedValue(true);
+
+    render(
+      <StintEditModal
+        open
+        stint={null}
+        teams={teams}
+        seasons={seasons}
+        history={[
+          {
+            id: 'stint-history',
+            player_id: 'player-kyle-masters',
+            team_id: 'team-sjs',
+            season_id: 'season-1',
+            jersey_number: 44,
+            is_prospect: false,
+            photo: null,
+            position: 'C',
+            acquisition_type: 'draft',
+            start_date: '2024-10-01',
+            end_date: null,
+            created_at: '2024-10-01T00:00:00.000Z',
+            team: {
+              id: 'team-sjs',
+              name: 'San Jose Sharks',
+              code: 'SJS',
+              logo: null,
+              primary_color: '#006d75',
+              text_color: '#ffffff',
+            },
+          } as PlayerStintRecord,
+        ]}
+        leagueId="league-1"
+        currentTeamId="team-sjs"
+        onClose={jest.fn()}
+        createStint={createStint}
+        updateStint={jest.fn()}
+      />,
+    );
+
+    expect(screen.getByLabelText('Acquisition Type')).toHaveValue('signing');
+    expect(screen.getByText('Team History')).toBeInTheDocument();
+    expect(screen.getAllByText('San Jose Sharks').length).toBeGreaterThan(0);
+    expect(
+      Array.from((screen.getByLabelText('Team') as HTMLSelectElement).options).map(
+        (option) => option.value,
+      ),
+    ).toEqual(['', 'team-ana']);
+
+    await user.selectOptions(screen.getByLabelText('Team'), 'team-ana');
+    await user.type(screen.getByLabelText('Start Date'), '2025-01-15');
+    await user.type(screen.getByLabelText('Jersey #'), '23');
+    await user.selectOptions(screen.getByLabelText('Position'), 'RW');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+
+    expect(createStint).toHaveBeenCalledWith(
+      expect.objectContaining({
+        team_id: 'team-ana',
+        season_id: 'season-1',
+        jersey_number: 23,
+        position: 'RW',
+        acquisition_type: 'signing',
+        start_date: '2025-01-15',
+      }),
+    );
+  });
+
   it('submits prospect status when editing a stint', async () => {
     const user = userEvent.setup();
     const updateStint = jest.fn().mockResolvedValue(true);
@@ -138,13 +223,21 @@ describe('StintEditModal', () => {
         }
         teams={teams}
         seasons={seasons}
+        leagueId="league-1"
+        currentTeamId="team-sjs"
         onClose={jest.fn()}
         createStint={jest.fn()}
         updateStint={updateStint}
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText('Roster Status'), 'prospect');
+    expect(
+      Array.from((screen.getByLabelText('Team') as HTMLSelectElement).options).map(
+        (option) => option.value,
+      ),
+    ).toEqual(['', 'team-sjs', 'team-ana']);
+
+    await user.click(screen.getByRole('button', { name: 'Prospect' }));
     await user.click(screen.getByRole('button', { name: 'Save' }));
 
     expect(updateStint).toHaveBeenCalledWith(

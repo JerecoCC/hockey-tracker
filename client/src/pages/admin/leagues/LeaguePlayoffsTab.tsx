@@ -2,15 +2,27 @@ import { useState } from 'react';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import BracketRulesModal from '../seasons/BracketRulesModal';
+import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
   leagueId: string;
   className?: string;
 }
+
+const inferBracketSizeFromSlots = (slots: BracketRuleSet['slots'] | undefined): number => {
+  const round1Matchups = new Set(
+    (slots ?? [])
+      .map((slot) => slot.slot_key.match(/^r1m(\d+)/)?.[1])
+      .filter((value): value is string => value !== undefined),
+  ).size;
+  return Math.max(4, round1Matchups * 2);
+};
 
 const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
   const { ruleSets, loading, deleteRuleSet } = useBracketRuleSets(leagueId);
@@ -35,56 +47,56 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
     setEditTarget(null);
   };
 
+  if (loading) return <LeaguePlayoffsTabSkeleton className={className} />;
+
   return (
     <>
-      <Card
-        className={className}
-        title="Playoff Rule Sets"
-        action={
-          <Button
-            icon="add"
-            size="sm"
-            onClick={openCreate}
-          >
-            New Rule Set
-          </Button>
-        }
-      >
-        {loading ? (
-          <p className={styles.emptyMsg}>Loading…</p>
-        ) : ruleSets.length === 0 ? (
-          <p className={styles.emptyMsg}>No rule sets yet. Create one to get started.</p>
-        ) : (
-          <ul className={styles.ruleSetList}>
-            {ruleSets.map((rs) => (
-              <li
-                key={rs.id}
-                className={styles.ruleSetItem}
-              >
-                <span className={styles.ruleSetName}>{rs.name}</span>
-                <div className={styles.ruleSetActions}>
-                  <Button
-                    variant="outlined"
-                    intent="neutral"
-                    icon="edit"
-                    size="sm"
-                    tooltip="Edit rule set"
-                    onClick={() => openEdit(rs)}
-                  />
-                  <Button
-                    variant="outlined"
-                    intent="danger"
-                    icon="delete"
-                    size="sm"
-                    tooltip="Delete rule set"
-                    onClick={() => setConfirmDelete(rs)}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+      <div className={styles.grid}>
+        <Card
+          className={[styles.col12, className].filter(Boolean).join(' ')}
+          title="Playoff Rule Sets"
+          action={
+            <Button
+              icon="add"
+              size="sm"
+              onClick={openCreate}
+            >
+              New Rule Set
+            </Button>
+          }
+        >
+          {ruleSets.length === 0 ? (
+            <p className={styles.emptyMsg}>No rule sets yet. Create one to get started.</p>
+          ) : (
+            <ul className={styles.ruleSetList}>
+              {ruleSets.map((rs) => (
+                <ListItem
+                  key={rs.id}
+                  hideImage
+                  name={rs.name}
+                  subtitle={`${inferBracketSizeFromSlots(rs.slots)}-team bracket`}
+                  actions={
+                    [
+                      {
+                        icon: 'edit',
+                        intent: 'neutral',
+                        tooltip: 'Edit rule set',
+                        onClick: () => openEdit(rs),
+                      },
+                      {
+                        icon: 'delete',
+                        intent: 'danger',
+                        tooltip: 'Delete rule set',
+                        onClick: () => setConfirmDelete(rs),
+                      },
+                    ] satisfies ListItemAction[]
+                  }
+                />
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
 
       <BracketRulesModal
         open={modalOpen}
@@ -114,5 +126,42 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
     </>
   );
 };
+
+export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
+  <div className={styles.grid}>
+    <Card
+      className={[styles.col12, className].filter(Boolean).join(' ')}
+      title="Playoff Rule Sets"
+      action={<TabActionSkeleton width="126px" />}
+      role="status"
+      aria-busy="true"
+      aria-label="Loading playoff rule sets"
+    >
+      <ul className={styles.ruleSetList}>
+        {Array.from({ length: 5 }, (_, index) => (
+          <li
+            key={index}
+            className={styles.ruleSetItem}
+          >
+            <span className={styles.ruleSetName}>
+              <Skeleton
+                type="text"
+                className={styles.tabSkeletonName}
+              />
+              <Skeleton
+                type="text"
+                className={styles.tabSkeletonMetaLine}
+              />
+            </span>
+            <span className={styles.tabSkeletonActions}>
+              <Skeleton type="circle" />
+              <Skeleton type="circle" />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  </div>
+);
 
 export default LeaguePlayoffsTab;

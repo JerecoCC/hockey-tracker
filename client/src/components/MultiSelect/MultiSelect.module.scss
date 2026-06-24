@@ -18,6 +18,7 @@
   border-radius: $radius-md;
   color: $text-body;
   font-size: $font-base;
+  height: 42px;
   min-height: 42px;
   padding: 6px $space-md 6px $space-lg;
   outline: none;
@@ -49,59 +50,95 @@
 
 .pills {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px;
   flex: 1;
   min-width: 0;
   align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 3px;
-  background: rgba($accent, 0.2);
-  border-radius: $radius-sm;
-  padding: 2px 4px 2px 8px;
-  font-size: $font-sm;
-  color: $text-bright;
-  font-weight: 500;
-  max-width: 180px;
-  flex-shrink: 0;
-}
-
-.pillLabel {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.pillRemove {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  color: inherit;
-  opacity: 0.65;
-  border-radius: 2px;
-  line-height: 1;
-  flex-shrink: 0;
-  transition: opacity $transition-fast;
-
-  &:hover {
-    opacity: 1;
+  &Tooltip {
+    flex: 0 0 auto;
   }
 
-  &:disabled {
-    cursor: not-allowed;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  background: rgba($accent, 0.2);
+  border-radius: $radius-sm;
+  padding: 2px 4px 2px 5px;
+  font-size: $font-sm;
+  color: $text-bright;
+  font-weight: 700;
+  max-width: 96px;
+  min-width: 0;
+  height: 26px;
+
+  &Label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &Logo {
+    width: 18px;
+    height: 18px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+  }
+
+  &NoLogo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: $radius-sm;
+    background: $border;
+    flex-shrink: 0;
+    color: $text-body;
+    font-size: 0.625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
+
+  &Remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.65;
+    border-radius: 2px;
+    line-height: 1;
+    flex-shrink: 0;
+    transition: opacity $transition-fast;
+
+    &:hover {
+      opacity: 1;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
   }
 }
 
 .searchInput {
-  flex: 1;
+  flex: 1 0 96px;
   min-width: 80px;
   background: transparent;
   border: none;
@@ -137,8 +174,8 @@
 // ── Dropdown menu ─────────────────────────────────────────────────────────────
 
 .menu {
-  // top, left, width are applied via inline style so the menu renders at
-  // position:fixed — prevents overflow:auto ancestors from clipping it.
+  // Positioned `fixed` with coordinates measured from the trigger so it overlays
+  // instead of growing/clipping inside an overflow card or modal.
   position: fixed;
   background: $bg-card;
   border: 1px solid $accent;
@@ -211,46 +248,48 @@
 }
 
 // Checkbox mark on the left of each option
-.optionCheck {
-  width: 18px;
-  height: 18px;
-  flex-shrink: 0;
-  border: 2px solid $border;
-  border-radius: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: $bg-card;
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
+.option {
+  &Check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border: 2px solid $border;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $bg-card;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
 
-  &.optionCheckSelected {
-    background: $text-bright;
-    border-color: $text-bright;
+    &.optionCheckSelected {
+      background: $text-bright;
+      border-color: $text-bright;
+    }
   }
-}
 
-.optionLogo {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-}
+  &Logo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+  }
 
-.optionNoLogo {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: $radius-sm;
-  background: $border;
-  flex-shrink: 0;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  letter-spacing: 0;
+  &NoLogo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-sm;
+    background: $border;
+    flex-shrink: 0;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    text-transform: uppercase;
+    letter-spacing: 0;
+  }
 }

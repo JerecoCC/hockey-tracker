@@ -37,48 +37,52 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   font-style: italic;
 }
 
-.periodBody {
-  position: relative;
-  min-height: 2.75rem;
-}
+.period {
+  &Body {
+    position: relative;
+    min-height: 2.75rem;
+  }
 
-.periodLoadingOverlay {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba($bg-card, 0.88);
-  backdrop-filter: blur(1px);
+  &LoadingOverlay {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba($bg-card, 0.88);
+    backdrop-filter: blur(1px);
+  }
 }
 
 // ── Goal list (inside period accordion) ──────────────────────────────────────
 
-.goalList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.goalItem {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: $space-sm $space-md;
-  border-bottom: 1px solid $border;
-
-  &:last-child {
-    border-bottom: none;
+.goal {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
 
-  &:hover .goalActions {
-    opacity: 1;
-    pointer-events: auto;
+  &Item {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    padding: $space-sm $space-md;
+    border-bottom: 1px solid $border;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover .goalActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
   }
 }
 
@@ -104,45 +108,47 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
-}
 
-.goalTeamLogoPlaceholder {
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  text-transform: uppercase;
+  &Placeholder {
+    width: 36px;
+    height: 36px;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: $font-sm;
+    font-weight: 700;
+    text-transform: uppercase;
+  }
 }
 
 // Text column: scorer name + assists
-.goalInfo {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
+.goal {
+  &Info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
 
-.goalScorer {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-body;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+  &Scorer {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-body;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 
-.goalAssists {
-  font-size: $font-sm;
-  color: $text-dim;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  &Assists {
+    font-size: $font-sm;
+    color: $text-dim;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
 }
 
 .playerLink {

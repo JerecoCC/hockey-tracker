@@ -8,6 +8,23 @@ import { type CreateLeagueData } from '@/hooks/useLeagues';
 import { descriptionHtmlToTextarea, textareaToDescriptionHtml } from '@/lib/descriptionHtml';
 import styles from './LeagueEditModal.module.scss';
 
+const BEST_OF_OPTIONS = [
+  { value: '3', label: 'Best of 3' },
+  { value: '5', label: 'Best of 5' },
+  { value: '7', label: 'Best of 7' },
+];
+
+const SHOOTOUT_OPTIONS = [
+  { value: '3', label: '3 rounds' },
+  { value: '5', label: '5 rounds' },
+  { value: '7', label: '7 rounds' },
+];
+
+const SCORING_SYSTEM_OPTIONS = [
+  { value: '2-1-0', label: '2-1-0 (W / OT Loss / Loss)' },
+  { value: '3-2-1-0', label: '3-2-1-0 (W / OT W / OT Loss / Loss)' },
+];
+
 interface FormValues {
   logo: File | string | null;
   icon: File | string | null;
@@ -15,6 +32,9 @@ interface FormValues {
   code: string;
   primary_color: string;
   text_color: string;
+  best_of_playoff: string;
+  best_of_shootout: string;
+  scoring_system: '3-2-1-0' | '2-1-0';
   description: string | null;
 }
 
@@ -35,6 +55,9 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       code: league.code,
       primary_color: league.primary_color,
       text_color: league.text_color,
+      best_of_playoff: String(league.best_of_playoff),
+      best_of_shootout: String(league.best_of_shootout),
+      scoring_system: league.scoring_system,
       description: descriptionHtmlToTextarea(league.description),
     }),
     [league],
@@ -78,6 +101,9 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
       code: data.code,
       primary_color: data.primary_color,
       text_color: data.text_color,
+      best_of_playoff: parseInt(data.best_of_playoff, 10),
+      best_of_shootout: parseInt(data.best_of_shootout, 10),
+      scoring_system: data.scoring_system,
       description: textareaToDescriptionHtml(data.description) ?? undefined,
     };
     const ok = await updateLeague(league.id, payload);
@@ -150,6 +176,34 @@ const LeagueEditModal = ({ open, league, uploadLogo, updateLeague, onClose }: Pr
             name="text_color"
             disabled={isSubmitting}
           />
+        </div>
+        <div className={styles.settingsGrid}>
+          <Field
+            label="Playoff Series Format"
+            type="select"
+            control={control}
+            name="best_of_playoff"
+            options={BEST_OF_OPTIONS}
+            disabled={isSubmitting}
+          />
+          <Field
+            label="Shootout Rounds"
+            type="select"
+            control={control}
+            name="best_of_shootout"
+            options={SHOOTOUT_OPTIONS}
+            disabled={isSubmitting}
+          />
+          <div className={styles.settingsGridFull}>
+            <Field
+              label="Scoring System"
+              type="select"
+              control={control}
+              name="scoring_system"
+              options={SCORING_SYSTEM_OPTIONS}
+              disabled={isSubmitting}
+            />
+          </div>
         </div>
         <Field
           label="Description"

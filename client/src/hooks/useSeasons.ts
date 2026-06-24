@@ -38,6 +38,12 @@ export interface SeasonRecord {
   scoring_system: '2-1-0' | '3-2-1-0' | null;
   /** ID of the bracket rule set assigned to this season. Null if none is assigned. */
   bracket_rule_set_id: string | null;
+  /** ID of the team alignment set assigned to this season. Null uses legacy group fallback. */
+  group_alignment_set_id: string | null;
+  /** True once any game exists for the season; alignment edits are locked after this. */
+  has_scheduled_games: boolean;
+  /** True while regular-season games are still scheduled or in progress. */
+  has_unfinished_regular_games: boolean;
   created_at: string;
 }
 
@@ -52,6 +58,7 @@ export interface CreateSeasonData {
   best_of_shootout?: number | null;
   scoring_system?: '2-1-0' | '3-2-1-0' | null;
   bracket_rule_set_id?: string | null;
+  group_alignment_set_id?: string | null;
 }
 
 // Re-export so consumers can import from one place.
@@ -133,4 +140,3 @@ const useSeasons = (leagueId?: string) => {
 };
 
 export default useSeasons;
-

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { toast } from 'react-toastify';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import { fetchNhlGoalieSwitchReport, type NhlGoalieSwitchReport } from './nhlGoalieSwitchChecker';
@@ -38,27 +39,28 @@ const NhlGoalieSwitchCheckerModal = ({
     },
     mode: 'onChange',
   });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
   const gameNumber = watch('game_number');
+  const busy = checking;
+  const canUseGameNumber = isValid && !!String(gameNumber ?? '').trim();
 
   const onSubmit = handleSubmit(async (values) => {
-    setError(null);
     setReportData(null);
-    setLoading(true);
+    setChecking(true);
     onLoadingChange?.(true);
 
     try {
-      setReportData(
-        await fetchNhlGoalieSwitchReport(String(values.game_number ?? '').trim(), {
-          seasonName: game.season_name,
-          scheduledAt: game.scheduled_at,
-        }),
-      );
+      const report = await fetchNhlGoalieSwitchReport(String(values.game_number ?? '').trim(), {
+        seasonName: game.season_name,
+        scheduledAt: game.scheduled_at,
+        gameType: game.game_type,
+      });
+      setReportData(report);
+      toast.success('NHL goalie switch report loaded.');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to check NHL goalie switches.');
+      toast.error(err instanceof Error ? err.message : 'Unable to check NHL goalie switches.');
     } finally {
-      setLoading(false);
+      setChecking(false);
       onLoadingChange?.(false);
     }
   });
@@ -68,11 +70,11 @@ const NhlGoalieSwitchCheckerModal = ({
       open={open}
       title="Check NHL Goalie Switches"
       onClose={onClose}
-      confirmLabel={loading ? 'Checking...' : 'Check'}
+      confirmLabel={checking ? 'Checking...' : 'Check'}
       confirmIcon="search"
       confirmForm={FORM_ID}
-      confirmDisabled={loading || !isValid || !String(gameNumber ?? '').trim()}
-      busy={loading}
+      confirmDisabled={busy || !canUseGameNumber}
+      busy={busy}
     >
       <div className={styles.nhlGoalieChecker}>
         <form
@@ -89,23 +91,16 @@ const NhlGoalieSwitchCheckerModal = ({
             step={1}
             inputMode="numeric"
             placeholder="Put game number here"
-            disabled={loading}
+            disabled={busy}
             autoFocus
             required
             rules={{ required: 'NHL game number is required' }}
           />
         </form>
 
-        {loading && (
-          <p className={styles.nhlGoalieCheckerStatus}>Fetching NHL GameCenter data...</p>
-        )}
-
-        {error && (
-          <p
-            className={`${styles.nhlGoalieCheckerStatus} ${styles.nhlGoalieCheckerError}`}
-            role="alert"
-          >
-            {error}
+        {busy && (
+          <p className={styles.nhlGoalieCheckerStatus}>
+            Fetching NHL GameCenter data...
           </p>
         )}
       </div>

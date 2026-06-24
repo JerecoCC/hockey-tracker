@@ -1,7 +1,20 @@
-import { type CSSProperties, type KeyboardEvent, useEffect, useId, useRef, useState } from 'react';
+import {
+  type CSSProperties,
+  type KeyboardEvent,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
+import { createPortal } from 'react-dom';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './MultiSelect.module.scss';
+
+// Keep in sync with `.menu { max-height }` in MultiSelect.module.scss.
+const MENU_MAX_HEIGHT = 220;
 
 export type MultiSelectOption = {
   value: string;
@@ -40,12 +53,39 @@ const MultiSelect = ({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [focusedIdx, setFocusedIdx] = useState(-1);
-  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
   const wrapperRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const menuRef = useRef<HTMLUListElement>(null);
   const menuId = useId();
+  // The menu is portaled to <body> and positioned `fixed` so it overlays
+  // without expanding/clipping inside an overflow card or modal. Measure the
+  // trigger to place it (flipping above when there's little room below), and
+  // keep it aligned while open as the page scrolls/resizes.
+  const [menuStyle, setMenuStyle] = useState<CSSProperties>({});
+  useLayoutEffect(() => {
+    if (!open) return;
+    const position = () => {
+      const r = wrapperRef.current?.getBoundingClientRect();
+      if (!r) return;
+      const gap = 4;
+      const spaceBelow = window.innerHeight - r.bottom;
+      const spaceAbove = r.top;
+      const flip = spaceBelow < MENU_MAX_HEIGHT && spaceAbove > spaceBelow;
+      setMenuStyle(
+        flip
+          ? { bottom: window.innerHeight - r.top + gap, left: r.left, width: r.width }
+          : { top: r.bottom + gap, left: r.left, width: r.width },
+      );
+    };
+    position();
+    window.addEventListener('scroll', position, true);
+    window.addEventListener('resize', position);
+    return () => {
+      window.removeEventListener('scroll', position, true);
+      window.removeEventListener('resize', position);
+    };
+  }, [open]);
 
   useEffect(() => {
     if (autoFocus) triggerRef.current?.focus();
@@ -55,14 +95,8 @@ const MultiSelect = ({
   useEffect(() => {
     if (!open || focusedIdx < 0 || !menuRef.current) return;
     const items = menuRef.current.querySelectorAll<HTMLElement>('[role="option"]');
-    items[focusedIdx]?.scrollIntoView({ block: 'nearest' });
+    items[focusedIdx]?.scrollIntoView?.({ block: 'nearest' });
   }, [focusedIdx, open]);
-
-  const measureMenu = () => {
-    const r = triggerRef.current?.getBoundingClientRect();
-    if (!r) return;
-    setMenuStyle({ top: r.bottom + 4, left: r.left, width: r.width });
-  };
 
   const closeMenu = () => {
     setOpen(false);
@@ -72,7 +106,6 @@ const MultiSelect = ({
 
   const openMenu = () => {
     if (disabled) return;
-    measureMenu();
     setOpen(true);
     if (searchable) setTimeout(() => searchRef.current?.focus(), 0);
   };
@@ -119,7 +152,13 @@ const MultiSelect = ({
       className={styles.wrapper}
       ref={wrapperRef}
       onBlur={(e) => {
-        if (!wrapperRef.current?.contains(e.relatedTarget as Node)) closeMenu();
+        const nextTarget = e.relatedTarget as Node | null;
+        if (
+          !wrapperRef.current?.contains(nextTarget) &&
+          !menuRef.current?.contains(nextTarget)
+        ) {
+          closeMenu();
+        }
       }}
     >
       <div
@@ -140,28 +179,40 @@ const MultiSelect = ({
       >
         <div className={styles.pills}>
           {selectedOptions.map((opt) => (
-            <span
+            <Tooltip
               key={opt.value}
-              className={styles.pill}
+              text={opt.label}
+              className={styles.pillTooltip}
             >
-              <span className={styles.pillLabel}>{opt.label}</span>
-              <button
-                type="button"
-                className={styles.pillRemove}
-                tabIndex={-1}
-                disabled={disabled}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  toggle(opt.value);
-                }}
-                aria-label={`Remove ${opt.label}`}
-              >
-                <Icon
-                  name="close"
-                  size="0.75em"
-                />
-              </button>
-            </span>
+              <span className={styles.pill}>
+                {opt.logo ? (
+                  <img
+                    src={opt.logo}
+                    alt=""
+                    className={styles.pillLogo}
+                  />
+                ) : opt.code ? (
+                  <span className={styles.pillNoLogo}>{opt.code.slice(0, 1)}</span>
+                ) : null}
+                <span className={styles.pillLabel}>{opt.code ?? opt.label}</span>
+                <button
+                  type="button"
+                  className={styles.pillRemove}
+                  tabIndex={-1}
+                  disabled={disabled}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    toggle(opt.value);
+                  }}
+                  aria-label={`Remove ${opt.label}`}
+                >
+                  <Icon
+                    name="close"
+                    size="0.75em"
+                  />
+                </button>
+              </span>
+            </Tooltip>
           ))}
           {searchable && open ? (
             <input
@@ -189,15 +240,16 @@ const MultiSelect = ({
         />
       </div>
 
-      {open && (
-        <ul
-          ref={menuRef}
-          id={menuId}
-          role="listbox"
-          aria-multiselectable="true"
-          className={styles.menu}
-          style={menuStyle}
-        >
+      {open &&
+        createPortal(
+          <ul
+            ref={menuRef}
+            id={menuId}
+            role="listbox"
+            aria-multiselectable="true"
+            className={styles.menu}
+            style={menuStyle}
+          >
           {visibleOptions.length === 0 ? (
             <li className={styles.emptyMessage}>
               {searchable && query ? `No results for "${query}"` : emptyMessage}
@@ -220,6 +272,7 @@ const MultiSelect = ({
                       focusedIdx === idx && styles.optionFocused,
                     )}
                     onClick={() => toggle(opt.value)}
+                    onMouseDown={(e) => e.preventDefault()}
                     onMouseEnter={() => setFocusedIdx(idx)}
                   >
                     <span
@@ -247,8 +300,9 @@ const MultiSelect = ({
               );
             })
           )}
-        </ul>
-      )}
+          </ul>,
+          document.body,
+        )}
     </div>
   );
 };

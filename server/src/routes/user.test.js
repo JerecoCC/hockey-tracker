@@ -61,6 +61,7 @@ const GAME = {
   league_text_color: '#ffffff',
   watched_by_user: false,
   watched_on: null,
+  skipped_by_user: false,
   scheduled_for: '2024-10-12',
 };
 
@@ -75,6 +76,24 @@ describe('GET /api/user/favorites', () => {
   });
 });
 
+describe('GET /api/user/teams', () => {
+  it('returns all teams for user-facing filters', async () => {
+    sql.mockResolvedValueOnce([
+      { id: 'team-1', league_id: 'league-1', name: 'Home', code: 'HOM', logo: null },
+      { id: 'team-2', league_id: 'league-1', name: 'Idle', code: 'IDL', logo: null },
+    ]);
+
+    const res = await request(app).get('/api/user/teams');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(2);
+    expect(res.body[1]).toMatchObject({ id: 'team-2', name: 'Idle', code: 'IDL' });
+    expect(queryText).toContain('FROM teams t');
+    expect(queryText).not.toContain('games');
+  });
+});
+
 describe('GET /api/user/games', () => {
   it('returns games and scopes the query to the authenticated user favorites', async () => {
     sql.mockResolvedValueOnce([GAME]);
@@ -86,11 +105,24 @@ describe('GET /api/user/games', () => {
     expect(res.body).toHaveLength(1);
     expect(res.body[0].id).toBe('game-1');
     expect(res.body[0].watched_by_user).toBe(false);
+    expect(res.body[0].skipped_by_user).toBe(false);
     expect(res.body[0].scheduled_for).toBe('2024-10-12');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
     expect(queryText).toContain("g.status <> 'cancelled'");
     expect(queryText).toContain('uwg.skipped_at IS NULL');
+  });
+
+  it('can include skipped games when requested', async () => {
+    sql.mockResolvedValueOnce([{ ...GAME, skipped_by_user: true }]);
+
+    const res = await request(app).get('/api/user/games?include_skipped=true');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].skipped_by_user).toBe(true);
+    expect(sql.mock.calls[0].slice(1)).toContain(true);
+    expect(queryText).toContain('OR uwg.skipped_at IS NULL');
   });
 
   it('keeps league and status filters working on top of favorite-team scoping', async () => {
@@ -101,6 +133,43 @@ describe('GET /api/user/games', () => {
 
     expect(res.status).toBe(200);
     expect(res.body[0].id).toBe('game-1');
+  });
+
+  it('filters games by week start using the effective user date', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/user/games?week=2024-10-07');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toContain('2024-10-07');
+    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain("INTERVAL '1 day'");
+    expect(queryText).toContain("INTERVAL '8 days'");
+  });
+
+  it('filters games by month using the effective user date', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const res = await request(app).get('/api/user/games?month=2024-10');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toContain('2024-10');
+    expect(queryText).toContain('uwg.scheduled_for');
+    expect(queryText).toContain("INTERVAL '1 day'");
+    expect(queryText).toContain("INTERVAL '1 month'");
+  });
+
+  it('rejects invalid week and month query values', async () => {
+    const weekRes = await request(app).get('/api/user/games?week=October-7');
+    const monthRes = await request(app).get('/api/user/games?month=2024-October');
+
+    expect(weekRes.status).toBe(400);
+    expect(weekRes.body.error).toMatch(/week must be/i);
+    expect(monthRes.status).toBe(400);
+    expect(monthRes.body.error).toMatch(/month must be/i);
+    expect(sql).not.toHaveBeenCalled();
   });
 });
 

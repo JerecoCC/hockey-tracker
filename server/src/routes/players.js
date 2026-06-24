@@ -146,7 +146,8 @@ router.get('/', async (req, res) => {
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 is_active, created_at,
-                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+                acquisition_type, start_date::text AS start_date, has_games
               FROM (
                 SELECT DISTINCT ON (p.id)
                   p.id, p.first_name, p.last_name,
@@ -163,7 +164,16 @@ router.get('/', async (req, res) => {
                   ti.code        AS team_code,
                   ti.logo        AS team_logo,
                   t.primary_color,
-                  t.text_color
+                  t.text_color,
+                  pt.acquisition_type,
+                  pt.start_date,
+                  EXISTS (
+                    SELECT 1
+                    FROM game_rosters gr
+                    JOIN games rg ON rg.id = gr.game_id
+                    WHERE gr.player_id = p.id
+                      AND rg.season_id = ${season_id}
+                  ) AS has_games
                 FROM players p
                 JOIN player_teams pt ON pt.player_id = p.id
                                     AND pt.season_id  = ${season_id}
@@ -175,12 +185,24 @@ router.get('/', async (req, res) => {
                 LEFT JOIN LATERAL (
                   SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
                   WHERE team_id = t.id
-                    AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-                    AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-                  ORDER BY start_date DESC NULLS LAST, recorded_at DESC
+                  ORDER BY
+                    CASE
+                      WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                       AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                      THEN 0
+                      WHEN end_date IS NULL THEN 1
+                      ELSE 2
+                    END,
+                    start_date DESC NULLS LAST,
+                    recorded_at DESC
                   LIMIT 1
                 ) ti ON TRUE
-                ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT *
@@ -202,7 +224,8 @@ router.get('/', async (req, res) => {
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
                 is_active, created_at,
-                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+                jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+                acquisition_type, start_date::text AS start_date, has_games
               FROM (
                 SELECT DISTINCT ON (p.id)
                   p.id, p.first_name, p.last_name,
@@ -219,20 +242,46 @@ router.get('/', async (req, res) => {
                   ti.code        AS team_code,
                   ti.logo        AS team_logo,
                   t.primary_color,
-                  t.text_color
+                  t.text_color,
+                  pt.acquisition_type,
+                  pt.start_date,
+                  EXISTS (
+                    SELECT 1
+                    FROM game_rosters gr
+                    JOIN games rg ON rg.id = gr.game_id
+                    JOIN seasons rs ON rs.id = rg.season_id
+                    WHERE gr.player_id = p.id
+                      AND rs.league_id = ${league_id}
+                  ) AS has_games
                 FROM players p
                 JOIN player_teams pt ON pt.player_id = p.id
                                     AND (${includeProspects} OR pt.is_prospect = FALSE)
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
                                     AND t.league_id   = ${league_id}
+                JOIN seasons      s  ON s.id          = pt.season_id
                 LEFT JOIN LATERAL (
                   SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
                   WHERE team_id = t.id
-                  ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+                  ORDER BY
+                    CASE
+                      WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                       AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                      THEN 0
+                      WHEN end_date IS NULL THEN 1
+                      ELSE 2
+                    END,
+                    start_date DESC NULLS LAST,
+                    recorded_at DESC
                   LIMIT 1
                 ) ti ON TRUE
-                ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+                  s.start_date DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT *
@@ -263,7 +312,12 @@ router.get('/', async (req, res) => {
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
                                     AND t.league_id   = ${league_id}
-                ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT COUNT(*)::int AS total
@@ -289,7 +343,14 @@ router.get('/', async (req, res) => {
                                     AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
                 JOIN teams        t  ON t.id          = pt.team_id
                                     AND t.league_id   = ${league_id}
-                ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+                JOIN seasons      s  ON s.id          = pt.season_id
+                ORDER BY
+                  p.id,
+                  CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+                  COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+                  s.start_date DESC NULLS LAST,
+                  pt.created_at DESC,
+                  pt.id DESC
               ) sub
             )
             SELECT COUNT(*)::int AS total
@@ -318,7 +379,8 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+            acquisition_type, start_date::text AS start_date, has_games
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -335,7 +397,16 @@ router.get('/', async (req, res) => {
               ti.code       AS team_code,
               ti.logo       AS team_logo,
               t.primary_color,
-              t.text_color
+              t.text_color,
+              pt.acquisition_type,
+              pt.start_date,
+              EXISTS (
+                SELECT 1
+                FROM game_rosters gr
+                JOIN games rg ON rg.id = gr.game_id
+                WHERE gr.player_id = p.id
+                  AND rg.season_id = ${season_id}
+              ) AS has_games
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.season_id  = ${season_id}
@@ -347,12 +418,24 @@ router.get('/', async (req, res) => {
             LEFT JOIN LATERAL (
               SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
               WHERE team_id = t.id
-                AND (start_date IS NULL OR start_date <= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-                AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, s.start_date, pt.created_at::date))
-              ORDER BY start_date DESC NULLS LAST, recorded_at DESC
+              ORDER BY
+                CASE
+                  WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                   AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                  THEN 0
+                  WHEN end_date IS NULL THEN 1
+                  ELSE 2
+                END,
+                start_date DESC NULLS LAST,
+                recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+            ORDER BY
+              p.id,
+              CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+              COALESCE(pt.end_date, pt.start_date, pt.created_at::date) DESC NULLS LAST,
+              pt.created_at DESC,
+              pt.id DESC
           ) sub
           ORDER BY last_name, first_name
         `
@@ -364,7 +447,8 @@ router.get('/', async (req, res) => {
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
             is_active, created_at,
-            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect
+            jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
+            acquisition_type, start_date::text AS start_date, has_games
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -381,20 +465,46 @@ router.get('/', async (req, res) => {
               ti.code       AS team_code,
               ti.logo       AS team_logo,
               t.primary_color,
-              t.text_color
+              t.text_color,
+              pt.acquisition_type,
+              pt.start_date,
+              EXISTS (
+                SELECT 1
+                FROM game_rosters gr
+                JOIN games rg ON rg.id = gr.game_id
+                JOIN seasons rs ON rs.id = rg.season_id
+                WHERE gr.player_id = p.id
+                  AND rs.league_id = ${league_id}
+              ) AS has_games
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND (${includeProspects} OR pt.is_prospect = FALSE)
                                 AND (${!prospectsOnly} OR pt.is_prospect = TRUE)
             JOIN teams        t  ON t.id          = pt.team_id
                                 AND t.league_id   = ${league_id}
+            JOIN seasons      s  ON s.id          = pt.season_id
             LEFT JOIN LATERAL (
               SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
               WHERE team_id = t.id
-              ORDER BY CASE WHEN end_date IS NULL THEN 0 ELSE 1 END, start_date DESC NULLS LAST, recorded_at DESC
+              ORDER BY
+                CASE
+                  WHEN (start_date IS NULL OR start_date <= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                   AND (end_date IS NULL OR end_date >= COALESCE(pt.start_date, pt.created_at::date, s.start_date))
+                  THEN 0
+                  WHEN end_date IS NULL THEN 1
+                  ELSE 2
+                END,
+                start_date DESC NULLS LAST,
+                recorded_at DESC
               LIMIT 1
             ) ti ON TRUE
-            ORDER BY p.id, pt.season_id DESC, pt.end_date DESC NULLS FIRST, pt.created_at DESC
+            ORDER BY
+              p.id,
+              CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
+              COALESCE(pt.end_date, pt.start_date, pt.created_at::date, s.start_date) DESC NULLS LAST,
+              s.start_date DESC NULLS LAST,
+              pt.created_at DESC,
+              pt.id DESC
           ) sub
           ORDER BY last_name, first_name
         `

@@ -16,7 +16,6 @@ interface LinescorePeriod {
 interface Props {
   game: GameRecord;
   isFinal: boolean;
-  isEditMode: boolean;
   busy: string | null;
   liveAwayScore: number;
   liveHomeScore: number;
@@ -28,20 +27,17 @@ interface Props {
   canEndGame: boolean;
   // ── Action callbacks ──
   onStartGame?: () => void;
+  onAutofillGame?: () => void;
   onReschedule?: () => void;
   onCancel?: () => void;
   onDelete?: () => void;
   onEndGame?: () => void;
-  onFinishEditing?: () => void;
   onDownloadScoreCard: () => void;
-  onEnterEditMode?: () => void;
-  onExitEditMode?: () => void;
 }
 
 const LinescoreCard = ({
   game,
   isFinal,
-  isEditMode,
   busy,
   liveAwayScore,
   liveHomeScore,
@@ -51,14 +47,12 @@ const LinescoreCard = ({
   lineupsReady,
   canEndGame,
   onStartGame,
+  onAutofillGame,
   onReschedule,
   onCancel,
   onDelete,
   onEndGame,
-  onFinishEditing,
   onDownloadScoreCard,
-  onEnterEditMode,
-  onExitEditMode,
 }: Props) => {
   const currentPeriodIdx = PERIOD_IDS.indexOf(game.current_period as '1' | '2' | '3');
   // When the game is in OT or SO, all regular periods are complete.
@@ -91,6 +85,17 @@ const LinescoreCard = ({
       title="Linescore"
       action={
         <div className={styles.linescoreActions}>
+          {onAutofillGame && (
+            <Button
+              variant="outlined"
+              intent="info"
+              icon="sports_hockey"
+              size="sm"
+              tooltip="Auto-fill NHL game"
+              disabled={!!busy}
+              onClick={onAutofillGame}
+            />
+          )}
           {game.status === 'scheduled' && onStartGame && onReschedule && onCancel && onDelete && (
             <>
               <Button
@@ -130,17 +135,7 @@ const LinescoreCard = ({
               onClick={onEndGame}
             />
           )}
-          {isFinal && isEditMode && onFinishEditing && (
-            <Button
-              variant="filled"
-              intent="accent"
-              icon="save"
-              size="sm"
-              tooltip="Finish editing"
-              onClick={onFinishEditing}
-            />
-          )}
-          {isFinal && !isEditMode && (
+          {isFinal && (
             <Button
               variant="outlined"
               intent="neutral"
@@ -150,26 +145,16 @@ const LinescoreCard = ({
               onClick={onDownloadScoreCard}
             />
           )}
-          {game.status !== 'scheduled' && (onEnterEditMode || onExitEditMode || onDelete) && (
+          {game.status !== 'scheduled' && onDelete && (
             <MoreActionsMenu
               disabled={!!busy}
               items={[
-                ...(isFinal && !isEditMode && onEnterEditMode
-                  ? [{ label: 'Edit Mode', icon: 'edit', onClick: onEnterEditMode }]
-                  : []),
-                ...(isEditMode && onExitEditMode
-                  ? [{ label: 'Exit Edit Mode', icon: 'close', onClick: onExitEditMode }]
-                  : []),
-                ...(onDelete
-                  ? [
-                      {
-                        label: 'Delete Game',
-                        icon: 'delete',
-                        intent: 'danger' as const,
-                        onClick: onDelete,
-                      },
-                    ]
-                  : []),
+                {
+                  label: 'Delete Game',
+                  icon: 'delete',
+                  intent: 'danger' as const,
+                  onClick: onDelete,
+                },
               ]}
             />
           )}
@@ -219,7 +204,7 @@ const LinescoreCard = ({
                   : game.period_scores.find((s) => s.period === p.id);
                 const pIdx = PERIOD_IDS.indexOf(p.id as '1' | '2' | '3');
                 const isPeriodDone =
-                  (isFinal && !isEditMode) ||
+                  isFinal ||
                   (pIdx >= 0 ? isPostRegulation || currentPeriodIdx > pIdx : true);
                 if (p.id === PERIOD.SHOOTOUT) {
                   const teamAttempts = attempts.filter((a) => a.team_id === row.teamId);

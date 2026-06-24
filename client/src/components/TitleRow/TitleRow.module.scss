@@ -5,11 +5,11 @@
   align-items: center;
   gap: $space-lg;
   margin: 0 0 $space-xl;
-}
 
-.titleRowHiddenMobile {
-  @media (max-width: 768px) {
-    display: none;
+  &HiddenMobile {
+    @media (max-width: 768px) {
+      display: none;
+    }
   }
 }
 

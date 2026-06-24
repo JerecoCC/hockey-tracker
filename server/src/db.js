@@ -18,6 +18,378 @@ const connectionString = `${rawUrl}${sep}options=-c%20TimeZone%3DAmerica/New_Yor
 const sql = neon(connectionString);
 const db = drizzle(sql, { schema });
 
+async function copyLegacyGroupsToAlignmentSet({ leagueId, alignmentSetId }) {
+  const legacyGroups = await sql`
+    SELECT id, parent_id, name, role, sort_order
+    FROM groups
+    WHERE league_id = ${leagueId}
+      AND season_id IS NULL
+      AND COALESCE(is_auto, false) = false
+    ORDER BY parent_id NULLS FIRST, sort_order, name
+  `;
+  const idMap = new Map();
+  const pending = [...legacyGroups];
+
+  while (pending.length > 0) {
+    const before = pending.length;
+    for (let i = pending.length - 1; i >= 0; i -= 1) {
+      const group = pending[i];
+      if (group.parent_id && !idMap.has(group.parent_id)) continue;
+      const parentId = group.parent_id ? idMap.get(group.parent_id) : null;
+      const stableKey = `legacy:${group.id}`;
+      const rows = await sql`
+        INSERT INTO group_alignment_groups (
+          alignment_set_id, parent_id, stable_key, name, role, sort_order
+        )
+        VALUES (
+          ${alignmentSetId},
+          ${parentId},
+          ${stableKey},
+          ${group.name},
+          ${group.role ?? null},
+          ${group.sort_order ?? 0}
+        )
+        RETURNING id
+      `;
+      idMap.set(group.id, rows[0].id);
+      pending.splice(i, 1);
+    }
+    if (pending.length === before) break;
+  }
+
+  for (const legacyGroup of legacyGroups) {
+    const alignmentGroupId = idMap.get(legacyGroup.id);
+    if (!alignmentGroupId) continue;
+    const teams = await sql`SELECT team_id FROM group_teams WHERE group_id = ${legacyGroup.id}`;
+    for (const { team_id: teamId } of teams) {
+      await sql`
+        INSERT INTO group_alignment_teams (alignment_group_id, team_id)
+        VALUES (${alignmentGroupId}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+  }
+}
+
+async function copyLegacyGroupTeamsToAlignmentSet({ leagueId, alignmentSetId }) {
+  const alignmentGroups = await sql`
+    SELECT
+      ag.id AS alignment_group_id,
+      REPLACE(ag.stable_key, 'legacy:', '')::uuid AS legacy_group_id
+    FROM group_alignment_groups ag
+    WHERE ag.alignment_set_id = ${alignmentSetId}
+      AND ag.stable_key LIKE 'legacy:%'
+  `;
+
+  for (const group of alignmentGroups) {
+    const existing = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM group_alignment_teams
+      WHERE alignment_group_id = ${group.alignment_group_id}
+    `;
+    if ((existing[0]?.count ?? 0) > 0) continue;
+
+    const defaultTeams = await sql`
+      SELECT team_id
+      FROM group_teams
+      WHERE group_id = ${group.legacy_group_id}
+    `;
+    for (const { team_id: teamId } of defaultTeams) {
+      await sql`
+        INSERT INTO group_alignment_teams (alignment_group_id, team_id)
+        VALUES (${group.alignment_group_id}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+
+    const copiedDefaults = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM group_alignment_teams
+      WHERE alignment_group_id = ${group.alignment_group_id}
+    `;
+    if ((copiedDefaults[0]?.count ?? 0) > 0) continue;
+
+    const inheritedSeasonTeams = await sql`
+      WITH source_season AS (
+        SELECT s.id
+        FROM seasons s
+        WHERE s.league_id = ${leagueId}
+          AND EXISTS (
+            SELECT 1
+            FROM season_group_teams sgt
+            WHERE sgt.season_id = s.id
+              AND sgt.group_id = ${group.legacy_group_id}
+          )
+        ORDER BY s.is_current DESC, s.start_date DESC NULLS LAST, s.created_at DESC
+        LIMIT 1
+      )
+      SELECT sgt.team_id
+      FROM season_group_teams sgt
+      WHERE sgt.season_id = (SELECT id FROM source_season)
+        AND sgt.group_id = ${group.legacy_group_id}
+    `;
+    for (const { team_id: teamId } of inheritedSeasonTeams) {
+      await sql`
+        INSERT INTO group_alignment_teams (alignment_group_id, team_id)
+        VALUES (${group.alignment_group_id}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+  }
+}
+
+async function getPreferredLegacyGroupAlignmentSet({ leagueId, defaultName }) {
+  const rows = await sql`
+    SELECT gas.id, gas.name, gas.created_at
+    FROM group_alignment_sets gas
+    WHERE gas.league_id = ${leagueId}
+      AND gas.structure_type = 'groups'
+      AND EXISTS (
+        SELECT 1
+        FROM group_alignment_groups gag
+        WHERE gag.alignment_set_id = gas.id
+          AND gag.stable_key LIKE 'legacy:%'
+      )
+    ORDER BY gas.created_at ASC, gas.id ASC
+  `;
+
+  const defaultSet = rows.find((row) => row.name === defaultName) ?? null;
+  const renamedOriginal =
+    rows.find((row) => {
+      if (row.name === defaultName) return false;
+      if (!defaultSet) return true;
+      return new Date(row.created_at).getTime() < new Date(defaultSet.created_at).getTime();
+    }) ?? null;
+
+  return renamedOriginal ?? defaultSet;
+}
+
+async function mergeDuplicateDefaultLegacyGroupAlignmentSets({
+  leagueId,
+  defaultName,
+  targetAlignmentSetId,
+}) {
+  const duplicateRows = await sql`
+    SELECT id
+    FROM group_alignment_sets gas
+    WHERE gas.league_id = ${leagueId}
+      AND gas.name = ${defaultName}
+      AND gas.id <> ${targetAlignmentSetId}
+      AND gas.structure_type = 'groups'
+      AND EXISTS (
+        SELECT 1
+        FROM group_alignment_groups gag
+        WHERE gag.alignment_set_id = gas.id
+          AND gag.stable_key LIKE 'legacy:%'
+      )
+  `;
+
+  for (const duplicate of duplicateRows) {
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${targetAlignmentSetId}
+      WHERE group_alignment_set_id = ${duplicate.id}
+    `;
+    await sql`
+      DELETE FROM group_alignment_sets
+      WHERE id = ${duplicate.id}
+    `;
+  }
+}
+
+async function backfillLegacyGroupAlignmentSets() {
+  const leaguesWithLegacyGroups = await sql`
+    SELECT DISTINCT l.id, l.code
+    FROM leagues l
+    JOIN groups g ON g.league_id = l.id
+    WHERE g.season_id IS NULL
+      AND COALESCE(g.is_auto, false) = false
+  `;
+
+  for (const league of leaguesWithLegacyGroups) {
+    const name = `${league.code || 'League'} Groupings`;
+    const existing = await getPreferredLegacyGroupAlignmentSet({
+      leagueId: league.id,
+      defaultName: name,
+    });
+    let alignmentSetId = existing?.id;
+    if (!alignmentSetId) {
+      const rows = await sql`
+        INSERT INTO group_alignment_sets (league_id, name, structure_type)
+        VALUES (${league.id}, ${name}, 'groups')
+        ON CONFLICT (league_id, name) DO UPDATE
+        SET structure_type = 'groups'
+        RETURNING id
+      `;
+      alignmentSetId = rows[0].id;
+    } else {
+      await mergeDuplicateDefaultLegacyGroupAlignmentSets({
+        leagueId: league.id,
+        defaultName: name,
+        targetAlignmentSetId: alignmentSetId,
+      });
+    }
+    const copiedGroups = await sql`
+      SELECT COUNT(*)::int AS count
+      FROM group_alignment_groups
+      WHERE alignment_set_id = ${alignmentSetId}
+    `;
+    if ((copiedGroups[0]?.count ?? 0) === 0) {
+      await copyLegacyGroupsToAlignmentSet({ leagueId: league.id, alignmentSetId });
+    }
+    await copyLegacyGroupTeamsToAlignmentSet({ leagueId: league.id, alignmentSetId });
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSetId}
+      WHERE league_id = ${league.id}
+        AND group_alignment_set_id IS NULL
+    `;
+  }
+}
+
+async function ensureFlatAlignmentTeamsFromSeason({ alignmentSetId, seasonId }) {
+  const alignmentTeams = await sql`
+    SELECT team_id
+    FROM group_alignment_set_teams
+    WHERE alignment_set_id = ${alignmentSetId}
+  `;
+  const seasonTeams = await sql`
+    SELECT team_id
+    FROM season_teams
+    WHERE season_id = ${seasonId}
+  `;
+  const alignmentTeamIds = new Set(alignmentTeams.map((row) => row.team_id));
+  const seasonTeamIds = new Set(seasonTeams.map((row) => row.team_id));
+  const matches =
+    alignmentTeamIds.size === seasonTeamIds.size &&
+    [...seasonTeamIds].every((teamId) => alignmentTeamIds.has(teamId));
+
+  if (alignmentTeamIds.size > 0 && matches) return { matches: true, wasEmpty: false };
+
+  if (alignmentTeamIds.size === 0) {
+    for (const { team_id: teamId } of seasonTeams) {
+      await sql`
+        INSERT INTO group_alignment_set_teams (alignment_set_id, team_id)
+        VALUES (${alignmentSetId}, ${teamId})
+        ON CONFLICT DO NOTHING
+      `;
+    }
+    return { matches: true, wasEmpty: true };
+  }
+
+  return { matches: false, wasEmpty: false };
+}
+
+async function backfillFlatAlignmentSetsFromSeasonRosters() {
+  const seasonsWithAssignedFlatRosters = await sql`
+    SELECT
+      s.id,
+      s.name AS season_name,
+      s.league_id,
+      s.group_alignment_set_id,
+      l.code AS league_code
+    FROM seasons s
+    JOIN leagues l ON l.id = s.league_id
+    JOIN group_alignment_sets gas ON gas.id = s.group_alignment_set_id
+    WHERE gas.structure_type = 'league'
+      AND EXISTS (
+        SELECT 1 FROM season_teams st WHERE st.season_id = s.id
+      )
+    ORDER BY s.league_id, s.start_date NULLS LAST, s.created_at
+  `;
+
+  for (const season of seasonsWithAssignedFlatRosters) {
+    const existing = await ensureFlatAlignmentTeamsFromSeason({
+      alignmentSetId: season.group_alignment_set_id,
+      seasonId: season.id,
+    });
+    if (existing.matches) continue;
+
+    const name = `${season.league_code || 'League'} ${season.season_name} Teams`;
+    const rows = await sql`
+      INSERT INTO group_alignment_sets (league_id, name, structure_type)
+      VALUES (${season.league_id}, ${name}, 'league')
+      ON CONFLICT (league_id, name) DO UPDATE
+      SET structure_type = 'league'
+      RETURNING id
+    `;
+    const alignmentSetId = rows[0].id;
+    const created = await ensureFlatAlignmentTeamsFromSeason({ alignmentSetId, seasonId: season.id });
+    if (!created.matches) continue;
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSetId}
+      WHERE id = ${season.id}
+    `;
+  }
+
+  const seasonsWithRosters = await sql`
+    SELECT
+      s.id,
+      s.name AS season_name,
+      s.league_id,
+      l.code AS league_code
+    FROM seasons s
+    JOIN leagues l ON l.id = s.league_id
+    WHERE EXISTS (
+      SELECT 1 FROM season_teams st WHERE st.season_id = s.id
+    )
+      AND s.group_alignment_set_id IS NULL
+      AND NOT EXISTS (
+        SELECT 1
+        FROM groups g
+        WHERE g.league_id = s.league_id
+          AND g.season_id IS NULL
+          AND COALESCE(g.is_auto, false) = false
+      )
+    ORDER BY s.league_id, s.start_date NULLS LAST, s.created_at
+  `;
+
+  for (const season of seasonsWithRosters) {
+    const name = `${season.league_code || 'League'} ${season.season_name} Teams`;
+    const rows = await sql`
+      INSERT INTO group_alignment_sets (league_id, name, structure_type)
+      VALUES (${season.league_id}, ${name}, 'league')
+      ON CONFLICT (league_id, name) DO UPDATE
+      SET structure_type = 'league'
+      RETURNING id
+    `;
+    const alignmentSetId = rows[0].id;
+    const ensured = await ensureFlatAlignmentTeamsFromSeason({ alignmentSetId, seasonId: season.id });
+    if (!ensured.matches) continue;
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSetId}
+      WHERE id = ${season.id}
+        AND group_alignment_set_id IS NULL
+    `;
+  }
+}
+
+async function backfillMissingDefaultGroupAlignmentAssignments() {
+  const leaguesWithLegacyGroups = await sql`
+    SELECT DISTINCT l.id, l.code
+    FROM leagues l
+    JOIN groups g ON g.league_id = l.id
+    WHERE g.season_id IS NULL
+      AND COALESCE(g.is_auto, false) = false
+  `;
+
+  for (const league of leaguesWithLegacyGroups) {
+    const alignmentSet = await getPreferredLegacyGroupAlignmentSet({
+      leagueId: league.id,
+      defaultName: `${league.code || 'League'} Groupings`,
+    });
+    if (!alignmentSet) continue;
+    await sql`
+      UPDATE seasons
+      SET group_alignment_set_id = ${alignmentSet.id}
+      WHERE league_id = ${league.id}
+        AND group_alignment_set_id IS NULL
+    `;
+  }
+}
+
 /**
  * Run once at startup: create the users table if it doesn't exist.
  */
@@ -130,6 +502,65 @@ async function initSchema() {
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       PRIMARY KEY (season_id, group_id, team_id)
     )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_sets (
+      id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id      UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      name           TEXT NOT NULL,
+      structure_type TEXT NOT NULL DEFAULT 'groups'
+                     CHECK (structure_type IN ('groups', 'league')),
+      created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE (league_id, name)
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_groups (
+      id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      alignment_set_id UUID NOT NULL REFERENCES group_alignment_sets(id) ON DELETE CASCADE,
+      parent_id        UUID REFERENCES group_alignment_groups(id) ON DELETE CASCADE,
+      stable_key       TEXT,
+      name             TEXT NOT NULL,
+      role             TEXT CHECK (role IN ('conference', 'division')),
+      sort_order       INT NOT NULL DEFAULT 0,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_teams (
+      alignment_group_id UUID NOT NULL REFERENCES group_alignment_groups(id) ON DELETE CASCADE,
+      team_id            UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (alignment_group_id, team_id)
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS group_alignment_set_teams (
+      alignment_set_id UUID NOT NULL REFERENCES group_alignment_sets(id) ON DELETE CASCADE,
+      team_id          UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (alignment_set_id, team_id)
+    )
+  `;
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS season_alignment_group_teams (
+      season_id          UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      alignment_group_id UUID NOT NULL REFERENCES group_alignment_groups(id) ON DELETE CASCADE,
+      team_id            UUID NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+      created_at         TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (season_id, alignment_group_id, team_id)
+    )
+  `;
+
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS group_alignment_set_id UUID
+        REFERENCES group_alignment_sets(id) ON DELETE SET NULL
   `;
 
   // Which teams are participating in a given season (season-level roster)
@@ -993,23 +1424,64 @@ async function initSchema() {
   `;
 
   // ── Game starting lineup ───────────────────────────────────────────────────
-  // One row per team per game. Each position slot is a nullable FK to players.
+  // One row per team per game. Each starting-line slot is a nullable FK to players.
   // Replaces game_lineups (6 rows per team) with a single compact row per team.
-  // Slots: center, left_wing, right_wing, defense_1, defense_2, goalie.
+  // Slots: forward_1, forward_2, forward_3, defense_1, defense_2, goalie.
   await sql`
     CREATE TABLE IF NOT EXISTS game_starting_lineup (
       id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
       game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
       team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
-      center_id     UUID REFERENCES players(id) ON DELETE SET NULL,
-      left_wing_id  UUID REFERENCES players(id) ON DELETE SET NULL,
-      right_wing_id UUID REFERENCES players(id) ON DELETE SET NULL,
+      forward_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      forward_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
+      forward_3_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       defense_1_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       defense_2_id  UUID REFERENCES players(id) ON DELETE SET NULL,
       goalie_id     UUID REFERENCES players(id) ON DELETE SET NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       UNIQUE (game_id, team_id)
     )
+  `;
+
+  // Existing databases may have the old center/wing columns. Add the generic
+  // forward columns and copy old slot values forward without dropping anything.
+  await sql`
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM information_schema.tables
+        WHERE table_schema = 'public' AND table_name = 'game_starting_lineup'
+      ) THEN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_1_id'
+        ) THEN
+          ALTER TABLE game_starting_lineup ADD COLUMN forward_1_id UUID REFERENCES players(id) ON DELETE SET NULL;
+        END IF;
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_2_id'
+        ) THEN
+          ALTER TABLE game_starting_lineup ADD COLUMN forward_2_id UUID REFERENCES players(id) ON DELETE SET NULL;
+        END IF;
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'forward_3_id'
+        ) THEN
+          ALTER TABLE game_starting_lineup ADD COLUMN forward_3_id UUID REFERENCES players(id) ON DELETE SET NULL;
+        END IF;
+
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns
+          WHERE table_schema = 'public' AND table_name = 'game_starting_lineup' AND column_name = 'center_id'
+        ) THEN
+          EXECUTE 'UPDATE game_starting_lineup
+            SET forward_1_id = COALESCE(forward_1_id, center_id),
+                forward_2_id = COALESCE(forward_2_id, left_wing_id),
+                forward_3_id = COALESCE(forward_3_id, right_wing_id)';
+        END IF;
+      END IF;
+    END $$
   `;
 
   // One-time data migration: pivot game_lineups rows (one per slot) into
@@ -1022,13 +1494,13 @@ async function initSchema() {
         WHERE table_schema = 'public' AND table_name = 'game_lineups'
       ) THEN
         INSERT INTO game_starting_lineup
-          (game_id, team_id, center_id, left_wing_id, right_wing_id, defense_1_id, defense_2_id, goalie_id)
+          (game_id, team_id, forward_1_id, forward_2_id, forward_3_id, defense_1_id, defense_2_id, goalie_id)
         SELECT
           game_id,
           team_id,
-          MAX(CASE WHEN position_slot = 'C'  THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'LW' THEN player_id::text END)::uuid,
-          MAX(CASE WHEN position_slot = 'RW' THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot IN ('F1', 'C')  THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot IN ('F2', 'LW') THEN player_id::text END)::uuid,
+          MAX(CASE WHEN position_slot IN ('F3', 'RW') THEN player_id::text END)::uuid,
           MAX(CASE WHEN position_slot = 'D1' THEN player_id::text END)::uuid,
           MAX(CASE WHEN position_slot = 'D2' THEN player_id::text END)::uuid,
           MAX(CASE WHEN position_slot = 'G'  THEN player_id::text END)::uuid
@@ -1100,29 +1572,6 @@ async function initSchema() {
 
   await sql`DROP TABLE IF EXISTS game_period_shots`;
 
-  // ── Goalie stats ───────────────────────────────────────────────────────────
-  // One row per goalie per game. shots_against is entered manually.
-  // goals_against is derived from the goals table based on entered_period window.
-  // saves = shots_against - goals_against (computed server-side).
-  // entered_period: the period the goalie entered (NULL = started from period 1).
-  await sql`
-    CREATE TABLE IF NOT EXISTS game_goalie_stats (
-      id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      game_id       UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
-      team_id       UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
-      goalie_id     UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
-      shots_against SMALLINT NOT NULL DEFAULT 0 CHECK (shots_against >= 0),
-      entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO')),
-      created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-      UNIQUE (game_id, goalie_id)
-    )
-  `;
-  // Migration: add entered_period if missing, drop saves if still present.
-  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO'))`;
-  await sql`ALTER TABLE game_goalie_stats DROP COLUMN IF EXISTS saves`;
-  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS sub_time TEXT CHECK (sub_time ~ '^[0-9]{1,2}:[0-5][0-9]$')`;
-  await sql`ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS goals_against INTEGER CHECK (goals_against >= 0)`;
-
   // ── Goalie stints ─────────────────────────────────────────────────────────
   // One row per goalie stint within a game. Supports a goalie being pulled and
   // re-inserted any number of times (including within the same period).
@@ -1131,9 +1580,7 @@ async function initSchema() {
   // shots_against and goals_against are stored per-stint; goals_against NULL
   // means "fall back to derivation from the goals table for this window".
   // stint_ord is 1-based and unique per (game_id, team_id).
-  // Phase 1 of the goalie-stints migration: this table is dual-written from
-  // the same admin endpoints that write game_goalie_stats; reads still come
-  // from game_goalie_stats. See rebuild_goalie_stints() below.
+  // This is the source of truth for goalie participation and goalie stats.
   await sql`
     CREATE TABLE IF NOT EXISTS game_goalie_stints (
       id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -1154,144 +1601,58 @@ async function initSchema() {
   await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_game_idx   ON game_goalie_stints(game_id)`;
   await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_goalie_idx ON game_goalie_stints(goalie_id)`;
 
-  // ── Helper function: rebuild_goalie_stints ────────────────────────────────
-  // Idempotently rebuilds the per-stint rows for an entire game from the
-  // legacy game_goalie_stats table. Called from each admin write endpoint
-  // (PUT/POST switch/DELETE) so the stints table stays in sync without
-  // requiring callers to perform multiple ordered statements. Will be removed
-  // in Phase 5 once the legacy table is dropped.
+  // Final legacy goalie-stats migration: copy old one-row goalie stats into
+  // stints for games that do not already have stint rows, then remove the
+  // retired table/functions.
   await sql`
-    CREATE OR REPLACE FUNCTION rebuild_goalie_stints(p_game_id uuid)
-    RETURNS void
-    LANGUAGE plpgsql
-    AS $func$
+    DO $$
     BEGIN
-      DELETE FROM game_goalie_stints WHERE game_id = p_game_id;
-      INSERT INTO game_goalie_stints (
-        game_id, team_id, goalie_id, stint_ord,
-        entered_period, entered_time, exited_period, exited_time,
-        shots_against, goals_against
-      )
-      WITH period_vals (p, v) AS (
-        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
-      ),
-      ordered AS (
-        SELECT
-          gs.game_id, gs.team_id, gs.goalie_id,
-          gs.shots_against, gs.goals_against,
-          COALESCE(gs.entered_period, '1')                                    AS entered_period,
-          gs.sub_time                                                         AS entered_time,
-          ROW_NUMBER() OVER (PARTITION BY gs.team_id ORDER BY pv.v)::smallint AS stint_ord,
-          LEAD(COALESCE(gs.entered_period, '1')) OVER (
-            PARTITION BY gs.team_id ORDER BY pv.v
-          )                                                                   AS exited_period,
-          LEAD(gs.sub_time) OVER (
-            PARTITION BY gs.team_id ORDER BY pv.v
-          )                                                                   AS exited_time
-        FROM game_goalie_stats gs
-        JOIN period_vals pv ON pv.p = COALESCE(gs.entered_period, '1')
-        WHERE gs.game_id = p_game_id
-      )
-      SELECT
-        game_id, team_id, goalie_id, stint_ord,
-        entered_period, entered_time, exited_period, exited_time,
-        shots_against, goals_against
-      FROM ordered;
-    END;
-    $func$
-  `;
+      IF to_regclass('public.game_goalie_stats') IS NOT NULL THEN
+        ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS entered_period TEXT CHECK (entered_period IN ('1','2','3','OT','SO'));
+        ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS sub_time TEXT CHECK (sub_time ~ '^[0-9]{1,2}:[0-5][0-9]$');
+        ALTER TABLE game_goalie_stats ADD COLUMN IF NOT EXISTS goals_against INTEGER CHECK (goals_against >= 0);
 
-  // ── Helper function: rebuild_legacy_goalie_stats ─────────────────────────
-  // Reverse direction of rebuild_goalie_stints: summarizes all stints for a
-  // game back into the legacy game_goalie_stats table (one row per goalie).
-  // Called from each /goalie-stints write endpoint so consumers that still
-  // read the legacy table (notably seasons.js) keep working until Phase 5.
-  // The reduction is lossy by design — multi-stint goalies collapse to:
-  //   shots_against    = SUM(stints.shots_against)
-  //   entered_period   = first stint's entered_period (NULL if starter from P1 puck-drop)
-  //   sub_time         = first stint's entered_time   (NULL if starter from P1 puck-drop)
-  //   goals_against    = SUM(stints.goals_against) when ALL stints have an
-  //                      override; NULL otherwise so the legacy CTE can derive.
-  // Will be removed in Phase 5 when the legacy table is dropped.
-  await sql`
-    CREATE OR REPLACE FUNCTION rebuild_legacy_goalie_stats(p_game_id uuid)
-    RETURNS void
-    LANGUAGE plpgsql
-    AS $func$
-    BEGIN
-      DELETE FROM game_goalie_stats WHERE game_id = p_game_id;
-      WITH period_vals (p, v) AS (
-        VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
-      ),
-      stint_pos AS (
+        INSERT INTO game_goalie_stints (
+          game_id, team_id, goalie_id, stint_ord,
+          entered_period, entered_time, exited_period, exited_time,
+          shots_against, goals_against
+        )
+        WITH period_vals (p, v) AS (
+          VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
+        ),
+        ordered AS (
+          SELECT
+            gs.game_id, gs.team_id, gs.goalie_id,
+            gs.shots_against, gs.goals_against,
+            COALESCE(gs.entered_period, '1') AS entered_period,
+            gs.sub_time AS entered_time,
+            ROW_NUMBER() OVER (PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v)::smallint AS stint_ord,
+            LEAD(COALESCE(gs.entered_period, '1')) OVER (
+              PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v
+            ) AS exited_period,
+            LEAD(gs.sub_time) OVER (
+              PARTITION BY gs.game_id, gs.team_id ORDER BY pv.v
+            ) AS exited_time
+          FROM game_goalie_stats gs
+          JOIN period_vals pv ON pv.p = COALESCE(gs.entered_period, '1')
+          WHERE NOT EXISTS (
+            SELECT 1
+            FROM game_goalie_stints existing
+            WHERE existing.game_id = gs.game_id
+          )
+        )
         SELECT
-          st.id, st.game_id, st.team_id, st.goalie_id, st.stint_ord,
-          st.entered_period, st.entered_time,
-          st.shots_against, st.goals_against AS override_ga,
-          pv.v * 100000
-            + COALESCE(
-                SPLIT_PART(st.entered_time, ':', 1)::int * 60
-                + SPLIT_PART(st.entered_time, ':', 2)::int,
-                0
-              ) AS pos
-        FROM game_goalie_stints st
-        JOIN period_vals pv ON pv.p = st.entered_period
-        WHERE st.game_id = p_game_id
-      ),
-      per_goalie AS (
-        SELECT
-          game_id, team_id, goalie_id,
-          SUM(shots_against)::smallint            AS total_sa,
-          SUM(COALESCE(override_ga, 0))::int      AS sum_overrides,
-          BOOL_AND(override_ga IS NOT NULL)       AS all_overrides
-        FROM stint_pos
-        GROUP BY game_id, team_id, goalie_id
-      ),
-      first_stint AS (
-        SELECT DISTINCT ON (game_id, team_id, goalie_id)
-          game_id, team_id, goalie_id,
-          entered_period AS first_entered_period,
-          entered_time   AS first_entered_time,
-          stint_ord      AS first_stint_ord
-        FROM stint_pos
-        ORDER BY game_id, team_id, goalie_id, stint_ord
-      )
-      INSERT INTO game_goalie_stats (
-        game_id, team_id, goalie_id, shots_against,
-        entered_period, sub_time, goals_against
-      )
-      SELECT
-        pg.game_id, pg.team_id, pg.goalie_id, pg.total_sa,
-        CASE WHEN fs.first_stint_ord = 1
-              AND fs.first_entered_period = '1'
-              AND fs.first_entered_time IS NULL
-             THEN NULL ELSE fs.first_entered_period END,
-        CASE WHEN fs.first_stint_ord = 1
-              AND fs.first_entered_period = '1'
-              AND fs.first_entered_time IS NULL
-             THEN NULL ELSE fs.first_entered_time END,
-        CASE WHEN pg.all_overrides THEN pg.sum_overrides ELSE NULL END
-      FROM per_goalie pg
-      JOIN first_stint fs
-        ON fs.game_id = pg.game_id
-       AND fs.team_id = pg.team_id
-       AND fs.goalie_id = pg.goalie_id;
-    END;
-    $func$
+          game_id, team_id, goalie_id, stint_ord,
+          entered_period, entered_time, exited_period, exited_time,
+          shots_against, goals_against
+        FROM ordered
+        ON CONFLICT (game_id, team_id, stint_ord) DO NOTHING;
+      END IF;
+    END $$;
   `;
-
-  // One-time backfill: if the stints table is empty but legacy stats exist,
-  // rebuild every game with goalie stats. Safe to re-run — the function does a
-  // full DELETE+INSERT per game, but the guard ensures we only pay the cost
-  // once. After Phase 1 ships, every write keeps the table in sync.
-  const stintsCount = await sql`SELECT COUNT(*)::int AS c FROM game_goalie_stints`;
-  if (stintsCount[0].c === 0) {
-    await sql`
-      SELECT rebuild_goalie_stints(g.id)
-      FROM games g
-      WHERE EXISTS (SELECT 1 FROM game_goalie_stats gs WHERE gs.game_id = g.id)
-    `;
-  }
+  await sql`DROP FUNCTION IF EXISTS rebuild_goalie_stints(uuid)`;
+  await sql`DROP FUNCTION IF EXISTS rebuild_legacy_goalie_stats(uuid)`;
+  await sql`DROP TABLE IF EXISTS game_goalie_stats`;
 
   // ── Shootout attempts ──────────────────────────────────────────────────────
   // One row per shot attempt in a shootout (both scored and missed).
@@ -1306,6 +1667,37 @@ async function initSchema() {
       attempt_order INT NOT NULL,
       created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  // Game-data query indexes. Keep this set intentionally small: these support
+  // the highest-volume reads without turning index storage into its own issue.
+  await sql`
+    CREATE INDEX IF NOT EXISTS games_season_status_schedule_idx
+      ON games(season_id, status, game_type, scheduled_at DESC NULLS LAST, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS games_home_team_status_schedule_idx
+      ON games(home_team_id, status, scheduled_at DESC NULLS LAST, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS games_away_team_status_schedule_idx
+      ON games(away_team_id, status, scheduled_at DESC NULLS LAST, created_at DESC)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS goals_game_team_period_idx
+      ON goals(game_id, team_id, period)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_rosters_player_game_idx
+      ON game_rosters(player_id, game_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_starting_lineup_team_game_idx
+      ON game_starting_lineup(team_id, game_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS shootout_attempts_game_order_idx
+      ON shootout_attempts(game_id, attempt_order)
   `;
 
   // ── Megan Carter jersey-number migration ──────────────────────────────────
@@ -1461,6 +1853,10 @@ async function initSchema() {
   //   NHL  (top 3/div + 2 WC/conf):
   //     [{"scope":"division","method":"top","count":3},
   //      {"scope":"conference","method":"wildcard","count":2}]
+  await backfillLegacyGroupAlignmentSets();
+  await backfillFlatAlignmentSetsFromSeasonRosters();
+  await backfillMissingDefaultGroupAlignmentAssignments();
+
   await sql`
     ALTER TABLE leagues
       ADD COLUMN IF NOT EXISTS playoff_format JSONB
@@ -1723,4 +2119,3 @@ async function initSchema() {
 }
 
 module.exports = { sql, db, schema, initSchema };
-

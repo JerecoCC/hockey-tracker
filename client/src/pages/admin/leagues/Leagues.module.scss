@@ -1,36 +1,54 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
-// ── Title row ──────────────────────────────────────────────────────────
-// ── League cell ────────────────────────────────────────────────────────
-.logoWithName {
+.leagueList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: $space-md;
 }
 
-.logoThumb {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+.emptyMsg {
+  font-size: $font-base;
+  color: $text-dim;
+  font-style: italic;
+  margin: 0;
 }
 
-.logoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  flex-shrink: 0;
+// ── Title row ──────────────────────────────────────────────────────────
+// ── League cell ────────────────────────────────────────────────────────
+.logo {
+  &WithName {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+  }
+
+  &Thumb {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    flex-shrink: 0;
+    filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
+  }
+
+  &Placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
 }
 
 // ── Table actions ───────────────────────────────────────────────────────

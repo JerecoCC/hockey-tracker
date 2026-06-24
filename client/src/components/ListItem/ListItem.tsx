@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
-import Badge, { type BadgeIntent } from '../Badge/Badge';
+import Tag, { type TagIntent } from '../Tag/Tag';
 import Button, { type ButtonIntent } from '../Button/Button';
 import PlayerAvatar from '../PlayerAvatar/PlayerAvatar';
 import TeamLogo from '../TeamLogo/TeamLogo';
@@ -18,7 +18,7 @@ export interface ListItemAction {
 export interface RightContentTag {
   type: 'tag';
   label: string;
-  intent?: BadgeIntent;
+  intent?: TagIntent;
 }
 
 export interface RightContentCode {
@@ -202,10 +202,10 @@ const ListItem = ({
         )}
       </div>
 
-      {/* Right content — Badge or code badge */}
+      {/* Right content — Tag or code badge */}
       {rightContent ? (
         rightContent.type === 'tag' ? (
-          <Badge
+          <Tag
             label={rightContent.label}
             intent={rightContent.intent}
           />

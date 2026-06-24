@@ -7,6 +7,24 @@ const { cleanupUnusedBlobs } = require('../lib/blobCleanup');
 
 const { users } = schema;
 
+const toNumber = (value) => Number(value ?? 0);
+
+const mapStorageRow = (row) => ({
+  table_name: row.table_name,
+  label: row.label,
+  category: row.category,
+  is_legacy: row.is_legacy === true,
+  present: row.present === true,
+  estimated_rows: toNumber(row.estimated_rows),
+  table_bytes: toNumber(row.table_bytes),
+  index_bytes: toNumber(row.index_bytes),
+  total_bytes: toNumber(row.total_bytes),
+  table_pretty: row.table_pretty,
+  index_pretty: row.index_pretty,
+  total_pretty: row.total_pretty,
+  pct_of_total: toNumber(row.pct_of_total),
+});
+
 // All admin routes require the admin role
 router.use(requireAdmin);
 
@@ -109,6 +127,97 @@ router.post('/blob-cleanup', async (req, res) => {
   } catch (err) {
     console.error('admin blob cleanup error:', err);
     return res.status(500).json({ error: 'Failed to clean up uploaded images' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/admin/game-data-storage - inspect DB footprint for game data tables
+// ---------------------------------------------------------------------------
+router.get('/game-data-storage', async (_req, res) => {
+  try {
+    const rows = await rawSql`
+      WITH tracked(table_name, label, category, is_legacy) AS (
+        VALUES
+          ('games',                'Games',                'core',          false),
+          ('playoff_series',       'Playoff Series',       'core',          false),
+          ('goals',                'Goals',                'events',        false),
+          ('shootout_attempts',    'Shootout Attempts',    'events',        false),
+          ('game_rosters',         'Game Rosters',         'participation', false),
+          ('game_starting_lineup', 'Starting Lineups',     'participation', false),
+          ('game_goalie_stints',   'Goalie Stints',        'goalies',       false),
+          ('user_watched_games',   'User Watched Games',   'user',          false)
+      ),
+      relation_sizes AS (
+        SELECT
+          t.table_name,
+          t.label,
+          t.category,
+          t.is_legacy,
+          c.oid,
+          c.oid IS NOT NULL AS present,
+          COALESCE(s.n_live_tup, 0)::bigint AS estimated_rows,
+          CASE WHEN c.oid IS NULL THEN 0 ELSE pg_relation_size(c.oid) END::bigint AS table_bytes,
+          CASE WHEN c.oid IS NULL THEN 0 ELSE pg_indexes_size(c.oid) END::bigint AS index_bytes,
+          CASE WHEN c.oid IS NULL THEN 0 ELSE pg_total_relation_size(c.oid) END::bigint AS total_bytes
+        FROM tracked t
+        LEFT JOIN pg_class c ON c.oid = to_regclass(format('public.%I', t.table_name))
+        LEFT JOIN pg_stat_user_tables s ON s.relid = c.oid
+      )
+      SELECT
+        table_name,
+        label,
+        category,
+        is_legacy,
+        present,
+        estimated_rows,
+        table_bytes,
+        index_bytes,
+        total_bytes,
+        pg_size_pretty(table_bytes) AS table_pretty,
+        pg_size_pretty(index_bytes) AS index_pretty,
+        pg_size_pretty(total_bytes) AS total_pretty,
+        CASE
+          WHEN SUM(total_bytes) OVER () > 0
+            THEN ROUND((total_bytes::numeric / SUM(total_bytes) OVER ()) * 100, 2)
+          ELSE 0
+        END AS pct_of_total
+      FROM relation_sizes
+      ORDER BY total_bytes DESC, table_name ASC
+    `;
+
+    const tables = rows.map(mapStorageRow);
+    const totals = tables.reduce(
+      (acc, table) => ({
+        estimated_rows: acc.estimated_rows + table.estimated_rows,
+        table_bytes: acc.table_bytes + table.table_bytes,
+        index_bytes: acc.index_bytes + table.index_bytes,
+        total_bytes: acc.total_bytes + table.total_bytes,
+      }),
+      { estimated_rows: 0, table_bytes: 0, index_bytes: 0, total_bytes: 0 },
+    );
+    const cleanupCandidates = tables
+      .filter(
+        (table) => table.is_legacy && table.present && table.total_bytes > 0,
+      )
+      .map((table) => ({
+        table_name: table.table_name,
+        label: table.label,
+        total_bytes: table.total_bytes,
+        total_pretty: table.total_pretty,
+      }));
+
+    return res.json({
+      generated_at: new Date().toISOString(),
+      row_count_source: 'pg_stat_user_tables.n_live_tup',
+      tables,
+      totals,
+      cleanup_candidates: cleanupCandidates,
+    });
+  } catch (err) {
+    console.error('admin game data storage report error:', err);
+    return res
+      .status(500)
+      .json({ error: 'Failed to load game data storage report' });
   }
 });
 

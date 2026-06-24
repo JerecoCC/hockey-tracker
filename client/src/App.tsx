@@ -9,11 +9,13 @@ import UserLayout from './components/UserLayout/UserLayout';
 import UserDashboard from './pages/user/dashboard/UserDashboard';
 import UserGames from './pages/user/games/UserGames';
 import UserGameDetailsPage from './pages/user/games/game-details/UserGameDetailsPage';
+import UserSettings from './pages/user/settings/UserSettings';
 import LeaguesPage from './pages/admin/leagues/Leagues';
 import LeagueDetailsPage from './pages/admin/leagues/LeagueDetails';
 import UsersPage from './pages/admin/users/Users';
 import TeamDetailsPage from './pages/admin/teams/TeamDetails';
 import SeasonDetailsPage from './pages/admin/seasons/SeasonDetails';
+import PlayoffSeriesDetailsPage from './pages/admin/seasons/PlayoffSeriesDetailsPage';
 import GameDetailsPage from './pages/admin/games/game-details/GameDetailsPage';
 import PlayerDetailsPage from './pages/admin/players/PlayerDetails';
 import AuthCallbackPage from './pages/auth/callback/AuthCallback';
@@ -104,6 +106,7 @@ const router = createBrowserRouter([
       { path: '/dashboard', element: <UserDashboard /> },
       { path: '/games', element: <UserGames /> },
       { path: '/games/:id', element: <UserGameDetailsPage /> },
+      { path: '/settings', element: <UserSettings /> },
     ],
   },
   {
@@ -127,6 +130,10 @@ const router = createBrowserRouter([
       { path: '/admin/leagues/:leagueSlug', element: <LeagueDetailsPage /> },
       { path: '/admin/leagues/:leagueSlug/teams/:teamSlug', element: <TeamDetailsPage /> },
       { path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug', element: <SeasonDetailsPage /> },
+      {
+        path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/playoffs/:seriesSlug',
+        element: <PlayoffSeriesDetailsPage />,
+      },
       {
         path: '/admin/leagues/:leagueSlug/seasons/:seasonSlug/games/:gameDateSlug/:gameSlug',
         element: <GameDetailsPage />,

@@ -1,23 +1,49 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 .segmentedControl {
+  --segmented-control-border: #{$text-dim};
+
   display: flex;
-  border: 1px solid $border;
+  align-items: stretch;
+  height: 40px;
+  box-sizing: border-box;
+  border: 1px solid var(--segmented-control-border);
   border-radius: $radius-md;
-  overflow: hidden;
+  overflow: visible;
   width: 100%;
 }
 
+.field {
+  --segmented-control-border: #{$border};
+
+  background: $bg-input;
+}
+
 .option {
+  &Wrapper {
+    position: relative;
+    flex: 1;
+    display: flex;
+    min-width: 0;
+    height: 100%;
+
+    &:has(.option:focus-visible) {
+      z-index: 2;
+    }
+  }
+
+  position: relative;
   flex: 1;
-  padding: $space-sm $space-md;
+  min-height: 0;
+  height: 100%;
+  padding: 0 $space-lg;
   background: transparent;
   border: none;
-  border-right: 1px solid $border;
-  color: $text-dim;
-  font-size: $font-sm;
-  font-weight: 700;
+  border-right: 1px solid var(--segmented-control-border);
+  color: $text-light;
+  font-size: $font-base;
+  font-weight: 600;
   letter-spacing: 0.06em;
   cursor: pointer;
   display: flex;
@@ -28,25 +54,41 @@
     background 0.15s,
     color 0.15s;
 
-  &:last-child {
-    border-right: none;
+  svg {
+    font-size: 1em;
+    width: 1em;
+    height: 1em;
   }
 
   &:hover:not(.active):not(:disabled) {
-    background: rgba(255, 255, 255, 0.05);
-    color: $text-body;
+    color: $text-bright;
   }
 
   &:focus {
     outline: none;
-    box-shadow: inset 0 0 0 2px $accent-light;
-    z-index: 1;
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent-light;
+    outline-offset: 2px;
+    z-index: 2;
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
   }
+}
+
+.firstOption {
+  border-top-left-radius: calc(#{$radius-md} - 1px);
+  border-bottom-left-radius: calc(#{$radius-md} - 1px);
+}
+
+.lastOption {
+  border-right: none;
+  border-top-right-radius: calc(#{$radius-md} - 1px);
+  border-bottom-right-radius: calc(#{$radius-md} - 1px);
 }
 
 .active {

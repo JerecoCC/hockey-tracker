@@ -1,17 +1,19 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import LeagueAwardsTab from './LeagueAwardsTab';
+import LeagueAlignmentsTab, { LeagueAlignmentsTabSkeleton } from './LeagueAlignmentsTab';
+import LeagueAwardsTab, { LeagueAwardsTabSkeleton } from './LeagueAwardsTab';
 import LeagueEditModal from './LeagueEditModal';
-import LeagueInfoCard from './LeagueInfoCard';
-import LeaguePlayersTab from './LeaguePlayersTab';
-import LeaguePlayoffsTab from './LeaguePlayoffsTab';
-import LeagueTeamsTab from './LeagueTeamsTab';
-import LeagueSeasonsCard from './LeagueSeasonsCard';
+import LeagueInfoTab, { LeagueInfoTabSkeleton } from './LeagueInfoTab';
+import LeaguePlayersTab, { LeaguePlayersTabSkeleton } from './LeaguePlayersTab';
+import LeaguePlayoffsTab, { LeaguePlayoffsTabSkeleton } from './LeaguePlayoffsTab';
+import LeagueTeamsTab, { LeagueTeamsTabSkeleton } from './LeagueTeamsTab';
+import LeagueSeasonsTab, { LeagueSeasonsTabSkeleton } from './LeagueSeasonsTab';
 import BulkAddPlayersModal from './BulkAddPlayersModal';
 import PlayerFormModal from './PlayerFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
 import SeasonFormModal from '../seasons/SeasonFormModal';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import Tabs from '@/components/Tabs/Tabs';
 import TeamFormModal from '../teams/TeamFormModal';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -64,6 +66,7 @@ const LeagueDetailsPage = () => {
     deleteSeason,
   } = useLeagueDetails(id);
   useDocumentIcon(league?.icon);
+  const leagueLoading = loading || (!isLegacyIdRoute && leaguesLoading);
   useEffect(() => {
     if (!league?.code) return;
     document.title = league.code;
@@ -90,14 +93,27 @@ const LeagueDetailsPage = () => {
   const [playersSearch, setPlayersSearch] = useState('');
 
   usePageBreadcrumbs(
-    loading || (!isLegacyIdRoute && leaguesLoading)
-      ? null
+    leagueLoading
+      ? {
+          backPath: '/admin/leagues',
+          backLabel: 'Back to Leagues',
+          items: [
+            {
+              label: (
+                <Skeleton
+                  type="text"
+                  className={styles.breadcrumbSkeleton}
+                />
+              ),
+            },
+          ],
+        }
       : {
           backPath: '/admin/leagues',
           backLabel: 'Back to Leagues',
           items: [league ? { label: league.code } : { label: 'Not Found' }],
         },
-    [loading, leaguesLoading, isLegacyIdRoute, league?.name, league?.code],
+    [leagueLoading, league?.name, league?.code],
   );
 
   useEffect(() => {
@@ -112,9 +128,9 @@ const LeagueDetailsPage = () => {
   }, [isLegacyIdRoute, league, leagueSlug, navigate]);
 
   useEffect(() => {
-    if (loading || (!isLegacyIdRoute && leaguesLoading) || league) return;
+    if (leagueLoading || league) return;
     navigate('/admin/leagues', { replace: true });
-  }, [isLegacyIdRoute, league, leaguesLoading, loading, navigate]);
+  }, [league, leagueLoading, navigate]);
 
   useEffect(() => {
     if (selectedSeasonId === null && seasons.length > 0) {
@@ -236,12 +252,49 @@ const LeagueDetailsPage = () => {
     ],
   );
 
-  if (loading || (!isLegacyIdRoute && leaguesLoading)) {
+  if (leagueLoading) {
     return (
-      <div className={styles.loaderWrapper}>
-        <span className={styles.spinner} />
-        <p className={styles.loaderText}>Loading league…</p>
-      </div>
+      <Tabs
+        activeIndex={activeTab}
+        onTabChange={handleTabChange}
+        tabs={[
+          {
+            label: 'Info',
+            icon: 'info',
+            content: <LeagueInfoTabSkeleton />,
+          },
+          {
+            label: 'Seasons',
+            icon: 'calendar_month',
+            content: <LeagueSeasonsTabSkeleton />,
+          },
+          {
+            label: 'Teams',
+            icon: 'group',
+            content: <LeagueTeamsTabSkeleton />,
+          },
+          {
+            label: 'Alignments',
+            icon: 'account_tree',
+            content: <LeagueAlignmentsTabSkeleton />,
+          },
+          {
+            label: 'Players',
+            icon: 'groups',
+            content: <LeaguePlayersTabSkeleton />,
+          },
+          {
+            label: 'Playoffs',
+            icon: 'emoji_events',
+            content: <LeaguePlayoffsTabSkeleton />,
+          },
+          {
+            label: 'Awards',
+            icon: 'workspace_premium',
+            content: <LeagueAwardsTabSkeleton />,
+          },
+        ]}
+      />
     );
   }
 
@@ -264,65 +317,41 @@ const LeagueDetailsPage = () => {
               label: 'Info',
               icon: 'info',
               content: (
-                <div className={styles.grid}>
-                  <LeagueInfoCard
-                    className={styles.col12}
-                    league={league}
-                    onEdit={() => setEditModalOpen(true)}
-                  />
-                </div>
+                <LeagueInfoTab
+                  league={league}
+                  onEdit={() => setEditModalOpen(true)}
+                />
               ),
             },
             {
               label: 'Seasons',
               icon: 'calendar_month',
-              content: (
-                <div className={styles.grid}>
-                  <LeagueSeasonsCard className={styles.col12} />
-                </div>
-              ),
+              content: <LeagueSeasonsTab />,
             },
             {
               label: 'Teams',
               icon: 'group',
-              content: (
-                <div className={styles.grid}>
-                  <LeagueTeamsTab className={styles.col12} />
-                </div>
-              ),
+              content: <LeagueTeamsTab />,
+            },
+            {
+              label: 'Alignments',
+              icon: 'account_tree',
+              content: <LeagueAlignmentsTab />,
             },
             {
               label: 'Players',
               icon: 'groups',
-              content: (
-                <div className={styles.grid}>
-                  <LeaguePlayersTab className={styles.col12} />
-                </div>
-              ),
+              content: <LeaguePlayersTab />,
             },
             {
               label: 'Playoffs',
               icon: 'emoji_events',
-              content: (
-                <div className={styles.grid}>
-                  <LeaguePlayoffsTab
-                    className={styles.col12}
-                    leagueId={league.id}
-                  />
-                </div>
-              ),
+              content: <LeaguePlayoffsTab leagueId={league.id} />,
             },
             {
               label: 'Awards',
               icon: 'workspace_premium',
-              content: (
-                <div className={styles.grid}>
-                  <LeagueAwardsTab
-                    className={styles.col12}
-                    leagueId={league.id}
-                  />
-                </div>
-              ),
+              content: <LeagueAwardsTab leagueId={league.id} />,
             },
           ]}
         />

@@ -141,4 +141,18 @@ describe('Table', () => {
     const th = screen.getByRole('columnheader', { name: 'Name' });
     expect(th.style.textAlign).toBe('');
   });
+
+  it('applies rowClassName to matching rows', () => {
+    render(
+      <Table
+        columns={columns}
+        data={data}
+        rowKey={(r) => r.id}
+        rowClassName={(row) => (row.id === '2' ? 'highlight-row' : undefined)}
+      />,
+    );
+
+    expect(screen.getByText('Beta').closest('tr')).toHaveClass('highlight-row');
+    expect(screen.getByText('Alpha').closest('tr')).not.toHaveClass('highlight-row');
+  });
 });

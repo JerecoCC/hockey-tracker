@@ -985,8 +985,8 @@ const PlayerDetailsPage = () => {
                   title="Team History"
                   action={
                     <Button
-                      variant="outlined"
-                      intent="neutral"
+                      variant="filled"
+                      intent="accent"
                       icon="add"
                       size="sm"
                       onClick={() => setCreatingStint(true)}
@@ -1095,6 +1095,9 @@ const PlayerDetailsPage = () => {
         stint={editingStint}
         teams={teams}
         seasons={seasons}
+        history={stints}
+        leagueId={leagueId ?? null}
+        currentTeamId={latestStint?.team_id ?? teamId ?? null}
         onClose={() => {
           setEditingStint(null);
           setCreatingStint(false);

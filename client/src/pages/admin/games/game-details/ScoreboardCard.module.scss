@@ -10,40 +10,40 @@ $scoreboard-stripe-overlap: 8px;
 
 // ── Scoreboard card ────────────────────────────────────────────────────────────
 // Default: normal in-place card appearance.
-.scoreboardCard {
-  --scoreboard-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
-  --scoreboard-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
-
-  position: sticky;
-  top: 52px;
-  z-index: 4;
-  width: 100%;
-  overflow: hidden;
-  margin-inline: 0;
-  margin-bottom: $space-lg;
-  transition:
-    border-color $transition-layout ease,
-    border-radius $transition-layout ease,
-    box-shadow $transition-layout ease,
-    margin-inline $transition-layout ease,
-    width $transition-layout ease;
-
-  @media (max-width: $bp-tablet) {
-    position: static;
-    top: auto;
-    z-index: auto;
-  }
-}
-
-.scoreboardCardStuck {
-  width: calc(100% + var(--scoreboard-main-inline-padding) + var(--scoreboard-main-inline-padding));
-  margin-inline: var(--scoreboard-main-inline-padding-offset);
-  border-radius: 0 0 $radius-lg $radius-lg !important;
-  border-color: transparent !important;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
-}
-
 .scoreboard {
+  &Card {
+    --scoreboard-main-inline-padding: var(--main-inline-padding, #{$space-4xl});
+    --scoreboard-main-inline-padding-offset: var(--main-inline-padding-offset, -#{$space-4xl});
+
+    position: sticky;
+    top: 52px;
+    z-index: 4;
+    width: 100%;
+    overflow: hidden;
+    margin-inline: 0;
+    margin-bottom: $space-lg;
+    transition:
+      border-color $transition-layout ease,
+      border-radius $transition-layout ease,
+      box-shadow $transition-layout ease,
+      margin-inline $transition-layout ease,
+      width $transition-layout ease;
+
+    @media (max-width: $bp-tablet) {
+      position: static;
+      top: auto;
+      z-index: auto;
+    }
+  }
+
+  &CardStuck {
+    width: calc(100% + var(--scoreboard-main-inline-padding) + var(--scoreboard-main-inline-padding));
+    margin-inline: var(--scoreboard-main-inline-padding-offset);
+    border-radius: 0 0 $radius-lg $radius-lg !important;
+    border-color: transparent !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  }
+
   display: flex;
   align-items: stretch;
   min-height: 80px;
@@ -93,23 +93,23 @@ $scoreboard-stripe-overlap: 8px;
     border-bottom: 1px solid $border;
     overflow: hidden;
   }
-}
 
-.teamSideLoser {
-  @media (max-width: 900px) {
-    .teamLogoBtn {
-      opacity: 0.45;
+  &Loser {
+    @media (max-width: 900px) {
+      .teamLogoBtn {
+        opacity: 0.45;
+      }
     }
   }
-}
 
-.teamSideHome {
-  flex-direction: row-reverse;
+  &Home {
+    flex-direction: row-reverse;
 
-  @media (max-width: 900px) {
-    flex-direction: row;
-    order: 2;
-    border-bottom: none;
+    @media (max-width: 900px) {
+      flex-direction: row;
+      order: 2;
+      border-bottom: none;
+    }
   }
 }
 
@@ -205,57 +205,57 @@ $scoreboard-stripe-overlap: 8px;
       clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
     }
   }
-}
 
-.teamStripeHome {
-  clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
-
-  @media (min-width: 901px) {
-    right: 0;
-    left: auto;
-  }
-
-  .teamStripeSecondary {
-    clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
-  }
-
-  .teamStripeSecondary2 {
-    clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
-  }
-
-  @media (max-width: 900px) {
-    clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
-    margin-left: -$space-lg;
-
-    .teamStripeSecondary {
-      clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
-    }
-
-    .teamStripeSecondary2 {
-      clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
-    }
-  }
-}
-
-.teamStripeRight {
-  display: none;
-
-  @media (max-width: 900px) {
-    display: block;
-    position: absolute;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    margin: 0;
-    width: 52px;
+  &Home {
     clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
 
+    @media (min-width: 901px) {
+      right: 0;
+      left: auto;
+    }
+
     .teamStripeSecondary {
-      clip-path: polygon(42.5% 0, 55% 0, 25% 100%, 12.5% 100%);
+      clip-path: polygon(42.5% 0%, 55% 0%, 25% 100%, 12.5% 100%);
     }
 
     .teamStripeSecondary2 {
-      clip-path: polygon(67.5% 0, 80% 0, 50% 100%, 37.5% 100%);
+      clip-path: polygon(67.5% 0%, 80% 0%, 50% 100%, 37.5% 100%);
+    }
+
+    @media (max-width: 900px) {
+      clip-path: polygon(0 0, 100% 0, 70% 100%, 0 100%);
+      margin-left: -$space-lg;
+
+      .teamStripeSecondary {
+        clip-path: polygon(75% 0, 87.5% 0, 57.5% 100%, 45% 100%);
+      }
+
+      .teamStripeSecondary2 {
+        clip-path: polygon(50% 0, 62.5% 0, 32.5% 100%, 20% 100%);
+      }
+    }
+  }
+
+  &Right {
+    display: none;
+
+    @media (max-width: 900px) {
+      display: block;
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      margin: 0;
+      width: 52px;
+      clip-path: polygon(30% 0, 100% 0, 100% 100%, 0 100%);
+
+      .teamStripeSecondary {
+        clip-path: polygon(42.5% 0, 55% 0, 25% 100%, 12.5% 100%);
+      }
+
+      .teamStripeSecondary2 {
+        clip-path: polygon(67.5% 0, 80% 0, 50% 100%, 37.5% 100%);
+      }
     }
   }
 }
@@ -271,12 +271,12 @@ $scoreboard-stripe-overlap: 8px;
   position: absolute;
   inset: 0;
   clip-path: polygon(45% 0%, 57.5% 0%, 87.5% 100%, 75% 100%);
-}
 
-.teamStripeSecondary2 {
-  position: absolute;
-  inset: 0;
-  clip-path: polygon(20% 0%, 32.5% 0%, 62.5% 100%, 50% 100%);
+  &2 {
+    position: absolute;
+    inset: 0;
+    clip-path: polygon(20% 0%, 32.5% 0%, 62.5% 100%, 50% 100%);
+  }
 }
 
 // Logo button
@@ -303,6 +303,16 @@ $scoreboard-stripe-overlap: 8px;
   &:hover {
     opacity: 0.75;
   }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+
+  &:disabled:hover {
+    opacity: 0.55;
+  }
+
   &:focus-visible {
     outline: 2px solid $accent;
     outline-offset: 4px;
@@ -314,36 +324,38 @@ $scoreboard-stripe-overlap: 8px;
     margin-left: 0;
     margin-right: 0;
   }
-}
 
-.teamLogoBtnHome {
-  margin-left: 0;
-  margin-right: calc(#{$scoreboard-stripe-width} + #{$scoreboard-stripe-gap});
-
-  @media (max-width: 900px) {
-    flex-direction: row-reverse;
+  &Home {
     margin-left: 0;
-    margin-right: 0;
+    margin-right: calc(#{$scoreboard-stripe-width} + #{$scoreboard-stripe-gap});
+
+    @media (max-width: 900px) {
+      flex-direction: row-reverse;
+      margin-left: 0;
+      margin-right: 0;
+    }
   }
 }
 
 // ── Team logo / placeholder ────────────────────────────────────────────────────
 // Overrides the inline size from TeamLogo so we can apply a media-query breakpoint
-.teamLogoResponsive {
-  width: 60px !important;
-  height: 60px !important;
+.team {
+  &LogoResponsive {
+    width: 60px !important;
+    height: 60px !important;
 
-  @media (max-width: 900px) {
-    width: 40px !important;
-    height: 40px !important;
+    @media (max-width: 900px) {
+      width: 40px !important;
+      height: 40px !important;
+    }
   }
-}
 
-.teamInfo {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  &Info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
 }
 
 .teamFullName,
@@ -359,19 +371,21 @@ $scoreboard-stripe-overlap: 8px;
     text-shadow $transition-layout ease;
 }
 
-.teamPlaceName {
-  font-size: $font-sm;
-  color: $text-dim;
-  transition:
-    color $transition-layout ease,
-    text-shadow $transition-layout ease;
-}
+.team {
+  &PlaceName {
+    font-size: $font-sm;
+    color: $text-dim;
+    transition:
+      color $transition-layout ease,
+      text-shadow $transition-layout ease;
+  }
 
-.teamMobileCode {
-  display: none;
+  &MobileCode {
+    display: none;
 
-  @media (max-width: 900px) {
-    display: inline;
+    @media (max-width: 900px) {
+      display: inline;
+    }
   }
 }
 
@@ -400,60 +414,62 @@ $scoreboard-stripe-overlap: 8px;
 }
 
 // ── Center: score numbers flanking the status block ───────────────────────────
-.scoreCenter {
-  display: flex;
-  align-items: center;
-  gap: $space-lg;
-  flex-shrink: 0;
-  padding: $space-md $space-xl;
+.score {
+  &Center {
+    display: flex;
+    align-items: center;
+    gap: $space-lg;
+    flex-shrink: 0;
+    padding: $space-md $space-xl;
 
-  @media (max-width: 900px) {
-    order: 1;
-    justify-content: center;
-    padding: $space-md $space-lg;
-    border-bottom: 1px solid $border;
-    width: 100%;
-    box-sizing: border-box;
+    @media (max-width: 900px) {
+      order: 1;
+      justify-content: center;
+      padding: $space-md $space-lg;
+      border-bottom: 1px solid $border;
+      width: 100%;
+      box-sizing: border-box;
+    }
   }
-}
 
-.scoreBlock {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: $space-xs;
-  flex-shrink: 0;
-}
-
-.scoreNumber {
-  font-size: 2.75rem;
-  font-weight: 700;
-  color: $text-bright;
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-  min-width: 2rem;
-  text-align: center;
-  transition: color 0.15s;
-  line-height: 1;
-
-  @media (max-width: 900px) {
-    font-size: 2rem;
+  &Block {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+    flex-shrink: 0;
   }
-}
 
-.scoreNumberLoser {
-  color: $text-dim;
-}
+  &Number {
+    font-size: 2.75rem;
+    font-weight: 700;
+    color: $text-bright;
+    letter-spacing: 0.02em;
+    font-variant-numeric: tabular-nums;
+    min-width: 2rem;
+    text-align: center;
+    transition: color 0.15s;
+    line-height: 1;
 
-.scoreMeta {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
+    @media (max-width: 900px) {
+      font-size: 2rem;
+    }
+  }
 
-.scoreDate {
-  font-size: $font-sm;
-  color: $text-dim;
+  &NumberLoser {
+    color: $text-dim;
+  }
+
+  &Meta {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &Date {
+    font-size: $font-sm;
+    color: $text-dim;
+  }
 }

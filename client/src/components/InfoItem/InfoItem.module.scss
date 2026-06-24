@@ -38,4 +38,12 @@
 .htmlContent {
   font-size: $font-body;
   color: $text-body;
+
+  > :first-child {
+    margin-top: 0;
+  }
+
+  > :last-child {
+    margin-bottom: 0;
+  }
 }

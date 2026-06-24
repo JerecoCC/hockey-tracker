@@ -4,6 +4,18 @@
 
 // ── Section title ──────────────────────────────────────────────────────
 // ── Page loader ────────────────────────────────────────────────────────
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 .loaderWrapper {
   display: flex;
   flex-direction: column;
@@ -97,6 +109,302 @@
   gap: $space-2xl;
 }
 
+.breadcrumbSkeleton {
+  width: 72px;
+  height: 16px;
+}
+
+.infoSkeleton {
+  &Header {
+    display: flex;
+    align-items: center;
+    gap: $space-xl;
+    margin-bottom: $space-2xl;
+    padding-bottom: $space-2xl;
+    border-bottom: 1px solid $border;
+
+    @media (max-width: 720px) {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  &Logo {
+    width: 80px;
+    height: 80px;
+    border-radius: $radius-lg;
+  }
+
+  &NameBlock {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &Title {
+    width: min(320px, 68%);
+    height: 28px;
+
+    @media (max-width: 720px) {
+      width: min(280px, 100%);
+    }
+  }
+
+  &Code {
+    width: 64px;
+    height: 14px;
+  }
+
+  &RightCol {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: $space-md;
+
+    @media (max-width: 720px) {
+      align-items: flex-start;
+      width: 100%;
+    }
+  }
+
+  &Button {
+    width: 86px;
+    height: 38px;
+    border-radius: $radius-md;
+  }
+
+  &Swatches {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: $space-xl;
+
+    @media (max-width: 720px) {
+      justify-content: flex-start;
+    }
+  }
+
+  &Swatch {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-md;
+  }
+
+  &SwatchDot {
+    width: $space-2xl;
+    height: $space-2xl;
+    border-radius: $radius-sm;
+  }
+
+  &SwatchLabel {
+    width: 54px;
+    height: 12px;
+  }
+
+  &Item {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &ItemFull {
+    grid-column: 1 / -1;
+  }
+}
+
+.infoSkeletonLabel,
+.infoSkeletonLabelLong {
+  height: 10px;
+}
+
+.infoSkeleton {
+  &Label {
+    width: 118px;
+  }
+
+  &LabelLong {
+    width: 96px;
+  }
+
+  &Value {
+    width: min(180px, 76%);
+    height: 16px;
+  }
+
+  &Description {
+    display: flex;
+    max-width: 720px;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+}
+
+.infoSkeletonDescriptionLine,
+.infoSkeletonDescriptionLineShort {
+  height: 16px;
+}
+
+.infoSkeletonDescriptionLine {
+  width: 100%;
+
+  &Short {
+    width: 58%;
+  }
+}
+
+.tabSkeleton {
+  &Title {
+    height: 18px;
+  }
+
+  &Button {
+    height: 34px;
+    border-radius: $radius-md;
+  }
+
+  &Controls {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: $space-md;
+    margin-bottom: $space-xl;
+  }
+
+  &Search {
+    flex: 1;
+    min-width: min(240px, 100%);
+    max-width: 380px;
+    height: 38px;
+    border-radius: $radius-md;
+  }
+
+  &SearchFull {
+    width: 100%;
+    max-width: none;
+  }
+
+  &Actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: $space-xs;
+    flex-shrink: 0;
+  }
+}
+
+.tabSkeletonStack,
+.tabSkeletonGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tabSkeleton {
+  &Stack {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    gap: $space-md;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    min-height: 72px;
+    padding: $space-md;
+    border-radius: $radius-md;
+    opacity: 0.65;
+  }
+
+  &RowBordered {
+    border: 1px solid $border;
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  &TextStack {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &Eyebrow {
+    width: min(96px, 35%);
+    height: 10px;
+  }
+
+  &Name {
+    width: min(180px, 65%);
+    height: 14px;
+  }
+
+  &Tag {
+    width: 70px;
+    height: 20px;
+  }
+
+  &HeadingBlock {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &Heading {
+    width: min(190px, 70%);
+    height: 18px;
+  }
+
+  &Subheading {
+    width: min(420px, 100%);
+    height: 13px;
+  }
+
+  &MetaLine {
+    width: min(150px, 50%);
+    height: 11px;
+  }
+
+  &ChipRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-xs;
+  }
+
+  &Chip {
+    width: 86px;
+    height: 20px;
+  }
+
+  &AwardName {
+    width: min(220px, 70%);
+    height: 16px;
+  }
+
+  &Description {
+    width: min(420px, 100%);
+    height: 13px;
+  }
+}
+
 .playoffFormatList {
   margin: 0;
   padding-left: 1.25rem;
@@ -109,9 +417,13 @@
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: $space-md;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 .rosterList {
@@ -120,7 +432,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: $space-xs;
 }
 
 .listSpinner {
@@ -135,42 +447,348 @@
 
 // ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
 
-.ruleSetList {
+.ruleSet {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &Item {
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-md;
+    overflow: hidden;
+    padding: $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &:hover,
+    &:focus-within {
+      background: rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  &Name {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: $font-sm;
+    color: $text-body;
+    font-weight: 500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    > span {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+}
+
+.alignmentSet {
+  &Meta {
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 400;
+  }
+
+  &Form {
+    display: grid;
+    gap: $space-md;
+  }
+}
+
+.teamsTabStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-lg;
+}
+
+.leagueTeamsActions {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.teamsViewSwitch {
+  width: auto;
+  flex-shrink: 0;
+  min-height: calc(#{$font-sm} * 1.2 + #{$space-md} * 2 + 2px);
+
+  button {
+    height: 100%;
+    min-width: 38px;
+    padding: 0 $space-md;
+  }
+}
+
+.alignment {
+  &Cards {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &TitleInfo {
+    display: inline-flex;
+    align-items: center;
+    color: $text-dim;
+    cursor: help;
+    line-height: 1;
+    transition: color $transition-fast;
+
+    &:hover,
+    &:focus-visible {
+      color: $text-bright;
+      outline: none;
+    }
+  }
+
+  &SetStack {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &HeaderCard {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xl;
+    padding: $space-lg $space-xl !important;
+  }
+
+  &Card {
+    position: relative;
+    overflow: hidden;
+    padding: $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &:hover,
+    &:focus-within {
+      background: rgba(255, 255, 255, 0.04);
+
+      .alignmentCardHoverActions {
+        opacity: 1;
+        pointer-events: auto;
+      }
+    }
+  }
+
+  &CardHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-md;
+
+    @media (max-width: 640px) {
+      flex-direction: column;
+    }
+  }
+
+  &CardHoverActions {
+    z-index: 2;
+  }
+
+  &PanelBody {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+  }
+}
+
+.alignmentTeamList,
+.alignmentGroupList {
   list-style: none;
   margin: 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: $space-xs;
 }
 
-.ruleSetItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  background: $bg-page;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-}
+.alignment {
+  &TeamList {
+    gap: $space-sm;
+  }
 
-.ruleSetName {
-  font-size: $font-sm;
-  color: $text-body;
-  font-weight: 500;
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  &GroupList {
+    gap: $space-md;
+  }
 
-.ruleSetActions {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-shrink: 0;
+  &EditRow {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &EditNameRow {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  &EditControlsRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: $space-md;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+      align-items: stretch;
+    }
+
+    > :only-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  &EditLabel {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    min-width: 0;
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+
+    input,
+    select {
+      min-height: 38px;
+      width: 100%;
+      border: 1px solid $border;
+      border-radius: $radius-md;
+      background: rgba(0, 0, 0, 0.18);
+      color: $text-body;
+      font-size: $font-sm;
+      font-weight: 500;
+      letter-spacing: 0;
+      padding: 0 $space-sm;
+      text-transform: none;
+
+      &:focus {
+        outline: none;
+        border-color: $accent-light;
+        box-shadow: 0 0 0 2px rgba($accent, 0.18);
+      }
+    }
+  }
+
+  &BooleanField {
+    display: flex;
+    align-items: center;
+  }
+
+  &StructureSegmented {
+    > button,
+    > span {
+      flex: 1;
+      min-width: 0;
+      height: 100%;
+    }
+
+    > span {
+      display: flex;
+    }
+
+    > button,
+    > span > button {
+      min-height: 0;
+      height: 100%;
+      width: 100%;
+      padding-top: 0;
+      padding-bottom: 0;
+    }
+  }
+
+  &CardMeta {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-wrap: wrap;
+  }
+
+  &Expanded {
+    margin-top: $space-md;
+  }
+
+  &GroupTools {
+    display: flex;
+    justify-content: flex-end;
+    padding: $space-sm $space-md 0;
+  }
+
+  &TeamModalControls {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    margin-bottom: $space-lg;
+
+    @media (max-width: $bp-tablet) {
+      align-items: stretch;
+      flex-direction: column;
+    }
+  }
+
+  &TeamModalSearch {
+    flex: 1;
+  }
+
+  &TeamModalList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: min(70vh, 680px);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &TeamModalCode {
+    align-self: center;
+    color: $text-dim;
+    flex-shrink: 0;
+    font-size: $font-xs;
+    letter-spacing: 0;
+  }
+
+  &TeamModalEmpty {
+    color: $text-dim;
+    font-size: $font-base;
+    font-style: italic;
+    margin: 0;
+    padding: $space-2xl 0;
+    text-align: center;
+  }
+
+  &EmptyState {
+    display: flex;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: $space-md;
+  }
 }
 
 // Applied only when teams.length > 5 — caps height and enables scrolling
@@ -210,19 +828,25 @@
   }
 }
 
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: $space-md;
-  grid-column: 1 / -1;
+.empty {
+  &State {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: $space-md;
+    grid-column: 1 / -1;
+  }
+
+  &Msg {
+    font-size: $font-sm;
+    color: $text-dim;
+    font-style: italic;
+    margin: 0;
+  }
 }
 
-.emptyMsg {
-  font-size: $font-sm;
-  color: $text-dim;
-  font-style: italic;
-  margin: 0;
+.groupEmptyMsg {
+  padding: $space-sm $space-md $space-md;
 }
 
 .ungroupedLabel {
@@ -286,13 +910,13 @@
   display: flex;
   flex-direction: column;
   gap: $space-md;
-}
 
-.formActions {
-  display: flex;
-  justify-content: flex-end;
-  gap: $space-md;
-  margin-top: $space-sm;
+  &Actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: $space-md;
+    margin-top: $space-sm;
+  }
 }
 
 // ── Inline league edit form ───────────────────────────────────────────────
@@ -333,11 +957,11 @@
 // Child groups are indented and separated from siblings
 .groupItemNew {
   margin: $space-sm;
-}
 
-.groupItemNewRoot {
-  margin-left: 0;
-  margin-right: 0;
+  &Root {
+    margin-left: 0;
+    margin-right: 0;
+  }
 }
 
 // Passed as className to Accordion to tint the border for nested sub-groups.
@@ -351,34 +975,36 @@
 }
 
 // Team chips inline in the row
-.groupTeams {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-wrap: wrap;
-  min-width: 0;
-}
+.group {
+  &Teams {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
 
-.groupTeamThumb {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-  border-radius: $radius-sm;
-  filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2));
-}
+  &TeamThumb {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+    border-radius: $radius-sm;
+    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2));
+  }
 
-.groupTeamDot {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  flex-shrink: 0;
+  &TeamDot {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    flex-shrink: 0;
+  }
 }
 
 // ── Group "add team" selector list (used inside modal) ───────────────────
@@ -400,94 +1026,80 @@
 }
 
 // ── Inline add / edit row ─────────────────────────────────────────────────
-.groupInlineRow {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: $space-sm $space-md;
-}
-
-.groupInlineInput {
-  flex: 1;
-  min-width: 0;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid $border;
-  color: $text-body;
-  font-size: $font-lg;
-  font-weight: 500;
-  padding: $space-xs 0;
-  outline: none;
-
-  &:focus {
-    border-bottom-color: $text-bright;
+.groupInline {
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    padding: $space-sm $space-md;
   }
 
-  &::placeholder {
+  &Input {
+    flex: 1;
+    min-width: 0;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid $border;
+    color: $text-body;
+    font-size: $font-lg;
+    font-weight: 500;
+    padding: $space-xs 0;
+    outline: none;
+
+    &:focus {
+      border-bottom-color: $text-bright;
+    }
+
+    &::placeholder {
+      color: $text-dim;
+    }
+  }
+
+  &Btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    background: transparent;
+    color: $text-bright;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition:
+      background $transition-fast,
+      color $transition-fast;
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+  }
+
+  &BtnCancel {
     color: $text-dim;
   }
 }
 
-.groupInlineBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: transparent;
-  color: $text-bright;
-  cursor: pointer;
-  flex-shrink: 0;
-  transition:
-    background $transition-fast,
-    color $transition-fast;
-
-  &:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.08);
-  }
-
-  &:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-}
-
-.groupInlineBtnCancel {
-  color: $text-dim;
-}
-
 // Group label with optional role badge
-.groupLabel {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
+.group {
+  &Label {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
 
-// Small pill badge indicating a group's playoff role
-.groupRoleBadge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 7px;
-  border-radius: $radius-sm;
-  font-size: $font-xs;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  background: rgba($text-dim, 0.15);
-  color: $text-dim;
-  white-space: nowrap;
-}
-
-.groupRoleBadge_conference {
-  background: rgba(#6366f1, 0.18);
-  color: #a5b4fc;
-}
-
-.groupRoleBadge_division {
-  background: rgba(#10b981, 0.18);
-  color: #6ee7b7;
+  &TeamCount {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    white-space: nowrap;
+  }
 }
 
 // Always-visible footer row inside each group node
@@ -499,93 +1111,95 @@
 }
 
 // League award definitions
-.awardDefinitionList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.awardDefinitionItem {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: $space-lg;
-  padding: $space-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
-
-  @media (max-width: 720px) {
+.awardDefinition {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
     flex-direction: column;
+    gap: $space-sm;
   }
-}
 
-.awardDefinitionMain {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  min-width: 0;
-}
+  &Item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-lg;
+    padding: $space-md;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
 
-.awardDefinitionName {
-  color: $text-bright;
-  font-size: $font-base;
-  font-weight: 700;
-}
+    @media (max-width: 720px) {
+      flex-direction: column;
+    }
+  }
 
-.awardDefinitionMeta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: $space-xs;
+  &Main {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    min-width: 0;
+  }
 
-  span {
-    padding: 2px 8px;
-    border-radius: $radius-sm;
-    background: rgba(255, 255, 255, 0.06);
+  &Name {
+    color: $text-bright;
+    font-size: $font-base;
+    font-weight: 700;
+  }
+
+  &Meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-xs;
+
+    span {
+      padding: 2px 8px;
+      border-radius: $radius-sm;
+      background: rgba(255, 255, 255, 0.06);
+      color: $text-dim;
+      font-size: $font-xs;
+      line-height: 1.6;
+      text-transform: capitalize;
+    }
+  }
+
+  &Description {
+    margin: 0;
     color: $text-dim;
-    font-size: $font-xs;
-    line-height: 1.6;
-    text-transform: capitalize;
+    font-size: $font-sm;
+    line-height: 1.45;
   }
-}
 
-.awardDefinitionDescription {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-sm;
-  line-height: 1.45;
-}
-
-.awardDefinitionForm {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.awardDefinitionFormGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-md;
-
-  @media (max-width: 640px) {
-    grid-template-columns: 1fr;
+  &Form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
   }
-}
 
-.awardDefinitionCheckbox {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  min-height: 42px;
-  color: $text-body;
-  font-size: $font-sm;
+  &FormGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-md;
 
-  input {
-    width: 16px;
-    height: 16px;
-    accent-color: $accent;
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &Checkbox {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    min-height: 42px;
+    color: $text-body;
+    font-size: $font-sm;
+
+    input {
+      width: 16px;
+      height: 16px;
+      accent-color: $accent;
+    }
   }
 }

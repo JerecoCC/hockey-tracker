@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
+import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
-import Select from '@/components/Select/Select';
-import { type SelectOption } from '@/components/Select/Select';
+import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
 import styles from './SetLineupModal.module.scss';
@@ -13,7 +14,7 @@ interface Props {
   teamId: string;
   teamName: string;
   players: TeamPlayerRecord[];
-  /** All lineup entries for the game — will be filtered to this team's entries. */
+  /** All lineup entries for the game, filtered here to this team's entries. */
   lineup: LineupEntry[];
   saveTeamLineup: (
     teamId: string,
@@ -22,77 +23,54 @@ interface Props {
   ) => Promise<boolean>;
 }
 
-type Draft = Record<LineupPositionSlot, string | null>;
-
-const emptyDraft = (): Draft => ({ C: null, LW: null, RW: null, D1: null, D2: null, G: null });
-
-const toOption = (p: TeamPlayerRecord): SelectOption => ({
-  value: p.id,
-  label:
-    p.jersey_number != null
-      ? `#${p.jersey_number} ${p.first_name} ${p.last_name}`
-      : `${p.first_name} ${p.last_name}`,
-});
-
-/**
- * Builds the option list for a position slot.
- *
- * For G: only goalies.
- * For C/LW/RW: exact-position matches come first, then generic 'F' (forward) players,
- * then a divider, then all remaining non-goalies.
- * For D1/D2: 'D' players come first, then a divider, then the rest (includes F players).
- */
-const buildOptions = (slot: LineupPositionSlot, players: TeamPlayerRecord[]): SelectOption[] => {
-  if (slot === 'G') return players.filter((p) => (p.position ?? '') === 'G').map(toOption);
-
-  const isForwardSlot = slot === 'C' || slot === 'LW' || slot === 'RW';
-  const nonGoalies = players.filter((p) => (p.position ?? '') !== 'G');
-
-  const primary = nonGoalies.filter((p) => {
-    const pos = p.position ?? '';
-    if (isForwardSlot) return pos === slot || pos === 'F';
-    // D1 → LD + D, D2 → RD + D; either specific side also fits the other D slot
-    if (slot === 'D1') return pos === 'LD' || pos === 'D' || pos === 'RD';
-    if (slot === 'D2') return pos === 'RD' || pos === 'D' || pos === 'LD';
-    return false;
-  });
-  const rest = nonGoalies.filter((p) => !primary.includes(p));
-
-  const result: SelectOption[] = primary.map(toOption);
-  if (primary.length > 0 && rest.length > 0) result.push({ divider: true });
-  result.push(...rest.map(toOption));
-  return result;
+type FormValues = {
+  jerseyInput: string;
+  query: string;
 };
 
-const SLOT_LABEL: Record<LineupPositionSlot, string> = {
+type JerseyNotice = {
+  number: number;
+  name?: string;
+};
+
+const MAX_STARTERS = 6;
+const REQUIRED_SKATERS = 5;
+const REQUIRED_GOALIES = 1;
+const SKATER_SLOTS: LineupPositionSlot[] = ['F1', 'F2', 'F3', 'D1', 'D2'];
+
+const POSITION_LABELS: Record<string, string> = {
   C: 'Center',
   LW: 'Left Wing',
   RW: 'Right Wing',
-  D1: 'Left Defense',
-  D2: 'Right Defense',
+  F: 'Forward',
+  D: 'Defense',
+  LD: 'Left Defense',
+  RD: 'Right Defense',
   G: 'Goalie',
 };
 
-const duplicateLineupPlayerError = (draft: Draft) => {
-  const playerSlots = new Map<string, LineupPositionSlot[]>();
-  (Object.keys(draft) as LineupPositionSlot[]).forEach((slot) => {
-    const playerId = draft[slot];
-    if (!playerId) return;
-    const slots = playerSlots.get(playerId) ?? [];
-    slots.push(slot);
-    playerSlots.set(playerId, slots);
-  });
+const playerFullName = (player: Pick<TeamPlayerRecord, 'first_name' | 'last_name'>) =>
+  `${player.first_name} ${player.last_name}`.trim();
 
-  for (const slots of playerSlots.values()) {
-    if (slots.length > 1) {
-      return `A player cannot be used in multiple starting lineup slots (${slots
-        .map((slot) => SLOT_LABEL[slot])
-        .join(', ')})`;
-    }
+const isGoalie = (player: Pick<TeamPlayerRecord, 'position'>) => (player.position ?? '') === 'G';
+
+const compareByRosterOrder = (a: TeamPlayerRecord, b: TeamPlayerRecord) => {
+  const goalieOrder = Number(isGoalie(a)) - Number(isGoalie(b));
+  if (goalieOrder !== 0) return goalieOrder;
+  if (a.jersey_number != null && b.jersey_number != null) {
+    if (a.jersey_number !== b.jersey_number) return a.jersey_number - b.jersey_number;
+  } else if (a.jersey_number != null) {
+    return -1;
+  } else if (b.jersey_number != null) {
+    return 1;
   }
-
-  return null;
+  return `${a.last_name} ${a.first_name}`.localeCompare(`${b.last_name} ${b.first_name}`);
 };
+
+const formatJerseyNotice = (label: string, notices: JerseyNotice[]) =>
+  notices.length > 0
+    ? `${label}: ${notices.map((notice) => `#${notice.number}${notice.name ? ` ${notice.name}` : ''}`).join(', ')}`
+    : null;
 
 const SetLineupModal = ({
   open,
@@ -103,42 +81,164 @@ const SetLineupModal = ({
   lineup,
   saveTeamLineup,
 }: Props) => {
-  const [draft, setDraft] = useState<Draft>(emptyDraft);
-  const [savedDraft, setSavedDraft] = useState<Draft>(emptyDraft);
+  const { control, watch, setValue, reset } = useForm<FormValues>({
+    defaultValues: {
+      jerseyInput: '',
+      query: '',
+    },
+  });
+  const jerseyInput = watch('jerseyInput');
+  const query = watch('query');
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [savedSelected, setSavedSelected] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [jerseyNotice, setJerseyNotice] = useState<string | null>(null);
 
-  const allFilled = (Object.values(draft) as (string | null)[]).every(Boolean);
-  const hasChanges = (Object.keys(draft) as LineupPositionSlot[]).some(
-    (slot) => draft[slot] !== savedDraft[slot],
+  const sortedPlayers = useMemo(
+    () => [...players].sort(compareByRosterOrder),
+    [players],
   );
-  const duplicateError = duplicateLineupPlayerError(draft);
 
-  // Sync draft from existing lineup when modal opens or lineup data changes
+  const selectedPlayers = useMemo(
+    () => sortedPlayers.filter((player) => selected.has(player.id)),
+    [selected, sortedPlayers],
+  );
+
+  const savedPlayers = useMemo(
+    () => sortedPlayers.filter((player) => savedSelected.has(player.id)),
+    [savedSelected, sortedPlayers],
+  );
+
+  const selectedKey = selectedPlayers.map((player) => player.id).join('|');
+  const savedKey = savedPlayers.map((player) => player.id).join('|');
+  const hasChanges = selectedKey !== savedKey;
+  const selectedCount = selected.size;
+  const selectedGoalieCount = selectedPlayers.filter(isGoalie).length;
+  const selectedSkaterCount = selectedCount - selectedGoalieCount;
+  const lineupError =
+    selectedCount === MAX_STARTERS && selectedGoalieCount !== REQUIRED_GOALIES
+      ? 'Select exactly one goalie for the starting lineup.'
+      : selectedCount === MAX_STARTERS && selectedSkaterCount !== REQUIRED_SKATERS
+        ? 'Select five skaters and one goalie for the starting lineup.'
+        : null;
+  const canSave =
+    !saving &&
+    selectedCount === MAX_STARTERS &&
+    selectedGoalieCount === REQUIRED_GOALIES &&
+    selectedSkaterCount === REQUIRED_SKATERS &&
+    hasChanges;
+
   useEffect(() => {
     if (!open) return;
-    const next = emptyDraft();
-    lineup
-      .filter((e) => e.team_id === teamId)
-      .forEach((e) => {
-        next[e.position_slot] = e.player_id;
-      });
-    setDraft(next);
-    setSavedDraft(next);
-  }, [open, lineup, teamId]);
 
-  const set = (slot: LineupPositionSlot, val: string) => {
+    const playerIds = new Set(players.map((player) => player.id));
+    const teamEntries = lineup.filter((entry) => entry.team_id === teamId);
+    const savedEntries = teamEntries.filter((entry) => !entry.inherited);
+    const initialEntries = savedEntries.length > 0 ? savedEntries : teamEntries;
+    const initialSelected = new Set(
+      initialEntries
+        .map((entry) => entry.player_id)
+        .filter((playerId) => playerIds.has(playerId)),
+    );
+    const nextSavedSelected = new Set(
+      savedEntries
+        .map((entry) => entry.player_id)
+        .filter((playerId) => playerIds.has(playerId)),
+    );
+
+    setSelected(initialSelected);
+    setSavedSelected(nextSavedSelected);
+    setJerseyNotice(null);
+    reset({ jerseyInput: '', query: '' });
+  }, [lineup, open, players, reset, teamId]);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return sortedPlayers;
+    const jerseyQuery = q.replace('#', '');
+    return sortedPlayers.filter((player) => {
+      const name = playerFullName(player).toLowerCase();
+      const displayName = `${player.last_name}, ${player.first_name}`.toLowerCase();
+      const position = (player.position ?? '').toLowerCase();
+      const jersey = player.jersey_number != null ? String(player.jersey_number) : '';
+      return (
+        name.includes(q) ||
+        displayName.includes(q) ||
+        position.includes(q) ||
+        jersey.startsWith(jerseyQuery)
+      );
+    });
+  }, [query, sortedPlayers]);
+
+  const toggle = (playerId: string) => {
     if (saving) return;
-    setDraft((prev) => ({ ...prev, [slot]: val || null }));
+    setJerseyNotice(null);
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(playerId)) {
+        next.delete(playerId);
+      } else if (next.size < MAX_STARTERS) {
+        next.add(playerId);
+      }
+      return next;
+    });
+  };
+
+  const handleApplyJerseys = () => {
+    if (saving) return;
+    const nums = jerseyInput
+      .split(/[\s,]+/)
+      .map((value) => parseInt(value, 10))
+      .filter((value) => !Number.isNaN(value));
+    if (nums.length === 0) return;
+
+    const missing: JerseyNotice[] = [];
+    const alreadySelected: JerseyNotice[] = [];
+    const skippedFull: JerseyNotice[] = [];
+    const nextSelected = new Set(selected);
+
+    nums.forEach((number) => {
+      const player = sortedPlayers.find((candidate) => candidate.jersey_number === number);
+      if (!player) {
+        missing.push({ number });
+        return;
+      }
+      const notice = { number, name: playerFullName(player) };
+      if (nextSelected.has(player.id)) {
+        alreadySelected.push(notice);
+        return;
+      }
+      if (nextSelected.size >= MAX_STARTERS) {
+        skippedFull.push(notice);
+        return;
+      }
+      nextSelected.add(player.id);
+    });
+    setSelected(nextSelected);
+
+    const notices = [
+      formatJerseyNotice('Already selected', alreadySelected),
+      formatJerseyNotice('No match', missing),
+      formatJerseyNotice('Skipped after six starters', skippedFull),
+    ].filter((notice): notice is string => Boolean(notice));
+    setJerseyNotice(notices.length > 0 ? notices.join(' ') : null);
+    setValue('jerseyInput', '');
   };
 
   const handleSave = async () => {
-    if (!allFilled) return;
-    if (duplicateError) return;
+    if (!canSave) return;
+    const skaters = selectedPlayers.filter((player) => !isGoalie(player));
+    const goalie = selectedPlayers.find(isGoalie);
+    const slots: Array<{ position_slot: LineupPositionSlot; player_id: string | null }> = [
+      ...SKATER_SLOTS.map((positionSlot, index) => ({
+        position_slot: positionSlot,
+        player_id: skaters[index]?.id ?? null,
+      })),
+      { position_slot: 'G', player_id: goalie?.id ?? null },
+    ];
+
     setSaving(true);
-    const slots = (Object.keys(draft) as LineupPositionSlot[]).map((slot) => ({
-      position_slot: slot,
-      player_id: draft[slot] ?? null,
-    }));
     let ok = false;
     try {
       ok = await saveTeamLineup(teamId, slots, teamName);
@@ -152,41 +252,33 @@ const SetLineupModal = ({
     if (!saving) onClose();
   };
 
-  const isDraftEmpty = (Object.values(draft) as (string | null)[]).every((v) => v === null);
   const handleClear = () => {
     if (saving) return;
-    setDraft(emptyDraft());
+    setSelected(new Set());
+    setJerseyNotice(null);
   };
 
-  const slotSelect = (slot: LineupPositionSlot, label: string) => (
-    <div className={styles.slotField}>
-      <span className={styles.slotLabel}>{label}</span>
-      <Select
-        value={draft[slot] ?? ''}
-        options={buildOptions(slot, players)}
-        placeholder="— Required —"
-        onChange={(val) => set(slot, val)}
-        searchable
-        disabled={saving}
-      />
-    </div>
-  );
+  const footerSummary =
+    selectedCount > 0
+      ? `${selectedCount}/${MAX_STARTERS} starter${selectedCount !== 1 ? 's' : ''} selected`
+      : 'No starters selected';
 
   return (
     <Modal
       open={open}
-      title={`Set Starting Lineup — ${teamName}`}
+      title={`Set Starting Lineup - ${teamName}`}
       onClose={handleClose}
       size="md"
       busy={saving}
       footer={
         <div className={styles.footerActions}>
+          <span className={styles.footerSummary}>{footerSummary}</span>
           <Button
             variant="outlined"
             intent="danger"
             icon="clear_all"
             onClick={handleClear}
-            disabled={saving || isDraftEmpty}
+            disabled={saving || selectedCount === 0}
             className={styles.footerClear}
           >
             Clear
@@ -206,30 +298,97 @@ const SetLineupModal = ({
             icon="set_lineup"
             onClick={handleSave}
             type="button"
-            disabled={saving || !allFilled || !hasChanges || !!duplicateError}
+            disabled={!canSave || !!lineupError}
             className={styles.footerSave}
           >
-            {saving ? 'Saving…' : 'Save Lineup'}
+            {saving ? 'Saving...' : 'Save Lineup'}
           </Button>
         </div>
       }
     >
-      <div className={styles.grid}>
-        {/* Center — spans both columns */}
-        <div className={styles.spanFull}>{slotSelect('C', SLOT_LABEL.C)}</div>
+      <div className={styles.content}>
+        <div className={styles.groupHeader}>
+          <span className={styles.slotGroupLabel}>
+            Starting players <span className={styles.required}>*</span>
+          </span>
+          <span className={styles.groupMeta}>5 skaters + 1 goalie</span>
+        </div>
 
-        {/* Left Wing + Right Wing — one column each */}
-        {slotSelect('LW', SLOT_LABEL.LW)}
-        {slotSelect('RW', SLOT_LABEL.RW)}
+        <div className={styles.controls}>
+          <div className={styles.quickAddWrap}>
+            <Field
+              control={control}
+              name="jerseyInput"
+              type="text"
+              className={styles.quickAddField}
+              placeholder="Jersey numbers (e.g. 7 11 25)..."
+              onKeyDown={(event) => {
+                if (event.key !== 'Enter') return;
+                event.preventDefault();
+                handleApplyJerseys();
+              }}
+              disabled={saving}
+              autoFocus
+            />
+            <Button
+              size="sm"
+              variant="outlined"
+              intent="info"
+              onClick={handleApplyJerseys}
+              disabled={saving || !jerseyInput.trim() || selectedCount >= MAX_STARTERS}
+            >
+              Apply
+            </Button>
+          </div>
+          <div className={styles.controlsDivider} />
+          {jerseyNotice && <p className={styles.notice}>{jerseyNotice}</p>}
+          <div className={styles.searchRow}>
+            <Field
+              control={control}
+              name="query"
+              type="search"
+              className={styles.searchField}
+              placeholder="Search players..."
+              disabled={saving}
+            />
+          </div>
+        </div>
 
-        {/* Left Defense + Right Defense — one column each */}
-        {slotSelect('D1', SLOT_LABEL.D1)}
-        {slotSelect('D2', SLOT_LABEL.D2)}
+        {lineupError && <p className={styles.error}>{lineupError}</p>}
 
-        {/* Goalie — spans both columns */}
-        <div className={styles.spanFull}>{slotSelect('G', SLOT_LABEL.G)}</div>
+        {filtered.length === 0 ? (
+          <p className={styles.empty}>
+            {sortedPlayers.length === 0 ? 'No players are in this game lineup yet.' : `No players match "${query}".`}
+          </p>
+        ) : (
+          <ul className={styles.list}>
+            {filtered.map((player) => {
+              const checked = selected.has(player.id);
+              const disabled = saving || (!checked && selectedCount >= MAX_STARTERS);
+              return (
+                <SelectableListItem
+                  key={player.id}
+                  checked={checked}
+                  onToggle={() => toggle(player.id)}
+                  imagePlaceholder={
+                    player.jersey_number != null
+                      ? String(player.jersey_number)
+                      : `${player.first_name[0] ?? ''}${player.last_name[0] ?? ''}`
+                  }
+                  imageShape="square"
+                  imagePrimaryColor={player.primary_color}
+                  imageTextColor={player.text_color}
+                  subtitle={
+                    player.position ? (POSITION_LABELS[player.position] ?? player.position) : undefined
+                  }
+                  name={`${player.last_name}, ${player.first_name}`}
+                  disabled={disabled}
+                />
+              );
+            })}
+          </ul>
+        )}
       </div>
-      {duplicateError && <p className={styles.error}>{duplicateError}</p>}
     </Modal>
   );
 };

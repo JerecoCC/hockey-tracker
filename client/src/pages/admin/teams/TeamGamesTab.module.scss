@@ -15,95 +15,49 @@
 
 .viewSegmentedControl {
   width: fit-content;
+}
 
-  svg {
-    width: 1.15rem;
-    height: 1.15rem;
+.calendar {
+  &Wrap {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
   }
-}
 
-.calendarWrap {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+  &Toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-sm;
+    flex-wrap: wrap;
+  }
 
-.calendarToolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-sm;
-  flex-wrap: wrap;
-}
+  &ToolbarControls {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+  }
 
-.calendarToolbarControls {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
+  &ExportButton {
+    flex-shrink: 0;
+  }
 
-.calendarMonthPicker {
-  width: fit-content;
-}
+  &Scroll {
+    overflow-x: auto;
+  }
 
-.calendarExportButton {
-  flex-shrink: 0;
-}
+  &DayGamesFilled {
+    width: 100%;
+    height: 100%;
+  }
 
-.calendarScroll {
-  overflow-x: auto;
-}
+  &DayGameCell {
+    --accordion-header-bg: var(--team-calendar-day-accent);
+    --accordion-border-color: var(--team-calendar-day-accent);
+    --month-calendar-day-bg: color-mix(in srgb, var(--team-calendar-day-accent) 9%, #{$bg-card});
+    --month-calendar-day-number-color: var(--team-calendar-day-text);
 
-.calendarGrid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: $space-sm;
-  min-width: 840px;
-}
-
-.calendarDayName {
-  text-align: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-bright;
-}
-
-.calendarEmptyCell,
-.calendarDayCell {
-  min-height: 160px;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
-}
-
-.calendarEmptyCell {
-  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-.calendarDayCell {
-  overflow: hidden;
-}
-
-.calendarDayNumber {
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-bright;
-  line-height: 1;
-}
-
-.calendarDayEmpty {
-  display: flex;
-  align-items: flex-start;
-  justify-content: flex-start;
-  width: 100%;
-  height: 100%;
-  padding: $space-sm;
-}
-
-.calendarDayGamesFilled {
-  width: 100%;
-  height: 100%;
+    border-color: var(--team-calendar-day-accent);
+  }
 }
 

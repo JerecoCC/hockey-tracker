@@ -1,0 +1,198 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.wrap {
+  display: flex;
+  width: 100%;
+}
+
+.item {
+  position: relative;
+  display: flex;
+  flex: 0 0 auto;
+  flex-direction: column;
+  width: 100%;
+  min-height: 1.9rem;
+  padding: $space-sm;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: color-mix(in srgb, #{$bg-card} 80%, #{$bg-page});
+  color: $text-body;
+  font-size: $font-sm;
+  line-height: 1;
+  text-decoration: none;
+  transition:
+    border-color $transition-fast ease,
+    background $transition-fast ease;
+
+  &:hover {
+    border-color: rgba($accent, 0.6);
+    background: rgba($accent, 0.08);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 1px;
+  }
+
+  &:hover,
+  &:focus-within {
+    [data-calendar-game-actions] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  &Live {
+    border-color: rgba($success, 0.65);
+    background: rgba($success, 0.08);
+  }
+
+  &Draggable {
+    cursor: grab;
+  }
+
+  &Dragging {
+    opacity: 0.55;
+    cursor: grabbing;
+  }
+}
+
+.topLabel {
+  width: 100%;
+  margin-bottom: $space-xs;
+  padding-bottom: $space-xs;
+  border-bottom: 1px solid $border;
+  color: $text-dim;
+  font-size: $font-sm;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.bottomLabel {
+  width: 100%;
+  margin-top: $space-xs;
+  padding-top: $space-xs;
+  border-top: 1px solid $border;
+  color: $text-dim;
+  font-size: $font-sm;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.matchup {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+}
+
+.logoSlot {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+
+  &Away {
+    grid-column: 1;
+    justify-self: start;
+  }
+
+  &Home {
+    grid-column: 5;
+    justify-self: end;
+  }
+
+  &Dimmed {
+    opacity: 0.5;
+  }
+}
+
+.score,
+.atSymbol {
+  font-size: $font-sm;
+  font-weight: 700;
+}
+
+.score {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.4rem;
+  height: 26px;
+  padding: 0 $space-xs;
+  border: 1px solid $border;
+  border-radius: 2px;
+  background: color-mix(in srgb, #{$bg-card} 70%, #{$bg-page});
+  color: $text-body;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+
+  &Away {
+    grid-column: 2;
+  }
+
+  &Home {
+    grid-column: 4;
+  }
+
+  &Win {
+    border-color: rgba($success, 0.45);
+    background: rgba($success, 0.16);
+  }
+
+  &Lose {
+    border-color: rgba($danger, 0.38);
+    background: rgba($danger, 0.12);
+    color: color-mix(in srgb, #{$text-body} 72%, transparent);
+  }
+
+  &Missing {
+    border-color: color-mix(in srgb, #{$text-dim} 46%, #{$border});
+    background: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
+    color: $text-dim;
+  }
+}
+
+.center {
+  grid-column: 3;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  color: $text-dim;
+  gap: 2px;
+  line-height: 1;
+
+  &Label {
+    max-width: 100%;
+    color: $text-dim;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+}
+
+.metaRow {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  margin-top: $space-xs;
+}
+
+.awayMeta {
+  grid-column: 1 / span 2;
+  justify-self: center;
+}
+
+.homeMeta {
+  grid-column: 4 / span 2;
+  justify-self: center;
+}

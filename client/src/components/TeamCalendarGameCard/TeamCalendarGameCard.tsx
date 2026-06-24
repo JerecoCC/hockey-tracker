@@ -19,10 +19,12 @@ interface TeamCalendarGameCardProps {
   topLabelAlign?: 'start' | 'center';
   topLabelWeight?: 'normal' | 'bold';
   homePrimaryColor?: string | null;
+  logoAccentColor?: string | null;
   logoSize?: number;
   live?: boolean;
   fillContainer?: boolean;
   flush?: boolean;
+  transparentBackground?: boolean;
   ariaLabel: string;
   onOpen: () => void;
 }
@@ -35,10 +37,12 @@ const TeamCalendarGameCard = ({
   topLabelAlign = 'start',
   topLabelWeight = 'bold',
   homePrimaryColor,
+  logoAccentColor,
   logoSize = 54,
   live = false,
   fillContainer = false,
   flush = false,
+  transparentBackground = false,
   ariaLabel,
   onOpen,
 }: TeamCalendarGameCardProps) => {
@@ -46,6 +50,11 @@ const TeamCalendarGameCard = ({
   const logo = isHome
     ? (opponent.logo ?? opponent.logoDark ?? opponent.logoLight ?? null)
     : (opponent.logoLight ?? opponent.logo ?? opponent.logoDark ?? null);
+  const cardStyle = {
+    '--calendar-primary': homePrimaryColor ?? '#334155',
+    '--calendar-logo-accent':
+      logoAccentColor ?? homePrimaryColor ?? opponent.primaryColor ?? '#334155',
+  } as CSSProperties;
 
   return (
     <Tooltip
@@ -59,14 +68,11 @@ const TeamCalendarGameCard = ({
           live ? styles.live : '',
           fillContainer ? styles.fill : '',
           flush ? styles.flush : '',
+          transparentBackground ? styles.transparent : '',
         ]
           .filter(Boolean)
           .join(' ')}
-        style={
-          isHome
-            ? ({ '--calendar-primary': homePrimaryColor ?? '#334155' } as CSSProperties)
-            : undefined
-        }
+        style={cardStyle}
         role="button"
         tabIndex={0}
         aria-label={ariaLabel}

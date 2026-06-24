@@ -13,21 +13,24 @@
   gap: $space-md;
 }
 
-.row {
+.teamRow {
   display: grid;
   grid-template-columns: 1fr 10rem;
   gap: $space-md;
 }
 
-// ── Trade History ──────────────────────────────────────────────────────────
-
-.history {
-  border-top: 1px solid $border;
-  padding-top: $space-xl;
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: $space-sm;
+  margin: 0;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
 }
 
-.historyTitle {
-  margin: 0 0 $space-md;
+.groupLabel {
+  padding: 0 $space-xs;
   font-size: $font-sm;
   font-weight: 600;
   color: $text-dim;
@@ -35,58 +38,105 @@
   letter-spacing: 0.05em;
 }
 
-.stintList {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.stintItem {
-  display: flex;
-  align-items: center;
+.movementRow,
+.dateRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: $space-md;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: $space-sm $space-md;
 }
 
-.stintLogo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  flex-shrink: 0;
+.segmented {
+  &Field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &Label {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-dim;
+  }
 }
 
-.stintInfo {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  flex: 1;
-  min-width: 0;
+@media (max-width: 520px) {
+  .teamRow,
+  .movementRow,
+  .dateRow {
+    grid-template-columns: 1fr;
+  }
 }
 
-.stintTeam {
-  font-size: $font-base;
-  font-weight: 600;
-  color: $text-body;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+// ── Trade History ──────────────────────────────────────────────────────────
+
+.history {
+  border-top: 1px solid $border;
+  padding-top: $space-xl;
+
+  &Title {
+    margin: 0 0 $space-md;
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 }
 
-.stintJersey {
-  font-size: $font-sm;
-  color: $text-dim;
-  flex-shrink: 0;
-}
+.stint {
+  &List {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
 
-.stintDates {
-  font-size: $font-sm;
-  color: $text-dim;
-  white-space: nowrap;
-  flex-shrink: 0;
+  &Item {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    padding: $space-sm $space-md;
+  }
+
+  &Logo {
+    width: 28px;
+    height: 28px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  &Info {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    flex: 1;
+    min-width: 0;
+  }
+
+  &Team {
+    font-size: $font-base;
+    font-weight: 600;
+    color: $text-body;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &Jersey {
+    font-size: $font-sm;
+    color: $text-dim;
+    flex-shrink: 0;
+  }
+
+  &Dates {
+    font-size: $font-sm;
+    color: $text-dim;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
 }

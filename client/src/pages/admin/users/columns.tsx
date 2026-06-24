@@ -1,7 +1,7 @@
-﻿import { Column } from '@/components/Table/Table';
+import { Column } from '@/components/Table/Table';
 import Button from '@/components/Button/Button';
 import Icon from '@/components/Icon/Icon';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import styles from './Users.module.scss';
 
 export interface UserRecord {
@@ -31,7 +31,7 @@ export const getUserColumns = (deps: ColumnDeps): Column<UserRecord>[] => {
       sortable: true,
       sortKey: 'role',
       render: (u) => (
-        <Badge
+        <Tag
           label={u.role}
           intent={u.role === 'admin' ? 'accent' : 'info'}
         />

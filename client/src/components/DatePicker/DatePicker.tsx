@@ -19,6 +19,11 @@ interface Props {
   granularity?: 'day' | 'month';
   triggerLabel?: string;
   triggerAriaLabel?: string;
+  hideTriggerIcon?: boolean;
+  className?: string;
+  triggerWrapClassName?: string;
+  triggerButtonClassName?: string;
+  ariaLabelledBy?: string;
 }
 
 type CalView = 'day' | 'month' | 'year';
@@ -146,6 +151,11 @@ const DatePicker = (props: Props) => {
     granularity = 'day',
     triggerLabel,
     triggerAriaLabel,
+    hideTriggerIcon = false,
+    className,
+    triggerWrapClassName,
+    triggerButtonClassName,
+    ariaLabelledBy,
   } = props;
   const [open, setOpen] = useState(false);
   const [view, setView] = useState<CalView>('day');
@@ -468,7 +478,7 @@ const DatePicker = (props: Props) => {
   return (
     <div
       ref={wrapperRef}
-      className={[styles.wrapper, usesButtonTrigger && styles.wrapperInline]
+      className={[styles.wrapper, usesButtonTrigger && styles.wrapperInline, className]
         .filter(Boolean)
         .join(' ')}
     >
@@ -477,6 +487,7 @@ const DatePicker = (props: Props) => {
         ref={triggerRef}
         className={[
           usesButtonTrigger ? styles.buttonTriggerWrap : styles.trigger,
+          usesButtonTrigger && triggerWrapClassName,
           disabled && styles.triggerDisabled,
         ]
           .filter(Boolean)
@@ -485,16 +496,19 @@ const DatePicker = (props: Props) => {
         {usesButtonTrigger ? (
           <button
             type="button"
-            className={styles.triggerButton}
+            className={[styles.triggerButton, triggerButtonClassName].filter(Boolean).join(' ')}
             onClick={openPicker}
-            aria-label={triggerAriaLabel ?? triggerLabel}
+            aria-label={ariaLabelledBy ? undefined : triggerAriaLabel ?? triggerLabel}
+            aria-labelledby={ariaLabelledBy}
             disabled={disabled}
           >
-            <Icon
-              name="calendar_today"
-              size="0.875rem"
-              className={styles.calIcon}
-            />
+            {!hideTriggerIcon && (
+              <Icon
+                name="calendar_today"
+                size="0.875rem"
+                className={styles.calIcon}
+              />
+            )}
             <span className={styles.triggerButtonLabel}>{triggerLabel}</span>
           </button>
         ) : (
@@ -526,6 +540,7 @@ const DatePicker = (props: Props) => {
               onFocus={!disabled ? handleFocus : undefined}
               onBlur={!disabled ? handleBlur : undefined}
               readOnly={disabled}
+              aria-labelledby={ariaLabelledBy}
             />
             {value && !disabled && (
               <span

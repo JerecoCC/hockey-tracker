@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import Tabs from '@/components/Tabs/Tabs';
@@ -11,13 +11,14 @@ import useGameGoalieStats from '@/hooks/useGameGoalieStats';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import useTabState from '@/hooks/useTabState';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
+import type { NhlAutofillProgress } from './nhlGameAutofill';
 import GameLineupsTab from './lineups/GameLineupsTab';
 import GameSummaryTab from './summary/GameSummaryTab';
 import ScoreboardCard from './ScoreboardCard';
-
 import styles from './GameDetailsPage.module.scss';
+
 import { PERIOD, PERIOD_SUFFIX, otPeriodId } from './constants';
-import { DATE_FMT_SHORT } from './formatUtils';
+import { DATE_FMT_SHORT, formatScheduledDate } from './formatUtils';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
@@ -40,17 +41,14 @@ const HEAD_DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'short',
   day: '2-digit',
   year: 'numeric',
+  timeZone: 'America/New_York',
 });
 
 const teamTitleName = (team?: { name: string; team_name?: string | null }) =>
   team?.team_name?.trim() || team?.name || '';
 
 const formatHeadDate = (scheduledAt?: string | null) => {
-  if (!scheduledAt) return null;
-  const match = scheduledAt.match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return HEAD_DATE_FMT.format(new Date(scheduledAt));
-  const [, year, month, day] = match;
-  return HEAD_DATE_FMT.format(new Date(Number(year), Number(month) - 1, Number(day)));
+  return formatScheduledDate(scheduledAt, HEAD_DATE_FMT);
 };
 
 const GameDetailsPage = ({ mode = 'admin' }: Props) => {
@@ -129,7 +127,6 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     updateStars,
     updateGameInfo,
     updatePeriodShots,
-    revertToEditMode,
     deleteGame,
     notFound: gameNotFound,
     failed: gameLoadFailed,
@@ -147,11 +144,17 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     };
   }, [game]);
 
+  const waitingForRouteGameId =
+    shouldResolveGameRoute &&
+    !routeGameId &&
+    !routeGameLookupNotFound &&
+    !routeGameLookupFailed;
   const loading =
     gameDetailsLoading ||
     (!isLegacyLeagueRoute && leaguesLoading) ||
     (!isLegacySeasonRoute && leagueDetailsLoading) ||
-    routeGameLookupLoading;
+    routeGameLookupLoading ||
+    waitingForRouteGameId;
   const gameHasStarted = !!game && game.status !== 'scheduled';
   const hasShootout = !!game?.shootout;
   const shouldFetchShootoutAttempts =
@@ -171,7 +174,42 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const [activeTab, handleTabChange] = useTabState(
     mode === 'admin' ? 'tab:game-details' : 'tab:user-game-details',
   );
-  const [isEditMode, setIsEditMode] = useState(false);
+  const [gameAutofillProgress, setGameAutofillProgress] = useState<NhlAutofillProgress | null>(
+    null,
+  );
+  const isGameAutofilling = !!gameAutofillProgress;
+  const isEditMode = isAdminView;
+
+  // Keep the sticky auto-fill banner pinned just below the sticky scoreboard.
+  // The scoreboard height is dynamic, so measure it and offset the banner's
+  // sticky `top` accordingly (the scoreboard is not sticky on mobile).
+  const autofillBannerRef = useRef<HTMLDivElement>(null);
+  const [autofillBannerTop, setAutofillBannerTop] = useState<number | null>(null);
+  useEffect(() => {
+    if (!isGameAutofilling) return;
+    const banner = autofillBannerRef.current;
+    const scoreboard = banner?.previousElementSibling as HTMLElement | null;
+    if (!banner || !scoreboard) return;
+
+    const HEADER_OFFSET = 52;
+    const MOBILE_HEADER_OFFSET = 88;
+    const GAP = 8;
+    const update = () => {
+      if (window.innerWidth <= 768) {
+        setAutofillBannerTop(MOBILE_HEADER_OFFSET);
+        return;
+      }
+      setAutofillBannerTop(HEADER_OFFSET + scoreboard.getBoundingClientRect().height + GAP);
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(scoreboard);
+    window.addEventListener('resize', update);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', update);
+    };
+  }, [isGameAutofilling]);
 
   /**
    * Which side ('away' | 'home') won the shootout, or null if not yet decided.
@@ -239,11 +277,12 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   // Both teams must have at least one persisted (non-inherited) roster entry.
   const rosterReady = awayRoster.length > 0 && homeRoster.length > 0;
 
-  // Both teams must have all 6 position slots covered (saved or inherited) AND every
-  // player in those slots must be on the current game's roster.
+  // Both teams must have all 6 starter slots covered (saved or inherited) — 3 forwards,
+  // 2 defense, and 1 goalie — AND every player in those slots must be on the current
+  // game's roster.
   const lineupsReady = (() => {
     if (!game) return false;
-    const SLOTS = ['C', 'LW', 'RW', 'D1', 'D2', 'G'] as const;
+    const SLOTS = ['F1', 'F2', 'F3', 'D1', 'D2', 'G'] as const;
     const rosterIds = new Set(roster.map((e) => e.player_id));
     const hasAll = (teamId: string) => {
       const entries = lineup.filter((e) => e.team_id === teamId);
@@ -287,14 +326,50 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const gameCrumbLabel = game
     ? [
         `${game.away_team.code} @ ${game.home_team.code}`,
-        game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null,
+        formatScheduledDate(game.scheduled_at, DATE_FMT_SHORT),
       ]
         .filter(Boolean)
         .join(' · ')
     : 'Not Found';
+  const canonicalGameSlug = game
+    ? gameRouteSlug({
+        awayTeamCode: game.away_team.code,
+        homeTeamCode: game.home_team.code,
+      })
+    : '';
+  const canonicalDateSlug = game
+    ? gameDateRouteSlug(game.scheduled_at, {
+        leagueCode: game.league_code,
+      })
+    : '';
+  const canonicalPath =
+    game && gameId
+      ? buildGameDetailsPath({
+          leagueCode: game.league_code,
+          leagueId: game.league_id,
+          seasonName: game.season_name,
+          seasonId: game.season_id,
+          gameId,
+          awayTeamCode: game.away_team.code,
+          homeTeamCode: game.home_team.code,
+          scheduledAt: game.scheduled_at,
+        })
+      : '';
+  const needsCanonicalRedirect =
+    isAdminView &&
+    !!game &&
+    !!gameId &&
+    !!canonicalPath &&
+    (leagueSlug !== toRouteSlug(game.league_code) ||
+      seasonSlug !== toRouteSlug(game.season_name) ||
+      gameSlug !== canonicalGameSlug ||
+      gameDateSlug !== canonicalDateSlug);
+  const suppressCanonicalRedirectFrame =
+    needsCanonicalRedirect && !isLegacyLeagueRoute && !isLegacySeasonRoute && isDatedGameRoute;
+  const pageLoading = loading || suppressCanonicalRedirectFrame;
 
   usePageBreadcrumbs(
-    loading
+    pageLoading
       ? null
       : {
           backPath: isAdminView ? seasonHref : '/games',
@@ -307,43 +382,36 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
               ]
             : [],
         },
-    [loading, isAdminView, seasonHref, seasonName, leagueHref, leagueCrumbLabel, gameCrumbLabel],
+    [
+      pageLoading,
+      isAdminView,
+      seasonHref,
+      seasonName,
+      leagueHref,
+      leagueCrumbLabel,
+      gameCrumbLabel,
+    ],
   );
 
   useEffect(() => {
-    if (!isAdminView || !game || !gameId) return;
-    const canonicalPath = buildGameDetailsPath({
-      leagueCode: game.league_code,
-      leagueId: game.league_id,
-      seasonName: game.season_name,
-      seasonId: game.season_id,
-      gameId,
-      awayTeamCode: game.away_team.code,
-      homeTeamCode: game.home_team.code,
-      scheduledAt: game.scheduled_at,
-    });
-    if (
-      leagueSlug !== toRouteSlug(game.league_code) ||
-      seasonSlug !== toRouteSlug(game.season_name) ||
-      gameSlug !==
-        gameRouteSlug({
-          awayTeamCode: game.away_team.code,
-          homeTeamCode: game.home_team.code,
-        }) ||
-      gameDateSlug !== gameDateRouteSlug(game.scheduled_at)
-    ) {
-      navigate(canonicalPath, { replace: true });
-    }
-  }, [game, gameDateSlug, gameId, gameSlug, isAdminView, leagueSlug, navigate, seasonSlug]);
+    if (!needsCanonicalRedirect || !canonicalPath) return;
+    navigate(canonicalPath, { replace: true });
+  }, [canonicalPath, navigate, needsCanonicalRedirect]);
 
   useEffect(() => {
-    if (loading || game) return;
+    if (pageLoading || game) return;
     if (!gameNotFound && !routeGameLookupNotFound) return;
     navigate(fallbackHref, { replace: true });
-  }, [fallbackHref, game, gameNotFound, loading, navigate, routeGameLookupNotFound]);
+  }, [fallbackHref, game, gameNotFound, navigate, pageLoading, routeGameLookupNotFound]);
 
-  if (loading) {
-    return <LoadingSpinner message="Loading game..." layout="page" size="lg" />;
+  if (pageLoading) {
+    return (
+      <LoadingSpinner
+        message="Loading game..."
+        layout="page"
+        size="lg"
+      />
+    );
   }
 
   if (!game && (gameLoadFailed || routeGameLookupFailed)) {
@@ -440,100 +508,160 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
       ? [{ id: PERIOD.SHOOTOUT, label: PERIOD.SHOOTOUT, shortLabel: PERIOD.SHOOTOUT }]
       : []),
   ];
+  const lockTabContent = (content: ReactNode) => (
+    <div
+      className={isGameAutofilling ? styles.gameAutofillLockedRegion : undefined}
+      aria-disabled={isGameAutofilling || undefined}
+      data-autofill-locked={isGameAutofilling || undefined}
+      inert={isGameAutofilling ? '' : undefined}
+      onClickCapture={
+        isGameAutofilling
+          ? (event) => {
+              event.preventDefault();
+              event.stopPropagation();
+            }
+          : undefined
+      }
+      onKeyDownCapture={
+        isGameAutofilling
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.stopPropagation();
+              }
+            }
+          : undefined
+      }
+    >
+      {content}
+    </div>
+  );
 
   return (
     <>
-      {/* ── Scoreboard card ── */}
-      <ScoreboardCard
-        game={game}
-        isFinal={isFinal}
-        isInProgress={isInProgress}
-        isEditMode={isEditMode}
-        liveAwayScore={liveAwayScore}
-        liveHomeScore={liveHomeScore}
-        overtimeSuffix={overtimeSuffix}
-        leagueId={isAdminView ? leagueId : undefined}
-        leagueCode={game.league_code}
-      />
+      <div style={{ display: 'contents' }}>
+        {/* ── Scoreboard card ── */}
+        <ScoreboardCard
+          game={game}
+          isFinal={isFinal}
+          isInProgress={isInProgress}
+          isEditMode={isEditMode}
+          liveAwayScore={liveAwayScore}
+          liveHomeScore={liveHomeScore}
+          overtimeSuffix={overtimeSuffix}
+          leagueId={isAdminView ? leagueId : undefined}
+          leagueCode={game.league_code}
+          disabled={isGameAutofilling}
+          useLocalTimezone={!isAdminView}
+        />
 
-      {/* ── Tabs ── */}
-      <Tabs
-        activeIndex={activeTab}
-        onTabChange={handleTabChange}
-        tabs={[
-          {
-            label: 'Summary',
-            icon: 'apps',
-            content: (
-              <GameSummaryTab
-                game={game}
-                isFinal={isFinal}
-                isInProgress={isInProgress}
-                isEditMode={isEditMode}
-                setIsEditMode={setIsEditMode}
-                editable={isAdminView}
-                showPlayerDataStatus={isAdminView}
-                busy={busy}
-                leagueId={leagueId}
-                seasonId={seasonId ?? ''}
-                liveAwayScore={liveAwayScore}
-                liveHomeScore={liveHomeScore}
-                overtimeSuffix={overtimeSuffix}
-                gameHrefBuilder={gameHrefBuilder}
-                playerHrefBuilder={playerHrefBuilder}
-                linescorePeriods={linescorePeriods}
-                goalieStats={goalieStats}
-                awayRoster={awayRoster}
-                homeRoster={homeRoster}
-                roster={roster}
-                lineup={lineup}
-                rosterReady={rosterReady}
-                lineupsReady={lineupsReady}
-                upsertGoalieStat={upsertGoalieStat}
-                switchGoalie={switchGoalie}
-                removeGoalieStat={removeGoalieStat}
-                updateGoalieStint={updateGoalieStint}
-                removeGoalieStint={removeGoalieStint}
-                startGame={startGame}
-                updateStatus={updateStatus}
-                advancePeriod={advancePeriod}
-                advanceOTPeriod={advanceOTPeriod}
-                revertOTPeriod={revertOTPeriod}
-                endGame={endGame}
-                updateStars={updateStars}
-                updateGameInfo={updateGameInfo}
-                updatePeriodShots={updatePeriodShots}
-                revertToEditMode={revertToEditMode}
-                deleteGame={deleteGame}
+        {gameAutofillProgress && (
+          <div
+            ref={autofillBannerRef}
+            className={styles.gameAutofillStatus}
+            style={autofillBannerTop != null ? { top: `${autofillBannerTop}px` } : undefined}
+            role="status"
+            aria-live="polite"
+            aria-label={gameAutofillProgress.message}
+          >
+            <div className={styles.gameAutofillStatusHeader}>
+              <span className={styles.gameAutofillPulse} />
+              <div className={styles.gameAutofillStatusText}>
+                <strong>Auto-filling NHL game</strong>
+                <span>{gameAutofillProgress.message}</span>
+              </div>
+            </div>
+            {gameAutofillProgress.total ? (
+              <progress
+                className={styles.gameAutofillProgress}
+                value={gameAutofillProgress.completed ?? 0}
+                max={gameAutofillProgress.total}
+                aria-label="Auto-fill progress"
               />
-            ),
-          },
-          {
-            label: 'Lineups',
-            icon: 'set_lineup',
-            content: (
-              <GameLineupsTab
-                game={game}
-                isEditMode={isEditMode}
-                readOnly={!isAdminView}
-                showPlayerDataStatus={isAdminView}
-                isFinal={isFinal}
-                leagueId={leagueId}
-                seasonId={seasonId}
-                playerHrefBuilder={playerHrefBuilder}
-                awayRoster={awayRoster}
-                homeRoster={homeRoster}
-                awayRosterInherited={awayRosterInherited}
-                homeRosterInherited={homeRosterInherited}
-                lineup={lineup}
-                saveTeamLineup={saveTeamLineup}
-                addToRoster={addToRoster}
-                removeFromRoster={removeFromRoster}
-              />
-            ),
-          },
-        ]}
-      />
+            ) : null}
+          </div>
+        )}
+
+        {/* ── Tabs ── */}
+        <Tabs
+          activeIndex={activeTab}
+          onTabChange={handleTabChange}
+          keepMounted={isGameAutofilling}
+          tabs={[
+            {
+              label: 'Summary',
+              icon: 'apps',
+              content: lockTabContent(
+                <GameSummaryTab
+                  game={game}
+                  isFinal={isFinal}
+                  isInProgress={isInProgress}
+                  isEditMode={isEditMode}
+                  editable={isAdminView}
+                  showPlayerDataStatus={isAdminView}
+                  useLocalTimezone={!isAdminView}
+                  busy={busy}
+                  leagueId={leagueId}
+                  seasonId={seasonId ?? ''}
+                  liveAwayScore={liveAwayScore}
+                  liveHomeScore={liveHomeScore}
+                  overtimeSuffix={overtimeSuffix}
+                  gameHrefBuilder={gameHrefBuilder}
+                  playerHrefBuilder={playerHrefBuilder}
+                  linescorePeriods={linescorePeriods}
+                  goalieStats={goalieStats}
+                  awayRoster={awayRoster}
+                  homeRoster={homeRoster}
+                  roster={roster}
+                  lineup={lineup}
+                  rosterReady={rosterReady}
+                  lineupsReady={lineupsReady}
+                  upsertGoalieStat={upsertGoalieStat}
+                  switchGoalie={switchGoalie}
+                  removeGoalieStat={removeGoalieStat}
+                  updateGoalieStint={updateGoalieStint}
+                  removeGoalieStint={removeGoalieStint}
+                  startGame={startGame}
+                  updateStatus={updateStatus}
+                  advancePeriod={advancePeriod}
+                  advanceOTPeriod={advanceOTPeriod}
+                  revertOTPeriod={revertOTPeriod}
+                  endGame={endGame}
+                  updateStars={updateStars}
+                  updateGameInfo={updateGameInfo}
+                  updatePeriodShots={updatePeriodShots}
+                  deleteGame={deleteGame}
+                  onGameAutofillChange={setGameAutofillProgress}
+                />,
+              ),
+            },
+            {
+              label: 'Lineups',
+              icon: 'set_lineup',
+              content: lockTabContent(
+                <GameLineupsTab
+                  game={game}
+                  isEditMode={isEditMode}
+                  readOnly={!isAdminView}
+                  showPlayerDataStatus={isAdminView}
+                  isFinal={isFinal}
+                  leagueId={leagueId}
+                  seasonId={seasonId}
+                  playerHrefBuilder={playerHrefBuilder}
+                  awayRoster={awayRoster}
+                  homeRoster={homeRoster}
+                  awayRosterInherited={awayRosterInherited}
+                  homeRosterInherited={homeRosterInherited}
+                  lineup={lineup}
+                  saveTeamLineup={saveTeamLineup}
+                  addToRoster={addToRoster}
+                  removeFromRoster={removeFromRoster}
+                />,
+              ),
+            },
+          ]}
+        />
+      </div>
     </>
   );
 };

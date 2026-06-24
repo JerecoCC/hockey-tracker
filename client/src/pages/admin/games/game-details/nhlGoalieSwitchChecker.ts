@@ -84,12 +84,19 @@ interface HtmlGoalieShift {
 export interface NhlGameIdContext {
   seasonName?: string | null;
   scheduledAt?: string | null;
+  gameType?: string | null;
 }
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const NHL_GAMECENTER_RE = /\/gamecenter\/(\d+)(?:\/|$)/i;
 const NHL_FULL_GAME_ID_RE = /^\d{10}$/;
 const NHL_SHORT_GAME_NUMBER_RE = /^\d{1,4}$/;
+const NHL_GAME_TYPE_CODE: Record<string, string> = {
+  preseason: '01',
+  regular: '02',
+  playoff: '03',
+  playoffs: '03',
+};
 const SWITCH_EVENT_RE = /\b(goalie|keeper)\b/i;
 const SWITCH_ACTION_RE =
   /\b(change|changed|enter|entered|left|leave|pulled|pull|returned|return|replace|reliev)/i;
@@ -112,7 +119,15 @@ export function buildNhlGamecenterGameId(input: string, context: NhlGameIdContex
   const seasonStartYear = getSeasonStartYear(context);
   if (seasonStartYear == null) return null;
 
-  return `${seasonStartYear}02${trimmed.padStart(4, '0')}`;
+  return `${seasonStartYear}${getNhlGameTypeCode(context.gameType)}${trimmed.padStart(4, '0')}`;
+}
+
+export function buildNhlGamecenterEndpoint(
+  input: string,
+  context: NhlGameIdContext = {},
+): string | null {
+  const gameId = buildNhlGamecenterGameId(input, context);
+  return gameId ? `https://api-web.nhle.com/v1/gamecenter/${gameId}` : null;
 }
 
 export function formatEasternStartTime(startTimeUTC: string): string {
@@ -191,7 +206,7 @@ export async function fetchNhlGoalieSwitchReport(
   }
 
   const base = `https://api-web.nhle.com/v1/gamecenter/${gameId}`;
-  const landing = await fetchJson(`${base}/landing`);
+  const landing = (await fetchOptionalJson(base)) ?? (await fetchJson(`${base}/landing`));
 
   let goaliesByTeam = getGoaliesFromLanding(landing);
 
@@ -415,9 +430,8 @@ export function buildGoalieStintsFromToiHtml(
         stintSortValue(b.enteredPeriod, b.enteredTime),
     );
 
-  return completeMissingGoalieStintsFromToiHtml(
-    mergeAdjacentGoalieShiftStints(rawStints),
-    teamGoalies,
+  return openFinalGoalieStintPerTeam(
+    completeMissingGoalieStintsFromToiHtml(mergeAdjacentGoalieShiftStints(rawStints), teamGoalies),
   );
 }
 
@@ -517,7 +531,25 @@ export function buildGoalieStintsFromShiftChart(
         stintSortValue(b.enteredPeriod, b.enteredTime),
     );
 
-  return mergeAdjacentGoalieShiftStints(rawStints);
+  return openFinalGoalieStintPerTeam(mergeAdjacentGoalieShiftStints(rawStints));
+}
+
+/**
+ * Clear the exit on each team's final stint. Shift- and TOI-based reports record
+ * an exit period/time for every shift, so the last goalie of the game ends up with
+ * an exit at the final period even though they were never switched out. Leaving the
+ * final stint open (exit = null) means "played to end of game" — matching the
+ * play-by-play builder, and letting the display infer a full-game starter rather
+ * than annotating a phantom "P1 → P3" window.
+ */
+function openFinalGoalieStintPerTeam(stints: GoalieStint[]): GoalieStint[] {
+  const lastIndexBySide = new Map<TeamSide, number>();
+  stints.forEach((stint, index) => lastIndexBySide.set(stint.teamSide, index));
+  return stints.map((stint, index) =>
+    lastIndexBySide.get(stint.teamSide) === index
+      ? { ...stint, exitedPeriod: null, exitedTime: null }
+      : stint,
+  );
 }
 
 function mergeAdjacentGoalieShiftStints(stints: GoalieStint[]): GoalieStint[] {
@@ -846,6 +878,10 @@ function getSeasonStartYear(context: NhlGameIdContext): string | null {
   if (!Number.isFinite(year) || !Number.isFinite(month)) return null;
 
   return String(month >= 7 ? year : year - 1);
+}
+
+function getNhlGameTypeCode(gameType: string | null | undefined): string {
+  return NHL_GAME_TYPE_CODE[String(gameType ?? 'regular').toLowerCase()] ?? NHL_GAME_TYPE_CODE.regular;
 }
 
 function stintSortValue(period: string, time: string): number {

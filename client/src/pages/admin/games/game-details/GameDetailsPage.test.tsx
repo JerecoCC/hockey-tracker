@@ -1,5 +1,5 @@
 /* eslint-disable react/display-name, @typescript-eslint/no-explicit-any */
-import { render } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
 import { useGameDetails, useGameRouteLookup } from '@/hooks/useGames';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
@@ -16,6 +16,9 @@ const mockUsePageBreadcrumbs = jest.fn();
 const mockSummaryTab = jest.fn(() => <div>summary</div>);
 const mockLineupsTab = jest.fn(() => <div>lineups</div>);
 const mockScoreboardCard = jest.fn(() => <div>scoreboard</div>);
+const mockTabs = jest.fn(({ tabs }: any) => (
+  <div>{tabs.map((tab: any) => <div key={tab.label}>{tab.content}</div>)}</div>
+));
 
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
@@ -41,7 +44,7 @@ jest.mock('@/context/BreadcrumbContext', () => ({
 }));
 jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div>breadcrumbs</div>);
 jest.mock('@/components/Button/Button', () => ({ children, onClick, type = 'button' }: any) => <button type={type} onClick={onClick}>{children}</button>);
-jest.mock('@/components/Tabs/Tabs', () => ({ tabs }: any) => <div>{tabs.map((tab: any) => <div key={tab.label}>{tab.content}</div>)}</div>);
+jest.mock('@/components/Tabs/Tabs', () => (props: any) => mockTabs(props));
 jest.mock('@/components/TitleRow/TitleRow', () => ({ left, right }: any) => <div>{left}{right}</div>);
 jest.mock('./ScoreboardCard', () => (props: any) => mockScoreboardCard(props));
 jest.mock('./summary/GameSummaryTab', () => (props: any) => mockSummaryTab(props));
@@ -98,11 +101,14 @@ describe('GameDetailsPage', () => {
     render(<GameDetailsPage mode="user" />);
 
     expect(mockScoreboardCard.mock.calls[0][0].leagueId).toBeUndefined();
+    expect(mockScoreboardCard.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].editable).toBe(false);
+    expect(mockSummaryTab.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe('/games/game-2');
     expect(mockSummaryTab.mock.calls[0][0].playerHrefBuilder).toBeUndefined();
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(true);
+    expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(false);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(false);
     expect(mockUsePageBreadcrumbs.mock.calls[0][0].backPath).toBe('/games');
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'user' });
@@ -113,7 +119,9 @@ describe('GameDetailsPage', () => {
     render(<GameDetailsPage />);
 
     expect(mockScoreboardCard.mock.calls[0][0].leagueId).toBe('league-1');
+    expect(mockScoreboardCard.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockSummaryTab.mock.calls[0][0].editable).toBe(true);
+    expect(mockSummaryTab.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockSummaryTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
     expect(mockSummaryTab.mock.calls[0][0].gameHrefBuilder('game-2')).toBe(
       '/admin/leagues/nhl/seasons/2024-25/games/game-2',
@@ -122,7 +130,44 @@ describe('GameDetailsPage', () => {
       '/admin/leagues/nhl/teams/hom/players/john-smith',
     );
     expect(mockLineupsTab.mock.calls[0][0].readOnly).toBe(false);
+    expect(mockLineupsTab.mock.calls[0][0].isEditMode).toBe(true);
     expect(mockLineupsTab.mock.calls[0][0].showPlayerDataStatus).toBe(true);
+  });
+
+  it('keeps game details visible while showing NHL auto-fill progress', () => {
+    mockUseParams.mockReturnValue({ leagueId: 'league-1', seasonId: 'season-1', id: 'game-1' });
+    render(<GameDetailsPage />);
+
+    act(() => {
+      mockSummaryTab.mock.calls[0][0].onGameAutofillChange({
+        step: 'goals',
+        message: 'Added goal 1 of 3.',
+        completed: 1,
+        total: 3,
+        refresh: true,
+      });
+    });
+
+    expect(screen.getByRole('status', { name: /added goal 1 of 3/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/auto-fill progress/i)).toBeInTheDocument();
+    expect(
+      screen.getByText('scoreboard').compareDocumentPosition(screen.getByRole('status')) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText('scoreboard')).toBeVisible();
+    expect(screen.getByText('summary')).toBeVisible();
+    expect(screen.getByText('lineups')).toBeVisible();
+    expect(mockScoreboardCard.mock.calls[mockScoreboardCard.mock.calls.length - 1]?.[0].disabled).toBe(true);
+    expect(mockSummaryTab.mock.calls[mockSummaryTab.mock.calls.length - 1]?.[0].editable).toBe(true);
+    expect(mockLineupsTab.mock.calls[mockLineupsTab.mock.calls.length - 1]?.[0].readOnly).toBe(false);
+    expect(screen.getByText('summary').closest('[data-autofill-locked="true"]')).toBeTruthy();
+    expect(screen.getByText('lineups').closest('[data-autofill-locked="true"]')).toBeTruthy();
+    expect(mockTabs.mock.calls[mockTabs.mock.calls.length - 1]?.[0].keepMounted).toBe(true);
+    expect(mockUsePageBreadcrumbs.mock.calls[0][0]).toEqual(
+      expect.objectContaining({
+        backLabel: 'Back to 2024-25',
+      }),
+    );
   });
 
   it('uses nickname-only team names in the document title', () => {
@@ -173,6 +218,67 @@ describe('GameDetailsPage', () => {
       enabled: true,
     });
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
+  });
+
+  it('keeps dated slug routes in the loading state until route lookup resolves', () => {
+    mockUseParams.mockReturnValue({
+      leagueSlug: 'nhl',
+      seasonSlug: '2024-25',
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'awy-vs-hom',
+    });
+    mockUseLeagues.mockReturnValue({
+      leagues: [{ id: 'league-1', code: 'NHL', name: 'National Hockey League' }],
+      loading: false,
+    });
+    mockUseLeagueDetails.mockReturnValue({
+      seasons: [{ id: 'season-1', name: '2024-25' }],
+      loading: false,
+    });
+    mockUseGameRouteLookup.mockReturnValue({
+      gameId: null,
+      loading: false,
+      notFound: false,
+      failed: false,
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(screen.getByRole('status', { name: /loading game/i })).toBeInTheDocument();
+    expect(screen.queryByText('scoreboard')).not.toBeInTheDocument();
+    expect(mockUseGameDetails).toHaveBeenCalledWith(undefined, { mode: 'admin' });
+  });
+
+  it('does not flash game content before replacing a noncanonical dated route', () => {
+    mockUseParams.mockReturnValue({
+      leagueSlug: 'nhl',
+      seasonSlug: '2024-25',
+      gameDateSlug: '10-09-2024',
+      gameSlug: 'awy-vs-hom',
+    });
+    mockUseLeagues.mockReturnValue({
+      leagues: [{ id: 'league-1', code: 'NHL', name: 'National Hockey League' }],
+      loading: false,
+    });
+    mockUseLeagueDetails.mockReturnValue({
+      seasons: [{ id: 'season-1', name: '2024-25' }],
+      loading: false,
+    });
+    mockUseGameRouteLookup.mockReturnValue({
+      gameId: 'game-1',
+      loading: false,
+      notFound: false,
+      failed: false,
+    });
+
+    render(<GameDetailsPage />);
+
+    expect(screen.getByRole('status', { name: /loading game/i })).toBeInTheDocument();
+    expect(screen.queryByText('scoreboard')).not.toBeInTheDocument();
+    expect(mockNavigate).toHaveBeenCalledWith(
+      '/admin/leagues/nhl/seasons/2024-25/games/10-10-2024/awy-vs-hom',
+      { replace: true },
+    );
   });
 
   it('treats no-date admin game routes as direct game id routes', () => {

@@ -23,6 +23,7 @@ import Select, { type SelectOption } from '@/components/Select/Select';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import { formatScheduledDate } from './formatUtils';
 import styles from './ScoreImageModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -46,6 +47,7 @@ const DATE_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   day: 'numeric',
   year: 'numeric',
+  timeZone: 'America/New_York',
 });
 const DATE_KEY_RE = /^([0-9]{4}-[0-9]{2}-[0-9]{2})/;
 
@@ -1041,7 +1043,11 @@ const ScoreImageModal = ({
           ctx.fillStyle = 'rgba(226,232,240,0.88)';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
-          ctx.fillText(DATE_FMT.format(new Date(drawGame.scheduled_at)), W / 2, BOT_Y + 69);
+          ctx.fillText(
+            formatScheduledDate(drawGame.scheduled_at, DATE_FMT) ?? '',
+            W / 2,
+            BOT_Y + 69,
+          );
         }
 
         // Playoff indicator — only rendered for playoff games
@@ -1127,435 +1133,441 @@ const ScoreImageModal = ({
   return (
     <>
       <Modal
-      open={open}
-      title="Generate Score Card"
-      onClose={onClose}
-      size="xl"
-      disableBackdropClose={isStandaloneForm}
-      footer={
-        <div className={styles.footer}>
-          <Button
-            variant="outlined"
-            intent="neutral"
-            onClick={onClose}
-          >
-            Close
-          </Button>
-          {canPreview && (
+        open={open}
+        title="Generate Score Card"
+        onClose={onClose}
+        size="xl"
+        disableBackdropClose={isStandaloneForm}
+        footer={
+          <div className={styles.footer}>
             <Button
               variant="outlined"
               intent="neutral"
-              icon="visibility"
-              onClick={handlePreview}
-              disabled={generating || previewing}
+              onClick={onClose}
             >
-              {previewing ? 'Generating Preview…' : 'Preview Image'}
+              Close
             </Button>
-          )}
-          <Button
-            variant="filled"
-            intent="accent"
-            icon="download"
-            onClick={handleDownload}
-            disabled={generating}
-          >
-            {generating ? 'Generating…' : 'Download Image'}
-          </Button>
-        </div>
-      }
-      >
-      {/* Hero image upload zone */}
-      <div className={styles.uploadAreaWrap}>
-        <div className={`${styles.uploadArea}${!showForm ? ` ${styles.uploadAreaLarge}` : ''}`}>
-          {heroPreviewUrl ? (
-            <div
-              ref={previewRef}
-              className={`${styles.uploadPreview} ${isDragging ? styles.uploadPreviewDragging : ''}`}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-            >
-              {/* Draggable preview image */}
-              <img
-                src={heroPreviewUrl}
-                draggable={false}
-                className={styles.uploadPreviewImg}
-                style={{
-                  objectPosition: `${cropX}% ${cropY}%`,
-                  transform: cropZoom !== 1 ? `scale(${cropZoom})` : undefined,
-                  transformOrigin: `${cropX}% ${cropY}%`,
-                }}
-              />
-
-              {/* Remove button */}
-              <button
-                type="button"
-                className={styles.uploadClear}
-                onClick={handleClear}
-                onPointerDown={(e) => e.stopPropagation()}
-                aria-label="Remove hero image"
+            {canPreview && (
+              <Button
+                variant="outlined"
+                intent="accent"
+                icon="visibility"
+                onClick={handlePreview}
+                disabled={generating || previewing}
               >
-                ✕
-              </button>
-
-              {/* Zoom slider */}
-              <div className={styles.uploadZoomBar}>
-                <span className={styles.uploadZoomIcon}>−</span>
-                <input
-                  type="range"
-                  min="1"
-                  max="3"
-                  step="0.05"
-                  value={cropZoom}
-                  className={styles.uploadZoomSlider}
-                  onChange={(e) => setCropZoom(Number(e.target.value))}
-                  onPointerDown={(e) => e.stopPropagation()}
+                {previewing ? 'Generating Preview…' : 'Preview Image'}
+              </Button>
+            )}
+            <Button
+              variant="filled"
+              intent="accent"
+              icon="download"
+              onClick={handleDownload}
+              disabled={generating}
+            >
+              {generating ? 'Generating…' : 'Download Image'}
+            </Button>
+          </div>
+        }
+      >
+        {/* Hero image upload zone */}
+        <div className={styles.uploadAreaWrap}>
+          <div className={`${styles.uploadArea}${!showForm ? ` ${styles.uploadAreaLarge}` : ''}`}>
+            {heroPreviewUrl ? (
+              <div
+                ref={previewRef}
+                className={`${styles.uploadPreview} ${isDragging ? styles.uploadPreviewDragging : ''}`}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+              >
+                {/* Draggable preview image */}
+                <img
+                  src={heroPreviewUrl}
+                  draggable={false}
+                  className={styles.uploadPreviewImg}
+                  style={{
+                    objectPosition: `${cropX}% ${cropY}%`,
+                    transform: cropZoom !== 1 ? `scale(${cropZoom})` : undefined,
+                    transformOrigin: `${cropX}% ${cropY}%`,
+                  }}
                 />
-                <span className={styles.uploadZoomIcon}>+</span>
+
+                {/* Remove button */}
+                <button
+                  type="button"
+                  className={styles.uploadClear}
+                  onClick={handleClear}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  aria-label="Remove hero image"
+                >
+                  ✕
+                </button>
+
+                {/* Zoom slider */}
+                <div className={styles.uploadZoomBar}>
+                  <span className={styles.uploadZoomIcon}>−</span>
+                  <input
+                    type="range"
+                    min="1"
+                    max="3"
+                    step="0.05"
+                    value={cropZoom}
+                    className={styles.uploadZoomSlider}
+                    onChange={(e) => setCropZoom(Number(e.target.value))}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  />
+                  <span className={styles.uploadZoomIcon}>+</span>
+                </div>
               </div>
-            </div>
-          ) : (
-            <label className={styles.uploadLabel}>
-              <Icon
-                name="upload"
-                size="2em"
-              />
-              <span className={styles.uploadLabelPrimary}>Upload Hero Image</span>
-              <span className={styles.uploadLabelSub}>
-                Click to browse · or paste an image from clipboard
-              </span>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className={styles.uploadInput}
-                onChange={handleFileChange}
-              />
-            </label>
-          )}
+            ) : (
+              <label className={styles.uploadLabel}>
+                <Icon
+                  name="upload"
+                  size="2em"
+                />
+                <span className={styles.uploadLabelPrimary}>Upload Hero Image</span>
+                <span className={styles.uploadLabelSub}>
+                  Click to browse · or paste an image from clipboard
+                </span>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  className={styles.uploadInput}
+                  onChange={handleFileChange}
+                />
+              </label>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* ── Image options form (user dashboard only) ── */}
-      {showForm && (
-        <div className={styles.formSection}>
-          {/* ── Game data (standalone mode) ── */}
-          {isStandaloneForm &&
-            (() => {
-              const leagueOptions: SelectOption[] = allLeagues.map((l) => ({
-                value: l.id,
-                label: l.name,
-                logo: l.logo,
-                code: l.code,
-              }));
-              const teamOptions: SelectOption[] = formTeams.map((t) => ({
-                value: t.id,
-                label: t.name,
-                logo: t.logo,
-                code: t.code,
-              }));
-              return (
-                <>
-                  {/* Row: League | Season */}
-                  <div className={styles.formRow}>
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>League</label>
-                      <Select
-                        value={formLeagueId || null}
-                        options={leagueOptions}
-                        placeholder="— Select league —"
-                        onChange={(val) => {
-                          setFormLeagueId(val);
-                          setFormSeasonId('');
-                          setFormAwayTeamId('');
-                          setFormHomeTeamId('');
-                        }}
-                        searchable
-                      />
-                    </div>
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Season</label>
-                      <SeasonSelect
-                        value={formSeasonId || null}
-                        seasons={formSeasons}
-                        placeholder="— Select season —"
-                        onChange={setFormSeasonId}
-                        disabled={!formLeagueId}
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row: Away Team | Home Team */}
-                  <div className={styles.formRow}>
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Away Team</label>
-                      <Select
-                        value={formAwayTeamId || null}
-                        options={teamOptions}
-                        placeholder="— Select team —"
-                        onChange={setFormAwayTeamId}
-                        disabled={!formLeagueId}
-                        searchable
-                      />
-                    </div>
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Home Team</label>
-                      <Select
-                        value={formHomeTeamId || null}
-                        options={teamOptions}
-                        placeholder="— Select team —"
-                        onChange={setFormHomeTeamId}
-                        disabled={!formLeagueId}
-                        searchable
-                      />
-                    </div>
-                  </div>
-
-                  {/* Row: Date | Away Score | Home Score */}
-                  <div className={styles.formRow3}>
-                    <div className={styles.formField}>
-                      <label className={styles.formLabel}>Game Date</label>
-                      <DatePicker
-                        value={formGameDate}
-                        onChange={setFormGameDate}
-                        placeholder="Select date"
-                      />
-                    </div>
-                    <ScoreCardNumberField
-                      label="Away Score"
-                      control={numControl}
-                      name="awayScore"
-                      min={0}
-                    />
-                    <ScoreCardNumberField
-                      label="Home Score"
-                      control={numControl}
-                      name="homeScore"
-                      min={0}
-                    />
-                  </div>
-
-                  {/* Playoff checkbox */}
-                  <div
-                    className={styles.formCheckboxRow}
-                    onClick={() => setFormIsPlayoff((value) => !value)}
-                  >
-                    <Checkbox
-                      checked={formIsPlayoff}
-                      onChange={() => setFormIsPlayoff((value) => !value)}
-                    />
-                    <span className={styles.formCheckboxLabel}>Playoff Game</span>
-                  </div>
-
-                  {/* Playoff sub-section */}
-                  {formIsPlayoff && (
-                    <div className={styles.playoffSection}>
-                      <div className={styles.playoffFieldsRow}>
-                        <div className={`${styles.formField} ${styles.playoffRoundField}`}>
-                          <label className={styles.formLabel}>Round</label>
-                          <input
-                            type="text"
-                            className={styles.formInput}
-                            placeholder="e.g. Quarterfinals"
-                            value={formPlayoffRound}
-                            onChange={(e) => setFormPlayoffRound(e.target.value)}
-                          />
-                        </div>
-                        <ScoreCardNumberField
-                          label="Game #"
-                          control={numControl}
-                          name="playoffGameNum"
-                          min={1}
-                          max={7}
+        {/* ── Image options form (user dashboard only) ── */}
+        {showForm && (
+          <div className={styles.formSection}>
+            {/* ── Game data (standalone mode) ── */}
+            {isStandaloneForm &&
+              (() => {
+                const leagueOptions: SelectOption[] = allLeagues.map((l) => ({
+                  value: l.id,
+                  label: l.name,
+                  logo: l.logo,
+                  code: l.code,
+                }));
+                const teamOptions: SelectOption[] = formTeams.map((t) => ({
+                  value: t.id,
+                  label: t.name,
+                  logo: t.logo,
+                  code: t.code,
+                }));
+                return (
+                  <>
+                    {/* Row: League | Season */}
+                    <div className={styles.formRow}>
+                      <div className={styles.formField}>
+                        <label className={styles.formLabel}>League</label>
+                        <Select
+                          value={formLeagueId || null}
+                          options={leagueOptions}
+                          placeholder="— Select league —"
+                          onChange={(val) => {
+                            setFormLeagueId(val);
+                            setFormSeasonId('');
+                            setFormAwayTeamId('');
+                            setFormHomeTeamId('');
+                          }}
+                          searchable
                         />
-                        <ScoreCardNumberField
-                          label="Away Wins"
-                          control={numControl}
-                          name="awayWins"
-                          min={0}
-                          max={4}
-                        />
-                        <ScoreCardNumberField
-                          label="Home Wins"
-                          control={numControl}
-                          name="homeWins"
-                          min={0}
-                          max={4}
+                      </div>
+                      <div className={styles.formField}>
+                        <label className={styles.formLabel}>Season</label>
+                        <SeasonSelect
+                          value={formSeasonId || null}
+                          seasons={formSeasons}
+                          placeholder="— Select season —"
+                          onChange={setFormSeasonId}
+                          disabled={!formLeagueId}
                         />
                       </div>
                     </div>
-                  )}
-                </>
-              );
-            })()}
-        </div>
-      )}
 
-      <div className={styles.scoreCardExportShell}>
-        <div
-          ref={scoreCardRef}
-          className={styles.scoreCardExport}
-          style={
-            {
-              width: W,
-              height: H,
-              '--away-primary': awayPrimary,
-              '--home-primary': homePrimary,
-              '--league-band': leagueBand,
-              '--hero-x': `${cropX}%`,
-              '--hero-y': `${cropY}%`,
-              '--hero-zoom': cropZoom,
-            } as CSSProperties
-          }
-        >
-          <header className={styles.scoreCardTopBar}>
-            <div className={styles.scoreCardTopLine} />
-            <div className={styles.scoreCardEvent}>
-              <span className={styles.scoreCardEventMuted}>{topLeagueCode}</span>
-              {topSeasonName && <span className={styles.scoreCardEventMain}>{topSeasonName}</span>}
-            </div>
-            <div className={styles.scoreCardTopLine} />
-          </header>
+                    {/* Row: Away Team | Home Team */}
+                    <div className={styles.formRow}>
+                      <div className={styles.formField}>
+                        <label className={styles.formLabel}>Away Team</label>
+                        <Select
+                          value={formAwayTeamId || null}
+                          options={teamOptions}
+                          placeholder="— Select team —"
+                          onChange={setFormAwayTeamId}
+                          disabled={!formLeagueId}
+                          searchable
+                        />
+                      </div>
+                      <div className={styles.formField}>
+                        <label className={styles.formLabel}>Home Team</label>
+                        <Select
+                          value={formHomeTeamId || null}
+                          options={teamOptions}
+                          placeholder="— Select team —"
+                          onChange={setFormHomeTeamId}
+                          disabled={!formLeagueId}
+                          searchable
+                        />
+                      </div>
+                    </div>
 
-          <section className={styles.scoreCardHero}>
-            {heroExportUrl ? (
-              <img
-                src={heroExportUrl}
-                alt=""
-                className={styles.scoreCardHeroImg}
-              />
-            ) : (
-              <div className={styles.scoreCardHeroFallback}>
-                <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
-                <span>VS</span>
-                <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
-              </div>
-            )}
-            <div className={styles.scoreCardHeroShade} />
-            {(headline || caption) && (
-              <div className={styles.scoreCardHeroText}>
-                {headline && <strong>{headline}</strong>}
-                {caption && <span>{caption}</span>}
-              </div>
-            )}
-          </section>
+                    {/* Row: Date | Away Score | Home Score */}
+                    <div className={styles.formRow3}>
+                      <div className={styles.formField}>
+                        <label className={styles.formLabel}>Game Date</label>
+                        <DatePicker
+                          value={formGameDate}
+                          onChange={setFormGameDate}
+                          placeholder="Select date"
+                        />
+                      </div>
+                      <ScoreCardNumberField
+                        label="Away Score"
+                        control={numControl}
+                        name="awayScore"
+                        min={0}
+                      />
+                      <ScoreCardNumberField
+                        label="Home Score"
+                        control={numControl}
+                        name="homeScore"
+                        min={0}
+                      />
+                    </div>
 
-          <div className={styles.scoreCardScoreRibbon}>
-            <span />
-            <strong>{finalLabel}</strong>
-            <span />
+                    {/* Playoff checkbox */}
+                    <div
+                      className={styles.formCheckboxRow}
+                      onClick={() => setFormIsPlayoff((value) => !value)}
+                    >
+                      <Checkbox
+                        checked={formIsPlayoff}
+                        onChange={() => setFormIsPlayoff((value) => !value)}
+                      />
+                      <span className={styles.formCheckboxLabel}>Playoff Game</span>
+                    </div>
+
+                    {/* Playoff sub-section */}
+                    {formIsPlayoff && (
+                      <div className={styles.playoffSection}>
+                        <div className={styles.playoffFieldsRow}>
+                          <div className={`${styles.formField} ${styles.playoffRoundField}`}>
+                            <label className={styles.formLabel}>Round</label>
+                            <input
+                              type="text"
+                              className={styles.formInput}
+                              placeholder="e.g. Quarterfinals"
+                              value={formPlayoffRound}
+                              onChange={(e) => setFormPlayoffRound(e.target.value)}
+                            />
+                          </div>
+                          <ScoreCardNumberField
+                            label="Game #"
+                            control={numControl}
+                            name="playoffGameNum"
+                            min={1}
+                            max={7}
+                          />
+                          <ScoreCardNumberField
+                            label="Away Wins"
+                            control={numControl}
+                            name="awayWins"
+                            min={0}
+                            max={4}
+                          />
+                          <ScoreCardNumberField
+                            label="Home Wins"
+                            control={numControl}
+                            name="homeWins"
+                            min={0}
+                            max={4}
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
           </div>
+        )}
 
-          <section className={styles.scoreCardScoreGrid}>
-            <div className={`${styles.scoreCardTeamPanel} ${styles.scoreCardTeamPanelAway}`}>
-              <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
-              <ScoreCardTeamName team={drawGame?.away_team ?? null} />
+        <div className={styles.scoreCardExportShell}>
+          <div
+            ref={scoreCardRef}
+            className={styles.scoreCardExport}
+            style={
+              {
+                width: W,
+                height: H,
+                '--away-primary': awayPrimary,
+                '--home-primary': homePrimary,
+                '--league-band': leagueBand,
+                '--hero-x': `${cropX}%`,
+                '--hero-y': `${cropY}%`,
+                '--hero-zoom': cropZoom,
+              } as CSSProperties
+            }
+          >
+            <header className={styles.scoreCardTopBar}>
+              <div className={styles.scoreCardTopLine} />
+              <div className={styles.scoreCardEvent}>
+                <span className={styles.scoreCardEventMuted}>{topLeagueCode}</span>
+                {topSeasonName && (
+                  <span className={styles.scoreCardEventMain}>{topSeasonName}</span>
+                )}
+              </div>
+              <div className={styles.scoreCardTopLine} />
+            </header>
+
+            <section className={styles.scoreCardHero}>
+              {heroExportUrl ? (
+                <img
+                  src={heroExportUrl}
+                  alt=""
+                  className={styles.scoreCardHeroImg}
+                />
+              ) : (
+                <div className={styles.scoreCardHeroFallback}>
+                  <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
+                  <span>VS</span>
+                  <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
+                </div>
+              )}
+              <div className={styles.scoreCardHeroShade} />
+              {(headline || caption) && (
+                <div className={styles.scoreCardHeroText}>
+                  {headline && <strong>{headline}</strong>}
+                  {caption && <span>{caption}</span>}
+                </div>
+              )}
+            </section>
+
+            <div className={styles.scoreCardScoreRibbon}>
+              <span />
+              <strong>{finalLabel}</strong>
+              <span />
             </div>
 
-            <div className={styles.scoreCardScorePanel}>
-              <div className={styles.scoreCardScoreBlock}>
-                {awayWon && (
-                  <span
-                    className={styles.scoreCardWinnerMarker}
-                    aria-hidden="true"
-                  />
-                )}
-                <strong className={awayWon ? styles.scoreCardWinnerScore : undefined}>
-                  {drawAwayScore}
-                </strong>
+            <section className={styles.scoreCardScoreGrid}>
+              <div className={`${styles.scoreCardTeamPanel} ${styles.scoreCardTeamPanelAway}`}>
+                <ScoreCardTeamLogo team={drawGame?.away_team ?? null} />
+                <ScoreCardTeamName team={drawGame?.away_team ?? null} />
               </div>
 
-              <span
-                className={`${styles.scoreCardResultBadge}${
-                  hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
-                }`}
-                title={scoreBadgeTitle}
-              >
-                {scoreBadgeLabel && (
-                  <span className={styles.scoreCardResultLabel}>
-                    {hasOvertimeBadge
-                      ? scoreBadgeLabel.split('').map((letter, index) => (
-                          <span
-                            key={`${letter}-${index}`}
-                            className={`${styles.scoreCardResultLetter}${
-                              letter === 'S' ? ` ${styles.scoreCardResultLetterWide}` : ''
-                            }`}
-                          >
-                            {letter}
-                          </span>
-                        ))
-                      : scoreBadgeLabel}
-                  </span>
-                )}
-              </span>
-              <div className={styles.scoreCardScoreBlock}>
-                {homeWon && (
-                  <span
-                    className={styles.scoreCardWinnerMarker}
-                    aria-hidden="true"
-                  />
-                )}
-                <strong className={homeWon ? styles.scoreCardWinnerScore : undefined}>
-                  {drawHomeScore}
-                </strong>
+              <div className={styles.scoreCardScorePanel}>
+                <div className={styles.scoreCardScoreBlock}>
+                  {awayWon && (
+                    <span
+                      className={styles.scoreCardWinnerMarker}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <strong className={awayWon ? styles.scoreCardWinnerScore : undefined}>
+                    {drawAwayScore}
+                  </strong>
+                </div>
+
+                <span
+                  className={`${styles.scoreCardResultBadge}${
+                    hasOvertimeBadge ? ` ${styles.scoreCardResultBadgeOvertime}` : ''
+                  }`}
+                  title={scoreBadgeTitle}
+                >
+                  {scoreBadgeLabel && (
+                    <span className={styles.scoreCardResultLabel}>
+                      {hasOvertimeBadge
+                        ? scoreBadgeLabel.split('').map((letter, index) => (
+                            <span
+                              key={`${letter}-${index}`}
+                              className={`${styles.scoreCardResultLetter}${
+                                letter === 'S' ? ` ${styles.scoreCardResultLetterWide}` : ''
+                              }`}
+                            >
+                              {letter}
+                            </span>
+                          ))
+                        : scoreBadgeLabel}
+                    </span>
+                  )}
+                </span>
+                <div className={styles.scoreCardScoreBlock}>
+                  {homeWon && (
+                    <span
+                      className={styles.scoreCardWinnerMarker}
+                      aria-hidden="true"
+                    />
+                  )}
+                  <strong className={homeWon ? styles.scoreCardWinnerScore : undefined}>
+                    {drawHomeScore}
+                  </strong>
+                </div>
               </div>
-            </div>
 
-            <div className={`${styles.scoreCardTeamPanel} ${styles.scoreCardTeamPanelHome}`}>
-              <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
-              <ScoreCardTeamName team={drawGame?.home_team ?? null} />
-            </div>
-          </section>
+              <div className={`${styles.scoreCardTeamPanel} ${styles.scoreCardTeamPanelHome}`}>
+                <ScoreCardTeamLogo team={drawGame?.home_team ?? null} />
+                <ScoreCardTeamName team={drawGame?.home_team ?? null} />
+              </div>
+            </section>
 
-          <section className={styles.scoreCardSeriesBar}>
-            <div className={styles.scoreCardSeriesDots}>
-              {isPlayoffScoreCard &&
-                Array.from({ length: seriesTotal }, (_, index) => (
-                  <span
-                    key={`away-dot-${index}`}
-                    className={index < awaySeriesWins ? styles.scoreCardSeriesDotFilled : undefined}
-                  />
-                ))}
-            </div>
-            <strong>{seriesStatusLine || leagueLine || 'FINAL'}</strong>
-            <div className={styles.scoreCardSeriesDots}>
-              {isPlayoffScoreCard &&
-                Array.from({ length: seriesTotal }, (_, index) => (
-                  <span
-                    key={`home-dot-${index}`}
-                    className={index < homeSeriesWins ? styles.scoreCardSeriesDotFilled : undefined}
-                  />
-                ))}
-            </div>
-          </section>
+            <section className={styles.scoreCardSeriesBar}>
+              <div className={styles.scoreCardSeriesDots}>
+                {isPlayoffScoreCard &&
+                  Array.from({ length: seriesTotal }, (_, index) => (
+                    <span
+                      key={`away-dot-${index}`}
+                      className={
+                        index < awaySeriesWins ? styles.scoreCardSeriesDotFilled : undefined
+                      }
+                    />
+                  ))}
+              </div>
+              <strong>{seriesStatusLine || leagueLine || 'FINAL'}</strong>
+              <div className={styles.scoreCardSeriesDots}>
+                {isPlayoffScoreCard &&
+                  Array.from({ length: seriesTotal }, (_, index) => (
+                    <span
+                      key={`home-dot-${index}`}
+                      className={
+                        index < homeSeriesWins ? styles.scoreCardSeriesDotFilled : undefined
+                      }
+                    />
+                  ))}
+              </div>
+            </section>
 
-          <footer className={styles.scoreCardFooter}>
-            {footerLeagueLogo ? (
-              <img
-                src={footerLeagueLogo}
-                alt={`${footerLeagueCode} logo`}
-                className={styles.scoreCardFooterLeagueLogo}
-                crossOrigin="anonymous"
-              />
-            ) : (
-              <strong className={styles.scoreCardFooterLeagueCode}>{footerLeagueCode}</strong>
-            )}
-            {showDate && drawGame?.scheduled_at && (
-              <span>{DATE_FMT.format(new Date(drawGame.scheduled_at))}</span>
-            )}
-            {showLeagueSeason && leagueLine && <span>{leagueLine}</span>}
-          </footer>
+            <footer className={styles.scoreCardFooter}>
+              {footerLeagueLogo ? (
+                <img
+                  src={footerLeagueLogo}
+                  alt={`${footerLeagueCode} logo`}
+                  className={styles.scoreCardFooterLeagueLogo}
+                  crossOrigin="anonymous"
+                />
+              ) : (
+                <strong className={styles.scoreCardFooterLeagueCode}>{footerLeagueCode}</strong>
+              )}
+              {showDate && drawGame?.scheduled_at && (
+                <span>{formatScheduledDate(drawGame.scheduled_at, DATE_FMT)}</span>
+              )}
+              {showLeagueSeason && leagueLine && <span>{leagueLine}</span>}
+            </footer>
+          </div>
         </div>
-      </div>
 
-      {/* Canvas is rendered off-screen; only used to produce the PNG */}
-      <canvas
-        ref={canvasRef}
-        width={W}
-        height={synthGame || game ? H : HERO_H}
-        className={styles.canvas}
-      />
+        {/* Canvas is rendered off-screen; only used to produce the PNG */}
+        <canvas
+          ref={canvasRef}
+          width={W}
+          height={synthGame || game ? H : HERO_H}
+          className={styles.canvas}
+        />
       </Modal>
 
       <ImagePreviewModal

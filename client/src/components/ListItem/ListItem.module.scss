@@ -14,7 +14,6 @@
   padding: $space-md;
   border: 1px solid $border;
   border-radius: $radius-md;
-  background: rgba(255, 255, 255, 0.02);
   transition:
     background $transition-fast,
     border-color $transition-fast;
@@ -28,11 +27,11 @@
       pointer-events: auto;
     }
   }
-}
 
-.itemPlain {
-  border-color: transparent;
-  background: transparent;
+  &Plain {
+    border-color: transparent;
+    background: transparent;
+  }
 }
 
 // ── Leading image (e.g. team logo to the left of a player photo) ──────────────
@@ -43,21 +42,21 @@
   border-radius: $radius-sm;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2));
-}
 
-.leadingLogoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  border-radius: $radius-sm;
-  background: $border;
-  font-size: $font-xs;
-  font-weight: 700;
-  color: $text-body;
-  text-transform: uppercase;
-  flex-shrink: 0;
+  &Placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
+    background: $border;
+    font-size: $font-xs;
+    font-weight: 700;
+    color: $text-body;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
 }
 
 // ── Image ─────────────────────────────────────────────────────────────────────
@@ -68,29 +67,29 @@
   border-radius: $radius-sm;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.25));
-}
 
-.logoCircle {
-  object-fit: cover;
-  border-radius: 50%;
-}
+  &Circle {
+    object-fit: cover;
+    border-radius: 50%;
+  }
 
-.logoPlaceholder {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--list-item-logo-size, 32px);
-  height: var(--list-item-logo-size, 32px);
-  border-radius: $radius-sm;
-  background: $border;
-  font-weight: 500;
-  color: $text-body;
-  text-transform: uppercase;
-  flex-shrink: 0;
-}
+  &Placeholder {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--list-item-logo-size, 32px);
+    height: var(--list-item-logo-size, 32px);
+    border-radius: $radius-sm;
+    background: $border;
+    font-weight: 500;
+    color: $text-body;
+    text-transform: uppercase;
+    flex-shrink: 0;
+  }
 
-.logoPlaceholderCircle {
-  border-radius: 50%;
+  &PlaceholderCircle {
+    border-radius: 50%;
+  }
 }
 
 // ── Jersey number chip ────────────────────────────────────────────────────────
@@ -131,10 +130,10 @@
   font-size: $font-base;
   color: $text-body;
   @include truncate;
-}
 
-.nameItalic {
-  font-style: italic;
+  &Italic {
+    font-style: italic;
+  }
 }
 
 .subtitle {

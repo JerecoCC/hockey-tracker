@@ -2,6 +2,8 @@
 
 This project can use a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
 
+Graphify is installed for this project at `.graphify_venv/Scripts`; if `graphify` is not found in an already-running shell, prepend that folder to `PATH`.
+
 When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
 
 Rules:

@@ -70,11 +70,11 @@ const MovePlayerModal = ({
     () => ({
       to_team_id: null,
       trade_date: '',
-      jersey_number: '',
+      jersey_number: player?.jersey_number == null ? '' : String(player.jersey_number),
       position: '',
       acquisition_type: 'trade',
     }),
-    [],
+    [player?.jersey_number],
   );
   const { teams } = useTeams();
 
@@ -138,29 +138,29 @@ const MovePlayerModal = ({
         >
           <Field
             type="select"
-            label="Move To"
-            required
+            label="Position (new team)"
             control={control}
-            name="to_team_id"
-            options={teamOptions}
-            placeholder="Select destination team..."
-            searchable
-            rules={{ required: true }}
+            name="position"
+            options={POSITION_OPTIONS}
+            placeholder="Inherit from player..."
             disabled={isSubmitting}
           />
-          <div className={styles.row}>
+          <div className={styles.teamRow}>
             <Field
-              type="datepicker"
-              label="Move Date"
-              control={control}
-              name="trade_date"
+              type="select"
+              label="Move To"
               required
-              rules={{ required: 'Move date is required' }}
+              control={control}
+              name="to_team_id"
+              options={teamOptions}
+              placeholder="Select destination team..."
+              searchable
+              rules={{ required: true }}
               disabled={isSubmitting}
             />
             <Field
               type="number"
-              label="Jersey # (new team)"
+              label="Jersey #"
               control={control}
               name="jersey_number"
               placeholder="e.g. 97"
@@ -169,23 +169,28 @@ const MovePlayerModal = ({
               disabled={isSubmitting}
             />
           </div>
-          <Field
-            type="select"
-            label="Position (new team)"
-            control={control}
-            name="position"
-            options={POSITION_OPTIONS}
-            placeholder="Inherit from player..."
-            disabled={isSubmitting}
-          />
-          <Field
-            type="select"
-            label="Move Type"
-            control={control}
-            name="acquisition_type"
-            options={ACQUISITION_TYPE_OPTIONS}
-            disabled={isSubmitting}
-          />
+          <fieldset className={styles.fieldGroup}>
+            <legend className={styles.groupLabel}>MOVEMENT</legend>
+            <div className={styles.movementRow}>
+              <Field
+                type="datepicker"
+                label="Date"
+                control={control}
+                name="trade_date"
+                required
+                rules={{ required: 'Move date is required' }}
+                disabled={isSubmitting}
+              />
+              <Field
+                type="select"
+                label="Type"
+                control={control}
+                name="acquisition_type"
+                options={ACQUISITION_TYPE_OPTIONS}
+                disabled={isSubmitting}
+              />
+            </div>
+          </fieldset>
         </form>
 
         {stints.length > 0 && (

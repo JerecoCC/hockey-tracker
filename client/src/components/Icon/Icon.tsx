@@ -29,6 +29,8 @@ import {
   faFilter,
   faFlag,
   faGauge,
+  faGear,
+  faHeart,
   faCalendarDays,
   faChevronDown,
   faChevronLeft,
@@ -100,6 +102,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   south: faArrowDown,
   menu: faBars,
   shield: faShield,
+  settings: faGear,
 
   // info
   info: faCircleInfo,
@@ -121,6 +124,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
   add: faPlus,
   save: faFloppyDisk,
   filter_list: faFilter,
+  favorite: faHeart,
+  heart: faHeart,
   calendar: faCalendarDays,
   download: faDownload,
   play_arrow: faPlay,
@@ -166,6 +171,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
   grid_view: faTableCells,
   view_list: faList,
   playlist_add: faLayerGroup,
+  account_tree: faLayerGroup,
 
   // loading / time
   hourglass_empty: faHourglassHalf,

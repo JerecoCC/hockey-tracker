@@ -13,3 +13,22 @@
   column-gap: $space-md;
   row-gap: $space-xl;
 }
+
+.settingsGrid {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(180px, 1fr);
+  align-items: end;
+  gap: $space-md;
+
+  @media (max-width: 760px) {
+    grid-template-columns: 1fr;
+  }
+
+  &Compact {
+    min-width: 0;
+  }
+
+  &Full {
+    min-width: 0;
+  }
+}

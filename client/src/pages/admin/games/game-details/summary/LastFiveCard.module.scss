@@ -35,33 +35,30 @@
 // ── Last 5 Games card ─────────────────────────────────────────────────────────
 
 // Two team columns side by side — collapses to single column on narrow cards
-.lastFiveList {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: $space-sm;
-  align-items: flex-start;
-  container-type: inline-size;
+.lastFive {
+  &List {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: $space-sm;
+    align-items: flex-start;
+    container-type: inline-size;
 
-  @container (max-width: #{$bp-tablet}) {
-    flex-direction: column;
+    @container (max-width: #{$bp-tablet}) {
+      flex-direction: column;
+    }
   }
-}
 
-.lastFiveTeamCol {
-  flex: 1;
-  min-width: 390px;
-  width: 100%;
+  &TeamCol {
+    flex: 1;
+    min-width: 390px;
+    width: 100%;
+  }
 }
 
 // View toggle in card header
 .lastFiveViewToggle {
   width: fit-content;
-
-  svg {
-    width: 1.15rem;
-    height: 1.15rem;
-  }
 }
 
 // ── List view ─────────────────────────────────────────────────────────────────
@@ -95,18 +92,18 @@
   width: 36px;
   text-align: center;
   flex-shrink: 0;
-}
 
-.lastFiveListResultW {
-  color: $success;
-}
+  &W {
+    color: $success;
+  }
 
-.lastFiveListResultL {
-  color: $danger;
-}
+  &L {
+    color: $danger;
+  }
 
-.lastFiveListResultT {
-  color: $text-dim;
+  &T {
+    color: $text-dim;
+  }
 }
 
 // Logo circle in list rows
@@ -123,18 +120,18 @@
   flex-shrink: 0;
   background: color-mix(in srgb, #{$bg-card}, white 10%);
   overflow: hidden;
-}
 
-.lastFiveListLogoImg {
-  width: 24px;
-  height: 24px;
-  object-fit: contain;
-}
+  &Img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
 
-.lastFiveListLogoPlaceholder {
-  font-size: 10px;
-  font-weight: 700;
-  color: $text-body;
+  &Placeholder {
+    font-size: 10px;
+    font-weight: 700;
+    color: $text-body;
+  }
 }
 
 // Opponent name (home/away indicator + name)
@@ -184,12 +181,12 @@
   font-variant-numeric: tabular-nums;
   color: $text-body;
   white-space: nowrap;
-}
 
-.lastFiveFormSep {
-  color: $text-dim;
-  font-weight: 400;
-  user-select: none;
+  &Sep {
+    color: $text-dim;
+    font-weight: 400;
+    user-select: none;
+  }
 }
 
 // Flex row of game squares inside accordion body
@@ -199,8 +196,8 @@
   gap: $space-sm;
   padding: $space-md;
   align-items: stretch;
-}
 
-.lastFiveGamesEmpty {
-  padding: 0;
+  &Empty {
+    padding: 0;
+  }
 }

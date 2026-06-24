@@ -5,16 +5,27 @@ import InfoItem from '@/components/InfoItem/InfoItem';
 import type { GameRecord, UpdateGameInfoData } from '@/hooks/useGames';
 import GameInfoEditModal from '../GameInfoEditModal';
 import { GAME_TYPE_LABEL } from '../constants';
-import { DATE_FMT_SHORT, TIME_FMT, formatScheduledTime, formatEndTime } from '../formatUtils';
+import {
+  DATE_FMT_SHORT,
+  TIME_FMT,
+  formatEndTime,
+  formatEndTimeLocal,
+  formatScheduledDate,
+  formatScheduledDateLocal,
+  formatScheduledTime,
+  formatScheduledTimeLocal,
+  formatTimestampTimeLocal,
+} from '../formatUtils';
 import styles from './GameInfoCard.module.scss';
 
 interface Props {
   game: GameRecord;
   busy: string | null;
   updateGameInfo?: (data: UpdateGameInfoData) => Promise<boolean>;
+  useLocalTimezone?: boolean;
 }
 
-const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
+const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: Props) => {
   const [editOpen, setEditOpen] = useState(false);
   const playoffRoundLabel =
     game.playoff_round != null
@@ -58,12 +69,18 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
           )}
           <InfoItem
             label="Scheduled Date"
-            data={game.scheduled_at ? DATE_FMT_SHORT.format(new Date(game.scheduled_at)) : null}
+            data={
+              useLocalTimezone
+                ? formatScheduledDateLocal(game.scheduled_at, game.scheduled_time)
+                : formatScheduledDate(game.scheduled_at, DATE_FMT_SHORT)
+            }
           />
           <InfoItem
             label="Scheduled Time"
             data={
-              game.scheduled_time
+              useLocalTimezone
+                ? formatScheduledTimeLocal(game.scheduled_time, game.scheduled_at)
+                : game.scheduled_time
                 ? formatScheduledTime(game.scheduled_time, game.scheduled_at)
                 : null
             }
@@ -72,11 +89,23 @@ const GameInfoCard = ({ game, busy, updateGameInfo }: Props) => {
             <>
               <InfoItem
                 label="Start Time"
-                data={game.time_start ? TIME_FMT.format(new Date(game.time_start)) : null}
+                data={
+                  useLocalTimezone
+                    ? formatTimestampTimeLocal(game.time_start)
+                    : game.time_start
+                      ? TIME_FMT.format(new Date(game.time_start))
+                      : null
+                }
               />
               <InfoItem
                 label="End Time"
-                data={game.time_end ? formatEndTime(game.time_end, game.time_start) : null}
+                data={
+                  game.time_end
+                    ? useLocalTimezone
+                      ? formatEndTimeLocal(game.time_end, game.time_start)
+                      : formatEndTime(game.time_end, game.time_start)
+                    : null
+                }
               />
             </>
           )}

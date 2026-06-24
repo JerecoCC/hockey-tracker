@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
+import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -177,11 +178,10 @@ const GroupNode = (props: GroupNodeProps) => {
             <span className={styles.groupLabel}>
               {group.name}
               {roleLabel && (
-                <span
-                  className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}
-                >
-                  {roleLabel}
-                </span>
+                <Tag
+                  label={roleLabel}
+                  intent={group.role === 'division' ? 'success' : 'info'}
+                />
               )}
             </span>
           }

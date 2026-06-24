@@ -8,33 +8,35 @@
   white-space: nowrap;
 }
 
-.prevMeetingsRows {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding: $space-xs 0;
-  gap: $space-sm;
+.prev {
+  &MeetingsRows {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: $space-xs 0;
+    gap: $space-sm;
 
-  @media (max-width: 720px) {
-    grid-template-columns: 1fr;
+    @media (max-width: 720px) {
+      grid-template-columns: 1fr;
+    }
   }
-}
 
-.prevMeetingRow {
-  display: flex;
-  flex-direction: column;
-  padding: $space-md;
-  border: 1px solid #334155;
-  border-radius: $radius-sm;
-  color: $text-bright;
-  gap: $space-xs;
-}
+  &MeetingRow {
+    display: flex;
+    flex-direction: column;
+    padding: $space-md;
+    border: 1px solid #334155;
+    border-radius: $radius-sm;
+    color: $text-bright;
+    gap: $space-xs;
+  }
 
-.prevMeetingRowClickable {
-  cursor: pointer;
-  transition: background $transition-fast;
+  &MeetingRowClickable {
+    cursor: pointer;
+    transition: background $transition-fast;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    &:hover {
+      background: rgba(255, 255, 255, 0.04);
+    }
   }
 }
 
@@ -50,10 +52,10 @@
   .teamScore {
     margin-left: auto;
   }
-}
 
-.teamInfoDim {
-  opacity: 0.55;
+  &Dim {
+    opacity: 0.55;
+  }
 }
 
 .gameInfo {

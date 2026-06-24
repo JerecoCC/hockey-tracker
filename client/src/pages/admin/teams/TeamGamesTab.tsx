@@ -1,17 +1,18 @@
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
+import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
+import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
 import useGames, { type GameRecord, type GameStatus } from '@/hooks/useGames';
 import useSeasons from '@/hooks/useSeasons';
 import GameFormModal, { type GameFormTeam } from '@/pages/admin/seasons/GameFormModal';
-import GameListItem from '@/pages/admin/seasons/GameListItem';
+import GameListItem from '@/components/GameListItem';
 import { buildGameDetailsPath } from '@/lib/routeSlugs';
 import { downloadMonthScheduleImage } from '@/lib/monthScheduleImage';
 import seasonStyles from '@/pages/admin/seasons/SeasonGamesTab.module.scss';
@@ -23,8 +24,6 @@ const MONTH_LABEL_FMT = new Intl.DateTimeFormat('en-US', {
   month: 'long',
   year: 'numeric',
 });
-
-const DAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 const formatTime = (hhmm: string, scheduledAt?: string | null): string => {
   const [hStr, mStr] = hhmm.split(':');
@@ -60,9 +59,6 @@ const monthStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), 1);
 const addMonths = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth() + n, 1);
 const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
 const addDays = (d: Date, n: number) => new Date(d.getTime() + n * 86_400_000);
-const daysInMonth = (year: number, monthIndex: number) =>
-  new Date(year, monthIndex + 1, 0).getDate();
-const firstDayOfWeek = (year: number, monthIndex: number) => new Date(year, monthIndex, 1).getDay();
 const dateToISO = (d: Date) =>
   `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 const fromISODate = (iso: string): Date => {
@@ -132,6 +128,22 @@ const sortGamesBySchedule = (games: GameRecord[]) =>
     return a.scheduled_time < b.scheduled_time ? -1 : 1;
   });
 
+type CalendarDayStyle = CSSProperties & {
+  '--team-calendar-day-accent'?: string;
+  '--team-calendar-day-text'?: string;
+};
+
+const getTeamCalendarDayStyle = (game: GameRecord, teamId: string): CalendarDayStyle => {
+  const isHomeGame = game.home_team.id === teamId;
+
+  return {
+    '--team-calendar-day-accent': isHomeGame
+      ? game.home_team.primary_color || '#334155'
+      : '#ffffff',
+    '--team-calendar-day-text': isHomeGame ? game.home_team.text_color || '#ffffff' : '#14181f',
+  };
+};
+
 const TeamCalendarGame = ({
   game,
   teamId,
@@ -146,6 +158,7 @@ const TeamCalendarGame = ({
   const isHomeGame = game.home_team.id === teamId;
   const team = isHomeGame ? game.home_team : game.away_team;
   const opponent = isHomeGame ? game.away_team : game.home_team;
+  const logoAccentColor = isHomeGame ? team.secondary_color || team.primary_color : '#ffffff';
   const { home, away, winnerTeamId } = displayScore(game);
   const teamGoals = isHomeGame ? home : away;
   const opponentGoals = isHomeGame ? away : home;
@@ -190,9 +203,11 @@ const TeamCalendarGame = ({
       detail={detail}
       topLabel={dayNumber}
       homePrimaryColor={team.primary_color}
+      logoAccentColor={logoAccentColor}
       live={game.status === 'in_progress'}
       fillContainer
       flush
+      transparentBackground
       ariaLabel={`Open game ${isHomeGame ? 'vs' : 'at'} ${opponent.name}`}
       onOpen={() => onOpen(game)}
     />
@@ -305,17 +320,6 @@ const TeamGamesTab = ({
     return Array.from(map.entries());
   }, [scheduledGames, weekStart]);
 
-  const calendarCells = useMemo(() => {
-    const year = calendarMonth.getFullYear();
-    const monthIndex = calendarMonth.getMonth();
-    const total = daysInMonth(year, monthIndex);
-    const startDow = firstDayOfWeek(year, monthIndex);
-    const cells: (number | null)[] = Array(startDow).fill(null);
-    for (let day = 1; day <= total; day++) cells.push(day);
-    while (cells.length % 7 !== 0) cells.push(null);
-    return cells;
-  }, [calendarMonth]);
-
   const loading = seasonsLoading || gamesLoading;
   const openGame = (game: GameRecord) =>
     navigate(
@@ -338,13 +342,16 @@ const TeamGamesTab = ({
     const calendarNode = calendarGridRef.current;
     if (exportingMonthImage || view !== 'calendar' || scheduledGames.length === 0 || !calendarNode)
       return;
+    const renderedCalendarWidth = Math.ceil(
+      Math.max(calendarNode.getBoundingClientRect().width, calendarNode.scrollWidth),
+    );
     setExportingMonthImage(true);
     try {
       await downloadMonthScheduleImage({
         calendarNode,
         calendarMonth,
         headerLabel: MONTH_LABEL_FMT.format(calendarMonth),
-        exportWidth: 1120,
+        exportWidth: renderedCalendarWidth || undefined,
         filename: `${teamName} Game Schedule - ${new Intl.DateTimeFormat('en-US', {
           month: 'short',
           year: 'numeric',
@@ -449,33 +456,14 @@ const TeamGamesTab = ({
               Games
               <span className={seasonStyles.titleDivider} />
               <span className={seasonStyles.weekNav}>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_left"
-                  size="sm"
-                  tooltip="Previous week"
-                  aria-label="Previous week"
-                  onClick={() => setWeekStart((current) => addDays(current, -7))}
-                />
-                <div className={seasonStyles.datePicker}>
-                  <DatePicker
-                    value={dateToISO(weekStart)}
-                    onChange={(value) =>
-                      setWeekStart(value ? fromISODate(value) : toDay(new Date()))
-                    }
-                    triggerLabel={fmtWeekRange(weekStart, weekEnd)}
-                    triggerAriaLabel={`Select week: ${fmtWeekRange(weekStart, weekEnd)}`}
-                  />
-                </div>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_right"
-                  size="sm"
-                  tooltip="Next week"
-                  aria-label="Next week"
-                  onClick={() => setWeekStart((current) => addDays(current, 7))}
+                <PeriodPicker
+                  value={dateToISO(weekStart)}
+                  label={fmtWeekRange(weekStart, weekEnd)}
+                  onChange={(value) =>
+                    setWeekStart(value ? fromISODate(value) : toDay(new Date()))
+                  }
+                  onPrevious={() => setWeekStart((current) => addDays(current, -7))}
+                  onNext={() => setWeekStart((current) => addDays(current, 7))}
                 />
               </span>
             </>
@@ -524,32 +512,13 @@ const TeamGamesTab = ({
           <div className={styles.calendarWrap}>
             <div className={styles.calendarToolbar}>
               <div className={styles.calendarToolbarControls}>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_left"
-                  size="sm"
-                  tooltip="Previous month"
-                  aria-label="Previous month"
-                  onClick={() => setCalendarMonth((current) => addMonths(current, -1))}
-                />
-                <div className={styles.calendarMonthPicker}>
-                  <DatePicker
-                    value={toMonthPickerValue(calendarMonth)}
-                    onChange={changeCalendarMonth}
-                    granularity="month"
-                    triggerLabel={MONTH_LABEL_FMT.format(calendarMonth)}
-                    triggerAriaLabel={`Select month: ${MONTH_LABEL_FMT.format(calendarMonth)}`}
-                  />
-                </div>
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="chevron_right"
-                  size="sm"
-                  tooltip="Next month"
-                  aria-label="Next month"
-                  onClick={() => setCalendarMonth((current) => addMonths(current, 1))}
+                <PeriodPicker
+                  kind="month"
+                  value={toMonthPickerValue(calendarMonth)}
+                  label={MONTH_LABEL_FMT.format(calendarMonth)}
+                  onChange={changeCalendarMonth}
+                  onPrevious={() => setCalendarMonth((current) => addMonths(current, -1))}
+                  onNext={() => setCalendarMonth((current) => addMonths(current, 1))}
                 />
               </div>
               <Button
@@ -567,54 +536,31 @@ const TeamGamesTab = ({
               />
             </div>
             <div className={styles.calendarScroll}>
-              <div
+              <MonthCalendar
                 ref={calendarGridRef}
-                className={styles.calendarGrid}
-              >
-                {DAY_LABELS.map((label) => (
-                  <div
-                    key={label}
-                    className={styles.calendarDayName}
-                  >
-                    {label}
-                  </div>
-                ))}
-                {calendarCells.map((day, index) => {
-                  if (day === null) {
-                    return (
-                      <div
-                        key={`blank-${index}`}
-                        className={styles.calendarEmptyCell}
-                      />
-                    );
-                  }
-
-                  const dateKey = `${calendarMonth.getFullYear()}-${String(calendarMonth.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                month={calendarMonth}
+                getDayClassName={({ dateKey }) =>
+                  gamesByDate.has(dateKey) ? styles.calendarDayGameCell : undefined
+                }
+                getDayProps={({ dateKey }) => {
                   const dayGame = gamesByDate.get(dateKey);
-                  return (
-                    <div
-                      key={dateKey}
-                      className={styles.calendarDayCell}
-                    >
-                      {dayGame ? (
-                        <div className={styles.calendarDayGamesFilled}>
-                          <TeamCalendarGame
-                            key={dayGame.id}
-                            game={dayGame}
-                            teamId={teamId}
-                            onOpen={openGame}
-                            dayNumber={day}
-                          />
-                        </div>
-                      ) : (
-                        <div className={styles.calendarDayEmpty}>
-                          <span className={styles.calendarDayNumber}>{day}</span>
-                        </div>
-                      )}
+                  if (!dayGame) return {};
+                  return { style: getTeamCalendarDayStyle(dayGame, teamId) };
+                }}
+                renderDayContent={({ dateKey }) => {
+                  const dayGame = gamesByDate.get(dateKey);
+                  return dayGame ? (
+                    <div className={styles.calendarDayGamesFilled}>
+                      <TeamCalendarGame
+                        key={dayGame.id}
+                        game={dayGame}
+                        teamId={teamId}
+                        onOpen={openGame}
+                      />
                     </div>
-                  );
-                })}
-              </div>
+                  ) : null;
+                }}
+              />
             </div>
           </div>
         )}

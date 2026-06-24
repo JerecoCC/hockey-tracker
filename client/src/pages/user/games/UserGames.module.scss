@@ -1,5 +1,5 @@
-@use "styles/colors" as *;
-@use "styles/mixins" as *;
+@use 'styles/colors' as *;
+@use 'styles/mixins' as *;
 
 // ── Page ───────────────────────────────────────────────────────────────
 .page {
@@ -8,371 +8,105 @@
   gap: $space-2xl;
 }
 
-// ── Toolbar (week nav + filter selects) ───────────────────────────────
-.toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: $space-lg;
-  flex-wrap: wrap;
+.controlsCard {
+  width: 100%;
 }
 
-.primaryControls {
-  display: flex;
-  align-items: center;
+.viewFilterControls {
+  display: inline-flex;
+  align-items: stretch;
   gap: $space-sm;
-  flex-wrap: wrap;
-}
-
-// ── Week navigation (prev btn + date picker + next btn) ───────────────
-.weekNav {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-}
-
-.navBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  flex-shrink: 0;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: transparent;
-  color: $text-body;
-  cursor: pointer;
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &:hover {
-    background: $bg-card;
-    border-color: #475569;
-  }
-}
-
-.viewToggle {
-  display: flex;
-  gap: $space-xs;
-}
-
-.viewBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 42px;
-  height: 42px;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: transparent;
-  color: $text-body;
-  cursor: pointer;
-
-  &:hover {
-    background: $bg-card;
-    border-color: #475569;
-  }
-}
-
-.viewBtnActive {
-  border-color: $accent;
-  color: $accent;
-  background: color-mix(in srgb, #{$accent} 12%, #{$bg-card});
-}
-
-// ── Filter row (league · favorite teams · status · timezone) ──────────
-.filters {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  flex-wrap: wrap;
-}
-
-.filterSelect {
-  min-width: 150px;
-}
-
-.filterAction {
-  min-width: auto;
   flex: 0 0 auto;
+  flex-wrap: nowrap;
 }
 
-.calendarExportButton {
-  white-space: nowrap;
+// ── Toolbar (week nav + filter selects) ───────────────────────────────
+// ── Week navigation (prev btn + date picker + next btn) ───────────────
+// ── Filter row (league · favorite teams · status · timezone) ──────────
+.filterVisibilitySwitch {
+  align-self: center;
 }
 
-.teamFilter {
-  min-width: 260px;
-  flex: 1 1 260px;
+.weekSummarySentinel {
+  height: 0;
+  margin-bottom: $space-md - ($space-2xl * 2);
+}
+
+.schedule {
+  &ContentBlock {
+    display: flex;
+    flex-direction: column;
+    margin-top: -$space-2xl;
+  }
+}
+
+.weekGame {
+  &Cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: $space-md;
+    padding: $space-xs 0;
+  }
 }
 
 // ── Empty / loading ────────────────────────────────────────────────────
-.empty {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-base;
-  padding: $space-lg 0;
-}
-
 // ── Games list ─────────────────────────────────────────────────────────
-.gamesList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+.calendarGame {
+  &Skipped {
+    border-style: dashed;
+    border-color: rgba($danger, 0.68);
+    background: rgba($danger, 0.07);
+    box-shadow: inset 3px 0 0 rgba($danger, 0.75);
 
-.calendarWrap {
-  overflow-x: auto;
-}
-
-.calendarGrid {
-  display: grid;
-  grid-template-columns: repeat(7, minmax(0, 1fr));
-  gap: $space-sm;
-  min-width: 980px;
-}
-
-.calendarDayName {
-  text-align: center;
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-bright;
-}
-
-.calendarEmptyCell,
-.calendarDayCell {
-  min-height: 180px;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  background: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
-}
-
-.calendarEmptyCell {
-  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-.calendarDayCell {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  padding: $space-sm;
-  min-height: 240px;
-  height: 240px;
-  min-width: 0;
-}
-
-.calendarDayCellDropTarget {
-  border-color: $accent;
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, #{$accent} 55%, transparent);
-}
-
-.calendarDayHeader {
-  display: flex;
-  justify-content: flex-end;
-}
-
-.calendarDayNumber {
-  font-size: $font-sm;
-  font-weight: 700;
-  color: $text-bright;
-  line-height: 1;
-}
-
-.calendarGameList {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  padding-right: 2px;
-}
-
-.calendarGameCard {
-  position: relative;
-  width: 100%;
-  border: 2px solid var(--game-league-primary);
-  border-radius: $radius-md;
-  padding: $space-sm $space-xs;
-  background: color-mix(in srgb, var(--game-league-primary) 50%, #2d3820 50%);
-  color: var(--game-league-text);
-  transition:
-    background $transition-fast,
-    border-color $transition-fast;
-
-  &:hover {
-    background: color-mix(in srgb, var(--game-league-primary) 94%, #0f172a 6%);
-    border-color: color-mix(in srgb, var(--game-league-primary) 82%, white);
+    &:hover {
+      border-color: rgba($danger, 0.86);
+      background: rgba($danger, 0.11);
+    }
   }
 
-  &:focus-visible {
-    outline: 2px solid $accent;
-    outline-offset: 2px;
-  }
+  &LeagueTint {
+    background: color-mix(in srgb, var(--game-league-primary, #334155) 16%, #{$bg-card});
 
-  &:hover,
-  &:focus-within {
-    .gameActions {
-      opacity: 1;
-      pointer-events: auto;
+    &:hover {
+      background: color-mix(in srgb, var(--game-league-primary, #334155) 22%, #{$bg-card});
     }
   }
 }
 
-.calendarGameCardDraggable {
-  cursor: grab;
-}
-
-.calendarGameCardDragging {
-  opacity: 0.55;
-  cursor: grabbing;
-}
-
-.calendarGameOriginalDate {
-  grid-column: 1 / -1;
-  width: 100%;
-  margin-bottom: $space-xs;
-  padding-bottom: $space-xs;
-  border-bottom: 1px solid color-mix(in srgb, var(--game-league-text) 18%, transparent);
-  font-size: $font-sm;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: $text-body;
-}
-
-.calendarGameLive {
-  border-color: rgba($success, 0.65);
-}
-
-.calendarGameCardUnwatched {
-  background: var(--game-league-primary);
-  border-color: var(--game-league-primary);
-}
-
-.calendarGameTeam {
-  width: fit-content;
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
-
-.calendarGameInfo {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.calendarGameScore,
-.calendarGameAtSymbol {
-  font-size: $font-lg;
-  font-weight: 700;
-  color: inherit;
-}
-
-.calendarGameScore {
-  line-height: 20px;
-  padding: 2px $space-xs;
-  background-color: var(--game-league-primary);
-  border-radius: 2px;
-}
-
-.calendarGameScoreWin {
-  background-color: #067400;
-}
-
-.calendarGameScoreLose {
-  background-color: #d40000;
-}
-
-.calendarGameAt {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  line-height: 1;
-  width: 100%;
-}
-
-.calendarGamePlayoffMeta {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--game-league-text) 84%, transparent);
-  white-space: nowrap;
-}
-
-.playoffDots {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.playoffDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  border: 1.5px solid color-mix(in srgb, var(--game-league-text) 28%, transparent);
-  background: transparent;
-}
-
-.playoffDotFilled {
-  border-color: $success;
-  background: $success;
-}
-
-// ── Game card ──────────────────────────────────────────────────────────
-.gameCardClickable {
-  cursor: pointer;
+.calendarGameSkipped.calendarGameLeagueTint {
+  background:
+    linear-gradient(0deg, rgba($danger, 0.1), rgba($danger, 0.1)),
+    color-mix(in srgb, var(--game-league-primary, #334155) 14%, #{$bg-card});
 
   &:hover {
-    border-color: $text-dim;
-  }
-
-  &:focus-visible {
-    outline: 2px solid $accent;
-    outline-offset: 2px;
+    background:
+      linear-gradient(0deg, rgba($danger, 0.13), rgba($danger, 0.13)),
+      color-mix(in srgb, var(--game-league-primary, #334155) 20%, #{$bg-card});
   }
 }
 
-.gameCard {
-  position: relative;
-  background: color-mix(in srgb, var(--game-league-primary) 18%, #{$bg-card});
-  border: 1px solid color-mix(in srgb, var(--game-league-primary) 44%, #{$border});
-  border-radius: $radius-lg;
-  padding: $space-lg $space-2xl;
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-  transition: border-color $transition-fast;
-
-  &:hover {
-    border-color: color-mix(in srgb, var(--game-league-primary) 66%, #475569);
+.playoff {
+  &Dots {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
-  &:hover,
-  &:focus-within {
-    .gameActions {
-      opacity: 1;
-      pointer-events: auto;
+  &Dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 999px;
+    border: 1.5px solid color-mix(in srgb, #{$text-dim} 56%, transparent);
+    background: transparent;
+
+    &Filled {
+      border-color: $success;
+      background: $success;
     }
   }
-
-  &.live {
-    border-color: $success;
-  }
 }
 
-.gameCardUnwatched {
-  background: color-mix(in srgb, var(--game-league-primary) 10%, #{$border});
-  border-color: color-mix(in srgb, var(--game-league-primary) 22%, #{$border});
-}
-
+// ── Calendar game actions ──────────────────────────────────────────────
 .gameActions {
   position: absolute;
   inset: 0;
@@ -389,145 +123,23 @@
   transition: opacity $transition-fast;
 }
 
-.dayEmpty {
-  margin: 0;
-  font-size: $font-sm;
-  color: $text-dim;
-  font-style: italic;
-}
-
-.dayGames {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-// ── Card meta row (time · season · badge) ─────────────────────────────
-.cardMeta {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  flex-wrap: wrap;
-}
-
-.metaTime {
-  font-size: $font-sm;
-  color: color-mix(in srgb, var(--game-league-primary) 44%, #{$text-dim});
-}
-
-.metaSeason {
-  font-size: $font-sm;
-  color: color-mix(in srgb, var(--game-league-primary) 44%, #{$text-dim});
-
-  &::before {
-    content: "·";
-    margin-right: $space-sm;
+// ── Schedule modal ────────────────────────────────────────────────────
+.scheduleModal {
+  &Body {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
   }
-}
 
-.originalGameDate {
-  align-self: stretch;
-  padding-bottom: $space-sm;
-  border-bottom: 1px solid color-mix(in srgb, var(--game-league-primary) 18%, #{$border});
-  font-size: $font-xl;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-align: center;
-  color: color-mix(in srgb, var(--game-league-primary) 76%, #{$text-body});
-}
-
-.scheduleModalBody {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
-.scheduleModalCopy {
-  margin: 0;
-  color: $text-dim;
-  font-size: $font-sm;
-}
-
-// ── Matchup row ────────────────────────────────────────────────────────
-.matchup {
-  display: flex;
-  align-items: center;
-  gap: $space-lg;
-}
-
-// ── Team block ─────────────────────────────────────────────────────────
-.team {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  min-width: 0;
-
-  &.teamRight {
-    flex-direction: row-reverse;
-    text-align: right;
+  &Copy {
+    margin: 0;
+    color: $text-dim;
+    font-size: $font-sm;
   }
-}
 
-.teamLogo {
-  width: 36px;
-  height: 36px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.teamLogoPlaceholder {
-  width: 36px;
-  height: 36px;
-  border-radius: $radius-sm;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: $font-xs;
-  font-weight: 700;
-  flex-shrink: 0;
-}
-
-.teamName {
-  font-size: $font-base;
-  font-weight: 600;
-  color: $text-body;
-  @include truncate;
-}
-
-// ── Score block ────────────────────────────────────────────────────────
-.scoreBlock {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-sm;
-  min-width: 72px;
-  flex-shrink: 0;
-}
-
-.scoreVal {
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--game-league-primary) 58%, #{$text-body});
-  min-width: 20px;
-  text-align: center;
-}
-
-.scoreWin {
-  font-size: $font-2xl;
-  font-weight: 700;
-  color: color-mix(in srgb, var(--game-league-primary) 78%, #{$text-bright});
-  min-width: 20px;
-  text-align: center;
-}
-
-.scoreSep {
-  font-size: $font-xl;
-  color: color-mix(in srgb, var(--game-league-primary) 40%, #{$text-dim});
-}
-
-.scoreVs {
-  font-size: $font-base;
-  color: color-mix(in srgb, var(--game-league-primary) 40%, #{$text-dim});
-  font-weight: 500;
+  &Error {
+    margin: 0;
+    color: $danger-light;
+    font-size: $font-sm;
+  }
 }

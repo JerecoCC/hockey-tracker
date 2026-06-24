@@ -1,4 +1,6 @@
 import Button, { type ButtonIntent, type ButtonSize } from '../Button/Button';
+import Icon from '../Icon/Icon';
+import Tooltip from '../Tooltip/Tooltip';
 import styles from './ToggleButton.module.scss';
 
 interface Props {
@@ -6,8 +8,14 @@ interface Props {
   active: boolean;
   /** Toggles the active state. */
   onClick: () => void;
+  /** Visual variant. Default keeps the existing outlined button style. */
+  variant?: 'button' | 'switch';
   /** Icon name (Material Icons ligature). */
   icon?: string;
+  /** Icon shown when active for the switch variant. Falls back to icon. */
+  activeIcon?: string;
+  /** Icon shown when inactive for the switch variant. Falls back to icon. */
+  inactiveIcon?: string;
   /** Size preset. Default: 'md'. */
   size?: ButtonSize;
   /**
@@ -47,7 +55,10 @@ interface Props {
 const ToggleButton = ({
   active,
   onClick,
+  variant = 'button',
   icon,
+  activeIcon,
+  inactiveIcon,
   size,
   iconHeight,
   activeIntent = 'accent',
@@ -57,20 +68,67 @@ const ToggleButton = ({
   children,
   disabled,
   className,
-}: Props) => (
-  <Button
-    variant="outlined"
-    intent={active ? activeIntent : inactiveIntent}
-    icon={icon}
-    size={size}
-    iconHeight={iconHeight}
-    tooltip={active ? activeTooltip : inactiveTooltip}
-    onClick={onClick}
-    disabled={disabled}
-    className={[active ? styles.active : '', className].filter(Boolean).join(' ')}
-  >
-    {children}
-  </Button>
-);
+}: Props) => {
+  if (variant === 'switch') {
+    const switchIcon = active ? (activeIcon ?? icon) : (inactiveIcon ?? icon);
+    const tooltip = active ? activeTooltip : inactiveTooltip;
+
+    const switchButton = (
+      <button
+        type="button"
+        role="switch"
+        aria-checked={active}
+        aria-label={tooltip}
+        onClick={onClick}
+        disabled={disabled}
+        className={[
+          styles.switchToggle,
+          active ? styles.switchToggleActive : '',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
+        <span className={styles.switchThumb}>
+          {switchIcon && (
+            <Icon
+              name={switchIcon}
+              size="1rem"
+            />
+          )}
+        </span>
+      </button>
+    );
+
+    if (tooltip) {
+      return (
+        <Tooltip
+          text={tooltip}
+          className={className}
+        >
+          {switchButton}
+        </Tooltip>
+      );
+    }
+
+    return switchButton;
+  }
+
+  return (
+    <Button
+      variant="outlined"
+      intent={active ? activeIntent : inactiveIntent}
+      icon={icon}
+      size={size}
+      iconHeight={iconHeight}
+      tooltip={active ? activeTooltip : inactiveTooltip}
+      onClick={onClick}
+      disabled={disabled}
+      className={[active ? styles.active : styles.inactive, className].filter(Boolean).join(' ')}
+    >
+      {children}
+    </Button>
+  );
+};
 
 export default ToggleButton;

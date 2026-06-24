@@ -33,26 +33,124 @@
   @container (max-width: #{$bp-tablet}) {
     grid-template-columns: 1fr;
   }
+
+  &Left {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xl;
+  }
+
+  &Right {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xl;
+  }
 }
 
-.layoutLeft {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xl;
-}
+.playoffWinner {
+  &Showcase {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: $space-xs;
+    padding: $space-md $space-sm;
+    text-align: center;
+  }
 
-.layoutRight {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xl;
+  &Logo {
+    margin-bottom: $space-xs;
+  }
+
+  &Details {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    min-width: 0;
+    width: 100%;
+  }
+
+  &Name {
+    font-size: $font-lg;
+    font-weight: 700;
+    color: $text-bright;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+  }
+
+  &Meta {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+  }
+
+  &Pending {
+    font-size: $font-sm;
+    color: $text-dim;
+    font-style: italic;
+  }
 }
 
 // ── Bracket rule set selector card ───────────────────────────────────────────
 
-.ruleSetSelector {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
+.ruleSet {
+  &Selector {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &Control {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    width: 100%;
+  }
+
+  &SelectField {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &SaveAction {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    align-self: center;
+
+    > button {
+      width: 100%;
+      height: 100%;
+    }
+  }
+}
+
+.readonlyRuleSet {
+  &Box {
+    display: inline-flex;
+    align-items: center;
+    min-height: 42px;
+    width: 100%;
+    min-width: 0;
+    padding: 0 $space-lg;
+    border: 1px solid rgba($text-dim, 0.2);
+    border-radius: $radius-sm;
+    background: rgba(255, 255, 255, 0.03);
+    color: $text-dim;
+    font-size: $font-base;
+    line-height: 1.4;
+    cursor: default;
+  }
+
+  &Label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 .ruleSetHint {
@@ -61,104 +159,98 @@
   font-style: italic;
 }
 
-// ── Game settings card ───────────────────────────────────────────────────────
-
-.settingsGrid {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-
 // ── Bracket rules modal ──────────────────────────────────────────────────────
 
-.bracketSizeLabel {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  width: 100%;
-}
-
-.bracketRulesStack {
-  display: flex;
-  flex-direction: column;
-  gap: $space-lg;
-}
-
-.bracketRulesRound {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.bracketRulesRoundLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  padding-bottom: $space-xs;
-  border-bottom: 1px solid $border;
-}
-
-.bracketRulesMatchups {
-  display: flex;
-  flex-direction: column;
-  gap: $space-sm;
-}
-
-.bracketRulesMatchup {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  background: $bg-page;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: $space-sm $space-md;
-}
-
-.bracketRulesMatchupLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-body;
-  margin-bottom: $space-xs;
-}
-
-.bracketRulesAutoNote {
-  font-size: $font-xs;
-  color: $text-dim;
-  font-style: italic;
-}
-
-.bracketRulesSlotRow {
-  display: flex;
-  align-items: flex-start;
-  gap: $space-sm;
-  padding: $space-xs 0;
-
-  &:not(:last-child) {
-    border-bottom: 1px solid rgba($border, 0.4);
+.bracket {
+  &SizeLabel {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    width: 100%;
   }
-}
 
-.bracketRulesSlotLabel {
-  font-size: $font-xs;
-  color: $text-dim;
-  font-weight: 500;
-  min-width: 3.5rem;
-  padding-top: 11px; // vertically centres against 42px Field height
-}
+  &RulesStack {
+    display: flex;
+    flex-direction: column;
+    gap: $space-lg;
+  }
 
-.bracketRulesSlotFields {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  gap: $space-xs;
-  flex: 1;
+  &RulesRound {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &RulesRoundLabel {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    padding-bottom: $space-xs;
+    border-bottom: 1px solid $border;
+  }
+
+  &RulesMatchups {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &RulesMatchup {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    background: transparent;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    padding: $space-sm $space-md;
+  }
+
+  &RulesMatchupLabel {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-body;
+    margin-bottom: $space-xs;
+  }
+
+  &RulesAutoNote {
+    font-size: $font-xs;
+    color: $text-dim;
+    font-style: italic;
+  }
+
+  &RulesSlotRow {
+    display: flex;
+    align-items: flex-start;
+    gap: $space-sm;
+    padding: $space-xs 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid rgba($border, 0.4);
+    }
+  }
+
+  &RulesSlotLabel {
+    font-size: $font-xs;
+    color: $text-dim;
+    font-weight: 500;
+    min-width: 3.5rem;
+    padding-top: 11px; // vertically centres against 42px Field height
+  }
+
+  &RulesSlotFields {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: $space-xs;
+    flex: 1;
+  }
 }
 
 // Rule type selector — fixed width, wide enough for "Choice Pick"
@@ -180,18 +272,20 @@
 }
 
 // Choice pool editor
-.poolEditor {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  flex: 1;
-  width: 100%;
-}
+.pool {
+  &Editor {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    flex: 1;
+    width: 100%;
+  }
 
-.poolSeedRow {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
+  &SeedRow {
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+  }
 }
 
 // Rank column in pool rows
@@ -201,80 +295,84 @@
 }
 
 // Scope column in pool rows
-.poolSeedScope {
-  flex: 1;
-  min-width: 9rem;
-}
+.poolSeed {
+  &Scope {
+    flex: 1;
+    min-width: 9rem;
+  }
 
-.poolSeedRemove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: $text-dim;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition:
-    color $transition-fast,
-    background $transition-fast;
+  &Remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: $text-dim;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition:
+      color $transition-fast,
+      background $transition-fast;
 
-  &:hover {
-    color: $danger;
-    background: rgba($danger, 0.1);
+    &:hover {
+      color: $danger;
+      background: rgba($danger, 0.1);
+    }
   }
 }
 
 // ── Choice picks modal ───────────────────────────────────────────────────────
 
-.choicePickStack {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
+.choicePick {
+  &Stack {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
 
-.choicePickHint {
-  font-size: $font-sm;
-  color: $text-dim;
-  font-style: italic;
-}
+  &Hint {
+    font-size: $font-sm;
+    color: $text-dim;
+    font-style: italic;
+  }
 
-.choicePickRow {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  background: $bg-page;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: $space-sm $space-md;
-}
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    background: transparent;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    padding: $space-sm $space-md;
+  }
 
-.choicePickChooser {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-body;
-  min-width: 7rem;
-  max-width: 10rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  flex-shrink: 0;
-}
+  &Chooser {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-body;
+    min-width: 7rem;
+    max-width: 10rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+  }
 
-.choicePickVerb {
-  font-size: $font-xs;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  flex-shrink: 0;
-}
+  &Verb {
+    font-size: $font-xs;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+  }
 
-.choicePickSelect {
-  flex: 1;
-  min-width: 0;
+  &Select {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 // ── Game settings modal ──────────────────────────────────────────────────────
@@ -293,318 +391,247 @@
   gap: $space-xs;
 }
 
-.qualRuleRow {
-  display: flex;
-  align-items: center;
-  gap: $space-sm;
-  background: $bg-page;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: 6px $space-sm;
-}
+.qualRule {
+  &Row {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    background: transparent;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    padding: 6px $space-sm;
+  }
 
-.qualRuleBadge {
-  min-width: 7.5rem;
-  text-align: center;
-  justify-content: center;
-}
-
-.formatRuleStep {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.375rem;
-  height: 1.375rem;
-  border-radius: 50%;
-  background: rgba($accent, 0.12);
-  border: 1px solid rgba($accent, 0.3);
-  color: $accent-light;
-  font-size: $font-xs;
-  font-weight: 700;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.formatRuleText {
-  flex: 1;
-  font-size: $font-sm;
-  font-weight: 500;
-  color: $text-body;
-}
-
-.formatEmpty {
-  font-size: $font-sm;
-  color: $text-dim;
-  font-style: italic;
-}
-
-// ── Format modal (bulk-style editor) ────────────────────────────────────────
-
-.formatHeaderRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 5rem 2rem;
-  gap: $space-md;
-  padding: 0 0 $space-xs;
-  border-bottom: 1px solid $border;
-  margin-bottom: $space-xs;
-}
-
-.formatHeaderCell {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-.formatRuleRows {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-  max-height: 360px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: transparent transparent;
-  padding-right: $space-xs;
-  margin-right: -#{$space-xs};
-
-  &:hover {
-    scrollbar-color: $border transparent;
+  &Badge {
+    min-width: 7.5rem;
+    text-align: center;
+    justify-content: center;
   }
 }
 
-.formatRuleRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr 5rem 2rem;
-  gap: $space-md;
-  align-items: end;
-  padding: $space-xs 0;
-
-  &:not(:last-child) {
-    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
-  }
-}
-
-.formatDeleteBtn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  flex-shrink: 0;
-  border: none;
-  background: transparent;
-  color: $text-dim;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  transition:
-    color $transition-fast,
-    background $transition-fast;
-  margin-bottom: 1px;
-
-  &:hover:not(:disabled) {
-    color: $danger;
-    background: rgba($danger, 0.1);
+.format {
+  &RuleStep {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.375rem;
+    height: 1.375rem;
+    border-radius: 50%;
+    background: rgba($accent, 0.12);
+    border: 1px solid rgba($accent, 0.3);
+    color: $accent-light;
+    font-size: $font-xs;
+    font-weight: 700;
+    flex-shrink: 0;
+    line-height: 1;
   }
 
-  &:disabled {
-    opacity: 0.25;
-    cursor: not-allowed;
-  }
-}
-
-.formatAddRow {
-  padding-top: $space-md;
-  border-top: 1px solid $border;
-  margin-top: $space-xs;
-}
-
-// ── Bracket grid ─────────────────────────────────────────────────────────────
-
-.bracketGrid {
-  display: flex;
-  gap: $space-lg;
-  overflow-x: auto;
-  align-items: stretch;
-  padding-bottom: $space-xs;
-  scrollbar-width: thin;
-  scrollbar-color: $border transparent;
-
-  &:hover {
-    scrollbar-color: $border transparent;
-  }
-}
-
-.bracketRound {
-  display: flex;
-  flex-direction: column;
-  min-width: 168px;
-  flex: 1;
-}
-
-.bracketRoundLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  text-align: center;
-  padding-bottom: $space-sm;
-  border-bottom: 1px solid $border;
-  margin-bottom: $space-sm;
-  flex-shrink: 0;
-}
-
-.bracketSlots {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  gap: $space-sm;
-  justify-content: space-around;
-}
-
-.bracketSlot {
-  border-radius: $radius-md;
-  overflow: hidden;
-  min-height: 82px;
-}
-
-// Simulated matchup: solid border, accent tint — not clickable
-.slotSimulated {
-  border-color: rgba($accent, 0.4);
-  opacity: 0.85;
-}
-
-// Empty matchup: same card structure as filled, but dashed border and TBD rows
-.slotEmptyMatchup {
-  border-style: dashed;
-  cursor: pointer;
-  transition: border-color $transition-fast;
-
-  &:hover {
-    border-color: $accent;
-
-    .slotTeamTbd .slotTeamName {
-      color: $text-body;
-    }
+  &RuleText {
+    flex: 1;
+    font-size: $font-sm;
+    font-weight: 500;
+    color: $text-body;
   }
 
-  &:focus-visible {
-    outline: 2px solid $accent;
-    outline-offset: 2px;
-  }
-}
-
-.slotEmptyDisabled {
-  cursor: default;
-  opacity: 0.35;
-
-  &:hover {
-    border-color: $border;
-  }
-}
-
-.slotTeamTbd {
-  .slotTeamName {
+  &Empty {
+    font-size: $font-sm;
     color: $text-dim;
     font-style: italic;
   }
 }
 
-.slotFilled {
-  position: relative;
-  background: $bg-page;
-  border: 1px solid $border;
-  display: flex;
-  flex-direction: column;
+// ── Format modal (bulk-style editor) ────────────────────────────────────────
 
-  .slotActions {
-    position: absolute;
-    inset: 0;
-    display: none;
+.format {
+  &HeaderRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr 5rem 2rem;
+    gap: $space-md;
+    padding: 0 0 $space-xs;
+    border-bottom: 1px solid $border;
+    margin-bottom: $space-xs;
+  }
+
+  &HeaderCell {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  &RuleRows {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+    max-height: 360px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+    padding-right: $space-xs;
+    margin-right: -#{$space-xs};
+
+    &:hover {
+      scrollbar-color: $border transparent;
+    }
+  }
+
+  &RuleRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr 5rem 2rem;
+    gap: $space-md;
+    align-items: end;
+    padding: $space-xs 0;
+
+    &:not(:last-child) {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    }
+  }
+
+  &DeleteBtn {
+    display: flex;
     align-items: center;
     justify-content: center;
-    gap: $space-xs;
-    background: rgba(0, 0, 0, 0.45);
-    border-radius: inherit;
+    width: 2rem;
+    height: 2rem;
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: $text-dim;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition:
+      color $transition-fast,
+      background $transition-fast;
+    margin-bottom: 1px;
+
+    &:hover:not(:disabled) {
+      color: $danger;
+      background: rgba($danger, 0.1);
+    }
+
+    &:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+  }
+
+  &AddRow {
+    padding-top: $space-md;
+    border-top: 1px solid $border;
+    margin-top: $space-xs;
+  }
+}
+
+// ── Bracket grid ─────────────────────────────────────────────────────────────
+
+.bracket {
+  &Grid {
+    position: relative;
+    isolation: isolate;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: $space-xs;
+    scrollbar-width: thin;
+    scrollbar-color: $border transparent;
+
+    &:hover {
+      scrollbar-color: $border transparent;
+    }
+  }
+
+  &Canvas {
+    position: relative;
+    display: flex;
+    align-items: stretch;
+    gap: $space-lg;
+    width: max-content;
+    min-width: 100%;
+    isolation: isolate;
+  }
+
+  &Round {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 168px;
+    flex: 1;
+  }
+
+  &RoundLabel {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-light;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    text-align: center;
+    padding-bottom: $space-sm;
+    border-bottom: 1px solid $border;
+    margin-bottom: $space-sm;
+    flex-shrink: 0;
+  }
+
+  &Slots {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: $space-sm;
+    justify-content: space-around;
+  }
+
+  &Slot {
+    position: relative;
+    border-radius: $radius-md;
+    overflow: visible;
+    min-height: 82px;
     z-index: 1;
   }
 
-  &:hover .slotActions {
-    display: flex;
+  &ConnectorOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  &ConnectorPath {
+    fill: none;
+    stroke: color-mix(in srgb, #{$accent-light} 78%, #{$bg-page});
+    stroke-width: 2;
+    stroke-linecap: square;
+    stroke-linejoin: miter;
+    shape-rendering: crispEdges;
+    vector-effect: non-scaling-stroke;
   }
 }
 
-.slotTeam {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  padding: $space-xs $space-sm;
-  flex: 1;
+// Simulated matchup: solid border, accent tint — not clickable
+.slotSimulated {
+  border-color: rgba($accent, 0.4);
 }
 
-.slotTeamLogo {
-  width: 20px;
-  height: 20px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.slotTeamLogoPlaceholder {
-  width: 20px;
-  height: 20px;
-  border-radius: $radius-sm;
-  background: $bg-input;
-  border: 1px solid $border;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 8px;
-  font-weight: 700;
-  color: $text-dim;
-  flex-shrink: 0;
-  line-height: 1;
-}
-
-.slotTeamName {
-  flex: 1;
-  font-size: $font-xs;
-  font-weight: 500;
-  color: $text-body;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.slotWinDots {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-
-.slotWinDot {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  border: 1.5px solid $text-dim;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: transparent; // icon hidden on empty dots
-  transition:
-    background $transition-fast,
-    border-color $transition-fast,
-    opacity $transition-fast;
-
-  // When rendered as a <Link> (anchor element)
-  &:is(a) {
+// Empty matchup: same card structure as filled, but dashed border and TBD rows
+.slot {
+  &EmptyMatchup {
+    background: color-mix(in srgb, #{$bg-card} 82%, #{$border});
+    border-color: color-mix(in srgb, #{$border} 78%, #{$text-light});
+    border-style: dashed;
     cursor: pointer;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
 
     &:hover {
-      opacity: 0.75;
+      background: color-mix(in srgb, #{$bg-card} 76%, #{$border});
       border-color: $accent;
+
+      .slotTeamTbd .slotTeamName {
+        color: $text-body;
+      }
     }
 
     &:focus-visible {
@@ -612,81 +639,169 @@
       outline-offset: 2px;
     }
   }
-}
 
-.slotWinDotFilled {
-  background: $success;
-  border-color: $success;
-  color: #fff; // makes the check icon visible
-}
+  &EmptyDisabled {
+    cursor: default;
+    background: color-mix(in srgb, #{$bg-card} 88%, #{$border});
+    border-color: color-mix(in srgb, #{$border} 70%, transparent);
 
-// ── Win dot tooltip content ───────────────────────────────────────────────────
+    &:hover {
+      background: color-mix(in srgb, #{$bg-card} 88%, #{$border});
+      border-color: color-mix(in srgb, #{$border} 70%, transparent);
+    }
 
-.winDotTooltip {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  align-items: center;
-  text-align: center;
-}
-
-.winDotTooltipGame {
-  font-weight: 600;
-  color: $text-bright;
-  width: 100%;
-  text-align: center;
-}
-
-.winDotTooltipDate {
-  color: $text-dim;
-  font-size: $font-xs;
-  width: 100%;
-  text-align: center;
-}
-
-.winDotTooltipScore {
-  color: $text-bright;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  gap: 4px;
-  margin-top: 2px;
-}
-
-.winDotTooltipDash {
-  color: $text-dim;
-  font-weight: 400;
-  flex: 1;
-  text-align: center;
-}
-
-.slotTeamWinner {
-  .slotTeamName {
-    color: $success;
+    .slotTeamTbd .slotTeamName {
+      color: color-mix(in srgb, #{$text-dim} 82%, #{$text-body});
+    }
   }
-}
 
-.slotTeamLoser {
-  .slotTeamName {
+  &TeamTbd {
+    .slotTeamName {
+      color: $text-dim;
+      font-style: italic;
+    }
+  }
+
+  &Filled {
+    position: relative;
+    background: $bg-card;
+    border: 1px solid $border;
+    display: flex;
+    flex-direction: column;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast,
+      box-shadow $transition-fast,
+      transform $transition-fast;
+
+    &:hover,
+    &:focus-within {
+      background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
+      border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
+      box-shadow: 0 8px 20px rgba($accent, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .slotActions {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      gap: $space-xs;
+      background: rgba(0, 0, 0, 0.45);
+      border-radius: inherit;
+      pointer-events: none;
+      z-index: 2;
+
+      > * {
+        pointer-events: auto;
+      }
+    }
+
+    &:hover .slotActions {
+      display: flex;
+    }
+  }
+
+  &Link {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+
+    &:focus-visible {
+      outline: 2px solid $accent;
+      outline-offset: 2px;
+    }
+  }
+
+  &Team {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    padding: $space-xs $space-sm;
+    flex: 1;
+  }
+
+  &TeamLogo {
+    width: 20px;
+    height: 20px;
+    object-fit: contain;
+    flex-shrink: 0;
+  }
+
+  &TeamLogoPlaceholder {
+    width: 20px;
+    height: 20px;
+    border-radius: $radius-sm;
+    background: color-mix(in srgb, #{$bg-card} 70%, #{$border});
+    border: 1px solid $border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8px;
+    font-weight: 700;
     color: $text-dim;
-    opacity: 0.55;
+    flex-shrink: 0;
+    line-height: 1;
   }
 
-  .slotWinDot {
-    opacity: 0.35;
+  &TeamName {
+    flex: 1;
+    font-size: $font-xs;
+    font-weight: 500;
+    color: $text-body;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
-  .slotWinDotFilled {
-    opacity: 0.6;
+  &WinCount {
+    align-self: stretch;
+    min-width: 28px;
+    margin-left: $space-xs;
+    padding-left: $space-sm;
+    border-left: 1px solid color-mix(in srgb, #{$border} 78%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: $font-sm;
+    font-weight: 700;
+    line-height: 1;
+    color: $text-bright;
   }
-}
 
-.slotDivider {
-  height: 1px;
-  background: $border;
-  margin: 0 $space-sm;
+  &TeamWinner {
+    .slotTeamName {
+      color: $success;
+    }
+  }
+
+  &TeamLoser {
+    .slotTeamName {
+      color: $text-dim;
+      opacity: 0.55;
+    }
+
+    .slotWinCount {
+      color: $text-dim;
+      opacity: 0.6;
+    }
+  }
+
+  &Divider {
+    position: relative;
+    z-index: 1;
+    pointer-events: none;
+    height: 1px;
+    background: $border;
+    margin: 0 $space-sm;
+  }
 }
 
 // ── Series card ──────────────────────────────────────────────────────────────
@@ -709,33 +824,69 @@
   }
 }
 
-.seriesRow {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  background: $bg-page;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: $space-sm $space-md;
-}
+.series {
+  &Row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    background: transparent;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    padding: $space-sm $space-md;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast,
+      box-shadow $transition-fast,
+      transform $transition-fast;
 
-.seriesTeams {
-  flex: 1;
-  font-size: $font-sm;
-  font-weight: 500;
-  color: $text-body;
-}
-.seriesScore {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-body;
-  min-width: 36px;
-  text-align: center;
-}
-.seriesRowActions {
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
+    &:hover,
+    &:focus-within {
+      background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
+      border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
+      box-shadow: 0 8px 20px rgba($accent, 0.12);
+      transform: translateY(-1px);
+    }
+  }
+
+  &RowLink {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    border-radius: inherit;
+
+    &:focus-visible {
+      outline: 2px solid $accent;
+      outline-offset: 2px;
+    }
+  }
+
+  &Teams {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    font-size: $font-sm;
+    font-weight: 500;
+    color: $text-body;
+  }
+
+  &Score {
+    position: relative;
+    z-index: 1;
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-body;
+    min-width: 36px;
+    text-align: center;
+  }
+
+  &RowActions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+  }
 }
 .emptyState {
   font-size: $font-sm;
@@ -747,28 +898,32 @@
 
 // ── Series form modal fields ──────────────────────────────────────────────────
 
-.formGrid {
-  display: flex;
-  flex-direction: column;
-  gap: $space-md;
-}
-.formRow {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: $space-md;
-}
-.formField {
-  display: flex;
-  flex-direction: column;
-  gap: $space-xs;
-}
+.form {
+  &Grid {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
 
-.formLabel {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  &Row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: $space-md;
+  }
+
+  &Field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &Label {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 }
 
 .formSelect,

@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
@@ -99,6 +99,8 @@ const ScoringCard = ({
   getPlayerHref,
   showPlayerDataStatus = false,
 }: Props) => {
+  const canUseEditControls = isInProgress || isEditMode;
+
   // ── Helpers ────────────────────────────────────────────────────────────────
   const periodTimeToSecs = (t: string | null | undefined): number => {
     if (!t) return 0;
@@ -231,7 +233,7 @@ const ScoringCard = ({
               </div>
               {primaryBadge && (
                 <Tooltip text={primaryBadge.tooltip}>
-                  <Badge
+                  <Tag
                     label={primaryBadge.label}
                     intent={primaryBadge.intent}
                   />
@@ -239,7 +241,7 @@ const ScoringCard = ({
               )}
               {showEN && (
                 <Tooltip text="Empty Net">
-                  <Badge
+                  <Tag
                     label="EN"
                     intent="neutral"
                   />
@@ -247,7 +249,7 @@ const ScoringCard = ({
               )}
               {showPS && (
                 <Tooltip text="Penalty Shot">
-                  <Badge
+                  <Tag
                     label="PS"
                     intent="success"
                   />
@@ -256,7 +258,7 @@ const ScoringCard = ({
               <span className={styles.goalScore}>
                 {awayScore} - {homeScore}
               </span>
-              {isInProgress && onEditGoal && onDeleteGoal && (
+              {canUseEditControls && onEditGoal && onDeleteGoal && (
                 <ActionOverlay className={styles.goalActions}>
                   <Button
                     variant="ghost"
@@ -293,7 +295,7 @@ const ScoringCard = ({
           const currentIdx = PERIOD_IDS.indexOf(game.current_period as '1' | '2' | '3');
           const isPostRegulation =
             game.current_period === PERIOD.OVERTIME || game.current_period === PERIOD.SHOOTOUT;
-          const isActive = !isFinal && game.current_period === periodId;
+          const isActive = canUseEditControls && game.current_period === periodId;
           const isDone = isFinal || isPostRegulation || currentIdx > idx;
           const periodGoals = sortedByTime(goals.filter((g) => g.period === periodId));
           if (isFinal && !isEditMode && periodGoals.length === 0) return null;
@@ -367,13 +369,14 @@ const ScoringCard = ({
                               ),
                           }
                         : null,
-                      num === 3 && liveAwayScore !== liveHomeScore && !isEditMode
+                      num === 3 && liveAwayScore !== liveHomeScore && isInProgress
                         ? {
                             icon: 'flag',
                             tooltip: 'End Game',
                             intent: 'danger' as const,
                             disabled: !!busy,
-                            onClick: () => onOpenShotsModal(PERIOD.THIRD, { type: 'end-game' }, true),
+                            onClick: () =>
+                              onOpenShotsModal(PERIOD.THIRD, { type: 'end-game' }, true),
                           }
                         : null,
                     ].filter(Boolean) as AccordionAction[])
@@ -395,7 +398,7 @@ const ScoringCard = ({
           (isFinal && game.shootout)) &&
           (() => {
             const isPlayoff = game.game_type === 'playoff';
-            const isOTActive = !isFinal && game.current_period === PERIOD.OVERTIME;
+            const isOTActive = canUseEditControls && game.current_period === PERIOD.OVERTIME;
             const isOTDone = isFinal || game.current_period === PERIOD.SHOOTOUT;
             const otGoals = sortedByTime(goals.filter((g) => g.period === PERIOD.OVERTIME));
             const otCount = game.overtime_periods ?? 1;
@@ -460,7 +463,7 @@ const ScoringCard = ({
                                     onOpenShotsModal(otPeriodId(otNum), { type: 'next-ot' }, true),
                                 }
                               : null,
-                            periodGoals.length > 0 && !isEditMode
+                            periodGoals.length > 0 && isInProgress
                               ? {
                                   icon: 'flag',
                                   tooltip: 'End Game',
@@ -541,7 +544,7 @@ const ScoringCard = ({
                                 ),
                             }
                           : null,
-                        otGoals.length > 0 && !isEditMode
+                        otGoals.length > 0 && isInProgress
                           ? {
                               icon: 'flag',
                               tooltip: 'End Game',
@@ -572,11 +575,12 @@ const ScoringCard = ({
             goals={goals}
             isFinal={isFinal}
             isInProgress={isInProgress}
+            canUseEditControls={isEditMode}
             soComplete={soComplete}
             busy={busy}
             deletingAttemptId={deletingAttemptId}
             className={
-              !isFinal && game.current_period === PERIOD.SHOOTOUT
+              canUseEditControls && game.current_period === PERIOD.SHOOTOUT
                 ? styles.periodItemActive
                 : undefined
             }
@@ -587,7 +591,7 @@ const ScoringCard = ({
             getPlayerHref={getPlayerHref}
             showPlayerDataStatus={showPlayerDataStatus}
             onEndGame={
-              onOpenShotsModal && !isEditMode
+              onOpenShotsModal && isInProgress
                 ? () => onOpenShotsModal(PERIOD.SHOOTOUT, { type: 'end-game' }, true)
                 : undefined
             }

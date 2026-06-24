@@ -1,0 +1,170 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  min-height: 176px;
+  padding: $space-lg;
+  overflow: hidden;
+  border: 1px solid $border;
+  border-radius: $radius-sm;
+  background: $bg-card;
+  color: $text-body;
+  transition:
+    border-color $transition-fast,
+    background $transition-fast;
+
+  &:hover,
+  &:focus-within {
+    border-color: rgba($accent, 0.6);
+    background: rgba($accent, 0.06);
+
+    .gameActions {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+}
+
+.leagueColors {
+  border-color: color-mix(in srgb, var(--game-league-primary, #334155) 44%, #{$border});
+  background: color-mix(in srgb, var(--game-league-primary, #334155) 16%, #{$bg-card});
+
+  &:hover,
+  &:focus-within {
+    border-color: color-mix(in srgb, var(--game-league-primary, #334155) 68%, #{$border});
+    background: color-mix(in srgb, var(--game-league-primary, #334155) 22%, #{$bg-card});
+  }
+
+  .gameMeta,
+  .gameFooter {
+    color: color-mix(in srgb, var(--game-league-primary, #334155) 74%, #{$text-bright});
+  }
+
+  &.clickable:focus-visible {
+    outline-color: var(--game-league-primary, #334155);
+  }
+
+  .bottomLabel {
+    border-top-color: color-mix(in srgb, var(--game-league-primary, #334155) 18%, #{$border});
+    color: color-mix(in srgb, var(--game-league-primary, #334155) 76%, #{$text-body});
+  }
+}
+
+.live {
+  border-color: rgba($success, 0.65);
+  background: rgba($success, 0.08);
+}
+
+.skipped {
+  border-style: dashed;
+  border-color: rgba($danger, 0.68);
+  background: rgba($danger, 0.07);
+  box-shadow: inset 3px 0 0 rgba($danger, 0.75);
+
+  &:hover,
+  &:focus-within {
+    border-color: rgba($danger, 0.86);
+    background: rgba($danger, 0.11);
+  }
+}
+
+.clickable {
+  cursor: pointer;
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
+  }
+}
+
+.watchedRibbon {
+  position: absolute;
+  top: 0;
+  right: $space-lg;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 26px;
+  height: 38px;
+  padding: 7px 6px 0;
+  border-radius: 0 0 4px 4px;
+  background: var(--game-league-primary, #334155);
+  clip-path: polygon(0 0, 100% 0, 100% 100%, 50% calc(100% - 8px), 0 100%);
+  color: var(--game-league-text, #ffffff);
+  filter: drop-shadow(0 1px 0 rgba(255, 255, 255, 0.16));
+  pointer-events: none;
+}
+
+.gameActions {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: $space-xs;
+  border-radius: inherit;
+  background: rgba(15, 23, 42, 0.9);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity $transition-fast;
+}
+
+.gameMeta,
+.gameFooter {
+  display: flex;
+  justify-content: space-between;
+  gap: $space-sm;
+  font-size: $font-sm;
+  color: $text-dim;
+}
+
+.gameFooter {
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.team {
+  &Line {
+    display: flex;
+    align-items: center;
+    gap: $space-sm;
+    font-weight: 700;
+  }
+
+  &LineDim {
+    opacity: 0.55;
+  }
+
+  &Code {
+    min-width: 0;
+    color: $text-body;
+    @include truncate;
+  }
+
+  &Score {
+    margin-left: auto;
+    min-width: 30px;
+    text-align: right;
+    font-size: $font-2xl;
+    color: $text-bright;
+  }
+}
+
+.bottomLabel {
+  align-self: stretch;
+  padding-top: $space-sm;
+  border-top: 1px solid $border;
+  font-size: $font-base;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-align: center;
+  color: $text-body;
+}

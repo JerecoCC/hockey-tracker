@@ -63,9 +63,17 @@ router.post('/upload', upload.single('logo'), async (req, res) => {
 router.get('/', async (_req, res) => {
   try {
     const leagues = await sql`
-      SELECT id, name, code, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format
-      FROM leagues
-      ORDER BY name ASC
+      SELECT
+        l.id, l.name, l.code, l.logo, l.icon, l.primary_color, l.text_color,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        CASE
+          WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
+          WHEN cs.playoffs_started THEN 'playoffs'
+          ELSE 'regular'
+        END AS season_phase
+      FROM leagues l
+      LEFT JOIN seasons cs ON cs.id = l.current_season_id
+      ORDER BY l.name ASC
     `;
     return res.json(leagues);
   } catch (err) {
@@ -81,9 +89,18 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      SELECT id, name, code, description, logo, icon, primary_color, text_color, best_of_playoff, best_of_shootout, scoring_system, playoff_format, created_at
-      FROM leagues
-      WHERE id = ${id}
+      SELECT
+        l.id, l.name, l.code, l.description, l.logo, l.icon, l.primary_color, l.text_color,
+        l.best_of_playoff, l.best_of_shootout, l.scoring_system, l.playoff_format,
+        CASE
+          WHEN cs.id IS NULL OR cs.is_ended THEN 'postseason'
+          WHEN cs.playoffs_started THEN 'playoffs'
+          ELSE 'regular'
+        END AS season_phase,
+        l.created_at
+      FROM leagues l
+      LEFT JOIN seasons cs ON cs.id = l.current_season_id
+      WHERE l.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'League not found' });
 

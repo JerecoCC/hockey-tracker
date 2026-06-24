@@ -1,7 +1,108 @@
 @use "styles/colors" as *;
+@use "styles/mixins" as *;
 
-// Applied when active=true — gives the outlined-accent button a persistent
-// background tint matching its hover state so it reads as "on".
+// Applied when active=true for the original outlined button variant.
 .active {
-  background: #1e3a8a !important; // blue-900 — solid active tint
+  background: #1e3a8a !important;
+}
+
+.inactive {
+  border-color: color-mix(in srgb, #{$text-dim} 42%, transparent) !important;
+  background: color-mix(in srgb, #{$border} 76%, #{$bg-input}) !important;
+  color: $text-body !important;
+
+  &:hover:not(:disabled) {
+    border-color: color-mix(in srgb, #{$text-light} 72%, transparent) !important;
+    background: color-mix(in srgb, #{$border} 86%, #{$bg-input}) !important;
+    color: $text-bright !important;
+  }
+}
+
+.switch {
+  &Toggle {
+    --switch-track-height: 40px;
+    --switch-thumb-size: 30px;
+    --switch-inset: 4px;
+    --switch-track-inner-width: calc(var(--switch-thumb-size) * 2);
+    --switch-track-width: calc(
+      var(--switch-track-inner-width) + (var(--switch-inset) * 2) + 2px
+    );
+    --switch-thumb-travel: var(--switch-thumb-size);
+
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    width: var(--switch-track-width);
+    height: var(--switch-track-height);
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid $text-dim;
+    border-radius: $radius-md;
+    box-sizing: border-box;
+    background: transparent;
+    color: $text-light;
+    font: inherit;
+    cursor: pointer;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
+
+    &:hover:not(:disabled) {
+      border-color: $text-light;
+      color: $text-bright;
+    }
+
+    &:focus-visible {
+      outline: 2px solid $accent;
+      outline-offset: 2px;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+
+  &ToggleActive {
+    border-color: $accent;
+    background: rgba($accent, 0.1);
+    color: $accent-light;
+
+    &:hover:not(:disabled) {
+      border-color: $accent-hover;
+      background: rgba($accent, 0.16);
+    }
+  }
+
+  &Thumb {
+    position: absolute;
+    top: var(--switch-inset);
+    left: var(--switch-inset);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: var(--switch-thumb-size);
+    height: var(--switch-thumb-size);
+    border-radius: $radius-md;
+    background: $border;
+    color: $text-body;
+    border: 1px solid $border;
+    transition:
+      color $transition-fast,
+      background $transition-fast,
+      border-color $transition-fast,
+      transform $transition-fast;
+  }
+}
+
+.switchToggleActive .switchThumb {
+  background: $accent;
+  color: #fff;
+  border-color: $accent;
+  transform: translateX(var(--switch-thumb-travel));
+}
+
+.switchToggleActive:hover:not(:disabled) .switchThumb {
+  background: $accent-hover;
+  border-color: $accent-hover;
 }

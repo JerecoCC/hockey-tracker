@@ -21,6 +21,7 @@ const LEAGUE = {
   id: 'league-1', name: 'NHL', code: 'NHL', description: null,
   logo: null, icon: null, primary_color: '#334155', text_color: '#ffffff',
   best_of_playoff: 7, best_of_shootout: 3,
+  season_phase: 'regular',
   created_at: new Date().toISOString(),
 };
 
@@ -59,6 +60,10 @@ describe('GET /api/admin/leagues', () => {
     const res = await request(app).get('/api/admin/leagues');
     expect(res.status).toBe(200);
     expect(res.body).toEqual([LEAGUE]);
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('AS season_phase');
+    expect(queryText).toContain('LEFT JOIN seasons cs');
+    expect(queryText).toContain('cs.playoffs_started');
   });
 
   it('returns 500 on DB error', async () => {

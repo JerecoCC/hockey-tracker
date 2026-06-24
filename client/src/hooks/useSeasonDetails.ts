@@ -4,6 +4,7 @@ import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
 import { type SeasonRecord, type CreateSeasonData } from './useSeasons';
 import { type GroupTeamRecord } from './useLeagueGroups';
+import useGroupAlignmentSets from './useGroupAlignmentSets';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -19,6 +20,7 @@ const apiError = (err: unknown, fallback: string): string =>
 export interface SeasonGroupRecord {
   id: string;
   league_id: string;
+  stable_key?: string | null;
   parent_id: string | null;
   name: string;
   sort_order: number;
@@ -60,7 +62,14 @@ export interface SeasonTeam extends LeagueTeam {
 
 // ── Hook ──────────────────────────────────────────────────────────────────────
 
-const useSeasonDetails = (seasonId: string | undefined) => {
+interface UseSeasonDetailsOptions {
+  leagueId?: string;
+}
+
+const useSeasonDetails = (
+  seasonId: string | undefined,
+  options: UseSeasonDetailsOptions = {},
+) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
   const [groupBusy, setGroupBusy] = useState<string | null>(null);
@@ -101,7 +110,13 @@ const useSeasonDetails = (seasonId: string | undefined) => {
   });
 
   // ③ All league teams — used to populate the override modal
-  const leagueId = season?.league_id;
+  const leagueId = options.leagueId ?? season?.league_id;
+  const {
+    alignmentSets,
+    loading: alignmentSetsLoading,
+    fetchAlignmentSet,
+  } = useGroupAlignmentSets(leagueId);
+
   const { data: leagueData = null, isLoading: leagueLoading } = useQuery<{
     teams: LeagueTeam[];
   } | null>({
@@ -140,7 +155,11 @@ const useSeasonDetails = (seasonId: string | undefined) => {
 
   const leagueTeams: LeagueTeam[] = leagueData?.teams ?? [];
   const loading =
-    seasonLoading || groupsLoading || (!!leagueId && leagueLoading) || seasonTeamsLoading;
+    seasonLoading ||
+    groupsLoading ||
+    (!!leagueId && leagueLoading) ||
+    (!!leagueId && alignmentSetsLoading) ||
+    seasonTeamsLoading;
 
   // ── Mutations ────────────────────────────────────────────────────────────────
 
@@ -279,6 +298,8 @@ const useSeasonDetails = (seasonId: string | undefined) => {
       toast.success(isCurrent ? 'Season set as current!' : 'Season unmarked as current');
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-groups', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-teams', seasonId] }),
         queryClient.invalidateQueries({ queryKey: ['seasons'] }),
       ]);
       return true;
@@ -339,8 +360,13 @@ const useSeasonDetails = (seasonId: string | undefined) => {
     try {
       await axios.patch(`${API}/admin/seasons/${id}`, payload, { headers: authHeaders() });
       toast.success('Season updated!');
+      const targetSeasonId = id || seasonId;
       await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['season', seasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-groups', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-teams', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-standings', targetSeasonId] }),
+        queryClient.invalidateQueries({ queryKey: ['season-stats', targetSeasonId] }),
         queryClient.invalidateQueries({ queryKey: ['seasons'] }),
       ]);
       return true;
@@ -355,6 +381,8 @@ const useSeasonDetails = (seasonId: string | undefined) => {
   return {
     season,
     groups,
+    alignmentSets,
+    fetchAlignmentSet,
     seasonTeams,
     leagueTeams,
     loading,

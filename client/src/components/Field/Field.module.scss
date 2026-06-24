@@ -134,75 +134,77 @@
 }
 
 // ── Color picker ────────────────────────────────────────────────────────
-.colorInputWrapper {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  background: $bg-input;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: $space-sm $space-md;
-  transition: border-color $transition-base;
-  min-width: 0;
-  width: 100%;
+.color {
+  &InputWrapper {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    background: $bg-input;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    padding: $space-sm $space-md;
+    transition: border-color $transition-base;
+    min-width: 0;
+    width: 100%;
 
-  &:focus-within {
-    border-color: $accent;
-  }
-}
-
-.colorInputWrapperDisabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-
-  &:focus-within {
-    border-color: $border;
-  }
-}
-
-.colorSwatch {
-  width: 24px;
-  height: 24px;
-  border-radius: $radius-sm;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-  transition: transform $transition-fast;
-
-  &:hover {
-    transform: scale(1.1);
+    &:focus-within {
+      border-color: $accent;
+    }
   }
 
-  &:disabled {
+  &InputWrapperDisabled {
+    opacity: 0.4;
     cursor: not-allowed;
-    transform: none;
+
+    &:focus-within {
+      border-color: $border;
+    }
   }
-}
 
-.colorHiddenInput {
-  position: absolute;
-  width: 0;
-  height: 0;
-  padding: 0;
-  border: none;
-  opacity: 0;
-  pointer-events: none;
-}
+  &Swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: $radius-sm;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    flex-shrink: 0;
+    padding: 0;
+    transition: transform $transition-fast;
 
-.colorHexInput {
-  flex: 1;
-  background: none;
-  border: none;
-  outline: none;
-  font-size: $font-sm;
-  font-family: monospace;
-  color: $text-body;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  min-width: 0;
+    &:hover {
+      transform: scale(1.1);
+    }
 
-  &:disabled {
-    cursor: not-allowed;
+    &:disabled {
+      cursor: not-allowed;
+      transform: none;
+    }
+  }
+
+  &HiddenInput {
+    position: absolute;
+    width: 0;
+    height: 0;
+    padding: 0;
+    border: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &HexInput {
+    flex: 1;
+    background: none;
+    border: none;
+    outline: none;
+    font-size: $font-sm;
+    font-family: monospace;
+    color: $text-body;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    min-width: 0;
+
+    &:disabled {
+      cursor: not-allowed;
+    }
   }
 }

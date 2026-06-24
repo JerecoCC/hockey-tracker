@@ -1,5 +1,6 @@
 import { forwardRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode, Ref } from 'react';
+import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button from '../Button/Button';
 import type { ButtonIntent, ButtonVariant } from '../Button/Button';
 import Icon from '../Icon/Icon';
@@ -19,15 +20,21 @@ export interface AccordionAction {
   onClick: () => void;
 }
 
-interface Props {
+interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   /** Header label – any ReactNode. */
   label: ReactNode;
+  /** Small content rendered immediately after the label, such as counts. */
+  labelMeta?: ReactNode;
   /** Always-visible right-side header content (badges, scores, etc.). */
   headerRight?: ReactNode;
   /** Hover-revealed action buttons rendered from a config array. */
   hoverActions?: AccordionAction[];
   /** Whether the body is expanded on first render. Defaults to true. */
   defaultOpen?: boolean;
+  /** Optional controlled expanded state. */
+  open?: boolean;
+  /** Called when the expanded state changes. */
+  onOpenChange?: (open: boolean) => void;
   /** When true the toggle button is inert — the row cannot be expanded or collapsed. */
   toggleDisabled?: boolean;
   /**
@@ -37,6 +44,12 @@ interface Props {
   variant?: 'collapsible' | 'static';
   /** Extra class applied to the root element (for border-color overrides, etc.). */
   className?: string;
+  /** Extra class applied to the header row. */
+  rowClassName?: string;
+  /** Extra class applied to the body wrapper. */
+  bodyClassName?: string;
+  /** Ref forwarded to the body wrapper. */
+  bodyRef?: Ref<HTMLDivElement>;
   /** Collapsible body content. */
   children?: ReactNode;
 }
@@ -45,22 +58,36 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
   (
     {
       label,
+      labelMeta,
       headerRight,
       hoverActions,
       defaultOpen = true,
+      open: controlledOpen,
+      onOpenChange,
       toggleDisabled = false,
       variant = 'collapsible',
       className,
+      rowClassName,
+      bodyClassName,
+      bodyRef,
       children,
+      ...rootProps
     },
     ref,
   ) => {
-    const [open, setOpen] = useState(defaultOpen);
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultOpen);
+    const open = controlledOpen ?? uncontrolledOpen;
     const isStatic = variant === 'static';
+    const hasHoverActions = hoverActions != null && hoverActions.length > 0;
     const bodyVisible = isStatic || open;
+    const setOpen = (next: boolean) => {
+      if (controlledOpen === undefined) setUncontrolledOpen(next);
+      onOpenChange?.(next);
+    };
 
     return (
       <div
+        {...rootProps}
         ref={ref}
         className={[styles.accordion, className].filter(Boolean).join(' ')}
       >
@@ -69,6 +96,8 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             styles.row,
             !(bodyVisible && children != null) ? styles.rowCollapsed : '',
             isStatic ? styles.rowStatic : '',
+            hasHoverActions ? styles.rowWithActions : '',
+            rowClassName,
           ]
             .filter(Boolean)
             .join(' ')}
@@ -78,7 +107,7 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
               className={[styles.toggle, toggleDisabled ? styles.toggleDisabled : '']
                 .filter(Boolean)
                 .join(' ')}
-              onClick={() => !toggleDisabled && setOpen((v) => !v)}
+              onClick={() => !toggleDisabled && setOpen(!open)}
               aria-label={open ? 'Collapse' : 'Expand'}
               aria-expanded={open}
               aria-disabled={toggleDisabled}
@@ -86,18 +115,18 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             >
               <Icon
                 name="expand_more"
-                size="0.8em"
+                size="0.8rem"
                 className={open ? styles.toggleIconOpen : styles.toggleIcon}
               />
             </button>
           )}
-          <div className={styles.label}>{label}</div>
+          <div className={styles.labelWrap}>
+            <div className={styles.label}>{label}</div>
+            {labelMeta != null && <div className={styles.labelMeta}>{labelMeta}</div>}
+          </div>
           {headerRight != null && <div className={styles.headerRight}>{headerRight}</div>}
-          {hoverActions != null && hoverActions.length > 0 && (
-            <div
-              className={styles.hoverActions}
-              data-hover-actions
-            >
+          {hasHoverActions && (
+            <ActionOverlay className={styles.hoverActions}>
               {hoverActions.map((action, i) => (
                 <Button
                   key={i}
@@ -106,16 +135,24 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
                   size="sm"
                   icon={action.icon}
                   disabled={action.disabled}
-                  tooltip={action.tooltip}
+                  tooltip={action.tooltip ?? action.label}
+                  aria-label={action.tooltip ?? action.label}
                   onClick={action.onClick}
                 >
                   {action.label}
                 </Button>
               ))}
-            </div>
+            </ActionOverlay>
           )}
         </div>
-        {bodyVisible && children != null && <div className={styles.body}>{children}</div>}
+        {bodyVisible && children != null && (
+          <div
+            ref={bodyRef}
+            className={[styles.body, bodyClassName].filter(Boolean).join(' ')}
+          >
+            {children}
+          </div>
+        )}
       </div>
     );
   },

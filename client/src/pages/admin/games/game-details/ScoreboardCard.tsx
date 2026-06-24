@@ -1,20 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Badge from '@/components/Badge/Badge';
+import Tag from '@/components/Tag/Tag';
 import Card from '@/components/Card/Card';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import type { GameRecord, GameStatus } from '@/hooks/useGames';
+import type { GameStatus, TeamInfo } from '@/hooks/useGames';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
+import {
+  DATE_FMT_LONG,
+  LOCAL_DATE_FMT_LONG,
+  formatScheduledDate,
+  formatScheduledDateLocal,
+} from './formatUtils';
 import styles from './ScoreboardCard.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
-
-const DATE_FMT = new Intl.DateTimeFormat('en-US', {
-  weekday: 'long',
-  month: 'long',
-  day: 'numeric',
-  year: 'numeric',
-});
 
 const STATUS_LABEL: Record<GameStatus, string> = {
   scheduled: 'Scheduled',
@@ -34,8 +33,19 @@ const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warnin
 
 // ── Props ─────────────────────────────────────────────────────────────────────
 
+interface ScoreboardGame {
+  status: GameStatus;
+  scheduled_at: string | null;
+  scheduled_time?: string | null;
+  playoff_round?: number | null;
+  playoff_round_names?: Record<string, string> | null;
+  game_number_in_series?: number | null;
+  home_team: TeamInfo;
+  away_team: TeamInfo;
+}
+
 interface Props {
-  game: GameRecord;
+  game: ScoreboardGame;
   isFinal: boolean;
   isInProgress: boolean;
   isEditMode?: boolean;
@@ -45,6 +55,8 @@ interface Props {
   /** When omitted, team logo buttons don't navigate anywhere (read-only user view). */
   leagueId?: string;
   leagueCode?: string | null;
+  disabled?: boolean;
+  useLocalTimezone?: boolean;
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -80,9 +92,8 @@ function teamTextShadow(textHex: string, bgHex: string, threshold = 3): string {
   return contrastRatio(textHex, bgHex) < threshold ? 'rgba(0,0,0,0.75)' : 'transparent';
 }
 
-const teamPlaceLabel = (team: GameRecord['home_team']) => team.place_name?.trim() || '';
-const teamNameLabel = (team: GameRecord['home_team']) =>
-  team.team_name?.trim() || team.name?.trim() || team.code;
+const teamPlaceLabel = (team: TeamInfo) => team.place_name?.trim() || '';
+const teamNameLabel = (team: TeamInfo) => team.team_name?.trim() || team.name?.trim() || team.code;
 
 // ── Component ─────────────────────────────────────────────────────────────────
 
@@ -101,12 +112,13 @@ const ScoreboardCard = ({
   game,
   isFinal,
   isInProgress,
-  isEditMode = false,
   liveAwayScore,
   liveHomeScore,
   overtimeSuffix,
   leagueId,
   leagueCode,
+  disabled = false,
+  useLocalTimezone = false,
 }: Props) => {
   const navigate = useNavigate();
 
@@ -188,8 +200,9 @@ const ScoreboardCard = ({
           <button
             type="button"
             className={styles.teamLogoBtn}
+            disabled={disabled}
             onClick={
-              leagueId
+              leagueId && !disabled
                 ? () =>
                     navigate(
                       buildTeamDetailsPath({
@@ -262,25 +275,26 @@ const ScoreboardCard = ({
                 })()}
               </span>
             )}
-            {isEditMode ? (
-              <Badge
-                label="Editing"
-                intent="info"
-              />
-            ) : isFinal ? (
-              <Badge
+            {isFinal ? (
+              <Tag
                 label={`Final${overtimeSuffix}`}
                 intent="success"
               />
             ) : (
-              <Badge
+              <Tag
                 label={STATUS_LABEL[game.status]}
                 intent={STATUS_INTENT[game.status]}
               />
             )}
             {game.scheduled_at && (
               <span className={styles.scoreDate}>
-                {DATE_FMT.format(new Date(game.scheduled_at))}
+                {useLocalTimezone
+                  ? formatScheduledDateLocal(
+                      game.scheduled_at,
+                      game.scheduled_time,
+                      LOCAL_DATE_FMT_LONG,
+                    )
+                  : formatScheduledDate(game.scheduled_at, DATE_FMT_LONG)}
               </span>
             )}
           </div>
@@ -336,8 +350,9 @@ const ScoreboardCard = ({
           <button
             type="button"
             className={`${styles.teamLogoBtn} ${styles.teamLogoBtnHome}`}
+            disabled={disabled}
             onClick={
-              leagueId
+              leagueId && !disabled
                 ? () =>
                     navigate(
                       buildTeamDetailsPath({

@@ -65,19 +65,19 @@
   object-fit: contain;
   flex-shrink: 0;
   filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.2));
-}
 
-.logoPlaceholder {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.6rem;
-  font-weight: 700;
-  flex-shrink: 0;
-  letter-spacing: 0.02em;
+  &Placeholder {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.6rem;
+    font-weight: 700;
+    flex-shrink: 0;
+    letter-spacing: 0.02em;
+  }
 }
 
 // ── Team code ─────────────────────────────────────────────────────────────────
@@ -94,18 +94,20 @@
 
 // ── Score (inline, right of code) ────────────────────────────────────────────
 
-.scoreNum {
-  font-size: $font-base;
-  font-weight: 700;
-  color: $text-bright;
-  min-width: 1.25rem;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
-  line-height: 1;
-}
+.score {
+  &Num {
+    font-size: $font-base;
+    font-weight: 700;
+    color: $text-bright;
+    min-width: 1.25rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
 
-.scoreLoser {
-  color: $text-dim;
+  &Loser {
+    color: $text-dim;
+  }
 }
 
 // ── Middle — always-present flex spacer between teams and badge ───────────────
@@ -134,16 +136,18 @@
 // ── Game type — left accent border ───────────────────────────────────────────
 // Overrides the left side of the base 1px $border to a thicker coloured stripe.
 
-.typePreseason {
-  border-left: 3px solid $text-dim; // slate — exhibition/lower stakes
-}
+.type {
+  &Preseason {
+    border-left: 3px solid $text-dim; // slate — exhibition/lower stakes
+  }
 
-.typeRegular {
-  border-left: 3px solid $accent-light; // blue — standard season play
-}
+  &Regular {
+    border-left: 3px solid $accent-light; // blue — standard season play
+  }
 
-.typePlayoff {
-  border-left: 3px solid $warning-light; // amber/gold — high stakes
+  &Playoff {
+    border-left: 3px solid $warning-light; // amber/gold — high stakes
+  }
 }
 
 // ── Stretched link — fills the entire item for right-click / middle-click ─────

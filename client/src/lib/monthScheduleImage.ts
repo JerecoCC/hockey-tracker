@@ -25,6 +25,7 @@ export const downloadMonthScheduleImage = async ({
   const backgroundColor = getNearestBackgroundColor(calendarNode);
   const exportPadding = 28;
   const exportNode = document.createElement('div');
+  const exportStyleNode = document.createElement('style');
   const headerNode = document.createElement('div');
   const clonedCalendar = calendarNode.cloneNode(true) as HTMLElement;
   const monthLabel = MONTH_IMAGE_LABEL_FMT.format(calendarMonth);
@@ -44,6 +45,18 @@ export const downloadMonthScheduleImage = async ({
     fontFamily:
       'Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
   });
+  exportStyleNode.textContent = `
+    [data-calendar-export="true"] * {
+      scrollbar-width: none !important;
+      -ms-overflow-style: none !important;
+    }
+
+    [data-calendar-export="true"] *::-webkit-scrollbar {
+      width: 0 !important;
+      height: 0 !important;
+      display: none !important;
+    }
+  `;
   Object.assign(headerNode.style, {
     margin: '0 0 20px',
     color: '#f8fafc',
@@ -58,7 +71,7 @@ export const downloadMonthScheduleImage = async ({
     pointerEvents: 'none',
   });
 
-  exportNode.append(headerNode, clonedCalendar);
+  exportNode.append(exportStyleNode, headerNode, clonedCalendar);
   document.body.appendChild(exportNode);
   await new Promise((resolve) => requestAnimationFrame(resolve));
 

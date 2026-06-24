@@ -19,19 +19,21 @@
 }
 
 // Star icons row
-.starIcons {
-  display: flex;
-  gap: 3px;
-  color: #f59e0b; // amber-400 — classic gold star colour
-  font-size: $font-lg;
-  margin-top: $space-xs;
-}
+.star {
+  &Icons {
+    display: flex;
+    gap: 3px;
+    color: #f59e0b; // amber-400 — classic gold star colour
+    font-size: $font-lg;
+    margin-top: $space-xs;
+  }
 
-.starName {
-  font-size: $font-sm;
-  font-weight: 600;
-  color: $text-body;
-  line-height: 1.3;
+  &Name {
+    font-size: $font-sm;
+    font-weight: 600;
+    color: $text-body;
+    line-height: 1.3;
+  }
 }
 
 .playerLink {
@@ -42,16 +44,18 @@
   }
 }
 
-.starTeam {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: $space-xs;
-  font-size: $font-xs;
-  color: $text-dim;
-}
+.star {
+  &Team {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: $space-xs;
+    font-size: $font-xs;
+    color: $text-dim;
+  }
 
-.starStats {
-  font-size: $font-xs;
-  color: $text-dim;
+  &Stats {
+    font-size: $font-xs;
+    color: $text-dim;
+  }
 }

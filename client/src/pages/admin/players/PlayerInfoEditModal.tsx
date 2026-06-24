@@ -190,7 +190,14 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
         <div className={styles.playerInfoVitalsRow}>
           <div className={styles.heightGroup}>
             <span className={styles.heightGroupLabel}>Height</span>
-            <div className={styles.heightSegmentedField}>
+            <div
+              className={[
+                styles.heightSegmentedField,
+                isSubmitting ? styles.heightSegmentedFieldDisabled : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
+            >
               <Controller
                 control={control}
                 name="height_ft"

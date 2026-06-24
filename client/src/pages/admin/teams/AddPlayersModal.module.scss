@@ -11,10 +11,10 @@
     flex-direction: column;
     align-items: stretch;
   }
-}
 
-.controlsGap {
-  margin-top: $space-xl;
+  &Gap {
+    margin-top: $space-xl;
+  }
 }
 
 .searchWrap {
@@ -32,44 +32,46 @@
   gap: 2px;
 }
 
-.jerseyWrap {
-  align-self: center;
-  display: flex;
-  align-items: center;
-  gap: $space-xs;
-  flex-shrink: 0;
-  height: 30px;
-}
-
-.jerseyLabel {
-  font-size: $font-sm;
-  color: $text-dim;
-  white-space: nowrap;
-}
-
-.jerseyInput {
-  width: 42px;
-  height: 30px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  padding: 0;
-  font-size: $font-base;
-  font-weight: 700;
-  color: $text-body;
-  outline: none;
-  text-align: center;
-
-  &:focus {
-    border-color: $accent;
+.jersey {
+  &Wrap {
+    align-self: center;
+    display: flex;
+    align-items: center;
+    gap: $space-xs;
+    flex-shrink: 0;
+    height: 30px;
   }
 
-  &::-webkit-outer-spin-button,
-  &::-webkit-inner-spin-button {
-    -webkit-appearance: none;
+  &Label {
+    font-size: $font-sm;
+    color: $text-dim;
+    white-space: nowrap;
   }
 
-  -moz-appearance: textfield;
+  &Input {
+    width: 42px;
+    height: 30px;
+    background: $bg-input;
+    border: 1px solid $border;
+    border-radius: $radius-sm;
+    padding: 0;
+    font-size: $font-base;
+    font-weight: 700;
+    color: $text-body;
+    outline: none;
+    text-align: center;
+
+    &:focus {
+      border-color: $accent;
+    }
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+    }
+
+    -moz-appearance: textfield;
+  }
 }
 
 .empty {

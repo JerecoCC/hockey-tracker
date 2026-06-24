@@ -135,4 +135,13 @@ describe('Field – non-password types', () => {
     render(<TextField />);
     expect(screen.getByLabelText('Username')).toHaveAttribute('type', 'text');
   });
+
+  it('does not focus the input when clicking the label text', () => {
+    render(<TextField />);
+    const input = screen.getByLabelText('Username');
+
+    fireEvent.click(screen.getByText('Username'));
+
+    expect(input).not.toHaveFocus();
+  });
 });

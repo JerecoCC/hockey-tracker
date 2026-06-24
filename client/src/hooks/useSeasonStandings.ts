@@ -20,9 +20,20 @@ export interface TeamStandingRecord {
   otl: number;
   points: number;
   games_remaining: number | null;
+  goals_for?: number;
+  goals_against?: number;
+  goal_diff?: number;
 }
 
-const useSeasonStandings = (seasonId: string | undefined) => {
+interface UseSeasonStandingsOptions {
+  enabled?: boolean;
+}
+
+const useSeasonStandings = (
+  seasonId: string | undefined,
+  options: UseSeasonStandingsOptions = {},
+) => {
+  const { enabled = true } = options;
   const { data = [], isLoading } = useQuery<TeamStandingRecord[]>({
     queryKey: ['season-standings', seasonId],
     queryFn: async () => {
@@ -37,7 +48,7 @@ const useSeasonStandings = (seasonId: string | undefined) => {
         return [];
       }
     },
-    enabled: !!seasonId,
+    enabled: !!seasonId && enabled,
   });
 
   return { standings: data, loading: isLoading };

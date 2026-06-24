@@ -6,11 +6,11 @@
 .wrapper {
   position: relative;
   width: 100%;
-}
 
-.wrapperInline {
-  display: inline-flex;
-  width: auto;
+  &Inline {
+    display: inline-flex;
+    width: auto;
+  }
 }
 
 // ── Trigger container (div wrapping icon button + text input + clear) ────
@@ -41,62 +41,64 @@
   max-width: 100%;
 }
 
-.triggerButton {
-  display: inline-flex;
-  align-items: center;
-  gap: $space-sm;
-  min-height: 42px;
-  width: auto;
-  background: $bg-input;
-  border: 1px solid $border;
-  border-radius: $radius-md;
-  padding: 0 $space-xl 0 $space-lg;
-  color: $text-body;
-  font: inherit;
-  cursor: pointer;
-  transition: border-color $transition-base;
+.trigger {
+  &Button {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-sm;
+    min-height: 42px;
+    width: auto;
+    background: $bg-input;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    padding: 0 $space-xl 0 $space-lg;
+    color: $text-body;
+    font: inherit;
+    cursor: pointer;
+    transition: border-color $transition-base;
 
-  &:hover {
-    border-color: color.adjust($border, $lightness: 10%);
+    &:hover {
+      border-color: color.adjust($border, $lightness: 10%);
+    }
+
+    &:focus-visible {
+      outline: none;
+      border-color: $accent;
+    }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   }
 
-  &:focus-visible {
-    outline: none;
-    border-color: $accent;
+  &ButtonLabel {
+    white-space: nowrap;
   }
 
-  &:disabled {
+  &Disabled {
     opacity: 0.5;
     cursor: not-allowed;
+    pointer-events: none;
   }
-}
-
-.triggerButtonLabel {
-  white-space: nowrap;
-}
-
-.triggerDisabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  pointer-events: none;
 }
 
 // Calendar icon — transparent button, just a clickable hit-target
-.calIconBtn {
-  display: flex;
-  align-items: center;
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  flex-shrink: 0;
-
-  &:focus {
-    outline: none;
-  }
-}
-
 .calIcon {
+  &Btn {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:focus {
+      outline: none;
+    }
+  }
+
   color: $text-dim;
 }
 
@@ -201,17 +203,17 @@
   gap: 2px;
 }
 
-.dayName {
-  font-size: $font-xs;
-  font-weight: 600;
-  color: $text-dim;
-  text-align: center;
-  padding: $space-xs 0 $space-sm;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
 .day {
+  &Name {
+    font-size: $font-xs;
+    font-weight: 600;
+    color: $text-dim;
+    text-align: center;
+    padding: $space-xs 0 $space-sm;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
   background: none;
   border: 1px solid transparent;
   color: $text-body;
@@ -249,56 +251,60 @@
 }
 
 // ── Month grid ────────────────────────────────────────────────────────────
-.monthGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $space-sm;
-}
+.month {
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $space-sm;
+  }
 
-.monthBtn {
-  background: none;
-  border: 1px solid transparent;
-  color: $text-body;
-  font-size: $font-sm;
-  font-family: inherit;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  padding: $space-sm 0;
-  text-align: center;
-  transition:
-    background $transition-fast,
-    color $transition-fast;
+  &Btn {
+    background: none;
+    border: 1px solid transparent;
+    color: $text-body;
+    font-size: $font-sm;
+    font-family: inherit;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    padding: $space-sm 0;
+    text-align: center;
+    transition:
+      background $transition-fast,
+      color $transition-fast;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: $text-bright;
+    &:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: $text-bright;
+    }
   }
 }
 
 // ── Year grid ─────────────────────────────────────────────────────────────
-.yearGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: $space-sm;
-}
+.year {
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: $space-sm;
+  }
 
-.yearBtn {
-  background: none;
-  border: 1px solid transparent;
-  color: $text-body;
-  font-size: $font-sm;
-  font-family: inherit;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  padding: $space-sm 0;
-  text-align: center;
-  transition:
-    background $transition-fast,
-    color $transition-fast;
+  &Btn {
+    background: none;
+    border: 1px solid transparent;
+    color: $text-body;
+    font-size: $font-sm;
+    font-family: inherit;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    padding: $space-sm 0;
+    text-align: center;
+    transition:
+      background $transition-fast,
+      color $transition-fast;
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: $text-bright;
+    &:hover {
+      background: rgba(255, 255, 255, 0.07);
+      color: $text-bright;
+    }
   }
 }
 
@@ -310,35 +316,35 @@
   margin-top: $space-md;
   padding-top: $space-md;
   border-top: 1px solid $border;
-}
 
-.footerBtn {
-  background: none;
-  border: 1px solid $border;
-  color: $text-dim;
-  font-size: $font-sm;
-  font-family: inherit;
-  border-radius: $radius-sm;
-  cursor: pointer;
-  padding: $space-xs $space-md;
-  transition:
-    color $transition-fast,
-    border-color $transition-fast,
-    background $transition-fast;
+  &Btn {
+    background: none;
+    border: 1px solid $border;
+    color: $text-dim;
+    font-size: $font-sm;
+    font-family: inherit;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    padding: $space-xs $space-md;
+    transition:
+      color $transition-fast,
+      border-color $transition-fast,
+      background $transition-fast;
 
-  &:hover {
-    color: $text-bright;
-    border-color: $accent;
-    background: rgba(37, 99, 235, 0.12);
+    &:hover {
+      color: $text-bright;
+      border-color: $accent;
+      background: rgba(37, 99, 235, 0.12);
+    }
   }
-}
 
-.footerBtnClear {
-  margin-left: auto;
+  &BtnClear {
+    margin-left: auto;
 
-  &:hover {
-    color: #f87171;
-    border-color: #f87171;
-    background: rgba(248, 113, 113, 0.1);
+    &:hover {
+      color: #f87171;
+      border-color: #f87171;
+      background: rgba(248, 113, 113, 0.1);
+    }
   }
 }
