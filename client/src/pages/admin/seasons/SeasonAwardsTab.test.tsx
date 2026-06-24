@@ -100,6 +100,7 @@ const renderTab = (
   award: SeasonAwardRecord,
   addRecipient = jest.fn(async () => true),
   playoffSeries: unknown[] = [],
+  playoffsStarted = true,
 ) => {
   mockUseSeasonAwards.mockReturnValue({
     awards: [award],
@@ -128,6 +129,7 @@ const renderTab = (
         leagueCode="PWHL"
         leagueId="league-1"
         seasonName="2025-26"
+        playoffsStarted={playoffsStarted}
         seasonTeams={[team]}
         skaters={[skater]}
         goalies={[]}
@@ -150,6 +152,18 @@ describe('SeasonAwardsTab', () => {
     expect(screen.getByRole('button', { name: 'Award Player' })).toBeEnabled();
     expect(screen.queryByText('No nominees recorded.')).not.toBeInTheDocument();
     expect(container.querySelector('.awardContentInnerNoNominees')).toBeInTheDocument();
+  });
+
+  it('hides winner actions for post-playoff awards before playoffs start', () => {
+    renderTab(makeAward({ awarded_after_playoffs: true }), undefined, [], false);
+
+    expect(screen.queryByRole('button', { name: 'Award Player' })).not.toBeInTheDocument();
+  });
+
+  it('keeps winner actions for regular-season awards before playoffs start', () => {
+    renderTab(makeAward({ awarded_after_playoffs: false }), undefined, [], false);
+
+    expect(screen.getByRole('button', { name: 'Award Player' })).toBeEnabled();
   });
 
   it('renders multiple winners without nominees as a single-column player list', () => {

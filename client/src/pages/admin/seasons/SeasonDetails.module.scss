@@ -1019,15 +1019,6 @@
     text-align: center;
   }
 
-  &SelectionLocked {
-    flex-shrink: 0;
-    color: $text-muted;
-    font-size: $font-xs;
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
   &PlayerChecklist {
     display: flex;
     flex-direction: column;

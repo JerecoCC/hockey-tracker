@@ -13,6 +13,7 @@ import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
+import Tag from '@/components/Tag/Tag';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
 import useSeasonAwards, {
@@ -146,6 +147,7 @@ interface Props {
   leagueCode: string | null;
   leagueId: string | null;
   seasonName: string | null;
+  playoffsStarted: boolean;
   seasonTeams: SeasonTeam[];
   skaters: SkaterStatRecord[];
   goalies: GoalieStatRecord[];
@@ -186,6 +188,9 @@ const supportsNominees = (award: SeasonAwardRecord) =>
 
 const usesWinnerChecklist = (award: SeasonAwardRecord) =>
   !isTeamSelectionAward(award.name) && award.allow_multiple_winners;
+
+const canAwardWinners = (award: SeasonAwardRecord, playoffsStarted: boolean) =>
+  !award.awarded_after_playoffs || playoffsStarted;
 
 const playoffChampionSuggestion = (
   series: PlayoffSeriesRecord[],
@@ -276,6 +281,7 @@ const SeasonAwardsTab = ({
   leagueCode,
   leagueId,
   seasonName,
+  playoffsStarted,
   seasonTeams,
   skaters,
   goalies,
@@ -651,6 +657,7 @@ const SeasonAwardsTab = ({
   };
 
   const openRecipientModal = (award: SeasonAwardRecord) => {
+    if (!canAwardWinners(award, playoffsStarted)) return;
     const winnerIds = award.recipients
       .filter((recipient) => recipient.role === 'winner')
       .map(recipientValueId)
@@ -718,6 +725,7 @@ const SeasonAwardsTab = ({
   };
 
   const openTeamSelectionModal = (award: SeasonAwardRecord) => {
+    if (!canAwardWinners(award, playoffsStarted)) return;
     setTeamSelectionAward(award);
     const values = { ...emptyTeamSelectionValues };
     const winnersByGroup = new Map<AwardTeamSelectionGroup, SeasonAwardRecipient[]>();
@@ -750,6 +758,7 @@ const SeasonAwardsTab = ({
 
   const submitRecipient = recipientForm.handleSubmit(async (values) => {
     if (!activeRecipientAward?.season_award_id) return;
+    if (!canAwardWinners(activeRecipientAward, playoffsStarted)) return;
     if (!activeRecipientAward.allow_multiple_winners) {
       for (const recipient of activeRecipientWinners) {
         const ok = await deleteRecipient(activeRecipientAward.season_award_id, recipient.id, {
@@ -771,6 +780,7 @@ const SeasonAwardsTab = ({
   const submitRecipientWinners = async () => {
     if (
       !activeRecipientAward?.season_award_id ||
+      !canAwardWinners(activeRecipientAward, playoffsStarted) ||
       !recipientUsesWinnerChecklist ||
       !recipientWinnerHasChanges ||
       recipientWinnerSaving
@@ -892,6 +902,7 @@ const SeasonAwardsTab = ({
 
   const addSuggestedWinner = async (award: SeasonAwardRecord, suggestion: SuggestedRecipient) => {
     if (!award.season_award_id) return;
+    if (!canAwardWinners(award, playoffsStarted)) return;
     const existingWinners = award.recipients.filter((recipient) => recipient.role === 'winner');
     const suggestionAlreadyRecorded = existingWinners.some(
       (recipient) =>
@@ -928,6 +939,7 @@ const SeasonAwardsTab = ({
   const submitTeamSelection = teamSelectionForm.handleSubmit(async (values) => {
     if (
       !teamSelectionAward?.season_award_id ||
+      !canAwardWinners(teamSelectionAward, playoffsStarted) ||
       !teamSelectionComplete ||
       teamSelectionHasDuplicates
     ) {
@@ -1033,7 +1045,8 @@ const SeasonAwardsTab = ({
                 award.selection_method === 'automatic' || award.stat_key === 'playoff_champion';
               const hideRecordedAutomaticAction =
                 hasAutomaticWinnerAction && !award.allow_multiple_winners && winners.length > 0;
-              const showAwardAction = !hideRecordedAutomaticAction;
+              const showAwardAction =
+                !hideRecordedAutomaticAction && canAwardWinners(award, playoffsStarted);
               const rendersColumnList =
                 isGroupedAward || (!canManageNominees && award.allow_multiple_winners);
               const awardLabel = (
@@ -1193,7 +1206,10 @@ const SeasonAwardsTab = ({
                     subtitle={awardSelectionSubtitle(award)}
                     rightContent={
                       locked ? (
-                        <span className={styles.awardSelectionLocked}>Recorded</span>
+                        <Tag
+                          label="Recorded"
+                          intent="success"
+                        />
                       ) : undefined
                     }
                   />
