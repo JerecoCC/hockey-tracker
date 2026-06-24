@@ -230,6 +230,51 @@ describe('SeasonAwardsTab', () => {
     expect(screen.queryByRole('button', { name: 'Award Team' })).not.toBeInTheDocument();
   });
 
+  it('shows the final score subtitle for recorded playoff champion awards', () => {
+    renderTab(
+      makeAward({
+        name: 'Walter Cup Winner',
+        recipient_type: 'team',
+        selection_method: 'playoff',
+        stat_key: 'playoff_champion',
+        recipients: [
+          {
+            ...makeWinner('winner-1', 'player-1', 'Toronto'),
+            recipient_type: 'team',
+            player_id: null,
+            team_id: 'team-1',
+            player_name: null,
+          },
+        ],
+      }),
+      undefined,
+      [
+        {
+          id: 'series-1',
+          season_id: 'season-1',
+          round: 2,
+          series_letter: 'F',
+          home_team_id: 'team-1',
+          home_team_name: 'Toronto',
+          home_team_code: 'TOR',
+          away_team_id: 'team-2',
+          away_team_name: 'Montreal',
+          away_team_code: 'MTL',
+          games_to_win: 3,
+          home_wins: 3,
+          away_wins: 2,
+          status: 'complete',
+          winner_team_id: 'team-1',
+          bracket_slot_key: null,
+          created_at: '2026-01-01T00:00:00.000Z',
+          games: [],
+        },
+      ],
+    );
+
+    expect(screen.getByText('Champion - Final 3-2')).toBeInTheDocument();
+  });
+
   it('keeps the set winner action for non-automatic awards after a winner is recorded', () => {
     renderTab(
       makeAward({

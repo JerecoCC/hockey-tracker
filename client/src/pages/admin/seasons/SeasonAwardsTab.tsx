@@ -222,6 +222,21 @@ const playoffChampionSuggestion = (
   };
 };
 
+const playoffChampionFinalSubtitle = (series: PlayoffSeriesRecord[]) => {
+  const maxRound = series.reduce((round, item) => Math.max(round, item.round), 0);
+  if (maxRound <= 0) return null;
+
+  const finalSeries = series.find(
+    (item) => item.round === maxRound && item.status === 'complete' && item.winner_team_id,
+  );
+  if (!finalSeries?.winner_team_id) return null;
+
+  const winnerIsHome = finalSeries.winner_team_id === finalSeries.home_team_id;
+  const wins = winnerIsHome ? finalSeries.home_wins : finalSeries.away_wins;
+  const opponentWins = winnerIsHome ? finalSeries.away_wins : finalSeries.home_wins;
+  return `Champion - Final ${wins}-${opponentWins}`;
+};
+
 const createNomineeDraft = (): NomineeDraft => ({
   id:
     typeof crypto !== 'undefined' && crypto.randomUUID
@@ -1009,6 +1024,10 @@ const SeasonAwardsTab = ({
                 award.stat_key === 'playoff_champion'
                   ? 'No winner recorded.'
                   : 'No winners recorded.';
+              const winnerSubtitle =
+                award.stat_key === 'playoff_champion'
+                  ? playoffChampionFinalSubtitle(playoffSeries)
+                  : null;
               const isSuggestedWinnerSaving = suggestedWinnerSavingAwardId === award.award_id;
               const hasAutomaticWinnerAction =
                 award.selection_method === 'automatic' || award.stat_key === 'playoff_champion';
@@ -1118,6 +1137,7 @@ const SeasonAwardsTab = ({
                         <AwardWinnerList
                           recipients={winners}
                           empty={winnerEmptyMessage}
+                          subtitle={winnerSubtitle}
                           getRecipientHref={recipientHref}
                         />
                         {canManageNominees && (
@@ -1418,6 +1438,7 @@ const SeasonAwardsTab = ({
 interface WinnerListProps {
   recipients: SeasonAwardRecipient[];
   empty: string;
+  subtitle?: string | null;
   getRecipientHref: (recipient: SeasonAwardRecipient) => string | undefined;
 }
 
@@ -1473,7 +1494,7 @@ const AwardRecipientMeta = ({
   );
 };
 
-const AwardWinnerList = ({ recipients, empty, getRecipientHref }: WinnerListProps) => {
+const AwardWinnerList = ({ recipients, empty, subtitle, getRecipientHref }: WinnerListProps) => {
   const cardImageSize = recipients.length > 1 ? 64 : 88;
 
   return (
@@ -1532,12 +1553,14 @@ const AwardWinnerList = ({ recipients, empty, getRecipientHref }: WinnerListProp
               </div>
               <div className={styles.awardWinnerInfo}>
                 <strong>{recipientName(recipient)}</strong>
-                {recipient.recipient_type === 'player' && (
+                {recipient.recipient_type === 'player' ? (
                   <AwardRecipientMeta
                     recipient={recipient}
                     className={styles.awardWinnerMeta}
                   />
-                )}
+                ) : subtitle ? (
+                  <span>{subtitle}</span>
+                ) : null}
               </div>
             </li>
           );
