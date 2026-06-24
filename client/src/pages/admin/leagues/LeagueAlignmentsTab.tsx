@@ -735,6 +735,10 @@ const AlignmentPanel = ({
     .filter((group) => group.parent_id === null)
     .sort((a, b) => a.sort_order - b.sort_order || a.name.localeCompare(b.name));
   const flatTeams = editMode ? draftDetails.teams : (details?.teams ?? []);
+  const assignedTeamCount =
+    structureType === 'league'
+      ? flatTeams.length
+      : new Set(groups.flatMap((group) => group.teams.map((team) => team.id))).size;
 
   const discardEdits = () => {
     reset({
@@ -1057,6 +1061,9 @@ const AlignmentPanel = ({
         confirmDisabled={busy === alignmentSet.id || !isValid || detailsLoading || !hasChanges}
         busy={busy === alignmentSet.id}
         size="md"
+        footerStart={
+          <span>{detailsLoading ? 'Loading teams...' : countLabel(assignedTeamCount, 'team')}</span>
+        }
       >
         {editorBody}
       </Modal>

@@ -586,6 +586,7 @@ describe('LeagueDetailsPage – tabs', () => {
 
     expect(await screen.findByText('Wolves')).toBeInTheDocument();
     expect(screen.getByText('Bears')).toBeInTheDocument();
+    expect(screen.getByText('2 teams')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /update teams/i })).toBeInTheDocument();
 
     const teamList = container.querySelector('.alignmentTeamList');
