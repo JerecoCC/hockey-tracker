@@ -852,10 +852,9 @@ router.get('/:id/awards', async (req, res) => {
       ORDER BY
         season_start_date DESC NULLS LAST,
         season_created_at DESC,
-        awarded_date DESC NULLS LAST,
-        source_order ASC,
         sort_order ASC,
         award_name ASC,
+        source_order ASC,
         id ASC
     `;
     return res.json(rows);

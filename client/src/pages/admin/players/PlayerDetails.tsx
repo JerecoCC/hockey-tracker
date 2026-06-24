@@ -683,6 +683,14 @@ const PlayerDetailsPage = () => {
   const gameLogColumns = buildGameLogColumns(isGoalie);
   const gameLogPageCount = Math.max(1, Math.ceil(gameLogsTotal / GAME_LOG_PAGE_SIZE));
   const gameLogSeasons = seasons.filter((season) => !leagueId || season.league_id === leagueId);
+  const filteredPlayerAwards =
+    gameLogSeasonId === 'all'
+      ? playerAwards
+      : playerAwards.filter((award) => award.season_id === gameLogSeasonId);
+  const handleSeasonChange = (value: string) => {
+    setGameLogSeasonId(value);
+    setGameLogPage(1);
+  };
 
   const playerEditTarget: TeamPlayerRecord = {
     ...player,
@@ -777,10 +785,7 @@ const PlayerDetailsPage = () => {
             <SeasonSelect
               value={gameLogSeasonId}
               seasons={gameLogSeasons}
-              onChange={(value) => {
-                setGameLogSeasonId(value);
-                setGameLogPage(1);
-              }}
+              onChange={handleSeasonChange}
               placeholder="All seasons"
               includeAllOption
             />
@@ -859,17 +864,33 @@ const PlayerDetailsPage = () => {
   );
 
   const awardsCard = (
-    <Card title="Awards">
+    <Card
+      title="Awards"
+      action={
+        <div className={styles.awardSeasonSelect}>
+          <SeasonSelect
+            value={gameLogSeasonId}
+            seasons={gameLogSeasons}
+            onChange={handleSeasonChange}
+            placeholder="All seasons"
+            includeAllOption
+          />
+        </div>
+      }
+    >
       {playerAwardsLoading ? (
         <p className={styles.placeholder}>Loading awards...</p>
-      ) : playerAwards.length === 0 ? (
-        <p className={styles.placeholder}>No awards recorded yet.</p>
+      ) : filteredPlayerAwards.length === 0 ? (
+        <p className={styles.placeholder}>
+          {gameLogSeasonId === 'all'
+            ? 'No awards recorded yet.'
+            : 'No awards recorded for this season.'}
+        </p>
       ) : (
         <ul className={styles.awardList}>
-          {playerAwards.map((award) => (
+          {filteredPlayerAwards.map((award) => (
             <ListItem
               key={award.id}
-              variant="plain"
               image={award.team_logo}
               image_shape="square"
               name={award.award_name}

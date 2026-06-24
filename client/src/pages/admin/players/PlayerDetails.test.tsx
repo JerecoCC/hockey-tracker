@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import usePlayerDetails, {
   usePlayerAwards,
@@ -113,6 +113,10 @@ const mockUseStintActions = useStintActions as jest.Mock;
 
 beforeAll(() => {
   Object.defineProperty(window, 'scrollTo', {
+    writable: true,
+    value: jest.fn(),
+  });
+  Object.defineProperty(HTMLElement.prototype, 'scrollIntoView', {
     writable: true,
     value: jest.fn(),
   });
@@ -378,11 +382,88 @@ describe('PlayerDetails awards tab', () => {
 
     expect(screen.getByText('Awards')).toBeInTheDocument();
     expect(awardItem).not.toBeNull();
-    expect(awardItem).toHaveClass('itemPlain');
+    expect(awardItem).toHaveClass('item');
+    expect(awardItem).not.toHaveClass('itemPlain');
     expect(within(awardItem as HTMLElement).getByText('Forward of the Year')).toBeInTheDocument();
     expect(within(awardItem as HTMLElement).getByText('Toronto Maple Leafs')).toBeInTheDocument();
     expect(within(awardItem as HTMLElement).getByText('2025-26')).toBeInTheDocument();
     expect(screen.getByText('Walter Cup Winner')).toBeInTheDocument();
+  });
+
+  it('syncs the awards season select with the game logs season select', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseSeasons.mockReturnValue({
+      seasons: [
+        {
+          id: 'season-1',
+          league_id: 'league-1',
+          name: '2025-26',
+          start_date: '2025-10-01',
+          created_at: '2025-01-01T00:00:00Z',
+        },
+        {
+          id: 'season-2',
+          league_id: 'league-1',
+          name: '2024-25',
+          start_date: '2024-10-01',
+          created_at: '2024-01-01T00:00:00Z',
+        },
+      ],
+    });
+    mockUsePlayerAwards.mockReturnValue({
+      awards: [
+        {
+          id: 'recipient-1',
+          award_id: 'award-1',
+          season_award_id: 'season-award-1',
+          award_name: 'Forward of the Year',
+          season_id: 'season-1',
+          season_name: '2025-26',
+          awarded_at: '2026-05-01',
+          team_id: 'team-1',
+          team_name: 'Toronto Maple Leafs',
+          team_code: 'TOR',
+          team_logo: null,
+          team_primary_color: '#003e7e',
+          team_text_color: '#ffffff',
+        },
+        {
+          id: 'recipient-2',
+          award_id: 'award-2',
+          season_award_id: 'season-award-2',
+          award_name: 'Older Season Award',
+          season_id: 'season-2',
+          season_name: '2024-25',
+          awarded_at: '2025-05-01',
+          team_id: 'team-1',
+          team_name: 'Toronto Maple Leafs',
+          team_code: 'TOR',
+          team_logo: null,
+          team_primary_color: '#003e7e',
+          team_text_color: '#ffffff',
+        },
+      ],
+      loading: false,
+    });
+
+    const { rerender } = render(<PlayerDetails />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Forward of the Year')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Older Season Award')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('combobox'));
+    await user.click(screen.getByRole('button', { name: '2024-25' }));
+
+    expect(screen.getByText('Older Season Award')).toBeInTheDocument();
+    expect(screen.queryByText('Forward of the Year')).not.toBeInTheDocument();
+
+    mockUseTabState.mockReturnValue([1, jest.fn()]);
+    rerender(<PlayerDetails />);
+
+    expect(screen.getByRole('combobox')).toHaveTextContent('2024-25');
   });
 });
 

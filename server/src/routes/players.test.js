@@ -256,6 +256,18 @@ describe('GET /api/admin/players/:id/awards', () => {
     expect(queryText).toContain('latest_pt.team_id = sar.team_id');
     expect(queryText).toContain('season_awards');
     expect(queryText).toContain('league_awards');
+    const finalOrderBy = queryText.slice(queryText.lastIndexOf('ORDER BY'));
+    expect(finalOrderBy).toContain('season_start_date DESC NULLS LAST');
+    expect(finalOrderBy).toContain('sort_order ASC');
+    expect(finalOrderBy.indexOf('season_start_date DESC NULLS LAST')).toBeLessThan(
+      finalOrderBy.indexOf('sort_order ASC'),
+    );
+    expect(finalOrderBy.indexOf('sort_order ASC')).toBeLessThan(
+      finalOrderBy.indexOf('award_name ASC'),
+    );
+    expect(finalOrderBy.indexOf('award_name ASC')).toBeLessThan(
+      finalOrderBy.indexOf('source_order ASC'),
+    );
   });
 
   it('returns 500 on DB error', async () => {

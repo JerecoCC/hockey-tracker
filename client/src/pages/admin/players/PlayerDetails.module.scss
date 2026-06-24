@@ -280,6 +280,10 @@
     flex-direction: column;
     gap: $space-md;
   }
+
+  &SeasonSelect {
+    width: 180px;
+  }
 }
 
 .currentSeasonCards {
