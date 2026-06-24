@@ -28,7 +28,7 @@ table {
       transition: background $transition-fast;
 
       &:hover {
-        background: $bg-page;
+        background: rgba(255, 255, 255, 0.04);
       }
 
       &.clickableRow {
