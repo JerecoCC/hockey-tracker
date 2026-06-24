@@ -637,6 +637,174 @@ $league-tab-list-gap: $space-md;
     gap: $league-tab-list-gap;
   }
 
+  &GroupListNested {
+    gap: $space-sm;
+  }
+
+  &GroupSection {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &ParentGroup {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    min-width: 0;
+  }
+
+  &ParentGroupHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: $space-md;
+    min-width: 0;
+    padding-bottom: $space-xs;
+    border-bottom: 1px solid $border;
+
+    @media (max-width: 640px) {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+
+  &ParentGroupTitle {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space-xs;
+    min-width: 0;
+  }
+
+  &ParentGroupName {
+    display: inline-flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: $space-xs;
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+
+  &ParentGroupBody {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    min-width: 0;
+  }
+
+  &GroupFieldset {
+    --alignment-group-border-control-size: 26px;
+
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    min-width: 0;
+    margin: 0;
+    padding: $space-md;
+    border: 1px solid $border;
+    border-radius: $radius-md;
+    background: transparent;
+  }
+
+  &GroupFieldsetNested {
+    gap: $space-sm;
+    padding: $space-sm;
+    border-color: rgba($border, 0.55);
+  }
+
+  &GroupLegend {
+    display: grid;
+    grid-template-columns: auto minmax($space-md, 1fr) auto;
+    align-items: center;
+    gap: $space-sm;
+    width: 100%;
+    box-sizing: border-box;
+    padding: 0 $space-xs;
+    color: $text-dim;
+    font-size: $font-sm;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  &GroupLegendTitle {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: $space-xs;
+    min-width: 0;
+    line-height: 1;
+  }
+
+  &GroupLegendRule {
+    min-width: $space-md;
+    border-top: 1px solid rgba($border, 0.55);
+  }
+
+  &GroupNameCount {
+    display: inline-flex;
+    align-items: center;
+    flex-shrink: 0;
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 600;
+    letter-spacing: 0;
+    line-height: 1;
+    text-transform: none;
+    white-space: nowrap;
+  }
+
+  &GroupActions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: $space-xs;
+    flex-shrink: 0;
+
+    > span {
+      display: inline-flex;
+    }
+
+    button,
+    > span > button {
+      width: var(--alignment-group-border-control-size, 26px);
+      height: var(--alignment-group-border-control-size, 26px);
+      padding: 0;
+      border-radius: $radius-sm;
+      font-size: $font-sm;
+    }
+  }
+
+  &GroupBody {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+    min-width: 0;
+  }
+
+  &GroupTeamList {
+    gap: $space-xs;
+  }
+
+  &GroupChildren {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &GroupChildrenLabel {
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
   &EditRow {
     display: flex;
     flex-direction: column;
@@ -848,7 +1016,7 @@ $league-tab-list-gap: $space-md;
 }
 
 .groupEmptyMsg {
-  padding: $space-sm $space-md $space-md;
+  padding: 0;
 }
 
 .ungroupedLabel {

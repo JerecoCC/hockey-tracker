@@ -674,6 +674,115 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(teamList?.querySelectorAll('li')).toHaveLength(2);
     expect(container.querySelector('.alignmentTeamGrid')).not.toBeInTheDocument();
   });
+
+  it('renders group alignment parents as label rows with grouped child fields', async () => {
+    sessionStorage.setItem('tab:league-details', '3');
+    const teams = [
+      {
+        id: 'team-1',
+        name: 'Seattle Wolves',
+        place_name: 'Seattle',
+        team_name: 'Wolves',
+        code: 'SEA',
+        logo: '',
+        primary_color: '#123456',
+        text_color: '#ffffff',
+      },
+    ];
+    const alignmentSet = {
+      id: 'align-groups',
+      league_id: 'lg1',
+      name: 'League Groups',
+      structure_type: 'groups',
+      team_count: teams.length,
+      conference_count: 1,
+      division_count: 1,
+      created_at: '',
+      teams: [],
+      groups: [
+        {
+          id: 'conf-1',
+          client_id: 'conf-1',
+          parent_client_id: null,
+          alignment_set_id: 'align-groups',
+          league_id: 'lg1',
+          parent_id: null,
+          stable_key: 'conference:east',
+          name: 'Eastern',
+          role: 'conference',
+          sort_order: 0,
+          created_at: '',
+          is_auto: false,
+          teams: [],
+        },
+        {
+          id: 'div-1',
+          client_id: 'div-1',
+          parent_client_id: 'conf-1',
+          alignment_set_id: 'align-groups',
+          league_id: 'lg1',
+          parent_id: 'conf-1',
+          stable_key: 'division:metro',
+          name: 'Metro',
+          role: 'division',
+          sort_order: 0,
+          created_at: '',
+          is_auto: false,
+          teams,
+        },
+      ],
+    };
+    const fetchAlignmentSet = jest.fn(async () => alignmentSet);
+    const { container } = setup(
+      { league: mockLeague, teams },
+      {},
+      null,
+      {},
+      {},
+      {},
+      {
+        alignmentSets: [alignmentSet],
+        fetchAlignmentSet,
+      },
+    );
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /create alignment/i })).toBeEnabled(),
+    );
+    const editTooltip = screen.getByRole('tooltip', { name: /edit alignment/i });
+    fireEvent.click(editTooltip.previousElementSibling as HTMLElement);
+
+    expect(await screen.findByText('Eastern Conference')).toBeInTheDocument();
+    expect(screen.getByText('Metro Division')).toBeInTheDocument();
+    expect(screen.getByText('Wolves')).toBeInTheDocument();
+
+    const groupSection = container.querySelector('.alignmentGroupSection');
+    expect(groupSection).toBeInTheDocument();
+    expect(groupSection?.querySelector('.alignmentGroupSectionLabel')).not.toBeInTheDocument();
+    expect(groupSection?.querySelector('.alignmentParentGroupHeader')).toHaveTextContent(
+      'Eastern Conference (1 team)',
+    );
+    expect(groupSection?.querySelectorAll('.alignmentGroupFieldset')).toHaveLength(1);
+    expect(groupSection?.querySelector('.alignmentGroupFieldsetNested')).toBeInTheDocument();
+    expect(
+      groupSection?.querySelector('.alignmentGroupLegend .alignmentGroupActions'),
+    ).toBeInTheDocument();
+    expect(
+      groupSection?.querySelector('.alignmentGroupLegend > .alignmentGroupActions'),
+    ).toBeInTheDocument();
+    expect(
+      groupSection?.querySelector('.alignmentGroupHeader .alignmentGroupActions'),
+    ).not.toBeInTheDocument();
+    expect(
+      groupSection?.querySelector('.alignmentGroupLegend .alignmentGroupLegendTitle'),
+    ).toHaveTextContent('Metro Division (1 team)');
+    expect(groupSection?.querySelector('.alignmentGroupLegendRule')).toBeInTheDocument();
+    expect(groupSection?.querySelector('.alignmentGroupBorderActions')).not.toBeInTheDocument();
+    expect(groupSection?.querySelector('.alignmentGroupSummary')).not.toBeInTheDocument();
+    expect(groupSection?.querySelectorAll('.alignmentGroupNameCount')).toHaveLength(2);
+    expect(groupSection?.querySelector('.alignmentGroupChildrenLabel')).not.toBeInTheDocument();
+    expect(groupSection?.querySelector('.accordion')).not.toBeInTheDocument();
+  });
 });
 
 const clickSeasonsTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Seasons' }));

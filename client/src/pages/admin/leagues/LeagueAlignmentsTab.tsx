@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import Accordion from '@/components/Accordion/Accordion';
-import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -486,6 +484,7 @@ const AlignmentGroupNode = ({
   leagueTeams,
   busy,
   editMode,
+  depth = 0,
   onAddSubgroup,
   onUpdateGroup,
   onDeleteGroup,
@@ -496,6 +495,7 @@ const AlignmentGroupNode = ({
   leagueTeams: TeamRecord[];
   busy: string | null;
   editMode: boolean;
+  depth?: number;
   onAddSubgroup: (
     parentGroup: DraftAlignmentGroup,
     payload: {
@@ -519,6 +519,9 @@ const AlignmentGroupNode = ({
   const canHaveSubgroups = group.parent_id === null && group.role !== 'division';
   const roleLabel = group.role ? ROLE_LABELS[group.role] : null;
   const teamCount = countGroupTeams(group, allGroups);
+  const teamCountLabel = `${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`;
+  const groupName = roleLabel ? `${group.name} ${roleLabel}` : group.name;
+  const groupCountLabel = `(${teamCountLabel})`;
   const removeTeam = (teamId: string) => {
     void onSetGroupTeams(
       group.id,
@@ -526,119 +529,152 @@ const AlignmentGroupNode = ({
     );
   };
 
-  return (
-    <li className={styles.groupItem}>
-      <Accordion
-        label={<span className={styles.groupLabel}>{group.name}</span>}
-        labelMeta={
-          <span
-            className={styles.groupTeamCount}
-            title={`${teamCount} ${teamCount === 1 ? 'team' : 'teams'}`}
-          >
-            ({teamCount} {teamCount === 1 ? 'team' : 'teams'})
-          </span>
-        }
-        headerRight={
-          roleLabel ? (
-            <Tag
-              label={roleLabel}
-              intent={group.role === 'division' ? 'success' : 'info'}
-            />
-          ) : null
-        }
-        hoverActions={
-          editMode
-            ? [
+  const groupActions = editMode ? (
+    <div className={styles.alignmentGroupActions}>
+      <Button
+        type="button"
+        variant="outlined"
+        intent="neutral"
+        size="sm"
+        icon="edit"
+        tooltip="Edit group"
+        disabled={busy === group.id}
+        onClick={() => setEditGroupModalOpen(true)}
+      />
+      {canHaveSubgroups && (
+        <Button
+          type="button"
+          variant="outlined"
+          intent="accent"
+          size="sm"
+          icon="add"
+          tooltip="Create subgroup"
+          disabled={busy === group.id}
+          onClick={() => setCreateSubgroupModalOpen(true)}
+        />
+      )}
+      {isLeaf && (
+        <Button
+          type="button"
+          variant="outlined"
+          intent="accent"
+          size="sm"
+          icon="group_add"
+          tooltip="Edit teams"
+          disabled={busy === group.id}
+          onClick={() => setTeamModalOpen(true)}
+        />
+      )}
+      <Button
+        type="button"
+        variant="outlined"
+        intent="danger"
+        size="sm"
+        icon="delete"
+        tooltip="Delete group"
+        disabled={busy === group.id}
+        onClick={() => setConfirmDeleteOpen(true)}
+      />
+    </div>
+  ) : null;
+
+  const groupBody = (
+    <div className={styles.alignmentGroupBody}>
+      {isLeaf && group.teams.length > 0 && (
+        <ul className={`${styles.alignmentTeamList} ${styles.alignmentGroupTeamList}`}>
+          {group.teams.map((team) => (
+            <ListItem
+              key={team.id}
+              image={team.logo}
+              eyebrow={team.place_name || ''}
+              name={team.team_name || team.name}
+              variant="plain"
+              rightContent={{ type: 'code', value: team.code }}
+              primaryColor={team.primary_color}
+              textColor={team.text_color}
+              actions={[
                 {
-                  icon: 'edit',
-                  tooltip: 'Edit group',
-                  disabled: busy === group.id,
-                  onClick: () => setEditGroupModalOpen(true),
-                },
-                ...(canHaveSubgroups
-                  ? [
-                      {
-                        icon: 'add',
-                        tooltip: 'Create subgroup',
-                        intent: 'accent',
-                        disabled: busy === group.id,
-                        onClick: () => setCreateSubgroupModalOpen(true),
-                      },
-                    ]
-                  : []),
-                ...(isLeaf
-                  ? [
-                      {
-                        icon: 'group_add',
-                        tooltip: 'Edit teams',
-                        intent: 'accent',
-                        disabled: busy === group.id,
-                        onClick: () => setTeamModalOpen(true),
-                      },
-                    ]
-                  : []),
-                {
-                  icon: 'delete',
-                  tooltip: 'Delete group',
+                  icon: 'close',
+                  tooltip: 'Remove team',
                   intent: 'danger',
                   disabled: busy === group.id,
-                  onClick: () => setConfirmDeleteOpen(true),
+                  onClick: () => removeTeam(team.id),
                 },
-              ]
-            : undefined
-        }
-      >
-        {isLeaf && group.teams.length > 0 && (
-          <ul className={styles.alignmentTeamList}>
-            {group.teams.map((team) => (
-              <ListItem
-                key={team.id}
-                image={team.logo}
-                eyebrow={team.place_name || ''}
-                name={team.team_name || team.name}
-                variant="plain"
-                rightContent={{ type: 'code', value: team.code }}
-                primaryColor={team.primary_color}
-                textColor={team.text_color}
-                actions={[
-                  {
-                    icon: 'close',
-                    tooltip: 'Remove team',
-                    intent: 'danger',
-                    disabled: busy === group.id,
-                    onClick: () => removeTeam(team.id),
-                  },
-                ]}
+              ]}
+            />
+          ))}
+        </ul>
+      )}
+      {isLeaf && group.teams.length === 0 && (
+        <p className={`${styles.emptyMsg} ${styles.groupEmptyMsg}`}>
+          No teams assigned to this group.
+        </p>
+      )}
+      {children.length > 0 && (
+        <div className={styles.alignmentGroupChildren}>
+          {depth > 0 && <div className={styles.alignmentGroupChildrenLabel}>Subgroups</div>}
+          <ul className={`${styles.alignmentGroupList} ${styles.alignmentGroupListNested}`}>
+            {children.map((child) => (
+              <AlignmentGroupNode
+                key={child.id}
+                group={child}
+                allGroups={allGroups}
+                leagueTeams={leagueTeams}
+                busy={busy}
+                editMode={editMode}
+                depth={depth + 1}
+                onAddSubgroup={onAddSubgroup}
+                onUpdateGroup={onUpdateGroup}
+                onDeleteGroup={onDeleteGroup}
+                onSetGroupTeams={onSetGroupTeams}
               />
             ))}
           </ul>
-        )}
-        {isLeaf && group.teams.length === 0 && (
-          <p className={`${styles.emptyMsg} ${styles.groupEmptyMsg}`}>
-            No teams assigned to this group.
-          </p>
-        )}
-        {children.length > 0 && (
-          <div className={styles.groupNestedList}>
-            <ul className={styles.alignmentGroupList}>
-              {children.map((child) => (
-                <AlignmentGroupNode
-                  key={child.id}
-                  group={child}
-                  allGroups={allGroups}
-                  leagueTeams={leagueTeams}
-                  busy={busy}
-                  editMode={editMode}
-                  onAddSubgroup={onAddSubgroup}
-                  onUpdateGroup={onUpdateGroup}
-                  onDeleteGroup={onDeleteGroup}
-                  onSetGroupTeams={onSetGroupTeams}
-                />
-              ))}
-            </ul>
+        </div>
+      )}
+    </div>
+  );
+
+  return (
+    <li className={styles.groupItem}>
+      {depth === 0 ? (
+        <div className={styles.alignmentParentGroup}>
+          <div className={styles.alignmentParentGroupHeader}>
+            <div className={styles.alignmentParentGroupTitle}>
+              <span className={styles.alignmentParentGroupName}>
+                {groupName}
+                {' '}
+                <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
+              </span>
+            </div>
+            {groupActions}
           </div>
-        )}
-      </Accordion>
+          <div className={styles.alignmentParentGroupBody}>{groupBody}</div>
+        </div>
+      ) : (
+        <fieldset
+          className={[
+            styles.alignmentGroupFieldset,
+            depth > 0 ? styles.alignmentGroupFieldsetNested : '',
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <legend className={styles.alignmentGroupLegend}>
+            <span className={styles.alignmentGroupLegendTitle}>
+              <span>{groupName}</span>
+              {' '}
+              <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
+            </span>
+            <span
+              className={styles.alignmentGroupLegendRule}
+              aria-hidden="true"
+            />
+            {groupActions}
+          </legend>
+          {groupBody}
+        </fieldset>
+      )}
       {isLeaf && (
         <TeamSelectionModal
           open={teamModalOpen}
@@ -1023,22 +1059,24 @@ const AlignmentPanel = ({
       ) : roots.length === 0 ? (
         <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
       ) : (
-        <ul className={styles.alignmentGroupList}>
-          {roots.map((group) => (
-            <AlignmentGroupNode
-              key={group.id}
-              group={group}
-              allGroups={groups}
-              leagueTeams={leagueTeams}
-              busy={busy}
-              editMode={editMode}
-              onAddSubgroup={(parentGroup, payload) => handleAddDraftGroup(parentGroup, payload)}
-              onUpdateGroup={handleUpdateDraftGroup}
-              onDeleteGroup={handleDeleteDraftGroup}
-              onSetGroupTeams={handleSetDraftGroupTeams}
-            />
-          ))}
-        </ul>
+        <div className={styles.alignmentGroupSection}>
+          <ul className={styles.alignmentGroupList}>
+            {roots.map((group) => (
+              <AlignmentGroupNode
+                key={group.id}
+                group={group}
+                allGroups={groups}
+                leagueTeams={leagueTeams}
+                busy={busy}
+                editMode={editMode}
+                onAddSubgroup={(parentGroup, payload) => handleAddDraftGroup(parentGroup, payload)}
+                onUpdateGroup={handleUpdateDraftGroup}
+                onDeleteGroup={handleDeleteDraftGroup}
+                onSetGroupTeams={handleSetDraftGroupTeams}
+              />
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );
@@ -1401,24 +1439,26 @@ const CreateAlignmentModal = ({
             roots.length === 0 ? (
               <p className={styles.emptyMsg}>No groups are defined in this alignment.</p>
             ) : (
-              <ul className={styles.alignmentGroupList}>
-                {roots.map((group) => (
-                  <AlignmentGroupNode
-                    key={group.id}
-                    group={group}
-                    allGroups={draftDetails.groups}
-                    leagueTeams={leagueTeams}
-                    busy={busy ? 'create' : null}
-                    editMode
-                    onAddSubgroup={(parentGroup, payload) =>
-                      handleAddDraftGroup(parentGroup, payload)
-                    }
-                    onUpdateGroup={handleUpdateDraftGroup}
-                    onDeleteGroup={handleDeleteDraftGroup}
-                    onSetGroupTeams={handleSetDraftGroupTeams}
-                  />
-                ))}
-              </ul>
+              <div className={styles.alignmentGroupSection}>
+                <ul className={styles.alignmentGroupList}>
+                  {roots.map((group) => (
+                    <AlignmentGroupNode
+                      key={group.id}
+                      group={group}
+                      allGroups={draftDetails.groups}
+                      leagueTeams={leagueTeams}
+                      busy={busy ? 'create' : null}
+                      editMode
+                      onAddSubgroup={(parentGroup, payload) =>
+                        handleAddDraftGroup(parentGroup, payload)
+                      }
+                      onUpdateGroup={handleUpdateDraftGroup}
+                      onDeleteGroup={handleDeleteDraftGroup}
+                      onSetGroupTeams={handleSetDraftGroupTeams}
+                    />
+                  ))}
+                </ul>
+              </div>
             )
           ) : null}
         </div>
