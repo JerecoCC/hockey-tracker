@@ -1,14 +1,14 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
-import LeagueAlignmentsTab from './LeagueAlignmentsTab';
-import LeagueAwardsTab from './LeagueAwardsTab';
+import LeagueAlignmentsTab, { LeagueAlignmentsTabSkeleton } from './LeagueAlignmentsTab';
+import LeagueAwardsTab, { LeagueAwardsTabSkeleton } from './LeagueAwardsTab';
 import LeagueEditModal from './LeagueEditModal';
-import LeagueInfoCard, { LeagueInfoCardSkeleton } from './LeagueInfoCard';
-import LeaguePlayersTab from './LeaguePlayersTab';
-import LeaguePlayoffsTab from './LeaguePlayoffsTab';
-import LeagueTeamsTab from './LeagueTeamsTab';
-import LeagueSeasonsCard from './LeagueSeasonsCard';
+import LeagueInfoTab, { LeagueInfoTabSkeleton } from './LeagueInfoTab';
+import LeaguePlayersTab, { LeaguePlayersTabSkeleton } from './LeaguePlayersTab';
+import LeaguePlayoffsTab, { LeaguePlayoffsTabSkeleton } from './LeaguePlayoffsTab';
+import LeagueTeamsTab, { LeagueTeamsTabSkeleton } from './LeagueTeamsTab';
+import LeagueSeasonsTab, { LeagueSeasonsTabSkeleton } from './LeagueSeasonsTab';
 import BulkAddPlayersModal from './BulkAddPlayersModal';
 import PlayerFormModal from './PlayerFormModal';
 import SeasonDeleteModal from '../seasons/SeasonDeleteModal';
@@ -255,25 +255,44 @@ const LeagueDetailsPage = () => {
   if (leagueLoading) {
     return (
       <Tabs
-        activeIndex={0}
-        onTabChange={() => undefined}
-        disabled
+        activeIndex={activeTab}
+        onTabChange={handleTabChange}
         tabs={[
           {
             label: 'Info',
             icon: 'info',
-            content: (
-              <div className={styles.grid}>
-                <LeagueInfoCardSkeleton className={styles.col12} />
-              </div>
-            ),
+            content: <LeagueInfoTabSkeleton />,
           },
-          { label: 'Seasons', icon: 'calendar_month', content: null },
-          { label: 'Teams', icon: 'group', content: null },
-          { label: 'Alignments', icon: 'account_tree', content: null },
-          { label: 'Players', icon: 'groups', content: null },
-          { label: 'Playoffs', icon: 'emoji_events', content: null },
-          { label: 'Awards', icon: 'workspace_premium', content: null },
+          {
+            label: 'Seasons',
+            icon: 'calendar_month',
+            content: <LeagueSeasonsTabSkeleton />,
+          },
+          {
+            label: 'Teams',
+            icon: 'group',
+            content: <LeagueTeamsTabSkeleton />,
+          },
+          {
+            label: 'Alignments',
+            icon: 'account_tree',
+            content: <LeagueAlignmentsTabSkeleton />,
+          },
+          {
+            label: 'Players',
+            icon: 'groups',
+            content: <LeaguePlayersTabSkeleton />,
+          },
+          {
+            label: 'Playoffs',
+            icon: 'emoji_events',
+            content: <LeaguePlayoffsTabSkeleton />,
+          },
+          {
+            label: 'Awards',
+            icon: 'workspace_premium',
+            content: <LeagueAwardsTabSkeleton />,
+          },
         ]}
       />
     );
@@ -298,74 +317,41 @@ const LeagueDetailsPage = () => {
               label: 'Info',
               icon: 'info',
               content: (
-                <div className={styles.grid}>
-                  <LeagueInfoCard
-                    className={styles.col12}
-                    league={league}
-                    onEdit={() => setEditModalOpen(true)}
-                  />
-                </div>
+                <LeagueInfoTab
+                  league={league}
+                  onEdit={() => setEditModalOpen(true)}
+                />
               ),
             },
             {
               label: 'Seasons',
               icon: 'calendar_month',
-              content: (
-                <div className={styles.grid}>
-                  <LeagueSeasonsCard className={styles.col12} />
-                </div>
-              ),
+              content: <LeagueSeasonsTab />,
             },
             {
               label: 'Teams',
               icon: 'group',
-              content: (
-                <div className={styles.grid}>
-                  <LeagueTeamsTab className={styles.col12} />
-                </div>
-              ),
+              content: <LeagueTeamsTab />,
             },
             {
               label: 'Alignments',
               icon: 'account_tree',
-              content: (
-                <div className={styles.grid}>
-                  <LeagueAlignmentsTab className={styles.col12} />
-                </div>
-              ),
+              content: <LeagueAlignmentsTab />,
             },
             {
               label: 'Players',
               icon: 'groups',
-              content: (
-                <div className={styles.grid}>
-                  <LeaguePlayersTab className={styles.col12} />
-                </div>
-              ),
+              content: <LeaguePlayersTab />,
             },
             {
               label: 'Playoffs',
               icon: 'emoji_events',
-              content: (
-                <div className={styles.grid}>
-                  <LeaguePlayoffsTab
-                    className={styles.col12}
-                    leagueId={league.id}
-                  />
-                </div>
-              ),
+              content: <LeaguePlayoffsTab leagueId={league.id} />,
             },
             {
               label: 'Awards',
               icon: 'workspace_premium',
-              content: (
-                <div className={styles.grid}>
-                  <LeagueAwardsTab
-                    className={styles.col12}
-                    leagueId={league.id}
-                  />
-                </div>
-              ),
+              content: <LeagueAwardsTab leagueId={league.id} />,
             },
           ]}
         />

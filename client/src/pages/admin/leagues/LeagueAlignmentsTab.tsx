@@ -11,6 +11,7 @@ import Modal from '@/components/Modal/Modal';
 import SearchField from '@/components/SearchField/SearchField';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import useGroupAlignmentSets, {
   type AlignmentGroupRecord,
@@ -20,6 +21,7 @@ import useGroupAlignmentSets, {
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type TeamRecord } from '@/hooks/useTeams';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
+import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -1159,62 +1161,64 @@ const LeagueAlignmentsTab = (props: Props) => {
 
   return (
     <>
-      <div className={[styles.alignmentCards, className].filter(Boolean).join(' ')}>
-        <Card
-          className={styles.alignmentHeaderCard}
-          noHeaderMargin
-        >
-          <div className={styles.alignmentViewHeader}>
-            <div>
-              <h3>Team Alignments</h3>
-              <p>Define reusable team lists and group structures for seasons.</p>
+      <div className={styles.grid}>
+        <div className={[styles.alignmentCards, styles.col12, className].filter(Boolean).join(' ')}>
+          <Card
+            className={styles.alignmentHeaderCard}
+            noHeaderMargin
+          >
+            <div className={styles.alignmentViewHeader}>
+              <div>
+                <h3>Team Alignments</h3>
+                <p>Define reusable team lists and group structures for seasons.</p>
+              </div>
+              <Button
+                icon="add"
+                size="sm"
+                onClick={() => setCreateModalOpen(true)}
+              >
+                New Alignment
+              </Button>
             </div>
-            <Button
-              icon="add"
-              size="sm"
-              onClick={() => setCreateModalOpen(true)}
-            >
-              New Alignment
-            </Button>
-          </div>
 
-          {alignmentsLoading ? (
-            <p className={styles.emptyMsg}>Loading...</p>
-          ) : alignmentSets.length === 0 ? (
-            <div className={styles.alignmentEmptyState}>
-              <p className={styles.emptyMsg}>No alignment sets yet.</p>
-            </div>
-          ) : (
-            <ul className={styles.alignmentSetStack}>
-              {alignmentSets.map((alignmentSet) => {
-                const editMode = editingAlignmentId === alignmentSet.id;
-                const editLocked =
-                  editingAlignmentId !== null && editingAlignmentId !== alignmentSet.id;
+            {alignmentsLoading ? (
+              <p className={styles.emptyMsg}>Loading...</p>
+            ) : alignmentSets.length === 0 ? (
+              <div className={styles.alignmentEmptyState}>
+                <p className={styles.emptyMsg}>No alignment sets yet.</p>
+              </div>
+            ) : (
+              <ul className={styles.alignmentSetStack}>
+                {alignmentSets.map((alignmentSet) => {
+                  const editMode = editingAlignmentId === alignmentSet.id;
+                  const editLocked =
+                    editingAlignmentId !== null && editingAlignmentId !== alignmentSet.id;
 
-                return (
-                  <AlignmentPanel
-                    key={alignmentSet.id}
-                    alignmentSet={alignmentSet}
-                    busy={alignmentBusy}
-                    details={alignmentDetails[alignmentSet.id] ?? null}
-                    leagueTeams={teams}
-                    editMode={editMode}
-                    editLocked={editLocked}
-                    onLoadDetails={loadAlignmentDetails}
-                    onDelete={() => setConfirmDelete(alignmentSet)}
-                    onStartEdit={() => setEditingAlignmentId(alignmentSet.id)}
-                    onStopEdit={() =>
-                      setEditingAlignmentId((current) =>
-                        current === alignmentSet.id ? null : current,
-                      )
-                    }
-                    onSave={handleSaveAlignment}
-                  />
-                );
-              })}
-            </ul>
-          )}
-        </Card>
+                  return (
+                    <AlignmentPanel
+                      key={alignmentSet.id}
+                      alignmentSet={alignmentSet}
+                      busy={alignmentBusy}
+                      details={alignmentDetails[alignmentSet.id] ?? null}
+                      leagueTeams={teams}
+                      editMode={editMode}
+                      editLocked={editLocked}
+                      onLoadDetails={loadAlignmentDetails}
+                      onDelete={() => setConfirmDelete(alignmentSet)}
+                      onStartEdit={() => setEditingAlignmentId(alignmentSet.id)}
+                      onStopEdit={() =>
+                        setEditingAlignmentId((current) =>
+                          current === alignmentSet.id ? null : current,
+                        )
+                      }
+                      onSave={handleSaveAlignment}
+                    />
+                  );
+                })}
+              </ul>
+            )}
+          </Card>
+        </div>
       </div>
 
       <Modal
@@ -1274,5 +1278,54 @@ const LeagueAlignmentsTab = (props: Props) => {
     </>
   );
 };
+
+export const LeagueAlignmentsTabSkeleton = ({ className }: TabSkeletonProps) => (
+  <div className={styles.grid}>
+    <div className={[styles.alignmentCards, styles.col12, className].filter(Boolean).join(' ')}>
+      <Card
+        className={styles.alignmentHeaderCard}
+        noHeaderMargin
+        role="status"
+        aria-busy="true"
+        aria-label="Loading alignments"
+      >
+        <div className={styles.alignmentViewHeader}>
+          <div className={styles.tabSkeletonHeadingBlock}>
+            <Skeleton
+              type="text"
+              className={styles.tabSkeletonHeading}
+            />
+            <Skeleton
+              type="text"
+              className={styles.tabSkeletonSubheading}
+            />
+          </div>
+          <TabActionSkeleton width="122px" />
+        </div>
+        <ul className={styles.alignmentSetStack}>
+          {Array.from({ length: 5 }, (_, index) => (
+            <li
+              key={index}
+              className={styles.alignmentCard}
+            >
+              <div className={styles.alignmentCardHeader}>
+                <span className={styles.ruleSetName}>
+                  <Skeleton
+                    type="text"
+                    className={styles.tabSkeletonName}
+                  />
+                  <Skeleton
+                    type="text"
+                    className={styles.tabSkeletonMetaLine}
+                  />
+                </span>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </Card>
+    </div>
+  </div>
+);
 
 export default LeagueAlignmentsTab;

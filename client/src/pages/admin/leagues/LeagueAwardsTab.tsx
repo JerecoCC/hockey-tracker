@@ -5,11 +5,17 @@ import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import useLeagueAwards, {
   type LeagueAwardPayload,
   type LeagueAwardRecord,
 } from '@/hooks/useLeagueAwards';
 import type { AwardRecipientType, AwardSelectionMethod } from '@/hooks/useSeasonAwards';
+import {
+  TabActionSkeleton,
+  TabTitleSkeleton,
+  type TabSkeletonProps,
+} from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 const METHOD_OPTIONS = [
@@ -113,73 +119,77 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
 
   const submit = form.handleSubmit(async (values) => {
     const payload = toPayload(values);
-    const ok = editTarget
-      ? await updateAward(editTarget.id, payload)
-      : await createAward(payload);
+    const ok = editTarget ? await updateAward(editTarget.id, payload) : await createAward(payload);
     if (ok) closeModal();
   });
 
   return (
     <>
-      <Card
-        className={className}
-        title="Award Definitions"
-        action={
-          <Button
-            icon="add"
-            size="sm"
-            onClick={openCreate}
-          >
-            New Award
-          </Button>
-        }
-      >
-        {loading ? (
-          <p className={styles.emptyMsg}>Loading...</p>
-        ) : awards.length === 0 ? (
-          <p className={styles.emptyMsg}>No award definitions yet. Create one to apply it across seasons.</p>
-        ) : (
-          <ul className={styles.awardDefinitionList}>
-            {awards.map((award) => (
-              <li
-                key={award.id}
-                className={styles.awardDefinitionItem}
-              >
-                <div className={styles.awardDefinitionMain}>
-                  <span className={styles.awardDefinitionName}>{award.name}</span>
-                  <div className={styles.awardDefinitionMeta}>
-                    <span>{award.recipient_type}</span>
-                    <span>{methodLabel(award.selection_method)}</span>
-                    {statLabel(award.stat_key) && <span>{statLabel(award.stat_key)}</span>}
-                    <span>{award.awarded_after_playoffs ? 'After playoffs' : 'Regular season'}</span>
+      <div className={styles.grid}>
+        <Card
+          className={[styles.col12, className].filter(Boolean).join(' ')}
+          title="Award Definitions"
+          action={
+            <Button
+              icon="add"
+              size="sm"
+              onClick={openCreate}
+            >
+              New Award
+            </Button>
+          }
+        >
+          {loading ? (
+            <p className={styles.emptyMsg}>Loading...</p>
+          ) : awards.length === 0 ? (
+            <p className={styles.emptyMsg}>
+              No award definitions yet. Create one to apply it across seasons.
+            </p>
+          ) : (
+            <ul className={styles.awardDefinitionList}>
+              {awards.map((award) => (
+                <li
+                  key={award.id}
+                  className={styles.awardDefinitionItem}
+                >
+                  <div className={styles.awardDefinitionMain}>
+                    <span className={styles.awardDefinitionName}>{award.name}</span>
+                    <div className={styles.awardDefinitionMeta}>
+                      <span>{award.recipient_type}</span>
+                      <span>{methodLabel(award.selection_method)}</span>
+                      {statLabel(award.stat_key) && <span>{statLabel(award.stat_key)}</span>}
+                      <span>
+                        {award.awarded_after_playoffs ? 'After playoffs' : 'Regular season'}
+                      </span>
+                    </div>
+                    {award.description && (
+                      <p className={styles.awardDefinitionDescription}>{award.description}</p>
+                    )}
                   </div>
-                  {award.description && (
-                    <p className={styles.awardDefinitionDescription}>{award.description}</p>
-                  )}
-                </div>
-                <div className={styles.ruleSetActions}>
-                  <Button
-                    variant="outlined"
-                    intent="neutral"
-                    icon="edit"
-                    size="sm"
-                    tooltip="Edit award"
-                    onClick={() => openEdit(award)}
-                  />
-                  <Button
-                    variant="outlined"
-                    intent="danger"
-                    icon="delete"
-                    size="sm"
-                    tooltip="Remove award"
-                    onClick={() => setConfirmDelete(award)}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+                  <div className={styles.ruleSetActions}>
+                    <Button
+                      variant="outlined"
+                      intent="neutral"
+                      icon="edit"
+                      size="sm"
+                      tooltip="Edit award"
+                      onClick={() => openEdit(award)}
+                    />
+                    <Button
+                      variant="outlined"
+                      intent="danger"
+                      icon="delete"
+                      size="sm"
+                      tooltip="Remove award"
+                      onClick={() => setConfirmDelete(award)}
+                    />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
 
       <Modal
         open={modalOpen}
@@ -282,5 +292,51 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     </>
   );
 };
+
+export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
+  <div className={styles.grid}>
+    <Card
+      className={[styles.col12, className].filter(Boolean).join(' ')}
+      title={<TabTitleSkeleton width="148px" />}
+      action={<TabActionSkeleton width="112px" />}
+      role="status"
+      aria-busy="true"
+      aria-label="Loading awards"
+    >
+      <ul className={styles.awardDefinitionList}>
+        {Array.from({ length: 5 }, (_, index) => (
+          <li
+            key={index}
+            className={styles.awardDefinitionItem}
+          >
+            <div className={styles.awardDefinitionMain}>
+              <Skeleton
+                type="text"
+                className={styles.tabSkeletonAwardName}
+              />
+              <div className={styles.tabSkeletonChipRow}>
+                {Array.from({ length: 3 }, (_, chipIndex) => (
+                  <Skeleton
+                    key={chipIndex}
+                    type="text"
+                    className={styles.tabSkeletonChip}
+                  />
+                ))}
+              </div>
+              <Skeleton
+                type="text"
+                className={styles.tabSkeletonDescription}
+              />
+            </div>
+            <span className={styles.tabSkeletonActions}>
+              <Skeleton type="circle" />
+              <Skeleton type="circle" />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  </div>
+);
 
 export default LeagueAwardsTab;

@@ -169,6 +169,12 @@
   }
 }
 
+.infoSkeletonButton {
+  width: 86px;
+  height: 38px;
+  border-radius: $radius-md;
+}
+
 .infoSkeletonSwatches {
   display: flex;
   flex-wrap: wrap;
@@ -183,13 +189,14 @@
 .infoSkeletonSwatch {
   display: inline-flex;
   align-items: center;
-  gap: $space-xs;
+  justify-content: flex-end;
+  gap: $space-md;
 }
 
 .infoSkeletonSwatchDot {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
+  width: $space-2xl;
+  height: $space-2xl;
+  border-radius: $radius-sm;
 }
 
 .infoSkeletonSwatchLabel {
@@ -244,6 +251,150 @@
 
 .infoSkeletonDescriptionLineShort {
   width: 58%;
+}
+
+.tabSkeletonTitle {
+  height: 18px;
+}
+
+.tabSkeletonButton {
+  height: 34px;
+  border-radius: $radius-md;
+}
+
+.tabSkeletonControls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: $space-md;
+  margin-bottom: $space-xl;
+}
+
+.tabSkeletonSearch {
+  flex: 1;
+  min-width: min(240px, 100%);
+  max-width: 380px;
+  height: 38px;
+  border-radius: $radius-md;
+}
+
+.tabSkeletonSearchFull {
+  width: 100%;
+  max-width: none;
+}
+
+.tabSkeletonActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-xs;
+  flex-shrink: 0;
+}
+
+.tabSkeletonStack,
+.tabSkeletonGrid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tabSkeletonStack {
+  display: flex;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.tabSkeletonGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: $space-md;
+
+  @media (max-width: 640px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.tabSkeletonRow {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  min-height: 72px;
+  padding: $space-md;
+  border-radius: $radius-md;
+  opacity: 0.65;
+}
+
+.tabSkeletonRowBordered {
+  border: 1px solid $border;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.tabSkeletonTextStack {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.tabSkeletonEyebrow {
+  width: min(96px, 35%);
+  height: 10px;
+}
+
+.tabSkeletonName {
+  width: min(180px, 65%);
+  height: 14px;
+}
+
+.tabSkeletonTag {
+  width: 70px;
+  height: 20px;
+}
+
+.tabSkeletonHeadingBlock {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-direction: column;
+  gap: $space-xs;
+}
+
+.tabSkeletonHeading {
+  width: min(190px, 70%);
+  height: 18px;
+}
+
+.tabSkeletonSubheading {
+  width: min(420px, 100%);
+  height: 13px;
+}
+
+.tabSkeletonMetaLine {
+  width: min(150px, 50%);
+  height: 11px;
+}
+
+.tabSkeletonChipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: $space-xs;
+}
+
+.tabSkeletonChip {
+  width: 86px;
+  height: 20px;
+}
+
+.tabSkeletonAwardName {
+  width: min(220px, 70%);
+  height: 16px;
+}
+
+.tabSkeletonDescription {
+  width: min(420px, 100%);
+  height: 13px;
 }
 
 .playoffFormatList {

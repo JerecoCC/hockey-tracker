@@ -3,9 +3,15 @@ import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import BracketRulesModal from '../seasons/BracketRulesModal';
+import {
+  TabActionSkeleton,
+  TabTitleSkeleton,
+  type TabSkeletonProps,
+} from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -47,59 +53,61 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
 
   return (
     <>
-      <Card
-        className={className}
-        title="Playoff Rule Sets"
-        action={
-          <Button
-            icon="add"
-            size="sm"
-            onClick={openCreate}
-          >
-            New Rule Set
-          </Button>
-        }
-      >
-        {loading ? (
-          <p className={styles.emptyMsg}>Loading…</p>
-        ) : ruleSets.length === 0 ? (
-          <p className={styles.emptyMsg}>No rule sets yet. Create one to get started.</p>
-        ) : (
-          <ul className={styles.ruleSetList}>
-            {ruleSets.map((rs) => (
-              <li
-                key={rs.id}
-                className={styles.ruleSetItem}
-              >
-                <span className={styles.ruleSetName}>
-                  <span>{rs.name}</span>
-                  <span className={styles.ruleSetSubtitle}>
-                    {inferBracketSizeFromSlots(rs.slots)}-team bracket
+      <div className={styles.grid}>
+        <Card
+          className={[styles.col12, className].filter(Boolean).join(' ')}
+          title="Playoff Rule Sets"
+          action={
+            <Button
+              icon="add"
+              size="sm"
+              onClick={openCreate}
+            >
+              New Rule Set
+            </Button>
+          }
+        >
+          {loading ? (
+            <p className={styles.emptyMsg}>Loading…</p>
+          ) : ruleSets.length === 0 ? (
+            <p className={styles.emptyMsg}>No rule sets yet. Create one to get started.</p>
+          ) : (
+            <ul className={styles.ruleSetList}>
+              {ruleSets.map((rs) => (
+                <li
+                  key={rs.id}
+                  className={styles.ruleSetItem}
+                >
+                  <span className={styles.ruleSetName}>
+                    <span>{rs.name}</span>
+                    <span className={styles.ruleSetSubtitle}>
+                      {inferBracketSizeFromSlots(rs.slots)}-team bracket
+                    </span>
                   </span>
-                </span>
-                <ActionOverlay className={styles.ruleSetHoverActions}>
-                  <Button
-                    variant="outlined"
-                    intent="neutral"
-                    icon="edit"
-                    size="sm"
-                    tooltip="Edit rule set"
-                    onClick={() => openEdit(rs)}
-                  />
-                  <Button
-                    variant="outlined"
-                    intent="danger"
-                    icon="delete"
-                    size="sm"
-                    tooltip="Delete rule set"
-                    onClick={() => setConfirmDelete(rs)}
-                  />
-                </ActionOverlay>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
+                  <ActionOverlay className={styles.ruleSetHoverActions}>
+                    <Button
+                      variant="outlined"
+                      intent="neutral"
+                      icon="edit"
+                      size="sm"
+                      tooltip="Edit rule set"
+                      onClick={() => openEdit(rs)}
+                    />
+                    <Button
+                      variant="outlined"
+                      intent="danger"
+                      icon="delete"
+                      size="sm"
+                      tooltip="Delete rule set"
+                      onClick={() => setConfirmDelete(rs)}
+                    />
+                  </ActionOverlay>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Card>
+      </div>
 
       <BracketRulesModal
         open={modalOpen}
@@ -129,5 +137,42 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
     </>
   );
 };
+
+export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
+  <div className={styles.grid}>
+    <Card
+      className={[styles.col12, className].filter(Boolean).join(' ')}
+      title={<TabTitleSkeleton width="144px" />}
+      action={<TabActionSkeleton width="126px" />}
+      role="status"
+      aria-busy="true"
+      aria-label="Loading playoff rule sets"
+    >
+      <ul className={styles.ruleSetList}>
+        {Array.from({ length: 5 }, (_, index) => (
+          <li
+            key={index}
+            className={styles.ruleSetItem}
+          >
+            <span className={styles.ruleSetName}>
+              <Skeleton
+                type="text"
+                className={styles.tabSkeletonName}
+              />
+              <Skeleton
+                type="text"
+                className={styles.tabSkeletonMetaLine}
+              />
+            </span>
+            <span className={styles.tabSkeletonActions}>
+              <Skeleton type="circle" />
+              <Skeleton type="circle" />
+            </span>
+          </li>
+        ))}
+      </ul>
+    </Card>
+  </div>
+);
 
 export default LeaguePlayoffsTab;

@@ -36,17 +36,18 @@ export const LeagueInfoCardSkeleton = ({ className }: SkeletonProps) => (
         />
       </div>
       <div className={styles.infoSkeletonRightCol}>
+        <Skeleton className={styles.infoSkeletonButton} />
         <div className={styles.infoSkeletonSwatches}>
           {['primary', 'text'].map((item) => (
             <span
               key={item}
               className={styles.infoSkeletonSwatch}
             >
-              <Skeleton className={styles.infoSkeletonSwatchDot} />
               <Skeleton
                 type="text"
                 className={styles.infoSkeletonSwatchLabel}
               />
+              <Skeleton className={styles.infoSkeletonSwatchDot} />
             </span>
           ))}
         </div>
