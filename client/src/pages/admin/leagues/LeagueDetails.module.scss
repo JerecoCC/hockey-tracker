@@ -466,11 +466,6 @@
   &:hover,
   &:focus-within {
     background: rgba(255, 255, 255, 0.04);
-
-    .ruleSetHoverActions {
-      opacity: 1;
-      pointer-events: auto;
-    }
   }
 }
 
@@ -491,16 +486,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-}
-
-.ruleSetSubtitle {
-  color: $text-dim;
-  font-size: $font-xs;
-  font-weight: 400;
-}
-
-.ruleSetHoverActions {
-  z-index: 2;
 }
 
 .alignmentSetMeta {

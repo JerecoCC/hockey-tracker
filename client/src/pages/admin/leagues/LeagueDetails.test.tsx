@@ -422,6 +422,46 @@ describe('LeagueDetailsPage – tabs', () => {
 
 const clickSeasonsTab = () => fireEvent.click(screen.getByRole('tab', { name: 'Seasons' }));
 
+describe('LeagueDetailsPage - playoffs tab', () => {
+  it('renders playoff rule sets with the default list item row', () => {
+    sessionStorage.setItem('tab:league-details', '5');
+    setup(
+      { league: mockLeague },
+      {},
+      null,
+      {},
+      {
+        ruleSets: [
+          {
+            id: 'br1',
+            league_id: 'lg1',
+            name: 'Standard Bracket',
+            round_names: null,
+            created_at: '',
+            slots: [
+              {
+                slot_key: 'r1m1-home',
+                rule_type: 'seed',
+                rank: 1,
+                scope: 'league',
+                group_id: null,
+                pool: [],
+                choice_ref: null,
+                matchup_ref: null,
+              },
+            ],
+          },
+        ],
+      },
+    );
+
+    const row = screen.getByText('Standard Bracket').closest('li');
+    expect(screen.getByText('4-team bracket')).toBeInTheDocument();
+    expect(row).toHaveClass('item');
+    expect(row).not.toHaveClass('ruleSetItem');
+  });
+});
+
 // ── Seasons card (Seasons tab) ─────────────────────────────────────────
 describe('LeagueDetailsPage – seasons card', () => {
   it('renders the "Create Season" button', () => {

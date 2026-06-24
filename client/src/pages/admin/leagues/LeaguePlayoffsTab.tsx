@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
@@ -70,35 +70,28 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
           ) : (
             <ul className={styles.ruleSetList}>
               {ruleSets.map((rs) => (
-                <li
+                <ListItem
                   key={rs.id}
-                  className={styles.ruleSetItem}
-                >
-                  <span className={styles.ruleSetName}>
-                    <span>{rs.name}</span>
-                    <span className={styles.ruleSetSubtitle}>
-                      {inferBracketSizeFromSlots(rs.slots)}-team bracket
-                    </span>
-                  </span>
-                  <ActionOverlay className={styles.ruleSetHoverActions}>
-                    <Button
-                      variant="outlined"
-                      intent="neutral"
-                      icon="edit"
-                      size="sm"
-                      tooltip="Edit rule set"
-                      onClick={() => openEdit(rs)}
-                    />
-                    <Button
-                      variant="outlined"
-                      intent="danger"
-                      icon="delete"
-                      size="sm"
-                      tooltip="Delete rule set"
-                      onClick={() => setConfirmDelete(rs)}
-                    />
-                  </ActionOverlay>
-                </li>
+                  hideImage
+                  name={rs.name}
+                  subtitle={`${inferBracketSizeFromSlots(rs.slots)}-team bracket`}
+                  actions={
+                    [
+                      {
+                        icon: 'edit',
+                        intent: 'neutral',
+                        tooltip: 'Edit rule set',
+                        onClick: () => openEdit(rs),
+                      },
+                      {
+                        icon: 'delete',
+                        intent: 'danger',
+                        tooltip: 'Delete rule set',
+                        onClick: () => setConfirmDelete(rs),
+                      },
+                    ] satisfies ListItemAction[]
+                  }
+                />
               ))}
             </ul>
           )}
