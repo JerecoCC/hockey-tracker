@@ -4,14 +4,13 @@ import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
-import Icon from '@/components/Icon/Icon';
+import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import SearchField from '@/components/SearchField/SearchField';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Skeleton from '@/components/Skeleton/Skeleton';
-import Tooltip from '@/components/Tooltip/Tooltip';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import useGroupAlignmentSets, {
   type AlignmentGroupRecord,
@@ -79,18 +78,7 @@ const ALIGNMENT_TITLE_TOOLTIP = 'Define reusable team lists and group structures
 const AlignmentCardTitle = () => (
   <>
     Team Alignments
-    <Tooltip text={ALIGNMENT_TITLE_TOOLTIP}>
-      <span
-        className={styles.alignmentTitleInfo}
-        aria-label={ALIGNMENT_TITLE_TOOLTIP}
-        tabIndex={0}
-      >
-        <Icon
-          name="info"
-          size="0.95rem"
-        />
-      </span>
-    </Tooltip>
+    <InfoTooltip text={ALIGNMENT_TITLE_TOOLTIP} />
   </>
 );
 

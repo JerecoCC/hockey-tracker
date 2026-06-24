@@ -544,21 +544,6 @@ $league-tab-list-gap: $space-md;
     gap: $space-md;
   }
 
-  &TitleInfo {
-    display: inline-flex;
-    align-items: center;
-    color: $text-dim;
-    cursor: help;
-    line-height: 1;
-    transition: color $transition-fast;
-
-    &:hover,
-    &:focus-visible {
-      color: $text-bright;
-      outline: none;
-    }
-  }
-
   &SetStack {
     list-style: none;
     margin: 0;

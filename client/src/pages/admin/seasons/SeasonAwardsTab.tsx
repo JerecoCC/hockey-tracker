@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Field from '@/components/Field/Field';
+import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -12,7 +13,6 @@ import SelectableListItem from '@/components/SelectableListItem/SelectableListIt
 import Select, { type SelectOption } from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import Tooltip from '@/components/Tooltip/Tooltip';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
 import useSeasonAwards, {
   type AwardRecipientType,
@@ -1021,18 +1021,15 @@ const SeasonAwardsTab = ({
                 >
                   <div className={styles.awardHeader}>
                     <div className={styles.awardTitleBlock}>
-                      {award.description ? (
-                        <h4>
-                          <Tooltip
+                      <h4>
+                        <span>{award.name}</span>
+                        {award.description && (
+                          <InfoTooltip
                             text={award.description}
-                            className={styles.awardTitleTooltip}
-                          >
-                            <span>{award.name}</span>
-                          </Tooltip>
-                        </h4>
-                      ) : (
-                        <h4>{award.name}</h4>
-                      )}
+                            size="0.9rem"
+                          />
+                        )}
+                      </h4>
                     </div>
                     <div className={styles.awardActions}>
                       <div className={styles.awardRecipientActions}>

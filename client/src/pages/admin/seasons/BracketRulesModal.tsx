@@ -2,10 +2,9 @@ import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import Button from '@/components/Button/Button';
 import Field from '@/components/Field/Field';
-import Icon from '@/components/Icon/Icon';
+import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import Modal from '@/components/Modal/Modal';
 import Select from '@/components/Select/Select';
-import Tooltip from '@/components/Tooltip/Tooltip';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 /** Minimal group shape used for scope filtering — satisfied by both SeasonGroupRecord and GroupRecord. */
 export interface GroupEntry {
@@ -787,18 +786,10 @@ const BracketRulesModal = ({
             <div className={styles.bracketRulesRound}>
               <div className={styles.bracketRulesRoundLabel}>
                 <span>{round1.label}</span>
-                <Tooltip text={AUTO_ADVANCE_TOOLTIP}>
-                  <span
-                    className={styles.bracketRulesRoundInfo}
-                    aria-label={AUTO_ADVANCE_TOOLTIP}
-                    tabIndex={0}
-                  >
-                    <Icon
-                      name="info"
-                      size="0.9rem"
-                    />
-                  </span>
-                </Tooltip>
+                <InfoTooltip
+                  text={AUTO_ADVANCE_TOOLTIP}
+                  size="0.9rem"
+                />
               </div>
               <div className={styles.bracketRulesMatchups}>
                 {Array.from({ length: round1.series }, (_, mi) => (

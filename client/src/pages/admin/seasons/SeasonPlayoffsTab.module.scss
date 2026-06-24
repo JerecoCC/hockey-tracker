@@ -242,21 +242,6 @@
     border-bottom: 1px solid $border;
   }
 
-  &RulesRoundInfo {
-    display: inline-flex;
-    align-items: center;
-    color: $text-dim;
-    cursor: help;
-    line-height: 1;
-    transition: color $transition-fast;
-
-    &:hover,
-    &:focus-visible {
-      color: $text-bright;
-      outline: none;
-    }
-  }
-
   &RulesMatchups {
     display: flex;
     flex-direction: column;

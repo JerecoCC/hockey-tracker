@@ -1,0 +1,17 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.icon {
+  display: inline-flex;
+  align-items: center;
+  color: $text-dim;
+  cursor: help;
+  line-height: 1;
+  transition: color $transition-fast;
+
+  &:hover,
+  &:focus-visible {
+    color: $text-bright;
+    outline: none;
+  }
+}

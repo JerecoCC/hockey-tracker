@@ -592,6 +592,10 @@
     width: 100%;
 
     h4 {
+      display: flex;
+      align-items: center;
+      gap: $space-xs;
+      flex-wrap: wrap;
       margin: 0;
       color: $text-bright;
       font-size: $font-lg;
@@ -606,10 +610,6 @@
       font-size: $font-sm;
       line-height: 1.45;
     }
-  }
-
-  &TitleTooltip {
-    display: inline;
   }
 
   &Actions {
