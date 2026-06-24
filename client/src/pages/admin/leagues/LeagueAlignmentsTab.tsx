@@ -977,7 +977,24 @@ const AlignmentPanel = ({
             </form>
 
             {details === null ? (
-              <p className={styles.emptyMsg}>Loading alignment...</p>
+              <div
+                className={styles.tabSkeletonStack}
+                role="status"
+                aria-busy="true"
+                aria-label="Loading alignment details"
+              >
+                {Array.from({ length: 3 }, (_, index) => (
+                  <Skeleton
+                    key={index}
+                    type="text"
+                    className={
+                      index === 2
+                        ? styles.infoSkeletonDescriptionLineShort
+                        : styles.infoSkeletonDescriptionLine
+                    }
+                  />
+                ))}
+              </div>
             ) : structureType === 'league' ? (
               flatTeams.length === 0 ? (
                 <p className={styles.emptyMsg}>No teams are defined in this alignment.</p>
@@ -1159,6 +1176,8 @@ const LeagueAlignmentsTab = (props: Props) => {
     return saved;
   };
 
+  if (alignmentsLoading) return <LeagueAlignmentsTabSkeleton className={className} />;
+
   return (
     <>
       <div className={styles.grid}>
@@ -1181,9 +1200,7 @@ const LeagueAlignmentsTab = (props: Props) => {
               </Button>
             </div>
 
-            {alignmentsLoading ? (
-              <p className={styles.emptyMsg}>Loading...</p>
-            ) : alignmentSets.length === 0 ? (
+            {alignmentSets.length === 0 ? (
               <div className={styles.alignmentEmptyState}>
                 <p className={styles.emptyMsg}>No alignment sets yet.</p>
               </div>
@@ -1290,15 +1307,9 @@ export const LeagueAlignmentsTabSkeleton = ({ className }: TabSkeletonProps) => 
         aria-label="Loading alignments"
       >
         <div className={styles.alignmentViewHeader}>
-          <div className={styles.tabSkeletonHeadingBlock}>
-            <Skeleton
-              type="text"
-              className={styles.tabSkeletonHeading}
-            />
-            <Skeleton
-              type="text"
-              className={styles.tabSkeletonSubheading}
-            />
+          <div>
+            <h3>Team Alignments</h3>
+            <p>Define reusable team lists and group structures for seasons.</p>
           </div>
           <TabActionSkeleton width="122px" />
         </div>

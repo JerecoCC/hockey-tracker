@@ -11,11 +11,7 @@ import useLeagueAwards, {
   type LeagueAwardRecord,
 } from '@/hooks/useLeagueAwards';
 import type { AwardRecipientType, AwardSelectionMethod } from '@/hooks/useSeasonAwards';
-import {
-  TabActionSkeleton,
-  TabTitleSkeleton,
-  type TabSkeletonProps,
-} from './LeagueTabSkeletonHelpers';
+import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 const METHOD_OPTIONS = [
@@ -123,6 +119,8 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
     if (ok) closeModal();
   });
 
+  if (loading) return <LeagueAwardsTabSkeleton className={className} />;
+
   return (
     <>
       <div className={styles.grid}>
@@ -139,9 +137,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             </Button>
           }
         >
-          {loading ? (
-            <p className={styles.emptyMsg}>Loading...</p>
-          ) : awards.length === 0 ? (
+          {awards.length === 0 ? (
             <p className={styles.emptyMsg}>
               No award definitions yet. Create one to apply it across seasons.
             </p>
@@ -297,7 +293,7 @@ export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
     <Card
       className={[styles.col12, className].filter(Boolean).join(' ')}
-      title={<TabTitleSkeleton width="148px" />}
+      title="Award Definitions"
       action={<TabActionSkeleton width="112px" />}
       role="status"
       aria-busy="true"

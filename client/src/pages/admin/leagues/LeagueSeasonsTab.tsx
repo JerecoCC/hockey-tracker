@@ -1,23 +1,26 @@
 import Card from '@/components/Card/Card';
+import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
-import {
-  LeagueListRowSkeleton,
-  TabActionSkeleton,
-  TabTitleSkeleton,
-} from './LeagueTabSkeletonHelpers';
+import { LeagueListRowSkeleton, TabActionSkeleton } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
-const LeagueSeasonsTab = () => (
-  <div className={styles.grid}>
-    <LeagueSeasonsCard className={styles.col12} />
-  </div>
-);
+const LeagueSeasonsTab = () => {
+  const { loading } = useLeagueDetailsContext();
+
+  if (loading) return <LeagueSeasonsTabSkeleton />;
+
+  return (
+    <div className={styles.grid}>
+      <LeagueSeasonsCard className={styles.col12} />
+    </div>
+  );
+};
 
 export const LeagueSeasonsTabSkeleton = () => (
   <div className={styles.grid}>
     <Card
       className={styles.col12}
-      title={<TabTitleSkeleton width="88px" />}
+      title="Seasons"
       action={<TabActionSkeleton width="126px" />}
       role="status"
       aria-busy="true"

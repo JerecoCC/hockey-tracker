@@ -6,6 +6,8 @@ import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbCo
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import useLeaguePlayers from '@/hooks/useLeaguePlayers';
+import useBracketRuleSets from '@/hooks/useBracketRuleSets';
+import useLeagueAwards from '@/hooks/useLeagueAwards';
 import LeagueDetailsPage from './LeagueDetails';
 
 // ── Router ─────────────────────────────────────────────────────────────
@@ -44,6 +46,27 @@ jest.mock('../../../hooks/useLeaguePlayers', () => ({
     deletePlayer: jest.fn(),
   })),
 }));
+jest.mock('../../../hooks/useBracketRuleSets', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    ruleSets: [],
+    loading: false,
+    fetchRuleSet: jest.fn(async () => null),
+    createRuleSet: jest.fn(async () => null),
+    updateSlots: jest.fn(async () => true),
+    deleteRuleSet: jest.fn(async () => true),
+  })),
+}));
+jest.mock('../../../hooks/useLeagueAwards', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    awards: [],
+    loading: false,
+    createAward: jest.fn(async () => true),
+    updateAward: jest.fn(async () => true),
+    deleteAward: jest.fn(async () => true),
+  })),
+}));
 jest.mock('../../../hooks/useGroupAlignmentSets', () => ({
   __esModule: true,
   default: jest.fn(() => ({
@@ -66,12 +89,17 @@ jest.mock('../../../hooks/useGroupAlignmentSets', () => ({
 jest.mock('./BulkAddPlayersModal', () => () => null);
 
 // ── Heavy / portal-incompatible child components ───────────────────────
-jest.mock('../../../components/RichTextEditor/RichTextEditor', () => function MockRichTextEditor() {
-  return <div data-testid="rte" />;
-});
+jest.mock(
+  '../../../components/RichTextEditor/RichTextEditor',
+  () =>
+    function MockRichTextEditor() {
+      return <div data-testid="rte" />;
+    },
+);
 jest.mock('./LeagueFormModal', () => () => null);
 jest.mock('./PlayerFormModal', () => () => null);
 jest.mock('../teams/TeamFormModal', () => () => null);
+jest.mock('../seasons/BracketRulesModal', () => () => null);
 jest.mock('../seasons/SeasonFormModal', () => () => null);
 jest.mock('../seasons/SeasonDeleteModal', () => () => null);
 
@@ -115,6 +143,23 @@ const basePlayersHook = {
   deletePlayer: jest.fn(),
 };
 
+const baseBracketRuleSetsHook = {
+  ruleSets: [],
+  loading: false,
+  fetchRuleSet: jest.fn(async () => null),
+  createRuleSet: jest.fn(async () => null),
+  updateSlots: jest.fn(async () => true),
+  deleteRuleSet: jest.fn(async () => true),
+};
+
+const baseAwardsHook = {
+  awards: [],
+  loading: false,
+  createAward: jest.fn(async () => true),
+  updateAward: jest.fn(async () => true),
+  deleteAward: jest.fn(async () => true),
+};
+
 const mockLeague = {
   id: 'lg1',
   name: 'Test League',
@@ -144,6 +189,8 @@ const setup = (
   groupOverrides = {},
   locationState: unknown = null,
   playerOverrides = {},
+  bracketRuleSetOverrides = {},
+  awardOverrides = {},
 ) => {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   (useParams as jest.Mock).mockReturnValue({ id: 'lg1' });
@@ -151,6 +198,11 @@ const setup = (
   (useLeagueDetails as jest.Mock).mockReturnValue({ ...baseHook, ...hookOverrides });
   (useLeagueGroups as jest.Mock).mockReturnValue({ ...baseGroupsHook, ...groupOverrides });
   (useLeaguePlayers as jest.Mock).mockReturnValue({ ...basePlayersHook, ...playerOverrides });
+  (useBracketRuleSets as jest.Mock).mockReturnValue({
+    ...baseBracketRuleSetsHook,
+    ...bracketRuleSetOverrides,
+  });
+  (useLeagueAwards as jest.Mock).mockReturnValue({ ...baseAwardsHook, ...awardOverrides });
   return render(
     <BreadcrumbHarness>
       <LeagueDetailsPage />
@@ -175,9 +227,7 @@ describe('LeagueDetailsPage – loading', () => {
 
   it('renders the Info tab skeleton while fetching', () => {
     const { container } = setup({ loading: true });
-    expect(
-      screen.getByRole('status', { name: /loading league information/i }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading league information/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Info' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('tab', { name: 'Seasons' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Teams' })).toBeInTheDocument();
@@ -194,6 +244,7 @@ describe('LeagueDetailsPage – loading', () => {
     const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Teams' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Teams' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading teams/i })).toBeInTheDocument();
     expect(container.querySelector('.tabSkeletonSearchFull')).toBeInTheDocument();
     expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(5);
@@ -207,8 +258,44 @@ describe('LeagueDetailsPage – loading', () => {
     const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Seasons' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Seasons' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading seasons/i })).toBeInTheDocument();
     expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(5);
+  });
+
+  it('keeps the static Alignments header visible while loading', () => {
+    sessionStorage.setItem('tab:league-details', '3');
+    setup({ loading: true });
+
+    expect(screen.getByRole('tab', { name: 'Alignments' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('heading', { name: 'Team Alignments' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Define reusable team lists and group structures for seasons.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading alignments/i })).toBeInTheDocument();
+  });
+
+  it('uses the Playoffs tab skeleton when playoff rule sets are loading', () => {
+    sessionStorage.setItem('tab:league-details', '5');
+    setup({ league: mockLeague }, {}, null, {}, { loading: true });
+
+    expect(screen.getByRole('tab', { name: 'Playoffs' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Playoff Rule Sets' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading playoff rule sets/i })).toBeInTheDocument();
+    expect(screen.queryByText(/No rule sets yet/i)).not.toBeInTheDocument();
+  });
+
+  it('uses the Awards tab skeleton when award definitions are loading', () => {
+    sessionStorage.setItem('tab:league-details', '6');
+    setup({ league: mockLeague }, {}, null, {}, {}, { loading: true });
+
+    expect(screen.getByRole('tab', { name: 'Awards' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('heading', { name: 'Award Definitions' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /loading awards/i })).toBeInTheDocument();
+    expect(screen.queryByText(/No award definitions yet/i)).not.toBeInTheDocument();
   });
 
   it('does not show the league name while loading', () => {
@@ -475,33 +562,28 @@ describe('LeagueDetailsPage – players tab', () => {
   });
 
   it('navigates to league-scoped player details from the Players tab', () => {
-    setup(
-      { league: mockLeague },
-      {},
-      null,
-      {
-        players: [
-          {
-            id: 'player-1',
-            first_name: 'John',
-            last_name: 'Smith',
-            photo: null,
-            date_of_birth: null,
-            birth_city: null,
-            birth_country: null,
-            height_cm: null,
-            weight_lbs: null,
-            position: 'C',
-            shoots: 'L',
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z',
-            team_id: null,
-            team_code: null,
-          },
-        ],
-        total: 1,
-      },
-    );
+    setup({ league: mockLeague }, {}, null, {
+      players: [
+        {
+          id: 'player-1',
+          first_name: 'John',
+          last_name: 'Smith',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+      ],
+      total: 1,
+    });
     clickPlayersTab();
 
     const tooltip = screen.getByRole('tooltip', { name: /view player/i });
@@ -511,33 +593,28 @@ describe('LeagueDetailsPage – players tab', () => {
   });
 
   it('renders player rows as links to player details', () => {
-    setup(
-      { league: mockLeague },
-      {},
-      null,
-      {
-        players: [
-          {
-            id: 'player-1',
-            first_name: 'John',
-            last_name: 'Smith',
-            photo: null,
-            date_of_birth: null,
-            birth_city: null,
-            birth_country: null,
-            height_cm: null,
-            weight_lbs: null,
-            position: 'C',
-            shoots: 'L',
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z',
-            team_id: null,
-            team_code: null,
-          },
-        ],
-        total: 1,
-      },
-    );
+    setup({ league: mockLeague }, {}, null, {
+      players: [
+        {
+          id: 'player-1',
+          first_name: 'John',
+          last_name: 'Smith',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+      ],
+      total: 1,
+    });
     clickPlayersTab();
 
     const row = screen.getByText('John Smith').closest('li');
@@ -545,56 +622,51 @@ describe('LeagueDetailsPage – players tab', () => {
   });
 
   it('shows missing data indicators only for players with associated games', () => {
-    setup(
-      { league: mockLeague },
-      {},
-      null,
-      {
-        players: [
-          {
-            id: 'player-1',
-            first_name: 'John',
-            last_name: 'Smith',
-            photo: null,
-            date_of_birth: '1995-01-01',
-            birth_city: null,
-            birth_country: null,
-            height_cm: null,
-            weight_lbs: null,
-            position: 'C',
-            shoots: 'L',
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z',
-            team_id: null,
-            team_code: null,
-            acquisition_type: null,
-            start_date: null,
-            has_games: true,
-          },
-          {
-            id: 'player-2',
-            first_name: 'Jane',
-            last_name: 'Doe',
-            photo: null,
-            date_of_birth: null,
-            birth_city: null,
-            birth_country: null,
-            height_cm: null,
-            weight_lbs: null,
-            position: 'D',
-            shoots: 'R',
-            is_active: true,
-            created_at: '2024-01-01T00:00:00Z',
-            team_id: null,
-            team_code: null,
-            acquisition_type: null,
-            start_date: null,
-            has_games: false,
-          },
-        ],
-        total: 2,
-      },
-    );
+    setup({ league: mockLeague }, {}, null, {
+      players: [
+        {
+          id: 'player-1',
+          first_name: 'John',
+          last_name: 'Smith',
+          photo: null,
+          date_of_birth: '1995-01-01',
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: true,
+        },
+        {
+          id: 'player-2',
+          first_name: 'Jane',
+          last_name: 'Doe',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'D',
+          shoots: 'R',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: null,
+          start_date: null,
+          has_games: false,
+        },
+      ],
+      total: 2,
+    });
     clickPlayersTab();
 
     expect(screen.getByText('John Smith \u26A0\uFE0F')).toBeInTheDocument();
@@ -603,4 +675,3 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.queryByText('Jane Doe \u26A0\uFE0F')).not.toBeInTheDocument();
   });
 });
-

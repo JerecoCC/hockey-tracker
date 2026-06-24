@@ -9,7 +9,6 @@ import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import {
   LeagueListRowSkeleton,
   TabActionSkeleton,
-  TabTitleSkeleton,
   type TabSkeletonProps,
 } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
@@ -23,6 +22,8 @@ const LeagueTeamsTab = (props: Props) => {
   const { league, teams, loading, busy, onAddTeam, onEditTeam, onDeleteTeam } =
     useLeagueDetailsContext();
   const navigate = useNavigate();
+
+  if (loading) return <LeagueTeamsTabSkeleton className={className} />;
 
   return (
     <div className={styles.grid}>
@@ -94,7 +95,6 @@ const LeagueTeamsTab = (props: Props) => {
             </ul>
           )}
           placeholder="Search teams..."
-          loading={loading}
           emptyMessage="No teams assigned to this league yet."
           noResultsMessage={(q) => `No teams match "${q}".`}
         />
@@ -107,7 +107,7 @@ export const LeagueTeamsTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
     <Card
       className={[styles.col12, className].filter(Boolean).join(' ')}
-      title={<TabTitleSkeleton width="72px" />}
+      title="Teams"
       action={<TabActionSkeleton width="112px" />}
       role="status"
       aria-busy="true"

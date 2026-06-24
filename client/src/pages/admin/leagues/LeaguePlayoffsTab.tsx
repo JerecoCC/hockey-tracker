@@ -7,11 +7,7 @@ import Skeleton from '@/components/Skeleton/Skeleton';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import BracketRulesModal from '../seasons/BracketRulesModal';
-import {
-  TabActionSkeleton,
-  TabTitleSkeleton,
-  type TabSkeletonProps,
-} from './LeagueTabSkeletonHelpers';
+import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -51,6 +47,8 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
     setEditTarget(null);
   };
 
+  if (loading) return <LeaguePlayoffsTabSkeleton className={className} />;
+
   return (
     <>
       <div className={styles.grid}>
@@ -67,9 +65,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
             </Button>
           }
         >
-          {loading ? (
-            <p className={styles.emptyMsg}>Loading…</p>
-          ) : ruleSets.length === 0 ? (
+          {ruleSets.length === 0 ? (
             <p className={styles.emptyMsg}>No rule sets yet. Create one to get started.</p>
           ) : (
             <ul className={styles.ruleSetList}>
@@ -142,7 +138,7 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
     <Card
       className={[styles.col12, className].filter(Boolean).join(' ')}
-      title={<TabTitleSkeleton width="144px" />}
+      title="Playoff Rule Sets"
       action={<TabActionSkeleton width="126px" />}
       role="status"
       aria-busy="true"

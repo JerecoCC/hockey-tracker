@@ -5,14 +5,6 @@ export interface TabSkeletonProps {
   className?: string;
 }
 
-export const TabTitleSkeleton = ({ width }: { width: string }) => (
-  <Skeleton
-    type="text"
-    width={width}
-    className={styles.tabSkeletonTitle}
-  />
-);
-
 export const TabActionSkeleton = ({ width = '112px' }: { width?: string }) => (
   <Skeleton
     width={width}

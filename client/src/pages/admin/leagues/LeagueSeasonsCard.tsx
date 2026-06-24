@@ -17,22 +17,14 @@ const parseLocal = (iso: string) => {
   const [y, m, d] = iso.slice(0, 10).split('-').map(Number);
   return new Date(y, m - 1, d);
 };
-const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : '—');
+const formatDate = (d: string | null) => (d ? DATE_FMT.format(parseLocal(d)) : 'â€”');
 const formatEndDate = (d: string | null, isCurrent: boolean) =>
   d ? DATE_FMT.format(parseLocal(d)) : isCurrent ? 'Present' : '?';
 
 const LeagueSeasonsCard = (props: Props) => {
   const { className } = props;
-  const {
-    seasons,
-    loading,
-    busy,
-    onAddSeason,
-    onEditSeason,
-    onDeleteSeason,
-    onViewSeason,
-    getSeasonHref,
-  } = useLeagueDetailsContext();
+  const { seasons, busy, onAddSeason, onEditSeason, onDeleteSeason, onViewSeason, getSeasonHref } =
+    useLeagueDetailsContext();
   return (
     <Card
       className={className}
@@ -47,9 +39,7 @@ const LeagueSeasonsCard = (props: Props) => {
         </Button>
       }
     >
-      {loading ? (
-        <p className={styles.teamsEmpty}>Loading…</p>
-      ) : seasons.length === 0 ? (
+      {seasons.length === 0 ? (
         <p className={styles.teamsEmpty}>No seasons for this league yet.</p>
       ) : (
         <ul
@@ -63,7 +53,7 @@ const LeagueSeasonsCard = (props: Props) => {
               href={getSeasonHref(s)}
               subtitle={
                 s.start_date || s.end_date
-                  ? `${formatDate(s.start_date)} – ${formatEndDate(s.end_date, s.is_current)}`
+                  ? `${formatDate(s.start_date)} â€“ ${formatEndDate(s.end_date, s.is_current)}`
                   : 'No dates'
               }
               rightContent={

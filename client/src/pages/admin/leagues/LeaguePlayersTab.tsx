@@ -13,11 +13,7 @@ import Skeleton from '@/components/Skeleton/Skeleton';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
-import {
-  TabActionSkeleton,
-  TabTitleSkeleton,
-  type TabSkeletonProps,
-} from './LeagueTabSkeletonHelpers';
+import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 const POSITION_LABELS: Record<string, string> = {
@@ -74,6 +70,8 @@ const LeaguePlayersTab = ({ className }: Props) => {
     setIsDeleting(false);
     setConfirmDelete(null);
   };
+
+  if (loading) return <LeaguePlayersTabSkeleton className={className} />;
 
   return (
     <>
@@ -223,7 +221,6 @@ const LeaguePlayersTab = ({ className }: Props) => {
                 </Button>
               </>
             }
-            loading={loading}
             emptyMessage="No players in this league yet."
             noResultsMessage={(q) => `No players match "${q}".`}
           />
@@ -261,7 +258,7 @@ export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
     <Card
       className={[styles.col12, className].filter(Boolean).join(' ')}
-      title={<TabTitleSkeleton width="80px" />}
+      title="Players"
       action={<TabActionSkeleton width="148px" />}
       role="status"
       aria-busy="true"
