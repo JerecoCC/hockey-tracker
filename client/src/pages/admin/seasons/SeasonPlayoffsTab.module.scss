@@ -180,6 +180,48 @@
     gap: $space-lg;
   }
 
+  &RulesLabelGroup {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+  }
+
+  &RulesLabelControl {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: $space-xs;
+  }
+
+  &RulesMatchupToggle {
+    flex-shrink: 0;
+  }
+
+  &RulesMatchupLabelRegion {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    overflow: hidden;
+    transition:
+      grid-template-rows $transition-base,
+      opacity $transition-fast;
+  }
+
+  &RulesMatchupLabelRegionOpen {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+
+  &RulesMatchupLabelFields {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+    gap: $space-sm;
+    min-height: 0;
+    overflow: hidden;
+    padding-left: $space-sm;
+    border-left: 1px solid rgba($border, 0.55);
+  }
+
   &RulesRound {
     display: flex;
     flex-direction: column;
@@ -218,13 +260,13 @@
   &RulesMatchups {
     display: flex;
     flex-direction: column;
-    gap: $space-sm;
+    gap: $space-md;
   }
 
   &RulesMatchup {
     display: flex;
     flex-direction: column;
-    gap: $space-sm;
+    gap: $space-md;
     margin: 0;
     background: transparent;
     border: 1px solid $border;
@@ -244,8 +286,8 @@
   &RulesSlotRow {
     display: flex;
     flex-direction: column;
-    gap: $space-sm;
-    padding: 0 0 $space-sm;
+    gap: $space-md;
+    padding: 0 0 $space-md;
 
     &:not(:last-child) {
       border-bottom: 1px solid rgba($border, 0.4);
@@ -263,7 +305,7 @@
   &RulesSlotFieldRows {
     display: flex;
     flex-direction: column;
-    gap: $space-xs;
+    gap: $space-md;
     min-width: 0;
   }
 
@@ -271,7 +313,7 @@
     display: flex;
     flex-wrap: wrap;
     align-items: flex-start;
-    gap: $space-xs;
+    gap: $space-md;
     flex: 1;
   }
 
@@ -303,7 +345,7 @@
   &Editor {
     display: flex;
     flex-direction: column;
-    gap: $space-xs;
+    gap: $space-md;
     flex: 1;
     width: 100%;
   }
@@ -311,7 +353,7 @@
   &SeedRow {
     display: flex;
     align-items: center;
-    gap: $space-xs;
+    gap: $space-md;
   }
 }
 
@@ -584,6 +626,25 @@
     flex: 1;
     gap: $space-sm;
     justify-content: space-around;
+  }
+
+  &SlotGroup {
+    display: flex;
+    flex-direction: column;
+    gap: $space-xs;
+  }
+
+  &MatchupLabel {
+    align-self: center;
+    max-width: 100%;
+    font-size: $font-xs;
+    font-weight: 600;
+    line-height: 1.3;
+    color: $text-dim;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    overflow-wrap: anywhere;
   }
 
   &Slot {
@@ -864,6 +925,20 @@
       outline: 2px solid $accent;
       outline-offset: 2px;
     }
+  }
+
+  &MatchupLabel {
+    position: relative;
+    z-index: 1;
+    flex: 0 1 9rem;
+    min-width: 0;
+    font-size: $font-xs;
+    font-weight: 600;
+    line-height: 1.25;
+    color: $text-dim;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    overflow-wrap: anywhere;
   }
 
   &Teams {

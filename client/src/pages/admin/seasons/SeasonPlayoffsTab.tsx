@@ -19,6 +19,7 @@ import { buildPlayoffSeriesDetailsPath } from '@/lib/routeSlugs';
 import {
   type BracketStructure,
   deriveBracketStructureFromSize,
+  getMatchupLabel,
   getRoundLabel,
   makeSlotKey,
 } from './BracketRulesModal';
@@ -952,14 +953,12 @@ const SeasonPlayoffsTab = ({
     [playoffFormat, groups],
   );
 
-  // Custom round names from the assigned rule set (null if none configured).
-  const roundNames = useMemo(
-    () =>
-      bracketRuleSetId
-        ? (ruleSets.find((rs) => rs.id === bracketRuleSetId)?.round_names ?? null)
-        : null,
+  const activeRuleSet = useMemo(
+    () => (bracketRuleSetId ? (ruleSets.find((rs) => rs.id === bracketRuleSetId) ?? null) : null),
     [bracketRuleSetId, ruleSets],
   );
+  const roundNames = activeRuleSet?.round_names ?? null;
+  const matchupNames = activeRuleSet?.matchup_names ?? null;
 
   // ── Modal state ───────────────────────────────────────────────────────────────
   const [formatModalOpen, setFormatModalOpen] = useState(false);
@@ -1285,36 +1284,48 @@ const SeasonPlayoffsTab = ({
                               );
                             const canAdvanceWinner =
                               s?.status === 'complete' && hasNextRound && !winnerAlreadyAdvanced;
+                            const matchupLabel = getMatchupLabel(slotKey, matchupNames);
 
                             return (
-                              <BracketSlot
-                                key={slotIndex}
-                                series={s}
-                                busy={seriesBusy}
-                                seriesHref={s ? seriesDetailsPath(s) : undefined}
-                                slotRef={registerBracketSlot(slotKey)}
-                                simulatedTeam1={
-                                  simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team1')]
-                                }
-                                simulatedTeam1Details={
-                                  simulatedSlotTeams?.[
-                                    makeSlotKey(roundInfo.round, slotIndex, 'team1')
-                                  ]
-                                }
-                                simulatedTeam2={
-                                  simulatedSlots?.[makeSlotKey(roundInfo.round, slotIndex, 'team2')]
-                                }
-                                simulatedTeam2Details={
-                                  simulatedSlotTeams?.[
-                                    makeSlotKey(roundInfo.round, slotIndex, 'team2')
-                                  ]
-                                }
-                                canAdvance={canAdvance}
-                                canAdvanceWinner={canAdvanceWinner}
-                                onStart={handleStartSeries}
-                                onAdvance={advanceBracket}
-                                onForceAdvance={s ? () => forceAdvance(s.id) : undefined}
-                              />
+                              <div
+                                key={slotKey}
+                                className={styles.bracketSlotGroup}
+                              >
+                                {matchupLabel && (
+                                  <span className={styles.bracketMatchupLabel}>{matchupLabel}</span>
+                                )}
+                                <BracketSlot
+                                  series={s}
+                                  busy={seriesBusy}
+                                  seriesHref={s ? seriesDetailsPath(s) : undefined}
+                                  slotRef={registerBracketSlot(slotKey)}
+                                  simulatedTeam1={
+                                    simulatedSlots?.[
+                                      makeSlotKey(roundInfo.round, slotIndex, 'team1')
+                                    ]
+                                  }
+                                  simulatedTeam1Details={
+                                    simulatedSlotTeams?.[
+                                      makeSlotKey(roundInfo.round, slotIndex, 'team1')
+                                    ]
+                                  }
+                                  simulatedTeam2={
+                                    simulatedSlots?.[
+                                      makeSlotKey(roundInfo.round, slotIndex, 'team2')
+                                    ]
+                                  }
+                                  simulatedTeam2Details={
+                                    simulatedSlotTeams?.[
+                                      makeSlotKey(roundInfo.round, slotIndex, 'team2')
+                                    ]
+                                  }
+                                  canAdvance={canAdvance}
+                                  canAdvanceWinner={canAdvanceWinner}
+                                  onStart={handleStartSeries}
+                                  onAdvance={advanceBracket}
+                                  onForceAdvance={s ? () => forceAdvance(s.id) : undefined}
+                                />
+                              </div>
                             );
                           })}
                         </div>
@@ -1339,42 +1350,51 @@ const SeasonPlayoffsTab = ({
                         <p className={styles.roundLabel}>
                           {getRoundLabel(round, maxRound, roundNames)}
                         </p>
-                        {seriesByRound[round].map((s) => (
-                          <div
-                            key={s.id}
-                            className={styles.seriesRow}
-                          >
-                            <Link
-                              to={seriesDetailsPath(s)}
-                              className={styles.seriesRowLink}
-                              aria-label={`View ${s.away_team_code ?? 'away'} vs ${s.home_team_code ?? 'home'} series`}
-                            />
-                            <span className={styles.seriesTeams}>
-                              {s.away_team_name} @ {s.home_team_name}
-                              {s.series_letter && <> &nbsp;({s.series_letter})</>}
-                            </span>
-                            <span className={styles.seriesScore}>
-                              {s.away_wins}–{s.home_wins}
-                            </span>
-                            <Tag
-                              label={STATUS_LABEL[s.status]}
-                              intent={STATUS_INTENT[s.status]}
-                            />
-                            <div className={styles.seriesRowActions}>
-                              {s.games.length === 0 && s.status === 'upcoming' && (
-                                <Button
-                                  variant="ghost"
-                                  intent="accent"
-                                  icon="play_arrow"
-                                  size="sm"
-                                  tooltip="Start series"
-                                  disabled={seriesBusy === s.id}
-                                  onClick={() => handleStartSeries(s)}
-                                />
+                        {seriesByRound[round].map((s) => {
+                          const matchupLabel = getMatchupLabel(
+                            s.bracket_slot_key ?? '',
+                            matchupNames,
+                          );
+                          return (
+                            <div
+                              key={s.id}
+                              className={styles.seriesRow}
+                            >
+                              <Link
+                                to={seriesDetailsPath(s)}
+                                className={styles.seriesRowLink}
+                                aria-label={`View ${s.away_team_code ?? 'away'} vs ${s.home_team_code ?? 'home'} series`}
+                              />
+                              {matchupLabel && (
+                                <span className={styles.seriesMatchupLabel}>{matchupLabel}</span>
                               )}
+                              <span className={styles.seriesTeams}>
+                                {s.away_team_name} @ {s.home_team_name}
+                                {s.series_letter && <> &nbsp;({s.series_letter})</>}
+                              </span>
+                              <span className={styles.seriesScore}>
+                                {s.away_wins}–{s.home_wins}
+                              </span>
+                              <Tag
+                                label={STATUS_LABEL[s.status]}
+                                intent={STATUS_INTENT[s.status]}
+                              />
+                              <div className={styles.seriesRowActions}>
+                                {s.games.length === 0 && s.status === 'upcoming' && (
+                                  <Button
+                                    variant="ghost"
+                                    intent="accent"
+                                    icon="play_arrow"
+                                    size="sm"
+                                    tooltip="Start series"
+                                    disabled={seriesBusy === s.id}
+                                    onClick={() => handleStartSeries(s)}
+                                  />
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     );
                   })}

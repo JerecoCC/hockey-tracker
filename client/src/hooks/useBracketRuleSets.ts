@@ -30,6 +30,8 @@ export interface BracketRuleSet {
   name: string;
   /** Custom display labels keyed by round number string, e.g. { "1": "Wild Card", "4": "Final" }. Null = use default labels. */
   round_names: Record<string, string> | null;
+  /** Optional display labels keyed by matchup slot, e.g. { "r3m0": "Eastern Conference Final" }. Null = use round labels. */
+  matchup_names?: Record<string, string> | null;
   created_at: string;
   slots: BracketSlotRule[];
 }
@@ -90,11 +92,18 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
     name: string,
     slots: SaveSlotsPayload[],
     round_names?: Record<string, string> | null,
+    matchup_names?: Record<string, string> | null,
   ): Promise<BracketRuleSet | null> => {
     try {
       const { data } = await axios.post<BracketRuleSet>(
         `${API}/admin/bracket-rule-sets`,
-        { league_id: leagueId, name, slots, round_names: round_names ?? null },
+        {
+          league_id: leagueId,
+          name,
+          slots,
+          round_names: round_names ?? null,
+          matchup_names: matchup_names ?? null,
+        },
         { headers: authHeaders() },
       );
       await invalidate();
@@ -111,12 +120,13 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
     name: string,
     slots: SaveSlotsPayload[],
     round_names?: Record<string, string> | null,
+    matchup_names?: Record<string, string> | null,
   ): Promise<boolean> => {
     try {
       await Promise.all([
         axios.patch(
           `${API}/admin/bracket-rule-sets/${id}`,
-          { name, round_names: round_names ?? null },
+          { name, round_names: round_names ?? null, matchup_names: matchup_names ?? null },
           { headers: authHeaders() },
         ),
         axios.put(

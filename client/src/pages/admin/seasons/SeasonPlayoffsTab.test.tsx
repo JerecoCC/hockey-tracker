@@ -3,6 +3,15 @@ import {
   getSeasonGroupTeamIds,
   normalizeBracketSlotRule,
 } from './SeasonPlayoffsTab';
+import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
+import { getMatchupLabel, getRoundLabel } from './BracketRulesModal';
+
+const groupTeam = (id: string): GroupTeamRecord => ({
+  id,
+  name: id,
+  code: id.toUpperCase(),
+  logo: null,
+});
 
 describe('playoff bracket slot key normalization', () => {
   it('maps legacy home and away suffixes to canonical team slots', () => {
@@ -44,7 +53,7 @@ describe('playoff bracket slot key normalization', () => {
           sort_order: 0,
           created_at: '2024-01-01T00:00:00.000Z',
           role: 'conference',
-          teams: [{ id: 'team-1' } as any],
+          teams: [groupTeam('team-1')],
           has_season_override: false,
           is_inherited: false,
           is_auto: false,
@@ -57,7 +66,7 @@ describe('playoff bracket slot key normalization', () => {
           sort_order: 0,
           created_at: '2024-01-01T00:00:00.000Z',
           role: 'division',
-          teams: [{ id: 'team-2' } as any],
+          teams: [groupTeam('team-2')],
           has_season_override: false,
           is_inherited: false,
           is_auto: false,
@@ -67,5 +76,19 @@ describe('playoff bracket slot key normalization', () => {
     );
 
     expect([...teams].sort()).toEqual(['team-1', 'team-2']);
+  });
+
+  it('keeps shared round labels independent from matchup labels', () => {
+    expect(getRoundLabel(3, 4, { 3: 'Conference Finals' })).toBe('Conference Finals');
+    expect(getMatchupLabel('r3m0', null)).toBeNull();
+  });
+
+  it('resolves matchup labels by neutral bracket slot key', () => {
+    expect(
+      getMatchupLabel('r3m1', {
+        r3m0: 'Eastern Conference Final',
+        r3m1: 'Western Conference Final',
+      }),
+    ).toBe('Western Conference Final');
   });
 });

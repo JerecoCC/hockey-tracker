@@ -52,6 +52,7 @@ router.get('/', async (req, res) => {
         league_id: bracketRuleSets.leagueId,
         name: bracketRuleSets.name,
         round_names: bracketRuleSets.roundNames,
+        matchup_names: bracketRuleSets.matchupNames,
         created_at: bracketRuleSets.createdAt,
       })
       .from(bracketRuleSets)
@@ -101,6 +102,7 @@ router.get('/:id', async (req, res) => {
         league_id: bracketRuleSets.leagueId,
         name: bracketRuleSets.name,
         round_names: bracketRuleSets.roundNames,
+        matchup_names: bracketRuleSets.matchupNames,
         created_at: bracketRuleSets.createdAt,
       })
       .from(bracketRuleSets)
@@ -129,10 +131,10 @@ router.get('/:id', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/bracket-rule-sets  – create a rule set (optionally with slots)
-// Body: { league_id, name, slots?: SlotRule[] }
+// Body: { league_id, name, slots?: SlotRule[], round_names?, matchup_names? }
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { league_id, name, slots = [], round_names = null } = req.body;
+  const { league_id, name, slots = [], round_names = null, matchup_names = null } = req.body;
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
@@ -142,12 +144,14 @@ router.post('/', async (req, res) => {
         leagueId: league_id,
         name: name.trim(),
         roundNames: round_names ?? null,
+        matchupNames: matchup_names ?? null,
       })
       .returning({
         id: bracketRuleSets.id,
         league_id: bracketRuleSets.leagueId,
         name: bracketRuleSets.name,
         round_names: bracketRuleSets.roundNames,
+        matchup_names: bracketRuleSets.matchupNames,
         created_at: bracketRuleSets.createdAt,
       });
     const savedSlots = await upsertSlots(sets[0].id, slots);
@@ -162,15 +166,16 @@ router.post('/', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // PATCH /api/admin/bracket-rule-sets/:id  – rename a rule set
-// Body: { name }
+// Body: { name, round_names?, matchup_names? }
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, round_names } = req.body;
+  const { name, round_names, matchup_names } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
     const changes = { name: name.trim() };
     if (round_names !== undefined) changes.roundNames = round_names;
+    if (matchup_names !== undefined) changes.matchupNames = matchup_names;
 
     const rows = await db
       .update(bracketRuleSets)
@@ -181,6 +186,7 @@ router.patch('/:id', async (req, res) => {
         league_id: bracketRuleSets.leagueId,
         name: bracketRuleSets.name,
         round_names: bracketRuleSets.roundNames,
+        matchup_names: bracketRuleSets.matchupNames,
         created_at: bracketRuleSets.createdAt,
       });
     if (rows.length === 0) return res.status(404).json({ error: 'Rule set not found' });

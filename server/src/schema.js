@@ -286,6 +286,7 @@ const bracketRuleSets = pgTable('bracket_rule_sets', {
   leagueId: uuid('league_id').notNull().references(() => leagues.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   roundNames: jsonb('round_names'),
+  matchupNames: jsonb('matchup_names'),
   createdAt: createdAt(),
 });
 

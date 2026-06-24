@@ -6,6 +6,7 @@ import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import Select from '@/components/Select/Select';
 import Tooltip from '@/components/Tooltip/Tooltip';
+import ToggleButton from '@/components/ToggleButton/ToggleButton';
 /** Minimal group shape used for scope filtering — satisfied by both SeasonGroupRecord and GroupRecord. */
 export interface GroupEntry {
   id: string;
@@ -80,10 +81,15 @@ export const getRoundLabel = (
 ): string => {
   if (roundNames?.[round]) return roundNames[round];
   if (round === totalRounds) return 'Final';
-  if (round === 1) return 'First Round';
-  if (round === totalRounds - 1) return 'Conference Finals';
-  if (round === totalRounds - 2) return 'Second Round';
   return `Round ${round}`;
+};
+
+export const getMatchupLabel = (
+  matchupKey: string,
+  matchupNames?: Record<string, string> | null,
+): string | null => {
+  const label = matchupNames?.[matchupKey]?.trim();
+  return label || null;
 };
 
 export const deriveBracketStructureFromSize = (totalTeams: number): BracketStructure => {
@@ -128,6 +134,8 @@ interface BracketRulesFormValues {
   slots: SlotFormItem[];
   /** Custom display name per round, keyed by round number string. Empty string = use default. */
   roundNames: Record<string, string>;
+  /** Custom display name per matchup, keyed by matchup slot like r3m0. Empty string = use round label. */
+  matchupNames: Record<string, string>;
 }
 
 export const makeSlotKey = (round: number, matchup: number, pos: 'team1' | 'team2') =>
@@ -214,6 +222,35 @@ const serializeSlots = (slots: SlotFormItem[]): SaveSlotsPayload[] =>
       choice_ref: s.type === 'unchosen' ? s.choiceRef : null,
       matchup_ref: s.type === 'winner' ? s.matchupRef : null,
     }));
+
+const cleanLabelMap = (
+  labels: Record<string, string> | undefined,
+): Record<string, string> | null => {
+  const cleaned = Object.fromEntries(
+    Object.entries(labels ?? {})
+      .filter(([, value]) => typeof value === 'string' && value.trim() !== '')
+      .map(([key, value]) => [key, value.trim()]),
+  );
+  return Object.keys(cleaned).length > 0 ? cleaned : null;
+};
+
+const hasRoundMatchupLabels = (
+  roundInfo: BracketRound,
+  matchupNames?: Record<string, string> | null,
+): boolean =>
+  Array.from({ length: roundInfo.series }, (_, mi) => `r${roundInfo.round}m${mi}`).some(
+    (key) => !!matchupNames?.[key]?.trim(),
+  );
+
+const getExpandedMatchupLabelRounds = (
+  structure: BracketStructure,
+  matchupNames?: Record<string, string> | null,
+): Record<number, boolean> =>
+  Object.fromEntries(
+    structure.rounds
+      .filter((roundInfo) => roundInfo.series > 1 && hasRoundMatchupLabels(roundInfo, matchupNames))
+      .map((roundInfo) => [roundInfo.round, true]),
+  ) as Record<number, boolean>;
 
 /**
  * Generates winner-advancement slots for every round after Round 1.
@@ -496,6 +533,9 @@ const BracketRulesModal = ({
 
   // Fetched rule set data (null = create mode or loading)
   const [loadedRuleSet, setLoadedRuleSet] = useState<BracketRuleSet | null>(null);
+  const [expandedMatchupLabelRounds, setExpandedMatchupLabelRounds] = useState<
+    Record<number, boolean>
+  >({});
 
   const effectiveStructure = useMemo(
     () => externalStructure ?? deriveBracketStructureFromSize(selectedSize),
@@ -509,7 +549,7 @@ const BracketRulesModal = ({
     handleSubmit,
     formState: { isSubmitting, isDirty, isValid },
   } = useForm<BracketRulesFormValues>({
-    defaultValues: { name: '', slots: [], roundNames: {} },
+    defaultValues: { name: '', slots: [], roundNames: {}, matchupNames: {} },
     mode: 'onChange',
   });
 
@@ -548,10 +588,20 @@ const BracketRulesModal = ({
         name: loadedRuleSet.name ?? '',
         slots: mergeApiSlots(structure, loadedRuleSet.slots),
         roundNames: loadedRuleSet.round_names ?? {},
+        matchupNames: loadedRuleSet.matchup_names ?? {},
       });
+      setExpandedMatchupLabelRounds(
+        getExpandedMatchupLabelRounds(structure, loadedRuleSet.matchup_names),
+      );
     } else if (!ruleSetId) {
       // Create mode: reset to empty defaults
-      reset({ name: '', slots: buildDefaultSlots(effectiveStructure), roundNames: {} });
+      reset({
+        name: '',
+        slots: buildDefaultSlots(effectiveStructure),
+        roundNames: {},
+        matchupNames: {},
+      });
+      setExpandedMatchupLabelRounds({});
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, loadedRuleSet]);
@@ -564,6 +614,7 @@ const BracketRulesModal = ({
       ...prev,
       slots: buildDefaultSlots(deriveBracketStructureFromSize(selectedSize)),
     }));
+    setExpandedMatchupLabelRounds({});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedSize]);
 
@@ -581,6 +632,9 @@ const BracketRulesModal = ({
   }, [effectiveStructure]);
 
   const allSlots = useWatch({ control, name: 'slots' }) as SlotFormItem[];
+  const watchedMatchupNames = useWatch({ control, name: 'matchupNames' }) as
+    | Record<string, string>
+    | undefined;
   const choiceSlotOptions = useMemo(
     () =>
       (allSlots ?? [])
@@ -592,20 +646,28 @@ const BracketRulesModal = ({
     [allSlots, effectiveStructure.rounds],
   );
 
-  const onSubmit = handleSubmit(async ({ name, slots, roundNames }) => {
+  const onSubmit = handleSubmit(async ({ name, slots, roundNames, matchupNames }) => {
     const payload = [...serializeSlots(slots), ...buildAutoWinnerSlots(effectiveStructure)];
-    // Strip empty strings; send null when nothing is set.
     // roundNames arrives as a sparse array (numeric-keyed paths → RHF array treatment),
     // so index 0 may be undefined. Guard against that before calling .trim().
-    const cleaned = Object.fromEntries(
-      Object.entries(roundNames ?? {}).filter(([, v]) => v != null && v.trim() !== ''),
-    );
-    const roundNamesPayload = Object.keys(cleaned).length > 0 ? cleaned : null;
+    const roundNamesPayload = cleanLabelMap(roundNames);
+    const matchupNamesPayload = cleanLabelMap(matchupNames);
     let savedId = ruleSetId;
     if (ruleSetId) {
-      await updateSlots(ruleSetId, name || 'Bracket Rules', payload, roundNamesPayload);
+      await updateSlots(
+        ruleSetId,
+        name || 'Bracket Rules',
+        payload,
+        roundNamesPayload,
+        matchupNamesPayload,
+      );
     } else {
-      const created = await createRuleSet(name || 'Bracket Rules', payload, roundNamesPayload);
+      const created = await createRuleSet(
+        name || 'Bracket Rules',
+        payload,
+        roundNamesPayload,
+        matchupNamesPayload,
+      );
       if (!created) return;
       savedId = created.id;
     }
@@ -614,13 +676,15 @@ const BracketRulesModal = ({
   });
 
   const actionLabel = ruleSetId ? 'Edit Rule Set' : 'Create Rule Set';
+  const confirmActionLabel = ruleSetId ? 'Save Changes' : actionLabel;
 
   return (
     <Modal
       open={open}
       title={actionLabel}
       onClose={onClose}
-      confirmLabel={isSubmitting ? 'Saving...' : actionLabel}
+      confirmLabel={isSubmitting ? 'Saving...' : confirmActionLabel}
+      confirmIcon={ruleSetId ? 'save' : undefined}
       onConfirm={onSubmit}
       confirmDisabled={isSubmitting || !isDirty || !isValid}
       busy={isSubmitting}
@@ -636,16 +700,72 @@ const BracketRulesModal = ({
         {/* ── Round Labels (optional) ── */}
         {effectiveStructure.rounds.map((r) => {
           const defaultLabel = getRoundLabel(r.round, effectiveStructure.rounds.length);
+          const matchupLabelsOpen = !!expandedMatchupLabelRounds[r.round];
+          const hasCustomMatchupLabels = hasRoundMatchupLabels(r, watchedMatchupNames);
           return (
-            <Field
+            <div
               key={r.round}
-              type="text"
-              label={`${defaultLabel} Label`}
-              placeholder={`e.g. ${defaultLabel}`}
-              control={control}
-              name={`roundNames.${r.round}`}
-              disabled={isSubmitting}
-            />
+              className={styles.bracketRulesLabelGroup}
+            >
+              <div className={styles.bracketRulesLabelControl}>
+                <Field
+                  type="text"
+                  label={`${defaultLabel} Label`}
+                  placeholder={`e.g. ${defaultLabel}`}
+                  control={control}
+                  name={`roundNames.${r.round}`}
+                  disabled={isSubmitting}
+                />
+                {r.series > 1 && (
+                  <ToggleButton
+                    active={matchupLabelsOpen}
+                    icon="account_tree"
+                    iconHeight="field"
+                    activeTooltip="Hide matchup labels"
+                    inactiveTooltip={
+                      hasCustomMatchupLabels ? 'Edit matchup labels' : 'Add matchup labels'
+                    }
+                    className={styles.bracketRulesMatchupToggle}
+                    disabled={isSubmitting}
+                    onClick={() =>
+                      setExpandedMatchupLabelRounds((prev) => ({
+                        ...prev,
+                        [r.round]: !prev[r.round],
+                      }))
+                    }
+                  />
+                )}
+              </div>
+              {r.series > 1 && (
+                <div
+                  className={[
+                    styles.bracketRulesMatchupLabelRegion,
+                    matchupLabelsOpen ? styles.bracketRulesMatchupLabelRegionOpen : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  aria-hidden={!matchupLabelsOpen}
+                  inert={!matchupLabelsOpen}
+                >
+                  <div className={styles.bracketRulesMatchupLabelFields}>
+                    {Array.from({ length: r.series }, (_, mi) => {
+                      const matchupKey = `r${r.round}m${mi}`;
+                      return (
+                        <Field
+                          key={matchupKey}
+                          type="text"
+                          label={`Matchup ${mi + 1} Label`}
+                          placeholder={`e.g. ${defaultLabel}`}
+                          control={control}
+                          name={`matchupNames.${matchupKey}`}
+                          disabled={isSubmitting}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })}
 

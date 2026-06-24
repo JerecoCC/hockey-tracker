@@ -1959,6 +1959,14 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS round_names JSONB
   `;
 
+  // Optional display names for specific bracket matchups, keyed by matchup slot.
+  // e.g. { "r3m0": "Eastern Conference Final", "r3m1": "Western Conference Final" }
+  // Null means each matchup uses the round label.
+  await sql`
+    ALTER TABLE bracket_rule_sets
+      ADD COLUMN IF NOT EXISTS matchup_names JSONB
+  `;
+
   // Game-rule overrides per season — nullable, falls back to league defaults when NULL.
   // best_of_playoff: number of games needed to win a series (2=Bo3, 3=Bo5, 4=Bo7).
   await sql`
