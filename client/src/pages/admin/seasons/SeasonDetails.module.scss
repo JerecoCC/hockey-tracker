@@ -643,6 +643,11 @@
     overflow: hidden;
   }
 
+  &ContentList {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
   &ContentInner {
     display: flex;
     flex-direction: column;
@@ -855,7 +860,7 @@
     width: 100%;
     overflow-x: hidden;
     overflow-y: auto;
-    padding: 0;
+    padding: var(--award-content-padding) 0;
   }
 
   &PlayerListItem {

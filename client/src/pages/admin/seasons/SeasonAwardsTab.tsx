@@ -1015,6 +1015,8 @@ const SeasonAwardsTab = ({
               const hideRecordedAutomaticAction =
                 hasAutomaticWinnerAction && !award.allow_multiple_winners && winners.length > 0;
               const showAwardAction = !hideRecordedAutomaticAction;
+              const rendersColumnList =
+                isGroupedAward || (!canManageNominees && award.allow_multiple_winners);
               const awardLabel = (
                 <div className={styles.awardTitleBlock}>
                   <h4>
@@ -1076,7 +1078,12 @@ const SeasonAwardsTab = ({
                   variant="static"
                   className={styles.awardItem}
                   rowClassName={styles.awardHeader}
-                  bodyClassName={styles.awardContent}
+                  bodyClassName={[
+                    styles.awardContent,
+                    rendersColumnList ? styles.awardContentList : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
                   label={awardLabel}
                   headerRight={awardActions}
                 >
