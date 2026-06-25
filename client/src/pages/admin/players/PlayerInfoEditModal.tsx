@@ -286,6 +286,7 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
                 <SegmentedControl
                   value={field.value}
                   onChange={(value) => field.onChange(value as PlayerShoots)}
+                  variant="field"
                   options={SHOOTS_OPTIONS}
                   disabled={isSubmitting}
                 />

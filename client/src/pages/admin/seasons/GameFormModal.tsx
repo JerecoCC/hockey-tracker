@@ -265,6 +265,7 @@ const GameFormModal = ({
               <SegmentedControl
                 value={teamSide}
                 onChange={handleTeamSideChange}
+                variant="field"
                 disabled={isSubmitting}
                 className={styles.teamSideControl}
                 options={[

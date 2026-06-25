@@ -266,6 +266,7 @@ const ScoreGoalModal = ({
           <SegmentedControl
             value={goalTeam}
             onChange={(v) => handleTeamChange(v as 'away' | 'home')}
+            variant="field"
             options={teamOptions}
             disabled={submitting || otGoalExists || lockTimingFields}
             autoFocus

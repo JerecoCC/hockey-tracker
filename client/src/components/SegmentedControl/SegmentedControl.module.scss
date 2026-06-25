@@ -1,8 +1,9 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 .segmentedControl {
   --segmented-control-border: #{$text-dim};
+  --segmented-control-option-bg: #{$bg-card};
 
   display: flex;
   align-items: stretch;
@@ -16,8 +17,14 @@
 
 .field {
   --segmented-control-border: #{$border};
+  --segmented-control-option-bg: #{$bg-input};
 
   background: $bg-input;
+}
+
+// Text-only (non-field) controls are shorter than icon-bearing ones.
+.iconless {
+  height: 34px;
 }
 
 .option {
@@ -25,7 +32,6 @@
     position: relative;
     flex: 1;
     display: flex;
-    min-width: 0;
     height: 100%;
 
     &:has(.option:focus-visible) {
@@ -38,7 +44,7 @@
   min-height: 0;
   height: 100%;
   padding: 0 $space-lg;
-  background: transparent;
+  background: var(--segmented-control-option-bg);
   border: none;
   border-right: 1px solid var(--segmented-control-border);
   color: $text-light;

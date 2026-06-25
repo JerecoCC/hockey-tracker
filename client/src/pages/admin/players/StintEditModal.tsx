@@ -289,6 +289,7 @@ const StintEditModal = ({
                 <SegmentedControl
                   value={field.value}
                   onChange={field.onChange}
+                  variant="field"
                   options={[
                     { value: 'roster', label: 'Roster' },
                     { value: 'prospect', label: 'Prospect' },

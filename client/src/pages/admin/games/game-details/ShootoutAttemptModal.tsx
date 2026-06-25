@@ -169,6 +169,7 @@ const ShootoutAttemptModal = ({
                   field.onChange(v as 'away' | 'home');
                   setValue('shooterId', '', { shouldDirty: true, shouldValidate: true });
                 }}
+                variant="field"
                 options={teamOptions}
                 disabled={isSubmitting}
               />
@@ -208,6 +209,7 @@ const ShootoutAttemptModal = ({
               <SegmentedControl
                 value={field.value || null}
                 onChange={(v) => field.onChange(v as FormValues['scored'])}
+                variant="field"
                 options={resultOptions}
                 disabled={isSubmitting}
               />

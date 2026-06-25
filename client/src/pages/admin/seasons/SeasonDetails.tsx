@@ -968,6 +968,7 @@ const SeasonDetailsPage = () => {
             content: (
               <div className={styles.statsSubTabs}>
                 <SegmentedControl
+                  iconless
                   value={statsSubTab}
                   onChange={handleStatsSubTabChange}
                   options={[
@@ -992,6 +993,7 @@ const SeasonDetailsPage = () => {
                             setHoveredSkaterIdx(0);
                           }}
                           options={STAT_OPTIONS}
+                          iconless
                           className={styles.statsSegmentedControl}
                         />
                       }
@@ -1030,6 +1032,7 @@ const SeasonDetailsPage = () => {
                             setHoveredDefIdx(0);
                           }}
                           options={STAT_OPTIONS}
+                          iconless
                           className={styles.statsSegmentedControl}
                         />
                       }
@@ -1068,6 +1071,7 @@ const SeasonDetailsPage = () => {
                             setHoveredGoalieIdx(0);
                           }}
                           options={GOALIE_OPTIONS}
+                          iconless
                           className={styles.statsSegmentedControl}
                         />
                       }

@@ -26,6 +26,11 @@ interface SegmentedControlProps {
   autoFocus?: boolean;
   /** Field treatment for usage inside labeled form controls. */
   variant?: 'default' | 'field';
+  /**
+   * Hint that options are text-only (no icons). For the non-field variant this
+   * renders a shorter 34px control. Ignored for the `field` variant.
+   */
+  iconless?: boolean;
   /** Extra CSS class applied to the root wrapper (e.g. for width overrides). */
   className?: string;
 }
@@ -42,10 +47,16 @@ const SegmentedControl = ({
   disabled = false,
   autoFocus = false,
   variant = 'default',
+  iconless = false,
   className,
 }: SegmentedControlProps) => (
   <div
-    className={[styles.segmentedControl, variant === 'field' ? styles.field : '', className]
+    className={[
+      styles.segmentedControl,
+      variant === 'field' ? styles.field : '',
+      iconless && variant !== 'field' ? styles.iconless : '',
+      className,
+    ]
       .filter(Boolean)
       .join(' ')}
   >

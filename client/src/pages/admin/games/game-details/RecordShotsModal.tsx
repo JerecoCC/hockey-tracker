@@ -363,6 +363,7 @@ const RecordShotsBody = ({
           <SegmentedControl
             value={soFirstTeam ?? ''}
             onChange={(v) => setSoFirstTeam(v as 'away' | 'home')}
+            variant="field"
             options={(['away', 'home'] as const).map((side) => {
               const logo = side === 'away' ? game.away_team.logo : game.home_team.logo;
               const code = side === 'away' ? game.away_team.code : game.home_team.code;
