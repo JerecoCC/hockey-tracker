@@ -19,6 +19,7 @@ const playersRoutes = require('./routes/players');
 const playerTeamsRoutes = require('./routes/player-teams');
 const gamesRoutes = require('./routes/games');
 const bracketRuleSetsRoutes = require('./routes/bracket-rule-sets');
+const playoffQualificationFormatsRoutes = require('./routes/playoff-qualification-formats');
 const userRoutes = require('./routes/user');
 
 const app = express();
@@ -76,6 +77,7 @@ app.use('/api/admin/players', playersRoutes);
 app.use('/api/admin/player-teams', playerTeamsRoutes);
 app.use('/api/admin/games', gamesRoutes);
 app.use('/api/admin/bracket-rule-sets', bracketRuleSetsRoutes);
+app.use('/api/admin/playoff-qualification-formats', playoffQualificationFormatsRoutes);
 app.use('/api/user', userRoutes);
 
 app.get('/api/health', async (_req, res) => {

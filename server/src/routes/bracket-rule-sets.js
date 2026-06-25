@@ -1,11 +1,51 @@
 const router = require('express').Router();
 const { requireAdmin } = require('../middleware/auth');
-const { asc, eq, inArray } = require('drizzle-orm');
+const { and, asc, eq, inArray } = require('drizzle-orm');
 const { db, schema } = require('../db');
 
-const { bracketRuleSets, bracketSlotRules } = schema;
+const { bracketRuleSets, bracketSlotRules, playoffQualificationFormats } = schema;
 
 router.use(requireAdmin);
+
+const ruleSetSelectShape = {
+  id: bracketRuleSets.id,
+  league_id: bracketRuleSets.leagueId,
+  name: bracketRuleSets.name,
+  qualification_format_id: bracketRuleSets.qualificationFormatId,
+  qualification_format_name: playoffQualificationFormats.name,
+  qualification_rules: playoffQualificationFormats.rules,
+  round_names: bracketRuleSets.roundNames,
+  matchup_names: bracketRuleSets.matchupNames,
+  created_at: bracketRuleSets.createdAt,
+};
+
+const ruleSetReturningShape = {
+  id: bracketRuleSets.id,
+  league_id: bracketRuleSets.leagueId,
+  name: bracketRuleSets.name,
+  qualification_format_id: bracketRuleSets.qualificationFormatId,
+  round_names: bracketRuleSets.roundNames,
+  matchup_names: bracketRuleSets.matchupNames,
+  created_at: bracketRuleSets.createdAt,
+};
+
+async function assertQualificationFormatBelongsToLeague(qualificationFormatId, leagueId) {
+  if (!qualificationFormatId) return;
+  const formats = await db
+    .select({ id: playoffQualificationFormats.id })
+    .from(playoffQualificationFormats)
+    .where(
+      and(
+        eq(playoffQualificationFormats.id, qualificationFormatId),
+        eq(playoffQualificationFormats.leagueId, leagueId),
+      ),
+    );
+  if (formats.length === 0) {
+    const err = new Error('qualification_format_id does not belong to this league');
+    err.status = 400;
+    throw err;
+  }
+}
 
 // Helper: insert/replace all slot rules for a rule set
 async function upsertSlots(ruleSetId, slots) {
@@ -47,15 +87,12 @@ router.get('/', async (req, res) => {
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   try {
     const rows = await db
-      .select({
-        id: bracketRuleSets.id,
-        league_id: bracketRuleSets.leagueId,
-        name: bracketRuleSets.name,
-        round_names: bracketRuleSets.roundNames,
-        matchup_names: bracketRuleSets.matchupNames,
-        created_at: bracketRuleSets.createdAt,
-      })
+      .select(ruleSetSelectShape)
       .from(bracketRuleSets)
+      .leftJoin(
+        playoffQualificationFormats,
+        eq(bracketRuleSets.qualificationFormatId, playoffQualificationFormats.id),
+      )
       .where(eq(bracketRuleSets.leagueId, league_id))
       .orderBy(asc(bracketRuleSets.name));
     if (rows.length === 0) return res.json([]);
@@ -97,15 +134,12 @@ router.get('/:id', async (req, res) => {
   const { id } = req.params;
   try {
     const sets = await db
-      .select({
-        id: bracketRuleSets.id,
-        league_id: bracketRuleSets.leagueId,
-        name: bracketRuleSets.name,
-        round_names: bracketRuleSets.roundNames,
-        matchup_names: bracketRuleSets.matchupNames,
-        created_at: bracketRuleSets.createdAt,
-      })
+      .select(ruleSetSelectShape)
       .from(bracketRuleSets)
+      .leftJoin(
+        playoffQualificationFormats,
+        eq(bracketRuleSets.qualificationFormatId, playoffQualificationFormats.id),
+      )
       .where(eq(bracketRuleSets.id, id));
     if (sets.length === 0) return res.status(404).json({ error: 'Rule set not found' });
     const slots = await db
@@ -134,29 +168,32 @@ router.get('/:id', async (req, res) => {
 // Body: { league_id, name, slots?: SlotRule[], round_names?, matchup_names? }
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { league_id, name, slots = [], round_names = null, matchup_names = null } = req.body;
+  const {
+    league_id,
+    name,
+    qualification_format_id = null,
+    slots = [],
+    round_names = null,
+    matchup_names = null,
+  } = req.body;
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
+    await assertQualificationFormatBelongsToLeague(qualification_format_id, league_id);
     const sets = await db
       .insert(bracketRuleSets)
       .values({
         leagueId: league_id,
         name: name.trim(),
+        qualificationFormatId: qualification_format_id || null,
         roundNames: round_names ?? null,
         matchupNames: matchup_names ?? null,
       })
-      .returning({
-        id: bracketRuleSets.id,
-        league_id: bracketRuleSets.leagueId,
-        name: bracketRuleSets.name,
-        round_names: bracketRuleSets.roundNames,
-        matchup_names: bracketRuleSets.matchupNames,
-        created_at: bracketRuleSets.createdAt,
-      });
+      .returning(ruleSetReturningShape);
     const savedSlots = await upsertSlots(sets[0].id, slots);
     return res.status(201).json({ ...sets[0], slots: savedSlots });
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     if (err.code === '23503') return res.status(400).json({ error: 'League not found' });
     console.error('bracket-rule-sets create error:', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -170,10 +207,23 @@ router.post('/', async (req, res) => {
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
-  const { name, round_names, matchup_names } = req.body;
+  const { name, qualification_format_id, round_names, matchup_names } = req.body;
   if (!name?.trim()) return res.status(400).json({ error: 'name is required' });
   try {
+    const current = await db
+      .select({ league_id: bracketRuleSets.leagueId })
+      .from(bracketRuleSets)
+      .where(eq(bracketRuleSets.id, id));
+    if (current.length === 0) return res.status(404).json({ error: 'Rule set not found' });
+
     const changes = { name: name.trim() };
+    if (qualification_format_id !== undefined) {
+      await assertQualificationFormatBelongsToLeague(
+        qualification_format_id,
+        current[0].league_id,
+      );
+      changes.qualificationFormatId = qualification_format_id || null;
+    }
     if (round_names !== undefined) changes.roundNames = round_names;
     if (matchup_names !== undefined) changes.matchupNames = matchup_names;
 
@@ -181,17 +231,10 @@ router.patch('/:id', async (req, res) => {
       .update(bracketRuleSets)
       .set(changes)
       .where(eq(bracketRuleSets.id, id))
-      .returning({
-        id: bracketRuleSets.id,
-        league_id: bracketRuleSets.leagueId,
-        name: bracketRuleSets.name,
-        round_names: bracketRuleSets.roundNames,
-        matchup_names: bracketRuleSets.matchupNames,
-        created_at: bracketRuleSets.createdAt,
-      });
-    if (rows.length === 0) return res.status(404).json({ error: 'Rule set not found' });
+      .returning(ruleSetReturningShape);
     return res.json(rows[0]);
   } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.message });
     console.error('bracket-rule-sets patch error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }

@@ -69,6 +69,7 @@ const seasons = pgTable('seasons', {
   isEnded: boolean('is_ended').notNull().default(false),
   gamesPerSeason: smallint('games_per_season'),
   playoffFormat: jsonb('playoff_format'),
+  playoffQualificationFormatId: uuid('playoff_qualification_format_id'),
   bracketRuleSetId: uuid('bracket_rule_set_id'),
   groupAlignmentSetId: uuid('group_alignment_set_id'),
   bestOfPlayoff: smallint('best_of_playoff'),
@@ -284,10 +285,22 @@ const jerseyNumberHistory = pgTable('jersey_number_history', {
   createdAt: createdAt(),
 });
 
+const playoffQualificationFormats = pgTable('playoff_qualification_formats', {
+  id: id(),
+  leagueId: uuid('league_id').notNull().references(() => leagues.id, { onDelete: 'cascade' }),
+  name: text('name').notNull(),
+  rules: jsonb('rules').notNull().default(sql`'[]'::jsonb`),
+  createdAt: createdAt(),
+});
+
 const bracketRuleSets = pgTable('bracket_rule_sets', {
   id: id(),
   leagueId: uuid('league_id').notNull().references(() => leagues.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
+  qualificationFormatId: uuid('qualification_format_id').references(
+    () => playoffQualificationFormats.id,
+    { onDelete: 'set null' },
+  ),
   roundNames: jsonb('round_names'),
   matchupNames: jsonb('matchup_names'),
   createdAt: createdAt(),
@@ -400,6 +413,7 @@ module.exports = {
   playerPhotos,
   jerseyNumberHistory,
   bracketRuleSets,
+  playoffQualificationFormats,
   playoffSeries,
   games,
   goals,

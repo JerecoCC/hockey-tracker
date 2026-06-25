@@ -1911,6 +1911,82 @@ async function initSchema() {
       ADD COLUMN IF NOT EXISTS playoff_format JSONB
   `;
 
+  // ── Playoff qualification formats ─────────────────────────────────────────
+  // A named, reusable collection of playoff qualification rules owned by a
+  // league. Seasons can reference one format, mirroring bracket rule sets.
+  await sql`
+    CREATE TABLE IF NOT EXISTS playoff_qualification_formats (
+      id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      league_id   UUID NOT NULL REFERENCES leagues(id) ON DELETE CASCADE,
+      name        TEXT NOT NULL,
+      rules       JSONB NOT NULL DEFAULT '[]'::jsonb,
+      created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `;
+
+  // ON DELETE SET NULL keeps the season intact when a reusable format is deleted.
+  await sql`
+    ALTER TABLE seasons
+      ADD COLUMN IF NOT EXISTS playoff_qualification_format_id UUID
+        REFERENCES playoff_qualification_formats(id) ON DELETE SET NULL
+  `;
+
+  // Seed reusable formats from existing league defaults and season overrides.
+  // Re-running init will not duplicate rows for the same league/rules JSON.
+  await sql`
+    WITH source_formats AS (
+      SELECT
+        id AS league_id,
+        playoff_format AS rules,
+        'Default Qualification Format' AS name,
+        0 AS source_order
+      FROM leagues
+      WHERE playoff_format IS NOT NULL
+        AND jsonb_typeof(playoff_format) = 'array'
+
+      UNION ALL
+
+      SELECT
+        league_id,
+        playoff_format AS rules,
+        'Imported Qualification Format' AS name,
+        1 AS source_order
+      FROM seasons
+      WHERE playoff_format IS NOT NULL
+        AND jsonb_typeof(playoff_format) = 'array'
+    ),
+    distinct_formats AS (
+      SELECT
+        league_id,
+        rules,
+        (array_agg(name ORDER BY source_order, name))[1] AS name
+      FROM source_formats
+      GROUP BY league_id, rules
+    )
+    INSERT INTO playoff_qualification_formats (league_id, name, rules)
+    SELECT league_id, name, rules
+    FROM distinct_formats df
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM playoff_qualification_formats pqf
+      WHERE pqf.league_id = df.league_id
+        AND pqf.rules = df.rules
+    )
+  `;
+
+  await sql`
+    UPDATE seasons s
+    SET playoff_qualification_format_id = pqf.id
+    FROM playoff_qualification_formats pqf, leagues l
+    WHERE s.playoff_qualification_format_id IS NULL
+      AND l.id = s.league_id
+      AND pqf.league_id = s.league_id
+      AND (
+        (s.playoff_format IS NOT NULL AND s.playoff_format = pqf.rules)
+        OR (s.playoff_format IS NULL AND l.playoff_format IS NOT NULL AND l.playoff_format = pqf.rules)
+      )
+  `;
+
   // ── Bracket rule sets ─────────────────────────────────────────────────────
   // A named, reusable collection of bracket slot assignment rules owned by a
   // league.  Multiple seasons in the same league can reference the same set so
@@ -1922,6 +1998,12 @@ async function initSchema() {
       name        TEXT NOT NULL,
       created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `;
+
+  await sql`
+    ALTER TABLE bracket_rule_sets
+      ADD COLUMN IF NOT EXISTS qualification_format_id UUID
+        REFERENCES playoff_qualification_formats(id) ON DELETE SET NULL
   `;
 
   // ── Bracket slot rules ────────────────────────────────────────────────────
@@ -1991,6 +2073,35 @@ async function initSchema() {
     ALTER TABLE seasons
       ADD COLUMN IF NOT EXISTS bracket_rule_set_id UUID
         REFERENCES bracket_rule_sets(id) ON DELETE SET NULL
+  `;
+
+  await sql`
+    WITH counts AS (
+      SELECT
+        bracket_rule_set_id,
+        playoff_qualification_format_id,
+        COUNT(*) AS uses
+      FROM seasons
+      WHERE bracket_rule_set_id IS NOT NULL
+        AND playoff_qualification_format_id IS NOT NULL
+      GROUP BY bracket_rule_set_id, playoff_qualification_format_id
+    ),
+    ranked AS (
+      SELECT
+        bracket_rule_set_id,
+        playoff_qualification_format_id,
+        ROW_NUMBER() OVER (
+          PARTITION BY bracket_rule_set_id
+          ORDER BY uses DESC, playoff_qualification_format_id
+        ) AS rn
+      FROM counts
+    )
+    UPDATE bracket_rule_sets brs
+    SET qualification_format_id = ranked.playoff_qualification_format_id
+    FROM ranked
+    WHERE brs.id = ranked.bracket_rule_set_id
+      AND brs.qualification_format_id IS NULL
+      AND ranked.rn = 1
   `;
 
   // Custom display names for each playoff round, keyed by round number string.

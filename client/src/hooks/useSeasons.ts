@@ -30,6 +30,10 @@ export interface SeasonRecord {
   league_best_of_shootout: number;
   /** Season-level playoff qualification rules (overrides any league-level format). */
   playoff_format: PlayoffFormatRule[] | null;
+  /** ID of the reusable playoff qualification format assigned to this season. */
+  playoff_qualification_format_id: string | null;
+  /** Name of the reusable playoff qualification format assigned to this season. */
+  playoff_qualification_format_name?: string | null;
   /** Season-level playoff series length override. Null falls back to league default. */
   best_of_playoff: number | null;
   /** Season-level shootout rounds override. Null falls back to league default. */
@@ -54,6 +58,7 @@ export interface CreateSeasonData {
   end_date?: string | null;
   games_per_season?: number | null;
   playoff_format?: PlayoffFormatRule[] | null;
+  playoff_qualification_format_id?: string | null;
   best_of_playoff?: number | null;
   best_of_shootout?: number | null;
   scoring_system?: '2-1-0' | '3-2-1-0' | null;

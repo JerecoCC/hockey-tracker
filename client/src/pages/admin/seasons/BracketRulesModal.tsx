@@ -17,6 +17,7 @@ import useBracketRuleSets, {
   type BracketSlotRule,
   type SaveSlotsPayload,
 } from '@/hooks/useBracketRuleSets';
+import usePlayoffQualificationFormats from '@/hooks/usePlayoffQualificationFormats';
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -57,6 +58,7 @@ const BRACKET_SIZE_OPTIONS = [
 ];
 
 const AUTO_ADVANCE_TOOLTIP = 'Rounds 2 and beyond automatically advance winners in bracket order.';
+const NO_QUALIFICATION_FORMAT_VALUE = '__none__';
 
 // ── Bracket structure ─────────────────────────────────────────────────────────
 
@@ -130,6 +132,7 @@ interface SlotFormItem {
 
 interface BracketRulesFormValues {
   name: string;
+  qualificationFormatId: string;
   slots: SlotFormItem[];
   /** Custom display name per round, keyed by round number string. Empty string = use default. */
   roundNames: Record<string, string>;
@@ -526,6 +529,15 @@ const BracketRulesModal = ({
   onClose,
 }: BracketRulesModalProps) => {
   const { fetchRuleSet, createRuleSet, updateSlots } = useBracketRuleSets(leagueId);
+  const { formats: qualificationFormats, loading: qualificationFormatsLoading } =
+    usePlayoffQualificationFormats(leagueId);
+  const qualificationFormatOptions = useMemo(
+    () => [
+      { value: NO_QUALIFICATION_FORMAT_VALUE, label: 'No qualification format' },
+      ...qualificationFormats.map((format) => ({ value: format.id, label: format.name })),
+    ],
+    [qualificationFormats],
+  );
 
   // When no external structure is provided (league context), the user picks a size.
   const [selectedSize, setSelectedSize] = useState<number>(8);
@@ -548,7 +560,13 @@ const BracketRulesModal = ({
     handleSubmit,
     formState: { isSubmitting, isDirty, isValid },
   } = useForm<BracketRulesFormValues>({
-    defaultValues: { name: '', slots: [], roundNames: {}, matchupNames: {} },
+    defaultValues: {
+      name: '',
+      qualificationFormatId: NO_QUALIFICATION_FORMAT_VALUE,
+      slots: [],
+      roundNames: {},
+      matchupNames: {},
+    },
     mode: 'onChange',
   });
 
@@ -585,6 +603,8 @@ const BracketRulesModal = ({
       const structure = externalStructure ?? deriveBracketStructureFromSize(selectedSize);
       reset({
         name: loadedRuleSet.name ?? '',
+        qualificationFormatId:
+          loadedRuleSet.qualification_format_id ?? NO_QUALIFICATION_FORMAT_VALUE,
         slots: mergeApiSlots(structure, loadedRuleSet.slots),
         roundNames: loadedRuleSet.round_names ?? {},
         matchupNames: loadedRuleSet.matchup_names ?? {},
@@ -596,6 +616,7 @@ const BracketRulesModal = ({
       // Create mode: reset to empty defaults
       reset({
         name: '',
+        qualificationFormatId: NO_QUALIFICATION_FORMAT_VALUE,
         slots: buildDefaultSlots(effectiveStructure),
         roundNames: {},
         matchupNames: {},
@@ -645,12 +666,20 @@ const BracketRulesModal = ({
     [allSlots, effectiveStructure.rounds],
   );
 
-  const onSubmit = handleSubmit(async ({ name, slots, roundNames, matchupNames }) => {
+  const onSubmit = handleSubmit(async ({
+    name,
+    qualificationFormatId,
+    slots,
+    roundNames,
+    matchupNames,
+  }) => {
     const payload = [...serializeSlots(slots), ...buildAutoWinnerSlots(effectiveStructure)];
     // roundNames arrives as a sparse array (numeric-keyed paths → RHF array treatment),
     // so index 0 may be undefined. Guard against that before calling .trim().
     const roundNamesPayload = cleanLabelMap(roundNames);
     const matchupNamesPayload = cleanLabelMap(matchupNames);
+    const qualificationFormatIdPayload =
+      qualificationFormatId === NO_QUALIFICATION_FORMAT_VALUE ? null : qualificationFormatId;
     let savedId = ruleSetId;
     if (ruleSetId) {
       await updateSlots(
@@ -659,6 +688,7 @@ const BracketRulesModal = ({
         payload,
         roundNamesPayload,
         matchupNamesPayload,
+        qualificationFormatIdPayload,
       );
     } else {
       const created = await createRuleSet(
@@ -666,6 +696,7 @@ const BracketRulesModal = ({
         payload,
         roundNamesPayload,
         matchupNamesPayload,
+        qualificationFormatIdPayload,
       );
       if (!created) return;
       savedId = created.id;
@@ -697,6 +728,15 @@ const BracketRulesModal = ({
           disabled={isSubmitting}
         />
         {/* ── Round Labels (optional) ── */}
+        <Field
+          type="select"
+          label="Qualification Format"
+          control={control}
+          name="qualificationFormatId"
+          options={qualificationFormatOptions}
+          placeholder={qualificationFormatsLoading ? 'Loading formats...' : 'Select a format...'}
+          disabled={isSubmitting || qualificationFormatsLoading}
+        />
         {effectiveStructure.rounds.map((r) => {
           const defaultLabel = getRoundLabel(r.round, effectiveStructure.rounds.length);
           const matchupLabelsOpen = !!expandedMatchupLabelRounds[r.round];

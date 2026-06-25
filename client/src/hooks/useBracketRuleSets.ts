@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { toast } from 'react-toastify';
+import { type PlayoffFormatRule } from './useLeagues';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 
@@ -28,6 +29,9 @@ export interface BracketRuleSet {
   id: string;
   league_id: string;
   name: string;
+  qualification_format_id: string | null;
+  qualification_format_name?: string | null;
+  qualification_rules?: PlayoffFormatRule[] | null;
   /** Custom display labels keyed by round number string, e.g. { "1": "Wild Card", "4": "Final" }. Null = use default labels. */
   round_names: Record<string, string> | null;
   /** Optional display labels keyed by matchup slot, e.g. { "r3m0": "Eastern Conference Final" }. Null = use round labels. */
@@ -71,7 +75,11 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
   });
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: ['bracket-rule-sets', leagueId] });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: ['bracket-rule-sets', leagueId] }),
+      queryClient.invalidateQueries({ queryKey: ['season'] }),
+      queryClient.invalidateQueries({ queryKey: ['seasons'] }),
+    ]);
 
   /** Fetch a single rule set (with slots) by id. */
   const fetchRuleSet = async (id: string): Promise<BracketRuleSet | null> => {
@@ -93,6 +101,7 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
     slots: SaveSlotsPayload[],
     round_names?: Record<string, string> | null,
     matchup_names?: Record<string, string> | null,
+    qualification_format_id?: string | null,
   ): Promise<BracketRuleSet | null> => {
     try {
       const { data } = await axios.post<BracketRuleSet>(
@@ -103,6 +112,7 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
           slots,
           round_names: round_names ?? null,
           matchup_names: matchup_names ?? null,
+          qualification_format_id: qualification_format_id ?? null,
         },
         { headers: authHeaders() },
       );
@@ -121,12 +131,26 @@ const useBracketRuleSets = (leagueId: string | undefined) => {
     slots: SaveSlotsPayload[],
     round_names?: Record<string, string> | null,
     matchup_names?: Record<string, string> | null,
+    qualification_format_id?: string | null,
   ): Promise<boolean> => {
     try {
+      const ruleSetPayload: {
+        name: string;
+        round_names: Record<string, string> | null;
+        matchup_names: Record<string, string> | null;
+        qualification_format_id?: string | null;
+      } = {
+        name,
+        round_names: round_names ?? null,
+        matchup_names: matchup_names ?? null,
+      };
+      if (qualification_format_id !== undefined) {
+        ruleSetPayload.qualification_format_id = qualification_format_id;
+      }
       await Promise.all([
         axios.patch(
           `${API}/admin/bracket-rule-sets/${id}`,
-          { name, round_names: round_names ?? null, matchup_names: matchup_names ?? null },
+          ruleSetPayload,
           { headers: authHeaders() },
         ),
         axios.put(

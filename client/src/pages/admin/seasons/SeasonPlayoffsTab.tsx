@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useForm, useFieldArray } from 'react-hook-form';
 import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
-import Field from '@/components/Field/Field';
 import Icon from '@/components/Icon/Icon';
 import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -26,17 +24,6 @@ import {
 import styles from './SeasonPlayoffsTab.module.scss';
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
-const SCOPE_OPTIONS = [
-  { value: 'league' as PlayoffFormatRule['scope'], label: 'Whole League' },
-  { value: 'conference' as PlayoffFormatRule['scope'], label: 'Per Conference' },
-  { value: 'division' as PlayoffFormatRule['scope'], label: 'Per Division' },
-];
-
-const METHOD_OPTIONS = [
-  { value: 'top' as PlayoffFormatRule['method'], label: 'Top N (direct)' },
-  { value: 'wildcard' as PlayoffFormatRule['method'], label: 'Wildcard (best remaining)' },
-];
 
 const STATUS_INTENT: Record<SeriesStatus, 'neutral' | 'warning' | 'success'> = {
   upcoming: 'neutral',
@@ -133,143 +120,6 @@ const BEST_OF_PLAYOFF_OPTIONS = [
 ];
 
 // ── Playoff Format Modal ──────────────────────────────────────────────────────
-
-interface PlayoffFormatFormValues {
-  rules: PlayoffFormatRule[];
-}
-
-interface PlayoffFormatModalProps {
-  open: boolean;
-  playoffFormat: PlayoffFormatRule[] | null;
-  seasonId: string;
-  updateSeason: (id: string, payload: Partial<CreateSeasonData>) => Promise<boolean>;
-  onClose: () => void;
-}
-
-const EMPTY_RULE: PlayoffFormatRule = { scope: 'league', method: 'top', count: 4 };
-
-const PlayoffFormatModal = ({
-  open,
-  playoffFormat,
-  seasonId,
-  updateSeason,
-  onClose,
-}: PlayoffFormatModalProps) => {
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { isSubmitting, isDirty, isValid },
-  } = useForm<PlayoffFormatFormValues>({
-    defaultValues: { rules: [] },
-    mode: 'onChange',
-  });
-
-  const { fields, append, remove } = useFieldArray({ control, name: 'rules' });
-
-  useEffect(() => {
-    if (!open) return;
-    reset({ rules: playoffFormat ?? [] });
-  }, [open, playoffFormat, reset]);
-
-  const onSubmit = handleSubmit(async (data) => {
-    const rules = data.rules.map((r) => ({ ...r, count: Number(r.count) }));
-    const ok = await updateSeason(seasonId, {
-      playoff_format: rules.length > 0 ? rules : null,
-    });
-    if (ok) onClose();
-  });
-
-  return (
-    <Modal
-      open={open}
-      title="Playoff Qualification Format"
-      size="lg"
-      onClose={onClose}
-      confirmLabel={isSubmitting ? 'Saving…' : 'Save Rules'}
-      confirmForm="playoff-format-form"
-      confirmDisabled={isSubmitting || !isDirty || !isValid}
-      busy={isSubmitting}
-    >
-      <form
-        id="playoff-format-form"
-        onSubmit={onSubmit}
-      >
-        {fields.length > 0 && (
-          <div className={styles.formatHeaderRow}>
-            <span className={styles.formatHeaderCell}>Scope</span>
-            <span className={styles.formatHeaderCell}>Method</span>
-            <span className={styles.formatHeaderCell}>Count</span>
-            <span />
-          </div>
-        )}
-
-        <div className={styles.formatRuleRows}>
-          {fields.map((field, i) => (
-            <div
-              key={field.id}
-              className={styles.formatRuleRow}
-            >
-              <Field
-                type="select"
-                control={control}
-                name={`rules.${i}.scope`}
-                options={SCOPE_OPTIONS}
-                disabled={isSubmitting}
-              />
-              <Field
-                type="select"
-                control={control}
-                name={`rules.${i}.method`}
-                options={METHOD_OPTIONS}
-                disabled={isSubmitting}
-              />
-              <Field
-                type="number"
-                control={control}
-                name={`rules.${i}.count`}
-                min={1}
-                max={32}
-                disabled={isSubmitting}
-                rules={{
-                  required: 'Count is required',
-                  min: { value: 1, message: 'Count must be at least 1' },
-                  max: { value: 32, message: 'Count must be 32 or less' },
-                }}
-              />
-              <button
-                type="button"
-                className={styles.formatDeleteBtn}
-                onClick={() => remove(i)}
-                disabled={isSubmitting}
-                aria-label="Remove rule"
-              >
-                <Icon
-                  name="delete"
-                  size="1em"
-                />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        <div className={styles.formatAddRow}>
-          <Button
-            type="button"
-            variant="ghost"
-            intent="neutral"
-            icon="add"
-            size="sm"
-            disabled={isSubmitting}
-            onClick={() => append({ ...EMPTY_RULE })}
-          >
-            Add Rule
-          </Button>
-        </div>
-      </form>
-    </Modal>
-  );
-};
 
 // ── Choice Pick Modal ─────────────────────────────────────────────────────────
 
@@ -948,21 +798,20 @@ const SeasonPlayoffsTab = ({
   };
 
   // ── Derived bracket structure ─────────────────────────────────────────────────
-  const bracketStructure = useMemo(
-    () => deriveBracketStructure(playoffFormat, groups),
-    [playoffFormat, groups],
-  );
-
   const activeRuleSet = useMemo(
     () => (bracketRuleSetId ? (ruleSets.find((rs) => rs.id === bracketRuleSetId) ?? null) : null),
     [bracketRuleSetId, ruleSets],
+  );
+  const activePlayoffFormat =
+    (activeRuleSet ? activeRuleSet.qualification_rules : playoffFormat) ?? null;
+  const bracketStructure = useMemo(
+    () => deriveBracketStructure(activePlayoffFormat, groups),
+    [activePlayoffFormat, groups],
   );
   const roundNames = activeRuleSet?.round_names ?? null;
   const matchupNames = activeRuleSet?.matchup_names ?? null;
 
   // ── Modal state ───────────────────────────────────────────────────────────────
-  const [formatModalOpen, setFormatModalOpen] = useState(false);
-
   // ── Series state ─────────────────────────────────────────────────────────────
   const seriesByRound = series.reduce<Record<number, PlayoffSeriesRecord[]>>((acc, s) => {
     if (!acc[s.round]) acc[s.round] = [];
@@ -1004,8 +853,8 @@ const SeasonPlayoffsTab = ({
     ruleSetOptions.find((option) => option.value === bracketRuleSetId)?.label ??
     'No rule set assigned';
   const bracketRuleSetLockedTitle = playoffsStarted
-    ? 'Bracket rule set cannot be changed after playoffs start.'
-    : 'Bracket rule set cannot be changed after the season ends.';
+    ? 'Playoff rule set cannot be changed after playoffs start.'
+    : 'Playoff rule set cannot be changed after the season ends.';
   const hasDraftBracketRuleSetChange = draftBracketRuleSetId !== bracketRuleSetId;
   const handleSaveBracketRuleSet = async () => {
     if (!hasDraftBracketRuleSetChange || !draftBracketRuleSetId) return;
@@ -1016,6 +865,13 @@ const SeasonPlayoffsTab = ({
       setSavingBracketRuleSet(false);
     }
   };
+  const qualificationFormatLabel =
+    activeRuleSet?.qualification_format_name ??
+    (activeRuleSet
+      ? 'No qualification format'
+      : activePlayoffFormat && activePlayoffFormat.length > 0
+      ? 'Legacy qualification rules'
+      : 'No format assigned');
   const canSimulateFirstRound =
     !!bracketStructure && !!bracketRuleSetId && !playoffsStarted && !hasRoundOneSeries;
   const canSeedMatchups =
@@ -1429,8 +1285,8 @@ const SeasonPlayoffsTab = ({
             )}
           </Card>
 
-          {/* ── Bracket Rule Set ── */}
-          <Card title="Bracket Rule Set">
+          {/* ── Playoff Rule Set ── */}
+          <Card title="Playoff Rule Set">
             <div className={styles.ruleSetSelector}>
               {bracketRuleSetLocked ? (
                 <div
@@ -1462,7 +1318,7 @@ const SeasonPlayoffsTab = ({
                       variant="filled"
                       intent="accent"
                       iconHeight="field"
-                      tooltip="Save bracket rule set"
+                      tooltip="Save playoff rule set"
                       tooltipClassName={styles.ruleSetSaveAction}
                       disabled={savingBracketRuleSet || !draftBracketRuleSetId}
                       onClick={handleSaveBracketRuleSet}
@@ -1472,7 +1328,7 @@ const SeasonPlayoffsTab = ({
               )}
               {!draftBracketRuleSetId && ruleSetOptions.length > 0 && (
                 <p className={styles.ruleSetHint}>
-                  Select a rule set to configure the playoff bracket structure.
+                  Select a rule set to configure playoff qualification and bracket structure.
                 </p>
               )}
             </div>
@@ -1518,25 +1374,15 @@ const SeasonPlayoffsTab = ({
           </Card>
 
           {/* ── Playoff Qualification Format ── */}
-          <Card
-            title="Playoff Qualification Format"
-            action={
-              !playoffsStarted ? (
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  size="sm"
-                  tooltip="Edit qualification format"
-                  disabled={isEnded}
-                  onClick={() => setFormatModalOpen(true)}
-                />
-              ) : null
-            }
-          >
-            {playoffFormat && playoffFormat.length > 0 ? (
+          <Card title="Playoff Qualification Format">
+            <div className={styles.ruleSetSelector}>
+              <div className={styles.readonlyRuleSetBox}>
+                <span className={styles.readonlyRuleSetLabel}>{qualificationFormatLabel}</span>
+              </div>
+            </div>
+            {activePlayoffFormat && activePlayoffFormat.length > 0 ? (
               <div className={styles.formatRuleList}>
-                {playoffFormat.map((r, i) => (
+                {activePlayoffFormat.map((r, i) => (
                   <div
                     key={i}
                     className={styles.qualRuleRow}
@@ -1572,14 +1418,6 @@ const SeasonPlayoffsTab = ({
 
       {/* ── Modals ── */}
       <>
-        <PlayoffFormatModal
-          open={formatModalOpen}
-          playoffFormat={playoffFormat}
-          seasonId={seasonId}
-          updateSeason={updateSeason}
-          onClose={() => setFormatModalOpen(false)}
-        />
-
         <ChoicePickModal
           open={pickModalOpen}
           choices={pendingChoices}

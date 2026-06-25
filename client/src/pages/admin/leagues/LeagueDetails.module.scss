@@ -449,6 +449,18 @@ $league-tab-list-gap: $space-md;
 
 // ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
 
+.playoffsTabGrid {
+  column-gap: $space-lg;
+}
+
+.playoffsTabCard {
+  grid-column: span 6;
+
+  @media (max-width: 1024px) {
+    grid-column: 1 / -1;
+  }
+}
+
 .ruleSet {
   &List {
     list-style: none;

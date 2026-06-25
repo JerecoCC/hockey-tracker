@@ -19,6 +19,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
                  s.group_alignment_set_id,
                  EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
                  EXISTS (
@@ -31,6 +32,7 @@ router.get('/', async (req, res) => {
                  l.name AS league_name, l.code AS league_code, l.logo AS league_logo
           FROM seasons s
           JOIN leagues l ON l.id = s.league_id
+          LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
           WHERE s.league_id = ${league_id}
           ORDER BY (l.current_season_id = s.id) DESC, s.start_date DESC NULLS LAST, s.name ASC
         `
@@ -40,6 +42,7 @@ router.get('/', async (req, res) => {
                  s.is_ended, s.playoffs_started,
                  s.start_date::text AS start_date, s.end_date::text AS end_date,
                  s.games_per_season,
+                 COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
                  s.group_alignment_set_id,
                  EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
                  EXISTS (
@@ -52,6 +55,7 @@ router.get('/', async (req, res) => {
                  l.name AS league_name, l.code AS league_code, l.logo AS league_logo
           FROM seasons s
           JOIN leagues l ON l.id = s.league_id
+          LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
           ORDER BY (l.current_season_id = s.id) DESC, s.start_date DESC NULLS LAST, s.name ASC
         `;
     return res.json(seasons);
@@ -73,7 +77,9 @@ router.get('/:id', async (req, res) => {
              s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
-             s.playoff_format,
+             COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
+             COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
+             pqf.name AS playoff_qualification_format_name,
              s.best_of_playoff,
              s.best_of_shootout,
              s.scoring_system,
@@ -93,6 +99,9 @@ router.get('/:id', async (req, res) => {
              l.best_of_shootout  AS league_best_of_shootout
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
+      LEFT JOIN playoff_qualification_formats pqf
+        ON pqf.id = COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id)
       WHERE s.id = ${id}
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Season not found' });
@@ -107,8 +116,15 @@ router.get('/:id', async (req, res) => {
 // POST /api/admin/seasons  – create a season
 // ---------------------------------------------------------------------------
 router.post('/', async (req, res) => {
-  const { league_id, name, start_date, end_date, games_per_season, group_alignment_set_id } =
-    req.body;
+  const {
+    league_id,
+    name,
+    start_date,
+    end_date,
+    games_per_season,
+    playoff_qualification_format_id,
+    group_alignment_set_id,
+  } = req.body;
 
   if (!league_id) return res.status(400).json({ error: 'league_id is required' });
   if (!name || !name.trim()) return res.status(400).json({ error: 'name is required' });
@@ -129,9 +145,22 @@ router.post('/', async (req, res) => {
       }
     }
 
+    if (playoff_qualification_format_id) {
+      const formatRows = await sql`
+        SELECT id FROM playoff_qualification_formats
+        WHERE id = ${playoff_qualification_format_id} AND league_id = ${league_id}
+      `;
+      if (formatRows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'playoff_qualification_format_id does not belong to this league' });
+      }
+    }
+
     const rows = await sql`
       INSERT INTO seasons (
-        name, league_id, start_date, end_date, games_per_season, group_alignment_set_id
+        name, league_id, start_date, end_date, games_per_season,
+        playoff_qualification_format_id, group_alignment_set_id
       )
       VALUES (
         ${name.trim()},
@@ -139,11 +168,12 @@ router.post('/', async (req, res) => {
         ${start_date ?? null},
         ${end_date ?? null},
         ${games_per_season ?? null},
+        ${playoff_qualification_format_id || null},
         ${group_alignment_set_id || null}
       )
       RETURNING id, name, league_id, FALSE AS is_current,
                 start_date::text AS start_date, end_date::text AS end_date,
-                games_per_season, group_alignment_set_id,
+                games_per_season, playoff_qualification_format_id, group_alignment_set_id,
                 FALSE AS has_scheduled_games,
                 FALSE AS has_unfinished_regular_games,
                 created_at
@@ -170,6 +200,7 @@ router.patch('/:id', async (req, res) => {
     end_date,
     games_per_season,
     playoff_format,
+    playoff_qualification_format_id,
     best_of_playoff,
     best_of_shootout,
     scoring_system,
@@ -184,6 +215,7 @@ router.patch('/:id', async (req, res) => {
              start_date::text AS start_date, end_date::text AS end_date, is_ended,
              playoffs_started,
              games_per_season, playoff_format,
+             playoff_qualification_format_id,
              best_of_playoff, best_of_shootout, scoring_system,
              bracket_rule_set_id, group_alignment_set_id,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = seasons.id) AS has_scheduled_games
@@ -206,6 +238,16 @@ router.patch('/:id', async (req, res) => {
         : cur.playoff_format
           ? JSON.stringify(cur.playoff_format)
           : null;
+    const mergedPlayoffQualificationFormatId =
+      playoff_qualification_format_id !== undefined
+        ? playoff_qualification_format_id || null
+        : cur.playoff_qualification_format_id;
+    const effectiveMergedPlayoffFormat =
+      playoff_qualification_format_id !== undefined &&
+      mergedPlayoffQualificationFormatId &&
+      playoff_format === undefined
+        ? null
+        : mergedPlayoffFormat;
     const mergedBestOfPlayoff =
       best_of_playoff !== undefined ? best_of_playoff || null : cur.best_of_playoff;
     const mergedBestOfShootout =
@@ -251,6 +293,30 @@ router.patch('/:id', async (req, res) => {
       }
     }
 
+    if (mergedPlayoffQualificationFormatId) {
+      const formatRows = await sql`
+        SELECT id FROM playoff_qualification_formats
+        WHERE id = ${mergedPlayoffQualificationFormatId} AND league_id = ${mergedLeagueId}
+      `;
+      if (formatRows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'playoff_qualification_format_id does not belong to this league' });
+      }
+    }
+
+    if (mergedBracketRuleSetId) {
+      const ruleSetRows = await sql`
+        SELECT id FROM bracket_rule_sets
+        WHERE id = ${mergedBracketRuleSetId} AND league_id = ${mergedLeagueId}
+      `;
+      if (ruleSetRows.length === 0) {
+        return res
+          .status(400)
+          .json({ error: 'bracket_rule_set_id does not belong to this league' });
+      }
+    }
+
     await sql`
       UPDATE seasons
       SET
@@ -260,7 +326,8 @@ router.patch('/:id', async (req, res) => {
         end_date             = ${mergedEndDate},
         is_ended             = ${mergedIsEnded},
         games_per_season     = ${mergedGamesPerSeason},
-        playoff_format       = ${mergedPlayoffFormat}::jsonb,
+        playoff_format       = ${effectiveMergedPlayoffFormat}::jsonb,
+        playoff_qualification_format_id = ${mergedPlayoffQualificationFormatId},
         best_of_playoff      = ${mergedBestOfPlayoff},
         best_of_shootout     = ${mergedBestOfShootout},
         scoring_system       = ${mergedScoringSystem},
@@ -284,7 +351,9 @@ router.patch('/:id', async (req, res) => {
              s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
-             s.playoff_format,
+             COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
+             COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
+             pqf.name AS playoff_qualification_format_name,
              s.bracket_rule_set_id,
              s.group_alignment_set_id,
              EXISTS (SELECT 1 FROM games g WHERE g.season_id = s.id) AS has_scheduled_games,
@@ -298,6 +367,9 @@ router.patch('/:id', async (req, res) => {
              l.name AS league_name, l.code AS league_code, l.logo AS league_logo
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
+      LEFT JOIN playoff_qualification_formats pqf
+        ON pqf.id = COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id)
       WHERE s.id = ${id}
     `;
     return res.json(rows[0]);
@@ -395,7 +467,9 @@ router.patch('/:id/playoffs', async (req, res) => {
              s.is_ended, s.playoffs_started,
              s.start_date::text AS start_date, s.end_date::text AS end_date,
              s.games_per_season,
-             s.playoff_format,
+             COALESCE(pqf.rules, s.playoff_format, l.playoff_format) AS playoff_format,
+             COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id) AS playoff_qualification_format_id,
+             pqf.name AS playoff_qualification_format_name,
              s.bracket_rule_set_id,
              s.group_alignment_set_id,
              s.best_of_playoff, s.best_of_shootout, s.scoring_system,
@@ -413,6 +487,9 @@ router.patch('/:id/playoffs', async (req, res) => {
              l.best_of_shootout AS league_best_of_shootout
       FROM seasons s
       JOIN leagues l ON l.id = s.league_id
+      LEFT JOIN bracket_rule_sets brs ON brs.id = s.bracket_rule_set_id
+      LEFT JOIN playoff_qualification_formats pqf
+        ON pqf.id = COALESCE(brs.qualification_format_id, s.playoff_qualification_format_id)
       WHERE s.id = ${id}
     `;
     return res.json(rows[0]);
