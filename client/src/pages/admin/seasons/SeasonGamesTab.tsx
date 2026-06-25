@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import axios, { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { toast, type Id, type TypeOptions } from 'react-toastify';
+import { toast, type TypeOptions } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Card from '@/components/Card/Card';
@@ -857,6 +857,7 @@ const SeasonGamesTab = ({
         href={gameDetailsPath(game)}
         tooltip={`${game.away_team.name} @ ${game.home_team.name}`}
         showScore={showScore}
+        gameType={game.game_type}
         live={game.status === 'in_progress'}
         awayTeam={{
           logo: game.away_team.logo,
@@ -969,6 +970,7 @@ const SeasonGamesTab = ({
         originalDateLabel={null}
         timeLabel={formatGameTime(game) ?? null}
         showScore={shouldShowGameScore(game)}
+        showTypeIndicator
         onOpen={() => openGame(game)}
         actions={renderGameCardActions(game)}
       />

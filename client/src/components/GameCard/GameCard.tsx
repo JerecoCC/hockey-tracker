@@ -1,10 +1,17 @@
 import type { CSSProperties, ReactNode } from 'react';
+import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import { type GameRecord } from '@/hooks/useGames';
+import { type GameRecord, type GameType } from '@/hooks/useGames';
 import styles from './GameCard.module.scss';
 
 export type GameCardTimezone = 'ET' | 'local';
+
+const GAME_TYPE_CLASS: Record<GameType, string> = {
+  preseason: styles.typePreseason,
+  regular: styles.typeRegular,
+  playoff: styles.typePlayoff,
+};
 
 type MaybePromise = void | Promise<void>;
 
@@ -20,6 +27,8 @@ interface GameCardProps {
   actions?: ReactNode;
   showScore?: boolean;
   timeLabel?: string | null;
+  /** Renders a left accent stripe coloured by game type. */
+  showTypeIndicator?: boolean;
 }
 
 const DATE_ONLY_RE = /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/;
@@ -238,6 +247,7 @@ const GameCard = ({
   actions,
   showScore: showScoreProp,
   timeLabel: timeLabelProp,
+  showTypeIndicator = false,
   onOpen,
 }: GameCardProps) => {
   const showScore = showScoreProp ?? shouldShowWatchedScore(game);
@@ -264,9 +274,11 @@ const GameCard = ({
   const playoffMetaLabel = getPlayoffGameMetaLabel(game);
 
   return (
-    <div
+    <Card
+      variant="border"
       className={[
         styles.card,
+        showTypeIndicator ? GAME_TYPE_CLASS[game.game_type] : '',
         useLeagueColors ? styles.leagueColors : '',
         game.status === 'in_progress' ? styles.live : '',
         game.skipped_by_user ? styles.skipped : '',
@@ -321,7 +333,7 @@ const GameCard = ({
         <span>{getStatusLabel(game)}</span>
         {playoffMetaLabel && <span>{playoffMetaLabel}</span>}
       </div>
-    </div>
+    </Card>
   );
 };
 

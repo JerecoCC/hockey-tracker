@@ -16,7 +16,7 @@
   padding: $space-sm;
   border: 1px solid $border;
   border-radius: $radius-sm;
-  background: color-mix(in srgb, #{$bg-card} 80%, #{$bg-page});
+  background: #222d3f;
   color: $text-body;
   font-size: $font-sm;
   line-height: 1;
@@ -41,6 +41,20 @@
       opacity: 1;
       pointer-events: auto;
     }
+  }
+
+  // Game type — left accent stripe (inset box-shadow survives hover/live
+  // border-color changes). Matches the playoff series games list.
+  &.typePreseason {
+    box-shadow: inset 3px 0 0 $text-dim;
+  }
+
+  &.typeRegular {
+    box-shadow: inset 3px 0 0 $accent-light;
+  }
+
+  &.typePlayoff {
+    box-shadow: inset 3px 0 0 $warning-light;
   }
 
   &Live {

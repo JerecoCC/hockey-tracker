@@ -2,9 +2,16 @@ import type { CSSProperties, DragEventHandler, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
+import type { GameType } from '@/hooks/useGames';
 import styles from './CalendarGameListItem.module.scss';
 
 type ScoreStatus = 'pending' | 'win' | 'lose' | 'missing';
+
+const GAME_TYPE_CLASS: Record<GameType, string> = {
+  preseason: styles.typePreseason,
+  regular: styles.typeRegular,
+  playoff: styles.typePlayoff,
+};
 
 export interface CalendarGameListItemTeam {
   code: string;
@@ -21,6 +28,8 @@ interface Props {
   awayTeam: CalendarGameListItemTeam;
   homeTeam: CalendarGameListItemTeam;
   showScore?: boolean;
+  /** Renders a left accent stripe coloured by game type. */
+  gameType?: GameType;
   href?: string;
   tooltip?: string;
   topLabel?: ReactNode;
@@ -60,6 +69,7 @@ const CalendarGameListItem = ({
   awayTeam,
   homeTeam,
   showScore = false,
+  gameType,
   href,
   tooltip,
   topLabel,
@@ -77,6 +87,7 @@ const CalendarGameListItem = ({
   const scoreVisible = showScore && awayTeam.score != null && homeTeam.score != null;
   const itemClassName = [
     styles.item,
+    gameType ? GAME_TYPE_CLASS[gameType] : '',
     live ? styles.itemLive : '',
     dragging ? styles.itemDragging : '',
     draggable ? styles.itemDraggable : '',

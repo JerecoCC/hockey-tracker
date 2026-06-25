@@ -1,17 +1,17 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+// The root element is the shared Card component (border variant), which supplies
+// the radius, padding and outline. GameCard only layers a subtle translucent
+// white fill plus its own layout, state and hover treatments on top.
 .card {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: $space-md;
   min-height: 176px;
-  padding: $space-lg;
   overflow: hidden;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  background: $bg-card;
+  background: #222d3f;
   color: $text-body;
   transition:
     border-color $transition-fast,
@@ -54,6 +54,34 @@
   }
 }
 
+// ── Game type — full-height left accent bar ──────────────────────────────────
+// A pseudo-element bar flush against the left edge. The card's overflow:hidden
+// + border-radius clips the bar's left corners to match the card, leaving a
+// straight right edge. Survives the hover/live/league border-color changes.
+
+.typePreseason::before,
+.typeRegular::before,
+.typePlayoff::before,
+.skipped::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  z-index: 1;
+  width: 6px;
+}
+
+.typePreseason::before {
+  background: $text-dim; // slate — exhibition/lower stakes
+}
+
+.typeRegular::before {
+  background: $accent-light; // blue — standard season play
+}
+
+.typePlayoff::before {
+  background: $warning-light; // amber/gold — high stakes
+}
+
 .live {
   border-color: rgba($success, 0.65);
   background: rgba($success, 0.08);
@@ -63,7 +91,10 @@
   border-style: dashed;
   border-color: rgba($danger, 0.68);
   background: rgba($danger, 0.07);
-  box-shadow: inset 3px 0 0 rgba($danger, 0.75);
+
+  &::before {
+    background: rgba($danger, 0.75);
+  }
 
   &:hover,
   &:focus-within {
