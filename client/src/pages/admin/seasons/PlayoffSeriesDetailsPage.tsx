@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import Card from '@/components/Card/Card';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -7,7 +8,8 @@ import type { TagIntent } from '@/components/Tag/Tag';
 import useLeagues from '@/hooks/useLeagues';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
-import {
+import useGames, {
+  type GameRecord,
   type GameStatus,
   type PlayoffSeriesRecord,
   type SeriesGame,
@@ -24,6 +26,7 @@ import {
 } from '@/lib/routeSlugs';
 import ScoreboardCard from '@/pages/admin/games/game-details/ScoreboardCard';
 import GameListItem from '@/components/GameListItem';
+import GameFormModal, { type GameFormTeam } from './GameFormModal';
 import styles from './PlayoffSeriesDetailsPage.module.scss';
 
 const STATUS_LABEL: Record<GameStatus, string> = {
@@ -148,6 +151,19 @@ const PlayoffSeriesDetailsPage = () => {
     : seasons.find((item) => toRouteSlug(item.name) === seasonSlug);
   const seasonId = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
   const { series, loading: seriesLoading } = usePlayoffSeries(seasonId);
+  const { createGame, updateGame } = useGames({ seasonId });
+  const queryClient = useQueryClient();
+  const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
+
+  // updateGame only invalidates the games cache; refresh the series so the
+  // games list reflects the edit immediately.
+  const handleUpdateGame = async (id: string, data: Parameters<typeof updateGame>[1]) => {
+    const ok = await updateGame(id, data);
+    if (ok && seasonId) {
+      await queryClient.invalidateQueries({ queryKey: ['playoff-series', seasonId] });
+    }
+    return ok;
+  };
   const playoffSeries =
     series.find(
       (item) =>
@@ -246,6 +262,36 @@ const PlayoffSeriesDetailsPage = () => {
     });
   };
 
+  // The form modal edits a small subset of fields (date, time, teams, venue).
+  // Both series teams are offered so home/away can be corrected.
+  const seriesTeams: GameFormTeam[] = [awayTeam, homeTeam].map((team) => ({
+    id: team.id,
+    name: team.name,
+    code: team.code,
+    logo: team.logo,
+    home_arena: null,
+  }));
+
+  const toEditTarget = (game: SeriesGame): GameRecord =>
+    ({
+      id: game.id,
+      season_id: seasonId ?? '',
+      game_type: 'playoff',
+      status: game.status,
+      scheduled_at: game.scheduled_at,
+      scheduled_time: game.scheduled_time,
+      venue: game.venue,
+      home_team: teamForId(game.home_team_id),
+      away_team: teamForId(game.away_team_id),
+      home_score: game.home_goals,
+      away_score: game.away_goals,
+      overtime_periods: game.overtime_periods,
+      shootout: game.shootout,
+      game_number_in_series: game.game_number_in_series,
+      playoff_round: playoffSeries.round,
+      notes: null,
+    }) as GameRecord;
+
   return (
     <div className={styles.page}>
       <ScoreboardCard
@@ -297,12 +343,29 @@ const PlayoffSeriesDetailsPage = () => {
                   venue={game.venue ?? undefined}
                   gameNumberInSeries={game.game_number_in_series}
                   gameType="playoff"
+                  actions={[
+                    {
+                      icon: 'edit',
+                      tooltip: 'Edit game',
+                      onClick: () => setEditTarget(toEditTarget(game)),
+                    },
+                  ]}
                 />
               );
             })}
           </ul>
         )}
       </Card>
+
+      <GameFormModal
+        open={editTarget !== null}
+        seasonId={seasonId ?? ''}
+        editTarget={editTarget}
+        seasonTeams={seriesTeams}
+        createGame={createGame}
+        updateGame={handleUpdateGame}
+        onClose={() => setEditTarget(null)}
+      />
     </div>
   );
 };
