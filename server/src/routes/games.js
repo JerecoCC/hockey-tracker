@@ -1779,6 +1779,17 @@ router.patch('/:id', async (req, res) => {
             WHERE id = ${series.id}
           `;
 
+          // Once the series is clinched, cancel any games that haven't been
+          // played — they're no longer needed (e.g. game 7 after a 4-2 series).
+          if (seriesComplete) {
+            await sql`
+              UPDATE games
+              SET status = 'cancelled'
+              WHERE playoff_series_id = ${series.id}
+                AND status NOT IN ('final', 'cancelled')
+            `;
+          }
+
           // ── Auto-advance: create next-round series shell ────────────────────
           // When a series completes and has a bracket_slot_key, check if the
           // bracket rule set has a 'winner' slot referencing this matchup.
