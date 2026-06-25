@@ -94,6 +94,43 @@
   }
 }
 
+.playoffSettings {
+  &Grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: $space-lg;
+
+    @media (max-width: 640px) {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  &QualificationList {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  &Form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &Field {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
+    width: 100%;
+    min-width: 0;
+    color: $text-dim;
+    font-size: $font-xs;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+  }
+}
+
 // ── Bracket rule set selector card ───────────────────────────────────────────
 
 .ruleSet {

@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import InfoItem from '@/components/InfoItem/InfoItem';
 import Icon from '@/components/Icon/Icon';
+import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
@@ -489,11 +491,11 @@ const SeasonPlayoffsTab = ({
   const ruleSetOptions = ruleSets.map((rs) => ({ value: rs.id, label: rs.name }));
   const currentPlayoffSeriesFormatValue = String(bestOfPlayoff ?? leagueBestOfPlayoff);
   const [draftBestOfPlayoff, setDraftBestOfPlayoff] = useState(currentPlayoffSeriesFormatValue);
-  const [savingPlayoffSeriesFormat, setSavingPlayoffSeriesFormat] = useState(false);
   const [draftBracketRuleSetId, setDraftBracketRuleSetId] = useState<string | null>(
     bracketRuleSetId,
   );
-  const [savingBracketRuleSet, setSavingBracketRuleSet] = useState(false);
+  const [settingsModalOpen, setSettingsModalOpen] = useState(false);
+  const [savingPlayoffSettings, setSavingPlayoffSettings] = useState(false);
   const bracketCanvasRef = useRef<HTMLDivElement | null>(null);
   const bracketSlotRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const [bracketConnectorPaths, setBracketConnectorPaths] = useState<BracketConnectorPath[]>([]);
@@ -827,51 +829,53 @@ const SeasonPlayoffsTab = ({
 
   const handleStartSeries = (s: PlayoffSeriesRecord) => startSeries(s.id);
   const hasRoundOneSeries = series.some((s) => s.round === 1);
-  const playoffSeriesFormatLocked = isEnded || playoffsStarted;
+  const playoffSettingsLocked = isEnded || playoffsStarted;
   const playoffSeriesFormatLabel =
     bestOfPlayoff != null
       ? `Best of ${bestOfPlayoff}`
       : `Best of ${leagueBestOfPlayoff} (league default)`;
-  const playoffSeriesFormatLockedTitle = playoffsStarted
-    ? 'Playoff series format cannot be changed after playoffs start.'
-    : 'Playoff series format cannot be changed after the season ends.';
-  const hasDraftPlayoffSeriesFormatChange = draftBestOfPlayoff !== currentPlayoffSeriesFormatValue;
-  const handleSavePlayoffSeriesFormat = async () => {
-    if (!hasDraftPlayoffSeriesFormatChange) return;
-    const playoffValue = parseInt(draftBestOfPlayoff, 10);
-    setSavingPlayoffSeriesFormat(true);
-    try {
-      await updateSeason(seasonId, {
-        best_of_playoff: playoffValue !== leagueBestOfPlayoff ? playoffValue : null,
-      });
-    } finally {
-      setSavingPlayoffSeriesFormat(false);
-    }
-  };
-  const bracketRuleSetLocked = isEnded || playoffsStarted;
+  const playoffSettingsLockedTitle = playoffsStarted
+    ? 'Playoff settings cannot be changed after playoffs start.'
+    : 'Playoff settings cannot be changed after the season ends.';
+  const playoffSettingsActionIcon = bracketRuleSetId ? 'edit' : 'add';
+  const playoffSettingsActionTooltip = playoffSettingsLocked
+    ? playoffSettingsLockedTitle
+    : bracketRuleSetId
+      ? 'Edit playoff settings'
+      : 'Add playoff settings';
   const bracketRuleSetLabel =
     ruleSetOptions.find((option) => option.value === bracketRuleSetId)?.label ??
     'No rule set assigned';
-  const bracketRuleSetLockedTitle = playoffsStarted
-    ? 'Playoff rule set cannot be changed after playoffs start.'
-    : 'Playoff rule set cannot be changed after the season ends.';
-  const hasDraftBracketRuleSetChange = draftBracketRuleSetId !== bracketRuleSetId;
-  const handleSaveBracketRuleSet = async () => {
-    if (!hasDraftBracketRuleSetChange || !draftBracketRuleSetId) return;
-    setSavingBracketRuleSet(true);
+  const qualificationScopeLabels = {
+    league: 'League',
+    conference: 'Per Conference',
+    division: 'Per Division',
+  } as const;
+  const hasDraftPlayoffSettingsChange =
+    draftBestOfPlayoff !== currentPlayoffSeriesFormatValue ||
+    draftBracketRuleSetId !== bracketRuleSetId;
+  const openPlayoffSettingsModal = () => {
+    setDraftBestOfPlayoff(currentPlayoffSeriesFormatValue);
+    setDraftBracketRuleSetId(bracketRuleSetId);
+    setSettingsModalOpen(true);
+  };
+  const closePlayoffSettingsModal = () => {
+    if (!savingPlayoffSettings) setSettingsModalOpen(false);
+  };
+  const handleSavePlayoffSettings = async () => {
+    if (!hasDraftPlayoffSettingsChange) return;
+    const playoffValue = parseInt(draftBestOfPlayoff, 10);
+    setSavingPlayoffSettings(true);
     try {
-      await updateSeason(seasonId, { bracket_rule_set_id: draftBracketRuleSetId });
+      const saved = await updateSeason(seasonId, {
+        bracket_rule_set_id: draftBracketRuleSetId,
+        best_of_playoff: playoffValue !== leagueBestOfPlayoff ? playoffValue : null,
+      });
+      if (saved) setSettingsModalOpen(false);
     } finally {
-      setSavingBracketRuleSet(false);
+      setSavingPlayoffSettings(false);
     }
   };
-  const qualificationFormatLabel =
-    activeRuleSet?.qualification_format_name ??
-    (activeRuleSet
-      ? 'No qualification format'
-      : activePlayoffFormat && activePlayoffFormat.length > 0
-      ? 'Legacy qualification rules'
-      : 'No format assigned');
   const canSimulateFirstRound =
     !!bracketStructure && !!bracketRuleSetId && !playoffsStarted && !hasRoundOneSeries;
   const canSeedMatchups =
@@ -1259,12 +1263,10 @@ const SeasonPlayoffsTab = ({
           </Card>
         </div>
 
-        {/* ── Right column — Settings + Qualification ── */}
+        {/* ── Right column — Playoff settings ── */}
         <div className={styles.layoutRight}>
-          <Card title="Playoff Winner">
-            {seriesLoading ? (
-              <p className={styles.playoffWinnerPending}>Loading...</p>
-            ) : playoffWinner ? (
+          {playoffWinner && (
+            <Card title="Playoff Winner">
               <div className={styles.playoffWinnerShowcase}>
                 <TeamLogo
                   logo={playoffWinner.logo}
@@ -1280,139 +1282,67 @@ const SeasonPlayoffsTab = ({
                   </span>
                 </div>
               </div>
-            ) : (
-              <p className={styles.playoffWinnerPending}>No winner yet.</p>
-            )}
-          </Card>
+            </Card>
+          )}
 
-          {/* ── Playoff Rule Set ── */}
-          <Card title="Playoff Rule Set">
-            <div className={styles.ruleSetSelector}>
-              {bracketRuleSetLocked ? (
-                <div
-                  className={styles.readonlyRuleSetBox}
-                  title={bracketRuleSetLockedTitle}
-                >
-                  <span className={styles.readonlyRuleSetLabel}>{bracketRuleSetLabel}</span>
-                </div>
-              ) : (
-                <div className={styles.ruleSetControl}>
-                  <div className={styles.ruleSetSelectField}>
-                    <Select
-                      value={draftBracketRuleSetId}
-                      options={ruleSetOptions}
-                      placeholder={
-                        ruleSetOptions.length === 0
-                          ? 'No rule sets — create one in the league Playoffs tab'
-                          : 'Select a rule set…'
-                      }
-                      onChange={setDraftBracketRuleSetId}
-                      disabled={savingBracketRuleSet || ruleSetOptions.length === 0}
-                    />
-                  </div>
-                  {hasDraftBracketRuleSetChange && (
-                    <Button
-                      type="button"
-                      icon="save"
-                      size="sm"
-                      variant="filled"
-                      intent="accent"
-                      iconHeight="field"
-                      tooltip="Save playoff rule set"
-                      tooltipClassName={styles.ruleSetSaveAction}
-                      disabled={savingBracketRuleSet || !draftBracketRuleSetId}
-                      onClick={handleSaveBracketRuleSet}
-                    />
-                  )}
-                </div>
-              )}
-              {!draftBracketRuleSetId && ruleSetOptions.length > 0 && (
-                <p className={styles.ruleSetHint}>
-                  Select a rule set to configure playoff qualification and bracket structure.
-                </p>
-              )}
+          <Card
+            title="Playoff Settings"
+            action={
+              <Button
+                type="button"
+                icon={playoffSettingsActionIcon}
+                size="sm"
+                variant="outlined"
+                intent="neutral"
+                tooltip={playoffSettingsActionTooltip}
+                disabled={playoffSettingsLocked || savingPlayoffSettings}
+                onClick={openPlayoffSettingsModal}
+              />
+            }
+          >
+            <div className={styles.playoffSettingsGrid}>
+              <InfoItem
+                label="Playoff Rule Set"
+                data={bracketRuleSetLabel}
+              />
+              <InfoItem
+                label="Series Format"
+                data={playoffSeriesFormatLabel}
+              />
+              <InfoItem
+                type="custom"
+                label="Qualification Rules"
+                full
+              >
+                {activePlayoffFormat && activePlayoffFormat.length > 0 ? (
+                  <ul className={styles.playoffSettingsQualificationList}>
+                    {activePlayoffFormat.map((r, i) => (
+                      <ListItem
+                        key={`${r.scope}-${r.method}-${r.count}-${i}`}
+                        hideImage
+                        jerseyNumber={i + 1}
+                        name={
+                          r.method === 'top'
+                            ? `Top ${r.count} team${r.count !== 1 ? 's' : ''}`
+                            : `${r.count} wildcard team${r.count !== 1 ? 's' : ''}`
+                        }
+                        rightContent={{
+                          type: 'tag',
+                          label: qualificationScopeLabels[r.scope],
+                          intent: 'neutral',
+                        }}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <p className={styles.formatEmpty}>
+                    No rules configured - qualification is managed manually.
+                  </p>
+                )}
+              </InfoItem>
             </div>
           </Card>
 
-          {/* ── Playoff Series Format ── */}
-          <Card title="Playoff Series Format">
-            <div className={styles.ruleSetSelector}>
-              {playoffSeriesFormatLocked ? (
-                <div
-                  className={styles.readonlyRuleSetBox}
-                  title={playoffSeriesFormatLockedTitle}
-                >
-                  <span className={styles.readonlyRuleSetLabel}>{playoffSeriesFormatLabel}</span>
-                </div>
-              ) : (
-                <div className={styles.ruleSetControl}>
-                  <div className={styles.ruleSetSelectField}>
-                    <Select
-                      value={draftBestOfPlayoff}
-                      options={BEST_OF_PLAYOFF_OPTIONS}
-                      onChange={setDraftBestOfPlayoff}
-                      disabled={savingPlayoffSeriesFormat}
-                    />
-                  </div>
-                  {hasDraftPlayoffSeriesFormatChange && (
-                    <Button
-                      type="button"
-                      icon="save"
-                      size="sm"
-                      variant="filled"
-                      intent="accent"
-                      iconHeight="field"
-                      tooltip="Save playoff series format"
-                      tooltipClassName={styles.ruleSetSaveAction}
-                      disabled={savingPlayoffSeriesFormat}
-                      onClick={handleSavePlayoffSeriesFormat}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          </Card>
-
-          {/* ── Playoff Qualification Format ── */}
-          <Card title="Playoff Qualification Format">
-            <div className={styles.ruleSetSelector}>
-              <div className={styles.readonlyRuleSetBox}>
-                <span className={styles.readonlyRuleSetLabel}>{qualificationFormatLabel}</span>
-              </div>
-            </div>
-            {activePlayoffFormat && activePlayoffFormat.length > 0 ? (
-              <div className={styles.formatRuleList}>
-                {activePlayoffFormat.map((r, i) => (
-                  <div
-                    key={i}
-                    className={styles.qualRuleRow}
-                  >
-                    <span className={styles.formatRuleStep}>{i + 1}</span>
-                    <span className={styles.formatRuleText}>
-                      {r.method === 'top'
-                        ? `Top ${r.count}`
-                        : `${r.count} wildcard${r.count !== 1 ? 's' : ''}`}
-                    </span>
-                    <Tag
-                      label={
-                        {
-                          league: 'League',
-                          conference: 'Per Conference',
-                          division: 'Per Division',
-                        }[r.scope]
-                      }
-                      intent="neutral"
-                      className={styles.qualRuleBadge}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className={styles.formatEmpty}>
-                No rules configured — qualification is managed manually.
-              </p>
-            )}
-          </Card>
         </div>
       </div>
 
@@ -1431,6 +1361,43 @@ const SeasonPlayoffsTab = ({
             setPendingRuleSlots([]);
           }}
         />
+        <Modal
+          open={settingsModalOpen}
+          title="Edit Playoff Settings"
+          onClose={closePlayoffSettingsModal}
+          confirmLabel={savingPlayoffSettings ? 'Saving...' : 'Save Changes'}
+          confirmIcon="save"
+          onConfirm={handleSavePlayoffSettings}
+          confirmDisabled={savingPlayoffSettings || !hasDraftPlayoffSettingsChange}
+          busy={savingPlayoffSettings}
+        >
+          <div className={styles.playoffSettingsForm}>
+            <label className={styles.playoffSettingsField}>
+              <span>Playoff Rule Set</span>
+              <Select
+                value={draftBracketRuleSetId}
+                options={ruleSetOptions}
+                placeholder={
+                  ruleSetOptions.length === 0
+                    ? 'No rule sets - create one in the league Playoffs tab'
+                    : 'Select a rule set...'
+                }
+                emptyMessage="No rule sets available"
+                onChange={setDraftBracketRuleSetId}
+                disabled={savingPlayoffSettings || ruleSetOptions.length === 0}
+              />
+            </label>
+            <label className={styles.playoffSettingsField}>
+              <span>Series Format</span>
+              <Select
+                value={draftBestOfPlayoff}
+                options={BEST_OF_PLAYOFF_OPTIONS}
+                onChange={setDraftBestOfPlayoff}
+                disabled={savingPlayoffSettings}
+              />
+            </label>
+          </div>
+        </Modal>
       </>
     </>
   );
