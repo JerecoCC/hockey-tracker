@@ -276,8 +276,13 @@ const BracketSlot = ({
         className={[
           styles.bracketSlot,
           styles.slotFilled,
-          isSimulated ? styles.slotSimulated : styles.slotEmptyMatchup,
-          !canAdvance && !isSimulated ? styles.slotEmptyDisabled : '',
+          // Only the advanceable empty slot is interactive; simulated and
+          // disabled placeholders stay static (no hover border/text change).
+          isSimulated
+            ? styles.slotSimulated
+            : canAdvance
+              ? styles.slotEmptyMatchup
+              : styles.slotEmptyDisabled,
         ]
           .filter(Boolean)
           .join(' ')}
@@ -339,6 +344,11 @@ const BracketSlot = ({
   const homeWon = series.winner_team_id === series.home_team_id;
   const awayWon = series.winner_team_id === series.away_team_id;
   const isComplete = series.status === 'complete';
+  // While a series is in progress, fade whichever team isn't leading yet (same
+  // treatment as a completed loser); the leader keeps its normal styling.
+  const isActive = series.status === 'active';
+  const homeTrailing = isActive && series.home_wins <= series.away_wins;
+  const awayTrailing = isActive && series.away_wins <= series.home_wins;
 
   const hasNoGames = (series.games ?? []).length === 0;
   const bothTeamsSet = !!series.home_team_id && !!series.away_team_id;
@@ -348,9 +358,16 @@ const BracketSlot = ({
   return (
     <div
       ref={slotRef}
-      className={`${styles.bracketSlot} ${styles.slotFilled}`}
+      className={[
+        styles.bracketSlot,
+        styles.slotFilled,
+        // Only a seeded, viewable series is interactive (gets the hover lift).
+        seriesHref && bothTeamsSet ? styles.slotInteractive : '',
+      ]
+        .filter(Boolean)
+        .join(' ')}
     >
-      {seriesHref && (
+      {seriesHref && bothTeamsSet && (
         <Link
           to={seriesHref}
           className={styles.slotLink}
@@ -388,6 +405,7 @@ const BracketSlot = ({
           styles.slotTeam,
           homeWon ? styles.slotTeamWinner : '',
           isComplete && !homeWon ? styles.slotTeamLoser : '',
+          homeTrailing ? styles.slotTeamTrailing : '',
           !series.home_team_id ? styles.slotTeamTbd : '',
         ]
           .filter(Boolean)
@@ -413,6 +431,7 @@ const BracketSlot = ({
           styles.slotTeam,
           awayWon ? styles.slotTeamWinner : '',
           isComplete && !awayWon ? styles.slotTeamLoser : '',
+          awayTrailing ? styles.slotTeamTrailing : '',
           !series.away_team_id ? styles.slotTeamTbd : '',
         ]
           .filter(Boolean)
@@ -459,6 +478,8 @@ interface Props {
 interface BracketConnectorPath {
   id: string;
   d: string;
+  /** True once the next-round series this feeds into has been seeded. */
+  active: boolean;
 }
 
 const SeasonPlayoffsTab = ({
@@ -950,6 +971,14 @@ const SeasonPlayoffsTab = ({
     const slotUnderlap = 6;
     const nextPaths: BracketConnectorPath[] = [];
 
+    // Slot keys whose series has been seeded (both teams set). A connector is
+    // only "active" (bright) once the next-round series it feeds into is seeded.
+    const seededSlotKeys = new Set(
+      series
+        .filter((s) => s.bracket_slot_key && s.home_team_id && s.away_team_id)
+        .map((s) => s.bracket_slot_key as string),
+    );
+
     const slotPoint = (slotKey: string, side: 'left' | 'right') => {
       const node = bracketSlotRefs.current[slotKey];
       if (!node) return null;
@@ -975,12 +1004,19 @@ const SeasonPlayoffsTab = ({
         if (!top || !bottom || !next) return;
 
         const joinX = top.x + (next.x - top.x) / 2;
+        // Soften the bracket bends with a small corner radius (matches the
+        // rounded series boxes), clamped so it never exceeds the available run.
+        const r = Math.max(
+          0,
+          Math.min(8, (bottom.y - top.y) / 2, joinX - top.x, joinX - bottom.x),
+        );
         nextPaths.push({
           id: `${topKey}-${bottomKey}-${nextKey}`,
+          active: seededSlotKeys.has(nextKey),
           d: [
-            `M ${top.x - slotUnderlap} ${top.y} H ${joinX}`,
-            `M ${bottom.x - slotUnderlap} ${bottom.y} H ${joinX}`,
-            `M ${joinX} ${top.y} V ${bottom.y}`,
+            `M ${top.x - slotUnderlap} ${top.y} H ${joinX - r} Q ${joinX} ${top.y} ${joinX} ${top.y + r}`,
+            `M ${bottom.x - slotUnderlap} ${bottom.y} H ${joinX - r} Q ${joinX} ${bottom.y} ${joinX} ${bottom.y - r}`,
+            `M ${joinX} ${top.y + r} V ${bottom.y - r}`,
             `M ${joinX} ${next.y} H ${next.x + slotUnderlap}`,
           ].join(' '),
         });
@@ -998,11 +1034,14 @@ const SeasonPlayoffsTab = ({
       const same =
         prev.length === nextPaths.length &&
         prev.every(
-          (path, index) => path.id === nextPaths[index]?.id && path.d === nextPaths[index]?.d,
+          (path, index) =>
+            path.id === nextPaths[index]?.id &&
+            path.d === nextPaths[index]?.d &&
+            path.active === nextPaths[index]?.active,
         );
       return same ? prev : nextPaths;
     });
-  }, [bracketStructure, clearBracketConnectors]);
+  }, [bracketStructure, clearBracketConnectors, series]);
 
   useLayoutEffect(() => {
     const canvas = bracketCanvasRef.current;
@@ -1105,7 +1144,12 @@ const SeasonPlayoffsTab = ({
                       {bracketConnectorPaths.map((path) => (
                         <path
                           key={path.id}
-                          className={styles.bracketConnectorPath}
+                          className={[
+                            styles.bracketConnectorPath,
+                            path.active ? styles.bracketConnectorPathActive : '',
+                          ]
+                            .filter(Boolean)
+                            .join(' ')}
                           d={path.d}
                         />
                       ))}

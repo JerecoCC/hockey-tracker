@@ -1,6 +1,10 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
+// Brightened slate derived from the border colour — used for bracket connector
+// lines and the series matchup box outlines.
+$bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
+
 // ── Playoffs-started callout banner ──────────────────────────────────────────
 
 .playoffsCallout {
@@ -613,7 +617,7 @@
     position: relative;
     display: flex;
     align-items: stretch;
-    gap: $space-lg;
+    gap: $space-2xl;
     width: max-content;
     min-width: 100%;
     isolation: isolate;
@@ -688,12 +692,16 @@
 
   &ConnectorPath {
     fill: none;
-    stroke: color-mix(in srgb, #{$accent-light} 78%, #{$bg-page});
-    stroke-width: 2;
-    stroke-linecap: square;
-    stroke-linejoin: miter;
-    shape-rendering: crispEdges;
+    stroke: $border;
+    stroke-width: 1; // match the 1px series box border
+    stroke-linecap: round;
+    stroke-linejoin: round;
     vector-effect: non-scaling-stroke;
+
+    // Brightens only once the next-round series it feeds into has been seeded.
+    &Active {
+      stroke: $bracket-line;
+    }
   }
 }
 
@@ -728,15 +736,10 @@
     }
   }
 
+  // Disabled placeholder: static, card-coloured. No :hover — nothing changes on
+  // hover (no longer carries the clickable empty-matchup treatment).
   &EmptyDisabled {
     cursor: default;
-    background: color-mix(in srgb, #{$bg-card} 88%, #{$border});
-    border-color: color-mix(in srgb, #{$border} 70%, transparent);
-
-    &:hover {
-      background: color-mix(in srgb, #{$bg-card} 88%, #{$border});
-      border-color: color-mix(in srgb, #{$border} 70%, transparent);
-    }
 
     .slotTeamTbd .slotTeamName {
       color: color-mix(in srgb, #{$text-dim} 82%, #{$text-body});
@@ -762,14 +765,6 @@
       box-shadow $transition-fast,
       transform $transition-fast;
 
-    &:hover,
-    &:focus-within {
-      background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
-      border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
-      box-shadow: 0 8px 20px rgba($accent, 0.12);
-      transform: translateY(-1px);
-    }
-
     .slotActions {
       position: absolute;
       inset: 0;
@@ -789,6 +784,21 @@
 
     &:hover .slotActions {
       display: flex;
+    }
+  }
+
+  // A seeded, clickable series (one that has reached its round) gets the
+  // brighter outline plus the hover lift/glow. Simulated, TBD and disabled
+  // slots also carry .slotFilled but stay card-coloured and static.
+  &Filled.slotInteractive {
+    border-color: $bracket-line;
+
+    &:hover,
+    &:focus-within {
+      background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
+      border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
+      box-shadow: 0 8px 20px rgba($accent, 0.12);
+      transform: translateY(-1px);
     }
   }
 
@@ -870,7 +880,11 @@
     }
   }
 
-  &TeamLoser {
+  // Loser of a completed series, and the team not leading an in-progress series,
+  // share the same faded treatment. (The leader of an in-progress series keeps
+  // its normal styling — like a winner but without the green name.)
+  &TeamLoser,
+  &TeamTrailing {
     .slotTeamName {
       color: $text-dim;
       opacity: 0.55;
