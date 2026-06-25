@@ -13,6 +13,13 @@
   border: 1px solid $border;
 }
 
+.bordered {
+  background: transparent;
+  border-radius: $radius-lg;
+  padding: $space-xl;
+  border: 1px solid $border;
+}
+
 // ── Light variant (white background, shadow) ──────────────────────────
 .light {
   background: #fff;

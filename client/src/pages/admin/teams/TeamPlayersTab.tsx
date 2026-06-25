@@ -306,6 +306,7 @@ const TeamPlayersTab = ({
           return (
             <Card
               key={section.title}
+              variant="bordered"
               title={`${section.title} (${sectionPlayers.length})`}
             >
               {loading ? (

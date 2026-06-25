@@ -9,6 +9,7 @@ client/.env
 
 # Build output
 client/dist/
+client/storybook-static/
 
 # Vercel
 .vercel/

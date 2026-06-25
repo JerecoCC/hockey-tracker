@@ -1,0 +1,72 @@
+body {
+  background: #0f172a;
+}
+
+.storybook-shell {
+  min-height: 100vh;
+  padding: 24px;
+  color: #e2e8f0;
+  background: #0f172a;
+}
+
+.storybook-page {
+  display: grid;
+  gap: 24px;
+  max-width: 1120px;
+  margin: 0 auto;
+}
+
+.storybook-section {
+  display: grid;
+  gap: 12px;
+}
+
+.storybook-section h2 {
+  margin: 0;
+  font-size: 1rem;
+  color: #f8fafc;
+}
+
+.storybook-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.storybook-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.storybook-panel {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  background: #1e293b;
+}
+
+.storybook-list {
+  display: grid;
+  gap: 10px;
+  padding: 0;
+  margin: 0;
+  list-style: none;
+}
+
+.storybook-overlay-visible {
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.storybook-layout-frame {
+  height: 620px;
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid #334155;
+  border-radius: 8px;
+}
