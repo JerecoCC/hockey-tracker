@@ -2139,7 +2139,7 @@ function getCurrentPeriod(boxscore: any, goals: NhlGoal[]) {
 
 function getOvertimePeriods(boxscore: any, goals: NhlGoal[]) {
   if (isShootoutGame(boxscore)) return 1;
-  const maxGoalPeriod = goals.reduce((max, goal) => Math.max(max, localPeriodNumber(goal.period)), 0);
+  const maxGoalPeriod = goals.reduce((max, goal) => Math.max(max, goal.periodNumber), 0);
   const finalPeriod = Number(boxscore?.periodDescriptor?.number ?? maxGoalPeriod);
   return Math.max(0, finalPeriod - 3);
 }
@@ -2267,15 +2267,11 @@ function isEmptyNetGoal(play: any, scoringSide: TeamSide) {
 function nhlPeriodToLocal(period: unknown) {
   const number = Number(period);
   if (number <= 3) return String(number);
-  if (number === 4) return 'OT';
-  return `OT${number - 3}`;
-}
-
-function localPeriodNumber(period: string) {
-  if (period === 'OT') return 4;
-  const otMatch = period.match(/^OT(\d+)$/);
-  if (otMatch) return 3 + Number(otMatch[1]);
-  return Number(period) || 0;
+  // The app/DB model only recognises a single 'OT' period (enforced by the
+  // goals_period_check constraint: '1','2','3','OT','SO'). Multiple overtime
+  // periods (2OT, 3OT, …) all collapse to 'OT'; how deep the game went is
+  // tracked separately by the game's overtime_periods count.
+  return 'OT';
 }
 
 function getPlays(playByPlay: any): any[] {
