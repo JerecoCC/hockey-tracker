@@ -663,34 +663,53 @@ const SeasonPlayoffsTab = ({
         return standings;
       };
 
-      const pickSeedTeam = (
-        rows: TeamStandingRecord[],
-        rank: number | null,
-        assignedTeamIds: Set<string>,
-      ) => {
-        const startIdx = Math.max((rank ?? 1) - 1, 0);
-        return rows.slice(startIdx).find((team) => !assignedTeamIds.has(team.team_id)) ?? null;
-      };
+      // When divisions feed the bracket, a conference-scoped seed is a wildcard:
+      // it must be drawn from the teams left over after the division qualifiers,
+      // and its rank N means the Nth such remaining team.
+      const hasDivisionSeeds = ruleSlots.some(
+        (s) =>
+          s.rule_type === 'seed' && (s.scope === 'division' || s.scope === 'specific_division'),
+      );
+      const isPoolSlot = (slot: BracketSlotRule) =>
+        hasDivisionSeeds && (slot.scope === 'conference' || slot.scope === 'specific_conference');
 
       const result: Record<string, string | null> = {};
       const resultTeamIds: Record<string, string | null> = {};
       const assignedTeamIds = new Set<string>();
+      // Non-seed slots (choice/unchosen/winner) are resolved elsewhere/later.
       for (const slot of ruleSlots) {
         if (slot.rule_type !== 'seed') {
           result[slot.slot_key] = null;
           resultTeamIds[slot.slot_key] = null;
-          continue;
         }
-        const team = pickSeedTeam(
-          scopedStandings(slot.scope, slot.group_id),
-          slot.rank,
-          assignedTeamIds,
-        );
+      }
+
+      const assignTeam = (slot: BracketSlotRule, team: TeamStandingRecord | null) => {
         result[slot.slot_key] = team ? standingTeamLabel(team) : null;
         resultTeamIds[slot.slot_key] = team?.team_id ?? null;
-        if (team) {
-          assignedTeamIds.add(team.team_id);
-        }
+        if (team) assignedTeamIds.add(team.team_id);
+      };
+
+      const seedSlots = ruleSlots.filter((slot) => slot.rule_type === 'seed');
+
+      // Pass 1 — direct qualifiers (e.g. division seeds). Rank N = the Nth team
+      // in scope, skipping any already placed.
+      for (const slot of seedSlots.filter((slot) => !isPoolSlot(slot))) {
+        const rows = scopedStandings(slot.scope, slot.group_id);
+        const idx = Math.max((slot.rank ?? 1) - 1, 0);
+        assignTeam(slot, rows.slice(idx).find((t) => !assignedTeamIds.has(t.team_id)) ?? null);
+      }
+
+      // Pass 2 — wildcard pool seeds. Index rank into a fixed snapshot of the
+      // teams remaining after the direct qualifiers, so rank N maps to the Nth
+      // wildcard regardless of how many wildcards have already been placed.
+      const poolBaseline = new Set(assignedTeamIds);
+      for (const slot of seedSlots.filter((slot) => isPoolSlot(slot))) {
+        const pool = scopedStandings(slot.scope, slot.group_id).filter(
+          (t) => !poolBaseline.has(t.team_id),
+        );
+        const team = pool[Math.max((slot.rank ?? 1) - 1, 0)] ?? null;
+        assignTeam(slot, team && !assignedTeamIds.has(team.team_id) ? team : null);
       }
 
       // Check whether any slots require a human pick.
