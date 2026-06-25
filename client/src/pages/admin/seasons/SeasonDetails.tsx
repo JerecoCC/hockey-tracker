@@ -982,7 +982,7 @@ const SeasonDetailsPage = () => {
                   <div className={styles.statsLeadersPage}>
                     {/* ── Forwards card ── */}
                     <Card
-                      variant="bordered"
+                      variant="filled"
                       title="Forwards"
                       action={
                         <SegmentedControl
@@ -1020,7 +1020,7 @@ const SeasonDetailsPage = () => {
 
                     {/* ── Defense card ── */}
                     <Card
-                      variant="bordered"
+                      variant="filled"
                       title="Defense"
                       action={
                         <SegmentedControl
@@ -1058,7 +1058,7 @@ const SeasonDetailsPage = () => {
 
                     {/* ── Goalies card ── */}
                     <Card
-                      variant="bordered"
+                      variant="filled"
                       title="Goalies"
                       action={
                         <SegmentedControl
@@ -1097,7 +1097,7 @@ const SeasonDetailsPage = () => {
                 )}
 
                 {statsSubTab === 'Forwards' && (
-                  <Card variant="bordered">
+                  <Card variant="filled">
                     <PaginatedTable
                       columns={skaterColumns}
                       data={forwardStats}
@@ -1119,7 +1119,7 @@ const SeasonDetailsPage = () => {
                 )}
 
                 {statsSubTab === 'Defense' && (
-                  <Card variant="bordered">
+                  <Card variant="filled">
                     <PaginatedTable
                       columns={skaterColumns}
                       data={defenseStats}
@@ -1141,7 +1141,7 @@ const SeasonDetailsPage = () => {
                 )}
 
                 {statsSubTab === 'Goalies' && (
-                  <Card variant="bordered">
+                  <Card variant="filled">
                     <PaginatedTable
                       columns={goalieColumns}
                       data={goalieStats}
@@ -1224,7 +1224,6 @@ const SeasonDetailsPage = () => {
                       return (
                         <Card
                           key={conf.id}
-                          variant="bordered"
                           title={conf.name}
                         >
                           {renderTable(rows, 'No standings data yet.')}
@@ -1242,7 +1241,6 @@ const SeasonDetailsPage = () => {
                       return (
                         <Card
                           key={div.id}
-                          variant="bordered"
                           title={div.name}
                         >
                           {renderTable(rows, 'No standings data yet.')}
@@ -1262,7 +1260,6 @@ const SeasonDetailsPage = () => {
                       return (
                         <Card
                           key={conf.id}
-                          variant="bordered"
                           title={conf.name}
                         >
                           {renderTable(rows, 'No wildcard contenders yet.')}
@@ -1273,7 +1270,7 @@ const SeasonDetailsPage = () => {
 
                   // ── League: all teams in one table (default) ─────────────────────
                   return (
-                    <Card variant="bordered">
+                    <Card>
                       {renderTable(sortRows(withPlaces(standings)), 'No standings data yet.')}
                     </Card>
                   );

@@ -848,8 +848,8 @@ const SeasonPlayoffsTab = ({
     'No rule set assigned';
   const qualificationScopeLabels = {
     league: 'League',
-    conference: 'Per Conference',
-    division: 'Per Division',
+    conference: 'Conference',
+    division: 'Division',
   } as const;
   const hasDraftPlayoffSettingsChange =
     draftBestOfPlayoff !== currentPlayoffSeriesFormatValue ||
@@ -1329,7 +1329,7 @@ const SeasonPlayoffsTab = ({
                         rightContent={{
                           type: 'tag',
                           label: qualificationScopeLabels[r.scope],
-                          intent: 'neutral',
+                          intent: 'info',
                         }}
                       />
                     ))}

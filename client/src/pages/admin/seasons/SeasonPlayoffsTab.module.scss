@@ -25,7 +25,7 @@
 
 .layout {
   display: grid;
-  grid-template-columns: 2fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 20rem);
   gap: $space-xl;
   align-items: start;
   container-type: inline-size;
@@ -97,15 +97,14 @@
 .playoffSettings {
   &Grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: $space-lg;
-
-    @media (max-width: 640px) {
-      grid-template-columns: 1fr;
-    }
+    grid-template-columns: 1fr;
+    gap: $space-xl;
   }
 
   &QualificationList {
+    display: flex;
+    flex-direction: column;
+    gap: $space-sm;
     list-style: none;
     margin: 0;
     padding: 0;

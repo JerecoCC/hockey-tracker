@@ -286,14 +286,17 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1em;
-  height: 1em;
+  width: 1.125rem;
+  height: 1.125rem;
   min-width: 0;
   padding: 0;
+  border-radius: $radius-sm;
   line-height: 1;
 
   svg {
-    font-size: 1em;
+    width: 0.7rem;
+    height: 0.7rem;
+    font-size: 0.7rem;
   }
 }
 

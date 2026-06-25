@@ -3,8 +3,8 @@ import type { ComponentPropsWithoutRef, CSSProperties, ReactNode } from 'react';
 import styles from './Card.module.scss';
 
 interface CardProps extends Omit<ComponentPropsWithoutRef<'div'>, 'title'> {
-  /** Visual theme. 'admin' = dark bg + border. 'bordered' = transparent bg + border. 'light' = white bg + shadow. */
-  variant?: 'admin' | 'bordered' | 'light';
+  /** Visual theme. 'filled' = card bg + border. 'border' = transparent bg + border. 'light' = white bg + shadow. */
+  variant?: 'filled' | 'border' | 'light';
   /** Renders a header row with a title at the start. Accepts a string or any ReactNode. */
   title?: ReactNode;
   /** Optional element placed at the end of the header row (e.g. an Add button). */
@@ -19,7 +19,7 @@ interface CardProps extends Omit<ComponentPropsWithoutRef<'div'>, 'title'> {
 
 const Card = forwardRef<HTMLDivElement, CardProps>((props, ref) => {
   const {
-    variant = 'admin',
+    variant = 'filled',
     title,
     action,
     className,
@@ -30,7 +30,7 @@ const Card = forwardRef<HTMLDivElement, CardProps>((props, ref) => {
   } = props;
   const classes = [
     styles.card,
-    variant === 'light' ? styles.light : variant === 'bordered' ? styles.bordered : styles.admin,
+    variant === 'light' ? styles.light : variant === 'border' ? styles.border : styles.filled,
     className,
   ]
     .filter(Boolean)

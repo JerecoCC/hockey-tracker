@@ -62,7 +62,7 @@ export const Surfaces = {
       <StorySection title="Card">
         <StoryGrid>
           <Card
-            title="Admin Card"
+            title="Filled Card"
             action={
               <Button
                 size="sm"
@@ -82,8 +82,8 @@ export const Surfaces = {
             <p style={{ margin: 0 }}>Light variant for neutral document-like surfaces.</p>
           </Card>
           <Card
-            variant="bordered"
-            title="Bordered Card"
+            variant="border"
+            title="Border Card"
           >
             <p style={{ margin: 0 }}>
               Border-only surface for nested sections that should align with framed list items.

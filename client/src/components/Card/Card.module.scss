@@ -2,25 +2,25 @@
 @use "styles/mixins" as *;
 
 .card {
-  // base – variant classes provide the visual styles
+  // Base: variant classes provide the visual styles.
 }
 
-// ── Admin variant (dark background, border) ───────────────────────────
-.admin {
+// Filled variant (card background, border)
+.filled {
   background: $bg-card;
   border-radius: $radius-lg;
   padding: $space-xl;
   border: 1px solid $border;
 }
 
-.bordered {
+.border {
   background: transparent;
   border-radius: $radius-lg;
   padding: $space-xl;
   border: 1px solid $border;
 }
 
-// ── Light variant (white background, shadow) ──────────────────────────
+// Light variant (white background, shadow)
 .light {
   background: #fff;
   border-radius: $radius-xl;
@@ -28,7 +28,7 @@
   padding: $space-4xl;
 }
 
-// ── Optional card header (title + action row) ─────────────────────────
+// Optional card header (title + action row)
 .card {
   &Header {
     display: flex;
