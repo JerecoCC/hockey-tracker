@@ -620,15 +620,15 @@ const SeasonDetailsPage = () => {
     return String(g.shutouts ?? 0);
   };
 
-  const STAT_OPTIONS: { value: SkaterStatType; label: string; tooltip: string }[] = [
-    { value: 'points', label: 'PTS', tooltip: 'Points (Goals + Assists)' },
-    { value: 'goals', label: 'G', tooltip: 'Goals' },
-    { value: 'assists', label: 'A', tooltip: 'Assists' },
+  const STAT_OPTIONS: { value: SkaterStatType; label: string }[] = [
+    { value: 'points', label: 'Points' },
+    { value: 'goals', label: 'Goals' },
+    { value: 'assists', label: 'Assists' },
   ];
-  const GOALIE_OPTIONS: { value: GoalieLeaderStat; label: string; tooltip: string }[] = [
-    { value: 'save_pct', label: 'SV%', tooltip: 'Save Percentage' },
-    { value: 'gaa', label: 'GAA', tooltip: 'Goals Against Average' },
-    { value: 'shutouts', label: 'SO', tooltip: 'Shutouts' },
+  const GOALIE_OPTIONS: { value: GoalieLeaderStat; label: string }[] = [
+    { value: 'save_pct', label: 'Save Percentage' },
+    { value: 'gaa', label: 'Goals Against Average' },
+    { value: 'shutouts', label: 'Shutouts' },
   ];
 
   const renderPlayerCell = (row: SkaterStatRecord | GoalieStatRecord) => (
