@@ -1048,10 +1048,7 @@ const SeasonPlayoffsTab = ({
         const joinX = top.x + (next.x - top.x) / 2;
         // Soften the bracket bends with a small corner radius (matches the
         // rounded series boxes), clamped so it never exceeds the available run.
-        const r = Math.max(
-          0,
-          Math.min(8, (bottom.y - top.y) / 2, joinX - top.x, joinX - bottom.x),
-        );
+        const r = Math.max(0, Math.min(8, (bottom.y - top.y) / 2, joinX - top.x, joinX - bottom.x));
         const baseId = `${topKey}-${bottomKey}-${nextKey}`;
         // A feeder's winner has advanced when it appears in the next series.
         const nextSeries = seriesBySlot.get(nextKey);
@@ -1315,31 +1312,31 @@ const SeasonPlayoffsTab = ({
                                     busy={seriesBusy}
                                     seriesHref={s ? seriesDetailsPath(s) : undefined}
                                     slotRef={registerBracketSlot(slotKey)}
-                                  simulatedTeam1={
-                                    simulatedSlots?.[
-                                      makeSlotKey(roundInfo.round, slotIndex, 'team1')
-                                    ]
-                                  }
-                                  simulatedTeam1Details={
-                                    simulatedSlotTeams?.[
-                                      makeSlotKey(roundInfo.round, slotIndex, 'team1')
-                                    ]
-                                  }
-                                  simulatedTeam2={
-                                    simulatedSlots?.[
-                                      makeSlotKey(roundInfo.round, slotIndex, 'team2')
-                                    ]
-                                  }
-                                  simulatedTeam2Details={
-                                    simulatedSlotTeams?.[
-                                      makeSlotKey(roundInfo.round, slotIndex, 'team2')
-                                    ]
-                                  }
-                                  canAdvance={canAdvance}
-                                  canAdvanceWinner={canAdvanceWinner}
-                                  onStart={handleStartSeries}
-                                  onAdvance={advanceBracket}
-                                  onForceAdvance={s ? () => handleForceAdvance(s) : undefined}
+                                    simulatedTeam1={
+                                      simulatedSlots?.[
+                                        makeSlotKey(roundInfo.round, slotIndex, 'team1')
+                                      ]
+                                    }
+                                    simulatedTeam1Details={
+                                      simulatedSlotTeams?.[
+                                        makeSlotKey(roundInfo.round, slotIndex, 'team1')
+                                      ]
+                                    }
+                                    simulatedTeam2={
+                                      simulatedSlots?.[
+                                        makeSlotKey(roundInfo.round, slotIndex, 'team2')
+                                      ]
+                                    }
+                                    simulatedTeam2Details={
+                                      simulatedSlotTeams?.[
+                                        makeSlotKey(roundInfo.round, slotIndex, 'team2')
+                                      ]
+                                    }
+                                    canAdvance={canAdvance}
+                                    canAdvanceWinner={canAdvanceWinner}
+                                    onStart={handleStartSeries}
+                                    onAdvance={advanceBracket}
+                                    onForceAdvance={s ? () => handleForceAdvance(s) : undefined}
                                   />
                                 )}
                               </div>
@@ -1476,6 +1473,7 @@ const SeasonPlayoffsTab = ({
                     {activePlayoffFormat.map((r, i) => (
                       <ListItem
                         key={`${r.scope}-${r.method}-${r.count}-${i}`}
+                        size="compact"
                         hideImage
                         jerseyNumber={i + 1}
                         name={
@@ -1499,7 +1497,6 @@ const SeasonPlayoffsTab = ({
               </InfoItem>
             </div>
           </Card>
-
         </div>
       </div>
 
