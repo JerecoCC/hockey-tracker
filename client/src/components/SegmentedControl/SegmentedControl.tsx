@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { Fragment, type ReactNode } from 'react';
 import Tooltip from '../Tooltip/Tooltip';
 import styles from './SegmentedControl.module.scss';
 
@@ -63,13 +63,10 @@ const SegmentedControl = ({
     {options.map((opt, i) => {
       const btn = (
         <button
-          key={opt.value}
           type="button"
           className={[
             styles.option,
             value === opt.value ? (opt.activeClassName ?? styles.active) : '',
-            i === 0 ? styles.firstOption : '',
-            i === options.length - 1 ? styles.lastOption : '',
           ]
             .filter(Boolean)
             .join(' ')}
@@ -81,16 +78,25 @@ const SegmentedControl = ({
           {opt.label}
         </button>
       );
-      return opt.tooltip ? (
-        <Tooltip
-          key={opt.value}
-          text={opt.tooltip}
-          className={styles.optionWrapper}
-        >
-          {btn}
-        </Tooltip>
-      ) : (
-        btn
+      return (
+        <Fragment key={opt.value}>
+          {i > 0 && (
+            <span
+              className={styles.divider}
+              aria-hidden="true"
+            />
+          )}
+          {opt.tooltip ? (
+            <Tooltip
+              text={opt.tooltip}
+              className={styles.optionWrapper}
+            >
+              {btn}
+            </Tooltip>
+          ) : (
+            btn
+          )}
+        </Fragment>
       );
     })}
   </div>

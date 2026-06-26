@@ -2,55 +2,65 @@
 @use "styles/mixins" as *;
 
 .segmentedControl {
-  --segmented-control-border: #{$text-dim};
-  --segmented-control-option-bg: #{$bg-card};
+  --segmented-control-border: #{$border};
+  // Border-only surface: options are transparent; only the active one fills.
+  --segmented-control-option-bg: transparent;
 
   display: flex;
-  align-items: stretch;
-  height: 40px;
+  align-items: center;
   box-sizing: border-box;
+  padding: $space-xs;
+  gap: $space-xs;
   border: 1px solid var(--segmented-control-border);
   border-radius: $radius-md;
   overflow: visible;
-  width: 100%;
+  // Compact: size to the options rather than stretching full width.
+  width: fit-content;
 }
 
 .field {
-  --segmented-control-border: #{$border};
   --segmented-control-option-bg: #{$bg-input};
 
   background: $bg-input;
+  // Form-field usage fills the available width.
+  width: 100%;
 }
 
-// Text-only (non-field) controls are shorter than icon-bearing ones.
-.iconless {
-  height: 34px;
+// Text-only (non-field) controls use tighter pills than icon-bearing ones.
+.iconless .option {
+  padding-top: $space-xs;
+  padding-bottom: $space-xs;
+}
+
+// Divider sitting in the gap between adjacent options.
+.divider {
+  flex: 0 0 auto;
+  width: 1px;
+  height: 1.1rem;
+  background: var(--segmented-control-border);
 }
 
 .option {
   &Wrapper {
     position: relative;
-    flex: 1;
+    flex: 0 0 auto;
     display: flex;
-    height: 100%;
+    align-items: center;
 
     &:has(.option:focus-visible) {
       z-index: 2;
     }
   }
 
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  height: 100%;
-  padding: 0 $space-lg;
+  flex: 0 0 auto;
+  // Separate pill with gap around it (matches the tab buttons).
+  padding: $space-sm $space-md;
   background: var(--segmented-control-option-bg);
   border: none;
-  border-right: 1px solid var(--segmented-control-border);
+  border-radius: $radius-md;
   color: $text-light;
-  font-size: $font-base;
-  font-weight: 600;
-  letter-spacing: 0.06em;
+  font-size: $font-nav;
+  font-weight: 400;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -67,7 +77,7 @@
   }
 
   &:hover:not(.active):not(:disabled) {
-    color: $text-bright;
+    color: $text-body;
   }
 
   &:focus {
@@ -86,18 +96,14 @@
   }
 }
 
-.firstOption {
-  border-top-left-radius: calc(#{$radius-md} - 1px);
-  border-bottom-left-radius: calc(#{$radius-md} - 1px);
-}
-
-.lastOption {
-  border-right: none;
-  border-top-right-radius: calc(#{$radius-md} - 1px);
-  border-bottom-right-radius: calc(#{$radius-md} - 1px);
+// Field variant keeps equal-width options that fill the control.
+.field .option,
+.field .optionWrapper {
+  flex: 1;
 }
 
 .active {
   background: $accent;
   color: #fff;
+  font-weight: 700;
 }
