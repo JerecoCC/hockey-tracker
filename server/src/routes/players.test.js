@@ -306,6 +306,7 @@ describe('GET /api/admin/players/:id/latest-season-stats', () => {
         goals_against: 0,
         shots_against: 0,
         save_pct: null,
+        time_on_ice: 0,
       },
       playoffs: {
         gp: 2,
@@ -317,6 +318,7 @@ describe('GET /api/admin/players/:id/latest-season-stats', () => {
         goals_against: 0,
         shots_against: 0,
         save_pct: null,
+        time_on_ice: 0,
       },
     });
   });

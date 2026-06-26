@@ -110,7 +110,7 @@ const STAT_LABELS = {
   P: 'Points',
   W: 'Wins',
   SO: 'Shootout Wins',
-  GA: 'Goals Against',
+  GAA: 'Goals Against Average',
   'SV%': 'Save Percentage',
 } as const;
 
@@ -167,6 +167,12 @@ const formatShortDate = (iso: string | null) => {
 const formatSavePct = (value: number | null) => {
   if (value == null) return '—';
   return value.toFixed(3).replace(/^0/, '');
+};
+
+// Goals-against average = goals against per 60 minutes of ice time.
+const formatGaa = (ga: number | null | undefined, toi: number | null | undefined) => {
+  if (ga == null || !toi) return '—';
+  return ((ga * 3600) / toi).toFixed(2);
 };
 
 const StatHeader = ({ label, tooltip }: { label: string; tooltip: string }) => (
@@ -238,11 +244,11 @@ const buildGameLogColumns = (isGoalie: boolean): Column<PlayerLastFiveGameRecord
           type: 'custom' as const,
           header: (
             <StatHeader
-              label="GA"
-              tooltip="Goals Against"
+              label="GAA"
+              tooltip="Goals Against Average"
             />
           ),
-          render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
+          render: (row: PlayerLastFiveGameRecord) => formatGaa(row.goals_against, row.time_on_ice),
           align: 'center' as const,
         },
         {
@@ -628,11 +634,11 @@ const PlayerDetailsPage = () => {
             type: 'custom' as const,
             header: (
               <StatHeader
-                label="GA"
-                tooltip="Goals Against"
+                label="GAA"
+                tooltip="Goals Against Average"
               />
             ),
-            render: (row: PlayerLastFiveGameRecord) => row.goals_against ?? '—',
+            render: (row: PlayerLastFiveGameRecord) => formatGaa(row.goals_against, row.time_on_ice),
             align: 'center' as const,
           },
           {
@@ -1238,9 +1244,9 @@ const SeasonStatCard = ({
             value={stats.shootout_wins}
           />
           <StatCell
-            label="GA"
-            tooltip={STAT_LABELS.GA}
-            value={stats.goals_against}
+            label="GAA"
+            tooltip={STAT_LABELS.GAA}
+            value={formatGaa(stats.goals_against, stats.time_on_ice)}
           />
           <StatCell
             label="SV%"

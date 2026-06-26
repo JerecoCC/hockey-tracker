@@ -114,6 +114,8 @@ export interface PlayerCurrentSeasonStatBlock {
   goals_against: number;
   shots_against: number;
   save_pct: number | null;
+  /** Total goalie time on ice this season, in seconds. */
+  time_on_ice: number;
 }
 
 export interface PlayerCurrentSeasonStats {
@@ -149,6 +151,8 @@ export interface PlayerLastFiveGameRecord {
   shots_against: number | null;
   goals_against: number | null;
   save_pct: number | null;
+  /** Goalie time on ice for this game, in seconds (null for skaters). */
+  time_on_ice: number | null;
 }
 
 export interface PlayerGameLogsResponse {

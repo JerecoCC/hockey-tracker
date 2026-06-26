@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import Card from '@/components/Card/Card';
+import Table, { type Column } from '@/components/Table/Table';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
@@ -145,6 +146,139 @@ const GoalieStatsCard = ({
     });
   const gameSwitchedGoalies = gameHasGoalieSwitch(goalieStats);
 
+  interface GoalieStatRow {
+    id: string;
+    goalie: GameRosterEntry;
+    primaryColor: string;
+    textColor: string;
+    teamLogo: string | null;
+    teamCode: string | null;
+    sa: number;
+    sv: number;
+    gaa: string;
+    svPct: string;
+    toi: string;
+    windows: string[];
+    isStarter: boolean;
+    playerHref?: string;
+  }
+
+  const goalieRows: GoalieStatRow[] = goaliesWithStats.flatMap((goalie) => {
+    const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
+    if (!stat) return [];
+    const isAway = goalie.team_id === game.away_team.id;
+    const team = isAway ? game.away_team : game.home_team;
+    const hasNoRecordedStats =
+      stat.shots_against === 0 && stat.saves === 0 && stat.goals_against === 0;
+    const toiSec = stat.stints.reduce(
+      (sum, st) => sum + (st.time_on_ice ?? defaultStintToi(st, game)),
+      0,
+    );
+    return [
+      {
+        id: goalie.player_id,
+        goalie,
+        primaryColor: team.primary_color,
+        textColor: team.text_color,
+        teamLogo: team.logo,
+        teamCode: team.code,
+        sa: stat.shots_against,
+        sv: stat.saves,
+        gaa:
+          hasNoRecordedStats || toiSec === 0
+            ? '--'
+            : ((stat.goals_against * 3600) / toiSec).toFixed(2),
+        svPct: hasNoRecordedStats
+          ? '--'
+          : stat.shots_against > 0
+            ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
+            : '1.000',
+        toi: toiSec > 0 ? secondsToMMSS(toiSec) : '--',
+        windows: stintLabels(stat),
+        isStarter: goalieStatIsStarter(stat),
+        playerHref: getPlayerHref?.(
+          goalie.team_id,
+          goalie.player_id,
+          goalie.first_name,
+          goalie.last_name,
+        ),
+      },
+    ];
+  });
+
+  const statHeader = (label: string, tooltip: string) => <Tooltip text={tooltip}>{label}</Tooltip>;
+
+  const columns: Column<GoalieStatRow>[] = [
+    {
+      type: 'custom',
+      header: '',
+      render: (row) => (
+        <span className={styles.goalieNameCell}>
+          <TeamLogo
+            logo={row.teamLogo}
+            code={row.teamCode ?? '?'}
+            primaryColor={row.primaryColor}
+            textColor={row.textColor}
+            size={30}
+            shape="square"
+          />
+          <PlayerAvatar
+            photo={row.goalie.photo}
+            initials={
+              `${row.goalie.first_name?.charAt(0) ?? ''}${row.goalie.last_name?.charAt(0) ?? ''}`.trim() ||
+              '?'
+            }
+            primaryColor={row.primaryColor}
+            textColor={row.textColor}
+            size={48}
+          />
+          <div className={styles.goalInfo}>
+            {row.goalie.jersey_number != null && (
+              <span className={styles.goalAssists}>#{row.goalie.jersey_number}</span>
+            )}
+            <span className={styles.goalScorer}>
+              {formatPlayerName(row.goalie.first_name, row.goalie.last_name)}
+              {playerDataComplete(
+                row.goalie.date_of_birth,
+                row.goalie.start_date,
+                row.goalie.acquisition_type,
+                showPlayerDataStatus,
+              )}
+            </span>
+            {row.windows.map((w, i) => (
+              <span
+                key={i}
+                className={styles.goalAssists}
+              >
+                {w}
+              </span>
+            ))}
+          </div>
+        </span>
+      ),
+    },
+    { type: 'custom', header: statHeader('SA', 'Shots Against'), align: 'center', render: (r) => r.sa },
+    { type: 'custom', header: statHeader('SV', 'Saves'), align: 'center', render: (r) => r.sv },
+    {
+      type: 'custom',
+      header: statHeader('GAA', 'Goals Against Average'),
+      align: 'center',
+      render: (r) => r.gaa,
+    },
+    {
+      type: 'custom',
+      header: statHeader('SV%', 'Save Percentage'),
+      align: 'center',
+      render: (r) => r.svPct,
+    },
+    {
+      type: 'custom',
+      header: statHeader('TOI', 'Time on Ice'),
+      align: 'center',
+      render: (r) => r.toi,
+    },
+  ];
+
   return (
     <>
       <Card
@@ -175,120 +309,15 @@ const GoalieStatsCard = ({
         {goaliesWithStats.length === 0 ? (
           <p className={styles.empty}>No goalie stats recorded yet.</p>
         ) : (
-          <table className={styles.goalieTable}>
-            <thead>
-              <tr>
-                <th className={styles.goalieThTeam}></th>
-                <th className={styles.goalieTh}>
-                  <Tooltip text="Shots Against">SA</Tooltip>
-                </th>
-                <th className={styles.goalieTh}>
-                  <Tooltip text="Saves">SV</Tooltip>
-                </th>
-                <th className={styles.goalieTh}>
-                  <Tooltip text="Goals Against">GA</Tooltip>
-                </th>
-                <th className={styles.goalieTh}>
-                  <Tooltip text="Save Percentage">SV%</Tooltip>
-                </th>
-                <th className={styles.goalieTh}>
-                  <Tooltip text="Time on Ice">TOI</Tooltip>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {goaliesWithStats.map((goalie) => {
-                const stat = goalieStats.find((gs) => gs.goalie_id === goalie.player_id);
-                if (!stat) return null;
-                const isAway = goalie.team_id === game.away_team.id;
-                const primaryColor = isAway
-                  ? game.away_team.primary_color
-                  : game.home_team.primary_color;
-                const textColor = isAway ? game.away_team.text_color : game.home_team.text_color;
-                const teamLogo = isAway ? game.away_team.logo : game.home_team.logo;
-                const teamCode = isAway ? game.away_team.code : game.home_team.code;
-                const hasNoRecordedStats =
-                  stat.shots_against === 0 && stat.saves === 0 && stat.goals_against === 0;
-                const svPct = hasNoRecordedStats
-                  ? '--'
-                  : stat.shots_against > 0
-                    ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
-                    : '1.000';
-                const toiSec = stat.stints.reduce(
-                  (sum, st) => sum + (st.time_on_ice ?? defaultStintToi(st, game)),
-                  0,
-                );
-                const toiDisplay = toiSec > 0 ? secondsToMMSS(toiSec) : '--';
-                const windows = stintLabels(stat);
-                const isStarter = goalieStatIsStarter(stat);
-                const playerHref = getPlayerHref?.(
-                  goalie.team_id,
-                  goalie.player_id,
-                  goalie.first_name,
-                  goalie.last_name,
-                );
-                return (
-                  <tr
-                    key={goalie.player_id}
-                    className={`${styles.goalieRow} ${
-                      isStarter && gameSwitchedGoalies ? styles.goalieRowStarterSwitch : ''
-                    }`}
-                    onClick={playerHref ? () => navigate(playerHref) : undefined}
-                  >
-                    <td className={styles.goalieTdName}>
-                      <span className={styles.goalieNameCell}>
-                        <TeamLogo
-                          logo={teamLogo}
-                          code={teamCode ?? '?'}
-                          primaryColor={primaryColor}
-                          textColor={textColor}
-                          size={30}
-                          shape="square"
-                        />
-                        <PlayerAvatar
-                          photo={goalie.photo}
-                          initials={
-                            `${goalie.first_name?.charAt(0) ?? ''}${goalie.last_name?.charAt(0) ?? ''}`.trim() ||
-                            '?'
-                          }
-                          primaryColor={primaryColor}
-                          textColor={textColor}
-                          size={48}
-                        />
-                        <div className={styles.goalInfo}>
-                          {goalie.jersey_number != null && (
-                            <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                          )}
-                          <span className={styles.goalScorer}>
-                            {formatPlayerName(goalie.first_name, goalie.last_name)}
-                            {playerDataComplete(
-                              goalie.date_of_birth,
-                              goalie.start_date,
-                              goalie.acquisition_type,
-                              showPlayerDataStatus,
-                            )}
-                          </span>
-                          {windows.map((w, i) => (
-                            <span
-                              key={i}
-                              className={styles.goalAssists}
-                            >
-                              {w}
-                            </span>
-                          ))}
-                        </div>
-                      </span>
-                    </td>
-                    <td className={styles.goalieTd}>{stat.shots_against}</td>
-                    <td className={styles.goalieTd}>{stat.saves}</td>
-                    <td className={styles.goalieTd}>{stat.goals_against}</td>
-                    <td className={styles.goalieTd}>{svPct}</td>
-                    <td className={styles.goalieTd}>{toiDisplay}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+          <Table
+            columns={columns}
+            data={goalieRows}
+            rowKey={(r) => r.id}
+            onRowClick={getPlayerHref ? (r) => r.playerHref && navigate(r.playerHref) : undefined}
+            rowClassName={(r) =>
+              r.isStarter && gameSwitchedGoalies ? styles.goalieRowStarterSwitch : undefined
+            }
+          />
         )}
       </Card>
 

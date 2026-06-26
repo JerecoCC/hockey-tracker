@@ -11,67 +11,26 @@
 // ── Table ─────────────────────────────────────────────────────────────────────
 
 .goalie {
-  &Table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: $font-sm;
-  }
-
-  &ThTeam {
-    text-align: left;
-    padding: $space-xs $space-md;
-    color: $text-dim;
-    font-weight: 600;
-    font-size: $font-xs;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  &Th {
-    text-align: center;
-    padding: $space-xs $space-md;
-    color: $text-dim;
-    font-weight: 600;
-    font-size: $font-xs;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-  }
-
-  &Row {
-    position: relative;
-    transition: background 0.15s ease;
-    cursor: pointer;
-
-    &:hover {
-      background: $bg-page;
-    }
-  }
-
+  // Highlight the starter row when the game had a goalie switch. Targets the
+  // reusable Table's cells generically since they carry no per-cell class.
   &RowStarterSwitch {
     box-shadow: inset 3px 0 0 $info;
 
-    .goalieTdName,
-    .goalieTd {
+    > td {
       border-top: 1px solid rgba($info, 0.42);
       border-bottom: 1px solid rgba($info, 0.42);
       background: rgba($info, 0.06);
     }
 
-    .goalieTdName {
+    > td:first-child {
       border-left: 1px solid rgba($info, 0.42);
       border-radius: $radius-sm 0 0 $radius-sm;
     }
 
-    .goalieTd:last-child {
+    > td:last-child {
       border-right: 1px solid rgba($info, 0.42);
       border-radius: 0 $radius-sm $radius-sm 0;
     }
-  }
-
-  &TdName {
-    position: relative;
-    text-align: left;
-    padding: $space-sm $space-md;
   }
 
   &NameCell {
@@ -80,12 +39,6 @@
     gap: $space-sm;
     flex: 1;
     min-width: 0;
-  }
-
-  &Td {
-    text-align: center;
-    padding: $space-sm $space-md;
-    color: $text-body;
   }
 }
 
