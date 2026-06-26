@@ -1863,19 +1863,21 @@ router.patch('/:id', async (req, res) => {
                       AND bracket_slot_key = ${nextMatchupKey}
                   `;
 
+                  const roundMatch = nextMatchupKey.match(/^r(\d+)/);
+                  const nextRound = roundMatch ? Number(roundMatch[1]) : null;
+                  if (!nextRound) continue;
+
+                  const gtwRows = await sql`
+                    SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
+                    FROM seasons s JOIN leagues l ON l.id = s.league_id
+                    WHERE s.id = ${seriesSeasonId}
+                  `;
+                  const bestOf = gtwRows[0]?.best_of ?? 7;
+                  const gamesToWin = Math.ceil(bestOf / 2);
+                  // Which side of the next matchup this series feeds (team1 = home).
+                  const isTeam1 = depSlot.endsWith('team1');
+
                   if (bothComplete) {
-                    const roundMatch = nextMatchupKey.match(/^r(\d+)/);
-                    const nextRound = roundMatch ? Number(roundMatch[1]) : null;
-                    if (!nextRound) continue;
-
-                    const gtwRows = await sql`
-                      SELECT COALESCE(s.best_of_playoff, l.best_of_playoff) AS best_of
-                      FROM seasons s JOIN leagues l ON l.id = s.league_id
-                      WHERE s.id = ${seriesSeasonId}
-                    `;
-                    const bestOf = gtwRows[0]?.best_of ?? 7;
-                    const gamesToWin = Math.ceil(bestOf / 2);
-
                     if (!nextExisting) {
                       // Create the full series shell — no games yet
                       await sql`
@@ -1894,14 +1896,23 @@ router.patch('/:id', async (req, res) => {
                         WHERE id = ${nextExisting.id}
                       `;
                     }
-                  } else if (nextExisting && (!nextExisting.home_team_id || !nextExisting.away_team_id)) {
-                    // One feeder just completed — fill in the missing team on an existing partial series
-                    const isTeam1 = depSlot.endsWith('team1');
-                    const winnerOfThis = winnerId; // the series that just completed
-                    if (isTeam1 && !nextExisting.home_team_id) {
-                      await sql`UPDATE playoff_series SET home_team_id = ${winnerOfThis} WHERE id = ${nextExisting.id}`;
+                  } else {
+                    // Only one feeder is complete: auto-advance this winner into
+                    // its slot now (the opponent stays TBD until the other feeder
+                    // finishes), so the first team no longer needs manual advance.
+                    if (!nextExisting) {
+                      const homeId = isTeam1 ? winnerId : null;
+                      const awayId = isTeam1 ? null : winnerId;
+                      await sql`
+                        INSERT INTO playoff_series
+                          (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
+                        VALUES
+                          (${seriesSeasonId}, ${nextRound}, ${homeId}, ${awayId}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+                      `;
+                    } else if (isTeam1 && !nextExisting.home_team_id) {
+                      await sql`UPDATE playoff_series SET home_team_id = ${winnerId} WHERE id = ${nextExisting.id}`;
                     } else if (!isTeam1 && !nextExisting.away_team_id) {
-                      await sql`UPDATE playoff_series SET away_team_id = ${winnerOfThis} WHERE id = ${nextExisting.id}`;
+                      await sql`UPDATE playoff_series SET away_team_id = ${winnerId} WHERE id = ${nextExisting.id}`;
                     }
                   }
                   }
