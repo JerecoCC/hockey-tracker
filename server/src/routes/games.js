@@ -611,8 +611,6 @@ router.get("/nhl-api", async (req, res) => {
   try {
     const { url } = req.query;
 
-    console.log("NHL proxy URL:", url);
-
     if (!url || typeof url !== "string") {
       return res.status(400).json({ error: "Missing NHL API URL." });
     }
@@ -625,7 +623,6 @@ router.get("/nhl-api", async (req, res) => {
 
     const response = await fetch(parsedUrl.toString());
 
-    console.log("NHL response status:", response.status);
 
     const text = await response.text();
 
@@ -1489,6 +1486,25 @@ router.post('/', async (req, res) => {
 
   const normalizedScheduledAt = normalizeAdminScheduledAt(scheduled_at);
 
+  // Reject a duplicate matchup on the same calendar date. Games with a null date
+  // are exempt (the date is nullable, so they can't be reliably de-duplicated).
+  if (normalizedScheduledAt) {
+    const dup = await sql`
+      SELECT id FROM games
+      WHERE season_id = ${season_id}
+        AND home_team_id = ${home_team_id}
+        AND away_team_id = ${away_team_id}
+        AND scheduled_at IS NOT NULL
+        AND scheduled_at::date = ${normalizedScheduledAt}::date
+      LIMIT 1
+    `;
+    if (dup.length > 0) {
+      return res
+        .status(409)
+        .json({ error: 'A game with the same date and teams already exists.' });
+    }
+  }
+
   try {
     const rows = await sql`
       INSERT INTO games (
@@ -1668,8 +1684,35 @@ router.patch('/:id', async (req, res) => {
     : normalizeAdminScheduledAt(scheduled_at);
 
   try {
-    const existing = await sql`SELECT id, playoff_series_id FROM games WHERE id = ${id}`;
+    const existing = await sql`
+      SELECT id, season_id, home_team_id, away_team_id, scheduled_at, playoff_series_id
+      FROM games WHERE id = ${id}
+    `;
     if (existing.length === 0) return res.status(404).json({ error: 'Game not found' });
+
+    // Reject editing a game into a duplicate matchup on the same calendar date.
+    // Games with a null date are exempt (the date is nullable).
+    const finalHome = home_team_id ?? existing[0].home_team_id;
+    const finalAway = away_team_id ?? existing[0].away_team_id;
+    const finalScheduledAt =
+      normalizedScheduledAt === undefined ? existing[0].scheduled_at : normalizedScheduledAt;
+    if (finalScheduledAt) {
+      const dup = await sql`
+        SELECT id FROM games
+        WHERE id <> ${id}
+          AND season_id = ${existing[0].season_id}
+          AND home_team_id = ${finalHome}
+          AND away_team_id = ${finalAway}
+          AND scheduled_at IS NOT NULL
+          AND scheduled_at::date = ${finalScheduledAt}::date
+        LIMIT 1
+      `;
+      if (dup.length > 0) {
+        return res
+          .status(409)
+          .json({ error: 'A game with the same date and teams already exists.' });
+      }
+    }
 
     const targetSeriesId = playoff_series_id ?? existing[0].playoff_series_id ?? null;
     if (playoff_round != null && !targetSeriesId) {
@@ -1779,14 +1822,13 @@ router.patch('/:id', async (req, res) => {
             WHERE id = ${series.id}
           `;
 
-          // Once the series is clinched, cancel any games that haven't been
+          // Once the series is clinched, delete any games that haven't been
           // played — they're no longer needed (e.g. game 7 after a 4-2 series).
           if (seriesComplete) {
             await sql`
-              UPDATE games
-              SET status = 'cancelled'
+              DELETE FROM games
               WHERE playoff_series_id = ${series.id}
-                AND status NOT IN ('final', 'cancelled')
+                AND status <> 'final'
             `;
           }
 

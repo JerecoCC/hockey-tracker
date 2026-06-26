@@ -289,6 +289,26 @@ describe('POST /api/admin/games', () => {
     expect(res.body.status).toBe('scheduled');
   });
 
+  it('returns 409 for a duplicate matchup on the same date', async () => {
+    sql.mockResolvedValueOnce([{ id: 'existing-game' }]); // duplicate check hit
+    const res = await request(app).post('/api/admin/games').send({
+      season_id: 'season-1', home_team_id: 'team-1', away_team_id: 'team-2',
+      scheduled_at: '2026-04-17',
+    });
+    expect(res.status).toBe(409);
+    expect(res.body.error).toMatch(/already exists/i);
+  });
+
+  it('skips the duplicate check when the date is null', async () => {
+    sql
+      .mockResolvedValueOnce([{ id: 'game-1' }])  // INSERT RETURNING id (no dup query first)
+      .mockResolvedValueOnce([GAME]);              // SELECT re-fetch
+    const res = await request(app).post('/api/admin/games').send({
+      season_id: 'season-1', home_team_id: 'team-1', away_team_id: 'team-2',
+    });
+    expect(res.status).toBe(201);
+  });
+
   it('returns 400 on FK violation', async () => {
     const fkErr = Object.assign(new Error('fk'), { code: '23503' });
     sql.mockRejectedValueOnce(fkErr);
