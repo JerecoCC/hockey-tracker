@@ -165,8 +165,8 @@ router.get('/', async (req, res) => {
                   ti.logo        AS team_logo,
                   t.primary_color,
                   t.text_color,
-                  pt.acquisition_type,
-                  pt.start_date,
+                  COALESCE(pt.acquisition_type, cs.acquisition_type) AS acquisition_type,
+                  COALESCE(pt.start_date, cs.start_date) AS start_date,
                   EXISTS (
                     SELECT 1
                     FROM game_rosters gr
@@ -197,6 +197,13 @@ router.get('/', async (req, res) => {
                     recorded_at DESC
                   LIMIT 1
                 ) ti ON TRUE
+                LEFT JOIN LATERAL (
+                  SELECT acquisition_type, start_date
+                  FROM player_team_stints
+                  WHERE player_id = p.id AND team_id = t.id
+                  ORDER BY start_date DESC NULLS LAST, created_at DESC
+                  LIMIT 1
+                ) cs ON TRUE
                 ORDER BY
                   p.id,
                   CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
@@ -243,8 +250,8 @@ router.get('/', async (req, res) => {
                   ti.logo        AS team_logo,
                   t.primary_color,
                   t.text_color,
-                  pt.acquisition_type,
-                  pt.start_date,
+                  COALESCE(pt.acquisition_type, cs.acquisition_type) AS acquisition_type,
+                  COALESCE(pt.start_date, cs.start_date) AS start_date,
                   EXISTS (
                     SELECT 1
                     FROM game_rosters gr
@@ -275,6 +282,13 @@ router.get('/', async (req, res) => {
                     recorded_at DESC
                   LIMIT 1
                 ) ti ON TRUE
+                LEFT JOIN LATERAL (
+                  SELECT acquisition_type, start_date
+                  FROM player_team_stints
+                  WHERE player_id = p.id AND team_id = t.id
+                  ORDER BY start_date DESC NULLS LAST, created_at DESC
+                  LIMIT 1
+                ) cs ON TRUE
                 ORDER BY
                   p.id,
                   CASE WHEN pt.end_date IS NULL THEN 0 ELSE 1 END,
