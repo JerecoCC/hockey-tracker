@@ -1,5 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import InfoItem from '@/components/InfoItem/InfoItem';
+import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card from '@/components/Card/Card';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
@@ -32,7 +33,9 @@ import {
 import useSeasonStats, {
   type SkaterStatRecord,
   type GoalieStatRecord,
+  type SeasonStatsCompetition,
 } from '@/hooks/useSeasonStats';
+import Select from '@/components/Select/Select';
 import useTabState from '@/hooks/useTabState';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -71,6 +74,20 @@ type StandingDisplayRow = TeamStandingRecord & {
 };
 
 const PAGE_SIZE = 10;
+/** Goalie stats only include goalies who played at least this many games. */
+const GOALIE_MIN_GAMES = 25;
+const GOALIE_MIN_GAMES_TOOLTIP = 'Only show goalies who played for 25 or more games';
+
+const STATS_VIEW_OPTIONS = [
+  { value: 'Summary', label: 'Summary' },
+  { value: 'Forwards', label: 'Forwards' },
+  { value: 'Defense', label: 'Defense' },
+  { value: 'Goalies', label: 'Goalies' },
+];
+const STATS_COMPETITION_OPTIONS = [
+  { value: 'regular', label: 'Regular Season' },
+  { value: 'playoff', label: 'Playoffs' },
+];
 const SEASON_TAB_INDEX = {
   INFO: 0,
   TEAMS: 1,
@@ -139,6 +156,7 @@ const SeasonDetailsPage = () => {
   const id = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
   const [activeTab, handleTabChange] = useTabState('tab:season-details');
   const [statsSubTab, setStatsSubTab] = useState('Summary');
+  const [statsCompetition, setStatsCompetition] = useState<SeasonStatsCompetition>('regular');
   const [visitedTabs, setVisitedTabs] = useState<Set<number>>(() => new Set([activeTab]));
   const [visitedStatsSubTabs, setVisitedStatsSubTabs] = useState<Set<string>>(() => new Set());
 
@@ -213,6 +231,7 @@ const SeasonDetailsPage = () => {
     goalies,
     loading: statsLoading,
   } = useSeasonStats(id, {
+    competition: statsCompetition,
     enabled: shouldFetchSummaryStats,
   });
   const { standings, loading: standingsLoading } = useSeasonStandings(id, {
@@ -325,6 +344,7 @@ const SeasonDetailsPage = () => {
     pageSize: PAGE_SIZE,
     sortKey: fwdSort.key,
     sortDir: fwdSort.dir,
+    competition: statsCompetition,
     enabled: shouldFetchForwardStats,
   });
   const {
@@ -338,6 +358,7 @@ const SeasonDetailsPage = () => {
     pageSize: PAGE_SIZE,
     sortKey: defSort.key,
     sortDir: defSort.dir,
+    competition: statsCompetition,
     enabled: shouldFetchDefenseStats,
   });
   const {
@@ -351,6 +372,7 @@ const SeasonDetailsPage = () => {
     pageSize: PAGE_SIZE,
     sortKey: goalieSort.key,
     sortDir: goalieSort.dir,
+    competition: statsCompetition,
     enabled: shouldFetchGoalieStats,
   });
 
@@ -558,6 +580,7 @@ const SeasonDetailsPage = () => {
   const summaryGoalies = useMemo(() => {
     const isAsc = summaryGoalieStat === 'gaa';
     return [...goalies]
+      .filter((g) => (g.gp ?? 0) >= GOALIE_MIN_GAMES)
       .sort((a, b) => {
         const av = (a[summaryGoalieStat] ?? (isAsc ? Infinity : -Infinity)) as number;
         const bv = (b[summaryGoalieStat] ?? (isAsc ? Infinity : -Infinity)) as number;
@@ -967,17 +990,34 @@ const SeasonDetailsPage = () => {
             icon: 'query_stats',
             content: (
               <div className={styles.statsSubTabs}>
-                <SegmentedControl
-                  iconless
-                  value={statsSubTab}
-                  onChange={handleStatsSubTabChange}
-                  options={[
-                    { value: 'Summary', label: 'Summary' },
-                    { value: 'Forwards', label: 'Forwards' },
-                    { value: 'Defense', label: 'Defense' },
-                    { value: 'Goalies', label: 'Goalies' },
-                  ]}
-                />
+                <Card
+                  variant="filled"
+                  noHeaderMargin
+                  title={
+                    <>
+                      Statistics
+                      <span className={styles.statsTitleDivider} />
+                      <div className={styles.statsFilterField}>
+                        <Select
+                          value={statsCompetition}
+                          options={STATS_COMPETITION_OPTIONS}
+                          onChange={(v) => setStatsCompetition(v as SeasonStatsCompetition)}
+                        />
+                      </div>
+                    </>
+                  }
+                  action={
+                    <SegmentedControl
+                      iconless
+                      value={statsSubTab}
+                      onChange={handleStatsSubTabChange}
+                      options={STATS_VIEW_OPTIONS}
+                      className={styles.statsSegmentedControl}
+                    />
+                  }
+                >
+                  {null}
+                </Card>
 
                 {statsSubTab === 'Summary' && (
                   <div className={styles.statsLeadersPage}>
@@ -1062,7 +1102,15 @@ const SeasonDetailsPage = () => {
                     {/* ── Goalies card ── */}
                     <Card
                       variant="filled"
-                      title="Goalies"
+                      title={
+                        <>
+                          Goalies
+                          <InfoTooltip
+                            text={GOALIE_MIN_GAMES_TOOLTIP}
+                            size="0.9rem"
+                          />
+                        </>
+                      }
                       action={
                         <SegmentedControl
                           value={summaryGoalieStat}

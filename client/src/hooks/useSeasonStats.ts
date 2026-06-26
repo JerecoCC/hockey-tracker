@@ -55,6 +55,7 @@ interface SeasonStatsResponse {
 }
 
 type SeasonStatsGroup = 'forwards' | 'defense' | 'goalies';
+export type SeasonStatsCompetition = 'regular' | 'playoff';
 
 interface UseSeasonStatsOptions {
   group?: SeasonStatsGroup;
@@ -62,6 +63,8 @@ interface UseSeasonStatsOptions {
   pageSize?: number;
   sortKey?: string;
   sortDir?: 'asc' | 'desc';
+  /** Which competition the stats are based on. Defaults to the regular season. */
+  competition?: SeasonStatsCompetition;
   enabled?: boolean;
 }
 
@@ -87,6 +90,7 @@ const useSeasonStats = (seasonId: string | undefined, options: UseSeasonStatsOpt
         if (queryOptions.page !== undefined) params.page = String(queryOptions.page);
         if (queryOptions.pageSize !== undefined) params.page_size = String(queryOptions.pageSize);
         if (queryOptions.sortKey) params.sort_key = queryOptions.sortKey;
+        if (queryOptions.competition) params.competition = queryOptions.competition;
         if (queryOptions.sortDir) params.sort_dir = queryOptions.sortDir;
 
         const { data } = await axios.get<SeasonStatsResponse | PaginatedSeasonStatsResponse>(

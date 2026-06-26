@@ -32,6 +32,7 @@ jest.mock('@/components/Button/Button', () => (props: any) => (
 jest.mock('@/components/Card/Card', () => (props: any) => (
   <div data-testid="card">
     {props.title}
+    {props.action}
     {props.children}
   </div>
 ));
@@ -221,7 +222,10 @@ describe('SeasonDetails standings tab', () => {
 
     render(<SeasonDetails />);
 
-    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', { enabled: false });
+    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', {
+      competition: 'regular',
+      enabled: false,
+    });
     expect(mockUseSeasonStats).toHaveBeenCalledWith(
       'season-1',
       expect.objectContaining({ group: 'forwards', enabled: false }),
@@ -240,7 +244,10 @@ describe('SeasonDetails standings tab', () => {
   it('enables standings without enabling stats when the standings tab is active', () => {
     render(<SeasonDetails />);
 
-    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', { enabled: false });
+    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', {
+      competition: 'regular',
+      enabled: false,
+    });
     expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: true });
   });
 
@@ -425,7 +432,10 @@ describe('SeasonDetails stats tab', () => {
 
     render(<SeasonDetails />);
 
-    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', { enabled: true });
+    expect(mockUseSeasonStats).toHaveBeenCalledWith('season-1', {
+      competition: 'regular',
+      enabled: true,
+    });
     expect(mockUseSeasonStats).toHaveBeenCalledWith(
       'season-1',
       expect.objectContaining({ group: 'forwards', enabled: false }),

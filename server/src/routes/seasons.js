@@ -1655,13 +1655,15 @@ router.get('/:id/stats', async (req, res) => {
   const offset = (page - 1) * pageSize;
   const sortKey = String(req.query.sort_key ?? (group === 'goalies' ? 'save_pct' : 'points'));
   const sortDir = String(req.query.sort_dir ?? 'desc') === 'asc' ? 'asc' : 'desc';
+  // Which competition the stats are based on. Defaults to the regular season.
+  const gameType = req.query.competition === 'playoff' ? 'playoff' : 'regular';
 
   try {
     if (group === 'forwards' || group === 'defense') {
       const positions = group === 'forwards' ? ['C', 'LW', 'RW'] : ['D', 'LD', 'RD'];
       const rows = await sql`
         WITH season_games AS (
-          SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
+          SELECT id FROM games WHERE season_id = ${id} AND status = 'final' AND game_type = ${gameType}
         ),
         player_gp AS (
           SELECT gr.player_id, COUNT(DISTINCT gr.game_id) AS gp
@@ -1780,7 +1782,7 @@ router.get('/:id/stats', async (req, res) => {
                   )
             END AS until_pos
           FROM game_goalie_stints st
-          JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final'
+          JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final' AND g.game_type = ${gameType}
           JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
           LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
         ),
@@ -1907,6 +1909,7 @@ router.get('/:id/stats', async (req, res) => {
         )
         SELECT stats.*, COUNT(*) OVER()::int AS total
         FROM stats
+        WHERE gp >= 25
         ORDER BY
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'asc' THEN last_name END ASC NULLS LAST,
           CASE WHEN ${sortKey} = 'last_name' AND ${sortDir} = 'desc' THEN last_name END DESC NULLS LAST,
@@ -1934,7 +1937,7 @@ router.get('/:id/stats', async (req, res) => {
 
     const skaters = await sql`
       WITH season_games AS (
-        SELECT id FROM games WHERE season_id = ${id} AND status = 'final'
+        SELECT id FROM games WHERE season_id = ${id} AND status = 'final' AND game_type = ${gameType}
       ),
       player_gp AS (
         SELECT gr.player_id, COUNT(DISTINCT gr.game_id) AS gp
@@ -2036,7 +2039,7 @@ router.get('/:id/stats', async (req, res) => {
                 )
           END AS until_pos
         FROM game_goalie_stints st
-        JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final'
+        JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final' AND g.game_type = ${gameType}
         JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
         LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
       ),
