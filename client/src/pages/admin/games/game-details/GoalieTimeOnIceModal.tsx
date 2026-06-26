@@ -6,12 +6,9 @@ import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord } from '@/hooks/useGames';
 import { type GoalieStatRecord, type UpdateGoalieStintData } from '@/hooks/useGameGoalieStats';
+import { type GoalRecord } from '@/hooks/useGameGoals';
 import styles from './GameDetailsPage.module.scss';
-import { defaultStintToi, mmssToSeconds, secondsToMMSS } from './goalieTimeOnIce';
-
-// Time on ice can exceed a single period (full game + overtime), so the
-// duration picker is uncapped well past the 20:00 period clock.
-const TOI_MAX_MINUTES = 99;
+import { defaultStintToi, gameMaxToiSeconds, mmssToSeconds, secondsToMMSS } from './goalieTimeOnIce';
 
 const fmt = (first: string | null, last: string | null) =>
   last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
@@ -22,6 +19,7 @@ interface Props {
   open: boolean;
   game: GameRecord;
   goalieStats: GoalieStatRecord[];
+  goals: GoalRecord[];
   onClose: () => void;
   updateGoalieStint: (
     stintId: string,
@@ -29,8 +27,17 @@ interface Props {
   ) => Promise<GoalieStatRecord[] | null>;
 }
 
-const GoalieTimeOnIceModal = ({ open, game, goalieStats, onClose, updateGoalieStint }: Props) => {
+const GoalieTimeOnIceModal = ({
+  open,
+  game,
+  goalieStats,
+  goals,
+  onClose,
+  updateGoalieStint,
+}: Props) => {
   const [submitting, setSubmitting] = useState(false);
+  // Cap the picker at the game's full length (regulation + any overtime).
+  const maxMinutes = Math.ceil(gameMaxToiSeconds(game, goals) / 60);
 
   // Flatten every goalie stint into a row with its display info and prefill.
   const rows = useMemo(
@@ -149,7 +156,7 @@ const GoalieTimeOnIceModal = ({ open, game, goalieStats, onClose, updateGoalieSt
                     <Field
                       type="timepicker"
                       mode="duration"
-                      maxDurationMinutes={TOI_MAX_MINUTES}
+                      maxDurationMinutes={maxMinutes}
                       control={control}
                       name={`stints.${i}.time_on_ice`}
                       disabled={submitting}

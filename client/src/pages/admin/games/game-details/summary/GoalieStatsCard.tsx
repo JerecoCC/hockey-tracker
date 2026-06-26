@@ -9,6 +9,7 @@ import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
 import GoalieTimeOnIceModal from '../GoalieTimeOnIceModal';
 import type { GameRecord } from '@/hooks/useGames';
+import type { GoalRecord } from '@/hooks/useGameGoals';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type {
   GoalieSwitchData,
@@ -97,6 +98,7 @@ interface Props {
   awayRoster: GameRosterEntry[];
   homeRoster: GameRosterEntry[];
   goalieStats: GoalieStatRecord[];
+  goals: GoalRecord[];
   getPlayerHref?: (
     teamId: string,
     playerId: string,
@@ -121,6 +123,7 @@ const GoalieStatsCard = ({
   awayRoster,
   homeRoster,
   goalieStats,
+  goals,
   getPlayerHref,
   isFinal,
   updateGoalieStint,
@@ -339,6 +342,7 @@ const GoalieStatsCard = ({
             open={toiOpen}
             game={game}
             goalieStats={goalieStats}
+            goals={goals}
             onClose={() => setToiOpen(false)}
             updateGoalieStint={updateGoalieStint}
           />

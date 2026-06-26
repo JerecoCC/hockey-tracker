@@ -598,6 +598,7 @@ const GameSummaryTab = ({
                 awayRoster={awayRoster}
                 homeRoster={homeRoster}
                 goalieStats={goalieStats}
+                goals={goals}
                 getPlayerHref={
                   playerHrefBuilder
                     ? (teamId, playerId, firstName, lastName) =>
