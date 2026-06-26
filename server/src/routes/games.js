@@ -32,6 +32,94 @@ const normalizeAdminScheduledAt = (value) => {
   return `${trimmed}T12:00:00Z`;
 };
 
+// Regular-season standings order (best team first) for a season, derived from
+// final regular-season games. Used to award playoff home-ice to the higher
+// seed. Mirrors the ordering in GET /seasons/:id/standings.
+const seasonStandingsOrder = async (seasonId) => {
+  const [info] = await sql`
+    SELECT COALESCE(s.scoring_system, l.scoring_system) AS scoring_system
+    FROM seasons s JOIN leagues l ON l.id = s.league_id WHERE s.id = ${seasonId}
+  `;
+  const scoringSystem = info?.scoring_system ?? '2-1-0';
+  const rows = await sql`
+    WITH season_games AS (
+      SELECT g.id, g.home_team_id, g.away_team_id, g.overtime_periods, g.shootout,
+        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.home_team_id AND period<>'SO')::int AS home_goals,
+        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.away_team_id AND period<>'SO')::int AS away_goals,
+        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.home_team_id AND period='OT')::int AS home_ot_goals,
+        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.away_team_id AND period='OT')::int AS away_ot_goals,
+        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.home_team_id AND period='SO')::int AS home_so_goals,
+        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.away_team_id AND period='SO')::int AS away_so_goals,
+        (SELECT COUNT(*) FROM shootout_attempts WHERE game_id=g.id AND team_id=g.home_team_id AND scored)::int AS home_so_attempt_goals,
+        (SELECT COUNT(*) FROM shootout_attempts WHERE game_id=g.id AND team_id=g.away_team_id AND scored)::int AS away_so_attempt_goals
+      FROM games g
+      WHERE g.season_id=${seasonId} AND g.status='final' AND g.game_type='regular'
+    ),
+    game_results AS (
+      SELECT home_team_id, away_team_id, home_goals, away_goals,
+        (COALESCE(overtime_periods,0)>0 OR shootout OR home_ot_goals>0 OR away_ot_goals>0
+          OR home_so_goals>0 OR away_so_goals>0) AS is_extra_time,
+        CASE
+          WHEN shootout OR home_so_attempt_goals>0 OR away_so_attempt_goals>0 OR home_so_goals>0 OR away_so_goals>0 THEN
+            CASE
+              WHEN home_so_attempt_goals>away_so_attempt_goals THEN home_team_id
+              WHEN away_so_attempt_goals>home_so_attempt_goals THEN away_team_id
+              WHEN home_so_goals>away_so_goals THEN home_team_id
+              WHEN away_so_goals>home_so_goals THEN away_team_id
+              WHEN home_goals>away_goals THEN home_team_id
+              WHEN away_goals>home_goals THEN away_team_id
+              ELSE NULL
+            END
+          WHEN home_goals>away_goals THEN home_team_id
+          WHEN away_goals>home_goals THEN away_team_id
+          ELSE NULL
+        END AS winner_id
+      FROM season_games
+    ),
+    team_game AS (
+      SELECT home_team_id AS team_id,
+        CASE WHEN winner_id=home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
+        CASE WHEN winner_id=home_team_id AND is_extra_time THEN 1 ELSE 0 END AS ot_win,
+        CASE WHEN winner_id<>home_team_id AND is_extra_time THEN 1 ELSE 0 END AS otl,
+        home_goals AS goals_for, away_goals AS goals_against
+      FROM game_results WHERE winner_id IS NOT NULL
+      UNION ALL
+      SELECT away_team_id AS team_id,
+        CASE WHEN winner_id=away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
+        CASE WHEN winner_id=away_team_id AND is_extra_time THEN 1 ELSE 0 END AS ot_win,
+        CASE WHEN winner_id<>away_team_id AND is_extra_time THEN 1 ELSE 0 END AS otl,
+        away_goals AS goals_for, home_goals AS goals_against
+      FROM game_results WHERE winner_id IS NOT NULL
+    ),
+    aggregated AS (
+      SELECT team_id, COUNT(*)::int AS gp,
+        SUM(reg_win+ot_win)::int AS wins, SUM(reg_win)::int AS reg_wins, SUM(ot_win)::int AS ot_wins,
+        SUM(otl)::int AS otl, SUM(goals_for)::int AS goals_for, SUM(goals_against)::int AS goals_against
+      FROM team_game GROUP BY team_id
+    )
+    SELECT team_id,
+      CASE ${scoringSystem}
+        WHEN '3-2-1-0' THEN (reg_wins*3 + ot_wins*2 + otl)
+        ELSE (wins*2 + otl)
+      END AS points,
+      reg_wins, wins, (goals_for - goals_against) AS goal_diff, goals_for, gp
+    FROM aggregated
+    ORDER BY points DESC, reg_wins DESC, wins DESC, goal_diff DESC, goals_for DESC, gp ASC
+  `;
+  return rows.map((r) => r.team_id);
+};
+
+// Returns { home, away } for a playoff series so the higher-seeded team (better
+// regular-season standing) gets home-ice. Falls back to the given order.
+const homeAwayBySeed = async (seasonId, teamA, teamB) => {
+  const order = await seasonStandingsOrder(seasonId);
+  const rankA = order.indexOf(teamA);
+  const rankB = order.indexOf(teamB);
+  const a = rankA === -1 ? Infinity : rankA;
+  const b = rankB === -1 ? Infinity : rankB;
+  return a <= b ? { home: teamA, away: teamB } : { home: teamB, away: teamA };
+};
+
 const teamIdentityJson = (teamIdColumn, teamTable) => ormSql`
   json_build_object(
     'id', ${teamIdColumn},
@@ -971,8 +1059,23 @@ router.post('/playoff-series/:seriesId/force-advance', async (req, res) => {
       WHERE season_id = ${series.season_id} AND bracket_slot_key = ${nextMatchupKey}
     `;
 
-    if (!existing) {
-      // Create partial series shell — opponent is TBD (NULL)
+    // Opponent already sitting in the next series' other slot, if any.
+    const existingOther = existing
+      ? (isHomeSlot ? existing.away_team_id : existing.home_team_id)
+      : null;
+    const opponent = existingOther && existingOther !== winnerId ? existingOther : null;
+
+    if (opponent) {
+      // Both teams known → the higher seed (better regular-season record) hosts.
+      const { home, away } = await homeAwayBySeed(series.season_id, winnerId, opponent);
+      await sql`
+        UPDATE playoff_series
+        SET home_team_id = ${home}, away_team_id = ${away}
+        WHERE id = ${existing.id}
+      `;
+    } else if (!existing) {
+      // Create partial series shell — opponent is TBD (NULL). Home-ice is
+      // re-seeded when the opponent arrives.
       const homeId = isHomeSlot ? winnerId : null;
       const awayId = isHomeSlot ? null : winnerId;
       await sql`
@@ -982,7 +1085,7 @@ router.post('/playoff-series/:seriesId/force-advance', async (req, res) => {
           (${series.season_id}, ${nextRound}, ${homeId}, ${awayId}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
       `;
     } else {
-      // Fill in the missing team on an existing partial series
+      // Fill in the missing team on an existing partial series.
       const alreadySet = isHomeSlot ? existing.home_team_id : existing.away_team_id;
       if (!alreadySet) {
         if (isHomeSlot) {
@@ -1919,29 +2022,44 @@ router.patch('/:id', async (req, res) => {
                   // Which side of the next matchup this series feeds (team1 = home).
                   const isTeam1 = depSlot.endsWith('team1');
 
-                  if (bothComplete) {
+                  // The opponent for this winner, as far as currently known: the
+                  // other feeder's winner, or a team already sitting in the next
+                  // series' other slot.
+                  const otherWinner = bothComplete
+                    ? (isTeam1 ? t2Series.winner_team_id : t1Series.winner_team_id)
+                    : null;
+                  const existingOther = nextExisting
+                    ? (isTeam1 ? nextExisting.away_team_id : nextExisting.home_team_id)
+                    : null;
+                  const opponent =
+                    otherWinner && otherWinner !== winnerId
+                      ? otherWinner
+                      : existingOther && existingOther !== winnerId
+                        ? existingOther
+                        : null;
+
+                  if (opponent) {
+                    // Both teams are known → the higher seed (better regular-season
+                    // record) gets home-ice.
+                    const { home, away } = await homeAwayBySeed(seriesSeasonId, winnerId, opponent);
                     if (!nextExisting) {
-                      // Create the full series shell — no games yet
                       await sql`
                         INSERT INTO playoff_series
                           (season_id, round, home_team_id, away_team_id, games_to_win, status, bracket_slot_key)
                         VALUES
-                          (${seriesSeasonId}, ${nextRound}, ${t1Series.winner_team_id},
-                           ${t2Series.winner_team_id}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
+                          (${seriesSeasonId}, ${nextRound}, ${home}, ${away}, ${gamesToWin}, 'upcoming', ${nextMatchupKey})
                       `;
-                    } else if (!nextExisting.home_team_id || !nextExisting.away_team_id) {
-                      // Partial series exists — fill only the missing team(s)
+                    } else {
                       await sql`
                         UPDATE playoff_series
-                        SET home_team_id = COALESCE(home_team_id, ${t1Series.winner_team_id}),
-                            away_team_id = COALESCE(away_team_id, ${t2Series.winner_team_id})
+                        SET home_team_id = ${home}, away_team_id = ${away}
                         WHERE id = ${nextExisting.id}
                       `;
                     }
                   } else {
-                    // Only one feeder is complete: auto-advance this winner into
-                    // its slot now (the opponent stays TBD until the other feeder
-                    // finishes), so the first team no longer needs manual advance.
+                    // Only this winner is known; the opponent is still TBD. Place it
+                    // now (home-ice is re-seeded when the opponent arrives), so the
+                    // first team no longer needs a manual advance.
                     if (!nextExisting) {
                       const homeId = isTeam1 ? winnerId : null;
                       const awayId = isTeam1 ? null : winnerId;
