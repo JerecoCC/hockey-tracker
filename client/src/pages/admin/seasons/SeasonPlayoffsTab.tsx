@@ -982,19 +982,12 @@ const SeasonPlayoffsTab = ({
     const slotUnderlap = 6;
     const nextPaths: BracketConnectorPath[] = [];
 
-    // A feeder arm lights up once that feeder series is finished; the stub into
-    // the next round lights up once the next-round series has been seeded (a
-    // winner advanced into it). This makes a half-finished bracket render half
-    // border / half bracket-colour.
-    const completedSlotKeys = new Set(
-      series
-        .filter((s) => s.bracket_slot_key && s.status === 'complete')
-        .map((s) => s.bracket_slot_key as string),
-    );
-    const seededSlotKeys = new Set(
-      series
-        .filter((s) => s.bracket_slot_key && (s.home_team_id || s.away_team_id))
-        .map((s) => s.bracket_slot_key as string),
+    // A feeder arm (and the stub into the next round) only lights up once that
+    // feeder's winner has actually been advanced into the next-round series —
+    // not merely when the feeder finished. This makes a half-advanced bracket
+    // render half border / half bracket-colour.
+    const seriesBySlot = new Map(
+      series.filter((s) => s.bracket_slot_key).map((s) => [s.bracket_slot_key as string, s]),
     );
 
     const slotPoint = (slotKey: string, side: 'left' | 'right') => {
@@ -1029,22 +1022,31 @@ const SeasonPlayoffsTab = ({
           Math.min(8, (bottom.y - top.y) / 2, joinX - top.x, joinX - bottom.x),
         );
         const baseId = `${topKey}-${bottomKey}-${nextKey}`;
+        // A feeder's winner has advanced when it appears in the next series.
+        const nextSeries = seriesBySlot.get(nextKey);
+        const advancedIntoNext = (teamId: string | null | undefined) =>
+          !!teamId &&
+          !!nextSeries &&
+          (nextSeries.home_team_id === teamId || nextSeries.away_team_id === teamId);
+        const topAdvanced = advancedIntoNext(seriesBySlot.get(topKey)?.winner_team_id);
+        const bottomAdvanced = advancedIntoNext(seriesBySlot.get(bottomKey)?.winner_team_id);
         // Top feeder arm + its half of the vertical spine (down to the branch).
         nextPaths.push({
           id: `${baseId}-top`,
-          active: completedSlotKeys.has(topKey),
+          active: topAdvanced,
           d: `M ${top.x - slotUnderlap} ${top.y} H ${joinX - r} Q ${joinX} ${top.y} ${joinX} ${top.y + r} V ${next.y}`,
         });
         // Bottom feeder arm + its half of the spine (up to the branch).
         nextPaths.push({
           id: `${baseId}-bottom`,
-          active: completedSlotKeys.has(bottomKey),
+          active: bottomAdvanced,
           d: `M ${bottom.x - slotUnderlap} ${bottom.y} H ${joinX - r} Q ${joinX} ${bottom.y} ${joinX} ${bottom.y - r} V ${next.y}`,
         });
-        // Horizontal stub feeding the next-round series.
+        // Horizontal stub feeding the next-round series — bright once either
+        // feeder's winner has been advanced into it.
         nextPaths.push({
           id: `${baseId}-next`,
-          active: seededSlotKeys.has(nextKey),
+          active: topAdvanced || bottomAdvanced,
           d: `M ${joinX} ${next.y} H ${next.x + slotUnderlap}`,
         });
       });
