@@ -586,7 +586,7 @@
     --award-horizontal-scroll-padding: calc(
       var(--award-divider-gap) - var(--award-scrollbar-lane-width)
     );
-    --accordion-header-bg: rgba(255, 255, 255, 0.03);
+    // Header background comes from the Accordion `headerType="light"` prop.
     --accordion-border-color: rgba(255, 255, 255, 0.08);
     --award-content-height: calc(
       var(--award-winner-card-height) + var(--award-player-row-height) +

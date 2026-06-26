@@ -16,6 +16,18 @@
   overflow: hidden;
 }
 
+// ── Header background treatments (headerType prop) ──────────────────────────────
+
+// Faded overlay header — matches the season awards tab item headers.
+.headerLight {
+  --accordion-header-bg: #{rgba(#fff, 0.03)};
+}
+
+// No header background.
+.headerTransparent {
+  --accordion-header-bg: transparent;
+}
+
 // ── Header row ────────────────────────────────────────────────────────────────
 
 .row {
@@ -49,18 +61,20 @@
 }
 
 // Static variant — no hover highlight since there is no toggle to interact with.
-// Hover actions are always visible since there is no collapse trigger to hover over.
 .rowStatic {
   cursor: default;
 
   &:hover {
     --accordion-current-header-bg: var(--accordion-header-bg);
   }
+}
 
-  .hoverActions {
-    opacity: 1;
-    pointer-events: auto;
-  }
+// By default a static accordion shows its actions permanently (there is no
+// collapse trigger to hover over). When `hoverRevealActions` is set this class
+// is omitted, so the actions fall back to hover/focus reveal via .rowWithActions.
+.rowStaticActionsVisible .hoverActions {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 // ── Toggle chevron ────────────────────────────────────────────────────────────

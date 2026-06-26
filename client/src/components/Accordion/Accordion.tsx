@@ -29,6 +29,12 @@ interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   headerRight?: ReactNode;
   /** Hover-revealed action buttons rendered from a config array. */
   hoverActions?: AccordionAction[];
+  /**
+   * When true, hover actions are revealed on hover/focus only — even in the
+   * `static` variant, which otherwise shows them permanently. Lets a
+   * non-collapsible accordion keep tidy, hover-revealed actions.
+   */
+  hoverRevealActions?: boolean;
   /** Whether the body is expanded on first render. Defaults to true. */
   defaultOpen?: boolean;
   /** Optional controlled expanded state. */
@@ -42,6 +48,13 @@ interface Props extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
    * 'static' — always open, no toggle button rendered at all.
    */
   variant?: 'collapsible' | 'static';
+  /**
+   * Header background treatment.
+   * 'filled' (default) — solid header background.
+   * 'light' — faded overlay header background (as on the season awards tab).
+   * 'transparent' — no header background.
+   */
+  headerType?: 'filled' | 'light' | 'transparent';
   /** Extra class applied to the root element (for border-color overrides, etc.). */
   className?: string;
   /** Extra class applied to the header row. */
@@ -61,11 +74,13 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
       labelMeta,
       headerRight,
       hoverActions,
+      hoverRevealActions = false,
       defaultOpen = true,
       open: controlledOpen,
       onOpenChange,
       toggleDisabled = false,
       variant = 'collapsible',
+      headerType = 'filled',
       className,
       rowClassName,
       bodyClassName,
@@ -89,7 +104,14 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
       <div
         {...rootProps}
         ref={ref}
-        className={[styles.accordion, className].filter(Boolean).join(' ')}
+        className={[
+          styles.accordion,
+          headerType === 'light' ? styles.headerLight : '',
+          headerType === 'transparent' ? styles.headerTransparent : '',
+          className,
+        ]
+          .filter(Boolean)
+          .join(' ')}
       >
         <div
           className={[
@@ -97,6 +119,9 @@ const Accordion = forwardRef<HTMLDivElement, Props>(
             !(bodyVisible && children != null) ? styles.rowCollapsed : '',
             isStatic ? styles.rowStatic : '',
             hasHoverActions ? styles.rowWithActions : '',
+            isStatic && hasHoverActions && !hoverRevealActions
+              ? styles.rowStaticActionsVisible
+              : '',
             rowClassName,
           ]
             .filter(Boolean)

@@ -1146,6 +1146,7 @@ const SeasonAwardsTab = ({
                 <Accordion
                   key={award.award_id}
                   variant="static"
+                  headerType="light"
                   className={styles.awardItem}
                   rowClassName={styles.awardHeader}
                   bodyClassName={[

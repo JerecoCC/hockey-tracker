@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Modal from '@/components/Modal/Modal';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -552,43 +553,44 @@ const GoalieStatsEditModal = ({
           const canRemoveGoalie = teamGoalieCount > 1 && !goalieHasStarterStint;
 
           return (
-            <section
+            <Accordion
               key={stat.goalie_id}
-              className={`${styles.goalieStatsEditorGroup} ${
+              variant="static"
+              hoverRevealActions
+              className={
                 teamGoalieCount > 1 && goalieHasStarterStint
                   ? styles.goalieStatsEditorGroupMulti
-                  : ''
-              }`}
-            >
-              <div className={styles.goalieStatsEditorHeader}>
-                <div className={styles.goalieStatsEditorIdentity}>
-                  <span className={styles.goalieNameCell}>
-                    <TeamLogo
-                      logo={logo}
-                      code={code}
-                      primaryColor={primary}
-                      textColor={text}
-                      size={30}
-                      shape="square"
-                    />
-                    <PlayerAvatar
-                      photo={goalie.photo}
-                      initials={goalie.last_name?.charAt(0) ?? '?'}
-                      primaryColor={primary}
-                      textColor={text}
-                      size={34}
-                    />
-                    <div className={styles.goalInfo}>
-                      {goalie.jersey_number != null && (
-                        <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                      )}
-                      <span className={`${styles.goalScorer} ${styles.goalieStatsEditorNameLine}`}>
-                        <span className={styles.goalieStatsEditorPlayerName}>{goalieName}</span>
-                      </span>
-                    </div>
-                  </span>
-                </div>
-
+                  : undefined
+              }
+              bodyClassName={styles.goalieStatsEditorBody}
+              label={
+                <span className={styles.goalieNameCell}>
+                  <TeamLogo
+                    logo={logo}
+                    code={code}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={30}
+                    shape="square"
+                  />
+                  <PlayerAvatar
+                    photo={goalie.photo}
+                    initials={goalie.last_name?.charAt(0) ?? '?'}
+                    primaryColor={primary}
+                    textColor={text}
+                    size={34}
+                  />
+                  <div className={styles.goalInfo}>
+                    {goalie.jersey_number != null && (
+                      <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
+                    )}
+                    <span className={`${styles.goalScorer} ${styles.goalieStatsEditorNameLine}`}>
+                      <span className={styles.goalieStatsEditorPlayerName}>{goalieName}</span>
+                    </span>
+                  </div>
+                </span>
+              }
+              labelMeta={
                 <div className={styles.goalieStatsEditorTotals}>
                   <span className={styles.goalieStatsEditorTotalPill}>
                     <b>{totals.shots}</b>
@@ -602,29 +604,28 @@ const GoalieStatsEditModal = ({
                     <b>{totals.goals}</b>
                     GA
                   </span>
-                  <Button
-                    variant="outlined"
-                    intent="neutral"
-                    icon="add"
-                    size="sm"
-                    tooltip="Add stint for this goalie"
-                    disabled={busy}
-                    onClick={() => openAddStintForGoalie(row)}
-                  />
-                  {canRemoveGoalie && (
-                    <Button
-                      variant="outlined"
-                      intent="danger"
-                      icon="delete"
-                      size="sm"
-                      tooltip="Remove all stints for this goalie"
-                      disabled={busy}
-                      onClick={() => handleRemoveGoalie(goalie.player_id)}
-                    />
-                  )}
                 </div>
-              </div>
-
+              }
+              hoverActions={[
+                {
+                  icon: 'add',
+                  tooltip: 'Add stint for this goalie',
+                  disabled: busy,
+                  onClick: () => openAddStintForGoalie(row),
+                },
+                ...(canRemoveGoalie
+                  ? [
+                      {
+                        icon: 'delete',
+                        intent: 'danger' as const,
+                        tooltip: 'Remove all stints for this goalie',
+                        disabled: busy,
+                        onClick: () => handleRemoveGoalie(goalie.player_id),
+                      },
+                    ]
+                  : []),
+              ]}
+            >
               <div className={styles.goalieStatsEditorTable}>
                 <div className={styles.goalieStatsEditorHead}>
                   <span>Window</span>
@@ -852,7 +853,7 @@ const GoalieStatsEditModal = ({
                   <p className={styles.noGoalsText}>No stints for this goalie.</p>
                 )}
               </div>
-            </section>
+            </Accordion>
           );
         })}
 
