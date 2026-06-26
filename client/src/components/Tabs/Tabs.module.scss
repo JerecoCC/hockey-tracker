@@ -11,8 +11,12 @@
 // ── Tab bar ────────────────────────────────────────────────────────────
 .tabList {
   display: flex;
-  gap: 0;
-  border-bottom: 1px solid $border;
+  width: fit-content;
+  gap: $space-xs;
+  padding: $space-sm;
+  background: $bg-card;
+  border: 1px solid $border;
+  border-radius: $radius-lg;
 
   &Disabled {
     opacity: 0.35;
@@ -31,41 +35,31 @@
 .tab {
   position: relative;
   background: none;
-  border: none;
+  border: 1px solid transparent;
   padding: $space-sm $space-xl;
   font-size: $font-nav;
-  font-weight: 500;
+  font-weight: 400;
   color: $text-light;
   cursor: pointer;
-  transition: color $transition-fast;
-
-  // Active indicator underline
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: -1px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    border-radius: $radius-sm $radius-sm 0 0;
-    background: $accent;
-    opacity: 0;
-    transition: opacity $transition-fast;
-  }
+  border-radius: $radius-md;
+  transition:
+    color $transition-fast,
+    background $transition-fast;
 
   &:hover {
     color: $text-body;
   }
 
+  // Active tab uses the table row hover fill, outlined with the brightened
+  // slate used for playoff bracket connector lines.
   &Active {
-    color: $accent-light;
-
-    &::after {
-      opacity: 1;
-    }
+    background: rgba(255, 255, 255, 0.04);
+    border-color: color-mix(in srgb, #{$border} 45%, #{$text-light});
+    color: $text-bright;
+    font-weight: 700;
 
     &:hover {
-      color: $accent-light;
+      color: $text-bright;
     }
   }
 }
