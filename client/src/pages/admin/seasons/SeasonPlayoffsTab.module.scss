@@ -796,6 +796,20 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     border-color: $bracket-line;
   }
 
+  // Placeholder shown while a winner is being advanced into this slot — a single
+  // rounded rectangle matching the series box shape.
+  &Skeleton {
+    display: block;
+    min-height: 82px;
+  }
+
+  &SkeletonBar {
+    display: block;
+    width: 100%;
+    height: 82px;
+    border-radius: $radius-md;
+  }
+
   // A fully-seeded series is also interactive: filled background plus the hover
   // lift/glow + clickable. (Partial series have .slotSeries but not
   // .slotInteractive, so they keep the card background and stay static.)

@@ -7,6 +7,7 @@ import InfoItem from '@/components/InfoItem/InfoItem';
 import Icon from '@/components/Icon/Icon';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type PlayoffSeriesRecord, type SeriesStatus, usePlayoffSeries } from '@/hooks/useGames';
 import { type PlayoffFormatRule } from '@/hooks/useLeagues';
@@ -879,6 +880,26 @@ const SeasonPlayoffsTab = ({
   };
 
   const handleStartSeries = (s: PlayoffSeriesRecord) => startSeries(s.id);
+
+  // While a winner is being advanced, show a skeleton in the next-round slot it
+  // feeds into (rNmIdx → r(N+1)m(floor(Idx/2))).
+  const [advancingSeriesId, setAdvancingSeriesId] = useState<string | null>(null);
+  const handleForceAdvance = async (s: PlayoffSeriesRecord) => {
+    setAdvancingSeriesId(s.id);
+    try {
+      await forceAdvance(s.id);
+    } finally {
+      setAdvancingSeriesId(null);
+    }
+  };
+  const advancingTargetSlotKey = useMemo(() => {
+    if (!advancingSeriesId) return null;
+    const s = series.find((x) => x.id === advancingSeriesId);
+    const m = s?.bracket_slot_key?.match(/^r(\d+)m(\d+)$/);
+    if (!m) return null;
+    return `r${Number(m[1]) + 1}m${Math.floor(Number(m[2]) / 2)}`;
+  }, [advancingSeriesId, series]);
+
   const hasRoundOneSeries = series.some((s) => s.round === 1);
   const playoffSettingsLocked = isEnded || playoffsStarted;
   const playoffSeriesFormatLabel =
@@ -1267,11 +1288,23 @@ const SeasonPlayoffsTab = ({
                                 {matchupLabel && (
                                   <span className={styles.bracketMatchupLabel}>{matchupLabel}</span>
                                 )}
-                                <BracketSlot
-                                  series={s}
-                                  busy={seriesBusy}
-                                  seriesHref={s ? seriesDetailsPath(s) : undefined}
-                                  slotRef={registerBracketSlot(slotKey)}
+                                {slotKey === advancingTargetSlotKey ? (
+                                  <div
+                                    ref={registerBracketSlot(slotKey)}
+                                    className={`${styles.bracketSlot} ${styles.slotSkeleton}`}
+                                    aria-label="Advancing winner…"
+                                  >
+                                    <Skeleton
+                                      type="block"
+                                      className={styles.slotSkeletonBar}
+                                    />
+                                  </div>
+                                ) : (
+                                  <BracketSlot
+                                    series={s}
+                                    busy={seriesBusy}
+                                    seriesHref={s ? seriesDetailsPath(s) : undefined}
+                                    slotRef={registerBracketSlot(slotKey)}
                                   simulatedTeam1={
                                     simulatedSlots?.[
                                       makeSlotKey(roundInfo.round, slotIndex, 'team1')
@@ -1296,8 +1329,9 @@ const SeasonPlayoffsTab = ({
                                   canAdvanceWinner={canAdvanceWinner}
                                   onStart={handleStartSeries}
                                   onAdvance={advanceBracket}
-                                  onForceAdvance={s ? () => forceAdvance(s.id) : undefined}
-                                />
+                                  onForceAdvance={s ? () => handleForceAdvance(s) : undefined}
+                                  />
+                                )}
                               </div>
                             );
                           })}
