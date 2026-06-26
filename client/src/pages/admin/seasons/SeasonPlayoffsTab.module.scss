@@ -756,6 +756,8 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
   &Filled {
     position: relative;
     background: $bg-card;
+    // Dim card border by default; a real series upgrades to the bright
+    // bracket-line border via .slotSeries below.
     border: 1px solid $border;
     display: flex;
     flex-direction: column;
@@ -763,7 +765,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
       background $transition-fast,
       border-color $transition-fast,
       box-shadow $transition-fast,
-      transform $transition-fast;
+      top $transition-fast;
 
     .slotActions {
       position: absolute;
@@ -787,18 +789,28 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     }
   }
 
-  // A seeded, clickable series (one that has reached its round) gets the
-  // brighter outline plus the hover lift/glow. Simulated, TBD and disabled
-  // slots also carry .slotFilled but stay card-coloured and static.
-  &Filled.slotInteractive {
+  // A real series box (partial or fully filled) uses the brighter bracket-line
+  // border. Simulated, TBD and disabled placeholders carry .slotFilled but not
+  // .slotSeries, so they keep the dim card border.
+  &Filled.slotSeries {
     border-color: $bracket-line;
+  }
+
+  // A fully-seeded series is also interactive: filled background plus the hover
+  // lift/glow + clickable. (Partial series have .slotSeries but not
+  // .slotInteractive, so they keep the card background and stay static.)
+  &Filled.slotInteractive {
+    background: #222d3f;
 
     &:hover,
     &:focus-within {
       background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
       border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
       box-shadow: 0 8px 20px rgba($accent, 0.12);
-      transform: translateY(-1px);
+      // Lift via `top` (not `transform`): a transformed ancestor becomes the
+      // containing block for the action buttons' position:fixed tooltips and
+      // throws them off-screen, making the tooltip look absent.
+      top: -1px;
     }
   }
 
@@ -940,14 +952,16 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
       background $transition-fast,
       border-color $transition-fast,
       box-shadow $transition-fast,
-      transform $transition-fast;
+      top $transition-fast;
 
     &:hover,
     &:focus-within {
       background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
       border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
       box-shadow: 0 8px 20px rgba($accent, 0.12);
-      transform: translateY(-1px);
+      // Lift via `top` (not `transform`) so the row action button's
+      // position:fixed tooltip isn't reparented off-screen.
+      top: -1px;
     }
   }
 

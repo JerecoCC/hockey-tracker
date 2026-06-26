@@ -341,17 +341,26 @@ const BracketSlot = ({
     );
   }
 
-  const homeWon = series.winner_team_id === series.home_team_id;
-  const awayWon = series.winner_team_id === series.away_team_id;
+  // Guard against null === null: a TBD slot with no winner must not read as won
+  // (which would turn the missing slot green).
+  const homeWon = !!series.winner_team_id && series.winner_team_id === series.home_team_id;
+  const awayWon = !!series.winner_team_id && series.winner_team_id === series.away_team_id;
   const isComplete = series.status === 'complete';
+  const homeSet = !!series.home_team_id;
+  const awaySet = !!series.away_team_id;
+  // A series that isn't fully seeded yet is treated like a tie: whichever team
+  // is already filled is faded (the empty TBD slot keeps its normal styling).
+  const partiallySeeded = (homeSet || awaySet) && !(homeSet && awaySet);
   // While a series is in progress, fade whichever team isn't leading yet (same
   // treatment as a completed loser); the leader keeps its normal styling.
   const isActive = series.status === 'active';
-  const homeTrailing = isActive && series.home_wins <= series.away_wins;
-  const awayTrailing = isActive && series.away_wins <= series.home_wins;
+  const homeTrailing =
+    (isActive && series.home_wins <= series.away_wins) || (partiallySeeded && homeSet);
+  const awayTrailing =
+    (isActive && series.away_wins <= series.home_wins) || (partiallySeeded && awaySet);
 
   const hasNoGames = (series.games ?? []).length === 0;
-  const bothTeamsSet = !!series.home_team_id && !!series.away_team_id;
+  const bothTeamsSet = homeSet && awaySet;
   const canStart = hasNoGames && series.status === 'upcoming' && bothTeamsSet;
   const showOverlay = canStart || canAdvanceWinner;
 
@@ -361,7 +370,9 @@ const BracketSlot = ({
       className={[
         styles.bracketSlot,
         styles.slotFilled,
-        // Only a seeded, viewable series is interactive (gets the hover lift).
+        // A real series box uses the bright bracket-line border even when not
+        // fully filled; only a fully-seeded one is also interactive.
+        styles.slotSeries,
         seriesHref && bothTeamsSet ? styles.slotInteractive : '',
       ]
         .filter(Boolean)
@@ -971,11 +982,18 @@ const SeasonPlayoffsTab = ({
     const slotUnderlap = 6;
     const nextPaths: BracketConnectorPath[] = [];
 
-    // Slot keys whose series has been seeded (both teams set). A connector is
-    // only "active" (bright) once the next-round series it feeds into is seeded.
+    // A feeder arm lights up once that feeder series is finished; the stub into
+    // the next round lights up once the next-round series has been seeded (a
+    // winner advanced into it). This makes a half-finished bracket render half
+    // border / half bracket-colour.
+    const completedSlotKeys = new Set(
+      series
+        .filter((s) => s.bracket_slot_key && s.status === 'complete')
+        .map((s) => s.bracket_slot_key as string),
+    );
     const seededSlotKeys = new Set(
       series
-        .filter((s) => s.bracket_slot_key && s.home_team_id && s.away_team_id)
+        .filter((s) => s.bracket_slot_key && (s.home_team_id || s.away_team_id))
         .map((s) => s.bracket_slot_key as string),
     );
 
@@ -1010,15 +1028,24 @@ const SeasonPlayoffsTab = ({
           0,
           Math.min(8, (bottom.y - top.y) / 2, joinX - top.x, joinX - bottom.x),
         );
+        const baseId = `${topKey}-${bottomKey}-${nextKey}`;
+        // Top feeder arm + its half of the vertical spine (down to the branch).
         nextPaths.push({
-          id: `${topKey}-${bottomKey}-${nextKey}`,
+          id: `${baseId}-top`,
+          active: completedSlotKeys.has(topKey),
+          d: `M ${top.x - slotUnderlap} ${top.y} H ${joinX - r} Q ${joinX} ${top.y} ${joinX} ${top.y + r} V ${next.y}`,
+        });
+        // Bottom feeder arm + its half of the spine (up to the branch).
+        nextPaths.push({
+          id: `${baseId}-bottom`,
+          active: completedSlotKeys.has(bottomKey),
+          d: `M ${bottom.x - slotUnderlap} ${bottom.y} H ${joinX - r} Q ${joinX} ${bottom.y} ${joinX} ${bottom.y - r} V ${next.y}`,
+        });
+        // Horizontal stub feeding the next-round series.
+        nextPaths.push({
+          id: `${baseId}-next`,
           active: seededSlotKeys.has(nextKey),
-          d: [
-            `M ${top.x - slotUnderlap} ${top.y} H ${joinX - r} Q ${joinX} ${top.y} ${joinX} ${top.y + r}`,
-            `M ${bottom.x - slotUnderlap} ${bottom.y} H ${joinX - r} Q ${joinX} ${bottom.y} ${joinX} ${bottom.y - r}`,
-            `M ${joinX} ${top.y + r} V ${bottom.y - r}`,
-            `M ${joinX} ${next.y} H ${next.x + slotUnderlap}`,
-          ].join(' '),
+          d: `M ${joinX} ${next.y} H ${next.x + slotUnderlap}`,
         });
       });
     });
@@ -1156,11 +1183,32 @@ const SeasonPlayoffsTab = ({
                     </svg>
                   )}
                   {bracketStructure.rounds.map((roundInfo) => {
-                    // Sort by bracket_slot_key matchup index so auto-advanced series
-                    // always appear in the correct bracket position.
-                    const roundSeries = [...(seriesByRound[roundInfo.round] ?? [])].sort(
-                      (a, b) => matchupIndex(a) - matchupIndex(b),
+                    // Place each series in the slot matching its bracket_slot_key
+                    // matchup index. Series without a slot key (legacy) fill any
+                    // remaining slots in order. Indexing a sorted list positionally
+                    // misplaced series when a round had gaps — e.g. a lone r2m3
+                    // winner rendering in the r2m0 (series 1) slot.
+                    const slotSeries: (PlayoffSeriesRecord | null)[] = Array.from(
+                      { length: roundInfo.series },
+                      () => null,
                     );
+                    const unkeyedSeries: PlayoffSeriesRecord[] = [];
+                    for (const ser of seriesByRound[roundInfo.round] ?? []) {
+                      const idx = matchupIndex(ser);
+                      if (
+                        Number.isFinite(idx) &&
+                        idx >= 0 &&
+                        idx < slotSeries.length &&
+                        !slotSeries[idx]
+                      ) {
+                        slotSeries[idx] = ser;
+                      } else {
+                        unkeyedSeries.push(ser);
+                      }
+                    }
+                    for (let i = 0, p = 0; i < slotSeries.length && p < unkeyedSeries.length; i++) {
+                      if (!slotSeries[i]) slotSeries[i] = unkeyedSeries[p++];
+                    }
 
                     // Fallback for legacy series without bracket_slot_key:
                     // an empty slot is advanceable when all previous-round series are complete.
@@ -1188,7 +1236,7 @@ const SeasonPlayoffsTab = ({
                         <div className={styles.bracketSlots}>
                           {Array.from({ length: roundInfo.series }, (_, slotIndex) => {
                             const slotKey = `r${roundInfo.round}m${slotIndex}`;
-                            const s = roundSeries[slotIndex] ?? null;
+                            const s = slotSeries[slotIndex] ?? null;
 
                             // canAdvance: slot-key match OR legacy round-based fallback
                             const canAdvance =
