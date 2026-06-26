@@ -10,6 +10,7 @@
 
 // ── Tab bar ────────────────────────────────────────────────────────────
 .tabList {
+  position: relative;
   display: flex;
   width: fit-content;
   gap: $space-xs;
@@ -31,9 +32,24 @@
   }
 }
 
+// Sliding accent fill that animates to sit behind the active tab.
+.tabIndicator {
+  position: absolute;
+  z-index: 0;
+  background: $accent;
+  border-radius: $radius-md;
+  pointer-events: none;
+  transition:
+    left $transition-base ease,
+    top $transition-base ease,
+    width $transition-base ease,
+    height $transition-base ease;
+}
+
 // ── Individual tab button ──────────────────────────────────────────────
 .tab {
   position: relative;
+  z-index: 1;
   background: none;
   border: 1px solid transparent;
   padding: $space-sm $space-xl;
@@ -42,24 +58,21 @@
   color: $text-light;
   cursor: pointer;
   border-radius: $radius-md;
-  transition:
-    color $transition-fast,
-    background $transition-fast;
+  transition: color $transition-fast;
 
   &:hover {
     color: $text-body;
   }
 
-  // Active tab uses the table row hover fill, outlined with the brightened
-  // slate used for playoff bracket connector lines.
+  // Active tab text sits on the sliding accent indicator and is inert — no
+  // hover/cursor affordance so it isn't mistaken for a clickable button.
   &Active {
-    background: rgba(255, 255, 255, 0.04);
-    border-color: color-mix(in srgb, #{$border} 45%, #{$text-light});
-    color: $text-bright;
+    color: #fff;
     font-weight: 700;
+    cursor: default;
 
     &:hover {
-      color: $text-bright;
+      color: #fff;
     }
   }
 }

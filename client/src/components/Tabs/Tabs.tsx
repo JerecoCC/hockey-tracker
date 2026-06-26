@@ -1,5 +1,5 @@
 import { useState, useLayoutEffect, useRef } from 'react';
-import type { ReactNode } from 'react';
+import type { CSSProperties, ReactNode } from 'react';
 import { useMobileTabs } from '@/context/MobileTabsContext';
 import styles from './Tabs.module.scss';
 
@@ -39,6 +39,29 @@ const Tabs = (props: TabsProps) => {
   const active = Math.min(Math.max(requestedActive, 0), Math.max(tabs.length - 1, 0));
   const { setMobileTabs } = useMobileTabs();
 
+  // Sliding accent indicator that moves to sit behind the active tab.
+  const listRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState<CSSProperties>();
+
+  useLayoutEffect(() => {
+    const measure = () => {
+      const list = listRef.current;
+      if (!list) return;
+      const btn = list.querySelectorAll<HTMLElement>('[role="tab"]')[active];
+      // Skip while hidden (e.g. mobile, where the strip is rendered elsewhere).
+      if (!btn || btn.offsetWidth === 0) return;
+      setIndicatorStyle({
+        left: btn.offsetLeft,
+        top: btn.offsetTop,
+        width: btn.offsetWidth,
+        height: btn.offsetHeight,
+      });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [active, tabs.length]);
+
   // Keep a ref to the latest onTabChange so the context callback never goes stale.
   const onTabChangeRef = useRef(onTabChange);
   onTabChangeRef.current = onTabChange;
@@ -71,6 +94,7 @@ const Tabs = (props: TabsProps) => {
   return (
     <div className={[styles.tabs, className].filter(Boolean).join(' ')}>
       <div
+        ref={listRef}
         className={[
           styles.tabList,
           disabled ? styles.tabListDisabled : '',
@@ -80,6 +104,13 @@ const Tabs = (props: TabsProps) => {
           .join(' ')}
         role="tablist"
       >
+        {indicatorStyle && (
+          <span
+            className={styles.tabIndicator}
+            style={indicatorStyle}
+            aria-hidden="true"
+          />
+        )}
         {tabs.map((tab, i) => (
           <button
             key={tab.label}
