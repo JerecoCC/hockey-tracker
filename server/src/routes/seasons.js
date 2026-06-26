@@ -1780,7 +1780,24 @@ router.get('/:id/stats', async (req, res) => {
                     + SPLIT_PART(st.exited_time, ':', 2)::int,
                     0
                   )
-            END AS until_pos
+            END AS until_pos,
+            -- Real elapsed game time (seconds) the stint started, for time-on-ice.
+            CASE st.entered_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
+              + COALESCE(SPLIT_PART(st.entered_time, ':', 1)::int * 60 + SPLIT_PART(st.entered_time, ':', 2)::int, 0) AS start_abs,
+            CASE
+              WHEN st.exited_period IS NULL THEN NULL
+              ELSE CASE st.exited_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
+                + COALESCE(SPLIT_PART(st.exited_time, ':', 1)::int * 60 + SPLIT_PART(st.exited_time, ':', 2)::int, 0)
+            END AS exited_abs,
+            -- Game end (seconds): regulation 3600, + OT length (OT-goal time, or full 300 on a shootout).
+            CASE
+              WHEN g.shootout THEN 3900
+              WHEN EXISTS (SELECT 1 FROM goals og WHERE og.game_id = g.id AND og.period = 'OT')
+                THEN 3600 + COALESCE((
+                  SELECT MAX(SPLIT_PART(og.period_time, ':', 1)::int * 60 + SPLIT_PART(og.period_time, ':', 2)::int)
+                  FROM goals og WHERE og.game_id = g.id AND og.period = 'OT'), 0)
+              ELSE 3600
+            END AS game_end_abs
           FROM game_goalie_stints st
           JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final' AND g.game_type = ${gameType}
           JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
@@ -1833,7 +1850,8 @@ router.get('/:id/stats', async (req, res) => {
               WHEN sr.goals_against_override IS NULL
                 THEN COALESCE(sgd.save_ga, 0)::int
               ELSE GREATEST(sr.goals_against_override - COALESCE(sgd.own_goal_ga, 0), 0)::int
-            END AS resolved_save_ga
+            END AS resolved_save_ga,
+            GREATEST(COALESCE(sr.exited_abs, sr.game_end_abs) - sr.start_abs, 0)::int AS toi
           FROM stint_ranges sr
           LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
         ),
@@ -1843,7 +1861,8 @@ router.get('/:id/stats', async (req, res) => {
             MIN(from_pos)           AS first_from_pos,
             SUM(shots_against)::int AS shots_against,
             SUM(resolved_ga)::int   AS goals_against,
-            SUM(resolved_save_ga)::int AS save_goals_against
+            SUM(resolved_save_ga)::int AS save_goals_against,
+            SUM(toi)::int           AS toi
           FROM stints_resolved
           GROUP BY game_id, goalie_id, team_id
         ),
@@ -1861,6 +1880,7 @@ router.get('/:id/stats', async (req, res) => {
             SUM(gg.shots_against)::int                            AS shots_against,
             SUM(gg.goals_against)::int                            AS goals_against,
             (SUM(gg.shots_against) - SUM(gg.save_goals_against))::int AS saves,
+            SUM(gg.toi)::int                                       AS toi,
             COUNT(*) FILTER (
               WHERE gg.shots_against > 0
                 AND gg.goals_against = 0
@@ -1893,8 +1913,8 @@ router.get('/:id/stats', async (req, res) => {
               THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
               ELSE NULL END                                        AS save_pct,
             agg.shutouts,
-            CASE WHEN agg.gp > 0
-              THEN ROUND(agg.goals_against::numeric / agg.gp, 2)
+            CASE WHEN agg.toi > 0
+              THEN ROUND(agg.goals_against::numeric * 3600 / agg.toi, 2)
               ELSE NULL END                                        AS gaa
           FROM goalie_game_agg agg
           JOIN players p    ON p.id  = agg.goalie_id
@@ -2037,7 +2057,24 @@ router.get('/:id/stats', async (req, res) => {
                   + SPLIT_PART(st.exited_time, ':', 2)::int,
                   0
                 )
-          END AS until_pos
+          END AS until_pos,
+          -- Real elapsed game time (seconds) the stint started, for time-on-ice.
+          CASE st.entered_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
+            + COALESCE(SPLIT_PART(st.entered_time, ':', 1)::int * 60 + SPLIT_PART(st.entered_time, ':', 2)::int, 0) AS start_abs,
+          CASE
+            WHEN st.exited_period IS NULL THEN NULL
+            ELSE CASE st.exited_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
+              + COALESCE(SPLIT_PART(st.exited_time, ':', 1)::int * 60 + SPLIT_PART(st.exited_time, ':', 2)::int, 0)
+          END AS exited_abs,
+          -- Game end (seconds): regulation 3600, + OT length (OT-goal time, or full 300 on a shootout).
+          CASE
+            WHEN g.shootout THEN 3900
+            WHEN EXISTS (SELECT 1 FROM goals og WHERE og.game_id = g.id AND og.period = 'OT')
+              THEN 3600 + COALESCE((
+                SELECT MAX(SPLIT_PART(og.period_time, ':', 1)::int * 60 + SPLIT_PART(og.period_time, ':', 2)::int)
+                FROM goals og WHERE og.game_id = g.id AND og.period = 'OT'), 0)
+            ELSE 3600
+          END AS game_end_abs
         FROM game_goalie_stints st
         JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final' AND g.game_type = ${gameType}
         JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
@@ -2090,7 +2127,8 @@ router.get('/:id/stats', async (req, res) => {
             WHEN sr.goals_against_override IS NULL
               THEN COALESCE(sgd.save_ga, 0)::int
             ELSE GREATEST(sr.goals_against_override - COALESCE(sgd.own_goal_ga, 0), 0)::int
-          END AS resolved_save_ga
+          END AS resolved_save_ga,
+          GREATEST(COALESCE(sr.exited_abs, sr.game_end_abs) - sr.start_abs, 0)::int AS toi
         FROM stint_ranges sr
         LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
       ),
@@ -2101,7 +2139,8 @@ router.get('/:id/stats', async (req, res) => {
           MIN(from_pos)           AS first_from_pos,
           SUM(shots_against)::int AS shots_against,
           SUM(resolved_ga)::int   AS goals_against,
-          SUM(resolved_save_ga)::int AS save_goals_against
+          SUM(resolved_save_ga)::int AS save_goals_against,
+          SUM(toi)::int           AS toi
         FROM stints_resolved
         GROUP BY game_id, goalie_id, team_id
       ),
@@ -2120,6 +2159,7 @@ router.get('/:id/stats', async (req, res) => {
           SUM(gg.shots_against)::int                            AS shots_against,
           SUM(gg.goals_against)::int                            AS goals_against,
           (SUM(gg.shots_against) - SUM(gg.save_goals_against))::int AS saves,
+          SUM(gg.toi)::int                                       AS toi,
           -- Shutout: goalie started at game start (period 1, 0:00 → from_pos = 100000),
           -- was never replaced (last goalie for the team in that game),
           -- faced at least one shot, and allowed zero goals.
@@ -2155,8 +2195,8 @@ router.get('/:id/stats', async (req, res) => {
           THEN ROUND(agg.saves::numeric / agg.shots_against, 3)
           ELSE NULL END                                        AS save_pct,
         agg.shutouts,
-        CASE WHEN agg.gp > 0
-          THEN ROUND(agg.goals_against::numeric / agg.gp, 2)
+        CASE WHEN agg.toi > 0
+          THEN ROUND(agg.goals_against::numeric * 3600 / agg.toi, 2)
           ELSE NULL END                                        AS gaa
       FROM goalie_game_agg agg
       JOIN players p    ON p.id  = agg.goalie_id
