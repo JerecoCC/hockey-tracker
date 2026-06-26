@@ -426,6 +426,9 @@ const SeasonGamesTab = ({
   const filteredGames = useMemo(() => {
     return [...games]
       .filter((g) => {
+        // Hide cancelled games (e.g. unplayed games after a series clinches)
+        // unless the user explicitly filters by the Cancelled status.
+        if (g.status === 'cancelled' && statusFilter !== 'cancelled') return false;
         if (
           teamFilter.length > 0 &&
           !teamFilter.includes(g.home_team.id) &&
@@ -443,7 +446,7 @@ const SeasonGamesTab = ({
         if (startTimeOrder !== 0) return startTimeOrder;
         return compareOptionalStringAsc(a.time_end, b.time_end);
       });
-  }, [games, teamFilter]);
+  }, [games, teamFilter, statusFilter]);
 
   const hasActiveFilters = !!(gameTypeFilter || statusFilter || teamFilter.length > 0);
   const gameDateKey = useCallback(
