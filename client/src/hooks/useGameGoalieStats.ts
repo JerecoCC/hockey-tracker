@@ -38,6 +38,8 @@ export interface GoalieSwitchData {
   exited_time?: string | null;
   shots_against?: number;
   goals_against?: number | null;
+  /** Authoritative ice time for this stint, in seconds. */
+  time_on_ice?: number | null;
   /**
    * Close the team's currently-open stint before opening the new one.
    * - true → close it at the new entered_period / entered_time.
@@ -56,6 +58,8 @@ export interface UpdateGoalieStintData {
   shots_against?: number;
   /** Override GA for this stint. null removes the override (reverts to goal-table derivation). */
   goals_against?: number | null;
+  /** Authoritative ice time for this stint, in seconds. null clears it. */
+  time_on_ice?: number | null;
 }
 
 export interface GoalieStintRecord {
@@ -70,6 +74,8 @@ export interface GoalieStintRecord {
   goals_against: number;
   /** Raw stored override (null = no override → derived). */
   goals_against_override: number | null;
+  /** Authoritative ice time for this stint, in seconds (null if not yet entered). */
+  time_on_ice: number | null;
   saves: number;
 }
 

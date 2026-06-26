@@ -3206,6 +3206,7 @@ const goalieStintsCTE = (gameId) => sql`
       st.exited_period,  st.exited_time,
       st.shots_against,
       st.goals_against AS goals_against_override,
+      st.time_on_ice,
       st.created_at,
       pv_in.v * 100000
         + COALESCE(
@@ -3346,6 +3347,7 @@ const goalieStintsCTE = (gameId) => sql`
           'shots_against',          resolved_sa,
           'goals_against',          resolved_ga,
           'goals_against_override', goals_against_override,
+          'time_on_ice',            time_on_ice,
           'saves',                  resolved_sa - resolved_save_ga
         )
         ORDER BY stint_ord
@@ -3465,12 +3467,15 @@ router.post('/:id/goalie-stints', async (req, res) => {
     team_id, goalie_id,
     entered_period, entered_time,
     exited_period, exited_time,
-    shots_against, goals_against,
+    shots_against, goals_against, time_on_ice,
     close_previous,
   } = req.body || {};
 
   if (!team_id || !goalie_id || !entered_period) {
     return res.status(400).json({ error: 'team_id, goalie_id, and entered_period are required' });
+  }
+  if (time_on_ice != null && (!Number.isInteger(Number(time_on_ice)) || Number(time_on_ice) < 0)) {
+    return res.status(400).json({ error: 'time_on_ice must be a non-negative number of seconds' });
   }
   if (!VALID_PERIODS.includes(entered_period)) {
     return res.status(400).json({ error: 'entered_period must be one of 1, 2, 3, OT, SO' });
@@ -3542,13 +3547,14 @@ router.post('/:id/goalie-stints', async (req, res) => {
         game_id, team_id, goalie_id, stint_ord,
         entered_period, entered_time,
         exited_period,  exited_time,
-        shots_against,  goals_against
+        shots_against,  goals_against, time_on_ice
       ) VALUES (
         ${id}, ${team_id}, ${goalie_id}, ${ord[0].next},
         ${entered_period}, ${enteredAt},
         ${exitedPd},       ${exitedAt},
         ${shots_against == null ? 0 : Number(shots_against)},
-        ${goals_against == null ? null : Number(goals_against)}
+        ${goals_against == null ? null : Number(goals_against)},
+        ${time_on_ice == null ? null : Number(time_on_ice)}
       )
     `;
     const rows = await fetchGoalieStatsForGame(id);
@@ -3588,6 +3594,10 @@ router.put('/:id/goalie-stints/:stintId', async (req, res) => {
       return res.status(400).json({ error: `${k} must be in MM:SS format` });
     }
   }
+  if (has('time_on_ice') && body.time_on_ice != null
+      && (!Number.isInteger(Number(body.time_on_ice)) || Number(body.time_on_ice) < 0)) {
+    return res.status(400).json({ error: 'time_on_ice must be a non-negative number of seconds' });
+  }
 
   // Build dynamic SET fragments. Each entry contributes ", col = ${val}".
   const sets = [];
@@ -3600,6 +3610,7 @@ router.put('/:id/goalie-stints/:stintId', async (req, res) => {
   if (has('exited_time'))    sets.push(sql`exited_time    = ${norm(body.exited_time)}`);
   if (has('shots_against'))  sets.push(sql`shots_against  = ${Number(body.shots_against)}`);
   if (has('goals_against'))  sets.push(sql`goals_against  = ${body.goals_against == null ? null : Number(body.goals_against)}`);
+  if (has('time_on_ice'))    sets.push(sql`time_on_ice    = ${body.time_on_ice == null ? null : Number(body.time_on_ice)}`);
 
   if (sets.length === 0) {
     return res.status(400).json({ error: 'no updatable fields supplied' });

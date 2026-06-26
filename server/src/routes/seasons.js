@@ -1781,6 +1781,7 @@ router.get('/:id/stats', async (req, res) => {
                     0
                   )
             END AS until_pos,
+            st.time_on_ice,
             -- Real elapsed game time (seconds) the stint started, for time-on-ice.
             CASE st.entered_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
               + COALESCE(SPLIT_PART(st.entered_time, ':', 1)::int * 60 + SPLIT_PART(st.entered_time, ':', 2)::int, 0) AS start_abs,
@@ -1851,7 +1852,7 @@ router.get('/:id/stats', async (req, res) => {
                 THEN COALESCE(sgd.save_ga, 0)::int
               ELSE GREATEST(sr.goals_against_override - COALESCE(sgd.own_goal_ga, 0), 0)::int
             END AS resolved_save_ga,
-            GREATEST(COALESCE(sr.exited_abs, sr.game_end_abs) - sr.start_abs, 0)::int AS toi
+            COALESCE(sr.time_on_ice, GREATEST(COALESCE(sr.exited_abs, sr.game_end_abs) - sr.start_abs, 0))::int AS toi
           FROM stint_ranges sr
           LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
         ),
@@ -2058,6 +2059,7 @@ router.get('/:id/stats', async (req, res) => {
                   0
                 )
           END AS until_pos,
+          st.time_on_ice,
           -- Real elapsed game time (seconds) the stint started, for time-on-ice.
           CASE st.entered_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
             + COALESCE(SPLIT_PART(st.entered_time, ':', 1)::int * 60 + SPLIT_PART(st.entered_time, ':', 2)::int, 0) AS start_abs,
@@ -2128,7 +2130,7 @@ router.get('/:id/stats', async (req, res) => {
               THEN COALESCE(sgd.save_ga, 0)::int
             ELSE GREATEST(sr.goals_against_override - COALESCE(sgd.own_goal_ga, 0), 0)::int
           END AS resolved_save_ga,
-          GREATEST(COALESCE(sr.exited_abs, sr.game_end_abs) - sr.start_abs, 0)::int AS toi
+          COALESCE(sr.time_on_ice, GREATEST(COALESCE(sr.exited_abs, sr.game_end_abs) - sr.start_abs, 0))::int AS toi
         FROM stint_ranges sr
         LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
       ),

@@ -13,11 +13,57 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
-import { type GoalieStatRecord } from '@/hooks/useGameGoalieStats';
+import {
+  type GoalieStatRecord,
+  type GoalieStintRecord,
+  type UpdateGoalieStintData,
+} from '@/hooks/useGameGoalieStats';
 import { type GoalRecord } from '@/hooks/useGameGoals';
+import fieldStyles from '@/components/Field/Field.module.scss';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_ORDER, PERIOD_TITLE_LABEL } from './constants';
 import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
+
+// ── Time-on-ice helpers ──────────────────────────────────────────────────────
+// Elapsed-game-seconds offset at the start of each period.
+const PERIOD_OFFSET: Record<string, number> = {
+  [PERIOD.FIRST]: 0,
+  [PERIOD.SECOND]: 1200,
+  [PERIOD.THIRD]: 2400,
+  [PERIOD.OVERTIME]: 3600,
+  [PERIOD.SHOOTOUT]: 6000,
+};
+
+const mmssToSeconds = (t?: string | null): number => {
+  if (!t) return 0;
+  const [m, s] = t.split(':').map((n) => parseInt(n, 10));
+  return (Number.isFinite(m) ? m : 0) * 60 + (Number.isFinite(s) ? s : 0);
+};
+
+const secondsToMMSS = (sec: number): string =>
+  `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
+
+const TOI_RE = /^\d{1,3}:[0-5]\d$/;
+const parseToiInput = (t: string): number | null => {
+  const v = t.trim();
+  if (!TOI_RE.test(v)) return null;
+  const [m, s] = v.split(':').map((n) => parseInt(n, 10));
+  return m * 60 + s;
+};
+
+// Default ice time for a stint when the admin hasn't entered one: derive it from
+// the stint's enter/exit clock. An open stint (no exit) defaults to the full
+// game — 65:00 if it reached a shootout, otherwise 60:00 (admin adjusts pulls).
+const defaultStintToi = (st: GoalieStintRecord, game: GameRecord): number => {
+  const start = (PERIOD_OFFSET[st.entered_period] ?? 0) + mmssToSeconds(st.entered_time);
+  const end =
+    st.exited_period != null
+      ? (PERIOD_OFFSET[st.exited_period] ?? 0) + mmssToSeconds(st.exited_time)
+      : game.shootout
+        ? 3900
+        : 3600;
+  return Math.max(end - start, 0);
+};
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }
@@ -111,12 +157,17 @@ interface Props {
   nextAction: ShotsNextAction;
   showShootsFirst: boolean;
   game: GameRecord;
+  goalieStats: GoalieStatRecord[];
   onClose: () => void;
   updatePeriodShots: (period: string, home: number, away: number) => Promise<boolean | undefined>;
   updateGameInfo: (data: {
     time_end?: string | null;
     shootout_first_team_id?: string | null;
   }) => Promise<boolean>;
+  updateGoalieStint: (
+    stintId: string,
+    data: UpdateGoalieStintData,
+  ) => Promise<GoalieStatRecord[] | null>;
   onAdvancePeriod: (next: CurrentPeriod) => void;
   onNextOTPeriod: () => void;
   onEndGameReady: () => void;
@@ -128,15 +179,21 @@ const RecordShotsModal = ({
   nextAction,
   showShootsFirst,
   game,
+  goalieStats,
   onClose,
   updatePeriodShots,
   updateGameInfo,
+  updateGoalieStint,
   onAdvancePeriod,
   onNextOTPeriod,
   onEndGameReady,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
   const [soFirstTeam, setSoFirstTeam] = useState<'away' | 'home' | null>('home');
+  // Per-stint time-on-ice inputs (MM:SS), keyed by stint id. Required to end a game.
+  const [toiInputs, setToiInputs] = useState<Record<string, string>>({});
+  const setToiField = (stintId: string, value: string) =>
+    setToiInputs((prev) => ({ ...prev, [stintId]: value }));
 
   const {
     control,
@@ -158,6 +215,17 @@ const RecordShotsModal = ({
         end_time: isEndGame && game.time_end ? isoToETHHMM(game.time_end) : '',
       });
       setSoFirstTeam('home');
+      if (isEndGame) {
+        const init: Record<string, string> = {};
+        goalieStats.forEach((stat) =>
+          stat.stints.forEach((st) => {
+            init[st.id] = secondsToMMSS(
+              st.time_on_ice != null ? st.time_on_ice : defaultStintToi(st, game),
+            );
+          }),
+        );
+        setToiInputs(init);
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
@@ -167,6 +235,11 @@ const RecordShotsModal = ({
 
   const endTimeValid = !isEndGame || !!endTimeValue;
   const shootsFirstValid = !showShootsFirst || !!soFirstTeam;
+  const toiValid =
+    !isEndGame ||
+    goalieStats.every((stat) =>
+      stat.stints.every((st) => parseToiInput(toiInputs[st.id] ?? '') != null),
+    );
 
   const isNextOT = nextAction.type === 'next-ot';
   // "OT1", "OT2", etc. → "Overtime 1", "Overtime 2", etc.
@@ -220,6 +293,17 @@ const RecordShotsModal = ({
       const firstTeamId = soFirstTeam === 'away' ? game.away_team.id : game.home_team.id;
       await updateGameInfo({ shootout_first_team_id: firstTeamId });
     }
+    if (isEndGame) {
+      // Persist each goalie stint's time on ice (only those the admin changed).
+      for (const stat of goalieStats) {
+        for (const st of stat.stints) {
+          const sec = parseToiInput(toiInputs[st.id] ?? '');
+          if (sec != null && sec !== st.time_on_ice) {
+            await updateGoalieStint(st.id, { time_on_ice: sec });
+          }
+        }
+      }
+    }
     setSubmitting(false);
     onClose();
     if (nextAction.type === 'advance') {
@@ -239,7 +323,7 @@ const RecordShotsModal = ({
       confirmLabel={confirmLabel}
       confirmIcon={isEndGame ? 'star' : 'flag'}
       confirmForm="record-shots-form"
-      confirmDisabled={submitting || !isValid || !endTimeValid || !shootsFirstValid}
+      confirmDisabled={submitting || !isValid || !endTimeValid || !shootsFirstValid || !toiValid}
       busy={submitting}
     >
       <form
@@ -255,6 +339,9 @@ const RecordShotsModal = ({
           soFirstTeam={soFirstTeam}
           setSoFirstTeam={setSoFirstTeam}
           submitting={submitting}
+          goalieStats={goalieStats}
+          toiInputs={toiInputs}
+          onToiChange={setToiField}
         />
       </form>
     </Modal>
@@ -271,6 +358,9 @@ interface BodyProps {
   soFirstTeam: 'away' | 'home' | null;
   setSoFirstTeam: Dispatch<SetStateAction<'away' | 'home' | null>>;
   submitting: boolean;
+  goalieStats: GoalieStatRecord[];
+  toiInputs: Record<string, string>;
+  onToiChange: (stintId: string, value: string) => void;
 }
 
 const RecordShotsBody = ({
@@ -282,6 +372,9 @@ const RecordShotsBody = ({
   soFirstTeam,
   setSoFirstTeam,
   submitting,
+  goalieStats,
+  toiInputs,
+  onToiChange,
 }: BodyProps) => {
   const teamRows = [
     {
@@ -355,6 +448,56 @@ const RecordShotsBody = ({
           disabled={submitting}
           rules={{ required: 'End time is required' }}
         />
+      )}
+      {isEndGame && goalieStats.length > 0 && (
+        <>
+          <hr className={styles.lineupDivider} />
+          <div className={styles.shotsGoalieHeader}>
+            <span className={styles.goalFormLabel}>Time on Ice</span>
+            <span className={styles.shotsSectionColLabel}>MM:SS</span>
+          </div>
+          {goalieStats.flatMap((stat) =>
+            stat.stints.map((st, idx) => {
+              const initial = stat.goalie_first_name?.charAt(0);
+              const name = `${initial ? `${initial}. ` : ''}${stat.goalie_last_name}`;
+              const invalid = parseToiInput(toiInputs[st.id] ?? '') == null;
+              return (
+                <div
+                  key={st.id}
+                  className={styles.shotsTeamRow}
+                >
+                  <span className={styles.shotsTeamInfo}>
+                    <TeamLogo
+                      logo={stat.team_logo}
+                      code={stat.team_code}
+                      primaryColor={stat.team_primary_color}
+                      textColor={stat.team_text_color}
+                      size={28}
+                      shape={stat.team_logo ? 'square' : 'circle'}
+                    />
+                    <span className={styles.shotsTeamName}>
+                      {name}
+                      {stat.stints.length > 1 ? ` (stint ${idx + 1})` : ''}
+                    </span>
+                  </span>
+                  <div className={styles.shotsFieldWrap}>
+                    <input
+                      className={fieldStyles.field}
+                      type="text"
+                      inputMode="numeric"
+                      placeholder="MM:SS"
+                      aria-label={`${name} time on ice`}
+                      aria-invalid={invalid}
+                      value={toiInputs[st.id] ?? ''}
+                      disabled={submitting}
+                      onChange={(e) => onToiChange(st.id, e.target.value)}
+                    />
+                  </div>
+                </div>
+              );
+            }),
+          )}
+        </>
       )}
       {showShootsFirst && (
         <>

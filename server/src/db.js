@@ -1643,6 +1643,50 @@ async function initSchema() {
   await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_game_idx   ON game_goalie_stints(game_id)`;
   await sql`CREATE INDEX IF NOT EXISTS game_goalie_stints_goalie_idx ON game_goalie_stints(goalie_id)`;
 
+  // time_on_ice (seconds) is the authoritative ice time for a stint, entered by
+  // an admin when ending the game. GAA divides goals against by total ice time,
+  // so a goalie pulled for an extra attacker is not over-credited the empty-net
+  // stretch (which deriving from period boundaries alone would do).
+  await sql`ALTER TABLE game_goalie_stints ADD COLUMN IF NOT EXISTS time_on_ice INTEGER CHECK (time_on_ice >= 0)`;
+
+  // One-time backfill for stints recorded before time_on_ice existed: derive it
+  // from the stint's enter/exit clock against the game's end (regulation 3600,
+  // + OT length from the OT-winning goal, or a full 65:00 for shootout games).
+  // Only fills NULLs, so admin-entered values are never overwritten.
+  await sql`
+    UPDATE game_goalie_stints st
+    SET time_on_ice = sub.toi
+    FROM (
+      SELECT s.id,
+        GREATEST(
+          COALESCE(
+            CASE WHEN s.exited_period IS NULL THEN NULL
+              ELSE (CASE s.exited_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
+                + COALESCE(SPLIT_PART(s.exited_time, ':', 1)::int * 60 + SPLIT_PART(s.exited_time, ':', 2)::int, 0))
+            END,
+            ge.end_abs
+          )
+          - (CASE s.entered_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
+             + COALESCE(SPLIT_PART(s.entered_time, ':', 1)::int * 60 + SPLIT_PART(s.entered_time, ':', 2)::int, 0)),
+          0
+        ) AS toi
+      FROM game_goalie_stints s
+      JOIN games g ON g.id = s.game_id
+      CROSS JOIN LATERAL (
+        SELECT CASE
+          WHEN g.shootout THEN 3900
+          WHEN EXISTS (SELECT 1 FROM goals og WHERE og.game_id = g.id AND og.period = 'OT')
+            THEN 3600 + COALESCE((
+              SELECT MAX(SPLIT_PART(og.period_time, ':', 1)::int * 60 + SPLIT_PART(og.period_time, ':', 2)::int)
+              FROM goals og WHERE og.game_id = g.id AND og.period = 'OT'), 0)
+          ELSE 3600
+        END AS end_abs
+      ) ge
+      WHERE s.time_on_ice IS NULL
+    ) sub
+    WHERE st.id = sub.id
+  `;
+
   // Final legacy goalie-stats migration: copy old one-row goalie stats into
   // stints for games that do not already have stint rows, then remove the
   // retired table/functions.

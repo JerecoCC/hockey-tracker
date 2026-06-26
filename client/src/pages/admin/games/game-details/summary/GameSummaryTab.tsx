@@ -890,9 +890,11 @@ const GameSummaryTab = ({
           nextAction={shotsNextAction}
           showShootsFirst={shotsShowShootsFirst}
           game={game}
+          goalieStats={goalieStats}
           onClose={() => setShotsPeriod(null)}
           updatePeriodShots={updatePeriodShots}
           updateGameInfo={updateGameInfo}
+          updateGoalieStint={updateGoalieStint}
           onAdvancePeriod={advancePeriod}
           onNextOTPeriod={() => advanceOTPeriod(game.overtime_periods ?? 1)}
           onEndGameReady={() => {
