@@ -901,7 +901,8 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
   }
 
   &TeamWinner {
-    .slotTeamName {
+    .slotTeamName,
+    .slotWinCount {
       color: $success;
     }
   }
