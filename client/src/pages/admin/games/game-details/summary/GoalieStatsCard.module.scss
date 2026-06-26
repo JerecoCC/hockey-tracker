@@ -138,3 +138,10 @@
     text-overflow: ellipsis;
   }
 }
+
+// Goalie Stats card header actions — keep the edit buttons grouped together.
+.goalieCardActions {
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+}

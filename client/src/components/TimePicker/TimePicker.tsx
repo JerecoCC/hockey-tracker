@@ -8,8 +8,10 @@ interface Props {
   placeholder?: string;
   disabled?: boolean;
   /** 'clock' (default) — wall-clock time in 12h AM/PM format (HH:MM 24h internally).
-   *  'duration' — period elapsed time as MM:SS (0–20 min, 0–59 sec). */
+   *  'duration' — elapsed time as MM:SS (0–maxDurationMinutes min, 0–59 sec). */
   mode?: 'clock' | 'duration';
+  /** Maximum minutes selectable in duration mode. Defaults to 20 (a period clock). */
+  maxDurationMinutes?: number;
   /** When true, focuses the text input and activates the hour segment on mount. */
   autoFocus?: boolean;
   ariaLabelledBy?: string;
@@ -70,7 +72,6 @@ const buildDisplay = (
 
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1); // 1–12
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, …, 55
-const PERIOD_MINS = Array.from({ length: 21 }, (_, i) => i); // 0–20
 const PERIOD_SECS = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, …, 55
 
 /** Display for duration (MM:SS) mode. */
@@ -96,10 +97,14 @@ const TimePicker = ({
   placeholder,
   disabled,
   mode = 'clock',
+  maxDurationMinutes = 20,
   autoFocus,
   ariaLabelledBy,
 }: Props) => {
   const parsed = parseTime(value);
+  const durationMax = maxDurationMinutes;
+  // Minute options for the duration dropdown column (0 … max).
+  const durationMins = Array.from({ length: durationMax + 1 }, (_, i) => i);
   const init12 = parsed && mode === 'clock' ? to12h(parsed.h24) : null;
   // In duration mode: cHour12 = elapsed minutes (0–20), cMinute = elapsed seconds (0–59), cAmPm unused.
   const [cHour12, setCHour12] = useState<number | null>(
@@ -304,8 +309,8 @@ const TimePicker = ({
         const v = parseInt(newBuf, 10);
         if (seg === 'hour') {
           // clock: first digit > 1 → can't form valid 12h hour
-          // duration: first digit > 2 → can't form valid minute 0-20
-          if (mode === 'clock' ? v > 1 : v > 2) shouldCommit = true;
+          // duration: first digit beyond the max's tens digit → commit early
+          if (mode === 'clock' ? v > 1 : v > Math.floor(durationMax / 10)) shouldCommit = true;
         }
         // minute/second: first digit > 5 means can't be valid (60+)
         if (seg === 'minute' && v > 5) shouldCommit = true;
@@ -314,11 +319,12 @@ const TimePicker = ({
         const v = parseInt(newBuf.padStart(info.maxLen, '0'), 10);
         let valid = true;
         if (seg === 'hour') {
-          if (mode === 'clock' ? v < 1 || v > 12 : v > 20) valid = false;
+          if (mode === 'clock' ? v < 1 || v > 12 : v > durationMax) valid = false;
         }
         if (seg === 'minute' && (v < 0 || v > 59)) valid = false;
-        // duration cap: seconds must be 0 when minutes = 20
-        if (mode === 'duration' && seg === 'minute' && cHour12 === 20 && v > 0) valid = false;
+        // duration cap: seconds must be 0 when minutes are at the max
+        if (mode === 'duration' && seg === 'minute' && cHour12 === durationMax && v > 0)
+          valid = false;
         if (!valid) {
           setBuf('');
           pendingSelRef.current = [info.start, info.end];
@@ -329,8 +335,8 @@ const TimePicker = ({
         if (seg === 'hour') {
           setCHour12(v);
           newH = v;
-          // entering minutes=20 clamps existing seconds to 0
-          if (mode === 'duration' && v === 20 && (cMinute ?? 0) > 0) {
+          // entering the max minute clamps existing seconds to 0
+          if (mode === 'duration' && v === durationMax && (cMinute ?? 0) > 0) {
             setCMinute(0);
             newM = 0;
           }
@@ -354,10 +360,10 @@ const TimePicker = ({
       const delta = e.key === 'ArrowUp' ? 1 : -1;
       if (seg === 'hour') {
         if (mode === 'duration') {
-          // cycle 0–20
-          const next = ((cHour12 ?? 0) + delta + 21) % 21;
-          // cycling to 20 clamps seconds to 0
-          const newSecs = next === 20 && (cMinute ?? 0) > 0 ? 0 : cMinute;
+          // cycle 0–max
+          const next = ((cHour12 ?? 0) + delta + (durationMax + 1)) % (durationMax + 1);
+          // cycling to the max clamps seconds to 0
+          const newSecs = next === durationMax && (cMinute ?? 0) > 0 ? 0 : cMinute;
           setCHour12(next);
           if (newSecs !== cMinute) setCMinute(newSecs ?? 0);
           emitChange(next, newSecs ?? cMinute, null);
@@ -368,9 +374,9 @@ const TimePicker = ({
           emitChange(next, cMinute, cAmPm);
         }
       } else {
-        // seconds/minutes — clamp seconds to 0 when minutes = 20
+        // seconds/minutes — clamp seconds to 0 when minutes are at the max
         const raw = ((cMinute ?? 0) + delta + 60) % 60;
-        const next = mode === 'duration' && cHour12 === 20 ? 0 : raw;
+        const next = mode === 'duration' && cHour12 === durationMax ? 0 : raw;
         setCMinute(next);
         emitChange(cHour12, next, mode === 'clock' ? cAmPm : null);
       }
@@ -420,8 +426,8 @@ const TimePicker = ({
 
   const selectHour = (h: number) => {
     setCHour12(h);
-    // duration cap: selecting 20 min clamps existing seconds to 0
-    const newSecs = mode === 'duration' && h === 20 && (cMinute ?? 0) > 0 ? 0 : cMinute;
+    // duration cap: selecting the max min clamps existing seconds to 0
+    const newSecs = mode === 'duration' && h === durationMax && (cMinute ?? 0) > 0 ? 0 : cMinute;
     if (mode === 'duration' && newSecs !== cMinute) setCMinute(newSecs ?? 0);
     emitChange(
       h,
@@ -433,8 +439,8 @@ const TimePicker = ({
   };
 
   const selectMinute = (m: number) => {
-    // duration cap: disallow seconds > 0 when minutes = 20
-    const clamped = mode === 'duration' && cHour12 === 20 ? 0 : m;
+    // duration cap: disallow seconds > 0 when minutes are at the max
+    const clamped = mode === 'duration' && cHour12 === durationMax ? 0 : m;
     setCMinute(clamped);
     emitChange(cHour12, clamped, mode === 'clock' ? cAmPm : null);
     if (mode === 'duration') {
@@ -522,7 +528,7 @@ const TimePicker = ({
                 ref={hourColRef}
                 className={styles.column}
               >
-                {(mode === 'duration' ? PERIOD_MINS : HOURS_12).map((h) => (
+                {(mode === 'duration' ? durationMins : HOURS_12).map((h) => (
                   <button
                     key={h}
                     type="button"
@@ -547,8 +553,8 @@ const TimePicker = ({
                 className={styles.column}
               >
                 {(mode === 'duration' ? PERIOD_SECS : MINUTES).map((m) => {
-                  // duration cap: seconds > 0 are unavailable when minutes = 20
-                  const disabledSec = mode === 'duration' && cHour12 === 20 && m > 0;
+                  // duration cap: seconds > 0 are unavailable when minutes are at the max
+                  const disabledSec = mode === 'duration' && cHour12 === durationMax && m > 0;
                   return (
                     <button
                       key={m}

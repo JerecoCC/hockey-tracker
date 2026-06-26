@@ -67,6 +67,8 @@ type TimePickerProps = BaseProps & {
   placeholder?: string;
   disabled?: boolean;
   mode?: 'clock' | 'duration';
+  /** Maximum minutes selectable in duration mode (default 20). */
+  maxDurationMinutes?: number;
   autoFocus?: boolean;
 };
 
@@ -179,6 +181,7 @@ const Field = (props: FieldProps) => {
                 placeholder={props.placeholder}
                 disabled={props.disabled}
                 mode={props.mode}
+                maxDurationMinutes={props.maxDurationMinutes}
                 autoFocus={props.autoFocus}
                 ariaLabelledBy={ariaLabelledBy}
               />

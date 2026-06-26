@@ -15,7 +15,6 @@ import { type GameRecord, type CurrentPeriod } from '@/hooks/useGames';
 import { type GameRosterEntry } from '@/hooks/useGameRoster';
 import {
   type GoalieStatRecord,
-  type GoalieStintRecord,
   type UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
 import { type GoalRecord } from '@/hooks/useGameGoals';
@@ -23,47 +22,7 @@ import fieldStyles from '@/components/Field/Field.module.scss';
 import styles from './GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_ORDER, PERIOD_TITLE_LABEL } from './constants';
 import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
-
-// ── Time-on-ice helpers ──────────────────────────────────────────────────────
-// Elapsed-game-seconds offset at the start of each period.
-const PERIOD_OFFSET: Record<string, number> = {
-  [PERIOD.FIRST]: 0,
-  [PERIOD.SECOND]: 1200,
-  [PERIOD.THIRD]: 2400,
-  [PERIOD.OVERTIME]: 3600,
-  [PERIOD.SHOOTOUT]: 6000,
-};
-
-const mmssToSeconds = (t?: string | null): number => {
-  if (!t) return 0;
-  const [m, s] = t.split(':').map((n) => parseInt(n, 10));
-  return (Number.isFinite(m) ? m : 0) * 60 + (Number.isFinite(s) ? s : 0);
-};
-
-const secondsToMMSS = (sec: number): string =>
-  `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(sec % 60).padStart(2, '0')}`;
-
-const TOI_RE = /^\d{1,3}:[0-5]\d$/;
-const parseToiInput = (t: string): number | null => {
-  const v = t.trim();
-  if (!TOI_RE.test(v)) return null;
-  const [m, s] = v.split(':').map((n) => parseInt(n, 10));
-  return m * 60 + s;
-};
-
-// Default ice time for a stint when the admin hasn't entered one: derive it from
-// the stint's enter/exit clock. An open stint (no exit) defaults to the full
-// game — 65:00 if it reached a shootout, otherwise 60:00 (admin adjusts pulls).
-const defaultStintToi = (st: GoalieStintRecord, game: GameRecord): number => {
-  const start = (PERIOD_OFFSET[st.entered_period] ?? 0) + mmssToSeconds(st.entered_time);
-  const end =
-    st.exited_period != null
-      ? (PERIOD_OFFSET[st.exited_period] ?? 0) + mmssToSeconds(st.exited_time)
-      : game.shootout
-        ? 3900
-        : 3600;
-  return Math.max(end - start, 0);
-};
+import { defaultStintToi, parseToiInput, secondsToMMSS } from './goalieTimeOnIce';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }

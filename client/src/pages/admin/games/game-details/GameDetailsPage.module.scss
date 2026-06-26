@@ -1109,6 +1109,29 @@
   align-items: center;
 }
 
+// ── Edit Time on Ice modal ────────────────────────────────────────────────────
+.toiPlayerCell {
+  display: flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+}
+
+.toiPlayerName {
+  display: inline-flex;
+  align-items: baseline;
+  gap: $space-xs;
+  min-width: 0;
+  color: $text-body;
+  font-weight: 600;
+}
+
+.toiStintLabel {
+  color: $text-dim;
+  font-size: $font-xs;
+  font-weight: 400;
+}
+
 .goalieStatsEditor {
   &Head {
     padding: $space-xs $space-sm;

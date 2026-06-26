@@ -6,6 +6,7 @@ import Card from '@/components/Card/Card';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import GoalieStatsEditModal from '../GoalieStatsEditModal';
+import GoalieTimeOnIceModal from '../GoalieTimeOnIceModal';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type {
@@ -15,6 +16,7 @@ import type {
   UpdateGoalieStintData,
 } from '@/hooks/useGameGoalieStats';
 import { formatPlayerName } from '../formatUtils';
+import { defaultStintToi, secondsToMMSS } from '../goalieTimeOnIce';
 import styles from './GoalieStatsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
 import { PERIOD } from '../constants';
@@ -128,6 +130,7 @@ const GoalieStatsCard = ({
 }: Props) => {
   const navigate = useNavigate();
   const [editOpen, setEditOpen] = useState(false);
+  const [toiOpen, setToiOpen] = useState(false);
   const canEdit =
     !!updateGoalieStint && !!addGoalieStint && !!removeGoalieStint && !!removeGoalieStat;
 
@@ -148,14 +151,24 @@ const GoalieStatsCard = ({
         title="Goalie Stats"
         action={
           isFinal && canEdit ? (
-            <Button
-              variant="outlined"
-              intent="neutral"
-              icon="edit"
-              size="sm"
-              tooltip="Edit goalie stats"
-              onClick={() => setEditOpen(true)}
-            />
+            <div className={styles.goalieCardActions}>
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="schedule"
+                size="sm"
+                tooltip="Edit time on ice"
+                onClick={() => setToiOpen(true)}
+              />
+              <Button
+                variant="outlined"
+                intent="neutral"
+                icon="edit"
+                size="sm"
+                tooltip="Edit goalie stats"
+                onClick={() => setEditOpen(true)}
+              />
+            </div>
           ) : undefined
         }
       >
@@ -178,6 +191,9 @@ const GoalieStatsCard = ({
                 <th className={styles.goalieTh}>
                   <Tooltip text="Save Percentage">SV%</Tooltip>
                 </th>
+                <th className={styles.goalieTh}>
+                  <Tooltip text="Time on Ice">TOI</Tooltip>
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -198,6 +214,11 @@ const GoalieStatsCard = ({
                   : stat.shots_against > 0
                     ? (stat.saves / stat.shots_against).toFixed(3).replace(/^0/, '')
                     : '1.000';
+                const toiSec = stat.stints.reduce(
+                  (sum, st) => sum + (st.time_on_ice ?? defaultStintToi(st, game)),
+                  0,
+                );
+                const toiDisplay = toiSec > 0 ? secondsToMMSS(toiSec) : '--';
                 const windows = stintLabels(stat);
                 const isStarter = goalieStatIsStarter(stat);
                 const playerHref = getPlayerHref?.(
@@ -262,6 +283,7 @@ const GoalieStatsCard = ({
                     <td className={styles.goalieTd}>{stat.saves}</td>
                     <td className={styles.goalieTd}>{stat.goals_against}</td>
                     <td className={styles.goalieTd}>{svPct}</td>
+                    <td className={styles.goalieTd}>{toiDisplay}</td>
                   </tr>
                 );
               })}
@@ -271,18 +293,27 @@ const GoalieStatsCard = ({
       </Card>
 
       {canEdit && (
-        <GoalieStatsEditModal
-          open={editOpen}
-          game={game}
-          awayRoster={awayRoster}
-          homeRoster={homeRoster}
-          goalieStats={goalieStats}
-          onClose={() => setEditOpen(false)}
-          updateGoalieStint={updateGoalieStint}
-          addGoalieStint={addGoalieStint}
-          removeGoalieStint={removeGoalieStint}
-          removeGoalieStat={removeGoalieStat}
-        />
+        <>
+          <GoalieStatsEditModal
+            open={editOpen}
+            game={game}
+            awayRoster={awayRoster}
+            homeRoster={homeRoster}
+            goalieStats={goalieStats}
+            onClose={() => setEditOpen(false)}
+            updateGoalieStint={updateGoalieStint}
+            addGoalieStint={addGoalieStint}
+            removeGoalieStint={removeGoalieStint}
+            removeGoalieStat={removeGoalieStat}
+          />
+          <GoalieTimeOnIceModal
+            open={toiOpen}
+            game={game}
+            goalieStats={goalieStats}
+            onClose={() => setToiOpen(false)}
+            updateGoalieStint={updateGoalieStint}
+          />
+        </>
       )}
     </>
   );
