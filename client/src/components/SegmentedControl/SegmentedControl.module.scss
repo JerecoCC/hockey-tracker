@@ -7,7 +7,9 @@
   --segmented-control-option-bg: transparent;
 
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  // Match the height of inputs / buttons so it lines up in control rows.
+  height: 42px;
   box-sizing: border-box;
   padding: $space-xs;
   gap: $space-xs;
@@ -26,17 +28,12 @@
   width: 100%;
 }
 
-// Text-only (non-field) controls use tighter pills than icon-bearing ones.
-.iconless .option {
-  padding-top: $space-xs;
-  padding-bottom: $space-xs;
-}
-
 // Divider sitting in the gap between adjacent options.
 .divider {
   flex: 0 0 auto;
+  align-self: center;
   width: 1px;
-  height: 1.1rem;
+  height: 1.5rem;
   background: var(--segmented-control-border);
 }
 
@@ -45,7 +42,7 @@
     position: relative;
     flex: 0 0 auto;
     display: flex;
-    align-items: center;
+    align-items: stretch;
 
     &:has(.option:focus-visible) {
       z-index: 2;

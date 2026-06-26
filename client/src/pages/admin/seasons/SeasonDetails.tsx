@@ -1009,7 +1009,6 @@ const SeasonDetailsPage = () => {
                   }
                   action={
                     <SegmentedControl
-                      iconless
                       value={statsSubTab}
                       onChange={handleStatsSubTabChange}
                       options={STATS_VIEW_OPTIONS}
@@ -1034,7 +1033,6 @@ const SeasonDetailsPage = () => {
                             setHoveredSkaterIdx(0);
                           }}
                           options={STAT_OPTIONS}
-                          iconless
                           className={styles.statsSegmentedControl}
                         />
                       }
@@ -1073,7 +1071,6 @@ const SeasonDetailsPage = () => {
                             setHoveredDefIdx(0);
                           }}
                           options={STAT_OPTIONS}
-                          iconless
                           className={styles.statsSegmentedControl}
                         />
                       }
@@ -1120,7 +1117,6 @@ const SeasonDetailsPage = () => {
                             setHoveredGoalieIdx(0);
                           }}
                           options={GOALIE_OPTIONS}
-                          iconless
                           className={styles.statsSegmentedControl}
                         />
                       }
