@@ -3,8 +3,8 @@ import Accordion from '@/components/Accordion/Accordion';
 import ActionOverlay from '@/components/ActionOverlay/ActionOverlay';
 import AddRowBar from '@/components/AddRowBar/AddRowBar';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import Pagination, { PaginatedTable } from '@/components/Pagination/Pagination';
+import Section from '@/components/Section/Section';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
 import Tag from '@/components/Tag/Tag';
@@ -61,7 +61,7 @@ export const Surfaces = {
     <StoryPage>
       <StorySection title="Card">
         <StoryGrid>
-          <Card
+          <Section
             title="Filled Card"
             action={
               <Button
@@ -74,21 +74,21 @@ export const Surfaces = {
             }
           >
             <p style={{ margin: 0 }}>Primary app surface with header actions.</p>
-          </Card>
-          <Card
+          </Section>
+          <Section
             variant="light"
             title="Light Card"
           >
             <p style={{ margin: 0 }}>Light variant for neutral document-like surfaces.</p>
-          </Card>
-          <Card
+          </Section>
+          <Section
             variant="border"
             title="Border Card"
           >
             <p style={{ margin: 0 }}>
               Border-only surface for nested sections that should align with framed list items.
             </p>
-          </Card>
+          </Section>
         </StoryGrid>
       </StorySection>
 

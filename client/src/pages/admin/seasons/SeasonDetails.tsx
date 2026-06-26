@@ -3,6 +3,7 @@ import InfoItem from '@/components/InfoItem/InfoItem';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import { useNavigate, useParams } from 'react-router-dom';
 import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Tag from '@/components/Tag/Tag';
@@ -990,7 +991,7 @@ const SeasonDetailsPage = () => {
             icon: 'query_stats',
             content: (
               <div className={styles.statsSubTabs}>
-                <Card
+                <Section
                   variant="filled"
                   noHeaderMargin
                   title={
@@ -1017,12 +1018,12 @@ const SeasonDetailsPage = () => {
                   }
                 >
                   {null}
-                </Card>
+                </Section>
 
                 {statsSubTab === 'Summary' && (
                   <div className={styles.statsLeadersPage}>
                     {/* ── Forwards card ── */}
-                    <Card
+                    <Section
                       variant="filled"
                       title="Forwards"
                       action={
@@ -1058,10 +1059,10 @@ const SeasonDetailsPage = () => {
                           <p className={styles.tabPlaceholder}>No forward stats yet.</p>
                         )
                       )}
-                    </Card>
+                    </Section>
 
                     {/* ── Defense card ── */}
-                    <Card
+                    <Section
                       variant="filled"
                       title="Defense"
                       action={
@@ -1097,10 +1098,10 @@ const SeasonDetailsPage = () => {
                           <p className={styles.tabPlaceholder}>No defense stats yet.</p>
                         )
                       )}
-                    </Card>
+                    </Section>
 
                     {/* ── Goalies card ── */}
-                    <Card
+                    <Section
                       variant="filled"
                       title={
                         <>
@@ -1144,7 +1145,7 @@ const SeasonDetailsPage = () => {
                           <p className={styles.tabPlaceholder}>No goalie stats yet.</p>
                         )
                       )}
-                    </Card>
+                    </Section>
                   </div>
                 )}
 
@@ -1274,12 +1275,12 @@ const SeasonDetailsPage = () => {
                         withPlaces(standings.filter((t) => ids.has(t.team_id))),
                       );
                       return (
-                        <Card
+                        <Section
                           key={conf.id}
                           title={conf.name}
                         >
                           {renderTable(rows, 'No standings data yet.')}
-                        </Card>
+                        </Section>
                       );
                     });
                   }
@@ -1291,12 +1292,12 @@ const SeasonDetailsPage = () => {
                       const rankedRows = standings.filter((t) => ids.has(t.team_id));
                       const rows = sortRows(withPlaces(rankedRows, divisionQualifierCount));
                       return (
-                        <Card
+                        <Section
                           key={div.id}
                           title={div.name}
                         >
                           {renderTable(rows, 'No standings data yet.')}
-                        </Card>
+                        </Section>
                       );
                     });
                   }
@@ -1310,12 +1311,12 @@ const SeasonDetailsPage = () => {
                       );
                       const rows = sortRows(withPlaces(rankedRows, wildcardQualifierCount));
                       return (
-                        <Card
+                        <Section
                           key={conf.id}
                           title={conf.name}
                         >
                           {renderTable(rows, 'No wildcard contenders yet.')}
-                        </Card>
+                        </Section>
                       );
                     });
                   }

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import type { TagIntent } from '@/components/Tag/Tag';
@@ -304,7 +304,7 @@ const PlayoffSeriesDetailsPage = () => {
         disabled={!playoffSeries.home_team_id || !playoffSeries.away_team_id}
       />
 
-      <Card title="Series Games">
+      <Section title="Series Games">
         {visibleGames.length === 0 ? (
           <p className={styles.emptyState}>No games have been generated for this series yet.</p>
         ) : (
@@ -353,7 +353,7 @@ const PlayoffSeriesDetailsPage = () => {
             })}
           </ul>
         )}
-      </Card>
+      </Section>
 
       <GameFormModal
         open={editTarget !== null}

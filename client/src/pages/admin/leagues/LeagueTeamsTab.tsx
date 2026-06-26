@@ -1,8 +1,7 @@
-import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import SearchableList from '@/components/SearchableList/SearchableList';
+import Section from '@/components/Section/Section';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import { buildTeamDetailsPath } from '@/lib/routeSlugs';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
@@ -21,13 +20,12 @@ const LeagueTeamsTab = (props: Props) => {
   const { className } = props;
   const { league, teams, loading, busy, onAddTeam, onEditTeam, onDeleteTeam } =
     useLeagueDetailsContext();
-  const navigate = useNavigate();
 
   if (loading) return <LeagueTeamsTabSkeleton className={className} />;
 
   return (
     <div className={styles.grid}>
-      <Card
+      <Section
         className={[styles.col12, className].filter(Boolean).join(' ')}
         title="Teams"
         action={
@@ -68,12 +66,6 @@ const LeagueTeamsTab = (props: Props) => {
                     actions={
                       [
                         {
-                          icon: 'open_in_new',
-                          intent: 'neutral',
-                          tooltip: 'View team',
-                          onClick: () => navigate(teamHref),
-                        },
-                        {
                           icon: 'edit',
                           intent: 'neutral',
                           tooltip: 'Edit',
@@ -98,14 +90,14 @@ const LeagueTeamsTab = (props: Props) => {
           emptyMessage="No teams assigned to this league yet."
           noResultsMessage={(q) => `No teams match "${q}".`}
         />
-      </Card>
+      </Section>
     </div>
   );
 };
 
 export const LeagueTeamsTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
-    <Card
+    <Section
       className={[styles.col12, className].filter(Boolean).join(' ')}
       title="Teams"
       action={<TabActionSkeleton width="112px" />}
@@ -129,7 +121,7 @@ export const LeagueTeamsTabSkeleton = ({ className }: TabSkeletonProps) => (
           />
         ))}
       </ul>
-    </Card>
+    </Section>
   </div>
 );
 

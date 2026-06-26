@@ -1,13 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Pagination from '@/components/Pagination/Pagination';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import { buildLeaguePlayerDetailsPath } from '@/lib/routeSlugs';
 import SearchableList from '@/components/SearchableList/SearchableList';
+import Section from '@/components/Section/Section';
 import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
@@ -86,7 +85,6 @@ const LeaguePlayersTab = ({ className }: Props) => {
     onEdit,
     onDelete,
   } = playersContext;
-  const navigate = useNavigate();
   const [confirmDelete, setConfirmDelete] = useState<PlayerRecord | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [paginationFetchPage, setPaginationFetchPage] = useState<number | null>(null);
@@ -155,7 +153,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
   return (
     <>
       <div className={styles.grid}>
-        <Card
+        <Section
           className={[styles.col12, className].filter(Boolean).join(' ')}
           title="Players"
           action={
@@ -247,12 +245,6 @@ const LeaguePlayersTab = ({ className }: Props) => {
                           actions={
                             [
                               {
-                                icon: 'open_in_new',
-                                intent: 'neutral',
-                                tooltip: 'View player',
-                                onClick: () => navigate(playerHref),
-                              },
-                              {
                                 icon: 'edit',
                                 intent: 'neutral',
                                 tooltip: 'Edit player',
@@ -309,7 +301,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
             emptyMessage="No players in this league yet."
             noResultsMessage={(q) => `No players match "${q}".`}
           />
-        </Card>
+        </Section>
       </div>
 
       <ConfirmModal
@@ -341,7 +333,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
 
 export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
-    <Card
+    <Section
       className={[styles.col12, className].filter(Boolean).join(' ')}
       title="Players"
       action={<TabActionSkeleton width="148px" />}
@@ -360,7 +352,7 @@ export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
         </span>
       </div>
       <LeaguePlayerRowsSkeleton />
-    </Card>
+    </Section>
   </div>
 );
 

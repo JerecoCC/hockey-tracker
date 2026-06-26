@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import ListItem from '@/components/ListItem/ListItem';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -387,7 +387,7 @@ const GameLineupsTab = ({
   return (
     <>
       <div className={styles.tabContent}>
-        <Card
+        <Section
           title="Lineups"
           action={
             <div className={styles.lineupMobileToggle}>
@@ -455,7 +455,7 @@ const GameLineupsTab = ({
               )}
             </div>
           </div>
-        </Card>
+        </Section>
       </div>
 
       {/* ── Add from Roster ── */}

@@ -2,10 +2,10 @@ import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
+import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import TeamCalendarGameCard from '@/components/TeamCalendarGameCard/TeamCalendarGameCard';
@@ -417,7 +417,7 @@ const TeamGamesTab = ({
     !loading && seasonId && view === 'list' ? (
       <div className={seasonStyles.dayList}>
         {groupedWeekGames.map(([dateKey, dayGames]) => (
-          <Card
+          <Section
             key={dateKey}
             title={fmtDayHeading(dateKey)}
             action={
@@ -439,14 +439,14 @@ const TeamGamesTab = ({
             ) : (
               <ul className={seasonStyles.list}>{dayGames.map(renderGameListItem)}</ul>
             )}
-          </Card>
+          </Section>
         ))}
       </div>
     ) : null;
 
   return (
     <>
-      <Card
+      <Section
         noHeaderMargin={view === 'list' && !!seasonId && !loading}
         title={
           view === 'list' && seasonId ? (
@@ -562,7 +562,7 @@ const TeamGamesTab = ({
             </div>
           </div>
         )}
-      </Card>
+      </Section>
       {listContent}
       {seasonId && (
         <GameFormModal

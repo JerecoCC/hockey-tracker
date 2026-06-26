@@ -5,6 +5,7 @@ import InfoItem from '@/components/InfoItem/InfoItem';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SearchField from '@/components/SearchField/SearchField';
+import Section from '@/components/Section/Section';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
@@ -128,7 +129,7 @@ const UserSettings = () => {
 
       <div className={styles.contentGrid}>
         <div className={styles.mainColumn}>
-          <Card title="Leagues">
+          <Section title="Leagues">
             <SearchField
               value={leagueSearch}
               onChange={setLeagueSearch}
@@ -188,11 +189,11 @@ const UserSettings = () => {
                 })}
               </div>
             )}
-          </Card>
+          </Section>
         </div>
 
         <aside className={styles.sideColumn}>
-          <Card title="My Teams">
+          <Section title="My Teams">
             {favoriteTeams.length === 0 ? (
               <p className={styles.empty}>No favorite teams yet.</p>
             ) : (
@@ -207,7 +208,7 @@ const UserSettings = () => {
                 ))}
               </ul>
             )}
-          </Card>
+          </Section>
         </aside>
       </div>
     </div>

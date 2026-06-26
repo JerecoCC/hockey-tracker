@@ -4,8 +4,8 @@ import { Route, Routes, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout/AdminLayout';
 import AdminNav from '@/components/AdminNav/AdminNav';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import PageHeader from '@/components/PageHeader/PageHeader';
+import Section from '@/components/Section/Section';
 import Tag from '@/components/Tag/Tag';
 import TitleRow from '@/components/TitleRow/TitleRow';
 import UserLayout from '@/components/UserLayout/UserLayout';
@@ -51,7 +51,7 @@ const ShellContent = ({ title }: { title: string }) => (
       }
       right={<Tag label="Storybook" intent="info" />}
     />
-    <Card
+    <Section
       title={title}
       action={
         <Button
@@ -64,7 +64,7 @@ const ShellContent = ({ title }: { title: string }) => (
       }
     >
       <p style={{ margin: 0 }}>Layout content renders through the shared route outlet.</p>
-    </Card>
+    </Section>
   </>
 );
 

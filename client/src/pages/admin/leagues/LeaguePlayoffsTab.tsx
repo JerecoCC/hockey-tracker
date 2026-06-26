@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Section from '@/components/Section/Section';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
@@ -111,7 +111,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
   return (
     <>
       <div className={[styles.grid, styles.playoffsTabGrid].join(' ')}>
-        <Card
+        <Section
           className={[styles.playoffsTabCard, className].filter(Boolean).join(' ')}
           title="Playoff Rule Sets"
           action={
@@ -154,9 +154,9 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
               ))}
             </ul>
           )}
-        </Card>
+        </Section>
 
-        <Card
+        <Section
           className={[styles.playoffsTabCard, className].filter(Boolean).join(' ')}
           title="Qualification Formats"
           action={
@@ -201,7 +201,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
               ))}
             </ul>
           )}
-        </Card>
+        </Section>
       </div>
 
       <BracketRulesModal
@@ -266,7 +266,7 @@ const LeaguePlayoffsTab = ({ leagueId, className }: Props) => {
 
 export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={[styles.grid, styles.playoffsTabGrid].join(' ')}>
-    <Card
+    <Section
       className={[styles.playoffsTabCard, className].filter(Boolean).join(' ')}
       title="Playoff Rule Sets"
       action={<TabActionSkeleton width="126px" />}
@@ -293,8 +293,8 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
           </li>
         ))}
       </ul>
-    </Card>
-    <Card
+    </Section>
+    <Section
       className={[styles.playoffsTabCard, className].filter(Boolean).join(' ')}
       title="Qualification Formats"
       action={<TabActionSkeleton width="112px" />}
@@ -321,7 +321,7 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
           </li>
         ))}
       </ul>
-    </Card>
+    </Section>
   </div>
 );
 

@@ -1081,37 +1081,6 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.getByText(/no players in this league yet/i)).toBeInTheDocument();
   });
 
-  it('navigates to league-scoped player details from the Players tab', () => {
-    setup({ league: mockLeague }, {}, null, {
-      players: [
-        {
-          id: 'player-1',
-          first_name: 'John',
-          last_name: 'Smith',
-          photo: null,
-          date_of_birth: null,
-          birth_city: null,
-          birth_country: null,
-          height_cm: null,
-          weight_lbs: null,
-          position: 'C',
-          shoots: 'L',
-          is_active: true,
-          created_at: '2024-01-01T00:00:00Z',
-          team_id: null,
-          team_code: null,
-        },
-      ],
-      total: 1,
-    });
-    clickPlayersTab();
-
-    const tooltip = screen.getByRole('tooltip', { name: /view player/i });
-    fireEvent.click(tooltip.previousElementSibling as HTMLElement);
-
-    expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/tl/players/john-smith');
-  });
-
   it('renders player rows as links to player details', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [

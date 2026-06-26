@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Card from '@/components/Card/Card';
 import Icon from '@/components/Icon/Icon';
+import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import type { GameRecord } from '@/hooks/useGames';
 import LastTeamGamesAccordion from './LastTeamGamesAccordion';
@@ -28,7 +28,7 @@ export default function LastFiveCard({ game, gameHrefBuilder }: Props) {
   const goToGame = (gameId: string) => navigate(gameHrefBuilder(gameId));
 
   return (
-    <Card
+    <Section
       title="Last 5 Games"
       action={
         <SegmentedControl
@@ -78,6 +78,6 @@ export default function LastFiveCard({ game, gameHrefBuilder }: Props) {
           />
         </div>
       </div>
-    </Card>
+    </Section>
   );
 }

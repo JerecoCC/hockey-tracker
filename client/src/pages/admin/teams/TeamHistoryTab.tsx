@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
 import Modal from '@/components/Modal/Modal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Section from '@/components/Section/Section';
 import useTeamHistory, { type TeamIteration } from '@/hooks/useTeamHistory';
 import styles from './TeamDetails.module.scss';
 
@@ -188,7 +188,7 @@ const TeamHistoryTab = ({
 
   return (
     <>
-      <Card
+      <Section
         title="Team History"
         action={
           <Button
@@ -248,7 +248,7 @@ const TeamHistoryTab = ({
             })}
           </ul>
         )}
-      </Card>
+      </Section>
 
       {/* ── Record / edit version modal ── */}
       <Modal

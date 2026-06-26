@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import type { GameRecord, UpdateGameInfoData } from '@/hooks/useGames';
 import GameInfoEditModal from '../GameInfoEditModal';
@@ -34,7 +34,7 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
 
   return (
     <>
-      <Card
+      <Section
         title="Game Info"
         action={
           updateGameInfo ? (
@@ -122,7 +122,7 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
             />
           )}
         </div>
-      </Card>
+      </Section>
 
       <GameInfoEditModal
         open={editOpen}

@@ -1,6 +1,6 @@
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Section from '@/components/Section/Section';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import styles from './LeagueDetails.module.scss';
 
@@ -26,10 +26,10 @@ const formatSeasonSubtitle = (start: string | null, end: string | null, isCurren
 
 const LeagueSeasonsCard = (props: Props) => {
   const { className } = props;
-  const { seasons, busy, onAddSeason, onEditSeason, onDeleteSeason, onViewSeason, getSeasonHref } =
+  const { seasons, busy, onAddSeason, onEditSeason, onDeleteSeason, getSeasonHref } =
     useLeagueDetailsContext();
   return (
-    <Card
+    <Section
       className={className}
       title="Seasons"
       action={
@@ -61,12 +61,6 @@ const LeagueSeasonsCard = (props: Props) => {
               actions={
                 [
                   {
-                    icon: 'open_in_new',
-                    intent: 'neutral',
-                    tooltip: 'View season',
-                    onClick: () => onViewSeason(s),
-                  },
-                  {
                     icon: 'edit',
                     intent: 'accent',
                     tooltip: 'Edit',
@@ -86,7 +80,7 @@ const LeagueSeasonsCard = (props: Props) => {
           ))}
         </ul>
       )}
-    </Card>
+    </Section>
   );
 };
 

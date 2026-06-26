@@ -5,7 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { toast, type TypeOptions } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -991,7 +991,7 @@ const SeasonGamesTab = ({
   return (
     <>
       <div className={styles.scheduleLayout}>
-        <Card
+        <Section
           noHeaderMargin
           title={
             <ScheduleGamesTitle
@@ -1089,7 +1089,7 @@ const SeasonGamesTab = ({
               />
             </ScheduleFilterSlot>
           </ScheduleFilters>
-        </Card>
+        </Section>
 
         {/* ── Day cards ── */}
         {view === 'list' && (

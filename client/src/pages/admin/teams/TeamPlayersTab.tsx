@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SearchField from '@/components/SearchField/SearchField';
+import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import useSeasons from '@/hooks/useSeasons';
@@ -238,7 +238,7 @@ const TeamPlayersTab = ({
 
   return (
     <>
-      <Card
+      <Section
         title="Players"
         action={
           <div className={styles.rosterActions}>
@@ -298,13 +298,13 @@ const TeamPlayersTab = ({
             ]}
           />
         </div>
-      </Card>
+      </Section>
 
       <div className={styles.rosterSections}>
         {PLAYER_SECTIONS.map((section) => {
           const sectionPlayers = sortPlayers(filteredPlayers.filter(section.matches));
           return (
-            <Card
+            <Section
               key={section.title}
               variant="border"
               title={`${section.title} (${sectionPlayers.length})`}
@@ -326,7 +326,7 @@ const TeamPlayersTab = ({
                         : `No ${section.title.toLowerCase()} on this roster.`}
                 </p>
               )}
-            </Card>
+            </Section>
           );
         })}
       </div>

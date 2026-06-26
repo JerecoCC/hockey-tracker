@@ -4,13 +4,13 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import GameCard from '@/components/GameCard/GameCard';
 import UserGameActions from '@/components/GameCard/UserGameActions';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
+import Section from '@/components/Section/Section';
 import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import { type GameRecord } from '@/hooks/useGames';
@@ -357,7 +357,7 @@ const UserDashboard = () => {
         </div>
       </div>
 
-      <Card title="Favorite Teams">
+      <Section title="Favorite Teams">
         {teamsLoading ? (
           <p className={styles.empty}>Loading...</p>
         ) : favoriteTeams.length === 0 ? (
@@ -372,9 +372,9 @@ const UserDashboard = () => {
             ))}
           </ul>
         )}
-      </Card>
+      </Section>
 
-      <Card
+      <Section
         title={fmtDayHeading(todayKey)}
         action={
           isAdmin ? (
@@ -440,7 +440,7 @@ const UserDashboard = () => {
             })}
           </div>
         )}
-      </Card>
+      </Section>
 
       <Modal
         open={!!scheduleTarget}

@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, PreviousMeeting } from '@/hooks/useGames';
 import styles from './SeasonSeriesCard.module.scss';
@@ -90,7 +90,7 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
   const cardTitle = game.game_type === 'playoff' ? 'Playoff Series' : 'Season Series';
 
   return (
-    <Card
+    <Section
       title={cardTitle}
       action={seriesLabel ? <span className={styles.seriesLabel}>{seriesLabel}</span> : undefined}
     >
@@ -172,7 +172,7 @@ const SeasonSeriesCard = ({ game, gameHrefBuilder, liveAwayScore, liveHomeScore 
           );
         })}
       </div>
-    </Card>
+    </Section>
   );
 };
 

@@ -2,10 +2,10 @@ import { useState } from 'react';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Icon from '@/components/Icon/Icon';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Section from '@/components/Section/Section';
 import {
   type CreateGroupData,
   type GroupRecord,
@@ -386,7 +386,7 @@ const LeagueGroupsCard = (props: Props) => {
   const isRootAdding = inlineMode?.type === 'add' && inlineMode.parentId === null;
 
   return (
-    <Card
+    <Section
       className={className}
       title="Teams"
       action={
@@ -520,7 +520,7 @@ const LeagueGroupsCard = (props: Props) => {
           setConfirmDeleteUngrouped(null);
         }}
       />
-    </Card>
+    </Section>
   );
 };
 

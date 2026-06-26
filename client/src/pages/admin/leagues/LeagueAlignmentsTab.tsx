@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import SearchField from '@/components/SearchField/SearchField';
+import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Skeleton from '@/components/Skeleton/Skeleton';
@@ -1550,7 +1550,7 @@ const LeagueAlignmentsTab = (props: Props) => {
     <>
       <div className={styles.grid}>
         <div className={[styles.alignmentCards, styles.col12, className].filter(Boolean).join(' ')}>
-          <Card
+          <Section
             className={styles.alignmentHeaderCard}
             title={<AlignmentCardTitle />}
             action={
@@ -1598,7 +1598,7 @@ const LeagueAlignmentsTab = (props: Props) => {
                 })}
               </ul>
             )}
-          </Card>
+          </Section>
         </div>
       </div>
 
@@ -1641,7 +1641,7 @@ const LeagueAlignmentsTab = (props: Props) => {
 export const LeagueAlignmentsTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
     <div className={[styles.alignmentCards, styles.col12, className].filter(Boolean).join(' ')}>
-      <Card
+      <Section
         className={styles.alignmentHeaderCard}
         title={<AlignmentCardTitle />}
         action={<TabActionSkeleton width="122px" />}
@@ -1671,7 +1671,7 @@ export const LeagueAlignmentsTabSkeleton = ({ className }: TabSkeletonProps) => 
             </li>
           ))}
         </ul>
-      </Card>
+      </Section>
     </div>
   </div>
 );

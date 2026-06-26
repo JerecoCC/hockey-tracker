@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
@@ -381,7 +381,7 @@ const SeasonTeamsCard = ({
   );
 
   return (
-    <Card
+    <Section
       title={draftAlignment?.structure_type === 'groups' ? 'Team Groups' : 'Teams'}
       action={alignmentControl}
     >
@@ -417,7 +417,7 @@ const SeasonTeamsCard = ({
             : 'Select an alignment set to view this season team structure.'}
         </p>
       )}
-    </Card>
+    </Section>
   );
 };
 

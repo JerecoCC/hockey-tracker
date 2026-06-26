@@ -2,7 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link } from 'react-router-dom';
 import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import Icon from '@/components/Icon/Icon';
 import ListItem from '@/components/ListItem/ListItem';
@@ -1150,7 +1150,7 @@ const SeasonPlayoffsTab = ({
         {/* ── Left column — Playoff Bracket ── */}
         <div className={styles.layoutLeft}>
           {/* ── Playoff Series ── */}
-          <Card
+          <Section
             title="Playoff Bracket"
             action={
               showBracketAction ? (
@@ -1414,13 +1414,13 @@ const SeasonPlayoffsTab = ({
                   })}
               </div>
             )}
-          </Card>
+          </Section>
         </div>
 
         {/* ── Right column — Playoff settings ── */}
         <div className={styles.layoutRight}>
           {playoffWinner && (
-            <Card title="Playoff Winner">
+            <Section title="Playoff Winner">
               <div className={styles.playoffWinnerShowcase}>
                 <TeamLogo
                   logo={playoffWinner.logo}
@@ -1436,10 +1436,10 @@ const SeasonPlayoffsTab = ({
                   </span>
                 </div>
               </div>
-            </Card>
+            </Section>
           )}
 
-          <Card
+          <Section
             title="Playoff Settings"
             action={
               <Button
@@ -1496,7 +1496,7 @@ const SeasonPlayoffsTab = ({
                 )}
               </InfoItem>
             </div>
-          </Card>
+          </Section>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, MutableRefObject, ReactNode, Ref } from 'react';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import Skeleton from '@/components/Skeleton/Skeleton';
@@ -183,7 +183,7 @@ export const ScheduleWeekSummary = <T,>({
   summaryRef,
   stickyTop,
 }: ScheduleWeekSummaryProps<T>) => (
-  <Card
+  <Section
     ref={summaryRef}
     className={[styles.weekSummaryCard, stuck && styles.weekSummaryCardStuck]
       .filter(Boolean)
@@ -242,7 +242,7 @@ export const ScheduleWeekSummary = <T,>({
         );
       })}
     </div>
-  </Card>
+  </Section>
 );
 
 interface ScheduleWeekListProps<T> {
@@ -275,7 +275,7 @@ export const ScheduleWeekList = <T,>({
         }}
         className={styles.dayCardAnchor}
       >
-        <Card
+        <Section
           title={formatHeading(dateKey)}
           action={renderDayAction?.(dateKey, dayGames)}
         >
@@ -286,7 +286,7 @@ export const ScheduleWeekList = <T,>({
           ) : (
             renderDayContent(dateKey, dayGames)
           )}
-        </Card>
+        </Section>
       </div>
     ))}
   </div>
@@ -329,14 +329,14 @@ interface ScheduleCalendarCardProps {
 }
 
 export const ScheduleCalendarCard = ({ children, className }: ScheduleCalendarCardProps) => (
-  <Card
+  <Section
     className={[styles.calendarCard, className].filter(Boolean).join(' ')}
     noHeaderMargin
   >
     <div className={styles.calendarWrap}>
       <div className={styles.calendarScroll}>{children}</div>
     </div>
-  </Card>
+  </Section>
 );
 
 interface ScheduleCalendarLoadingProps {

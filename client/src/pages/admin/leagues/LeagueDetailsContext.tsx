@@ -36,7 +36,6 @@ interface LeagueDetailsContextValue {
   onAddSeason: () => void;
   onEditSeason: (season: LeagueSeasonRecord) => void;
   onDeleteSeason: (season: LeagueSeasonRecord) => void;
-  onViewSeason: (season: LeagueSeasonRecord) => void;
   getSeasonHref: (season: LeagueSeasonRecord) => string;
 }
 

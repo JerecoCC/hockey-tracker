@@ -217,15 +217,6 @@ const LeagueDetailsPage = () => {
               setConfirmDeleteSeason(s);
               setConfirmDeleteSeasonOpen(true);
             },
-            onViewSeason: (s: LeagueSeasonRecord) =>
-              navigate(
-                buildSeasonDetailsPath({
-                  leagueCode: league.code,
-                  leagueId: league.id,
-                  seasonName: s.name,
-                  seasonId: s.id,
-                }),
-              ),
             getSeasonHref: (s: LeagueSeasonRecord) =>
               buildSeasonDetailsPath({
                 leagueCode: league.code,

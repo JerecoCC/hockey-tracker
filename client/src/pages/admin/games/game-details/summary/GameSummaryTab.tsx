@@ -3,7 +3,7 @@ import useGameGoals from '@/hooks/useGameGoals';
 import useShootoutAttempts from '@/hooks/useShootoutAttempts';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import StartGameModal from '../StartGameModal';
@@ -680,7 +680,7 @@ const GameSummaryTab = ({
 
             {/* ── Shots breakdown card ── */}
             {(game.period_shots.length > 0 || isInProgress || isFinal) && (
-              <Card
+              <Section
                 title="Shots"
                 action={
                   isFinal && isEditMode ? (
@@ -765,7 +765,7 @@ const GameSummaryTab = ({
                     ))}
                   </tbody>
                 </table>
-              </Card>
+              </Section>
             )}
 
             {showGoalieSwitchReport && (

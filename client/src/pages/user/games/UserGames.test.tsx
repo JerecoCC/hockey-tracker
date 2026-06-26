@@ -55,7 +55,7 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@/components/Card/Card', () => {
+jest.mock('@/components/Section/Section', () => {
   const React = require('react');
   return React.forwardRef(({ title, action, children, className }: any, ref: any) => (
     <section

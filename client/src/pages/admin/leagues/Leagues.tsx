@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
+import Section from '@/components/Section/Section';
 import useLeagues, { LeagueRecord } from '@/hooks/useLeagues';
 import { buildLeagueDetailsPath } from '@/lib/routeSlugs';
 import LeagueDeleteModal from './LeagueDeleteModal';
@@ -54,7 +54,7 @@ const LeaguesPage = () => {
 
   return (
     <>
-      <Card
+      <Section
         title="Leagues"
         action={
           <Button
@@ -125,7 +125,7 @@ const LeaguesPage = () => {
             })}
           </ul>
         )}
-      </Card>
+      </Section>
 
       <LeagueDeleteModal
         open={confirmDeleteOpen}

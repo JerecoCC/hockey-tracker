@@ -28,28 +28,3 @@
   padding: $space-4xl;
 }
 
-// Optional card header (title + action row)
-.card {
-  &Header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space-md;
-    flex-wrap: wrap;
-    margin-bottom: $space-xl;
-  }
-
-  &HeaderNoMargin {
-    margin-bottom: 0;
-  }
-
-  &Title {
-    display: flex;
-    align-items: center;
-    gap: $space-md;
-    font-size: $font-xl;
-    font-weight: 700;
-    color: $text-bright;
-    margin: 0;
-  }
-}

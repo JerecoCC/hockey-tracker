@@ -1,4 +1,4 @@
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import LeagueSeasonsCard from './LeagueSeasonsCard';
 import { LeagueListRowSkeleton, TabActionSkeleton } from './LeagueTabSkeletonHelpers';
@@ -18,7 +18,7 @@ const LeagueSeasonsTab = () => {
 
 export const LeagueSeasonsTabSkeleton = () => (
   <div className={styles.grid}>
-    <Card
+    <Section
       className={styles.col12}
       title="Seasons"
       action={<TabActionSkeleton width="126px" />}
@@ -35,7 +35,7 @@ export const LeagueSeasonsTabSkeleton = () => (
           />
         ))}
       </ul>
-    </Card>
+    </Section>
   </div>
 );
 

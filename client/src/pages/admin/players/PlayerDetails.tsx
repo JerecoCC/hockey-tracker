@@ -5,6 +5,7 @@ import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import ListItem from '@/components/ListItem/ListItem';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -711,7 +712,7 @@ const PlayerDetailsPage = () => {
   };
 
   const playerInfoCard = (
-    <Card
+    <Section
       title="Player Info"
       className={styles.playerInfoCard}
       action={
@@ -750,11 +751,11 @@ const PlayerDetailsPage = () => {
           value={player.shoots === 'L' ? 'Left' : player.shoots === 'R' ? 'Right' : null}
         />
       </div>
-    </Card>
+    </Section>
   );
 
   const recentGamesCard = (
-    <Card
+    <Section
       title="Last 5 Games"
       className={styles.recentGamesCard}
     >
@@ -779,11 +780,11 @@ const PlayerDetailsPage = () => {
           )
         }
       />
-    </Card>
+    </Section>
   );
 
   const gameLogsCard = (
-    <Card
+    <Section
       title="Game Logs"
       action={
         <div className={styles.gameLogFilters}>
@@ -866,11 +867,11 @@ const PlayerDetailsPage = () => {
           />
         </div>
       </div>
-    </Card>
+    </Section>
   );
 
   const awardsCard = (
-    <Card
+    <Section
       title="Awards"
       action={
         <div className={styles.awardSeasonSelect}>
@@ -913,7 +914,7 @@ const PlayerDetailsPage = () => {
           ))}
         </ul>
       )}
-    </Card>
+    </Section>
   );
 
   return (
@@ -1028,14 +1029,14 @@ const PlayerDetailsPage = () => {
             {
               label: 'Career Stats',
               content: (
-                <Card title="Career Statistics">
+                <Section title="Career Statistics">
                   <Table
                     columns={statColumns}
                     data={stats}
                     rowKey={(r) => `${r.season_id}-${r.team_id ?? 'teamless'}`}
                     emptyMessage="No stats recorded yet."
                   />
-                </Card>
+                </Section>
               ),
             },
             {
@@ -1045,7 +1046,7 @@ const PlayerDetailsPage = () => {
             {
               label: 'Team History',
               content: (
-                <Card
+                <Section
                   title="Team History"
                   action={
                     <Button
@@ -1107,7 +1108,7 @@ const PlayerDetailsPage = () => {
                       ))}
                     </ul>
                   )}
-                </Card>
+                </Section>
               ),
             },
           ]}
@@ -1223,7 +1224,7 @@ const SeasonStatCard = ({
   };
 
   return (
-    <Card title={title}>
+    <Section title={title}>
       {!stats ? (
         <p className={styles.placeholder}>No games played.</p>
       ) : isGoalie ? (
@@ -1278,7 +1279,7 @@ const SeasonStatCard = ({
           />
         </div>
       )}
-    </Card>
+    </Section>
   );
 };
 

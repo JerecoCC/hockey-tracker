@@ -1,5 +1,5 @@
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import type { GameRecord } from '@/hooks/useGames';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
 import type { GoalieStatRecord } from '@/hooks/useGameGoalieStats';
@@ -41,7 +41,7 @@ const ThreeStarsCard = ({
   ];
 
   return (
-    <Card
+    <Section
       title="Three Stars"
       action={
         onEdit ? (
@@ -89,7 +89,7 @@ const ThreeStarsCard = ({
           );
         })}
       </div>
-    </Card>
+    </Section>
   );
 };
 

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import Table, { type Column } from '@/components/Table/Table';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
@@ -284,7 +284,7 @@ const GoalieStatsCard = ({
 
   return (
     <>
-      <Card
+      <Section
         title="Goalie Stats"
         action={
           isFinal && canEdit ? (
@@ -322,7 +322,7 @@ const GoalieStatsCard = ({
             }
           />
         )}
-      </Card>
+      </Section>
 
       {canEdit && (
         <>

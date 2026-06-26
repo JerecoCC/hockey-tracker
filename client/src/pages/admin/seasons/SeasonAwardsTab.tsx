@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import Field from '@/components/Field/Field';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ListItem from '@/components/ListItem/ListItem';
@@ -1028,7 +1028,7 @@ const SeasonAwardsTab = ({
 
   return (
     <>
-      <Card
+      <Section
         title="Awards"
         action={
           !loading && awards.length > 0 ? (
@@ -1208,7 +1208,7 @@ const SeasonAwardsTab = ({
             })}
           </div>
         )}
-      </Card>
+      </Section>
 
       <Modal
         open={awardSelectionOpen}

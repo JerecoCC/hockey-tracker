@@ -5,7 +5,6 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import GameCard from '@/components/GameCard/GameCard';
@@ -28,6 +27,7 @@ import {
   scheduleViewSegmentedControlClassName,
   useScheduleWeekSummaryStuck,
 } from '@/components/ScheduleGamesLayout/ScheduleGamesLayout';
+import Section from '@/components/Section/Section';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
@@ -1195,7 +1195,7 @@ const UserGames = () => {
 
   return (
     <div className={styles.page}>
-      <Card
+      <Section
         className={styles.controlsCard}
         noHeaderMargin
         title={
@@ -1302,7 +1302,7 @@ const UserGames = () => {
             />
           </ScheduleFilterSlot>
         </ScheduleFilters>
-      </Card>
+      </Section>
 
       {view === 'list' && (
         <>

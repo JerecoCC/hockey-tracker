@@ -1,12 +1,12 @@
 import { useId, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import Checkbox from '@/components/Checkbox/Checkbox';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Field from '@/components/Field/Field';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
+import Section from '@/components/Section/Section';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag from '@/components/Tag/Tag';
 import useLeagueAwards, {
@@ -167,7 +167,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   return (
     <>
       <div className={styles.grid}>
-        <Card
+        <Section
           className={[styles.col12, className].filter(Boolean).join(' ')}
           title="Awards"
           action={
@@ -271,7 +271,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
               })}
             </ul>
           )}
-        </Card>
+        </Section>
       </div>
 
       <Modal
@@ -411,7 +411,7 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
 
 export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
   <div className={styles.grid}>
-    <Card
+    <Section
       className={[styles.col12, className].filter(Boolean).join(' ')}
       title="Awards"
       action={<TabActionSkeleton width="112px" />}
@@ -451,7 +451,7 @@ export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
           </li>
         ))}
       </ul>
-    </Card>
+    </Section>
   </div>
 );
 

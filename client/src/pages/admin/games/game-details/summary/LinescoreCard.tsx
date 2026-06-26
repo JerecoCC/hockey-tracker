@@ -1,6 +1,6 @@
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
+import Section from '@/components/Section/Section';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord } from '@/hooks/useGames';
 import type { ShootoutAttempt } from '@/hooks/useShootoutAttempts';
@@ -79,7 +79,7 @@ const LinescoreCard = ({
   ];
 
   return (
-    <Card
+    <Section
       title="Linescore"
       action={
         <div className={styles.linescoreActions}>
@@ -238,7 +238,7 @@ const LinescoreCard = ({
           ))}
         </tbody>
       </table>
-    </Card>
+    </Section>
   );
 };
 

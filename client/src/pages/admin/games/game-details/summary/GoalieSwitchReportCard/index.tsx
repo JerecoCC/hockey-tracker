@@ -1,4 +1,4 @@
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import TeamResult from './TeamResult';
 import { NhlGoalieSwitchReport } from '../../nhlGoalieSwitchChecker';
@@ -57,7 +57,7 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
 
   return (
     <>
-      <Card
+      <Section
         title="Goalie Switch Report"
         action={
           <Button
@@ -93,7 +93,7 @@ const GoalieSwitchReportCard = ({ game }: Props) => {
         ) : (
           <span className={styles.emptyAPIData}>No data fetched.</span>
         )}
-      </Card>
+      </Section>
       <NhlGoalieSwitchCheckerModal
         open={modalOpen}
         game={game}

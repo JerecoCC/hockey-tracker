@@ -6,7 +6,7 @@ import Tag from '@/components/Tag/Tag';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import Accordion, { type AccordionAction } from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
-import Card from '@/components/Card/Card';
+import Section from '@/components/Section/Section';
 import LoadingSpinner from '@/components/LoadingSpinner/LoadingSpinner';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import type { GameRecord, CurrentPeriod } from '@/hooks/useGames';
@@ -288,7 +288,7 @@ const ScoringCard = ({
   };
 
   return (
-    <Card title="Scoring">
+    <Section title="Scoring">
       <div className={styles.periodList}>
         {/* ── Regular period accordions ── */}
         {PERIODS.map(({ num, label, periodId }, idx) => {
@@ -598,7 +598,7 @@ const ScoringCard = ({
           />
         )}
       </div>
-    </Card>
+    </Section>
   );
 };
 
