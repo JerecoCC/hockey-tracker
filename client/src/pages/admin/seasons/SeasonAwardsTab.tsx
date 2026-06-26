@@ -200,6 +200,26 @@ const usesWinnerChecklist = (award: SeasonAwardRecord) =>
 const canAwardWinners = (award: SeasonAwardRecord, playoffsStarted: boolean) =>
   getAwardRecordingGate(award) === 'anytime' || playoffsStarted;
 
+// A player who changed teams mid-season can appear as more than one stat row
+// (multiple team stints, or split duplicate records that share only a name).
+// Collapse them to a single entry — their most-recent stint (the latest
+// stint creation date) — so player select fields don't show repeats.
+const dedupePlayersByName = <
+  T extends { first_name: string; last_name: string; team_stint_created: string | null },
+>(
+  records: T[],
+): T[] => {
+  const byName = new Map<string, T>();
+  for (const record of records) {
+    const key = `${record.first_name} ${record.last_name}`.toLowerCase();
+    const existing = byName.get(key);
+    if (!existing || (record.team_stint_created ?? '') > (existing.team_stint_created ?? '')) {
+      byName.set(key, record);
+    }
+  }
+  return [...byName.values()];
+};
+
 const playoffChampionSuggestion = (
   series: PlayoffSeriesRecord[],
   seasonTeams: SeasonTeam[],
@@ -325,14 +345,19 @@ const SeasonAwardsTab = ({
     mode: 'onChange',
   });
 
+  // Collapse multi-team / split-record players to a single option (most-played
+  // team) so the select fields below never list the same player twice.
+  const dedupedSkaters = useMemo(() => dedupePlayersByName(skaters), [skaters]);
+  const dedupedGoalies = useMemo(() => dedupePlayersByName(goalies), [goalies]);
+
   const players = useMemo(() => {
     const byId = new Map<string, SkaterStatRecord | GoalieStatRecord>();
-    skaters.forEach((player) => byId.set(player.player_id, player));
-    goalies.forEach((player) => {
+    dedupedSkaters.forEach((player) => byId.set(player.player_id, player));
+    dedupedGoalies.forEach((player) => {
       if (!byId.has(player.player_id)) byId.set(player.player_id, player);
     });
     return [...byId.values()].sort((a, b) => playerName(a).localeCompare(playerName(b)));
-  }, [goalies, skaters]);
+  }, [dedupedGoalies, dedupedSkaters]);
 
   const playerOptions = players.map((player) => ({
     value: player.player_id,
@@ -341,7 +366,7 @@ const SeasonAwardsTab = ({
     code: player.team_code ?? undefined,
   }));
 
-  const forwardOptions = skaters
+  const forwardOptions = dedupedSkaters
     .filter((player) => !isDefensePosition(player.position) && !isGoaliePosition(player.position))
     .map((player) => ({
       value: player.player_id,
@@ -350,7 +375,7 @@ const SeasonAwardsTab = ({
       code: player.team_code ?? undefined,
     }));
 
-  const defenderOptions = skaters
+  const defenderOptions = dedupedSkaters
     .filter((player) => isDefensePosition(player.position))
     .map((player) => ({
       value: player.player_id,
@@ -359,7 +384,7 @@ const SeasonAwardsTab = ({
       code: player.team_code ?? undefined,
     }));
 
-  const goalieOptions = goalies.map((player) => ({
+  const goalieOptions = dedupedGoalies.map((player) => ({
     value: player.player_id,
     label: playerName(player),
     logo: player.team_logo,
@@ -536,7 +561,7 @@ const SeasonAwardsTab = ({
       }
 
       if (['points', 'goals', 'assists'].includes(award.stat_key)) {
-        const top = [...skaters].sort(
+        const top = [...dedupedSkaters].sort(
           (a, b) =>
             (numericFieldValue(b, award.stat_key) ?? 0) -
             (numericFieldValue(a, award.stat_key) ?? 0),
@@ -550,7 +575,7 @@ const SeasonAwardsTab = ({
         }
       } else if (['save_pct', 'gaa', 'shutouts'].includes(award.stat_key)) {
         const ascending = award.stat_key === 'gaa';
-        const candidates = goalies.filter(
+        const candidates = dedupedGoalies.filter(
           (goalie) => numericFieldValue(goalie, award.stat_key) !== null,
         );
         const top = candidates.sort((a, b) => {
@@ -569,7 +594,7 @@ const SeasonAwardsTab = ({
       }
     }
     return byAward;
-  }, [awards, goalies, playoffSeries, seasonTeams, skaters, standings]);
+  }, [awards, dedupedGoalies, dedupedSkaters, playoffSeries, seasonTeams, standings]);
 
   const trackedAwards = useMemo(
     () => awards.filter((award) => award.season_award_id),
@@ -600,6 +625,9 @@ const SeasonAwardsTab = ({
     : null;
   const recipientUsesWinnerChecklist =
     !!activeRecipientAward && usesWinnerChecklist(activeRecipientAward);
+  // Drive the simple-form confirm off the selected value rather than
+  // isDirty/isValid, which can lag with a Controller-backed select after reset().
+  const recipientSelectedId = recipientForm.watch('recipient_id');
   const activeRecipientNominees =
     activeRecipientAward?.recipients.filter((recipient) => recipient.role === 'nominee') ?? [];
   const activeRecipientWinners =
@@ -1259,9 +1287,7 @@ const SeasonAwardsTab = ({
         confirmDisabled={
           recipientUsesWinnerChecklist
             ? recipientWinnerSaving || !recipientWinnerHasChanges
-            : recipientForm.formState.isSubmitting ||
-              !recipientForm.formState.isDirty ||
-              !recipientForm.formState.isValid
+            : recipientForm.formState.isSubmitting || !recipientSelectedId
         }
         busy={recipientUsesWinnerChecklist ? recipientWinnerSaving : recipientForm.formState.isSubmitting}
         footerStart={recipientUsesWinnerChecklist ? <span>{recipientWinnerCountLabel}</span> : undefined}

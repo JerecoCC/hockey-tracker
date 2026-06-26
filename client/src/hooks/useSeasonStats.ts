@@ -18,6 +18,8 @@ export interface SkaterStatRecord {
   team_logo: string | null;
   team_primary_color: string | null;
   team_text_color: string | null;
+  /** created_at of the player's most-recent team stint this season (for de-duping). */
+  team_stint_created: string | null;
   gp: number;
   goals: number;
   assists: number;
@@ -36,6 +38,8 @@ export interface GoalieStatRecord {
   team_logo: string | null;
   team_primary_color: string | null;
   team_text_color: string | null;
+  /** created_at of the player's most-recent team stint this season (for de-duping). */
+  team_stint_created: string | null;
   gp: number;
   shots_against: number;
   saves: number;

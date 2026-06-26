@@ -1961,7 +1961,7 @@ router.get('/:id/stats', async (req, res) => {
       ),
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
-          pt.player_id, pt.team_id, pt.jersey_number, pt.photo
+          pt.player_id, pt.team_id, pt.jersey_number, pt.photo, pt.created_at
         FROM player_teams pt
         WHERE pt.season_id = ${id}
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
@@ -1974,6 +1974,7 @@ router.get('/:id/stats', async (req, res) => {
         p.position,
         ptr.jersey_number,
         ptr.team_id,
+        ptr.created_at                                AS team_stint_created,
         ti.code                                       AS team_code,
         ti.name                                       AS team_name,
         ti.logo                                       AS team_logo,
@@ -2005,7 +2006,7 @@ router.get('/:id/stats', async (req, res) => {
       ),
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
-          pt.player_id, pt.team_id, pt.jersey_number, pt.photo
+          pt.player_id, pt.team_id, pt.jersey_number, pt.photo, pt.created_at
         FROM player_teams pt
         WHERE pt.season_id = ${id}
         ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
@@ -2136,6 +2137,7 @@ router.get('/:id/stats', async (req, res) => {
         p.last_name,
         COALESCE(ptr.photo, p.photo)                           AS photo,
         ptr.jersey_number,
+        ptr.created_at                                         AS team_stint_created,
         agg.team_id                                            AS team_id,
         ti.code                                                AS team_code,
         ti.name                                                AS team_name,
