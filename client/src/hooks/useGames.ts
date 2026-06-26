@@ -12,7 +12,7 @@ const apiError = (err: unknown, fallback: string) =>
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 export type GameType      = 'preseason' | 'regular' | 'playoff';
-export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed' | 'cancelled';
+export type GameStatus    = 'scheduled' | 'in_progress' | 'final' | 'postponed';
 export type CurrentPeriod = '1' | '2' | '3' | 'OT' | 'SO';
 
 export interface UpdateGameInfoData {
@@ -523,7 +523,6 @@ export const useGameDetails = (
       const label =
         status === 'in_progress' ? 'Game started!'
         : status === 'final'      ? 'Game ended!'
-        : status === 'cancelled'  ? 'Game cancelled.'
         : 'Status updated.';
       toast.success(label);
       updateCachedGame(queryClient, id, game);

@@ -1350,7 +1350,7 @@ async function initSchema() {
       game_type             TEXT NOT NULL DEFAULT 'regular'
                               CHECK (game_type IN ('preseason', 'regular', 'playoff')),
       status                TEXT NOT NULL DEFAULT 'scheduled'
-                              CHECK (status IN ('scheduled', 'in_progress', 'final', 'postponed', 'cancelled')),
+                              CHECK (status IN ('scheduled', 'in_progress', 'final', 'postponed')),
       home_score            SMALLINT,
       away_score            SMALLINT,
       home_score_reg        SMALLINT,

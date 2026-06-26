@@ -85,7 +85,7 @@ const GameInfoCard = ({ game, busy, updateGameInfo, useLocalTimezone = false }: 
                 : null
             }
           />
-          {game.status !== 'cancelled' && game.status !== 'scheduled' && (
+          {game.status !== 'scheduled' && (
             <>
               <InfoItem
                 label="Start Time"

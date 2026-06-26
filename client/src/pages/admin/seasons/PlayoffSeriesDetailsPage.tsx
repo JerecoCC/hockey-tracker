@@ -34,7 +34,6 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   in_progress: 'In Progress',
   final: 'Final',
   postponed: 'Postponed',
-  cancelled: 'Cancelled',
 };
 
 const STATUS_INTENT: Record<GameStatus, TagIntent> = {
@@ -42,7 +41,6 @@ const STATUS_INTENT: Record<GameStatus, TagIntent> = {
   in_progress: 'warning',
   final: 'success',
   postponed: 'warning',
-  cancelled: 'danger',
 };
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', {
@@ -245,7 +243,7 @@ const PlayoffSeriesDetailsPage = () => {
 
   const homeTeam = scoreboardGame.home_team;
   const awayTeam = scoreboardGame.away_team;
-  const visibleGames = playoffSeries.games.filter((game) => game.status !== 'cancelled');
+  const visibleGames = playoffSeries.games;
   const teamForId = (teamId: string) => (teamId === homeTeam.id ? homeTeam : awayTeam);
   const gameHref = (game: SeriesGame) => {
     const gameHome = teamForId(game.home_team_id);

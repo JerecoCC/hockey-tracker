@@ -20,7 +20,6 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   in_progress: 'In Progress',
   final: 'Final',
   postponed: 'Postponed',
-  cancelled: 'Cancelled',
 };
 
 const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warning' | 'danger'> = {
@@ -28,7 +27,6 @@ const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warnin
   in_progress: 'warning',
   final: 'success',
   postponed: 'warning',
-  cancelled: 'danger',
 };
 
 // ── Props ─────────────────────────────────────────────────────────────────────

@@ -29,7 +29,6 @@ interface Props {
   onStartGame?: () => void;
   onAutofillGame?: () => void;
   onReschedule?: () => void;
-  onCancel?: () => void;
   onDelete?: () => void;
   onEndGame?: () => void;
   onDownloadScoreCard: () => void;
@@ -49,7 +48,6 @@ const LinescoreCard = ({
   onStartGame,
   onAutofillGame,
   onReschedule,
-  onCancel,
   onDelete,
   onEndGame,
   onDownloadScoreCard,
@@ -96,7 +94,7 @@ const LinescoreCard = ({
               onClick={onAutofillGame}
             />
           )}
-          {game.status === 'scheduled' && onStartGame && onReschedule && onCancel && onDelete && (
+          {game.status === 'scheduled' && onStartGame && onReschedule && onDelete && (
             <>
               <Button
                 variant="filled"
@@ -118,7 +116,6 @@ const LinescoreCard = ({
                 disabled={!!busy}
                 items={[
                   { label: 'Reschedule Game', icon: 'calendar', onClick: onReschedule },
-                  { label: 'Cancel Game', icon: 'close', intent: 'danger', onClick: onCancel },
                   { label: 'Delete Game', icon: 'delete', intent: 'danger', onClick: onDelete },
                 ]}
               />

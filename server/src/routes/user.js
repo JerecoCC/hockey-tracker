@@ -477,8 +477,6 @@ router.get('/games', async (req, res) => {
           WHERE uft.user_id = ${userId}
             AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
         )
-        AND
-        g.status <> 'cancelled'
         AND (${includeSkipped}::boolean OR uwg.skipped_at IS NULL)
         AND
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
@@ -696,7 +694,6 @@ router.get('/games/:id', async (req, res) => {
           WHERE uft.user_id = ${userId}
             AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
         )
-        AND g.status <> 'cancelled'
         AND uwg.skipped_at IS NULL
       LIMIT 1
     `;

@@ -657,7 +657,6 @@ const GameSummaryTab = ({
                 canAutofillNhlGame ? () => setNhlAutofillModalOpen(true) : undefined
               }
               onReschedule={editable ? () => updateStatus('postponed') : undefined}
-              onCancel={editable ? () => updateStatus('cancelled') : undefined}
               onDelete={editable ? () => setConfirmDeleteOpen(true) : undefined}
               onEndGame={
                 editable

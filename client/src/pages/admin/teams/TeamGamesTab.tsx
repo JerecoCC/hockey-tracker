@@ -47,7 +47,6 @@ const STATUS_LABEL: Record<GameStatus, string> = {
   in_progress: 'Live',
   final: 'Final',
   postponed: 'Postponed',
-  cancelled: 'Cancelled',
 };
 
 const toLocalDateKey = (iso: string) => {
@@ -105,7 +104,6 @@ const STATUS_INTENT: Record<GameStatus, 'neutral' | 'info' | 'success' | 'warnin
   in_progress: 'warning',
   final: 'success',
   postponed: 'warning',
-  cancelled: 'danger',
 };
 
 const formatStatusLabel = (game: GameRecord): string => {
