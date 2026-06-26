@@ -879,11 +879,19 @@ const SeasonPlayoffsTab = ({
     return m ? Number(m[1]) : Infinity;
   };
 
-  const handleStartSeries = (s: PlayoffSeriesRecord) => startSeries(s.id);
-
-  // While a winner is being advanced, show a skeleton in the next-round slot it
-  // feeds into (rNmIdx → r(N+1)m(floor(Idx/2))).
+  // Show a skeleton in a slot while the backend is processing it: the series'
+  // own slot while it's being started, and the next-round slot while a winner
+  // is being advanced into it (rNmIdx → r(N+1)m(floor(Idx/2))).
+  const [startingSeriesId, setStartingSeriesId] = useState<string | null>(null);
   const [advancingSeriesId, setAdvancingSeriesId] = useState<string | null>(null);
+  const handleStartSeries = async (s: PlayoffSeriesRecord) => {
+    setStartingSeriesId(s.id);
+    try {
+      await startSeries(s.id);
+    } finally {
+      setStartingSeriesId(null);
+    }
+  };
   const handleForceAdvance = async (s: PlayoffSeriesRecord) => {
     setAdvancingSeriesId(s.id);
     try {
@@ -892,13 +900,15 @@ const SeasonPlayoffsTab = ({
       setAdvancingSeriesId(null);
     }
   };
-  const advancingTargetSlotKey = useMemo(() => {
-    if (!advancingSeriesId) return null;
-    const s = series.find((x) => x.id === advancingSeriesId);
-    const m = s?.bracket_slot_key?.match(/^r(\d+)m(\d+)$/);
-    if (!m) return null;
-    return `r${Number(m[1]) + 1}m${Math.floor(Number(m[2]) / 2)}`;
-  }, [advancingSeriesId, series]);
+  const skeletonSlotKeys = useMemo(() => {
+    const keys = new Set<string>();
+    const startingKey = series.find((x) => x.id === startingSeriesId)?.bracket_slot_key;
+    if (startingKey) keys.add(startingKey);
+    const advancing = series.find((x) => x.id === advancingSeriesId)?.bracket_slot_key;
+    const m = advancing?.match(/^r(\d+)m(\d+)$/);
+    if (m) keys.add(`r${Number(m[1]) + 1}m${Math.floor(Number(m[2]) / 2)}`);
+    return keys;
+  }, [startingSeriesId, advancingSeriesId, series]);
 
   const hasRoundOneSeries = series.some((s) => s.round === 1);
   const playoffSettingsLocked = isEnded || playoffsStarted;
@@ -1288,11 +1298,11 @@ const SeasonPlayoffsTab = ({
                                 {matchupLabel && (
                                   <span className={styles.bracketMatchupLabel}>{matchupLabel}</span>
                                 )}
-                                {slotKey === advancingTargetSlotKey ? (
+                                {skeletonSlotKeys.has(slotKey) ? (
                                   <div
                                     ref={registerBracketSlot(slotKey)}
                                     className={`${styles.bracketSlot} ${styles.slotSkeleton}`}
-                                    aria-label="Advancing winner…"
+                                    aria-label="Processing…"
                                   >
                                     <Skeleton
                                       type="block"
