@@ -32,6 +32,10 @@
     border-color: transparent;
     background: transparent;
   }
+
+  &Compact {
+    padding: $space-sm; // 0.5rem
+  }
 }
 
 // ── Leading image (e.g. team logo to the left of a player photo) ──────────────

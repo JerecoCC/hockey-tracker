@@ -68,6 +68,8 @@ interface Props {
   hideImage?: boolean;
   /** Visual treatment. 'plain' removes the static row frame/background. */
   variant?: 'framed' | 'plain';
+  /** Row density. 'compact' tightens the padding to 0.5rem. Defaults to 'default'. */
+  size?: 'default' | 'compact';
   /**
    * Hover-revealed action buttons. Pass an array of action descriptors; falsy
    * entries (false | null | undefined) are ignored, enabling conditional buttons.
@@ -90,6 +92,7 @@ const ListItem = ({
   image_shape = 'square',
   hideImage = false,
   variant = 'framed',
+  size = 'default',
   name,
   nameItalic = false,
   placeholder,
@@ -140,6 +143,7 @@ const ListItem = ({
       className={[
         styles.item,
         variant === 'plain' ? styles.itemPlain : '',
+        size === 'compact' ? styles.itemCompact : '',
         href ? styles.itemClickable : '',
         className,
       ]
