@@ -234,11 +234,20 @@ const Select = (props: Props) => {
             disabled={disabled}
             aria-labelledby={ariaLabelledBy}
           />
-          <Icon
-            name="expand_more"
-            size="1em"
-            className={cn(styles.caret, open && styles.caretOpen)}
+          <Divider
+            variant="vertical"
+            className={styles.triggerDivider}
           />
+          <span
+            className={styles.caretButton}
+            aria-hidden="true"
+          >
+            <Icon
+              name="expand_more"
+              size="1em"
+              className={cn(styles.caret, open && styles.caretOpen)}
+            />
+          </span>
         </div>
       ) : (
         /* ── Standard trigger: button ── */
@@ -281,11 +290,20 @@ const Select = (props: Props) => {
           ) : (
             <span className={styles.placeholder}>{placeholder}</span>
           )}
-          <Icon
-            name="expand_more"
-            size="1em"
-            className={cn(styles.caret, open && styles.caretOpen)}
+          <Divider
+            variant="vertical"
+            className={styles.triggerDivider}
           />
+          <span
+            className={styles.caretButton}
+            aria-hidden="true"
+          >
+            <Icon
+              name="expand_more"
+              size="1em"
+              className={cn(styles.caret, open && styles.caretOpen)}
+            />
+          </span>
         </button>
       )}
 

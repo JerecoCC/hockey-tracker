@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import cn from 'classnames';
+import Divider from '../Divider/Divider';
 import Icon from '../Icon/Icon';
 import Tooltip from '../Tooltip/Tooltip';
 import styles from './MultiSelect.module.scss';
@@ -233,11 +234,20 @@ const MultiSelect = ({
             <span className={styles.placeholder}>{placeholder}</span>
           ) : null}
         </div>
-        <Icon
-          name="expand_more"
-          size="1em"
-          className={cn(styles.caret, open && styles.caretOpen)}
+        <Divider
+          variant="vertical"
+          className={styles.triggerDivider}
         />
+        <span
+          className={styles.caretButton}
+          aria-hidden="true"
+        >
+          <Icon
+            name="expand_more"
+            size="1em"
+            className={cn(styles.caret, open && styles.caretOpen)}
+          />
+        </span>
       </div>
 
       {open &&

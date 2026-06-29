@@ -11,7 +11,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: $space-sm;
+  gap: $space-xs;
   background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
@@ -19,7 +19,8 @@
   font-size: $font-base;
   line-height: 1.4;
   height: 42px;
-  padding: 0 $space-md 0 $space-lg;
+  box-sizing: border-box;
+  padding: $space-xs $space-xs $space-xs $space-lg;
   outline: none;
   cursor: pointer;
   font-weight: 400;
@@ -76,13 +77,37 @@
 }
 
 .placeholder {
+  flex: 1 1 auto;
+  min-width: 0;
   color: $text-dim;
   font-size: $font-base;
   line-height: 1.4;
 }
 
-.caret {
+.triggerDivider {
+  --divider-color: #{$border};
+}
+
+.caretButton {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2rem;
+  border-radius: $radius-md;
   color: $text-dim;
+  transition:
+    background $transition-fast,
+    color $transition-fast;
+}
+
+.trigger:hover:not(.triggerDisabled) .caretButton {
+  color: $text-bright;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.caret {
+  color: currentColor;
   flex-shrink: 0;
   transition: transform $transition-base ease;
 
@@ -180,6 +205,7 @@
     display: flex;
     align-items: center;
     gap: $space-md;
+    flex: 1 1 auto;
     min-width: 0;
     font-size: $font-base;
     line-height: 1.4;
