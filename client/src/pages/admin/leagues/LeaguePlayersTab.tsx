@@ -165,6 +165,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                   label: s.is_current ? `${s.name} ✦` : s.name,
                 }))}
                 onChange={handleSeasonChange}
+                width="content"
               />
             ) : undefined
           }

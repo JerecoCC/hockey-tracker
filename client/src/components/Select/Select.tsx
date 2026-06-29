@@ -20,6 +20,7 @@ const MENU_MAX_HEIGHT = 220;
 export type SelectOption =
   | { value: string; label: string; logo?: string | null; code?: string; indicator?: ReactNode }
   | { divider: true };
+export type SelectWidth = 'full' | 'content';
 
 /** Type guard — true for selectable options, false for dividers. */
 const isOption = (
@@ -42,6 +43,7 @@ interface Props {
   /** Moves focus to the trigger on mount. */
   autoFocus?: boolean;
   ariaLabelledBy?: string;
+  width?: SelectWidth;
 }
 
 const Select = (props: Props) => {
@@ -56,7 +58,9 @@ const Select = (props: Props) => {
     searchable = false,
     autoFocus = false,
     ariaLabelledBy,
+    width = 'full',
   } = props;
+  const contentWidth = width === 'content';
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -185,7 +189,7 @@ const Select = (props: Props) => {
 
   return (
     <div
-      className={styles.wrapper}
+      className={cn(styles.wrapper, contentWidth && styles.wrapperContent)}
       ref={ref}
       onKeyDown={handleKeyDown}
       onBlur={(e) => {
@@ -203,6 +207,7 @@ const Select = (props: Props) => {
           className={cn(
             styles.trigger,
             styles.searchTrigger,
+            contentWidth && styles.triggerContentWidth,
             open && styles.triggerOpen,
             disabled && styles.triggerDisabled,
             error && !open && styles.triggerError,
@@ -261,6 +266,7 @@ const Select = (props: Props) => {
           aria-labelledby={ariaLabelledBy}
           className={cn(
             styles.trigger,
+            contentWidth && styles.triggerContentWidth,
             open && styles.triggerOpen,
             disabled && styles.triggerDisabled,
             error && !open && styles.triggerError,

@@ -3,6 +3,22 @@ import userEvent from '@testing-library/user-event';
 import Select from './Select';
 
 describe('Select', () => {
+  it('applies content-width styling when requested', () => {
+    render(
+      <Select
+        value="2025-26"
+        options={[{ value: '2025-26', label: '2025-26' }]}
+        onChange={() => {}}
+        width="content"
+      />,
+    );
+
+    const trigger = screen.getByRole('combobox');
+
+    expect(trigger.parentElement).toHaveClass('wrapperContent');
+    expect(trigger).toHaveClass('triggerContentWidth');
+  });
+
   it('does not auto-open a searchable menu when autofocus focuses the input', async () => {
     render(
       <Select

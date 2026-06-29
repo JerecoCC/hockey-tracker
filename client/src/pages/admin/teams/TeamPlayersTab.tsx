@@ -252,6 +252,7 @@ const TeamPlayersTab = ({
                   value={selectedSeasonId}
                   seasons={leagueSeasons}
                   onChange={setSelectedSeasonId}
+                  width="content"
                 />
               </div>
             </div>

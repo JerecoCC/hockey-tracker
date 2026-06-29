@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import Select, { type SelectOption } from '@/components/Select/Select';
+import Select, { type SelectOption, type SelectWidth } from '@/components/Select/Select';
 
 export interface SeasonSelectRecord {
   id: string;
@@ -19,6 +19,7 @@ interface Props<TSeason extends SeasonSelectRecord> {
   includeAllOption?: boolean;
   allOptionLabel?: string;
   allOptionValue?: string;
+  width?: SelectWidth;
 }
 
 const sortLatestFirst = <TSeason extends SeasonSelectRecord>(seasons: TSeason[]) =>
@@ -53,6 +54,7 @@ const SeasonSelect = <TSeason extends SeasonSelectRecord>(props: Props<TSeason>)
     includeAllOption = false,
     allOptionLabel = 'All seasons',
     allOptionValue = 'all',
+    width = 'full',
   } = props;
   const initializedKeyRef = useRef<string | null>(null);
   const seasonKey = seasons.map((season) => season.id).join('|');
@@ -80,6 +82,7 @@ const SeasonSelect = <TSeason extends SeasonSelectRecord>(props: Props<TSeason>)
       emptyMessage={emptyMessage}
       onChange={onChange}
       disabled={disabled || seasons.length === 0}
+      width={width}
     />
   );
 };

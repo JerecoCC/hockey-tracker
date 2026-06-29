@@ -231,9 +231,10 @@
   }
 
   &SeasonSelect {
-    width: 180px;
-    flex: 0 1 180px;
-    min-width: 160px;
+    width: fit-content;
+    max-width: 100%;
+    flex: 0 0 auto;
+    min-width: 0;
   }
 
   &ViewSegmentedControl {
