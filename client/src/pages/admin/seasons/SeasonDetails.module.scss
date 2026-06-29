@@ -449,12 +449,9 @@
 // Vertical divider between the "Statistics" title and the competition filter,
 // mirroring the games tab header divider.
 .statsTitleDivider {
-  display: inline-block;
-  width: 1px;
-  height: 1.5em;
-  background: $border;
+  --divider-length: 1.5em;
+  --divider-min-length: 1.5em;
   align-self: center;
-  flex-shrink: 0;
 }
 
 .statsFilterField {

@@ -1,4 +1,5 @@
 import Card from '@/components/Card/Card';
+import Divider from '@/components/Divider/Divider';
 import ListItem from '@/components/ListItem/ListItem';
 import PlayerCard from '@/components/PlayerCard/PlayerCard';
 import styles from './StatsLeaderCard.module.scss';
@@ -66,10 +67,7 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
           className={styles.featuredCard}
         />
 
-        <div
-          className={styles.previewDivider}
-          aria-hidden="true"
-        />
+        <Divider />
 
         <Card
           variant="border"
@@ -97,9 +95,9 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
               preTextContent={
                 <span className={styles.rankSlot}>
                   <span className={styles.rankText}>{tieRanks[i]}</span>
-                  <span
+                  <Divider
+                    variant="vertical"
                     className={styles.rankDivider}
-                    aria-hidden="true"
                   />
                 </span>
               }

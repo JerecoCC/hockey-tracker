@@ -4,6 +4,7 @@ import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import { useNavigate, useParams } from 'react-router-dom';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
@@ -998,7 +999,10 @@ const SeasonDetailsPage = () => {
                   title={
                     <>
                       Statistics
-                      <span className={styles.statsTitleDivider} />
+                      <Divider
+                        variant="vertical"
+                        className={styles.statsTitleDivider}
+                      />
                       <div className={styles.statsFilterField}>
                         <Select
                           value={statsCompetition}

@@ -74,7 +74,8 @@ describe('StatsLeaderCard featured player', () => {
     expect(statCard).toBeInTheDocument();
     expect(statCard?.tagName).toBe('DIV');
     expect(statCard?.closest('button')).toBeNull();
-    expect(statCard?.previousElementSibling).toHaveClass('previewDivider');
+    expect(statCard?.previousElementSibling).toHaveClass('divider');
+    expect(statCard?.previousElementSibling).toHaveClass('horizontal');
 
     fireEvent.click(statCard as HTMLElement);
 

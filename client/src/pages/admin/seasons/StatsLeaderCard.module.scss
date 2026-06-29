@@ -24,13 +24,6 @@
   --player-card-mobile-min-height: 180px;
 }
 
-.previewDivider {
-  width: 100%;
-  height: 1px;
-  flex-shrink: 0;
-  background: $border;
-}
-
 .statCard {
   display: flex;
   align-items: center;
@@ -113,9 +106,8 @@
 }
 
 .rankDivider {
-  width: 1px;
-  height: 18px;
-  background: $border;
+  --divider-length: 18px;
+  --divider-min-length: 18px;
 }
 
 .entryStat {
