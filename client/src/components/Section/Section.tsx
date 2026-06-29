@@ -8,6 +8,8 @@ interface SectionProps extends Omit<ComponentPropsWithoutRef<'div'>, 'title'> {
   variant?: 'filled' | 'border' | 'light';
   /** Section title at the start of the header row. Accepts a string or any ReactNode. */
   title?: ReactNode;
+  /** Optional element rendered beside the title, before the right-side action. */
+  titleAccessory?: ReactNode;
   /** Optional element placed at the end of the header row (e.g. an Add button or control). */
   action?: ReactNode;
   /** Extra CSS class for layout/sizing concerns (max-width, grid column, margin, etc.). */
@@ -24,8 +26,17 @@ interface SectionProps extends Omit<ComponentPropsWithoutRef<'div'>, 'title'> {
  * surface with no header.
  */
 const Section = forwardRef<HTMLDivElement, SectionProps>((props, ref) => {
-  const { variant = 'filled', title, action, className, style, noHeaderMargin, children, ...rest } =
-    props;
+  const {
+    variant = 'filled',
+    title,
+    titleAccessory,
+    action,
+    className,
+    style,
+    noHeaderMargin,
+    children,
+    ...rest
+  } = props;
 
   return (
     <Card
@@ -35,13 +46,18 @@ const Section = forwardRef<HTMLDivElement, SectionProps>((props, ref) => {
       style={style}
       {...rest}
     >
-      {(title || action) && (
+      {(title || titleAccessory || action) && (
         <div
           className={[styles.sectionHeader, noHeaderMargin && styles.sectionHeaderNoMargin]
             .filter(Boolean)
             .join(' ')}
         >
-          {title && <h3 className={styles.sectionTitle}>{title}</h3>}
+          {(title || titleAccessory) && (
+            <div className={styles.sectionTitleGroup}>
+              {title && <h3 className={styles.sectionTitle}>{title}</h3>}
+              {titleAccessory}
+            </div>
+          )}
           {action}
         </div>
       )}

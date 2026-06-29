@@ -216,18 +216,34 @@
 }
 
 .player {
-  &ViewSegmentedControl {
-    width: auto;
-    min-width: 210px;
-    flex-shrink: 0;
+  &HeaderSeasonGroup {
+    display: flex;
+    align-items: center;
+    gap: $space-md;
+    min-width: 0;
   }
 
-  &ToolbarDivider {
+  &HeaderDivider {
     width: 1px;
     height: 32px;
     background: $border;
     flex-shrink: 0;
   }
+
+  &SeasonSelect {
+    width: 180px;
+    flex: 0 1 180px;
+    min-width: 160px;
+  }
+
+  &ViewSegmentedControl {
+    width: 210px;
+    flex: 0 0 210px;
+  }
+}
+
+.playerViewSegmentedControl.playerViewSegmentedControl {
+  width: 210px;
 }
 
 .roster {
@@ -250,6 +266,22 @@
     display: flex;
     flex-direction: column;
     gap: $space-md;
+  }
+}
+
+@media (max-width: $bp-tablet) {
+  .rosterToolbar {
+    align-items: stretch;
+  }
+
+  .rosterSearch,
+  .playerViewSegmentedControl.playerViewSegmentedControl {
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .playerHeaderSeasonGroup {
+    gap: $space-sm;
   }
 }
 

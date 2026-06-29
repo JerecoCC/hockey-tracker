@@ -240,6 +240,23 @@ const TeamPlayersTab = ({
     <>
       <Section
         title="Players"
+        titleAccessory={
+          leagueSeasons.length > 0 ? (
+            <div className={styles.playerHeaderSeasonGroup}>
+              <span
+                className={styles.playerHeaderDivider}
+                aria-hidden="true"
+              />
+              <div className={styles.playerSeasonSelect}>
+                <SeasonSelect
+                  value={selectedSeasonId}
+                  seasons={leagueSeasons}
+                  onChange={setSelectedSeasonId}
+                />
+              </div>
+            </div>
+          ) : null
+        }
         action={
           <div className={styles.rosterActions}>
             <Button
@@ -277,19 +294,9 @@ const TeamPlayersTab = ({
             value={query}
             onChange={setQuery}
           />
-          {leagueSeasons.length > 0 && (
-            <SeasonSelect
-              value={selectedSeasonId}
-              seasons={leagueSeasons}
-              onChange={setSelectedSeasonId}
-            />
-          )}
-          <span
-            className={styles.playerToolbarDivider}
-            aria-hidden="true"
-          />
           <SegmentedControl
             className={styles.playerViewSegmentedControl}
+            variant="field"
             value={playerView}
             onChange={(value) => setPlayerView(value as PlayerView)}
             options={[
@@ -306,7 +313,6 @@ const TeamPlayersTab = ({
           return (
             <Section
               key={section.title}
-              variant="border"
               title={`${section.title} (${sectionPlayers.length})`}
             >
               {loading ? (

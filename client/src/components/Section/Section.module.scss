@@ -25,3 +25,11 @@
   color: $text-bright;
   margin: 0;
 }
+
+.sectionTitleGroup {
+  display: flex;
+  align-items: center;
+  gap: $space-md;
+  flex-wrap: wrap;
+  min-width: 0;
+}
