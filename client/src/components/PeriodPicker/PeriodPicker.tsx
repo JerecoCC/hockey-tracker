@@ -1,4 +1,5 @@
 import DatePicker from '@/components/DatePicker/DatePicker';
+import Divider from '@/components/Divider/Divider';
 import Icon from '@/components/Icon/Icon';
 import styles from './PeriodPicker.module.scss';
 
@@ -45,6 +46,10 @@ const PeriodPicker = ({
           size="1rem"
         />
       </button>
+      <Divider
+        variant="vertical"
+        className={styles.divider}
+      />
       <DatePicker
         value={value}
         onChange={onChange}
@@ -56,6 +61,10 @@ const PeriodPicker = ({
         className={styles.datePicker}
         triggerWrapClassName={styles.triggerWrap}
         triggerButtonClassName={styles.triggerButton}
+      />
+      <Divider
+        variant="vertical"
+        className={styles.divider}
       />
       <button
         type="button"

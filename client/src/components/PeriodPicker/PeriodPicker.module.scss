@@ -7,6 +7,9 @@
   align-items: stretch;
   min-width: 204px;
   height: 42px;
+  box-sizing: border-box;
+  padding: $space-xs;
+  gap: $space-xs;
   border: 1px solid $border;
   border-radius: $radius-md;
   background: $bg-input;
@@ -24,14 +27,18 @@
   }
 }
 
+.divider {
+  --divider-color: #{$border};
+}
+
 .navButton {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  flex: 0 0 42px;
-  width: 42px;
+  flex: 0 0 2rem;
   padding: 0;
   border: 0;
+  border-radius: $radius-md;
   background: transparent;
   color: $text-dim;
   cursor: pointer;
@@ -44,22 +51,18 @@
     background: rgba(255, 255, 255, 0.05);
   }
 
+  &:focus {
+    outline: none;
+  }
+
   &:focus-visible {
     outline: 2px solid $accent-light;
-    outline-offset: -3px;
+    outline-offset: 2px;
   }
 
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-  }
-
-  &:first-child {
-    border-radius: $radius-md 0 0 $radius-md;
-  }
-
-  &:last-child {
-    border-radius: 0 $radius-md $radius-md 0;
   }
 }
 
