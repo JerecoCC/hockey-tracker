@@ -27,7 +27,7 @@
 }
 
 .loaderText {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-base;
   margin: 0;
 }
@@ -85,7 +85,7 @@
     min-width: 0;
     font-size: $font-3xl;
     font-weight: 700;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     margin: 0;
     overflow-wrap: anywhere;
   }
@@ -96,7 +96,7 @@
     align-items: center;
     gap: $space-md;
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
 
     > span + span::before {
       content: "•";
@@ -129,7 +129,7 @@
 
   &Copy {
     margin: 0;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     line-height: 1.45;
   }
 }
@@ -183,26 +183,26 @@
   &CellLabel {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.07em;
   }
 
   &CellValue {
     font-size: $font-body;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 
   &CellMuted {
     font-size: $font-body;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-style: italic;
   }
 }
 
 // ── Placeholder ───────────────────────────────────────────────────────────
 .placeholder {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   margin: 0;
   padding: $space-lg 0;
@@ -247,7 +247,7 @@
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     flex-shrink: 0;
   }
@@ -263,12 +263,12 @@
   &Team {
     font-size: $font-body;
     font-weight: 600;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 
   &Meta {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -309,11 +309,11 @@
     align-items: center;
     gap: $space-xs;
     font-weight: 600;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 
   &Prefix {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-weight: 500;
   }
 }
@@ -324,7 +324,7 @@
   justify-content: center;
   min-width: 3ch;
   font-weight: 700;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
 }
 
 .gameLog {
@@ -353,7 +353,7 @@
     justify-content: space-between;
     gap: $space-md;
     margin-top: $space-lg;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
 
     @media (max-width: 640px) {
@@ -397,7 +397,7 @@
   &CellLabel {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.07em;
   }
@@ -405,12 +405,12 @@
   &CellValue {
     font-size: $font-xl;
     font-weight: 700;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 
   &CellMuted {
     font-size: $font-xl;
     font-weight: 700;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }

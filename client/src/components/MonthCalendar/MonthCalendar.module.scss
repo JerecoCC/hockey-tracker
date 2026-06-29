@@ -9,7 +9,7 @@
 }
 
 .dayName {
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   font-size: $font-sm;
   font-weight: 700;
   text-align: center;
@@ -45,7 +45,7 @@
     --month-calendar-day-bg: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
 
     background: var(--month-calendar-day-bg);
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     overflow: hidden;
   }
 

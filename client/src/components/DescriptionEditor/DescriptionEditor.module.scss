@@ -24,21 +24,21 @@
 .editIcon {
   flex-shrink: 0;
   margin-top: 2px;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   opacity: 0;
   transition: opacity $transition-fast;
 }
 
 .content {
   font-size: $font-body;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   flex: 1;
   min-width: 0;
 }
 
 .muted {
   font-size: $font-body;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   flex: 1;
 }
@@ -57,7 +57,7 @@
   background: $bg-input;
   border: 1px solid $border;
   border-radius: $radius-md;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   font-size: $font-base;
   font-family: inherit;
   line-height: 1.6;
@@ -69,7 +69,7 @@
   }
 
   &::placeholder {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &:disabled {

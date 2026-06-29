@@ -15,8 +15,8 @@
   width: fit-content;
   gap: $space-xs;
   padding: $space-sm;
-  background: var(--filter-field-background, #{$bg-card});
-  border: 1px solid var(--app-field-border, #{$border});
+  background: var(--app-surface, #{$bg-card});
+  border: 1px solid var(--app-border, #{$border});
   border-radius: $radius-lg;
 
   &Disabled {

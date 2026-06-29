@@ -31,7 +31,7 @@
 }
 
 .groupMeta {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   white-space: nowrap;
 }
@@ -106,7 +106,7 @@
 
 .empty {
   font-size: $font-base;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   text-align: center;
   padding: $space-2xl 0;
@@ -128,7 +128,7 @@
 
   &Summary {
     margin-right: auto;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
   }
 }

@@ -47,7 +47,7 @@
 
   &Label {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     white-space: nowrap;
   }
 
@@ -60,7 +60,7 @@
     padding: 0;
     font-size: $font-base;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     outline: none;
     text-align: center;
 
@@ -79,7 +79,7 @@
 
 .empty {
   font-size: $font-base;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   text-align: center;
   padding: $space-2xl 0;

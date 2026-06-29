@@ -16,5 +16,5 @@
 
 .hint {
   font-size: $font-xs;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }

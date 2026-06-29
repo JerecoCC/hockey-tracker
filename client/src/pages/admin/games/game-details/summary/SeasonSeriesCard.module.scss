@@ -4,7 +4,7 @@
 .seriesLabel {
   font-size: $font-sm;
   font-weight: 500;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   white-space: nowrap;
 }
 
@@ -26,7 +26,7 @@
     padding: $space-md;
     border: 1px solid #334155;
     border-radius: $radius-sm;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     gap: $space-xs;
   }
 
@@ -62,5 +62,5 @@
   display: flex;
   justify-content: space-between;
   font-size: $font-sm;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }

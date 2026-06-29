@@ -47,14 +47,14 @@
   &Label {
     font-size: $font-sm;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
 
   &Hint {
     font-size: $font-xs;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     margin: 0;
   }
 
@@ -75,7 +75,7 @@
     background: $bg-card;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-sm;
     padding: 0 $space-sm;
     cursor: pointer;
@@ -92,7 +92,7 @@
     background: $bg-card;
     border: 1px solid $border;
     border-radius: $radius-sm;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-sm;
     padding: 0 $space-sm;
     text-align: center;
@@ -112,7 +112,7 @@
     border: 1px solid $border;
     border-radius: $radius-sm;
     background: transparent;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     cursor: pointer;
     flex-shrink: 0;
 
@@ -124,7 +124,7 @@
 
   &Empty {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-style: italic;
   }
 }

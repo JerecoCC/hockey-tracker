@@ -5,7 +5,7 @@
 .soLabelSummary {
   font-size: $font-sm;
   font-weight: 500;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }
 
 // ── Attempt grid ──────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
 
     &:first-child {
       border-right: 1px solid #334155;
@@ -51,7 +51,7 @@
 
   &HeaderGoalCount {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-weight: 700;
   }
 
@@ -100,7 +100,7 @@
   &RoundLabel {
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &Cell {
@@ -147,7 +147,7 @@
 
   &EmptyDash {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &EmptySquare {
@@ -176,14 +176,14 @@
 
   &Jersey {
     font-size: $font-xs;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     line-height: 1.2;
   }
 
   &Name {
     font-size: $font-sm;
     font-weight: 500;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
@@ -212,13 +212,13 @@
   &Scored {
     background: rgba($success, 0.5);
     border-color: $success;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 
   &Missed {
     background: rgba($danger, 0.5);
     border-color: $danger;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 }
 
@@ -236,14 +236,14 @@
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &TotalCell {
     padding: $space-sm $space-md;
     font-size: $font-sm;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     border-right: 1px solid $border;
 
     &:last-child {

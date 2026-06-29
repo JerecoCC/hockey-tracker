@@ -51,7 +51,7 @@
 .closeBtnInner {
   background: rgba(0, 0, 0, 0.5);
   border-radius: 50%;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
 
   &:hover {
     background: rgba(0, 0, 0, 0.75);

@@ -16,13 +16,13 @@
     margin: 0 0 $space-xs;
     font-size: $font-2xl;
     font-weight: 700;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 
   &Email {
     margin: 0;
     font-size: $font-base;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -38,7 +38,7 @@
 .empty {
   margin: 0;
   font-size: $font-base;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   padding: $space-lg 0;
 }
 
@@ -105,7 +105,7 @@
 
   &Copy {
     margin: 0;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
   }
 
@@ -130,7 +130,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 

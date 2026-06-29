@@ -32,7 +32,7 @@
     border: 1px solid rgba($text-dim, 0.2);
     border-radius: $radius-sm;
     background: rgba(255, 255, 255, 0.03);
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-base;
     line-height: 1.4;
     cursor: default;
@@ -48,7 +48,7 @@
 
 .emptyMsg {
   margin: $space-sm $space-md;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   font-style: italic;
 }
@@ -183,7 +183,7 @@
   &TeamCount {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     white-space: nowrap;
   }
 

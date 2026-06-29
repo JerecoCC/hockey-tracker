@@ -39,7 +39,7 @@
 
 .dateLine {
   font-size: $font-xs;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   margin-bottom: 2px;
   white-space: nowrap;
 }
@@ -85,7 +85,7 @@
 .teamCode {
   font-size: $font-sm;
   font-weight: 700;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   letter-spacing: 0.04em;
   white-space: nowrap;
   // Fixed width keeps the score column aligned between away and home rows
@@ -98,7 +98,7 @@
   &Num {
     font-size: $font-base;
     font-weight: 700;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     min-width: 1.25rem;
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -106,7 +106,7 @@
   }
 
   &Loser {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -123,14 +123,14 @@
 .venue,
 .metaLine {
   font-size: $font-xs;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .metaLine {
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
 }
 
 // ── Game type — left accent border ───────────────────────────────────────────

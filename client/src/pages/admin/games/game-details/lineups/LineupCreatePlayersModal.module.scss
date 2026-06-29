@@ -30,7 +30,7 @@
   &Cell {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
@@ -80,7 +80,7 @@
   flex-shrink: 0;
   border: none;
   background: transparent;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   border-radius: $radius-sm;
   cursor: pointer;
   transition:
@@ -143,7 +143,7 @@
 
   &WarningNote {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     margin: $space-xs 0 0;
   }
 

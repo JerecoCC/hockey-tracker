@@ -5,7 +5,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }
 
 .inline {

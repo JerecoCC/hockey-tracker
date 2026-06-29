@@ -3,7 +3,7 @@
 
 .empty {
   font-size: $font-sm;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   margin: 0;
   padding: $space-xs 0;
 }
@@ -77,7 +77,7 @@
   &Scorer {
     font-size: $font-sm;
     font-weight: 600;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -85,7 +85,7 @@
 
   &Assists {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

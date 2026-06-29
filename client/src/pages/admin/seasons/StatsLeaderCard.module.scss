@@ -74,7 +74,7 @@
 
 .stat {
   &Label {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 700;
     letter-spacing: 0;
@@ -83,7 +83,7 @@
   }
 
   &Value {
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-size: 2.5rem;
     font-variant-numeric: tabular-nums;
     font-weight: 900;
@@ -141,7 +141,7 @@
 
 .rankText {
   min-width: 20px;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   font-variant-numeric: tabular-nums;
   font-weight: 600;
@@ -155,7 +155,7 @@
 
 .entryStat {
   flex-shrink: 0;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   font-size: $font-sm;
   font-variant-numeric: tabular-nums;
   font-weight: 800;

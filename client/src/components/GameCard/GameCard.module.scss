@@ -12,7 +12,7 @@
   min-height: 176px;
   overflow: hidden;
   background: #222d3f;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   transition:
     border-color $transition-fast,
     background $transition-fast;
@@ -154,7 +154,7 @@
   justify-content: space-between;
   gap: $space-sm;
   font-size: $font-sm;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }
 
 .gameFooter {
@@ -176,7 +176,7 @@
 
   &Code {
     min-width: 0;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     @include truncate;
   }
 
@@ -185,7 +185,7 @@
     min-width: 30px;
     text-align: right;
     font-size: $font-2xl;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 }
 
@@ -197,5 +197,5 @@
   font-weight: 700;
   letter-spacing: 0.04em;
   text-align: center;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
 }

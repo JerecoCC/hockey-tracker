@@ -12,7 +12,7 @@
 
 .emptyMsg {
   font-size: $font-base;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   margin: 0;
 }
@@ -45,7 +45,7 @@
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     flex-shrink: 0;
   }

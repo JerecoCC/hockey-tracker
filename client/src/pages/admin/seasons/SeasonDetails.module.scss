@@ -21,7 +21,7 @@
 }
 
 .loaderText {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-base;
   margin: 0;
 }
@@ -42,7 +42,7 @@
 
 // ── Placeholder ────────────────────────────────────────────────────────────────
 .tabPlaceholder {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   text-align: center;
   padding: $space-xl 0;
@@ -53,7 +53,7 @@
 .standings {
   &Place {
     font-weight: 700;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &QualifierRow {
@@ -181,12 +181,12 @@
 
   &ListName {
     font-size: $font-base;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 
   &Code {
     font-size: $font-xs;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     margin-left: auto;
     white-space: nowrap;
   }
@@ -210,7 +210,7 @@
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     flex-shrink: 0;
   }
@@ -218,7 +218,7 @@
 
 .emptyMsg {
   font-size: $font-base;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   margin: $space-sm $space-md;
 }
@@ -278,7 +278,7 @@
 
     &[data-checked='true'] {
       background: $text-bright;
-      border-color: $text-bright;
+      border-color: var(--app-text-strong, #{$text-bright});
     }
   }
 }
@@ -307,11 +307,11 @@
     border-bottom: 2px solid $accent;
     outline: none;
     font-size: $font-lg;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     padding: 2px 0;
 
     &::placeholder {
-      color: $text-dim;
+      color: var(--app-text-muted, #{$text-dim});
     }
   }
 
@@ -325,7 +325,7 @@
     border: 1px solid $border;
     border-radius: $radius-sm;
     background: rgba(255, 255, 255, 0.06);
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     cursor: pointer;
     transition:
       background $transition-fast,
@@ -342,7 +342,7 @@
   }
 
   &BtnCancel {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -498,7 +498,7 @@
     width: 20px;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-align: right;
   }
 
@@ -507,7 +507,7 @@
     flex-shrink: 0;
     font-size: $font-sm;
     font-weight: 700;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -521,7 +521,7 @@
 
   &PlayerName {
     font-size: $font-sm;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -542,7 +542,7 @@
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -624,7 +624,7 @@
     h4 {
       display: block;
       margin: 0;
-      color: $text-bright;
+      color: var(--app-text-strong, #{$text-bright});
       font-size: $font-lg;
       line-height: 1.2;
       overflow-wrap: anywhere;
@@ -633,7 +633,7 @@
 
     p {
       margin: 0;
-      color: $text-dim;
+      color: var(--app-text-muted, #{$text-dim});
       font-size: $font-sm;
       line-height: 1.45;
     }
@@ -724,7 +724,7 @@
   }
 
   &RecipientsTitle {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -918,7 +918,7 @@
 
     legend {
       padding: 0 $space-xs;
-      color: $text-dim;
+      color: var(--app-text-muted, #{$text-dim});
       font-size: $font-xs;
       font-weight: 700;
       letter-spacing: 0.05em;
@@ -1000,7 +1000,7 @@
 
   &PlayerChecklistEmpty {
     padding: $space-2xl 0;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-base;
     font-style: italic;
     text-align: center;
@@ -1031,7 +1031,7 @@
     justify-content: center;
     width: 28px;
     min-height: 42px;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 700;
     line-height: 1;
@@ -1071,7 +1071,7 @@
     gap: $space-sm;
     min-height: 42px;
     margin-top: 22px;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-sm;
 
     input {
@@ -1104,7 +1104,7 @@
   &Hint {
     grid-column: 1 / -1;
     margin: 0;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
   }
 }

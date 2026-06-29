@@ -23,7 +23,7 @@
   min-height: 100%;
   padding: $space-xl;
   background: rgba(0, 0, 0, 0.68);
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   backdrop-filter: blur(1px);
 }
 
@@ -38,7 +38,7 @@
   }
 
   &Text {
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-size: $font-sm;
     font-weight: 600;
   }
@@ -50,7 +50,7 @@
   justify-content: space-between;
   gap: $space-md;
   margin-top: $space-lg;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
 
   @media (max-width: 640px) {

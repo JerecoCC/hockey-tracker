@@ -115,7 +115,7 @@ button.card {
 
   strong {
     max-width: 100%;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-size: $font-sm;
     font-weight: 700;
     line-height: 1.25;
@@ -128,7 +128,7 @@ button.card {
 .subtitle {
   display: block;
   max-width: 100%;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-xs;
   font-style: normal;
   line-height: 1.25;

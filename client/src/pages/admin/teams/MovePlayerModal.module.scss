@@ -33,7 +33,7 @@
   padding: 0 $space-xs;
   font-size: $font-sm;
   font-weight: 600;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -55,7 +55,7 @@
   &Label {
     font-size: $font-sm;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -77,7 +77,7 @@
     margin: 0 0 $space-md;
     font-size: $font-sm;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -121,7 +121,7 @@
   &Team {
     font-size: $font-base;
     font-weight: 600;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -129,13 +129,13 @@
 
   &Jersey {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     flex-shrink: 0;
   }
 
   &Dates {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     white-space: nowrap;
     flex-shrink: 0;
   }

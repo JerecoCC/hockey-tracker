@@ -135,7 +135,7 @@
 
   &Copy {
     margin: 0;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
   }
 

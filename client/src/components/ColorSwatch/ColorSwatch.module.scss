@@ -11,7 +11,7 @@
 .label {
   font-size: $font-xs;
   font-weight: 600;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   text-transform: uppercase;
   letter-spacing: 0.07em;
   text-align: right;

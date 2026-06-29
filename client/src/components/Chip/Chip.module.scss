@@ -13,7 +13,7 @@
   border-radius: $radius-sm;
   font-size: var(--chip-font-size, 1rem);
   font-weight: 700;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   background: rgba(255, 255, 255, 0.04);
   font-variant-numeric: tabular-nums;
   padding: 0 var(--chip-padding-x, #{$space-xs});

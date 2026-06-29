@@ -28,7 +28,7 @@
 }
 
 .loaderText {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-base;
   margin: 0;
 }
@@ -68,12 +68,12 @@
 
   &Value {
     font-size: $font-body;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 
   &ValueMuted {
     font-size: $font-body;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-style: italic;
   }
 }
@@ -89,7 +89,7 @@
 // ── Tab placeholder ────────────────────────────────────────────────────
 .tabPlaceholder {
   font-size: $font-body;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   margin: 0;
   padding: $space-lg 0;
@@ -135,7 +135,7 @@
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     flex-shrink: 0;
   }
@@ -151,17 +151,17 @@
   &Name {
     font-size: $font-body;
     font-weight: 600;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 
   &Meta {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &Note {
     font-size: $font-sm;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-style: italic;
   }
 
@@ -202,7 +202,7 @@
 
   &Empty {
     font-size: $font-base;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-style: italic;
     margin: 0;
   }
@@ -317,7 +317,7 @@
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     flex-shrink: 0;
   }

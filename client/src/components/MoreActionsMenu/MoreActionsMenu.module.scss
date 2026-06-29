@@ -12,12 +12,12 @@
   padding: 0;
   background: transparent;
   border: none;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 
   &:hover:not(:disabled),
   &:focus-visible:not(:disabled) {
     background: transparent;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
   }
 
   svg {
@@ -46,7 +46,7 @@
     padding: $space-md $space-lg;
     background: transparent;
     border: none;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-sm;
     font-family: inherit;
     cursor: pointer;
@@ -58,7 +58,7 @@
 
     &:hover:not(:disabled) {
       background: rgba(255, 255, 255, 0.06);
-      color: $text-bright;
+      color: var(--app-text-strong, #{$text-bright});
     }
 
     &:disabled {

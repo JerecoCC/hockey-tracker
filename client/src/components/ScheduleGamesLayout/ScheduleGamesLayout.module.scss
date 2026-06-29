@@ -81,7 +81,7 @@
   &Empty {
     margin: 0;
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-style: italic;
   }
 }
@@ -96,7 +96,7 @@
 }
 
 .empty {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   padding: $space-lg 0;
   text-align: center;
@@ -147,7 +147,7 @@
     border: 1px solid $border;
     border-radius: $radius-md;
     background: transparent;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     cursor: pointer;
     text-align: left;
     transition:
@@ -184,19 +184,19 @@
   }
 
   &Date {
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-size: $font-sm;
   }
 
   &Weekday {
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-xs;
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
   &Count {
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-size: $font-sm;
     font-weight: 800;
     line-height: 1;
@@ -221,7 +221,7 @@
 }
 
 .weekSummaryIcon {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: 1.2rem;
   flex: 0 0 auto;
   line-height: 1;
@@ -263,7 +263,7 @@
 
 .calendarDayCount {
   margin-left: $space-xs;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-xs;
   font-weight: 600;
   white-space: nowrap;

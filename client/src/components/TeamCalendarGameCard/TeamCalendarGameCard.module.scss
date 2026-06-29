@@ -59,7 +59,7 @@
 }
 
 .away.transparent {
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
 }
 
 .live {

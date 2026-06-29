@@ -20,7 +20,7 @@
 
 .separator {
   font-size: 0.65em;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }
 
 .link {
@@ -34,20 +34,20 @@
   transition: color $transition-fast;
 
   &:hover {
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     text-decoration: underline;
   }
 }
 
 .label {
   font-size: $font-base;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }
 
 .current {
   font-size: $font-base;
   font-weight: 600;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
 }
 
 // ── Short label (mobile only) ──────────────────────────────────────────

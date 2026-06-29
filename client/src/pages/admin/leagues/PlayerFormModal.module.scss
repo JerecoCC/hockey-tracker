@@ -65,7 +65,7 @@
   &GroupLabel {
     font-size: $font-sm;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -134,14 +134,14 @@
       width: 100%;
       background: transparent;
       border: none;
-      color: $text-body;
+      color: var(--app-text, #{$text-body});
       font-size: $font-base;
       padding: $space-md $space-xs $space-md $space-lg;
       outline: none;
       -moz-appearance: textfield;
 
       &::placeholder {
-        color: $text-dim;
+        color: var(--app-text-muted, #{$text-dim});
       }
 
       &:disabled {
@@ -159,7 +159,7 @@
     span {
       flex-shrink: 0;
       padding-right: $space-lg;
-      color: $text-dim;
+      color: var(--app-text-muted, #{$text-dim});
       font-size: $font-xs;
       font-weight: 700;
       letter-spacing: 0.04em;
@@ -222,7 +222,7 @@
   &Label {
     font-size: $font-sm;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.05em;
   }
@@ -238,7 +238,7 @@
     align-items: center;
     gap: $space-sm;
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     padding: $space-xs $space-sm;
     background: rgba(255, 255, 255, 0.02);
     border: 1px solid $border;
@@ -247,7 +247,7 @@
 
   &EntryNumber {
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     min-width: 2.5rem;
   }
 
@@ -265,13 +265,13 @@
     border: 1px solid $border;
     border-radius: $radius-sm;
     background: rgba(255, 255, 255, 0.02);
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
     line-height: 1.4;
   }
 
   &Label {
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-weight: 700;
   }
 }

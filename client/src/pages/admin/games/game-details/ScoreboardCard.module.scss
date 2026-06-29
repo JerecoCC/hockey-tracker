@@ -362,7 +362,7 @@ $scoreboard-stripe-overlap: 8px;
 .teamMobileCode {
   font-size: $font-base;
   font-weight: 700;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   line-height: 1.2;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -374,7 +374,7 @@ $scoreboard-stripe-overlap: 8px;
 .team {
   &PlaceName {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     transition:
       color $transition-layout ease,
       text-shadow $transition-layout ease;
@@ -443,7 +443,7 @@ $scoreboard-stripe-overlap: 8px;
   &Number {
     font-size: 2.75rem;
     font-weight: 700;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     letter-spacing: 0.02em;
     font-variant-numeric: tabular-nums;
     min-width: 2rem;
@@ -457,19 +457,19 @@ $scoreboard-stripe-overlap: 8px;
   }
 
   &NumberLoser {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &Meta {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
 
   &Date {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }

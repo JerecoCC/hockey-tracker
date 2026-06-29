@@ -17,7 +17,7 @@
   border: 1px solid $border;
   border-radius: $radius-sm;
   background: #222d3f;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   font-size: $font-sm;
   line-height: 1;
   text-decoration: none;
@@ -77,7 +77,7 @@
   margin-bottom: $space-xs;
   padding-bottom: $space-xs;
   border-bottom: 1px solid $border;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   letter-spacing: 0.04em;
   text-align: center;
@@ -88,7 +88,7 @@
   margin-top: $space-xs;
   padding-top: $space-xs;
   border-top: 1px solid $border;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   letter-spacing: 0.04em;
   text-align: center;
@@ -138,7 +138,7 @@
   border: 1px solid $border;
   border-radius: 2px;
   background: color-mix(in srgb, #{$bg-card} 70%, #{$bg-page});
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   font-variant-numeric: tabular-nums;
   text-align: center;
 
@@ -164,7 +164,7 @@
   &Missing {
     border-color: color-mix(in srgb, #{$text-dim} 46%, #{$border});
     background: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -175,13 +175,13 @@
   align-items: center;
   justify-content: center;
   min-width: 0;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   gap: 2px;
   line-height: 1;
 
   &Label {
     max-width: 100%;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.06em;

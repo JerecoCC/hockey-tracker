@@ -34,7 +34,7 @@
 
 .neutral {
   background: $border;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   border-color: $border;
 }
 

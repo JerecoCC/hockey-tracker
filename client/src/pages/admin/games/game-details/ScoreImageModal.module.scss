@@ -37,7 +37,7 @@
     background: $bg-input;
     border: 1.5px dashed $border;
     border-radius: $radius-md;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     cursor: pointer;
     padding: $space-md;
     text-align: center;
@@ -47,7 +47,7 @@
 
     &:hover {
       border-color: $accent;
-      color: $text-bright;
+      color: var(--app-text-strong, #{$text-bright});
     }
   }
 
@@ -58,12 +58,12 @@
   &LabelPrimary {
     font-size: $font-body;
     font-weight: 600;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 
   &LabelSub {
     font-size: $font-base;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &Preview {
@@ -752,7 +752,7 @@
   &Label {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-transform: uppercase;
     letter-spacing: 0.06em;
   }
@@ -761,7 +761,7 @@
     background: $bg-input;
     border: 1px solid $border;
     border-radius: $radius-md;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-base;
     font-family: inherit;
     height: 42px;
@@ -771,7 +771,7 @@
     transition: border-color $transition-base;
 
     &::placeholder {
-      color: $text-dim;
+      color: var(--app-text-muted, #{$text-dim});
     }
 
     &:focus {
@@ -803,13 +803,13 @@
     width: fit-content;
 
     &:hover .formCheckboxLabel {
-      color: $text-bright;
+      color: var(--app-text-strong, #{$text-bright});
     }
   }
 
   &CheckboxLabel {
     font-size: $font-base;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     user-select: none;
   }
 }

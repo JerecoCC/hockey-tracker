@@ -15,7 +15,7 @@ table {
   thead th {
     text-align: left;
     padding: $space-md $space-lg;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
@@ -38,7 +38,7 @@ table {
 
     td {
       padding: $space-lg;
-      color: $text-body;
+      color: var(--app-text, #{$text-body});
       vertical-align: middle;
     }
   }
@@ -70,14 +70,14 @@ table {
 }
 
 .loaderText {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-base;
   margin: 0;
 }
 
 // ── Empty state ────────────────────────────────────────────────────────
 .emptyMsg {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   text-align: center;
   padding: $space-4xl;
 }
@@ -97,7 +97,7 @@ table {
     background: none;
     border: none;
     cursor: pointer;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-weight: 600;
     font-size: inherit;
     font-family: inherit;
@@ -107,7 +107,7 @@ table {
     transition: color $transition-fast;
 
     &:hover {
-      color: $text-body;
+      color: var(--app-text, #{$text-body});
     }
   }
 
@@ -143,7 +143,7 @@ table {
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     cursor: auto;
     user-select: none;

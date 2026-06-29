@@ -21,7 +21,7 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
 .periodLabel {
   font-size: $font-base;
   font-weight: 600;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   min-width: 96px;
   flex-shrink: 0;
   display: flex;
@@ -33,7 +33,7 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   margin: 0;
   padding: $space-sm $space-md;
   font-size: $font-sm;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
 }
 
@@ -90,7 +90,7 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
 .goalTime,
 .goalScore {
   font-size: $font-sm;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
   min-width: 2.75rem;
@@ -136,7 +136,7 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
   &Scorer {
     font-size: $font-sm;
     font-weight: 600;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -144,7 +144,7 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
 
   &Assists {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

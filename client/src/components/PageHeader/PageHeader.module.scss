@@ -252,11 +252,11 @@
 
 // ── Chevron ────────────────────────────────────────────────────────────
 .chevron {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   transition: transform 0.2s;
 
   &Open {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     transform: rotate(180deg);
     transition: transform 0.2s;
   }

@@ -55,7 +55,7 @@
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     flex-shrink: 0;
   }
@@ -71,7 +71,7 @@
   justify-content: center;
   font-size: var(--selectable-list-item-image-font-size, #{$font-sm});
   font-weight: 500;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   overflow: hidden;
 
   &.square {
@@ -103,7 +103,7 @@
 
 .eyebrow {
   font-size: $font-xs;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -112,7 +112,7 @@
 .name {
   font-size: $font-base;
   font-weight: 600;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -120,7 +120,7 @@
 
 .subtitle {
   font-size: $font-sm;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }
 
 .actions {

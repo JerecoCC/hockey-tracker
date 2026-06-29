@@ -37,7 +37,7 @@ $league-tab-list-gap: $space-md;
 }
 
 .loaderText {
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-base;
   margin: 0;
 }
@@ -546,7 +546,7 @@ $league-tab-list-gap: $space-md;
     flex-direction: column;
     gap: 2px;
     font-size: $font-sm;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-weight: 500;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -561,7 +561,7 @@ $league-tab-list-gap: $space-md;
 
 .alignmentSet {
   &Meta {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 400;
   }
@@ -726,7 +726,7 @@ $league-tab-list-gap: $space-md;
     align-items: baseline;
     flex-wrap: wrap;
     gap: $space-xs;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 600;
     letter-spacing: 0.07em;
@@ -768,7 +768,7 @@ $league-tab-list-gap: $space-md;
     width: 100%;
     box-sizing: border-box;
     padding: 0 $space-xs;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
     font-weight: 600;
     letter-spacing: 0.05em;
@@ -793,7 +793,7 @@ $league-tab-list-gap: $space-md;
     display: inline-flex;
     align-items: center;
     flex-shrink: 0;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 600;
     letter-spacing: 0;
@@ -842,7 +842,7 @@ $league-tab-list-gap: $space-md;
   }
 
   &GroupChildrenLabel {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 600;
     letter-spacing: 0.05em;
@@ -881,7 +881,7 @@ $league-tab-list-gap: $space-md;
     flex-direction: column;
     gap: $space-xs;
     min-width: 0;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 700;
     letter-spacing: 0.04em;
@@ -894,7 +894,7 @@ $league-tab-list-gap: $space-md;
       border: 1px solid $border;
       border-radius: $radius-md;
       background: rgba(0, 0, 0, 0.18);
-      color: $text-body;
+      color: var(--app-text, #{$text-body});
       font-size: $font-sm;
       font-weight: 500;
       letter-spacing: 0;
@@ -982,14 +982,14 @@ $league-tab-list-gap: $space-md;
 
   &TeamModalCode {
     align-self: center;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     flex-shrink: 0;
     font-size: $font-xs;
     letter-spacing: 0;
   }
 
   &TeamModalEmpty {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-base;
     font-style: italic;
     margin: 0;
@@ -1053,7 +1053,7 @@ $league-tab-list-gap: $space-md;
 
   &Msg {
     font-size: $font-sm;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-style: italic;
     margin: 0;
   }
@@ -1066,7 +1066,7 @@ $league-tab-list-gap: $space-md;
 .ungroupedLabel {
   font-size: $font-sm;
   font-weight: 600;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin: $space-md 0 $space-sm;
@@ -1216,7 +1216,7 @@ $league-tab-list-gap: $space-md;
     background: $border;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     flex-shrink: 0;
   }
 }
@@ -1254,18 +1254,18 @@ $league-tab-list-gap: $space-md;
     background: transparent;
     border: none;
     border-bottom: 1px solid $border;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-lg;
     font-weight: 500;
     padding: $space-xs 0;
     outline: none;
 
     &:focus {
-      border-bottom-color: $text-bright;
+      border-bottom-color: var(--app-text-strong, #{$text-bright});
     }
 
     &::placeholder {
-      color: $text-dim;
+      color: var(--app-text-muted, #{$text-dim});
     }
   }
 
@@ -1278,7 +1278,7 @@ $league-tab-list-gap: $space-md;
     border: 1px solid $border;
     border-radius: $radius-sm;
     background: transparent;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     cursor: pointer;
     flex-shrink: 0;
     transition:
@@ -1296,7 +1296,7 @@ $league-tab-list-gap: $space-md;
   }
 
   &BtnCancel {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
@@ -1311,7 +1311,7 @@ $league-tab-list-gap: $space-md;
   &TeamCount {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     white-space: nowrap;
   }
 }
@@ -1357,7 +1357,7 @@ $league-tab-list-gap: $space-md;
   }
 
   &Name {
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-size: $font-base;
     font-weight: 700;
   }
@@ -1370,7 +1370,7 @@ $league-tab-list-gap: $space-md;
 
   &Description {
     margin: 0;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
     line-height: 1.45;
   }
@@ -1396,7 +1396,7 @@ $league-tab-list-gap: $space-md;
     align-items: center;
     gap: $space-sm;
     min-height: 42px;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     cursor: pointer;
     font-size: $font-sm;
     user-select: none;
