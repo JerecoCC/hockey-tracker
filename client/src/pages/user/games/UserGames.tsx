@@ -17,7 +17,6 @@ import {
   ScheduleCalendarCard,
   ScheduleCalendarDayCount,
   ScheduleCalendarGameList,
-  ScheduleCalendarLoading,
   ScheduleFilters,
   ScheduleFilterSlot,
   ScheduleGamesActions,
@@ -259,33 +258,6 @@ const getScheduledInstant = (scheduledAt: string | null, scheduledTime: string |
   return new Date(`${etDatePart}T${scheduledTime}:00${offset}`);
 };
 
-/**
- * Format a game's scheduled time.
- *
- * The user games page always passes 'local': reconstruct the exact Eastern
- * scheduled moment when needed and display it in the browser's timezone.
- */
-const fmtGameTime = (
-  scheduledAt: string | null,
-  scheduledTime: string | null,
-  tzPref: TzPref,
-): string => {
-  const instant = getScheduledInstant(scheduledAt, scheduledTime);
-  if (!instant) return '';
-
-  if (tzPref === 'ET') {
-    return new Intl.DateTimeFormat('en-US', {
-      timeZone: 'America/New_York',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-      timeZoneName: 'short',
-    }).format(instant);
-  }
-
-  return instant.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-};
-
 const getOriginalGameDateKey = (game: GameRecord, tzPref: TzPref) => {
   if (game.scheduled_at && DATE_ONLY_RE.test(game.scheduled_at) && !game.scheduled_time) {
     return game.scheduled_at;
@@ -517,7 +489,7 @@ const ScheduleWatchModal = ({
         />
         {scheduleDateInvalid && (
           <p className={styles.scheduleModalError}>
-            Choose a watch date after the game's scheduled date.
+            Choose a watch date after the game&apos;s scheduled date.
           </p>
         )}
       </div>
@@ -1111,7 +1083,7 @@ const UserGames = () => {
     setDragGameId(null);
   };
 
-  const handleCalendarDragOver = (_dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+  const handleCalendarDragOver = (event: DragEvent<HTMLDivElement>) => {
     const draggedId = dragGameId || event.dataTransfer.getData('text/user-game-id');
     if (!draggedId) return;
     event.preventDefault();
@@ -1339,22 +1311,19 @@ const UserGames = () => {
             )}
           />
         </div>
-      ) : isLoading ? (
-        <div className={styles.scheduleContentBlock}>
-          <ScheduleCalendarLoading month={calendarMonth} />
-        </div>
       ) : (
         <div className={styles.scheduleContentBlock}>
           <ScheduleCalendarCard>
             <MonthCalendar
               ref={calendarGridRef}
               month={calendarMonth}
+              loading={isLoading}
               getDayLabelSuffix={({ dateKey }) => (
                 <ScheduleCalendarDayCount count={gamesByCalendarDate.get(dateKey)?.length ?? 0} />
               )}
               getDayProps={({ dateKey }) => ({
                 'data-date-key': dateKey,
-                onDragOver: handleCalendarDragOver(dateKey),
+                onDragOver: handleCalendarDragOver,
                 onDrop: handleCalendarDrop(dateKey),
               })}
               renderDayContent={({ dateKey }) => {

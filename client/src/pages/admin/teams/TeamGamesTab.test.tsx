@@ -420,8 +420,32 @@ describe('TeamGamesTab', () => {
     );
   });
 
+  it('uses the reusable calendar loading grid in calendar view', () => {
+    mockUseGames.mockReturnValue({
+      games: [],
+      loading: true,
+      createGame: jest.fn(),
+      updateGame: jest.fn(),
+    });
+
+    renderTeamGamesTab();
+
+    expect(screen.getAllByLabelText(/^Loading (calendar slot|games for)/).length).toBeGreaterThan(
+      0,
+    );
+    expect(screen.queryByText('Select a season to view games.')).not.toBeInTheDocument();
+  });
+
   it('adds the winner point for shootout games in list view', async () => {
     const user = userEvent.setup();
+    mockUseGames.mockReturnValue({
+      games: games.map((game) =>
+        game.id === 'game-shootout' ? { ...game, scheduled_at: dateOffsetIso(0) } : game,
+      ),
+      loading: false,
+      createGame: jest.fn(),
+      updateGame: jest.fn(),
+    });
 
     renderTeamGamesTab();
 
@@ -513,8 +537,8 @@ describe('TeamGamesTab', () => {
     expect(capturedNode.textContent).toContain(
       new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(currentDate),
     );
-    expect(capturedNode).toHaveStyle({ width: '1176px' });
-    expect(capturedNode.querySelector('.calendarGrid')).not.toBeNull();
+    expect(capturedNode).toHaveStyle({ width: '1656px' });
+    expect(capturedNode.querySelector('.grid')).not.toBeNull();
     expect(createdAnchor?.download).toBe(
       `Home Team Game Schedule - ${new Intl.DateTimeFormat('en-US', {
         month: 'short',
@@ -574,7 +598,7 @@ describe('TeamGamesTab', () => {
     expect(
       screen.getByText(monthLabel(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))),
     ).toBeInTheDocument();
-    expect(container.querySelector('.calendarGrid')).not.toBeNull();
+    expect(container.querySelector('.grid')).not.toBeNull();
     expect(screen.queryByText('No games scheduled for this season.')).not.toBeInTheDocument();
   });
 });

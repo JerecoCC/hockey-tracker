@@ -457,7 +457,7 @@ describe('UserGames schedule views', () => {
 
     expect(document.querySelector(`.${scheduleLayoutStyles.calendarCard}`)).toBeInTheDocument();
     expect(
-      document.querySelectorAll(`.${scheduleLayoutStyles.calendarDaySkeleton}`).length,
+      screen.getAllByLabelText(/^Loading (calendar slot|games for)/).length,
     ).toBeGreaterThan(0);
   });
   it('shows team filtering with favorite teams first and uses dashboard cards in Week view', async () => {

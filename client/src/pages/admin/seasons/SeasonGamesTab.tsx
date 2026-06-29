@@ -14,7 +14,6 @@ import {
   ScheduleCalendarCard,
   ScheduleCalendarDayCount,
   ScheduleCalendarGameList,
-  ScheduleCalendarLoading,
   ScheduleFilters,
   ScheduleFilterSlot,
   ScheduleGamesActions,
@@ -1069,15 +1068,12 @@ const SeasonGamesTab = ({
           </>
         )}
 
-        {loading && view === 'calendar' ? (
-          <div className={styles.scheduleContentBlock}>
-            <ScheduleCalendarLoading month={calendarMonth} />
-          </div>
-        ) : view === 'calendar' ? (
+        {view === 'calendar' ? (
           <div className={styles.scheduleContentBlock}>
             <ScheduleCalendarCard>
               <MonthCalendar
                 month={calendarMonth}
+                loading={loading}
                 getDayLabelSuffix={({ dateKey }) => (
                   <ScheduleCalendarDayCount count={calendarGamesByDate.get(dateKey)?.length ?? 0} />
                 )}

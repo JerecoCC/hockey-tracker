@@ -351,20 +351,8 @@ export const ScheduleCalendarLoading = ({ month }: ScheduleCalendarLoadingProps)
   <ScheduleCalendarCard>
     <MonthCalendar
       month={month}
-      renderEmptyCellPlaceholder={({ index }) => (
-        <Skeleton
-          type="block"
-          className={styles.calendarDaySkeleton}
-          aria-label={`Loading calendar slot ${index + 1}`}
-        />
-      )}
-      renderDayPlaceholder={({ dateKey }) => (
-        <Skeleton
-          type="block"
-          className={styles.calendarDaySkeleton}
-          aria-label={`Loading games for ${dateKey}`}
-        />
-      )}
+      loading
+      loadingSkeletonClassName={styles.calendarDaySkeleton}
       renderDayContent={() => null}
     />
   </ScheduleCalendarCard>

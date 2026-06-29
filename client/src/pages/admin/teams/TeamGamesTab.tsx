@@ -505,7 +505,7 @@ const TeamGamesTab = ({
           </div>
         }
       >
-        {loading ? (
+        {loading && view === 'list' ? (
           <p className={seasonStyles.empty}>Loading…</p>
         ) : !seasonId ? (
           <p className={seasonStyles.empty}>Select a season to view games.</p>
@@ -540,6 +540,7 @@ const TeamGamesTab = ({
               <MonthCalendar
                 ref={calendarGridRef}
                 month={calendarMonth}
+                loading={loading}
                 getDayClassName={({ dateKey }) =>
                   gamesByDate.has(dateKey) ? styles.calendarDayGameCell : undefined
                 }

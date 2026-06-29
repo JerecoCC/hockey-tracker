@@ -1,6 +1,7 @@
 import { forwardRef, useLayoutEffect, useRef, useState } from 'react';
 import type { HTMLAttributes, ReactNode } from 'react';
 import Accordion from '@/components/Accordion/Accordion';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import styles from './MonthCalendar.module.scss';
 
 const DEFAULT_DAY_LABELS = [
@@ -40,6 +41,8 @@ interface Props {
   dayCellClassName?: string;
   dayNumberClassName?: string;
   dayBodyClassName?: string;
+  loading?: boolean;
+  loadingSkeletonClassName?: string;
   getDayClassName?: (args: MonthCalendarDayArgs) => string | undefined;
   getDayLabelSuffix?: (args: MonthCalendarDayArgs) => ReactNode;
   getDayHeaderRight?: (args: MonthCalendarDayArgs) => ReactNode;
@@ -155,6 +158,17 @@ const MonthCalendarDay = ({
   );
 };
 
+interface MonthCalendarLoadingSkeletonProps {
+  className?: string;
+}
+
+const MonthCalendarLoadingSkeleton = ({ className }: MonthCalendarLoadingSkeletonProps) => (
+  <Skeleton
+    type="block"
+    className={[styles.loadingSkeleton, className].filter(Boolean).join(' ')}
+  />
+);
+
 const MonthCalendar = forwardRef<HTMLDivElement, Props>(
   (
     {
@@ -167,6 +181,8 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
       dayCellClassName,
       dayNumberClassName,
       dayBodyClassName,
+      loading = false,
+      loadingSkeletonClassName,
       getDayClassName,
       getDayLabelSuffix,
       getDayHeaderRight,
@@ -188,6 +204,7 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
       <div
         ref={ref}
         className={[styles.grid, gridClassName, className].filter(Boolean).join(' ')}
+        aria-busy={loading || undefined}
       >
         {dayLabels.map((label) => (
           <div
@@ -199,6 +216,20 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
         ))}
         {cells.map((day, index) => {
           if (day === null) {
+            if (loading) {
+              return (
+                <div
+                  key={`blank-${index}`}
+                  className={[styles.dayCell, styles.dayPlaceholderCell, emptyCellClassName]
+                    .filter(Boolean)
+                    .join(' ')}
+                  aria-label={`Loading calendar slot ${index + 1}`}
+                >
+                  <MonthCalendarLoadingSkeleton className={loadingSkeletonClassName} />
+                </div>
+              );
+            }
+
             if (renderEmptyCellPlaceholder) {
               return (
                 <div
@@ -221,6 +252,21 @@ const MonthCalendar = forwardRef<HTMLDivElement, Props>(
           }
 
           const args = { dateKey: monthDayKey(month, day), day };
+
+          if (loading) {
+            return (
+              <div
+                key={args.dateKey}
+                className={[styles.dayCell, styles.dayPlaceholderCell, dayCellClassName]
+                  .filter(Boolean)
+                  .join(' ')}
+                aria-label={`Loading games for ${args.dateKey}`}
+              >
+                <MonthCalendarLoadingSkeleton className={loadingSkeletonClassName} />
+              </div>
+            );
+          }
+
           const dayProps = getDayProps?.(args) ?? {};
           const { className: dayPropsClassName, ...rootProps } = dayProps;
 
