@@ -61,6 +61,26 @@ describe('StatsLeaderCard featured player', () => {
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 
+  it('renders featured stat info in a separate non-interactable card', () => {
+    const onSelectItem = jest.fn();
+    render(
+      <StatsLeaderCard
+        {...defaultProps}
+        onSelectItem={onSelectItem}
+      />,
+    );
+
+    const statCard = screen.getByText('Points').closest('.statCard');
+    expect(statCard).toBeInTheDocument();
+    expect(statCard?.tagName).toBe('DIV');
+    expect(statCard?.closest('button')).toBeNull();
+    expect(statCard?.previousElementSibling).toHaveClass('previewDivider');
+
+    fireEvent.click(statCard as HTMLElement);
+
+    expect(onSelectItem).not.toHaveBeenCalled();
+  });
+
   it('renders a photo <img> when photo is set', () => {
     const withPhoto = [makePlayer({ player_id: 'p1', photo: 'https://example.com/player.jpg' })];
     const { container } = render(

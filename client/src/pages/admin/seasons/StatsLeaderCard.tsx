@@ -1,3 +1,4 @@
+import Card from '@/components/Card/Card';
 import ListItem from '@/components/ListItem/ListItem';
 import PlayerCard from '@/components/PlayerCard/PlayerCard';
 import styles from './StatsLeaderCard.module.scss';
@@ -50,25 +51,36 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
 
   return (
     <div className={styles.layout}>
-      <PlayerCard
-        name={featuredName}
-        photo={featured.photo}
-        initials={featuredInitials}
-        teamLogo={featured.team_logo}
-        teamCode={featured.team_code}
-        teamPrimaryColor={featured.team_primary_color}
-        teamTextColor={featured.team_text_color}
-        jerseyNumber={featured.jersey_number}
-        position={featured.position}
-        onClick={onSelectItem ? () => onSelectItem(featured) : undefined}
-        className={styles.featuredCard}
-        footer={
+      <div className={styles.previewColumn}>
+        <PlayerCard
+          name={featuredName}
+          photo={featured.photo}
+          initials={featuredInitials}
+          teamLogo={featured.team_logo}
+          teamCode={featured.team_code}
+          teamPrimaryColor={featured.team_primary_color}
+          teamTextColor={featured.team_text_color}
+          jerseyNumber={featured.jersey_number}
+          position={featured.position}
+          onClick={onSelectItem ? () => onSelectItem(featured) : undefined}
+          className={styles.featuredCard}
+        />
+
+        <div
+          className={styles.previewDivider}
+          aria-hidden="true"
+        />
+
+        <Card
+          variant="border"
+          className={styles.statCard}
+        >
           <div className={styles.statBlock}>
             <span className={styles.statLabel}>{statLabel}</span>
             <span className={styles.statValue}>{getFeaturedStat(featured)}</span>
           </div>
-        }
-      />
+        </Card>
+      </div>
 
       <ul className={styles.leaderList}>
         {items.map((item, i) => {

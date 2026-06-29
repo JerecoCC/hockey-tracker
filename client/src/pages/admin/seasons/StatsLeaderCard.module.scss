@@ -12,20 +12,40 @@
   }
 }
 
+.previewColumn {
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  min-width: 0;
+}
+
 .featuredCard {
-  --player-card-min-height: 252px;
-  --player-card-mobile-min-height: 220px;
+  --player-card-min-height: 172px;
+  --player-card-mobile-min-height: 180px;
+}
+
+.previewDivider {
+  width: 100%;
+  height: 1px;
+  flex-shrink: 0;
+  background: $border;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 74px;
+  padding: $space-md;
+  text-align: center;
 }
 
 .statBlock {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 2px;
+  gap: $space-xs;
   width: 100%;
-  margin-top: $space-xs;
-  padding-top: $space-sm;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stat {
