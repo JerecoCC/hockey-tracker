@@ -2,6 +2,8 @@
 @use "styles/mixins" as *;
 
 .weekNav {
+  --filter-field-background: #{$bg-filter-field};
+
   display: inline-flex;
   align-items: center;
   gap: $space-xs;

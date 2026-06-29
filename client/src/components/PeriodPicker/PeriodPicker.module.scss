@@ -12,7 +12,7 @@
   gap: $space-xs;
   border: 1px solid $border;
   border-radius: $radius-md;
-  background: $bg-input;
+  background: var(--filter-field-background, #{$bg-input});
   color: $text-body;
   transition:
     border-color $transition-base,
