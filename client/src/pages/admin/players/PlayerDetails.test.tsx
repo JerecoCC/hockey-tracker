@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import axios from 'axios';
 import usePlayerDetails, {
   usePlayerAwards,
   usePlayerCurrentSeasonStats,
@@ -20,7 +21,9 @@ import {
 import PlayerDetails, { collapseSameTeamStints } from './PlayerDetails';
 
 const mockNavigate = jest.fn();
+const mockedAxios = axios as jest.Mocked<typeof axios>;
 
+jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({
   useQueryClient: () => ({ invalidateQueries: jest.fn() }),
 }));
@@ -55,12 +58,28 @@ jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
 jest.mock(
   '@/components/Button/Button',
   () =>
-    ({ children, onClick, type = 'button', disabled, icon, tooltip }: any) => (
+    ({
+      children,
+      onClick,
+      type = 'button',
+      disabled,
+      icon,
+      tooltip,
+      variant: _variant,
+      intent: _intent,
+      size: _size,
+      iconSize: _iconSize,
+      iconHeight: _iconHeight,
+      tooltipClassName: _tooltipClassName,
+      tooltipIntent: _tooltipIntent,
+      ...rest
+    }: any) => (
       <button
         type={type}
         onClick={onClick}
         disabled={disabled}
         aria-label={tooltip ?? (icon === 'edit' ? 'Edit' : icon)}
+        {...rest}
       >
         {children}
       </button>
@@ -87,7 +106,9 @@ jest.mock('@/components/Tabs/Tabs', () => ({ tabs, activeIndex = 0 }: any) => (
 ));
 jest.mock('@/components/Tooltip/Tooltip', () => ({ children }: any) => <>{children}</>);
 jest.mock('../teams/TeamPlayerEditModal', () => () => null);
-jest.mock('../teams/MovePlayerModal', () => () => null);
+jest.mock('../teams/MovePlayerModal', () => ({ open }: any) =>
+  open ? <div>Move Player Modal</div> : null,
+);
 jest.mock('./StintEditModal', () => ({
   __esModule: true,
   default: () => null,
@@ -139,6 +160,8 @@ beforeAll(() => {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockedAxios.patch.mockReset();
+  (mockedAxios.isAxiosError as unknown as jest.Mock).mockReturnValue(false);
   document.title = 'Hockey Tracker';
   mockUseTabState.mockReturnValue([0, jest.fn()]);
   mockUsePlayerRouteLookup.mockReturnValue({
@@ -259,6 +282,80 @@ describe('PlayerDetails info tab', () => {
     expect(container.querySelector('.infoSummaryGrid')).toBeInTheDocument();
     expect(container.querySelector('.playerInfoCard')).toBeInTheDocument();
     expect(container.querySelector('.currentSeasonCards')).toBeInTheDocument();
+  });
+
+  it('shows the active or retired tag beside the player heading', () => {
+    const { rerender } = render(<PlayerDetails />);
+
+    expect(screen.getByRole('heading', { name: 'John Smith' })).toBeInTheDocument();
+    expect(screen.getByText('Active')).toBeInTheDocument();
+
+    mockUsePlayerDetails.mockReturnValue({
+      player: {
+        id: 'player-1',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: '1997-01-13',
+        birth_city: 'Edmonton',
+        birth_country: 'CAN',
+        height_cm: 185,
+        weight_lbs: 195,
+        position: 'C',
+        shoots: 'L',
+        is_active: false,
+        created_at: '2024-01-01T00:00:00Z',
+      },
+      stats: [],
+      loading: false,
+    });
+
+    rerender(<PlayerDetails />);
+
+    expect(screen.getByText('Retired')).toBeInTheDocument();
+    expect(screen.queryByText('Inactive')).not.toBeInTheDocument();
+  });
+
+  it('moves the move player action into the more actions menu', async () => {
+    const user = userEvent.setup();
+    const { container } = render(<PlayerDetails />);
+
+    const heroActions = container.querySelector('.heroActions') as HTMLElement;
+    const actionButtons = within(heroActions).getAllByRole('button');
+    expect(actionButtons[0]).toHaveAccessibleName('Edit player');
+    expect(actionButtons[1]).toHaveAccessibleName('More actions');
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Move Player' }));
+
+    expect(screen.getByText('Move Player Modal')).toBeInTheDocument();
+  });
+
+  it('retires a player from the more actions menu', async () => {
+    const user = userEvent.setup();
+    mockedAxios.patch.mockResolvedValueOnce({ data: {} });
+
+    render(<PlayerDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'More actions' }));
+    await user.click(screen.getByRole('button', { name: 'Retire Player' }));
+
+    const retirementDate = screen.getByRole('textbox', { name: /Retirement Date/ });
+    for (const key of ['0', '6', '3', '0', '2', '0', '2', '5']) {
+      fireEvent.keyDown(retirementDate, { key });
+    }
+
+    const submit = screen.getByRole('button', { name: 'Retire Player' });
+    await waitFor(() => expect(submit).not.toBeDisabled());
+    await user.click(submit);
+
+    await waitFor(() => {
+      expect(mockedAxios.patch).toHaveBeenCalledWith(
+        '/api/admin/players/player-1/retire',
+        { retirement_date: '2025-06-30' },
+        expect.objectContaining({ headers: expect.any(Object) }),
+      );
+    });
   });
 
   it('opens the player info edit modal from the info card action', async () => {

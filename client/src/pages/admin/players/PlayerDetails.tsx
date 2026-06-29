@@ -1,18 +1,23 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
+import Field from '@/components/Field/Field';
 import Section from '@/components/Section/Section';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
 import ListItem from '@/components/ListItem/ListItem';
+import Modal from '@/components/Modal/Modal';
+import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import Table, { type Column } from '@/components/Table/Table';
 import Tabs from '@/components/Tabs/Tabs';
+import Tag from '@/components/Tag/Tag';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
@@ -344,6 +349,8 @@ const PlayerDetailsPage = () => {
   const [changingPhotoStint, setChangingPhotoStint] = useState<PlayerStintRecord | null>(null);
   const [photoPreviewOpen, setPhotoPreviewOpen] = useState(false);
   const [movePlayerOpen, setMovePlayerOpen] = useState(false);
+  const [retirePlayerOpen, setRetirePlayerOpen] = useState(false);
+  const [retirePlayerBusy, setRetirePlayerBusy] = useState(false);
   const [gameLogSeasonId, setGameLogSeasonId] = useState('all');
   const [gameLogType, setGameLogType] = useState('all');
   const [gameLogPage, setGameLogPage] = useState(1);
@@ -445,6 +452,43 @@ const PlayerDetailsPage = () => {
           : 'Failed to move player';
       toast.error(message);
       return false;
+    }
+  };
+
+  const retirePlayer = async (retirementDate: string): Promise<boolean> => {
+    if (!id) return false;
+    setRetirePlayerBusy(true);
+    try {
+      await axios.patch(
+        `${API}/admin/players/${id}/retire`,
+        { retirement_date: retirementDate },
+        { headers: authHeaders() },
+      );
+
+      toast.success('Player retired successfully!');
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['player', id] }),
+        queryClient.invalidateQueries({ queryKey: ['player-trade-history', id] }),
+        queryClient.invalidateQueries({ queryKey: ['players'] }),
+        queryClient.invalidateQueries({ queryKey: ['teams', teamId] }),
+        queryClient.invalidateQueries({ queryKey: ['game-roster'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-lineup'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goalie-stats'] }),
+        queryClient.invalidateQueries({ queryKey: ['game-goals'] }),
+        queryClient.invalidateQueries({ queryKey: ['shootout-attempts'] }),
+      ]);
+
+      return true;
+    } catch (err) {
+      const message =
+        axios.isAxiosError(err) && typeof err.response?.data?.error === 'string'
+          ? err.response.data.error
+          : 'Failed to retire player';
+      toast.error(message);
+      return false;
+    } finally {
+      setRetirePlayerBusy(false);
     }
   };
 
@@ -575,6 +619,27 @@ const PlayerDetailsPage = () => {
     latestStint?.season_id &&
     !latestStint?.end_date
   );
+  const playerActionItems = [
+    ...(canMovePlayer
+      ? [
+          {
+            label: 'Move Player',
+            icon: 'swap_horiz',
+            onClick: () => setMovePlayerOpen(true),
+          },
+        ]
+      : []),
+    ...(player.is_active
+      ? [
+          {
+            label: 'Retire Player',
+            icon: 'person_remove',
+            intent: 'danger' as const,
+            onClick: () => setRetirePlayerOpen(true),
+          },
+        ]
+      : []),
+  ];
   const positionLabel = effectivePosition
     ? (POSITION_LABELS[effectivePosition] ?? effectivePosition)
     : null;
@@ -952,7 +1017,13 @@ const PlayerDetailsPage = () => {
             />
           )}
           <div className={styles.heroInfo}>
-            <h2 className={styles.heroName}>{fullName}</h2>
+            <div className={styles.heroTitleRow}>
+              <h2 className={styles.heroName}>{fullName}</h2>
+              <Tag
+                label={player.is_active ? 'Active' : 'Retired'}
+                intent={player.is_active ? 'success' : 'neutral'}
+              />
+            </div>
             <div className={styles.heroMeta}>
               {latestStint?.team.name && (
                 <span className={styles.heroTeamMeta}>
@@ -971,22 +1042,7 @@ const PlayerDetailsPage = () => {
               {positionLabel && <span>{positionLabel}</span>}
             </div>
           </div>
-          <span
-            className={`${styles.statusBadge} ${player.is_active ? styles.statusActive : styles.statusInactive}`}
-          >
-            {player.is_active ? 'Active' : 'Inactive'}
-          </span>
           <div className={styles.heroActions}>
-            {canMovePlayer && (
-              <Button
-                variant="outlined"
-                intent="neutral"
-                icon="swap_horiz"
-                size="sm"
-                tooltip="Move player"
-                onClick={() => setMovePlayerOpen(true)}
-              />
-            )}
             <Button
               variant="outlined"
               intent="neutral"
@@ -995,6 +1051,13 @@ const PlayerDetailsPage = () => {
               tooltip="Edit player"
               onClick={() => setEditPlayerOpen(true)}
             />
+            {playerActionItems.length > 0 && (
+              <MoreActionsMenu
+                items={playerActionItems}
+                size="sm"
+                variant="outlined"
+              />
+            )}
           </div>
         </div>
       </Card>
@@ -1141,6 +1204,14 @@ const PlayerDetailsPage = () => {
         movePlayer={movePlayer}
       />
 
+      <RetirePlayerModal
+        open={retirePlayerOpen}
+        playerName={fullName}
+        busy={retirePlayerBusy}
+        onClose={() => setRetirePlayerOpen(false)}
+        onConfirm={retirePlayer}
+      />
+
       <PlayerInfoEditModal
         open={editPlayerInfoOpen}
         player={player}
@@ -1201,6 +1272,79 @@ const PlayerDetailsPage = () => {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 // ── Helper: label/value cell ────────────────────────────────────────────────
+const RetirePlayerModal = ({
+  open,
+  playerName,
+  busy,
+  onClose,
+  onConfirm,
+}: {
+  open: boolean;
+  playerName: string;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (retirementDate: string) => Promise<boolean>;
+}) => {
+  const { control, handleSubmit, reset, watch } = useForm<{ retirement_date: string }>({
+    defaultValues: { retirement_date: '' },
+  });
+  const retirementDate = watch('retirement_date');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    reset({ retirement_date: '' });
+    setIsSubmitting(false);
+  }, [open, reset]);
+
+  const handleClose = () => {
+    reset({ retirement_date: '' });
+    onClose();
+  };
+
+  const onSubmit = handleSubmit(async ({ retirement_date }) => {
+    if (!retirement_date) return;
+
+    setIsSubmitting(true);
+    const ok = await onConfirm(retirement_date);
+    setIsSubmitting(false);
+    if (ok) handleClose();
+  });
+
+  return (
+    <Modal
+      open={open}
+      title="Retire Player"
+      onClose={handleClose}
+      confirmLabel={isSubmitting || busy ? 'Retiring...' : 'Retire Player'}
+      confirmForm="retire-player-form"
+      confirmIntent="danger"
+      confirmDisabled={isSubmitting || busy || !retirementDate}
+      busy={isSubmitting || busy}
+    >
+      <form
+        id="retire-player-form"
+        className={styles.retireForm}
+        onSubmit={onSubmit}
+      >
+        <p className={styles.retireCopy}>
+          This will mark {playerName} as retired and close their latest active team stint.
+        </p>
+        <Field
+          label="Retirement Date"
+          type="datepicker"
+          control={control}
+          name="retirement_date"
+          rules={{ required: 'Retirement date is required' }}
+          placeholder="Select retirement date..."
+          required
+          autoFocus
+        />
+      </form>
+    </Modal>
+  );
+};
+
 const InfoCell = ({ label, value }: { label: string; value: string | null | undefined }) => (
   <div className={styles.infoCell}>
     <span className={styles.infoCellLabel}>{label}</span>

@@ -73,11 +73,21 @@
     gap: $space-xs;
   }
 
+  &TitleRow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: $space-sm;
+    min-width: 0;
+  }
+
   &Name {
+    min-width: 0;
     font-size: $font-3xl;
     font-weight: 700;
     color: $text-bright;
     margin: 0;
+    overflow-wrap: anywhere;
   }
 
   &Meta {
@@ -103,33 +113,25 @@
   gap: $space-xs;
 }
 
-.status {
-  &Badge {
-    flex-shrink: 0;
-    padding: $space-xs $space-md;
-    border-radius: $radius-pill;
-    font-size: $font-xs;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  &Active {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
-  }
-
-  &Inactive {
-    background: rgba(100, 116, 139, 0.15);
-    color: $text-dim;
-  }
-}
-
 .heroActions {
   display: flex;
   align-items: center;
   gap: $space-sm;
   flex-shrink: 0;
+}
+
+.retire {
+  &Form {
+    display: flex;
+    flex-direction: column;
+    gap: $space-md;
+  }
+
+  &Copy {
+    margin: 0;
+    color: $text-body;
+    line-height: 1.45;
+  }
 }
 
 // ── Info grid ─────────────────────────────────────────────────────────────
