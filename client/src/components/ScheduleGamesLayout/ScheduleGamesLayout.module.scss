@@ -115,9 +115,7 @@
   }
 
   &CardStuck {
-    width: calc(
-      100% + var(--week-summary-main-inline-padding) + var(--week-summary-main-inline-padding)
-    );
+    width: calc(100% + var(--week-summary-main-inline-padding) + var(--week-summary-main-inline-padding));
     margin-inline: var(--week-summary-main-inline-padding-offset);
     border-radius: 0 0 $radius-lg $radius-lg !important;
     border-color: transparent !important;
@@ -228,10 +226,6 @@
 }
 
 .calendar {
-  &Card {
-    margin-top: $space-md;
-  }
-
   &Wrap {
     display: flex;
     flex-direction: column;

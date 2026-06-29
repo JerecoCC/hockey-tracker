@@ -8,7 +8,6 @@ import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import Section from '@/components/Section/Section';
 import CalendarGameListItem from '@/components/CalendarGameListItem/CalendarGameListItem';
 import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
-import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
 import {
@@ -398,7 +397,7 @@ const SeasonGamesTab = ({
     sessionStorage.setItem(teamKey, JSON.stringify(teamFilter));
   }, [teamKey, teamFilter]);
 
-  const { games, loading, busy, createGame, updateGame, deleteGame, bulkCreateGames } = useGames({
+  const { games, loading, createGame, updateGame, bulkCreateGames } = useGames({
     seasonId,
     ...(view === 'calendar'
       ? { month: toMonthPickerValue(calendarMonth) }
@@ -483,7 +482,6 @@ const SeasonGamesTab = ({
   const [formDate, setFormDate] = useState<string | null>(null);
   const [bulkDate, setBulkDate] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<GameRecord | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<GameRecord | null>(null);
   const [autofillDay, setAutofillDay] = useState<string | null>(null);
   const [autofillingGameIds, setAutofillingGameIds] = useState<Set<string>>(() => new Set());
   const todayKey = dateToISO(toDay(new Date()));
@@ -594,12 +592,6 @@ const SeasonGamesTab = ({
   const handleAdd = (date?: string) => {
     setEditTarget(null);
     setFormDate(date ?? null);
-    setFormOpen(true);
-  };
-
-  const handleEdit = (game: GameRecord) => {
-    setEditTarget(game);
-    setFormDate(null);
     setFormOpen(true);
   };
 
@@ -908,55 +900,6 @@ const SeasonGamesTab = ({
     </div>
   );
 
-  const renderGameCardActions = (game: GameRecord) => (
-    <>
-      <Button
-        type="button"
-        variant="outlined"
-        intent="neutral"
-        icon="open_in_new"
-        size="sm"
-        tooltip="View game"
-        onClick={(event) => {
-          event.stopPropagation();
-          openGame(game);
-        }}
-      />
-      {!isEnded && (
-        <>
-          <Button
-            type="button"
-            variant="outlined"
-            intent="neutral"
-            icon="edit"
-            size="sm"
-            tooltip="Edit game"
-            disabled={busy === game.id}
-            onClick={(event) => {
-              event.stopPropagation();
-              handleEdit(game);
-            }}
-          />
-          {game.status === 'scheduled' && (
-            <Button
-              type="button"
-              variant="outlined"
-              intent="danger"
-              icon="delete"
-              size="sm"
-              tooltip="Delete game"
-              disabled={busy === game.id}
-              onClick={(event) => {
-                event.stopPropagation();
-                setConfirmDelete(game);
-              }}
-            />
-          )}
-        </>
-      )}
-    </>
-  );
-
   const renderGameCard = (game: GameRecord) => {
     if (autofillingGameIds.has(game.id)) return renderWeekGameAutofillSkeleton(game);
 
@@ -971,7 +914,6 @@ const SeasonGamesTab = ({
         showScore={shouldShowGameScore(game)}
         showTypeIndicator
         onOpen={() => openGame(game)}
-        actions={renderGameCardActions(game)}
       />
     );
   };
@@ -1200,24 +1142,6 @@ const SeasonGamesTab = ({
         onClose={handleFormClose}
       />
 
-      <ConfirmModal
-        open={confirmDelete !== null}
-        title="Delete Game"
-        body={
-          confirmDelete
-            ? `Delete ${confirmDelete.away_team.code} @ ${confirmDelete.home_team.code}? This cannot be undone.`
-            : ''
-        }
-        confirmLabel="Delete"
-        confirmIcon="delete"
-        variant="danger"
-        busy={busy === confirmDelete?.id}
-        onCancel={() => setConfirmDelete(null)}
-        onConfirm={async () => {
-          if (confirmDelete) await deleteGame(confirmDelete.id);
-          setConfirmDelete(null);
-        }}
-      />
     </>
   );
 };
