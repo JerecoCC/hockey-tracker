@@ -33,8 +33,7 @@ const defaultProps = {
 
 beforeEach(() => jest.clearAllMocks());
 
-// ── Empty state ─────────────────────────────────────────────────────────
-describe('StatsLeaderCard – empty', () => {
+describe('StatsLeaderCard empty', () => {
   it('returns null when items is empty', () => {
     const { container } = render(
       <StatsLeaderCard
@@ -46,12 +45,10 @@ describe('StatsLeaderCard – empty', () => {
   });
 });
 
-// ── Featured player ─────────────────────────────────────────────────────
-describe('StatsLeaderCard – featured player', () => {
+describe('StatsLeaderCard featured player', () => {
   it('renders the featured player first name and last name', () => {
     render(<StatsLeaderCard {...defaultProps} />);
-    // The name appears in the list row as "John Smith" (single text node)
-    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(screen.getAllByText('John Smith').length).toBeGreaterThanOrEqual(1);
   });
 
   it('renders the stat label', () => {
@@ -72,13 +69,11 @@ describe('StatsLeaderCard – featured player', () => {
         items={withPhoto}
       />,
     );
-    // alt="" gives the img role "presentation"; use DOM query instead
     expect(container.querySelector('img.img')).toBeInTheDocument();
   });
 
   it('renders initials placeholder when photo is null', () => {
     render(<StatsLeaderCard {...defaultProps} />);
-    // Initials span contains "J" + "S"
     expect(screen.getByText('JS')).toBeInTheDocument();
   });
 
@@ -89,12 +84,17 @@ describe('StatsLeaderCard – featured player', () => {
 
   it('renders jersey number in meta', () => {
     render(<StatsLeaderCard {...defaultProps} />);
-    expect(screen.getByText('• #19')).toBeInTheDocument();
+    expect(screen.getByText('#19')).toBeInTheDocument();
   });
 
   it('renders position in meta', () => {
     render(<StatsLeaderCard {...defaultProps} />);
-    expect(screen.getByText('• C')).toBeInTheDocument();
+    expect(screen.getByText('Center')).toBeInTheDocument();
+  });
+
+  it('dot-separates player info in the featured subtitle', () => {
+    render(<StatsLeaderCard {...defaultProps} />);
+    expect(screen.getAllByText('•').length).toBe(2);
   });
 
   it('shows the second player as featured when featuredIdx=1', () => {
@@ -104,17 +104,15 @@ describe('StatsLeaderCard – featured player', () => {
         featuredIdx={1}
       />,
     );
-    // "Jane Doe" appears in the list row; the featured stat value (42) is still shown
-    expect(screen.getByText('Jane Doe')).toBeInTheDocument();
+    expect(screen.getAllByText('Jane Doe').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('42')).toBeInTheDocument();
   });
 });
 
-// ── Ranked list ─────────────────────────────────────────────────────────
-describe('StatsLeaderCard – ranked list', () => {
+describe('StatsLeaderCard ranked list', () => {
   it('renders all player names in the list', () => {
     render(<StatsLeaderCard {...defaultProps} />);
-    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(screen.getAllByText('John Smith').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.getByText('Bob Lee')).toBeInTheDocument();
   });
@@ -144,17 +142,13 @@ describe('StatsLeaderCard – ranked list', () => {
         onHover={onHover}
       />,
     );
-    // Target the ranked-list entry divs directly (they have onMouseEnter).
-    // CSS modules return the property name unchanged in the test env (identity-obj-proxy),
-    // so styles.entry === "entry". Use :not to exclude entryName/entryStat spans.
     const entryDivs = container.querySelectorAll('div.entry');
-    // entryDivs[0]=John Smith row, entryDivs[1]=Jane Doe row
     fireEvent.mouseEnter(entryDivs[1]);
     expect(onHover).toHaveBeenCalledWith(1);
   });
 });
 
-describe('StatsLeaderCard – selectable items', () => {
+describe('StatsLeaderCard selectable items', () => {
   it('calls onSelectItem when the featured player is clicked', () => {
     const onSelectItem = jest.fn();
     render(
@@ -184,8 +178,7 @@ describe('StatsLeaderCard – selectable items', () => {
   });
 });
 
-// ── All Leaders ──────────────────────────────────────────────────────────
-describe('StatsLeaderCard – All Leaders button', () => {
+describe('StatsLeaderCard All Leaders', () => {
   it('renders "All Leaders" button when onAllLeaders is provided', () => {
     render(
       <StatsLeaderCard

@@ -695,6 +695,8 @@
     }
 
     .awardWinnerCard {
+      --player-card-max-height: none;
+
       height: 100%;
       min-height: 100%;
       max-height: none;
@@ -738,6 +740,9 @@
   }
 
   &WinnerCard {
+    --player-card-min-height: var(--award-winner-card-height);
+    --player-card-max-height: var(--award-winner-card-height);
+
     position: relative;
     display: flex;
     flex-direction: column;
@@ -766,43 +771,6 @@
     justify-content: center;
   }
 
-  &WinnerCardClickable {
-    cursor: pointer;
-    transition:
-      background $transition-fast,
-      border-color $transition-fast;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.04);
-      border-color: rgba($accent, 0.5);
-    }
-  }
-
-  &WinnerCardLink {
-    position: absolute;
-    inset: 0;
-    z-index: 1;
-    border-radius: inherit;
-  }
-
-  &WinnerImageWrap {
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 112px;
-    height: 112px;
-  }
-
-  &WinnerCardsMultiple &WinnerImageWrap {
-    width: 72px;
-    height: 72px;
-  }
-
-  &WinnerTeamLogo {
-    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
-  }
-
   &WinnerSkeleton {
     pointer-events: none;
   }
@@ -813,34 +781,6 @@
     align-items: center;
     gap: $space-xs;
     width: 100%;
-  }
-
-  &WinnerInfo {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    width: 100%;
-    min-width: 0;
-
-    strong {
-      color: $text-bright;
-      font-size: $font-sm;
-      line-height: 1.25;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-
-    span,
-    em {
-      color: $text-dim;
-      font-size: $font-xs;
-      font-style: normal;
-      line-height: 1.25;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
   }
 
   &PlayerList {
@@ -928,8 +868,9 @@
   }
 
   &PlayerListItem {
+    --player-card-list-min-height: var(--award-player-row-height);
+
     flex: 0 0 min(260px, 82vw);
-    background: rgba(255, 255, 255, 0.02);
   }
 
   &PlayerListScrollerColumn &PlayerListItem {
@@ -949,29 +890,6 @@
     font-style: italic;
     line-height: 1.35;
     text-align: center;
-  }
-
-  &RecipientMeta {
-    display: inline-flex;
-    align-items: center;
-    gap: $space-xs;
-    min-width: 0;
-    color: $text-dim;
-    font-size: $font-xs;
-    line-height: 1.25;
-    white-space: nowrap;
-  }
-
-  &WinnerMeta {
-    justify-content: center;
-    width: 100%;
-  }
-
-  &RecipientMetaTeam {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    min-width: 0;
   }
 
   &TeamSelectionForm {

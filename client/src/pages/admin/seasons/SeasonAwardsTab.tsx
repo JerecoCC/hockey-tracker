@@ -1,20 +1,16 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Section from '@/components/Section/Section';
 import Field from '@/components/Field/Field';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
-import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Select, { type SelectOption } from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag from '@/components/Tag/Tag';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { usePlayoffSeries, type PlayoffSeriesRecord } from '@/hooks/useGames';
 import useSeasonAwards, {
   type AwardRecipientType,
@@ -36,16 +32,8 @@ import {
   getAwardSelectionSource,
   getAwardWinnerMode,
 } from '@/lib/awardDefinitions';
+import PlayerCard, { formatPlayerPosition } from '@/components/PlayerCard/PlayerCard';
 import styles from './SeasonDetails.module.scss';
-
-const POSITION_LABELS: Record<string, string> = {
-  F: 'Forward',
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  D: 'Defense',
-  G: 'Goalie',
-};
 
 const STAT_LABELS: Record<string, string> = {
   points: 'Player Points',
@@ -465,7 +453,7 @@ const SeasonAwardsTab = ({
     player: SkaterStatRecord | GoalieStatRecord,
   ): WinnerChecklistOption => {
     const position = 'position' in player ? player.position : 'G';
-    const subtitle = position ? (POSITION_LABELS[position] ?? position) : undefined;
+    const subtitle = formatPlayerPosition(position) ?? undefined;
     const name = playerName(player);
 
     return {
@@ -502,7 +490,9 @@ const SeasonAwardsTab = ({
     if (!id) return null;
     const name = recipientName(recipient);
     const subtitle =
-      recipient.recipient_type === 'player' ? recipientPositionLabel(recipient) : undefined;
+      recipient.recipient_type === 'player'
+        ? (formatPlayerPosition(recipient.position) ?? undefined)
+        : undefined;
 
     return {
       id,
@@ -1504,51 +1494,21 @@ const recipientInitials = (recipient: SeasonAwardRecipient) => {
   return parts.length > 1 ? `${parts[0][0]}${parts[parts.length - 1][0]}` : name.slice(0, 2);
 };
 
-const recipientPositionLabel = (recipient: SeasonAwardRecipient) =>
-  recipient.position ? (POSITION_LABELS[recipient.position] ?? recipient.position) : undefined;
-
-const AwardRecipientMeta = ({
-  recipient,
-  className,
-}: {
-  recipient: SeasonAwardRecipient;
-  className?: string;
-}) => {
-  const textParts = [
-    recipient.jersey_number != null ? `#${recipient.jersey_number}` : null,
-    recipientPositionLabel(recipient),
-  ].filter(Boolean);
-  const hasTeam = !!recipient.team_code;
-
-  return (
-    <span className={[styles.awardRecipientMeta, className].filter(Boolean).join(' ')}>
-      {textParts.map((part, index) => (
-        <span key={part}>
-          {index > 0 && <span aria-hidden="true"> | </span>}
-          {part}
-        </span>
-      ))}
-      {hasTeam && (
-        <>
-          {textParts.length > 0 && <span aria-hidden="true">|</span>}
-          <span className={styles.awardRecipientMetaTeam}>
-            <TeamLogo
-              logo={recipient.team_logo}
-              code={recipient.team_code ?? 'T'}
-              primaryColor={recipient.team_primary_color}
-              textColor={recipient.team_text_color}
-              size={16}
-            />
-            <span>{recipient.team_code}</span>
-          </span>
-        </>
-      )}
-    </span>
-  );
-};
+const recipientPlayerCardProps = (recipient: SeasonAwardRecipient) => ({
+  kind: recipient.recipient_type,
+  name: recipientName(recipient),
+  photo: recipient.player_photo,
+  initials: recipientInitials(recipient),
+  teamLogo: recipient.team_logo,
+  teamCode: recipient.team_code,
+  teamPrimaryColor: recipient.team_primary_color,
+  teamTextColor: recipient.team_text_color,
+  jerseyNumber: recipient.recipient_type === 'player' ? recipient.jersey_number : null,
+  position: recipient.recipient_type === 'player' ? recipient.position : null,
+});
 
 const AwardWinnerList = ({ recipients, empty, subtitle, getRecipientHref }: WinnerListProps) => {
-  const cardImageSize = recipients.length > 1 ? 64 : 88;
+  const compactCards = recipients.length > 1;
 
   return (
     <ul
@@ -1564,60 +1524,17 @@ const AwardWinnerList = ({ recipients, empty, subtitle, getRecipientHref }: Winn
           <span className={styles.awardEmptyMessage}>{empty}</span>
         </li>
       ) : (
-        recipients.map((recipient) => {
-          const href = getRecipientHref(recipient);
-          return (
-            <li
-              key={recipient.id}
-              className={[
-                styles.awardWinnerCard,
-                href ? styles.awardWinnerCardClickable : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
-              {href && (
-                <Link
-                  to={href}
-                  className={styles.awardWinnerCardLink}
-                  aria-label={`View ${recipientName(recipient)}`}
-                />
-              )}
-              <div className={styles.awardWinnerImageWrap}>
-                {recipient.recipient_type === 'team' ? (
-                  <TeamLogo
-                    logo={recipient.team_logo}
-                    code={recipient.team_code ?? 'T'}
-                    primaryColor={recipient.team_primary_color}
-                    textColor={recipient.team_text_color}
-                    size={cardImageSize}
-                    className={styles.awardWinnerTeamLogo}
-                  />
-                ) : (
-                  <PlayerAvatar
-                    photo={recipient.player_photo}
-                    initials={recipientInitials(recipient)}
-                    primaryColor={recipient.team_primary_color ?? undefined}
-                    textColor={recipient.team_text_color ?? undefined}
-                    ringColor={recipient.team_primary_color ?? undefined}
-                    size={cardImageSize}
-                  />
-                )}
-              </div>
-              <div className={styles.awardWinnerInfo}>
-                <strong>{recipientName(recipient)}</strong>
-                {recipient.recipient_type === 'player' ? (
-                  <AwardRecipientMeta
-                    recipient={recipient}
-                    className={styles.awardWinnerMeta}
-                  />
-                ) : subtitle ? (
-                  <span>{subtitle}</span>
-                ) : null}
-              </div>
-            </li>
-          );
-        })
+        recipients.map((recipient) => (
+          <PlayerCard
+            key={recipient.id}
+            {...recipientPlayerCardProps(recipient)}
+            as="li"
+            subtitle={recipient.recipient_type === 'team' ? subtitle : undefined}
+            href={getRecipientHref(recipient)}
+            compact={compactCards}
+            className={styles.awardWinnerCard}
+          />
+        ))
       )}
     </ul>
   );
@@ -1683,34 +1600,14 @@ const AwardPlayerList = ({
         {recipients.map((recipient) => {
           const href = getRecipientHref(recipient);
           return (
-            <ListItem
+            <PlayerCard
               key={recipient.id}
-              imageNode={
-                recipient.recipient_type === 'team' ? (
-                  <TeamLogo
-                    logo={recipient.team_logo}
-                    code={recipient.team_code ?? 'T'}
-                    primaryColor={recipient.team_primary_color}
-                    textColor={recipient.team_text_color}
-                    size={48}
-                  />
-                ) : (
-                  <PlayerAvatar
-                    photo={recipient.player_photo}
-                    initials={recipientInitials(recipient)}
-                    primaryColor={recipient.team_primary_color}
-                    textColor={recipient.team_text_color}
-                    ringColor={recipient.team_primary_color}
-                    size={48}
-                  />
-                )
-              }
-              name={recipientName(recipient)}
+              {...recipientPlayerCardProps(recipient)}
+              as="li"
+              variant="list"
               href={href}
               className={styles.awardPlayerListItem}
-            >
-              <AwardRecipientMeta recipient={recipient} />
-            </ListItem>
+            />
           );
         })}
       </ul>

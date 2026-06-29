@@ -1,0 +1,164 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.card {
+  position: relative;
+  display: flex;
+  flex: 1 1 0;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: $space-sm;
+  min-width: 0;
+  min-height: var(--player-card-min-height, 252px);
+  max-height: var(--player-card-max-height, none);
+  box-sizing: border-box;
+  padding: $space-md;
+  border: 1px solid $border;
+  border-radius: $radius-md;
+  background: rgba(255, 255, 255, 0.02);
+  color: inherit;
+  overflow: hidden;
+  text-align: center;
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+
+  @media (max-width: 600px) {
+    min-height: var(--player-card-mobile-min-height, 220px);
+  }
+}
+
+button.card {
+  appearance: none;
+  width: 100%;
+  font: inherit;
+}
+
+.compact {
+  gap: $space-xs;
+  padding: $space-sm;
+
+  .imageWrap {
+    width: 72px;
+    height: 72px;
+  }
+}
+
+.list {
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: $space-md;
+  min-height: var(--player-card-list-min-height, 72px);
+  max-height: none;
+  padding: $space-sm $space-md;
+  text-align: left;
+
+  .imageWrap {
+    width: 48px;
+    height: 48px;
+    flex: 0 0 auto;
+  }
+
+  .info {
+    align-items: flex-start;
+    flex: 1 1 auto;
+  }
+
+  .meta {
+    justify-content: flex-start;
+  }
+}
+
+.clickable {
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba($accent, 0.5);
+  }
+
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 4px;
+  }
+}
+
+.cardLink {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+}
+
+.imageWrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 112px;
+  height: 112px;
+}
+
+.teamLogo {
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.35));
+}
+
+.info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+
+  strong {
+    max-width: 100%;
+    color: $text-bright;
+    font-size: $font-sm;
+    font-weight: 700;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.subtitle {
+  display: block;
+  max-width: 100%;
+  color: $text-dim;
+  font-size: $font-xs;
+  font-style: normal;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.meta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.metaItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.metaSeparator {
+  margin: 0 6px;
+}
+
+.metaTeam {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}

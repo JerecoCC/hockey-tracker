@@ -1,5 +1,4 @@
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import PlayerCard from '@/components/PlayerCard/PlayerCard';
 import styles from './StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
@@ -42,58 +41,31 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
   if (items.length === 0) return null;
 
   const featured = items[featuredIdx];
-  const featuredContent = (
-    <>
-      <PlayerAvatar
-        photo={featured.photo}
-        initials={`${featured.first_name.charAt(0)}${featured.last_name.charAt(0)}`}
-        primaryColor={featured.team_primary_color}
-        textColor={featured.team_text_color}
-        size={110}
-        className={styles.featuredAvatar}
-      />
-
-      <span className={styles.name}>
-        {featured.first_name}
-        <br />
-        {featured.last_name}
-      </span>
-
-      <div className={styles.meta}>
-        {featured.team_code && (
-          <TeamLogo
-            logo={featured.team_logo}
-            code={featured.team_code}
-            size={16}
-            shape="square"
-          />
-        )}
-        {featured.team_code && <span>{featured.team_code}</span>}
-        {featured.jersey_number != null && <span>• #{featured.jersey_number}</span>}
-        {featured.position && <span>• {featured.position}</span>}
-      </div>
-
-      <span className={styles.statLabel}>{statLabel}</span>
-      <span className={styles.statValue}>{getFeaturedStat(featured)}</span>
-    </>
-  );
+  const featuredName = `${featured.first_name} ${featured.last_name}`;
+  const featuredInitials = `${featured.first_name.charAt(0)}${featured.last_name.charAt(0)}`;
 
   return (
     <div className={styles.layout}>
-      {/* ── Featured player ── */}
-      {onSelectItem ? (
-        <button
-          type="button"
-          className={[styles.featured, styles.clickableCard].join(' ')}
-          onClick={() => onSelectItem(featured)}
-        >
-          {featuredContent}
-        </button>
-      ) : (
-        <div className={styles.featured}>{featuredContent}</div>
-      )}
+      <PlayerCard
+        name={featuredName}
+        photo={featured.photo}
+        initials={featuredInitials}
+        teamLogo={featured.team_logo}
+        teamCode={featured.team_code}
+        teamPrimaryColor={featured.team_primary_color}
+        teamTextColor={featured.team_text_color}
+        jerseyNumber={featured.jersey_number}
+        position={featured.position}
+        onClick={onSelectItem ? () => onSelectItem(featured) : undefined}
+        className={styles.featuredCard}
+        footer={
+          <div className={styles.statBlock}>
+            <span className={styles.statLabel}>{statLabel}</span>
+            <span className={styles.statValue}>{getFeaturedStat(featured)}</span>
+          </div>
+        }
+      />
 
-      {/* ── Ranked list ── */}
       <div>
         {items.map((item, i) => {
           const className = [

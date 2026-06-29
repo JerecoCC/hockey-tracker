@@ -102,6 +102,7 @@ describe('GET /api/admin/seasons/:id/stats', () => {
 
     expect(res.status).toBe(200);
     expect(sql).toHaveBeenCalledTimes(1);
+    expect(sql.mock.calls[0][0].join('')).toContain('best_player_photo');
     expect(res.body).toEqual({
       items: [
         {
@@ -115,6 +116,17 @@ describe('GET /api/admin/seasons/:id/stats', () => {
       page: 2,
       page_size: 10,
     });
+  });
+
+  it('uses the shared player photo helper for summary skater and goalie stats', async () => {
+    sql.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/admin/seasons/season-1/stats');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+    expect(sql.mock.calls[0][0].join('')).toContain('best_player_photo');
+    expect(sql.mock.calls[1][0].join('')).toContain('best_player_photo');
   });
 });
 

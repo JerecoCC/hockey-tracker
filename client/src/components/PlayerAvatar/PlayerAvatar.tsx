@@ -15,6 +15,10 @@ interface Props {
    * to be visible as a border ring.
    */
   ringColor?: string | null;
+  /** Width in pixels for the optional ring. Defaults to 2. */
+  ringWidth?: number;
+  /** Adds a dark outside separator around the colored ring for better contrast. */
+  ringContrast?: boolean;
 }
 
 /**
@@ -42,13 +46,22 @@ const PlayerAvatar = ({
   size,
   className,
   ringColor,
+  ringWidth = 2,
+  ringContrast = false,
 }: Props) => {
   const fontSize = Math.round(size * 0.38);
 
   // Both photos and initials get the same 20%-white tint over the team color.
   const background = primaryColor ? mixWithWhite(primaryColor, 0.2) : undefined;
 
-  const boxShadow = ringColor ? `0 0 0 2px ${ringColor}` : undefined;
+  const boxShadow = ringColor
+    ? ringContrast
+      ? [
+          `0 0 0 ${ringWidth}px ${ringColor}`,
+          `0 0 0 ${ringWidth + 1}px rgba(0, 0, 0, 0.45)`,
+        ].join(', ')
+      : `0 0 0 ${ringWidth}px ${ringColor}`
+    : undefined;
 
   const wrapperStyle = { width: size, height: size, background, boxShadow, '--avatar-size': size };
 

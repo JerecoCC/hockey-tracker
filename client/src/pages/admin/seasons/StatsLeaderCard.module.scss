@@ -1,94 +1,51 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
 
-// Two-column layout: featured panel + ranked list
 .layout {
   display: grid;
-  grid-template-columns: 200px 1fr;
+  grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
   gap: $space-xl;
-  align-items: start;
+  align-items: stretch;
 
   @media (max-width: 600px) {
     grid-template-columns: 1fr;
   }
 }
 
-// ── Featured panel ────────────────────────────────────────────────────────────
+.featuredCard {
+  --player-card-min-height: 252px;
+  --player-card-mobile-min-height: 220px;
+}
 
-.featured {
+.statBlock {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: $space-xs;
-}
-
-.clickableCard {
+  gap: 2px;
   width: 100%;
-  background: none;
-  border: none;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  text-align: inherit;
-  cursor: pointer;
-
-  &:focus-visible {
-    outline: 2px solid $accent;
-    outline-offset: 4px;
-    border-radius: $radius-md;
-  }
-}
-
-// Adds a border ring to the PlayerAvatar in the featured slot
-.featuredAvatar {
-  border: 2px solid $border;
-}
-
-.name {
-  font-size: $font-body;
-  font-weight: 700;
-  color: $text-bright;
-  text-align: center;
-  line-height: 1.3;
   margin-top: $space-xs;
-}
-
-.meta {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 4px;
-  font-size: $font-xs;
-  color: $text-dim;
-
-  &Logo {
-    width: 16px;
-    height: 16px;
-    object-fit: contain;
-  }
+  padding-top: $space-sm;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .stat {
   &Label {
+    color: $text-dim;
     font-size: $font-xs;
     font-weight: 700;
-    letter-spacing: 0.08em;
+    letter-spacing: 0;
+    line-height: 1.2;
     text-transform: uppercase;
-    color: $text-dim;
-    margin-top: $space-md;
   }
 
   &Value {
-    font-size: 3rem;
-    font-weight: 900;
     color: $text-bright;
-    line-height: 1;
+    font-size: 2.5rem;
     font-variant-numeric: tabular-nums;
+    font-weight: 900;
+    line-height: 1;
   }
 }
-
-// ── Ranked list ───────────────────────────────────────────────────────────────
 
 .entry {
   display: flex;
@@ -129,10 +86,10 @@
 .rank {
   flex-shrink: 0;
   min-width: 32px;
-  text-align: right;
-  font-size: $font-sm;
   color: $text-dim;
+  font-size: $font-sm;
   font-variant-numeric: tabular-nums;
+  text-align: right;
 
   .entryActive & {
     color: rgba(255, 255, 255, 0.7);
@@ -142,9 +99,9 @@
 .entry {
   &Name {
     flex: 1;
+    color: $text-body;
     font-size: $font-sm;
     font-weight: 500;
-    color: $text-body;
 
     .entryActive & {
       color: #fff;
@@ -154,10 +111,10 @@
 
   &Stat {
     flex-shrink: 0;
-    font-weight: 700;
+    color: $text-bright;
     font-size: $font-sm;
     font-variant-numeric: tabular-nums;
-    color: $text-bright;
+    font-weight: 700;
 
     .entryActive & {
       color: #fff;
@@ -176,9 +133,9 @@
     background: none;
     border: none;
     padding: 0;
+    color: $accent-light;
     font-size: $font-sm;
     font-weight: 600;
-    color: $accent-light;
     cursor: pointer;
 
     &:hover {

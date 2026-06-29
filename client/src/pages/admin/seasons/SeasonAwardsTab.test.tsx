@@ -167,6 +167,19 @@ describe('SeasonAwardsTab', () => {
     expect(screen.getByRole('button', { name: 'Award Player' })).toBeEnabled();
   });
 
+  it('renders winner cards with full positions and dot-separated player info', () => {
+    renderTab(
+      makeAward({
+        recipients: [makeWinner('winner-1', 'player-1', 'John Smith')],
+      }),
+    );
+
+    expect(screen.getByText('John Smith')).toBeInTheDocument();
+    expect(screen.getByText('#19')).toBeInTheDocument();
+    expect(screen.getByText('Center')).toBeInTheDocument();
+    expect(screen.getAllByText('•').length).toBe(2);
+  });
+
   it('renders multiple winners without nominees as a single-column player list', () => {
     const { container } = renderTab(
       makeAward({
@@ -180,8 +193,33 @@ describe('SeasonAwardsTab', () => {
 
     expect(container.querySelector('.awardPlayerListColumn')).toBeInTheDocument();
     expect(container.querySelector('.awardWinnerCards')).not.toBeInTheDocument();
+    expect(container.querySelectorAll('.awardPlayerListItem.list')).toHaveLength(2);
     expect(screen.getByText('John Smith')).toBeInTheDocument();
     expect(screen.getByText('Jane Smith')).toBeInTheDocument();
+  });
+
+  it('renders nominees with the shared player card list variant', () => {
+    const { container } = renderTab(
+      makeAward({
+        uses_nominees: true,
+        recipients: [
+          {
+            ...makeWinner('nominee-1', 'player-1', 'John Smith'),
+            role: 'nominee',
+          },
+        ],
+      }),
+    );
+
+    const nomineeCard = container.querySelector('.awardPlayerListItem.list');
+    expect(nomineeCard).toBeInTheDocument();
+    expect(nomineeCard).toHaveTextContent('John Smith');
+
+    const metaItems = nomineeCard?.querySelectorAll('.metaItem') ?? [];
+    expect(metaItems).toHaveLength(3);
+    expect(metaItems[0]).toHaveTextContent('TOR');
+    expect(metaItems[1]).toHaveTextContent('#19');
+    expect(metaItems[2]).toHaveTextContent('Center');
   });
 
   it('uses the grouped team selection flow only when the award definition is flagged', () => {

@@ -1700,7 +1700,11 @@ router.get('/:id/stats', async (req, res) => {
             p.id                                          AS player_id,
             p.first_name,
             p.last_name,
-            COALESCE(ptr.photo, p.photo)                  AS photo,
+            COALESCE(
+              NULLIF(ptr.photo, ''),
+              best_player_photo(p.id, ${id}, ptr.team_id),
+              NULLIF(p.photo, '')
+            )                                             AS photo,
             p.position,
             ptr.jersey_number,
             ptr.team_id,
@@ -1898,7 +1902,11 @@ router.get('/:id/stats', async (req, res) => {
             p.id                                                   AS player_id,
             p.first_name,
             p.last_name,
-            COALESCE(ptr.photo, p.photo)                           AS photo,
+            COALESCE(
+              NULLIF(ptr.photo, ''),
+              best_player_photo(p.id, ${id}, agg.team_id),
+              NULLIF(p.photo, '')
+            )                                                      AS photo,
             ptr.jersey_number,
             agg.team_id                                            AS team_id,
             ti.code                                                AS team_code,
@@ -1994,7 +2002,11 @@ router.get('/:id/stats', async (req, res) => {
         p.id                                          AS player_id,
         p.first_name,
         p.last_name,
-        COALESCE(ptr.photo, p.photo)                  AS photo,
+        COALESCE(
+          NULLIF(ptr.photo, ''),
+          best_player_photo(p.id, ${id}, ptr.team_id),
+          NULLIF(p.photo, '')
+        )                                             AS photo,
         p.position,
         ptr.jersey_number,
         ptr.team_id,
@@ -2180,7 +2192,11 @@ router.get('/:id/stats', async (req, res) => {
         p.id                                                   AS player_id,
         p.first_name,
         p.last_name,
-        COALESCE(ptr.photo, p.photo)                           AS photo,
+        COALESCE(
+          NULLIF(ptr.photo, ''),
+          best_player_photo(p.id, ${id}, agg.team_id),
+          NULLIF(p.photo, '')
+        )                                                      AS photo,
         ptr.jersey_number,
         ptr.created_at                                         AS team_stint_created,
         agg.team_id                                            AS team_id,
