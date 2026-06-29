@@ -1272,13 +1272,23 @@ const SeasonDetailsPage = () => {
             icon: 'leaderboard',
             content: (
               <div className={styles.statsSubTabs}>
-                {standingsSubTabOptions.length > 1 && (
-                  <SegmentedControl
-                    value={standingsSubTab}
-                    onChange={setStandingsSubTab}
-                    options={standingsSubTabOptions}
-                  />
-                )}
+                <Section
+                  variant="filled"
+                  noHeaderMargin
+                  title="Standings"
+                  action={
+                    standingsSubTabOptions.length > 1 ? (
+                      <SegmentedControl
+                        value={standingsSubTab}
+                        onChange={setStandingsSubTab}
+                        options={standingsSubTabOptions}
+                        className={styles.statsSegmentedControl}
+                      />
+                    ) : undefined
+                  }
+                >
+                  {null}
+                </Section>
 
                 {(() => {
                   const withPlaces = (

@@ -4,7 +4,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: $page-section-gap;
 }
 
 .welcome {

@@ -31,6 +31,9 @@ $space-2xl: 1.5rem;
 $space-3xl: 1.75rem;
 $space-4xl: 2rem;
 
+// Standard vertical rhythm between page-level sections and tab content blocks.
+$page-section-gap: $space-lg;
+
 // ── Font size scale ───────────────────────────────────────────────────
 //   $font-xs    →  12px   badges, labels
 //   $font-sm    →  13px   button sm

@@ -5,7 +5,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: $space-2xl;
+  gap: $page-section-gap;
 }
 
 .controlsCard {
@@ -29,14 +29,14 @@
 
 .weekSummarySentinel {
   height: 0;
-  margin-bottom: $space-md - ($space-2xl * 2);
+  margin-bottom: $space-md - ($page-section-gap * 2);
 }
 
 .schedule {
   &ContentBlock {
     display: flex;
     flex-direction: column;
-    margin-top: -$space-2xl;
+    margin-top: -$page-section-gap;
   }
 }
 

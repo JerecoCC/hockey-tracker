@@ -30,7 +30,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: $space-2xl;
+  gap: $page-section-gap;
   align-items: start;
 }
 
@@ -429,7 +429,7 @@
 .statsSubTabs {
   display: flex;
   flex-direction: column;
-  gap: $space-xl;
+  gap: $page-section-gap;
 }
 
 // SegmentedControl inside a card header — shrink to content width
@@ -461,7 +461,7 @@
 .statsSummaryGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $space-xl;
+  gap: $page-section-gap;
   align-items: start;
 
   @media (max-width: 768px) {
@@ -552,7 +552,7 @@
 .statsLeadersPage {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: $space-2xl;
+  gap: $page-section-gap;
 
   // When an odd number of cards leaves one alone in the last row, stretch it full width.
   > *:last-child:nth-child(odd) {

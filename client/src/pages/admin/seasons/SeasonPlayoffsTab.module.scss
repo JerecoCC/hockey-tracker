@@ -30,7 +30,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
 .layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(18rem, 20rem);
-  gap: $space-xl;
+  gap: $page-section-gap;
   align-items: start;
   container-type: inline-size;
 
@@ -41,13 +41,13 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
   &Left {
     display: flex;
     flex-direction: column;
-    gap: $space-xl;
+    gap: $page-section-gap;
   }
 
   &Right {
     display: flex;
     flex-direction: column;
-    gap: $space-xl;
+    gap: $page-section-gap;
   }
 }
 
@@ -102,7 +102,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
   &Grid {
     display: grid;
     grid-template-columns: 1fr;
-    gap: $space-xl;
+    gap: $page-section-gap;
   }
 
   &QualificationList {

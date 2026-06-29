@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import useLeagueDetails from '@/hooks/useLeagueDetails';
 import useLeagues from '@/hooks/useLeagues';
@@ -412,6 +412,13 @@ describe('SeasonDetails standings tab', () => {
     });
 
     render(<SeasonDetails />);
+    const standingsHeader = screen
+      .getByRole('heading', { name: 'Standings' })
+      .closest('[data-testid="card"]');
+    expect(standingsHeader).toBeInTheDocument();
+    expect(within(standingsHeader as HTMLElement).getByRole('button', { name: 'Division' }))
+      .toBeInTheDocument();
+
     await user.click(screen.getByRole('button', { name: 'Division' }));
 
     const atlanticThreeRow = screen.getByText('Atlantic Three').closest('tr');

@@ -1,21 +1,20 @@
-@use 'styles/colors' as *;
-@use 'styles/mixins' as *;
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
 
 .scheduleLayout {
   display: flex;
   flex-direction: column;
-  gap: $space-md;
+  gap: $page-section-gap;
 }
 
 .weekSummarySentinel {
   height: 0;
-  margin-bottom: -$space-md;
+  margin-bottom: -$page-section-gap;
 }
 
 .scheduleContentBlock {
   display: flex;
   flex-direction: column;
-  margin-top: -$space-md;
 }
 
 .weekGameCards {

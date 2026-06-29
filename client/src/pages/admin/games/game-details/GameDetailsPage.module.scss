@@ -246,7 +246,7 @@
 .tabContent {
   display: flex;
   flex-direction: column;
-  gap: $space-xl;
+  gap: $page-section-gap;
   container-type: inline-size;
 }
 
@@ -628,7 +628,7 @@
 .summaryGrid {
   display: grid;
   grid-template-columns: 2fr 1fr;
-  gap: $space-lg;
+  gap: $page-section-gap;
   align-items: start;
 
   @container (max-width: #{$bp-tablet}) {
@@ -640,7 +640,7 @@
 .summaryLeft {
   display: flex;
   flex-direction: column;
-  gap: $space-lg;
+  gap: $page-section-gap;
 }
 
 // ── Three Stars card ──────────────────────────────────────────────────────────
@@ -691,7 +691,7 @@
 .summaryRight {
   display: flex;
   flex-direction: column;
-  gap: $space-lg;
+  gap: $page-section-gap;
 
   @container (max-width: #{$bp-tablet}) {
     order: -1;

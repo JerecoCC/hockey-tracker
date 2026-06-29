@@ -37,7 +37,7 @@
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: $space-2xl;
+  gap: $page-section-gap;
   align-items: start;
 }
 
@@ -239,7 +239,7 @@
   &Sections {
     display: flex;
     flex-direction: column;
-    gap: $space-lg;
+    gap: $page-section-gap;
     margin-top: $space-lg;
   }
 

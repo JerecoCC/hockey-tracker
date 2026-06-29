@@ -69,8 +69,7 @@
   &List {
     display: flex;
     flex-direction: column;
-    gap: $space-md;
-    margin-top: $space-md;
+    gap: $page-section-gap;
   }
 
   &Empty {

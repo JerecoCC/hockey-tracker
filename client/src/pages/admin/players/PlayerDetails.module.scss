@@ -34,7 +34,7 @@
 
 // ── Tabs spacing ───────────────────────────────────────────────────────────
 .tabsWrapper {
-  margin-top: $space-xl;
+  margin-top: $page-section-gap;
 }
 
 // ── Hero card ──────────────────────────────────────────────────────────────
@@ -136,7 +136,7 @@
 .infoSummaryGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: $space-xl;
+  gap: $page-section-gap;
   align-items: start;
   grid-auto-flow: dense;
 
@@ -289,7 +289,7 @@
 .currentSeasonCards {
   display: flex;
   flex-direction: column;
-  gap: $space-lg;
+  gap: $page-section-gap;
   grid-column: 3;
   grid-row: 1 / span 2;
 

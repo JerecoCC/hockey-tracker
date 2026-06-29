@@ -4,7 +4,7 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: $space-xl;
+  gap: $page-section-gap;
 }
 
 .gameList {

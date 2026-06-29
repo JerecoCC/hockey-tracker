@@ -46,7 +46,7 @@ $league-tab-list-gap: $space-md;
 .grid {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: $space-2xl;
+  gap: $page-section-gap;
   align-items: start;
 }
 
@@ -450,7 +450,7 @@ $league-tab-list-gap: $space-md;
 // ── Rule set list (LeaguePlayoffsTab) ─────────────────────────────────────────
 
 .playoffsTabGrid {
-  column-gap: $space-lg;
+  column-gap: $page-section-gap;
 }
 
 .playoffsTabCard {
@@ -553,7 +553,7 @@ $league-tab-list-gap: $space-md;
   &Cards {
     display: flex;
     flex-direction: column;
-    gap: $space-md;
+    gap: $page-section-gap;
   }
 
   &SetStack {
