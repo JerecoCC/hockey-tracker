@@ -50,8 +50,8 @@
     width: 112px;
     height: 112px;
     padding: 0 $space-sm;
-    background: $bg-input;
-    border: 1px dashed $border;
+    background: var(--app-field-bg, #{$bg-input});
+    border: 1px dashed var(--app-field-border, #{$border});
     border-radius: $radius-md;
     color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
@@ -60,10 +60,12 @@
     cursor: pointer;
     transition:
       border-color $transition-base,
+      background $transition-base,
       color $transition-base;
 
     &:hover {
-      border-color: $accent;
+      background: var(--app-field-bg-hover, #{$bg-filter-field});
+      border-color: var(--app-field-border-hover, #{$text-dim});
       color: var(--app-text-strong, #{$text-bright});
     }
   }
@@ -92,8 +94,8 @@
   justify-content: center;
   width: 112px;
   height: 112px;
-  background: $bg-input;
-  border: 1px solid $border;
+  background: var(--app-field-bg, #{$bg-input});
+  border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
   overflow: hidden;
 
