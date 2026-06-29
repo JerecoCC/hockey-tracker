@@ -17,6 +17,21 @@
   width: fit-content;
 }
 
+.titleDivider {
+  --divider-length: 1.5em;
+  --divider-min-length: 1.5em;
+
+  align-self: center;
+}
+
+.weekNav {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-xs;
+  font-size: initial;
+  font-weight: initial;
+}
+
 .calendar {
   &Wrap {
     display: flex;

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { CSSProperties, MutableRefObject, ReactNode, Ref } from 'react';
+import Divider from '@/components/Divider/Divider';
 import Section from '@/components/Section/Section';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
@@ -100,7 +101,10 @@ export const ScheduleGamesTitle = ({ title = 'Games', picker }: ScheduleGamesTit
     {title}
     {picker && (
       <>
-        <span className={styles.titleDivider} />
+        <Divider
+          variant="vertical"
+          className={styles.titleDivider}
+        />
         <span className={styles.weekNav}>{picker}</span>
       </>
     )}
@@ -128,6 +132,7 @@ export const ScheduleFilters = ({ visible, children, className }: ScheduleFilter
       .filter(Boolean)
       .join(' ')}
   >
+    <Divider className={styles.filtersDivider} />
     {children}
   </div>
 );

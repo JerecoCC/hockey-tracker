@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
+import Divider from '../Divider/Divider';
 import styles from './RichTextEditor.module.scss';
 
 interface ToolbarButtonProps {
@@ -91,7 +92,10 @@ const RichTextEditor = (props: Props) => {
         >
           <s>S</s>
         </ToolbarButton>
-        <span className={styles.divider} />
+        <Divider
+          variant="vertical"
+          className={styles.divider}
+        />
         <ToolbarButton
           active={editor.isActive('bulletList')}
           onClick={() => editor.chain().focus().toggleBulletList().run()}

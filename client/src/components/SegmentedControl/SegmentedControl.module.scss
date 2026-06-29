@@ -30,11 +30,11 @@
 
 // Divider sitting in the gap between adjacent options.
 .divider {
-  flex: 0 0 auto;
+  --divider-color: var(--segmented-control-border);
+  --divider-length: 1.5rem;
+  --divider-min-length: 1.5rem;
+
   align-self: center;
-  width: 1px;
-  height: 1.5rem;
-  background: var(--segmented-control-border);
 }
 
 .option {

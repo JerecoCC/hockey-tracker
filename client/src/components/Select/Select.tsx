@@ -10,6 +10,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import cn from 'classnames';
+import Divider from '../Divider/Divider';
 import Icon from '../Icon/Icon';
 import styles from './Select.module.scss';
 
@@ -308,8 +309,10 @@ const Select = (props: Props) => {
                   key={`divider-${idx}`}
                   role="separator"
                   aria-hidden="true"
-                  className={styles.divider}
-                />
+                  className={styles.dividerItem}
+                >
+                  <Divider className={styles.divider} />
+                </li>
               ) : (
                 <li
                   key={opt.value}

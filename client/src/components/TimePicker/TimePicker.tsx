@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
+import Divider from '../Divider/Divider';
 import Icon from '../Icon/Icon';
 import styles from './TimePicker.module.scss';
 
@@ -544,7 +545,10 @@ const TimePicker = ({
                 ))}
               </div>
             </div>
-            <div className={styles.columnDivider} />
+            <Divider
+              variant="vertical"
+              className={styles.columnDivider}
+            />
             {/* ── Column 2: Minute (clock) or Second (duration) ── */}
             <div className={styles.columnWrap}>
               <div className={styles.columnLabel}>{mode === 'duration' ? 'Sec' : 'Min'}</div>
@@ -576,7 +580,10 @@ const TimePicker = ({
             {/* ── Column 3: AM/PM — clock mode only ── */}
             {mode === 'clock' && (
               <>
-                <div className={styles.columnDivider} />
+                <Divider
+                  variant="vertical"
+                  className={styles.columnDivider}
+                />
                 <div className={styles.columnWrap}>
                   <div className={styles.columnLabel}>AM/PM</div>
                   <div className={styles.column}>

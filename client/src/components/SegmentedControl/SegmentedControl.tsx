@@ -1,4 +1,5 @@
 import { Fragment, type ReactNode } from 'react';
+import Divider from '../Divider/Divider';
 import Tooltip from '../Tooltip/Tooltip';
 import styles from './SegmentedControl.module.scss';
 
@@ -70,9 +71,9 @@ const SegmentedControl = ({
       return (
         <Fragment key={opt.value}>
           {i > 0 && (
-            <span
+            <Divider
+              variant="vertical"
               className={styles.divider}
-              aria-hidden="true"
             />
           )}
           {opt.tooltip ? (

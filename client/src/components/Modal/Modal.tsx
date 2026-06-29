@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useState } from 'react';
 import Button from '../Button/Button';
 import type { ButtonIntent } from '../Button/Button';
+import Divider from '../Divider/Divider';
 import { lockBackgroundScroll, unlockBackgroundScroll } from './backgroundScrollLock';
 import styles from './Modal.module.scss';
 
@@ -156,7 +157,12 @@ const Modal = (props: Props) => {
           />
         </div>
         <div className={`${styles.body} ${bodyClassName ?? ''}`}>{children}</div>
-        {!hideFooter && <div className={styles.footer}>{footer ?? builtInFooter}</div>}
+        {!hideFooter && (
+          <div className={styles.footer}>
+            <Divider className={styles.footerDivider} />
+            {footer ?? builtInFooter}
+          </div>
+        )}
       </div>
     </div>
   );

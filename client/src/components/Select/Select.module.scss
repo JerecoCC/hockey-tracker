@@ -127,12 +127,15 @@
   }
 }
 
-.divider {
-  border-top: 1px solid $text-dim;
+.dividerItem {
   margin: $space-sm $space-md;
   pointer-events: none;
   list-style: none;
   flex-shrink: 0;
+}
+
+.divider {
+  --divider-color: #{$text-dim};
 }
 
 .emptyMessage {

@@ -62,9 +62,10 @@
 }
 
 .divider {
-  width: 1px;
-  height: 16px;
-  background: $border;
+  --divider-length: 16px;
+  --divider-min-length: 16px;
+
+  align-self: center;
   margin: 0 $space-xs;
 }
 

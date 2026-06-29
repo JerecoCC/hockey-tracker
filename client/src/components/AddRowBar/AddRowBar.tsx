@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import Button from '../Button/Button';
+import Divider from '../Divider/Divider';
 import styles from './AddRowBar.module.scss';
 
 interface Props {
@@ -13,6 +14,7 @@ interface Props {
 
 const AddRowBar = ({ label, onClick, disabled, hint }: Props) => (
   <div className={styles.root}>
+    <Divider className={styles.divider} />
     {hint ? <span className={styles.hint}>{hint}</span> : <span className="filler"></span>}
     <Button
       type="button"

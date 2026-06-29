@@ -2,12 +2,16 @@
 @use "styles/mixins" as *;
 
 .root {
-  padding-top: $space-sm;
-  border-top: 1px solid $border;
   margin-top: $space-xs;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
+}
+
+.divider {
+  flex: 0 0 100%;
+  margin-bottom: $space-sm;
 }
 
 .hint {

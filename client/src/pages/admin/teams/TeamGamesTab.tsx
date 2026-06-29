@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef, type CSSProperties } from 'react'
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
+import Divider from '@/components/Divider/Divider';
 import Icon from '@/components/Icon/Icon';
 import MonthCalendar from '@/components/MonthCalendar/MonthCalendar';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
@@ -452,8 +453,11 @@ const TeamGamesTab = ({
           view === 'list' && seasonId ? (
             <>
               Games
-              <span className={seasonStyles.titleDivider} />
-              <span className={seasonStyles.weekNav}>
+              <Divider
+                variant="vertical"
+                className={styles.titleDivider}
+              />
+              <span className={styles.weekNav}>
                 <PeriodPicker
                   value={dateToISO(weekStart)}
                   label={fmtWeekRange(weekStart, weekEnd)}

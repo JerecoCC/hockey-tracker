@@ -2,12 +2,10 @@
 @use "styles/mixins" as *;
 
 .titleDivider {
-  display: inline-block;
-  width: 1px;
-  height: 1.5em;
-  background: $border;
+  --divider-length: 1.5em;
+  --divider-min-length: 1.5em;
+
   align-self: center;
-  flex-shrink: 0;
 }
 
 .weekNav {
@@ -46,14 +44,7 @@
     opacity 0.25s ease,
     margin-top 0.25s ease;
 
-  &::before {
-    content: "";
-    flex: 0 0 100%;
-    height: 1px;
-    background: $border;
-  }
-
-  > *:not(.filterSlotWide):not(.filterSlotFixed) {
+  > *:not(.filtersDivider):not(.filterSlotWide):not(.filterSlotFixed) {
     flex: 1 0 130px;
   }
 
@@ -63,6 +54,10 @@
     margin-top: 0;
     overflow: hidden;
   }
+}
+
+.filtersDivider {
+  flex: 0 0 100%;
 }
 
 .filterSlot {
