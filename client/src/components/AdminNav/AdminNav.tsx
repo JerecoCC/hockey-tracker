@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useTheme } from '@/context/ThemeContext';
 import Button from '../Button/Button';
 import Icon from '../Icon/Icon';
 import styles from './AdminNav.module.scss';
@@ -25,10 +26,12 @@ const AdminNav = (props: AdminNavProps) => {
   const { collapsed, mobileOpen, onMobileClose } = props;
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  const { isDarkMode, toggleTheme } = useTheme();
 
   const isActive = (path: string) => pathname === path || pathname.startsWith(path + '/');
 
   const showExpanded = !collapsed || !!mobileOpen;
+  const themeTooltip = isDarkMode ? 'Switch to light mode' : 'Switch to dark mode';
 
   const handleNavClick = (path: string) => {
     navigate(path);
@@ -74,6 +77,35 @@ const AdminNav = (props: AdminNavProps) => {
         </ul>
       </div>
 
+      <div className={styles.bottom}>
+        <Button
+          variant="ghost"
+          intent="neutral"
+          className={`${styles.navItem} ${styles.themeToggle}`}
+          onClick={toggleTheme}
+          role="switch"
+          aria-checked={isDarkMode}
+          aria-label={themeTooltip}
+          tooltip={!showExpanded ? themeTooltip : undefined}
+          tooltipClassName={!showExpanded ? styles.navTooltipWrapper : undefined}
+        >
+          <Icon
+            name={isDarkMode ? 'dark_mode' : 'light_mode'}
+            className={styles.icon}
+          />
+          {showExpanded && (
+            <>
+              <span className={styles.label}>Dark mode</span>
+              <span
+                className={`${styles.themeSwitch} ${isDarkMode ? styles.themeSwitchOn : ''}`}
+                aria-hidden="true"
+              >
+                <span className={styles.themeSwitchThumb} />
+              </span>
+            </>
+          )}
+        </Button>
+      </div>
     </nav>
   );
 };

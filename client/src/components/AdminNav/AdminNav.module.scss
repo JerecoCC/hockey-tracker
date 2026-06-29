@@ -120,6 +120,49 @@ $nav-collapsed-width: 56px;
 }
 
 // ── Nav tooltip wrapper (makes Tooltip full-width for nav items) ───────
+.themeToggle {
+  &[aria-checked='true'] {
+    color: $accent-light;
+  }
+}
+
+.themeSwitch {
+  position: relative;
+  flex: 0 0 auto;
+  width: 34px;
+  height: 20px;
+  margin-left: auto;
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-pill;
+  background: var(--filter-field-background, #{$bg-input});
+  transition:
+    background $transition-fast,
+    border-color $transition-fast;
+}
+
+.themeSwitchThumb {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--app-text-muted, #{$text-dim});
+  transition:
+    background $transition-fast,
+    transform $transition-fast;
+}
+
+.themeSwitchOn {
+  border-color: $accent;
+  background: rgba($accent, 0.16);
+
+  .themeSwitchThumb {
+    background: $accent-light;
+    transform: translateX(14px);
+  }
+}
+
 .navTooltipWrapper {
   display: block;
   width: 100%;
