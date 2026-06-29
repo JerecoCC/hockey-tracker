@@ -9,6 +9,7 @@ import useLeaguePlayers from '@/hooks/useLeaguePlayers';
 import useBracketRuleSets from '@/hooks/useBracketRuleSets';
 import useLeagueAwards from '@/hooks/useLeagueAwards';
 import useGroupAlignmentSets from '@/hooks/useGroupAlignmentSets';
+import usePlayoffQualificationFormats from '@/hooks/usePlayoffQualificationFormats';
 import LeagueDetailsPage from './LeagueDetails';
 
 // ── Router ─────────────────────────────────────────────────────────────
@@ -84,6 +85,16 @@ jest.mock('../../../hooks/useGroupAlignmentSets', () => ({
     deleteGroup: jest.fn(async () => true),
     setGroupTeams: jest.fn(async () => true),
     setAlignmentTeams: jest.fn(async () => true),
+  })),
+}));
+jest.mock('../../../hooks/usePlayoffQualificationFormats', () => ({
+  __esModule: true,
+  default: jest.fn(() => ({
+    formats: [],
+    loading: false,
+    createFormat: jest.fn(async () => true),
+    updateFormat: jest.fn(async () => true),
+    deleteFormat: jest.fn(async () => true),
   })),
 }));
 
@@ -177,6 +188,14 @@ const baseGroupAlignmentSetsHook = {
   setAlignmentTeams: jest.fn(async () => true),
 };
 
+const basePlayoffQualificationFormatsHook = {
+  formats: [],
+  loading: false,
+  createFormat: jest.fn(async () => true),
+  updateFormat: jest.fn(async () => true),
+  deleteFormat: jest.fn(async () => true),
+};
+
 const mockLeague = {
   id: 'lg1',
   name: 'Test League',
@@ -209,6 +228,7 @@ const setup = (
   bracketRuleSetOverrides = {},
   awardOverrides = {},
   groupAlignmentSetOverrides = {},
+  playoffQualificationFormatOverrides = {},
 ) => {
   (useNavigate as jest.Mock).mockReturnValue(mockNavigate);
   (useParams as jest.Mock).mockReturnValue({ id: 'lg1' });
@@ -224,6 +244,10 @@ const setup = (
   (useGroupAlignmentSets as jest.Mock).mockReturnValue({
     ...baseGroupAlignmentSetsHook,
     ...groupAlignmentSetOverrides,
+  });
+  (usePlayoffQualificationFormats as jest.Mock).mockReturnValue({
+    ...basePlayoffQualificationFormatsHook,
+    ...playoffQualificationFormatOverrides,
   });
   return render(
     <BreadcrumbHarness>
@@ -906,7 +930,7 @@ describe('LeagueDetailsPage - playoffs tab', () => {
 
     const row = screen.getByText('Standard Bracket').closest('li');
     expect(screen.getByRole('button', { name: /create rule set/i })).toBeInTheDocument();
-    expect(screen.getByText('4-team bracket')).toBeInTheDocument();
+    expect(screen.getByText(/4-team bracket/)).toBeInTheDocument();
     expect(row).toHaveClass('item');
     expect(row).not.toHaveClass('ruleSetItem');
   });

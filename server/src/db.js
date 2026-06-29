@@ -953,6 +953,7 @@ async function initSchema() {
       weight_lbs     SMALLINT,
       position       TEXT CHECK (position IN ('C', 'LW', 'RW', 'F', 'D', 'LD', 'RD', 'G')),
       shoots         TEXT CHECK (shoots IN ('L', 'R')),
+      rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL,
       is_active      BOOLEAN NOT NULL DEFAULT TRUE,
       created_at     TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
@@ -960,6 +961,7 @@ async function initSchema() {
 
   // Migrations for columns added after the table was first created
   await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS is_active BOOLEAN NOT NULL DEFAULT TRUE`;
+  await sql`ALTER TABLE players ADD COLUMN IF NOT EXISTS rookie_season_id UUID REFERENCES seasons(id) ON DELETE SET NULL`;
   await sql`ALTER TABLE players DROP COLUMN IF EXISTS nationality`;
 
   // Expand position check constraint to include 'F' (generic Forward)

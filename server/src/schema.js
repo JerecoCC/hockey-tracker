@@ -236,6 +236,7 @@ const players = pgTable('players', {
   weightLbs: smallint('weight_lbs'),
   position: text('position'),
   shoots: text('shoots'),
+  rookieSeasonId: uuid('rookie_season_id').references(() => seasons.id, { onDelete: 'set null' }),
   isActive: boolean('is_active').notNull().default(true),
   createdAt: createdAt(),
 });

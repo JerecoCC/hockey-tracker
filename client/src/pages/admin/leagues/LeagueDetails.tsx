@@ -430,6 +430,7 @@ const LeagueDetailsPage = () => {
       <PlayerFormModal
         open={playerModalOpen}
         editTarget={editTargetPlayer}
+        seasons={seasons}
         onClose={() => {
           setPlayerModalOpen(false);
           setEditTargetPlayer(null);

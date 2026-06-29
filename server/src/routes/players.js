@@ -68,6 +68,8 @@ router.get('/', async (req, res) => {
           p.date_of_birth::text AS date_of_birth,
           p.birth_city, p.birth_country,
           p.height_cm, p.weight_lbs, COALESCE(latest_pt.position, p.position) AS position, p.shoots,
+          p.rookie_season_id,
+          (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
           p.is_active, p.created_at,
           COALESCE(latest_jnh.jersey_number, latest_pt.jersey_number) AS jersey_number,
           latest_pt.id AS player_team_id,
@@ -145,6 +147,7 @@ router.get('/', async (req, res) => {
                 date_of_birth::text AS date_of_birth,
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
+                rookie_season_id, rookie_season_name,
                 is_active, created_at,
                 jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
                 acquisition_type, start_date::text AS start_date, has_games
@@ -155,6 +158,8 @@ router.get('/', async (req, res) => {
                   p.date_of_birth,
                   p.birth_city, p.birth_country,
                   p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+                  p.rookie_season_id,
+                  (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
                   p.is_active, p.created_at,
                   pt.jersey_number,
                   pt.id          AS player_team_id,
@@ -230,6 +235,7 @@ router.get('/', async (req, res) => {
                 date_of_birth::text AS date_of_birth,
                 birth_city, birth_country,
                 height_cm, weight_lbs, position, shoots,
+                rookie_season_id, rookie_season_name,
                 is_active, created_at,
                 jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
                 acquisition_type, start_date::text AS start_date, has_games
@@ -240,6 +246,8 @@ router.get('/', async (req, res) => {
                   p.date_of_birth,
                   p.birth_city, p.birth_country,
                   p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+                  p.rookie_season_id,
+                  (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
                   p.is_active, p.created_at,
                   pt.jersey_number,
                   pt.id          AS player_team_id,
@@ -392,6 +400,7 @@ router.get('/', async (req, res) => {
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
+            rookie_season_id, rookie_season_name,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
             acquisition_type, start_date::text AS start_date, has_games
@@ -402,6 +411,8 @@ router.get('/', async (req, res) => {
               p.date_of_birth,
               p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+              p.rookie_season_id,
+              (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
               p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
@@ -460,6 +471,7 @@ router.get('/', async (req, res) => {
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
+            rookie_season_id, rookie_season_name,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
             acquisition_type, start_date::text AS start_date, has_games
@@ -470,6 +482,8 @@ router.get('/', async (req, res) => {
               p.date_of_birth,
               p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+              p.rookie_season_id,
+              (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
               p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
@@ -529,6 +543,7 @@ router.get('/', async (req, res) => {
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
+            rookie_season_id, rookie_season_name,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
@@ -538,6 +553,8 @@ router.get('/', async (req, res) => {
               p.date_of_birth,
               p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+              p.rookie_season_id,
+              (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
               p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
@@ -572,6 +589,7 @@ router.get('/', async (req, res) => {
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
+            rookie_season_id, rookie_season_name,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, primary_color, text_color, is_prospect
           FROM (
@@ -580,6 +598,8 @@ router.get('/', async (req, res) => {
               p.date_of_birth,
               p.birth_city, p.birth_country,
               p.height_cm, p.weight_lbs, COALESCE(pt.position, p.position) AS position, p.shoots,
+              p.rookie_season_id,
+              (SELECT rs.name FROM seasons rs WHERE rs.id = p.rookie_season_id) AS rookie_season_name,
               p.is_active, p.created_at,
               pt.jersey_number,
               pt.id          AS player_team_id,
@@ -610,6 +630,8 @@ router.get('/', async (req, res) => {
             date_of_birth::text AS date_of_birth,
             birth_city, birth_country,
             height_cm, weight_lbs, position, shoots,
+            rookie_season_id,
+            (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
             is_active, created_at
           FROM players ORDER BY last_name, first_name
         `;
@@ -1807,6 +1829,8 @@ router.get('/:id', async (req, res) => {
         date_of_birth::text AS date_of_birth,
         birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
+        rookie_season_id,
+        (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
         is_active, created_at
       FROM players WHERE id = ${id}
     `;
@@ -1825,7 +1849,7 @@ router.post('/', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
     date_of_birth, birth_city, birth_country,
-    height_cm, weight_lbs, is_active,
+    height_cm, weight_lbs, rookie_season_id, is_active,
   } = req.body;
 
   if (!first_name || typeof first_name !== 'string' || first_name.trim() === '') {
@@ -1840,13 +1864,14 @@ router.post('/', async (req, res) => {
       INSERT INTO players (
         first_name, last_name, position, shoots,
         date_of_birth, birth_city, birth_country,
-        height_cm, weight_lbs, is_active
+        height_cm, weight_lbs, rookie_season_id, is_active
       ) VALUES (
         ${first_name.trim()}, ${last_name.trim()},
         ${position ?? null}, ${shoots ?? null},
         ${date_of_birth ?? null}, ${birth_city?.trim() ?? null},
         ${birth_country?.trim().toUpperCase() ?? null},
         ${height_cm ?? null}, ${weight_lbs ?? null},
+        ${rookie_season_id || null},
         ${is_active ?? true}
       )
       RETURNING
@@ -1854,6 +1879,8 @@ router.post('/', async (req, res) => {
         date_of_birth::text AS date_of_birth,
         birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
+        rookie_season_id,
+        (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
         is_active, created_at
     `;
     return res.status(201).json(rows[0]);
@@ -1865,7 +1892,7 @@ router.post('/', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // POST /api/admin/players/bulk  – create multiple players in one request
-// Body: { players: [{ first_name, last_name, position, shoots }, ...] }
+// Body: { players: [{ first_name, last_name, position, shoots, rookie_season_id? }, ...] }
 // ---------------------------------------------------------------------------
 router.post('/bulk', async (req, res) => {
   const { players } = req.body;
@@ -1887,18 +1914,20 @@ router.post('/bulk', async (req, res) => {
 
   try {
     const created = [];
-    for (const { first_name, last_name, position, shoots } of players) {
+    for (const { first_name, last_name, position, shoots, rookie_season_id } of players) {
       const rows = await sql`
-        INSERT INTO players (first_name, last_name, position, shoots, is_active)
+        INSERT INTO players (first_name, last_name, position, shoots, rookie_season_id, is_active)
         VALUES (
           ${first_name.trim()}, ${last_name.trim()},
-          ${position}, ${shoots ?? null}, true
+          ${position}, ${shoots ?? null}, ${rookie_season_id || null}, true
         )
         RETURNING
           id, first_name, last_name, photo,
           date_of_birth::text AS date_of_birth,
           birth_city, birth_country,
           height_cm, weight_lbs, position, shoots,
+          rookie_season_id,
+          (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
           is_active, created_at
       `;
       created.push(rows[0]);
@@ -1918,7 +1947,7 @@ router.patch('/:id', async (req, res) => {
   const {
     first_name, last_name, position, shoots,
     date_of_birth, birth_city, birth_country,
-    height_cm, weight_lbs, is_active,
+    height_cm, weight_lbs, rookie_season_id, is_active,
   } = req.body;
 
   const firstNameInBody    = 'first_name'    in req.body;
@@ -1930,6 +1959,7 @@ router.patch('/:id', async (req, res) => {
   const birthCountryInBody = 'birth_country' in req.body;
   const heightInBody       = 'height_cm'     in req.body;
   const weightInBody       = 'weight_lbs'    in req.body;
+  const rookieSeasonInBody = 'rookie_season_id' in req.body;
   const isActiveInBody     = 'is_active'     in req.body;
 
   try {
@@ -1944,6 +1974,7 @@ router.patch('/:id', async (req, res) => {
         birth_country = CASE WHEN ${birthCountryInBody} THEN ${birth_country?.trim().toUpperCase() ?? null}   ELSE birth_country END,
         height_cm     = CASE WHEN ${heightInBody}       THEN ${height_cm ?? null}                             ELSE height_cm     END,
         weight_lbs    = CASE WHEN ${weightInBody}       THEN ${weight_lbs ?? null}                            ELSE weight_lbs    END,
+        rookie_season_id = CASE WHEN ${rookieSeasonInBody} THEN ${rookie_season_id || null}                   ELSE rookie_season_id END,
         is_active     = CASE WHEN ${isActiveInBody}     THEN ${is_active ?? true}                             ELSE is_active     END
       WHERE id = ${id}
       RETURNING
@@ -1951,6 +1982,8 @@ router.patch('/:id', async (req, res) => {
         date_of_birth::text AS date_of_birth,
         birth_city, birth_country,
         height_cm, weight_lbs, position, shoots,
+        rookie_season_id,
+        (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
         is_active, created_at
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });

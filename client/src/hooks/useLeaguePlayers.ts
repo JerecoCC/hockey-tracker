@@ -27,6 +27,8 @@ export interface PlayerRecord {
   weight_lbs: number | null;
   position: PlayerPosition | null;
   shoots: PlayerShoots | null;
+  rookie_season_id?: string | null;
+  rookie_season_name?: string | null;
   is_active: boolean;
   created_at: string;
   // Roster fields — populated when fetching by league_id or team_id
@@ -54,6 +56,7 @@ export interface CreatePlayerData {
   birth_country?: string | null;
   height_cm?: number | null;
   weight_lbs?: number | null;
+  rookie_season_id?: string | null;
   is_active?: boolean;
 }
 
@@ -63,6 +66,7 @@ export interface BulkPlayerInput {
   last_name: string;
   position: PlayerPosition;
   shoots: PlayerShoots;
+  rookie_season_id?: string | null;
 }
 
 interface UseLeaguePlayersOptions {
@@ -143,6 +147,7 @@ const useLeaguePlayers = (
       await axios.patch(`${API}/admin/players/${playerId}`, payload, { headers: authHeaders() });
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['players'] });
+      await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
       await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
     } catch (err) {

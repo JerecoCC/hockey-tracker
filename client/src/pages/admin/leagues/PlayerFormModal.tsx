@@ -26,6 +26,8 @@ const SHOOTS_OPTIONS = [
   { value: 'R', label: 'Right' },
 ];
 
+const NO_ROOKIE_SEASON = 'none';
+
 // ── Height conversion helpers ────────────────────────────────────────────
 const cmToFtIn = (cm: number) => {
   const totalInches = cm / 2.54;
@@ -51,12 +53,20 @@ interface FormValues {
   height_ft: string;
   height_in: string;
   weight_lbs: string;
+  rookie_season_id: string;
   jersey_number: string;
+}
+
+interface RookieSeasonOption {
+  id: string;
+  name: string;
+  is_current?: boolean;
 }
 
 interface Props {
   open: boolean;
   editTarget: PlayerRecord | null;
+  seasons: RookieSeasonOption[];
   onClose: () => void;
   addPlayer?: (data: CreatePlayerData) => Promise<boolean>;
   updatePlayer: (id: string, data: Partial<CreatePlayerData>) => Promise<boolean>;
@@ -67,6 +77,7 @@ interface Props {
 const PlayerFormModal = ({
   open,
   editTarget,
+  seasons,
   onClose,
   addPlayer,
   updatePlayer,
@@ -88,9 +99,20 @@ const PlayerFormModal = ({
       height_ft: ft != null ? String(ft) : '',
       height_in: inches != null ? String(inches) : '',
       weight_lbs: editTarget?.weight_lbs != null ? String(editTarget.weight_lbs) : '',
+      rookie_season_id: editTarget?.rookie_season_id ?? NO_ROOKIE_SEASON,
       jersey_number: editTarget?.jersey_number != null ? String(editTarget.jersey_number) : '',
     };
   }, [editTarget]);
+  const rookieSeasonOptions = useMemo(
+    () => [
+      { value: NO_ROOKIE_SEASON, label: 'No rookie season' },
+      ...seasons.map((season) => ({
+        value: season.id,
+        label: season.is_current ? `${season.name} (Current)` : season.name,
+      })),
+    ],
+    [seasons],
+  );
   const {
     control,
     handleSubmit,
@@ -127,6 +149,12 @@ const PlayerFormModal = ({
       birth_country: data.birth_country || null,
       height_cm,
       weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
+      ...(seasons.length > 0
+        ? {
+            rookie_season_id:
+              data.rookie_season_id === NO_ROOKIE_SEASON ? null : data.rookie_season_id,
+          }
+        : {}),
     };
     const ok = editTarget
       ? await updatePlayer(editTarget.id, payload)
@@ -217,6 +245,19 @@ const PlayerFormModal = ({
             disabled={isSubmitting}
           />
         </div>
+        {seasons.length > 0 && (
+          <div className={styles.fullRow}>
+            <Field
+              type="select"
+              label="Rookie Season"
+              control={control}
+              name="rookie_season_id"
+              options={rookieSeasonOptions}
+              placeholder="Select rookie season"
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
         <div className={styles.row}>
           <Field
             type="datepicker"

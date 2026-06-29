@@ -15,6 +15,8 @@ const SHOOTS_OPTIONS = [
   { value: 'R', label: 'Right' },
 ];
 
+const NO_ROOKIE_SEASON = 'none';
+
 const cmToFtIn = (cm: number) => {
   const totalInches = cm / 2.54;
   let ft = Math.floor(totalInches / 12);
@@ -50,16 +52,24 @@ interface FormValues {
   height_ft: string;
   height_in: string;
   weight_lbs: string;
+  rookie_season_id: string;
+}
+
+interface RookieSeasonOption {
+  id: string;
+  name: string;
+  is_current?: boolean;
 }
 
 interface Props {
   open: boolean;
   player: PlayerRecord | null;
+  seasons: RookieSeasonOption[];
   onClose: () => void;
   updatePlayer: (id: string, data: Partial<CreatePlayerData>) => Promise<boolean>;
 }
 
-const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => {
+const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: Props) => {
   const formValues = useMemo<FormValues>(() => {
     const { ft, inches } =
       player?.height_cm != null
@@ -73,8 +83,19 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
       height_ft: ft != null ? String(ft) : '',
       height_in: inches != null ? String(inches) : '',
       weight_lbs: player?.weight_lbs != null ? String(player.weight_lbs) : '',
+      rookie_season_id: player?.rookie_season_id ?? NO_ROOKIE_SEASON,
     };
   }, [player]);
+  const rookieSeasonOptions = useMemo(
+    () => [
+      { value: NO_ROOKIE_SEASON, label: 'No rookie season' },
+      ...seasons.map((season) => ({
+        value: season.id,
+        label: season.is_current ? `${season.name} (Current)` : season.name,
+      })),
+    ],
+    [seasons],
+  );
   const {
     control,
     handleSubmit,
@@ -122,6 +143,12 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
           ? ftInToCm(hasFt ? Number(data.height_ft) : 0, hasIn ? Number(data.height_in) : 0)
           : null,
       weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
+      ...(seasons.length > 0
+        ? {
+            rookie_season_id:
+              data.rookie_season_id === NO_ROOKIE_SEASON ? null : data.rookie_season_id,
+          }
+        : {}),
     });
     if (ok) handleClose();
   });
@@ -187,6 +214,19 @@ const PlayerInfoEditModal = ({ open, player, onClose, updatePlayer }: Props) => 
             disabled={isSubmitting}
           />
         </div>
+        {seasons.length > 0 && (
+          <div className={styles.fullRow}>
+            <Field
+              type="select"
+              label="Rookie Season"
+              control={control}
+              name="rookie_season_id"
+              options={rookieSeasonOptions}
+              placeholder="Select rookie season"
+              disabled={isSubmitting}
+            />
+          </div>
+        )}
         <div className={styles.playerInfoVitalsRow}>
           <div className={styles.heightGroup}>
             <span className={styles.heightGroupLabel}>Height</span>

@@ -366,6 +366,7 @@ const PlayerDetailsPage = () => {
       await axios.patch(`${API}/admin/players/${playerId}`, payload, { headers: authHeaders() });
       toast.success('Player updated!');
       await queryClient.invalidateQueries({ queryKey: ['player', playerId] });
+      await queryClient.invalidateQueries({ queryKey: ['players'] });
       await queryClient.invalidateQueries({ queryKey: ['game-roster'] });
       await queryClient.invalidateQueries({ queryKey: ['game-goals'] });
       return true;
@@ -737,6 +738,10 @@ const PlayerDetailsPage = () => {
         <InfoCell
           label="Birth Country"
           value={player.birth_country}
+        />
+        <InfoCell
+          label="Rookie Season"
+          value={player.rookie_season_name}
         />
         <InfoCell
           label="Height"
@@ -1139,6 +1144,7 @@ const PlayerDetailsPage = () => {
       <PlayerInfoEditModal
         open={editPlayerInfoOpen}
         player={player}
+        seasons={gameLogSeasons}
         onClose={() => setEditPlayerInfoOpen(false)}
         updatePlayer={updatePlayer}
       />
