@@ -603,7 +603,21 @@ const SeasonGamesTab = ({
 
   const changeCalendarMonth = (value: string) => {
     if (!value) return;
-    setCalendarMonth(fromMonthPickerValue(value));
+    const nextMonth = fromMonthPickerValue(value);
+    setCalendarMonth(nextMonth);
+    setWeekStart(firstWeekStartForMonth(nextMonth));
+  };
+
+  const goToPreviousCalendarMonth = () => {
+    const nextMonth = addMonths(calendarMonth, -1);
+    setCalendarMonth(nextMonth);
+    setWeekStart(firstWeekStartForMonth(nextMonth));
+  };
+
+  const goToNextCalendarMonth = () => {
+    const nextMonth = addMonths(calendarMonth, 1);
+    setCalendarMonth(nextMonth);
+    setWeekStart(firstWeekStartForMonth(nextMonth));
   };
 
   const gameDetailsPath = (game: GameRecord) =>
@@ -952,8 +966,8 @@ const SeasonGamesTab = ({
                     value={toMonthPickerValue(calendarMonth)}
                     label={MONTH_LABEL_FMT.format(calendarMonth)}
                     onChange={changeCalendarMonth}
-                    onPrevious={() => setCalendarMonth((current) => addMonths(current, -1))}
-                    onNext={() => setCalendarMonth((current) => addMonths(current, 1))}
+                    onPrevious={goToPreviousCalendarMonth}
+                    onNext={goToNextCalendarMonth}
                   />
                 )
               }
