@@ -213,6 +213,83 @@
   }
 }
 
+// Light mode: outlined buttons borrow the filled variants' base colours.
+:global(:root[data-theme='light']) {
+  .outlined {
+    &Accent {
+      background: rgba($accent, 0.06);
+      color: $accent;
+      border-color: $accent;
+
+      &:hover:not(:disabled) {
+        background: $accent;
+        color: #fff;
+        border-color: $accent;
+      }
+    }
+
+    &Success {
+      background: rgba($success, 0.06);
+      color: $success;
+      border-color: $success;
+
+      &:hover:not(:disabled) {
+        background: $success;
+        color: #fff;
+        border-color: $success;
+      }
+    }
+
+    &Warning {
+      background: rgba($warning, 0.08);
+      color: $warning-hover;
+      border-color: $warning;
+
+      &:hover:not(:disabled) {
+        background: $warning-hover;
+        color: #fff;
+        border-color: $warning-hover;
+      }
+    }
+
+    &Danger {
+      background: rgba($danger, 0.06);
+      color: $danger;
+      border-color: $danger;
+
+      &:hover:not(:disabled) {
+        background: $danger;
+        color: #fff;
+        border-color: $danger;
+      }
+    }
+
+    &Info {
+      background: rgba($info, 0.06);
+      color: $info;
+      border-color: $info;
+
+      &:hover:not(:disabled) {
+        background: $info;
+        color: #fff;
+        border-color: $info;
+      }
+    }
+
+    &Neutral {
+      background: color-mix(in srgb, var(--app-border, #{$border}) 28%, transparent);
+      color: var(--app-text, #{$text-body});
+      border-color: var(--app-border, #{$border});
+
+      &:hover:not(:disabled) {
+        background: var(--app-border, #{$border});
+        color: var(--app-text-strong, #{$text-bright});
+        border-color: var(--app-border, #{$border});
+      }
+    }
+  }
+}
+
 // ── Ghost (no border, no background) ──────────────────────────────────
 .ghost {
   &Accent {

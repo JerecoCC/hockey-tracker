@@ -6,11 +6,11 @@
 }
 
 .horizontal {
-  border-block-start: 1px solid var(--divider-color, #{$border});
+  border-block-start: 1px solid var(--divider-color, var(--app-border, #{$border}));
 }
 
 .vertical {
   align-self: stretch;
-  border-inline-start: 1px solid var(--divider-color, #{$border});
+  border-inline-start: 1px solid var(--divider-color, var(--app-border, #{$border}));
   margin-block: var(--divider-vertical-margin-block, 0.25rem);
 }

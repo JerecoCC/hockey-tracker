@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { ReactNode } from 'react';
 import Button from '../Button/Button';
 import ColorSwatch from '../ColorSwatch/ColorSwatch';
+import Divider from '../Divider/Divider';
 import ImagePreviewModal from '../ImagePreviewModal/ImagePreviewModal';
 import TeamLogo from '../TeamLogo/TeamLogo';
 import styles from './EntityHeader.module.scss';
@@ -50,58 +51,62 @@ const EntityHeader = ({
   );
 
   return (
-    <div className={styles.header}>
-      {logo ? (
-        <button
-          type="button"
-          className={styles.logoButton}
-          onClick={() => setPreviewOpen(true)}
-          aria-label={`View ${name} logo`}
-        >
-          {logoEl}
-        </button>
-      ) : (
-        logoEl
-      )}
+    <>
+      <div className={styles.header}>
+        {logo ? (
+          <button
+            type="button"
+            className={styles.logoButton}
+            onClick={() => setPreviewOpen(true)}
+            aria-label={`View ${name} logo`}
+          >
+            {logoEl}
+          </button>
+        ) : (
+          logoEl
+        )}
 
-      <div className={styles.nameBlock}>
-        <div className={styles.nameRow}>
-          <h3 className={styles.name}>{name}</h3>
-          {nameAccessory}
+        <div className={styles.nameBlock}>
+          <div className={styles.nameRow}>
+            <h3 className={styles.name}>{name}</h3>
+            {nameAccessory}
+          </div>
+          <span className={styles.code}>{subtitle ?? code}</span>
         </div>
-        <span className={styles.code}>{subtitle ?? code}</span>
+
+        {(onEdit || actions || swatches.length > 0) && (
+          <div className={styles.rightCol}>
+            {(onEdit || actions) && (
+              <div className={styles.actions}>
+                {onEdit && (
+                  <Button
+                    variant="outlined"
+                    intent="neutral"
+                    icon="edit"
+                    onClick={onEdit}
+                  >
+                    Edit
+                  </Button>
+                )}
+                {actions}
+              </div>
+            )}
+            {swatches.length > 0 && (
+              <div className={styles.swatches}>
+                {swatches.map((s) => (
+                  <ColorSwatch
+                    key={s.label}
+                    label={s.label}
+                    color={s.color}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
-      {(onEdit || actions || swatches.length > 0) && (
-        <div className={styles.rightCol}>
-          {(onEdit || actions) && (
-            <div className={styles.actions}>
-              {onEdit && (
-                <Button
-                  variant="outlined"
-                  intent="neutral"
-                  icon="edit"
-                  onClick={onEdit}
-                >
-                  Edit
-                </Button>
-              )}
-              {actions}
-            </div>
-          )}
-          {swatches.length > 0 && (
-            <div className={styles.swatches}>
-              {swatches.map((s) => (
-                <ColorSwatch
-                  key={s.label}
-                  label={s.label}
-                  color={s.color}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+      <Divider className={styles.divider} />
 
       <ImagePreviewModal
         open={previewOpen}
@@ -109,7 +114,7 @@ const EntityHeader = ({
         alt={name}
         onClose={() => setPreviewOpen(false)}
       />
-    </div>
+    </>
   );
 };
 
