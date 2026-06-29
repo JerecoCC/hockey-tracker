@@ -220,7 +220,7 @@ const TeamPlayersTab = ({
         placeholder={`${p.first_name[0]}${p.last_name[0]}`}
         primaryColor={p.primary_color ?? undefined}
         textColor={p.text_color ?? undefined}
-        jerseyNumber={p.jersey_number}
+        chip={p.jersey_number != null ? { label: p.jersey_number } : null}
         subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
         rightContent={
           isProspectsView

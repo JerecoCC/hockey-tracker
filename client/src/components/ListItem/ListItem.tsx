@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
+import Chip, { type ChipSize } from '../Chip/Chip';
 import Tag, { type TagIntent } from '../Tag/Tag';
 import Button, { type ButtonIntent } from '../Button/Button';
 import PlayerAvatar from '../PlayerAvatar/PlayerAvatar';
@@ -27,6 +28,13 @@ export interface RightContentCode {
 }
 
 export type ListItemRightContent = RightContentTag | RightContentCode;
+
+export interface ListItemChip {
+  label: ReactNode;
+  size?: ChipSize;
+  primaryColor?: string | null;
+  textColor?: string | null;
+}
 
 interface Props {
   /**
@@ -56,8 +64,8 @@ interface Props {
   textColor?: string | null;
   /** Optional line shown above the name (e.g. jersey number + position). */
   eyebrow?: string;
-  /** Jersey number — rendered as a distinct chip between the photo and name column. */
-  jerseyNumber?: number | null;
+  /** Optional chip rendered between the photo and name column. */
+  chip?: ListItemChip | null;
   /** Optional secondary line shown below the name (e.g. season label + recorded date). */
   subtitle?: string;
   /** Optional third line shown below the subtitle (e.g. a version note). */
@@ -100,7 +108,7 @@ const ListItem = ({
   primaryColor,
   textColor,
   eyebrow,
-  jerseyNumber,
+  chip,
   subtitle,
   note,
   actions,
@@ -177,22 +185,14 @@ const ListItem = ({
       {/* Image or color-branded placeholder */}
       {!hideImage && (imageNode ?? defaultImageNode)}
 
-      {/* Jersey number chip */}
-      {jerseyNumber != null && (
-        <span
-          className={styles.jerseyChip}
-          style={
-            primaryColor
-              ? {
-                  background: primaryColor,
-                  borderColor: primaryColor,
-                  color: textColor ?? undefined,
-                }
-              : undefined
-          }
+      {chip && (
+        <Chip
+          size={chip.size}
+          primaryColor={chip.primaryColor ?? primaryColor}
+          textColor={chip.textColor ?? textColor}
         >
-          {jerseyNumber}
-        </span>
+          {chip.label}
+        </Chip>
       )}
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}

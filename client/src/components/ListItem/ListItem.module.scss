@@ -4,7 +4,6 @@
 // ── Row ──────────────────────────────────────────────────────────────────────
 .item {
   --list-item-logo-size: 48px;
-  --list-item-jersey-size: 32px;
 
   position: relative;
   list-style: none;
@@ -94,25 +93,6 @@
   &PlaceholderCircle {
     border-radius: 50%;
   }
-}
-
-// ── Jersey number chip ────────────────────────────────────────────────────────
-.jerseyChip {
-  flex-shrink: 0;
-  height: var(--list-item-jersey-size, 22px);
-  aspect-ratio: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid $border;
-  border-radius: $radius-sm;
-  font-size: var(--list-item-jersey-font-size, 1rem);
-  font-weight: 700;
-  color: $text-body;
-  background: rgba(255, 255, 255, 0.04);
-  font-variant-numeric: tabular-nums;
-  padding: 0 var(--list-item-jersey-padding-x, #{$space-xs});
-  letter-spacing: 0.02em;
 }
 
 // ── Info column (name + optional subtitle / note) ─────────────────────────────

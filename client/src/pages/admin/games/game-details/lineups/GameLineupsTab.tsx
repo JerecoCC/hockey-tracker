@@ -324,7 +324,7 @@ const GameLineupsTab = ({
                 hideImage
                 primaryColor={primaryColor}
                 textColor={textColor}
-                jerseyNumber={e.jersey_number ?? null}
+                chip={e.jersey_number != null ? { label: e.jersey_number } : null}
                 subtitle={positionPart}
                 name={`${e.last_name}, ${e.first_name} ${playerDataComplete(
                   e.date_of_birth,

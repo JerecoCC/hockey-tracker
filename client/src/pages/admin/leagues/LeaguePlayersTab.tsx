@@ -232,7 +232,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                           primaryColor={p.primary_color ?? undefined}
                           textColor={p.text_color ?? undefined}
                           href={playerHref}
-                          jerseyNumber={p.jersey_number}
+                          chip={p.jersey_number != null ? { label: p.jersey_number } : null}
                           variant="framed"
                           subtitle={
                             p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined

@@ -1475,7 +1475,7 @@ const SeasonPlayoffsTab = ({
                         key={`${r.scope}-${r.method}-${r.count}-${i}`}
                         size="compact"
                         hideImage
-                        jerseyNumber={i + 1}
+                        chip={{ label: i + 1, size: 'small' }}
                         name={
                           r.method === 'top'
                             ? `Top ${r.count} team${r.count !== 1 ? 's' : ''}`

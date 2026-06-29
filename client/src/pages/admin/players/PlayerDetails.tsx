@@ -1074,7 +1074,7 @@ const PlayerDetailsPage = () => {
                           placeholder={teamCodePlaceholder(s)}
                           primaryColor={s.team.primary_color}
                           textColor={s.team.text_color}
-                          jerseyNumber={s.jersey_number}
+                          chip={s.jersey_number != null ? { label: s.jersey_number } : null}
                           subtitle={formatStintDates(s)}
                           rightContent={
                             s.acquisition_type

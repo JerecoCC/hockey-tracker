@@ -72,7 +72,7 @@ export const Lists = {
               placeholder={player.name.split(' ').map((part) => part[0]).join('')}
               primaryColor={player.team.primary_color}
               textColor={player.team.text_color}
-              jerseyNumber={player.jersey}
+              chip={{ label: player.jersey }}
               name={player.name}
               subtitle={`${player.position} | ${player.team.code}`}
               rightContent={{ type: 'tag', label: 'Active', intent: 'success' }}
@@ -105,7 +105,7 @@ export const Lists = {
                     imagePlaceholder={player.name.split(' ').map((part) => part[0]).join('')}
                     imagePrimaryColor={player.team.primary_color}
                     imageTextColor={player.team.text_color}
-                    jerseyNumber={player.jersey}
+                    chip={{ label: player.jersey }}
                     name={player.name}
                     subtitle={`${player.position} | ${player.team.code}`}
                   />

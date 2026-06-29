@@ -165,6 +165,38 @@ describe('ListItem – primaryColor / textColor', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Chip
+// ---------------------------------------------------------------------------
+describe('ListItem - chip', () => {
+  it('renders an optional chip', () => {
+    renderItem({ name: 'Leafs', chip: { label: 34 } });
+
+    expect(screen.getByText('34')).toHaveClass('chip');
+  });
+
+  it('uses row colors for the chip by default', () => {
+    renderItem({
+      name: 'Leafs',
+      primaryColor: '#003e7e',
+      textColor: '#ffffff',
+      chip: { label: 34 },
+    });
+
+    expect(screen.getByText('34')).toHaveStyle({
+      background: '#003e7e',
+      borderColor: '#003e7e',
+      color: '#ffffff',
+    });
+  });
+
+  it('passes the chip size through', () => {
+    renderItem({ name: 'Leafs', chip: { label: 1, size: 'small' } });
+
+    expect(screen.getByText('1')).toHaveClass('small');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Subtitle and note
 // ---------------------------------------------------------------------------
 describe('ListItem – subtitle and note', () => {

@@ -2,6 +2,7 @@ import { type ReactNode } from 'react';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button, { type ButtonIntent } from '../Button/Button';
 import Checkbox from '../Checkbox/Checkbox';
+import Chip, { type ChipSize } from '../Chip/Chip';
 import styles from './SelectableListItem.module.scss';
 
 export interface SelectableListItemAction {
@@ -10,6 +11,13 @@ export interface SelectableListItemAction {
   tooltip?: string;
   disabled?: boolean;
   onClick: () => void;
+}
+
+export interface SelectableListItemChip {
+  label: ReactNode;
+  size?: ChipSize;
+  primaryColor?: string | null;
+  textColor?: string | null;
 }
 
 export interface SelectableListItemProps {
@@ -37,8 +45,8 @@ export interface SelectableListItemProps {
   imageTextColor?: string | null;
   /** Optional line shown above the name (e.g. position). */
   eyebrow?: string;
-  /** Jersey number — rendered as a bordered chip between the avatar and name column. */
-  jerseyNumber?: number | null;
+  /** Optional chip rendered between the avatar and name column. */
+  chip?: SelectableListItemChip | null;
   name: string;
   subtitle?: string;
   /** Optional node rendered at the trailing edge of the row (e.g. a code badge or jersey input). */
@@ -63,7 +71,7 @@ const SelectableListItem = ({
   imagePrimaryColor,
   imageTextColor,
   eyebrow,
-  jerseyNumber,
+  chip,
   name,
   subtitle,
   rightContent,
@@ -135,7 +143,15 @@ const SelectableListItem = ({
         </div>
       )}
 
-      {jerseyNumber != null && <span className={styles.jerseyChip}>{jerseyNumber}</span>}
+      {chip && (
+        <Chip
+          size={chip.size}
+          primaryColor={chip.primaryColor}
+          textColor={chip.textColor}
+        >
+          {chip.label}
+        </Chip>
+      )}
 
       <div className={styles.info}>
         {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
