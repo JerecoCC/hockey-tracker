@@ -455,7 +455,6 @@ const TeamGamesTab = ({
               Games
               <Divider
                 variant="vertical"
-                className={styles.titleDivider}
               />
               <span className={styles.weekNav}>
                 <PeriodPicker

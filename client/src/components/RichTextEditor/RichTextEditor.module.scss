@@ -62,11 +62,7 @@
 }
 
 .divider {
-  --divider-length: 16px;
-  --divider-min-length: 16px;
-
-  align-self: center;
-  margin: 0 $space-xs;
+  margin-inline: $space-xs;
 }
 
 // ── Editor content ────────────────────────────────────────────────────

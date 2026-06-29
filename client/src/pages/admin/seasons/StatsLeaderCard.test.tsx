@@ -167,7 +167,7 @@ describe('StatsLeaderCard ranked list', () => {
     expect(firstRankedItem?.querySelector('.subtitle')).toBeNull();
     expect(screen.getByText('1')).toHaveClass('rankText');
     expect(screen.getByText('1').parentElement).toHaveClass('rankSlot');
-    expect(firstRankedItem?.querySelector('.rankDivider')).toBeInTheDocument();
+    expect(firstRankedItem?.querySelector('.divider.vertical')).toBeInTheDocument();
     expect(screen.getByText('1')).not.toHaveAttribute('style');
     expect(within(firstRankedItem as HTMLElement).queryByText('TOR')).not.toBeInTheDocument();
   });

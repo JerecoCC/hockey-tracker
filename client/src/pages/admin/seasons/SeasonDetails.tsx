@@ -1001,7 +1001,6 @@ const SeasonDetailsPage = () => {
                       Statistics
                       <Divider
                         variant="vertical"
-                        className={styles.statsTitleDivider}
                       />
                       <div className={styles.statsFilterField}>
                         <Select

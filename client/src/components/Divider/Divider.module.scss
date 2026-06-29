@@ -3,17 +3,14 @@
 .divider {
   display: block;
   flex-shrink: 0;
-  background: var(--divider-color, #{$border});
 }
 
 .horizontal {
-  width: 100%;
-  height: var(--divider-thickness, 1px);
+  border-block-start: 1px solid var(--divider-color, #{$border});
 }
 
 .vertical {
   align-self: stretch;
-  width: var(--divider-thickness, 1px);
-  height: var(--divider-length, auto);
-  min-height: var(--divider-min-length, 1.5em);
+  border-inline-start: 1px solid var(--divider-color, #{$border});
+  margin-block: var(--divider-vertical-margin-block, 0.25rem);
 }

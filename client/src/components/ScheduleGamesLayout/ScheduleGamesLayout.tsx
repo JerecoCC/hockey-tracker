@@ -103,7 +103,6 @@ export const ScheduleGamesTitle = ({ title = 'Games', picker }: ScheduleGamesTit
       <>
         <Divider
           variant="vertical"
-          className={styles.titleDivider}
         />
         <span className={styles.weekNav}>{picker}</span>
       </>

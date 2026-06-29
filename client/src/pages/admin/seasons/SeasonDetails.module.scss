@@ -446,14 +446,6 @@
   flex-wrap: wrap;
 }
 
-// Vertical divider between the "Statistics" title and the competition filter,
-// mirroring the games tab header divider.
-.statsTitleDivider {
-  --divider-length: 1.5em;
-  --divider-min-length: 1.5em;
-  align-self: center;
-}
-
 .statsFilterField {
   width: 14rem;
   max-width: 100%;
