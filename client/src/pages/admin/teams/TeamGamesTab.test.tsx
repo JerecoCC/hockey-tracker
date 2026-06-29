@@ -2,63 +2,19 @@ import { useState, type ComponentProps } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toPng } from 'html-to-image';
-import TeamGamesTab from './TeamGamesTab';
 import useGames from '@/hooks/useGames';
-import useSeasons from '@/hooks/useSeasons';
+import TeamGamesTab from './TeamGamesTab';
 
 const mockNavigate = jest.fn();
-const mockGameFormModal = jest.fn(
-  (props: { open: boolean; defaultDate?: string; teamContext?: { teamId: string } }) =>
-    props.open ? (
-      <div
-        role="dialog"
-        aria-label="Create game modal"
-      >
-        {props.defaultDate}
-      </div>
-    ) : null,
-);
 
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
 jest.mock('@/hooks/useGames', () => jest.fn());
-jest.mock('@/hooks/useSeasons', () => jest.fn());
-jest.mock('@/pages/admin/seasons/GameFormModal', () => ({
-  __esModule: true,
-  default: (props: { open: boolean; defaultDate?: string; teamContext?: { teamId: string } }) =>
-    mockGameFormModal(props),
-}));
-jest.mock('@/components/GameListItem', () => {
-  interface MockGameListItemProps {
-    awayTeam: { code: string };
-    homeTeam: { code: string };
-    awayScore: number;
-    homeScore: number;
-    statusLabel: string;
-  }
-
-  function MockGameListItem({
-    awayTeam,
-    homeTeam,
-    awayScore,
-    homeScore,
-    statusLabel,
-  }: MockGameListItemProps) {
-    return (
-      <li>{`${awayTeam.code} ${awayScore} - ${homeTeam.code} ${homeScore} ${statusLabel}`}</li>
-    );
-  }
-
-  return MockGameListItem;
-});
 
 const mockUseGames = useGames as jest.Mock;
-const mockUseSeasons = useSeasons as jest.Mock;
 const mockToPng = toPng as jest.Mock;
 
 const currentDate = new Date();
-const dateParam = (date: Date) =>
-  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 const monthParam = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 const monthLabel = (date: Date) =>
@@ -68,23 +24,8 @@ const monthOffsetIso = (monthOffset: number, day: number) =>
     Date.UTC(currentDate.getFullYear(), currentDate.getMonth() + monthOffset, day, 12, 0, 0),
   ).toISOString();
 const currentMonthIso = (day: number) => monthOffsetIso(0, day);
-const dateOffsetIso = (dayOffset: number) =>
-  new Date(
-    Date.UTC(
-      currentDate.getFullYear(),
-      currentDate.getMonth(),
-      currentDate.getDate() + dayOffset,
-      12,
-      0,
-      0,
-    ),
-  ).toISOString();
-const dayHeading = (date: Date) =>
-  date.toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+const routeDateSegment = (day: number) =>
+  `${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}-${currentDate.getFullYear()}`;
 
 const games = [
   {
@@ -312,30 +253,12 @@ const games = [
   },
 ];
 
-const seasonTeams = [
-  {
-    id: 'team-1',
-    name: 'Home Team',
-    code: 'HOM',
-    logo: null,
-    home_arena: 'Home Arena',
-  },
-  {
-    id: 'team-2',
-    name: 'Away Team',
-    code: 'AWY',
-    logo: null,
-    home_arena: 'Away Arena',
-  },
-];
-
 const renderTeamGamesTab = (props: Partial<ComponentProps<typeof TeamGamesTab>> = {}) =>
   render(
     <TeamGamesTab
       teamId="team-1"
       teamName="Home Team"
       leagueId="league-1"
-      defaultSeasonId="season-1"
       {...props}
     />,
   );
@@ -362,7 +285,6 @@ const TeamGamesTabHarness = () => {
           teamId="team-1"
           teamName="Home Team"
           leagueId="league-1"
-          defaultSeasonId="season-1"
           calendarMonth={calendarMonth}
           onCalendarMonthChange={setCalendarMonth}
         />
@@ -375,21 +297,15 @@ const TeamGamesTabHarness = () => {
 
 beforeEach(() => {
   jest.clearAllMocks();
-  mockUseSeasons.mockReturnValue({
-    seasons: [{ id: 'season-1', name: '2024-25', is_current: true }],
-    loading: false,
-  });
   mockUseGames.mockReturnValue({
     games,
     loading: false,
-    createGame: jest.fn(),
-    updateGame: jest.fn(),
   });
   mockToPng.mockResolvedValue('data:image/png;base64,test');
 });
 
 describe('TeamGamesTab', () => {
-  it('defaults to calendar view with one game per day and navigates on click', async () => {
+  it('renders a month-only calendar and navigates on game click', async () => {
     const user = userEvent.setup();
     const { container } = renderTeamGamesTab();
     const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
@@ -398,20 +314,21 @@ describe('TeamGamesTab', () => {
       hasUseGamesCall(
         (filters) =>
           filters.teamId === 'team-1' &&
-          filters.seasonId === 'season-1' &&
+          filters.seasonId === undefined &&
           filters.month === monthParam(currentMonth) &&
           filters.week === undefined,
       ),
     ).toBe(true);
+    expect(screen.queryByRole('button', { name: /week view/i })).not.toBeInTheDocument();
+    expect(screen.queryByText('Select season...')).not.toBeInTheDocument();
+
     const gameButtons = screen.getAllByRole('button', { name: /^Open game / });
     expect(gameButtons.filter((button) => button.classList.contains('home'))).toHaveLength(2);
     expect(gameButtons.filter((button) => button.classList.contains('away'))).toHaveLength(1);
     expect(gameButtons.find((button) => button.classList.contains('home'))).toHaveStyle(
       '--calendar-primary: #123456',
     );
-    expect(
-      screen.getByText(monthLabel(new Date(currentDate.getFullYear(), currentDate.getMonth(), 1))),
-    ).toBeInTheDocument();
+    expect(screen.getByText(monthLabel(currentMonth))).toBeInTheDocument();
     await user.hover(screen.getByLabelText('Open game vs Away Team'));
 
     expect(container.querySelector('.tipVisible')).toHaveTextContent('Away Team');
@@ -439,20 +356,17 @@ describe('TeamGamesTab', () => {
     );
 
     await user.click(screen.getByLabelText('Previous month'));
-
     await user.click(screen.getByLabelText('Open game vs Away Team'));
 
     expect(mockNavigate).toHaveBeenCalledWith(
-      '/admin/leagues/league-1/seasons/season-1/games/06-05-2026/awy-vs-hom',
+      `/admin/leagues/league-1/seasons/season-1/games/${routeDateSegment(5)}/awy-vs-hom`,
     );
   });
 
-  it('uses the reusable calendar loading grid in calendar view', () => {
+  it('uses the reusable calendar loading grid in month view', () => {
     mockUseGames.mockReturnValue({
       games: [],
       loading: true,
-      createGame: jest.fn(),
-      updateGame: jest.fn(),
     });
 
     renderTeamGamesTab();
@@ -461,79 +375,6 @@ describe('TeamGamesTab', () => {
       0,
     );
     expect(screen.queryByText('Select a season to view games.')).not.toBeInTheDocument();
-  });
-
-  it('adds the winner point for shootout games in list view', async () => {
-    const user = userEvent.setup();
-    mockUseGames.mockReturnValue({
-      games: games.map((game) =>
-        game.id === 'game-shootout' ? { ...game, scheduled_at: dateOffsetIso(0) } : game,
-      ),
-      loading: false,
-      createGame: jest.fn(),
-      updateGame: jest.fn(),
-    });
-
-    renderTeamGamesTab();
-
-    await user.click(screen.getByRole('button', { name: /list/i }));
-
-    expect(
-      hasUseGamesCall(
-        (filters) => filters.week === dateParam(currentDate) && filters.month === undefined,
-      ),
-    ).toBe(true);
-    expect(screen.getByText('SHO 2 - HOM 3 Final/SO')).toBeInTheDocument();
-  });
-
-  it('uses the season games week-list layout in list view', async () => {
-    const user = userEvent.setup();
-    mockUseGames.mockReturnValue({
-      games: [
-        {
-          ...games[0],
-          scheduled_at: dateOffsetIso(1),
-        },
-      ],
-      loading: false,
-    });
-
-    const { container } = renderTeamGamesTab();
-
-    await user.click(screen.getByRole('button', { name: /list/i }));
-
-    expect(container.querySelector('.card > .dayList')).toBeNull();
-    expect(screen.getByLabelText('Previous week')).toBeInTheDocument();
-    expect(screen.getByLabelText('Next week')).toBeInTheDocument();
-    expect(screen.getByLabelText(/^Select week:/)).toBeInTheDocument();
-    expect(screen.getByText(dayHeading(currentDate))).toBeInTheDocument();
-    expect(
-      screen.getByText(dayHeading(new Date(currentDate.getTime() + 6 * 86_400_000))),
-    ).toBeInTheDocument();
-    expect(screen.getByText('AWY 4 - HOM 5 Final/OT')).toBeInTheDocument();
-    expect(screen.getAllByText('No games scheduled.')).toHaveLength(6);
-  });
-
-  it('opens the team-scoped create modal from each day card action', async () => {
-    const user = userEvent.setup();
-
-    renderTeamGamesTab({ seasonTeams });
-
-    await user.click(screen.getByRole('button', { name: /list/i }));
-    const createButtons = screen.getAllByRole('button', { name: /^Create game on / });
-    await user.click(createButtons[0]);
-
-    expect(screen.getByRole('dialog', { name: 'Create game modal' })).toHaveTextContent(
-      /^\d{4}-\d{2}-\d{2}$/,
-    );
-    expect(mockGameFormModal).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        open: true,
-        seasonId: 'season-1',
-        seasonTeams,
-        teamContext: { teamId: 'team-1' },
-      }),
-    );
   });
 
   it('downloads the current calendar month as an image', async () => {

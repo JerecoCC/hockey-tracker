@@ -197,10 +197,8 @@ const TeamDetailsPage = () => {
                 teamName={team.name}
                 leagueId={team.league_id ?? leagueId ?? ''}
                 leagueCode={team.league_code}
-                defaultSeasonId={routeSeasonId}
                 calendarMonth={teamGamesCalendarMonth}
                 onCalendarMonthChange={setTeamGamesCalendarMonth}
-                seasonTeams={leagueTeams}
               />
             ),
           },
