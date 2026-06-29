@@ -451,6 +451,12 @@
   max-width: 100%;
 }
 
+.statsTableCardSkeleton {
+  box-sizing: border-box;
+  border-radius: $radius-lg;
+  min-height: calc(160px + #{$space-xl * 2} + 2px);
+}
+
 // Summary subtab: two cards side by side
 .statsSummaryGrid {
   display: grid;

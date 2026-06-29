@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import StatsLeaderCard, { type StatsLeaderItem } from './StatsLeaderCard';
+import StatsLeaderCard, { StatsLeaderCardSkeleton, type StatsLeaderItem } from './StatsLeaderCard';
 
 const makePlayer = (overrides: Partial<StatsLeaderItem> = {}): StatsLeaderItem => ({
   player_id: 'p1',
@@ -32,6 +32,18 @@ const defaultProps = {
 };
 
 beforeEach(() => jest.clearAllMocks());
+
+describe('StatsLeaderCard skeleton', () => {
+  it('renders bare skeletons for the featured card, stat card, and ten leader rows', () => {
+    const { container } = render(<StatsLeaderCardSkeleton />);
+
+    expect(container.querySelectorAll('.featuredCardSkeleton')).toHaveLength(1);
+    expect(container.querySelectorAll('.statCardSkeleton')).toHaveLength(1);
+    expect(container.querySelectorAll('.leaderItemSkeletonSurface')).toHaveLength(10);
+    expect(container.querySelector('.rankText')).toBeNull();
+    expect(container.querySelector('.entryStat')).toBeNull();
+  });
+});
 
 describe('StatsLeaderCard empty', () => {
   it('returns null when items is empty', () => {

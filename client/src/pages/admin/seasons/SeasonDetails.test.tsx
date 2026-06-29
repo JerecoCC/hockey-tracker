@@ -464,6 +464,47 @@ describe('SeasonDetails stats tab', () => {
     expect(mockUseSeasonStandings).toHaveBeenCalledWith('season-1', { enabled: false });
   });
 
+  it('renders skeletons for the cards inside each summary section while stats load', () => {
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseSeasonStats.mockReturnValue({
+      skaters: [],
+      goalies: [],
+      items: [],
+      total: 0,
+      loading: true,
+      fetching: false,
+    });
+
+    const { container } = render(<SeasonDetails />);
+
+    expect(container.querySelectorAll('.featuredCardSkeleton')).toHaveLength(3);
+    expect(container.querySelectorAll('.statCardSkeleton')).toHaveLength(3);
+    expect(container.querySelectorAll('.leaderItemSkeletonSurface')).toHaveLength(30);
+    expect(screen.getByRole('button', { name: 'View all forward leaders' })).toBeInTheDocument();
+    expect(screen.queryByText('No forward stats yet.')).not.toBeInTheDocument();
+  });
+
+  it('renders a bare card skeleton while a full stats list loads', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    mockUseSeasonStats.mockReturnValue({
+      skaters: [],
+      goalies: [],
+      items: [],
+      total: 0,
+      loading: true,
+      fetching: false,
+    });
+
+    const { container } = render(<SeasonDetails />);
+
+    await user.click(screen.getByRole('button', { name: 'Forwards' }));
+
+    expect(container.querySelectorAll('.statsTableCardSkeleton')).toHaveLength(1);
+    expect(screen.queryByText('Loading forwards...')).not.toBeInTheDocument();
+    expect(screen.queryByText('No forward stats recorded yet.')).not.toBeInTheDocument();
+  });
+
   it('navigates to the player details page when a summary leader is clicked', async () => {
     const user = userEvent.setup();
     mockUseTabState.mockReturnValue([3, jest.fn()]);

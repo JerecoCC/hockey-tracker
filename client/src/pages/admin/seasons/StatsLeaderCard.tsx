@@ -2,6 +2,7 @@ import Card from '@/components/Card/Card';
 import Divider from '@/components/Divider/Divider';
 import ListItem from '@/components/ListItem/ListItem';
 import PlayerCard from '@/components/PlayerCard/PlayerCard';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import styles from './StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
@@ -33,6 +34,40 @@ const getPlayerName = (item: StatsLeaderItem) => `${item.first_name} ${item.last
 
 const getPlayerInitials = (item: StatsLeaderItem) =>
   `${item.first_name.charAt(0)}${item.last_name.charAt(0)}`;
+
+const TOP_LEADER_SKELETON_COUNT = 10;
+
+export const StatsLeaderCardSkeleton = () => (
+  <div className={styles.layout}>
+    <div className={styles.previewColumn}>
+      <Skeleton
+        type="card"
+        className={[styles.featuredCard, styles.featuredCardSkeleton].join(' ')}
+      />
+
+      <Divider />
+
+      <Skeleton
+        type="card"
+        className={styles.statCardSkeleton}
+      />
+    </div>
+
+    <ul className={styles.leaderList}>
+      {Array.from({ length: TOP_LEADER_SKELETON_COUNT }, (_, index) => (
+        <li
+          key={index}
+          className={styles.leaderItemSkeleton}
+        >
+          <Skeleton
+            type="card"
+            className={styles.leaderItemSkeletonSurface}
+          />
+        </li>
+      ))}
+    </ul>
+  </div>
+);
 
 function StatsLeaderCard<T extends StatsLeaderItem>({
   items,

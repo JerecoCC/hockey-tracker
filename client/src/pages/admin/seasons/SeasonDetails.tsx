@@ -13,6 +13,7 @@ import MoreActionsMenu from '@/components/MoreActionsMenu/MoreActionsMenu';
 import { PaginatedTable } from '@/components/Pagination/Pagination';
 import Table, { type Column } from '@/components/Table/Table';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
+import Skeleton from '@/components/Skeleton/Skeleton';
 import Tabs from '@/components/Tabs/Tabs';
 import { usePageBreadcrumbs } from '@/context/BreadcrumbContext';
 import useDocumentIcon from '@/hooks/useDocumentIcon';
@@ -48,7 +49,7 @@ import SeasonFormModal from './SeasonFormModal';
 import SeasonGamesTab from './SeasonGamesTab';
 import SeasonPlayoffsTab from './SeasonPlayoffsTab';
 import SeasonTeamsCard from './SeasonTeamsCard';
-import StatsLeaderCard from './StatsLeaderCard';
+import StatsLeaderCard, { StatsLeaderCardSkeleton } from './StatsLeaderCard';
 import styles from './SeasonDetails.module.scss';
 
 const DATE_FMT = new Intl.DateTimeFormat('en-US', {
@@ -633,6 +634,13 @@ const SeasonDetailsPage = () => {
     { value: 'shutouts', label: 'Shutouts' },
   ];
 
+  const renderStatsTableSkeleton = () => (
+    <Skeleton
+      type="card"
+      className={styles.statsTableCardSkeleton}
+    />
+  );
+
   const renderPlayerCell = (row: SkaterStatRecord | GoalieStatRecord) => (
     <div className={styles.statsPlayerCell}>
       <TeamLogo
@@ -1054,7 +1062,9 @@ const SeasonDetailsPage = () => {
                         </div>
                       }
                     >
-                      {summarySkaters.length > 0 ? (
+                      {statsLoading ? (
+                        <StatsLeaderCardSkeleton />
+                      ) : summarySkaters.length > 0 ? (
                         <StatsLeaderCard
                           items={summarySkaters}
                           featuredIdx={hoveredSkaterIdx}
@@ -1069,9 +1079,7 @@ const SeasonDetailsPage = () => {
                           onSelectItem={navigateToPlayer}
                         />
                       ) : (
-                        !statsLoading && (
-                          <p className={styles.tabPlaceholder}>No forward stats yet.</p>
-                        )
+                        <p className={styles.tabPlaceholder}>No forward stats yet.</p>
                       )}
                     </Section>
 
@@ -1104,7 +1112,9 @@ const SeasonDetailsPage = () => {
                         </div>
                       }
                     >
-                      {summaryDefensemen.length > 0 ? (
+                      {statsLoading ? (
+                        <StatsLeaderCardSkeleton />
+                      ) : summaryDefensemen.length > 0 ? (
                         <StatsLeaderCard
                           items={summaryDefensemen}
                           featuredIdx={hoveredDefIdx}
@@ -1119,9 +1129,7 @@ const SeasonDetailsPage = () => {
                           onSelectItem={navigateToPlayer}
                         />
                       ) : (
-                        !statsLoading && (
-                          <p className={styles.tabPlaceholder}>No defense stats yet.</p>
-                        )
+                        <p className={styles.tabPlaceholder}>No defense stats yet.</p>
                       )}
                     </Section>
 
@@ -1162,7 +1170,9 @@ const SeasonDetailsPage = () => {
                         </div>
                       }
                     >
-                      {summaryGoalies.length > 0 ? (
+                      {statsLoading ? (
+                        <StatsLeaderCardSkeleton />
+                      ) : summaryGoalies.length > 0 ? (
                         <StatsLeaderCard
                           items={summaryGoalies}
                           featuredIdx={hoveredGoalieIdx}
@@ -1177,21 +1187,21 @@ const SeasonDetailsPage = () => {
                           onSelectItem={navigateToPlayer}
                         />
                       ) : (
-                        !statsLoading && (
-                          <p className={styles.tabPlaceholder}>No goalie stats yet.</p>
-                        )
+                        <p className={styles.tabPlaceholder}>No goalie stats yet.</p>
                       )}
                     </Section>
                   </div>
                 )}
 
-                {statsSubTab === 'Forwards' && (
+                {statsSubTab === 'Forwards' && forwardStatsLoading && renderStatsTableSkeleton()}
+
+                {statsSubTab === 'Forwards' && !forwardStatsLoading && (
                   <Card variant="filled">
                     <PaginatedTable
                       columns={skaterColumns}
                       data={forwardStats}
                       rowKey={(r) => r.player_id}
-                      loading={forwardStatsLoading}
+                      loading={false}
                       fetching={forwardStatsFetching}
                       emptyMessage="No forward stats recorded yet."
                       activeSortKey={fwdSort.key}
@@ -1207,13 +1217,15 @@ const SeasonDetailsPage = () => {
                   </Card>
                 )}
 
-                {statsSubTab === 'Defense' && (
+                {statsSubTab === 'Defense' && defenseStatsLoading && renderStatsTableSkeleton()}
+
+                {statsSubTab === 'Defense' && !defenseStatsLoading && (
                   <Card variant="filled">
                     <PaginatedTable
                       columns={skaterColumns}
                       data={defenseStats}
                       rowKey={(r) => r.player_id}
-                      loading={defenseStatsLoading}
+                      loading={false}
                       fetching={defenseStatsFetching}
                       emptyMessage="No defense stats recorded yet."
                       activeSortKey={defSort.key}
@@ -1229,13 +1241,15 @@ const SeasonDetailsPage = () => {
                   </Card>
                 )}
 
-                {statsSubTab === 'Goalies' && (
+                {statsSubTab === 'Goalies' && goalieStatsLoading && renderStatsTableSkeleton()}
+
+                {statsSubTab === 'Goalies' && !goalieStatsLoading && (
                   <Card variant="filled">
                     <PaginatedTable
                       columns={goalieColumns}
                       data={goalieStats}
                       rowKey={(r) => r.player_id}
-                      loading={goalieStatsLoading}
+                      loading={false}
                       fetching={goalieStatsFetching}
                       emptyMessage="No goalie stats recorded yet."
                       activeSortKey={goalieSort.key}
