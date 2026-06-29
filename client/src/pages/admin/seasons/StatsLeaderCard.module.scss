@@ -106,25 +106,3 @@
   font-weight: 800;
   line-height: 1;
 }
-
-.allLeaders {
-  &Row {
-    display: flex;
-    justify-content: flex-end;
-    padding: $space-sm $space-sm 0;
-  }
-
-  &Link {
-    background: none;
-    border: none;
-    padding: 0;
-    color: $accent-light;
-    font-size: $font-sm;
-    font-weight: 600;
-    cursor: pointer;
-
-    &:hover {
-      text-decoration: underline;
-    }
-  }
-}

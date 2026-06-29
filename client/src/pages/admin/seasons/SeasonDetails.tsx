@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import { useNavigate, useParams } from 'react-router-dom';
+import Button from '@/components/Button/Button';
 import Card from '@/components/Card/Card';
 import Section from '@/components/Section/Section';
 import EntityHeader from '@/components/EntityHeader/EntityHeader';
@@ -1026,15 +1027,28 @@ const SeasonDetailsPage = () => {
                       variant="filled"
                       title="Forwards"
                       action={
-                        <SegmentedControl
-                          value={summarySkaterStat}
-                          onChange={(v) => {
-                            setSummarySkaterStat(v as SkaterStatType);
-                            setHoveredSkaterIdx(0);
-                          }}
-                          options={STAT_OPTIONS}
-                          className={styles.statsSegmentedControl}
-                        />
+                        <div className={styles.statsSectionActions}>
+                          <SegmentedControl
+                            value={summarySkaterStat}
+                            onChange={(v) => {
+                              setSummarySkaterStat(v as SkaterStatType);
+                              setHoveredSkaterIdx(0);
+                            }}
+                            options={STAT_OPTIONS}
+                            className={styles.statsSegmentedControl}
+                          />
+                          <Button
+                            type="button"
+                            variant="outlined"
+                            intent="neutral"
+                            size="sm"
+                            icon="ranking_star"
+                            iconHeight="button"
+                            tooltip="All Leaders"
+                            aria-label="View all forward leaders"
+                            onClick={() => handleStatsSubTabChange('Forwards')}
+                          />
+                        </div>
                       }
                     >
                       {summarySkaters.length > 0 ? (
@@ -1050,7 +1064,6 @@ const SeasonDetailsPage = () => {
                           getFeaturedStat={(s) => s[summarySkaterStat] ?? 0}
                           getRowStat={(s) => s[summarySkaterStat] ?? 0}
                           onSelectItem={navigateToPlayer}
-                          onAllLeaders={() => handleStatsSubTabChange('Forwards')}
                         />
                       ) : (
                         !statsLoading && (
@@ -1064,15 +1077,28 @@ const SeasonDetailsPage = () => {
                       variant="filled"
                       title="Defense"
                       action={
-                        <SegmentedControl
-                          value={summaryDefStat}
-                          onChange={(v) => {
-                            setSummaryDefStat(v as SkaterStatType);
-                            setHoveredDefIdx(0);
-                          }}
-                          options={STAT_OPTIONS}
-                          className={styles.statsSegmentedControl}
-                        />
+                        <div className={styles.statsSectionActions}>
+                          <SegmentedControl
+                            value={summaryDefStat}
+                            onChange={(v) => {
+                              setSummaryDefStat(v as SkaterStatType);
+                              setHoveredDefIdx(0);
+                            }}
+                            options={STAT_OPTIONS}
+                            className={styles.statsSegmentedControl}
+                          />
+                          <Button
+                            type="button"
+                            variant="outlined"
+                            intent="neutral"
+                            size="sm"
+                            icon="ranking_star"
+                            iconHeight="button"
+                            tooltip="All Leaders"
+                            aria-label="View all defense leaders"
+                            onClick={() => handleStatsSubTabChange('Defense')}
+                          />
+                        </div>
                       }
                     >
                       {summaryDefensemen.length > 0 ? (
@@ -1088,7 +1114,6 @@ const SeasonDetailsPage = () => {
                           getFeaturedStat={(s) => s[summaryDefStat] ?? 0}
                           getRowStat={(s) => s[summaryDefStat] ?? 0}
                           onSelectItem={navigateToPlayer}
-                          onAllLeaders={() => handleStatsSubTabChange('Defense')}
                         />
                       ) : (
                         !statsLoading && (
@@ -1110,15 +1135,28 @@ const SeasonDetailsPage = () => {
                         </>
                       }
                       action={
-                        <SegmentedControl
-                          value={summaryGoalieStat}
-                          onChange={(v) => {
-                            setSummaryGoalieStat(v as GoalieLeaderStat);
-                            setHoveredGoalieIdx(0);
-                          }}
-                          options={GOALIE_OPTIONS}
-                          className={styles.statsSegmentedControl}
-                        />
+                        <div className={styles.statsSectionActions}>
+                          <SegmentedControl
+                            value={summaryGoalieStat}
+                            onChange={(v) => {
+                              setSummaryGoalieStat(v as GoalieLeaderStat);
+                              setHoveredGoalieIdx(0);
+                            }}
+                            options={GOALIE_OPTIONS}
+                            className={styles.statsSegmentedControl}
+                          />
+                          <Button
+                            type="button"
+                            variant="outlined"
+                            intent="neutral"
+                            size="sm"
+                            icon="ranking_star"
+                            iconHeight="button"
+                            tooltip="All Leaders"
+                            aria-label="View all goalie leaders"
+                            onClick={() => handleStatsSubTabChange('Goalies')}
+                          />
+                        </div>
                       }
                     >
                       {summaryGoalies.length > 0 ? (
@@ -1134,7 +1172,6 @@ const SeasonDetailsPage = () => {
                           getFeaturedStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
                           getRowStat={(g) => formatGoalieVal(g, summaryGoalieStat)}
                           onSelectItem={navigateToPlayer}
-                          onAllLeaders={() => handleStatsSubTabChange('Goalies')}
                         />
                       ) : (
                         !statsLoading && (

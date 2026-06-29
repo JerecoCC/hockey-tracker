@@ -194,32 +194,3 @@ describe('StatsLeaderCard selectable items', () => {
     expect(onSelectItem).toHaveBeenCalledWith(items[1]);
   });
 });
-
-describe('StatsLeaderCard All Leaders', () => {
-  it('renders "All Leaders" button when onAllLeaders is provided', () => {
-    render(
-      <StatsLeaderCard
-        {...defaultProps}
-        onAllLeaders={jest.fn()}
-      />,
-    );
-    expect(screen.getByRole('button', { name: /all leaders/i })).toBeInTheDocument();
-  });
-
-  it('does NOT render "All Leaders" button when onAllLeaders is not provided', () => {
-    render(<StatsLeaderCard {...defaultProps} />);
-    expect(screen.queryByRole('button', { name: /all leaders/i })).not.toBeInTheDocument();
-  });
-
-  it('calls onAllLeaders when the button is clicked', () => {
-    const onAllLeaders = jest.fn();
-    render(
-      <StatsLeaderCard
-        {...defaultProps}
-        onAllLeaders={onAllLeaders}
-      />,
-    );
-    fireEvent.click(screen.getByRole('button', { name: /all leaders/i }));
-    expect(onAllLeaders).toHaveBeenCalledTimes(1);
-  });
-});

@@ -25,7 +25,6 @@ interface Props<T extends StatsLeaderItem> {
   getFeaturedStat: (item: T) => React.ReactNode;
   getRowStat: (item: T) => React.ReactNode;
   onSelectItem?: (item: T) => void;
-  onAllLeaders?: () => void;
 }
 
 const getPlayerName = (item: StatsLeaderItem) => `${item.first_name} ${item.last_name}`;
@@ -42,7 +41,6 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
   getFeaturedStat,
   getRowStat,
   onSelectItem,
-  onAllLeaders,
 }: Props<T>) {
   if (items.length === 0) return null;
 
@@ -102,17 +100,6 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
             />
           );
         })}
-
-        {onAllLeaders && (
-          <li className={styles.allLeadersRow}>
-            <button
-              className={styles.allLeadersLink}
-              onClick={onAllLeaders}
-            >
-              All Leaders
-            </button>
-          </li>
-        )}
       </ul>
     </div>
   );

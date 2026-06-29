@@ -26,9 +26,22 @@ jest.mock('@/lib/computeClinched', () => ({
   computeEliminated: () => new Set<string>(),
 }));
 jest.mock('@/components/Breadcrumbs/Breadcrumbs', () => () => <div />);
-jest.mock('@/components/Button/Button', () => (props: any) => (
-  <button {...props}>{props.children}</button>
-));
+jest.mock('@/components/Button/Button', () => (props: any) => {
+  const {
+    children,
+    icon,
+    tooltip,
+    tooltipClassName,
+    tooltipIntent,
+    variant,
+    intent,
+    size,
+    iconSize,
+    iconHeight,
+    ...buttonProps
+  } = props;
+  return <button {...buttonProps}>{children ?? icon}</button>;
+});
 jest.mock('@/components/Card/Card', () => (props: any) => (
   <div data-testid="card">
     {props.title}
@@ -456,9 +469,23 @@ describe('SeasonDetails stats tab', () => {
     mockUseTabState.mockReturnValue([3, jest.fn()]);
     render(<SeasonDetails />);
 
-    await user.click(screen.getByText('John Smith'));
+    await user.click(screen.getByRole('button', { name: 'View John Smith' }));
 
     expect(mockNavigate).toHaveBeenCalledWith('/admin/leagues/nhl/teams/tor/players/john-smith');
+  });
+
+  it('opens full leader lists from the summary header icon buttons', async () => {
+    const user = userEvent.setup();
+    mockUseTabState.mockReturnValue([3, jest.fn()]);
+    render(<SeasonDetails />);
+
+    expect(screen.getByRole('button', { name: 'View all forward leaders' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View all defense leaders' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'View all goalie leaders' })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'View all forward leaders' }));
+
+    expect(screen.getByText('Smith, John')).toBeInTheDocument();
   });
 
   it('navigates to the player details page when a stats table row is clicked', async () => {

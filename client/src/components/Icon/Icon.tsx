@@ -54,6 +54,7 @@ import {
   faPeopleGroup,
   faPlay,
   faPlus,
+  faRankingStar,
   faRightFromBracket,
   faRightLeft,
   faShield,
@@ -166,6 +167,7 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // stats
   query_stats: faChartLine,
+  ranking_star: faRankingStar,
 
   // view toggles
   grid_view: faTableCells,

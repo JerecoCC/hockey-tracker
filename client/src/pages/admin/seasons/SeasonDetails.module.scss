@@ -437,6 +437,15 @@
   width: fit-content;
 }
 
+.statsSectionActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: $space-sm;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
 // Vertical divider between the "Statistics" title and the competition filter,
 // mirroring the games tab header divider.
 .statsTitleDivider {
