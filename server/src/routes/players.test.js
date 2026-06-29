@@ -647,6 +647,71 @@ describe('POST /api/admin/players/bulk', () => {
 });
 
 // ---------------------------------------------------------------------------
+// PATCH /api/admin/players/:id/retire
+// ---------------------------------------------------------------------------
+describe('PATCH /api/admin/players/:id/retire', () => {
+  it('marks the player inactive and closes current stint records', async () => {
+    const retiredPlayer = {
+      ...PLAYER,
+      is_active: false,
+      retirement_date: '2025-06-30',
+      retired_stint_id: 'career-stint-1',
+      retired_team_id: 'team-1',
+      retired_player_team_id: 'player-team-1',
+      retired_season_id: 'season-1',
+    };
+    sql.mockResolvedValueOnce([retiredPlayer]);
+
+    const res = await request(app).patch('/api/admin/players/player-1/retire')
+      .send({ retirement_date: '2025-06-30' });
+
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({
+      id: 'player-1',
+      is_active: false,
+      retirement_date: '2025-06-30',
+      retired_stint_id: 'career-stint-1',
+      retired_player_team_id: 'player-team-1',
+    });
+    expect(sql).toHaveBeenCalledTimes(1);
+
+    const queryText = sql.mock.calls[0][0].join(' ');
+    expect(queryText).toContain('UPDATE players');
+    expect(queryText).toContain('SET is_active = FALSE');
+    expect(queryText).toContain('player_team_stints');
+    expect(queryText).toContain('player_teams');
+    expect(queryText).toContain('SET end_date =');
+  });
+
+  it('requires a valid retirement_date', async () => {
+    const res = await request(app).patch('/api/admin/players/player-1/retire')
+      .send({ retirement_date: '2025-02-30' });
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/retirement_date/i);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when the player is not found', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).patch('/api/admin/players/nope/retire')
+      .send({ retirement_date: '2025-06-30' });
+
+    expect(res.status).toBe(404);
+  });
+
+  it('returns 500 on DB error', async () => {
+    sql.mockRejectedValueOnce(new Error('DB down'));
+
+    const res = await request(app).patch('/api/admin/players/player-1/retire')
+      .send({ retirement_date: '2025-06-30' });
+
+    expect(res.status).toBe(500);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // PATCH /api/admin/players/:id
 // ---------------------------------------------------------------------------
 describe('PATCH /api/admin/players/:id', () => {

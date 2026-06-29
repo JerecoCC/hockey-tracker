@@ -20,6 +20,12 @@ const upload = multer({
 
 router.use(requireAdmin);
 
+const isValidDateOnly = (value) => {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+};
+
 // ---------------------------------------------------------------------------
 // POST /api/admin/players/upload  – upload a player photo to Vercel Blob
 // ---------------------------------------------------------------------------
@@ -1966,7 +1972,91 @@ router.post('/bulk', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
-// PATCH /api/admin/players/:id  – update a player
+// PATCH /api/admin/players/:id/retire
+// Body: { retirement_date }
+// Marks a player inactive and closes their latest open career/roster stint.
+// ---------------------------------------------------------------------------
+router.patch('/:id/retire', async (req, res) => {
+  const { id } = req.params;
+  const { retirement_date } = req.body;
+
+  if (!isValidDateOnly(retirement_date)) {
+    return res.status(400).json({ error: 'retirement_date must be a valid YYYY-MM-DD date' });
+  }
+
+  try {
+    const rows = await sql`
+      WITH retired_player AS (
+        UPDATE players
+        SET is_active = FALSE
+        WHERE id = ${id}
+        RETURNING
+          id, first_name, last_name, photo,
+          date_of_birth::text AS date_of_birth,
+          birth_city, birth_country,
+          height_cm, weight_lbs, position, shoots,
+          rookie_season_id,
+          (SELECT rs.name FROM seasons rs WHERE rs.id = rookie_season_id) AS rookie_season_name,
+          is_active, created_at
+      ),
+      latest_career_stint AS (
+        SELECT pts.id, pts.team_id
+        FROM player_team_stints pts
+        WHERE pts.player_id = ${id}
+          AND pts.end_date IS NULL
+          AND EXISTS (SELECT 1 FROM retired_player)
+        ORDER BY pts.start_date DESC NULLS LAST, pts.created_at DESC, pts.id DESC
+        LIMIT 1
+      ),
+      closed_career_stint AS (
+        UPDATE player_team_stints pts
+        SET end_date = ${retirement_date}::date
+        FROM latest_career_stint latest
+        WHERE pts.id = latest.id
+        RETURNING pts.id, pts.team_id
+      ),
+      latest_roster_stint AS (
+        SELECT pt.id
+        FROM player_teams pt
+        WHERE pt.player_id = ${id}
+          AND pt.end_date IS NULL
+          AND EXISTS (SELECT 1 FROM retired_player)
+          AND (
+            (
+              EXISTS (SELECT 1 FROM closed_career_stint)
+              AND pt.team_id = (SELECT team_id FROM closed_career_stint LIMIT 1)
+            )
+            OR NOT EXISTS (SELECT 1 FROM closed_career_stint)
+          )
+        ORDER BY pt.start_date DESC NULLS LAST, pt.created_at DESC, pt.id DESC
+        LIMIT 1
+      ),
+      closed_roster_stint AS (
+        UPDATE player_teams pt
+        SET end_date = ${retirement_date}::date
+        FROM latest_roster_stint latest
+        WHERE pt.id = latest.id
+        RETURNING pt.id, pt.team_id, pt.season_id
+      )
+      SELECT
+        retired_player.*,
+        ${retirement_date}::date::text AS retirement_date,
+        (SELECT id FROM closed_career_stint LIMIT 1) AS retired_stint_id,
+        (SELECT team_id FROM closed_career_stint LIMIT 1) AS retired_team_id,
+        (SELECT id FROM closed_roster_stint LIMIT 1) AS retired_player_team_id,
+        (SELECT season_id FROM closed_roster_stint LIMIT 1) AS retired_season_id
+      FROM retired_player
+    `;
+    if (rows.length === 0) return res.status(404).json({ error: 'Player not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('players retire error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/admin/players/:id - update a player
 // ---------------------------------------------------------------------------
 router.patch('/:id', async (req, res) => {
   const { id } = req.params;
