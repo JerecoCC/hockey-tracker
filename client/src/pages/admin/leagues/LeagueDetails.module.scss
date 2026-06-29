@@ -50,6 +50,49 @@ $league-tab-list-gap: $space-md;
   align-items: start;
 }
 
+.playerFilterToggles,
+.playerActionButtons,
+.playerHeaderSeasonGroup,
+.playerRowTags {
+  display: flex;
+  align-items: center;
+}
+
+.playerFilterToggles,
+.playerActionButtons,
+.playerRowTags {
+  gap: $space-sm;
+}
+
+.playerFilterToggles,
+.playerActionButtons,
+.playerRowTags {
+  flex-wrap: wrap;
+}
+
+.playerFilterToggles {
+  margin-left: auto;
+}
+
+.playerHeaderSeasonGroup {
+  gap: $space-md;
+  min-width: 0;
+}
+
+.playerHeaderDivider {
+  width: 1px;
+  height: 32px;
+  background: $border;
+  flex-shrink: 0;
+}
+
+.playerHeaderSeasonSelect {
+  width: fit-content;
+  max-width: 100%;
+  flex: 0 0 auto;
+  min-width: 0;
+}
+
 @for $i from 1 through 12 {
   .col#{$i} {
     grid-column: span #{$i};

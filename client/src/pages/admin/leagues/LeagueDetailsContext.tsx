@@ -11,12 +11,16 @@ interface LeaguePlayersContextValue {
   search: string;
   seasons: LeagueSeasonRecord[];
   selectedSeasonId: string | null;
+  rookiesOnly: boolean;
+  includeRetiredPlayers: boolean;
   loading: boolean;
   fetching: boolean;
   busy: string | null;
   onPageChange: (page: number) => void;
   onSearchChange: (query: string) => void;
   onSeasonChange: (id: string) => void;
+  onRookiesOnlyChange: (active: boolean) => void;
+  onIncludeRetiredPlayersChange: (active: boolean) => void;
   onAdd: () => void;
   onBulkAdd: () => void;
   onEdit: (player: PlayerRecord) => void;

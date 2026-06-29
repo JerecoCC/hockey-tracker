@@ -9,6 +9,8 @@ import SearchableList from '@/components/SearchableList/SearchableList';
 import Section from '@/components/Section/Section';
 import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
+import Tag from '@/components/Tag/Tag';
+import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
@@ -74,9 +76,13 @@ const LeaguePlayersTab = ({ className }: Props) => {
     search,
     seasons,
     selectedSeasonId,
+    rookiesOnly,
+    includeRetiredPlayers,
     onPageChange,
     onSearchChange,
     onSeasonChange,
+    onRookiesOnlyChange,
+    onIncludeRetiredPlayersChange,
     loading,
     fetching,
     busy,
@@ -92,6 +98,11 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const paginationFetchStartedRef = useRef(false);
   const seasonFetchStartedRef = useRef(false);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  const emptyMessage = rookiesOnly
+    ? 'No rookies for this season.'
+    : includeRetiredPlayers
+      ? 'No players in this league yet.'
+      : 'No active players in this league yet.';
   const showPaginationSkeleton = fetching && paginationFetchPage === page;
   const showSeasonSkeleton =
     fetching && seasonFetchId !== null && seasonFetchId === selectedSeasonId;
@@ -100,6 +111,23 @@ const LeaguePlayersTab = ({ className }: Props) => {
     const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;
     if (!player.has_games || !hasMissingData) return '';
     return ` ${missingPlayerDataIndicator}`;
+  };
+  const renderPlayerTags = (player: PlayerRecord) => {
+    const isRookie = !!selectedSeasonId && player.rookie_season_id === selectedSeasonId;
+    const isRetired = !player.is_active;
+    if (!isRookie && !isRetired) return undefined;
+
+    return (
+      <span className={styles.playerRowTags}>
+        {isRookie && (
+          <Tag
+            label="Rookie"
+            intent="accent"
+          />
+        )}
+        {isRetired && <Tag label="Retired" />}
+      </span>
+    );
   };
 
   useEffect(() => {
@@ -140,6 +168,14 @@ const LeaguePlayersTab = ({ className }: Props) => {
     onSeasonChange(seasonId);
   };
 
+  const handleRookiesOnlyToggle = () => {
+    onRookiesOnlyChange(!rookiesOnly);
+  };
+
+  const handleIncludeRetiredToggle = () => {
+    onIncludeRetiredPlayersChange(!includeRetiredPlayers);
+  };
+
   const handleConfirmDelete = async () => {
     if (!confirmDelete) return;
     setIsDeleting(true);
@@ -156,18 +192,46 @@ const LeaguePlayersTab = ({ className }: Props) => {
         <Section
           className={[styles.col12, className].filter(Boolean).join(' ')}
           title="Players"
-          action={
+          titleAccessory={
             seasons.length > 0 ? (
-              <Select
-                value={selectedSeasonId}
-                options={seasons.map((s) => ({
-                  value: s.id,
-                  label: s.is_current ? `${s.name} ✦` : s.name,
-                }))}
-                onChange={handleSeasonChange}
-                width="content"
-              />
-            ) : undefined
+              <div className={styles.playerHeaderSeasonGroup}>
+                <span
+                  className={styles.playerHeaderDivider}
+                  aria-hidden="true"
+                />
+                <div className={styles.playerHeaderSeasonSelect}>
+                  <Select
+                    value={selectedSeasonId}
+                    options={seasons.map((s) => ({
+                      value: s.id,
+                      label: s.is_current ? `${s.name} ✦` : s.name,
+                    }))}
+                    onChange={handleSeasonChange}
+                    width="content"
+                  />
+                </div>
+              </div>
+            ) : null
+          }
+          action={
+            <div className={styles.playerActionButtons}>
+              <Button
+                variant="outlined"
+                intent="accent"
+                icon="group_add"
+                size="sm"
+                onClick={onBulkAdd}
+              >
+                Bulk Create
+              </Button>
+              <Button
+                icon="add"
+                size="sm"
+                onClick={onAdd}
+              >
+                Create Player
+              </Button>
+            </div>
           }
         >
           <SearchableList
@@ -238,11 +302,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                           subtitle={
                             p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined
                           }
-                          rightContent={{
-                            type: 'tag',
-                            label: p.is_active ? 'Active' : 'Inactive',
-                            intent: p.is_active ? 'success' : 'neutral',
-                          }}
+                          rightContent={renderPlayerTags(p)}
                           actions={
                             [
                               {
@@ -280,26 +340,28 @@ const LeaguePlayersTab = ({ className }: Props) => {
             onQueryChange={onSearchChange}
             disableClientFilter
             actions={
-              <>
-                <Button
-                  variant="outlined"
-                  intent="accent"
-                  icon="group_add"
-                  size="sm"
-                  onClick={onBulkAdd}
-                >
-                  Bulk Create
-                </Button>
-                <Button
-                  icon="add"
-                  size="sm"
-                  onClick={onAdd}
-                >
-                  Create Player
-                </Button>
-              </>
+              <div className={styles.playerFilterToggles}>
+                <ToggleButton
+                  variant="switch"
+                  active={rookiesOnly}
+                  onClick={handleRookiesOnlyToggle}
+                  icon="stars"
+                  activeTooltip="Rookies only"
+                  inactiveTooltip="Rookies only"
+                  disabled={!selectedSeasonId}
+                />
+                <ToggleButton
+                  variant="switch"
+                  active={includeRetiredPlayers}
+                  onClick={handleIncludeRetiredToggle}
+                  activeIcon="visibility"
+                  inactiveIcon="visibility_off"
+                  activeTooltip="Show retired players"
+                  inactiveTooltip="Show retired players"
+                />
+              </div>
             }
-            emptyMessage="No players in this league yet."
+            emptyMessage={emptyMessage}
             noResultsMessage={(q) => `No players match "${q}".`}
           />
         </Section>
@@ -337,7 +399,21 @@ export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
     <Section
       className={[styles.col12, className].filter(Boolean).join(' ')}
       title="Players"
-      action={<TabActionSkeleton width="148px" />}
+      titleAccessory={
+        <div className={styles.playerHeaderSeasonGroup}>
+          <span
+            className={styles.playerHeaderDivider}
+            aria-hidden="true"
+          />
+          <TabActionSkeleton width="148px" />
+        </div>
+      }
+      action={
+        <span className={styles.tabSkeletonActions}>
+          <TabActionSkeleton width="118px" />
+          <TabActionSkeleton width="124px" />
+        </span>
+      }
       role="status"
       aria-busy="true"
       aria-label="Loading players"
@@ -348,8 +424,8 @@ export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
           className={[styles.tabSkeletonSearch, styles.tabSkeletonSearchFull].join(' ')}
         />
         <span className={styles.tabSkeletonActions}>
-          <TabActionSkeleton width="118px" />
-          <TabActionSkeleton width="124px" />
+          <TabActionSkeleton width="66px" />
+          <TabActionSkeleton width="66px" />
         </span>
       </div>
       <LeaguePlayerRowsSkeleton />

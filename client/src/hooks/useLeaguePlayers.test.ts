@@ -86,6 +86,40 @@ describe('useLeaguePlayers – fetch', () => {
     );
   });
 
+  it('passes paginated league player filters as query params', async () => {
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { players: [PLAYER], total: 1, page: 1, page_size: 15 },
+    });
+
+    const { result } = renderHook(
+      () =>
+        useLeaguePlayers('league-1', 'season-1', {
+          page: 1,
+          pageSize: 15,
+          search: 'wayne',
+          rookiesOnly: true,
+          includeRetired: true,
+        }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockedAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/admin/players'),
+      expect.objectContaining({
+        params: {
+          league_id: 'league-1',
+          season_id: 'season-1',
+          page: '1',
+          page_size: '15',
+          search: 'wayne',
+          rookies_only: 'true',
+          include_retired: 'true',
+        },
+      }),
+    );
+  });
+
   it('exposes optional roster fields from the API response', async () => {
     mockedAxios.get.mockResolvedValueOnce({ data: [PLAYER_WITH_ROSTER] });
     const { result } = renderHook(() => useLeaguePlayers('league-1'), { wrapper: createWrapper() });

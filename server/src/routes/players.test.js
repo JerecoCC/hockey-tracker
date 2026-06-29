@@ -119,6 +119,26 @@ describe('GET /api/admin/players', () => {
     expect(queryText).toContain('rg.season_id');
   });
 
+  it('applies rookie and active filters to paginated league player rows and counts', async () => {
+    sql
+      .mockResolvedValueOnce([PLAYER_WITH_ROSTER])
+      .mockResolvedValueOnce([{ total: 1 }]);
+
+    const res = await request(app)
+      .get('/api/admin/players?league_id=league-1&season_id=season-1&page=1&page_size=20&rookies_only=true');
+
+    expect(res.status).toBe(200);
+    expect(sql).toHaveBeenCalledTimes(2);
+
+    const rowQueryText = sql.mock.calls[0][0].join(' ');
+    const countQueryText = sql.mock.calls[1][0].join(' ');
+
+    expect(rowQueryText).toContain('is_active = TRUE');
+    expect(rowQueryText).toContain('rookie_season_id =');
+    expect(countQueryText).toContain('is_active = TRUE');
+    expect(countQueryText).toContain('rookie_season_id =');
+  });
+
   it('filters by team_id and returns roster fields', async () => {
     sql.mockResolvedValueOnce([PLAYER_WITH_ROSTER]);
     const res = await request(app).get('/api/admin/players?team_id=team-1');

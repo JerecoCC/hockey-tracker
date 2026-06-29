@@ -1102,7 +1102,69 @@ describe('LeagueDetailsPage – players tab', () => {
   it('shows empty state when no players are assigned', () => {
     setup({ league: mockLeague });
     clickPlayersTab();
-    expect(screen.getByText(/no players in this league yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/no active players in this league yet/i)).toBeInTheDocument();
+  });
+
+  it('passes rookie and retired player filters to the players query', async () => {
+    const seasons = [
+      {
+        id: 'season-1',
+        name: 'Spring 2024',
+        league_id: 'lg1',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+        is_current: true,
+        is_ended: false,
+        created_at: '',
+      },
+    ];
+
+    setup({ league: mockLeague, seasons });
+    clickPlayersTab();
+
+    await waitFor(() =>
+      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
+        undefined,
+        'season-1',
+        expect.objectContaining({
+          page: 1,
+          pageSize: 15,
+          search: '',
+          rookiesOnly: false,
+          includeRetired: false,
+        }),
+      ),
+    );
+
+    const rookiesSwitch = screen.getByRole('switch', { name: 'Rookies only' });
+    const retiredSwitch = screen.getByRole('switch', { name: 'Show retired players' });
+
+    expect(rookiesSwitch).toHaveAttribute('aria-checked', 'false');
+    expect(retiredSwitch).toHaveAttribute('aria-checked', 'false');
+
+    fireEvent.click(rookiesSwitch);
+    await waitFor(() =>
+      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
+        undefined,
+        'season-1',
+        expect.objectContaining({
+          rookiesOnly: true,
+          includeRetired: false,
+        }),
+      ),
+    );
+
+    fireEvent.click(retiredSwitch);
+    await waitFor(() =>
+      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
+        undefined,
+        'season-1',
+        expect.objectContaining({
+          rookiesOnly: true,
+          includeRetired: true,
+        }),
+      ),
+    );
   });
 
   it('renders player rows as links to player details', () => {
@@ -1132,6 +1194,68 @@ describe('LeagueDetailsPage – players tab', () => {
 
     const row = screen.getByText('John Smith').closest('li');
     expect(row?.querySelector('a')).toHaveAttribute('href', '/admin/leagues/tl/players/john-smith');
+  });
+
+  it('shows only rookie and retired player row tags', async () => {
+    const seasons = [
+      {
+        id: 'season-1',
+        name: 'Spring 2024',
+        league_id: 'lg1',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+        is_current: true,
+        is_ended: false,
+        created_at: '',
+      },
+    ];
+
+    setup({ league: mockLeague, seasons }, {}, null, {
+      players: [
+        {
+          id: 'player-1',
+          first_name: 'John',
+          last_name: 'Smith',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'C',
+          shoots: 'L',
+          rookie_season_id: 'season-1',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+        {
+          id: 'player-2',
+          first_name: 'Jane',
+          last_name: 'Doe',
+          photo: null,
+          date_of_birth: null,
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'D',
+          shoots: 'R',
+          rookie_season_id: null,
+          is_active: false,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+        },
+      ],
+      total: 2,
+    });
+    clickPlayersTab();
+
+    await waitFor(() => expect(screen.getByText('Rookie')).toBeInTheDocument());
+    expect(screen.getByText('Retired')).toBeInTheDocument();
+    expect(screen.queryByText('Active')).not.toBeInTheDocument();
   });
 
   it('shows player list skeleton rows only after pagination controls start fetching', () => {

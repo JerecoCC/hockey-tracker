@@ -48,6 +48,8 @@ router.get('/', async (req, res) => {
   const prospectsOnly = req.query.prospects_only === 'true';
   const includeProspects = prospectsOnly || req.query.include_prospects === 'true';
   const unassignedOnly = req.query.unassigned === 'true';
+  const rookiesOnly = req.query.rookies_only === 'true';
+  const includeRetired = req.query.include_retired === 'true';
   const wantsPagination = req.query.page !== undefined || req.query.page_size !== undefined || req.query.search !== undefined;
   const page = Math.max(1, Number.parseInt(req.query.page ?? '1', 10) || 1);
   const pageSize = Math.min(100, Math.max(1, Number.parseInt(req.query.page_size ?? '20', 10) || 20));
@@ -225,6 +227,11 @@ router.get('/', async (req, res) => {
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
+            AND (${includeRetired} OR is_active = TRUE)
+            AND (
+              ${!rookiesOnly}
+              OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)
+            )
             ORDER BY first_name, last_name, id
             LIMIT ${pageSize} OFFSET ${offset}
           `
@@ -314,6 +321,11 @@ router.get('/', async (req, res) => {
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
+            AND (${includeRetired} OR is_active = TRUE)
+            AND (
+              ${!rookiesOnly}
+              OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)
+            )
             ORDER BY first_name, last_name, id
             LIMIT ${pageSize} OFFSET ${offset}
           `;
@@ -321,12 +333,14 @@ router.get('/', async (req, res) => {
       const countRows = league_id && season_id
         ? await sql`
             WITH roster AS (
-              SELECT id, first_name, last_name, position, jersey_number
+              SELECT id, first_name, last_name, position, jersey_number, rookie_season_id, is_active
               FROM (
                 SELECT DISTINCT ON (p.id)
                   p.id, p.first_name, p.last_name,
                   COALESCE(pt.position, p.position) AS position,
-                  pt.jersey_number
+                  pt.jersey_number,
+                  p.rookie_season_id,
+                  p.is_active
                 FROM players p
                 JOIN player_teams pt ON pt.player_id = p.id
                                     AND pt.season_id  = ${season_id}
@@ -350,15 +364,22 @@ router.get('/', async (req, res) => {
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
             )
+            AND (${includeRetired} OR is_active = TRUE)
+            AND (
+              ${!rookiesOnly}
+              OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)
+            )
           `
         : await sql`
             WITH roster AS (
-              SELECT id, first_name, last_name, position, jersey_number
+              SELECT id, first_name, last_name, position, jersey_number, rookie_season_id, is_active
               FROM (
                 SELECT DISTINCT ON (p.id)
                   p.id, p.first_name, p.last_name,
                   COALESCE(pt.position, p.position) AS position,
-                  pt.jersey_number
+                  pt.jersey_number,
+                  p.rookie_season_id,
+                  p.is_active
                 FROM players p
                 JOIN player_teams pt ON pt.player_id = p.id
                                     AND (${includeProspects} OR pt.is_prospect = FALSE)
@@ -382,6 +403,11 @@ router.get('/', async (req, res) => {
               OR LOWER(first_name || ' ' || last_name) LIKE ${searchPattern}
               OR LOWER(COALESCE(position, '')) LIKE ${searchPattern}
               OR COALESCE(jersey_number::text, '') LIKE ${jerseyPattern}
+            )
+            AND (${includeRetired} OR is_active = TRUE)
+            AND (
+              ${!rookiesOnly}
+              OR (${season_id ?? null}::uuid IS NOT NULL AND rookie_season_id = ${season_id ?? null}::uuid)
             )
           `;
 

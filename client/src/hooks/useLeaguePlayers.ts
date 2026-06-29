@@ -73,6 +73,8 @@ interface UseLeaguePlayersOptions {
   page?: number;
   pageSize?: number;
   search?: string;
+  rookiesOnly?: boolean;
+  includeRetired?: boolean;
 }
 
 interface PaginatedPlayersResponse {
@@ -89,7 +91,8 @@ const useLeaguePlayers = (
 ) => {
   const queryClient = useQueryClient();
   const [busy, setBusy] = useState<string | null>(null);
-  const isPaginated = options.page !== undefined || options.pageSize !== undefined || options.search !== undefined;
+  const isPaginated =
+    options.page !== undefined || options.pageSize !== undefined || options.search !== undefined;
 
   const { data, isFetching: fetching, isLoading: loading } = useQuery<PlayerRecord[] | PaginatedPlayersResponse>({
     queryKey: [
@@ -100,6 +103,8 @@ const useLeaguePlayers = (
         page: options.page,
         page_size: options.pageSize,
         search: options.search,
+        rookies_only: options.rookiesOnly,
+        include_retired: options.includeRetired,
       },
     ],
     queryFn: async () => {
@@ -110,6 +115,8 @@ const useLeaguePlayers = (
         if (options.page !== undefined) params.page = String(options.page);
         if (options.pageSize !== undefined) params.page_size = String(options.pageSize);
         if (options.search !== undefined) params.search = options.search;
+        if (options.rookiesOnly) params.rookies_only = 'true';
+        if (options.includeRetired) params.include_retired = 'true';
         const { data } = await axios.get<PlayerRecord[] | PaginatedPlayersResponse>(
           `${API}/admin/players`,
           { headers: authHeaders(), params: Object.keys(params).length ? params : undefined },
