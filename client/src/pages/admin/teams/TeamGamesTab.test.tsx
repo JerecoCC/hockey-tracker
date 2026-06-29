@@ -57,6 +57,10 @@ const mockUseSeasons = useSeasons as jest.Mock;
 const mockToPng = toPng as jest.Mock;
 
 const currentDate = new Date();
+const dateParam = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+const monthParam = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 const monthLabel = (date: Date) =>
   new Intl.DateTimeFormat('en-US', { month: 'long', year: 'numeric' }).format(date);
 const monthOffsetIso = (monthOffset: number, day: number) =>
@@ -336,6 +340,9 @@ const renderTeamGamesTab = (props: Partial<ComponentProps<typeof TeamGamesTab>> 
     />,
   );
 
+const hasUseGamesCall = (predicate: (filters: Record<string, unknown>) => boolean) =>
+  mockUseGames.mock.calls.some(([filters]) => predicate(filters));
+
 const TeamGamesTabHarness = () => {
   const [showGamesTab, setShowGamesTab] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(
@@ -385,7 +392,17 @@ describe('TeamGamesTab', () => {
   it('defaults to calendar view with one game per day and navigates on click', async () => {
     const user = userEvent.setup();
     const { container } = renderTeamGamesTab();
+    const currentMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
 
+    expect(
+      hasUseGamesCall(
+        (filters) =>
+          filters.teamId === 'team-1' &&
+          filters.seasonId === 'season-1' &&
+          filters.month === monthParam(currentMonth) &&
+          filters.week === undefined,
+      ),
+    ).toBe(true);
     const gameButtons = screen.getAllByRole('button', { name: /^Open game / });
     expect(gameButtons.filter((button) => button.classList.contains('home'))).toHaveLength(2);
     expect(gameButtons.filter((button) => button.classList.contains('away'))).toHaveLength(1);
@@ -410,6 +427,16 @@ describe('TeamGamesTab', () => {
         monthLabel(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)),
       ),
     ).toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        hasUseGamesCall(
+          (filters) =>
+            filters.month ===
+              monthParam(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)) &&
+            filters.week === undefined,
+        ),
+      ).toBe(true),
+    );
 
     await user.click(screen.getByLabelText('Previous month'));
 
@@ -451,6 +478,11 @@ describe('TeamGamesTab', () => {
 
     await user.click(screen.getByRole('button', { name: /list/i }));
 
+    expect(
+      hasUseGamesCall(
+        (filters) => filters.week === dateParam(currentDate) && filters.month === undefined,
+      ),
+    ).toBe(true);
     expect(screen.getByText('SHO 2 - HOM 3 Final/SO')).toBeInTheDocument();
   });
 

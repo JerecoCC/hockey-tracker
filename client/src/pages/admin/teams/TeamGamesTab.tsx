@@ -261,17 +261,6 @@ const TeamGamesTab = ({
     setWeekStartState(stored ? fromISODate(stored) : toDay(new Date()));
   }, [weekKey]);
 
-  const {
-    games,
-    loading: gamesLoading,
-    createGame,
-    updateGame,
-  } = useGames({
-    teamId,
-    seasonId: seasonId || undefined,
-  });
-
-  const scheduledGames = useMemo(() => games.filter((game) => !!game.scheduled_at), [games]);
   const weekEnd = addDays(weekStart, 6);
   const setWeekStart = (updater: Date | ((current: Date) => Date)) => {
     setWeekStartState((current) => {
@@ -295,6 +284,21 @@ const TeamGamesTab = ({
       setInternalCalendarMonth(nextMonth);
     }
   };
+
+  const {
+    games,
+    loading: gamesLoading,
+    createGame,
+    updateGame,
+  } = useGames({
+    teamId,
+    seasonId: seasonId || undefined,
+    ...(view === 'calendar'
+      ? { month: toMonthPickerValue(calendarMonth) }
+      : { week: dateToISO(weekStart) }),
+  });
+
+  const scheduledGames = useMemo(() => games.filter((game) => !!game.scheduled_at), [games]);
 
   const gamesByDate = useMemo(() => {
     const map = new Map<string, GameRecord>();
