@@ -115,6 +115,8 @@ describe('GET /api/admin/players', () => {
     expect(queryText).toContain('pt.acquisition_type');
     expect(queryText).toContain('pt.start_date');
     expect(queryText).toContain('AS has_games');
+    expect(queryText).toContain('AS season_points');
+    expect(queryText).toContain("sg.goal_type != 'own'");
     expect(queryText).toContain('FROM game_rosters gr');
     expect(queryText).toContain('rg.season_id');
   });

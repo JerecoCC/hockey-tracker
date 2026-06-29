@@ -1359,7 +1359,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
-  it('shows missing data indicators only for players with associated games', () => {
+  it('shows missing data indicators only for players with one season point', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [
         {
@@ -1381,6 +1381,7 @@ describe('LeagueDetailsPage – players tab', () => {
           acquisition_type: null,
           start_date: null,
           has_games: true,
+          season_points: 1,
         },
         {
           id: 'player-2',
@@ -1400,10 +1401,32 @@ describe('LeagueDetailsPage – players tab', () => {
           team_code: null,
           acquisition_type: null,
           start_date: null,
-          has_games: false,
+          has_games: true,
+          season_points: 2,
+        },
+        {
+          id: 'player-3',
+          first_name: 'Pat',
+          last_name: 'Ready',
+          photo: null,
+          date_of_birth: '1996-02-02',
+          birth_city: null,
+          birth_country: null,
+          height_cm: null,
+          weight_lbs: null,
+          position: 'LW',
+          shoots: 'L',
+          is_active: true,
+          created_at: '2024-01-01T00:00:00Z',
+          team_id: null,
+          team_code: null,
+          acquisition_type: 'draft',
+          start_date: '2024-10-01',
+          has_games: true,
+          season_points: 1,
         },
       ],
-      total: 2,
+      total: 3,
     });
     clickPlayersTab();
 
@@ -1411,5 +1434,7 @@ describe('LeagueDetailsPage – players tab', () => {
     expect(screen.queryByText('John Smith \uD83D\uDCDD')).not.toBeInTheDocument();
     expect(screen.getByText('Jane Doe')).toBeInTheDocument();
     expect(screen.queryByText('Jane Doe \u26A0\uFE0F')).not.toBeInTheDocument();
+    expect(screen.getByText('Pat Ready')).toBeInTheDocument();
+    expect(screen.queryByText('Pat Ready \u26A0\uFE0F')).not.toBeInTheDocument();
   });
 });

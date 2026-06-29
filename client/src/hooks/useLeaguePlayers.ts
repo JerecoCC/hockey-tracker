@@ -44,6 +44,7 @@ export interface PlayerRecord {
   acquisition_type?: string | null;
   start_date?: string | null;
   has_games?: boolean;
+  season_points?: number | null;
 }
 
 export interface CreatePlayerData {

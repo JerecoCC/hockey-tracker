@@ -158,7 +158,7 @@ router.get('/', async (req, res) => {
                 rookie_season_id, rookie_season_name,
                 is_active, created_at,
                 jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
-                acquisition_type, start_date::text AS start_date, has_games
+                acquisition_type, start_date::text AS start_date, has_games, season_points
               FROM (
                 SELECT DISTINCT ON (p.id)
                   p.id, p.first_name, p.last_name,
@@ -186,7 +186,23 @@ router.get('/', async (req, res) => {
                     JOIN games rg ON rg.id = gr.game_id
                     WHERE gr.player_id = p.id
                       AND rg.season_id = ${season_id}
-                  ) AS has_games
+                  ) AS has_games,
+                  (
+                    (
+                      SELECT COUNT(*)
+                      FROM goals sg
+                      JOIN games sgg ON sgg.id = sg.game_id
+                      WHERE sg.scorer_id = p.id
+                        AND sg.goal_type != 'own'
+                        AND sgg.season_id = ${season_id}
+                    ) + (
+                      SELECT COUNT(*)
+                      FROM goals ag
+                      JOIN games agg ON agg.id = ag.game_id
+                      WHERE (ag.assist_1_id = p.id OR ag.assist_2_id = p.id)
+                        AND agg.season_id = ${season_id}
+                    )
+                  )::int AS season_points
                 FROM players p
                 JOIN player_teams pt ON pt.player_id = p.id
                                     AND pt.season_id  = ${season_id}
@@ -435,7 +451,7 @@ router.get('/', async (req, res) => {
             rookie_season_id, rookie_season_name,
             is_active, created_at,
             jersey_number, player_team_id, team_id, team_name, team_code, team_logo, primary_color, text_color, is_prospect,
-            acquisition_type, start_date::text AS start_date, has_games
+            acquisition_type, start_date::text AS start_date, has_games, season_points
           FROM (
             SELECT DISTINCT ON (p.id)
               p.id, p.first_name, p.last_name,
@@ -463,7 +479,23 @@ router.get('/', async (req, res) => {
                 JOIN games rg ON rg.id = gr.game_id
                 WHERE gr.player_id = p.id
                   AND rg.season_id = ${season_id}
-              ) AS has_games
+              ) AS has_games,
+              (
+                (
+                  SELECT COUNT(*)
+                  FROM goals sg
+                  JOIN games sgg ON sgg.id = sg.game_id
+                  WHERE sg.scorer_id = p.id
+                    AND sg.goal_type != 'own'
+                    AND sgg.season_id = ${season_id}
+                ) + (
+                  SELECT COUNT(*)
+                  FROM goals ag
+                  JOIN games agg ON agg.id = ag.game_id
+                  WHERE (ag.assist_1_id = p.id OR ag.assist_2_id = p.id)
+                    AND agg.season_id = ${season_id}
+                )
+              )::int AS season_points
             FROM players p
             JOIN player_teams pt ON pt.player_id = p.id
                                 AND pt.season_id  = ${season_id}
