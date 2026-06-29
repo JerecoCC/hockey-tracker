@@ -19,11 +19,15 @@
 }
 
 .viewSegmentedControl.viewSegmentedControl {
+  --filter-field-background: #{$bg-filter-field};
+
   flex: 0 0 auto;
   width: fit-content;
 }
 
 .filters {
+  --filter-field-background: #{$bg-filter-field};
+
   display: flex;
   flex-wrap: wrap;
   gap: $space-md;

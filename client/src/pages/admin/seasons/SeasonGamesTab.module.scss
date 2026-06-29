@@ -17,6 +17,10 @@
   flex-direction: column;
 }
 
+.filterVisibilitySwitch {
+  --filter-field-background: #{$bg-filter-field};
+}
+
 .weekGameCards {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

@@ -8,12 +8,18 @@
 
 .inactive {
   border-color: color-mix(in srgb, #{$text-dim} 42%, transparent) !important;
-  background: color-mix(in srgb, #{$border} 76%, #{$bg-input}) !important;
+  background: var(
+    --filter-field-background,
+    color-mix(in srgb, #{$border} 76%, #{$bg-input})
+  ) !important;
   color: $text-body !important;
 
   &:hover:not(:disabled) {
     border-color: color-mix(in srgb, #{$text-light} 72%, transparent) !important;
-    background: color-mix(in srgb, #{$border} 86%, #{$bg-input}) !important;
+    background: var(
+      --filter-field-background,
+      color-mix(in srgb, #{$border} 86%, #{$bg-input})
+    ) !important;
     color: $text-bright !important;
   }
 }
@@ -39,7 +45,7 @@
     border: 1px solid $border;
     border-radius: $radius-md;
     box-sizing: border-box;
-    background: $bg-input;
+    background: var(--filter-field-background, #{$bg-input});
     color: $text-light;
     font: inherit;
     cursor: pointer;

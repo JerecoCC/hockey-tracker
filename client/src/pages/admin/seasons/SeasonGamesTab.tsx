@@ -1018,6 +1018,7 @@ const SeasonGamesTab = ({
                 icon="filter_list"
                 activeTooltip="Hide filters"
                 inactiveTooltip="Show filters"
+                className={styles.filterVisibilitySwitch}
               />
             </ScheduleGamesActions>
           }

@@ -16,15 +16,16 @@
   gap: $space-xs;
   border: 1px solid var(--segmented-control-border);
   border-radius: $radius-md;
+  background: var(--filter-field-background, transparent);
   overflow: visible;
   // Compact: size to the options rather than stretching full width.
   width: fit-content;
 }
 
 .field {
-  --segmented-control-option-bg: #{$bg-input};
+  --segmented-control-option-bg: var(--filter-field-background, #{$bg-input});
 
-  background: $bg-input;
+  background: var(--filter-field-background, #{$bg-input});
   // Form-field usage fills the available width.
   width: 100%;
 }

@@ -13,7 +13,7 @@
   display: flex;
   align-items: center;
   gap: $space-xs;
-  background: $bg-input;
+  background: var(--filter-field-background, #{$bg-input});
   border: 1px solid $border;
   border-radius: $radius-md;
   color: $text-body;

@@ -118,6 +118,8 @@
 
 .testDate {
   &Control {
+    --filter-field-background: #{$bg-filter-field};
+
     display: flex;
     align-items: center;
     gap: $space-sm;

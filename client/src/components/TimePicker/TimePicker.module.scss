@@ -14,7 +14,7 @@
   align-items: center;
   gap: $space-sm;
   width: 100%;
-  background: $bg-input;
+  background: var(--filter-field-background, #{$bg-input});
   border: 1px solid $border;
   border-radius: $radius-md;
   height: 42px;

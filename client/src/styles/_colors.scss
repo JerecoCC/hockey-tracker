@@ -34,6 +34,7 @@ $edit-light: #93c5fd; // blue-300
 $bg-page: #0f172a; // slate-900 — outermost page background
 $bg-card: #1e293b; // slate-800 — cards, nav sidebar
 $bg-input: #0f172a; // same as page, used for form fields
+$bg-filter-field: color-mix(in srgb, #{$bg-input} 45%, #{$bg-card}); // search and filter controls
 
 // ── Dark admin — borders ──────────────────────────────────────────────
 $border: #334155; // slate-700
