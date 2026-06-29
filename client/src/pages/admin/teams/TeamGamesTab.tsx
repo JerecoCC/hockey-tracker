@@ -96,7 +96,7 @@ const TeamCalendarGame = ({
   const isHomeGame = game.home_team.id === teamId;
   const team = isHomeGame ? game.home_team : game.away_team;
   const opponent = isHomeGame ? game.away_team : game.home_team;
-  const logoAccentColor = isHomeGame ? team.secondary_color || team.primary_color : '#ffffff';
+  const logoAccentColor = isHomeGame ? team.text_color || '#ffffff' : '#ffffff';
   const { home, away, winnerTeamId } = displayScore(game);
   const teamGoals = isHomeGame ? home : away;
   const opponentGoals = isHomeGame ? away : home;
@@ -243,6 +243,7 @@ const TeamGamesTab = ({
           year: 'numeric',
         }).format(calendarMonth)}.png`,
       });
+      toast.success('Monthly schedule downloaded!');
     } catch {
       toast.error('Failed to generate schedule image');
     } finally {
@@ -274,8 +275,8 @@ const TeamGamesTab = ({
           size="sm"
           icon="download"
           iconHeight="field"
-          aria-label="Download month image"
-          tooltip="Download month image"
+          aria-label="Download monthly schedule"
+          tooltip="Download monthly schedule"
           className={styles.calendarExportButton}
           onClick={() => void handleDownloadMonthImage()}
           disabled={exportingMonthImage || scheduledGames.length === 0}

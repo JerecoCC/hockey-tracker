@@ -2,6 +2,7 @@ import { useState, type ComponentProps } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { toPng } from 'html-to-image';
+import { toast } from 'react-toastify';
 import useGames from '@/hooks/useGames';
 import TeamGamesTab from './TeamGamesTab';
 
@@ -9,6 +10,7 @@ const mockNavigate = jest.fn();
 
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('html-to-image', () => ({ toPng: jest.fn() }));
+jest.mock('react-toastify', () => ({ toast: { success: jest.fn(), error: jest.fn() } }));
 jest.mock('@/hooks/useGames', () => jest.fn());
 
 const mockUseGames = useGames as jest.Mock;
@@ -323,13 +325,15 @@ describe('TeamGamesTab', () => {
     expect(screen.queryByText('Select season...')).not.toBeInTheDocument();
 
     const gameButtons = screen.getAllByRole('button', { name: /^Open game / });
+    const homeGameButton = screen.getByLabelText('Open game vs Away Team');
+    const awayGameButton = screen.getByLabelText('Open game at Road Team');
     expect(gameButtons.filter((button) => button.classList.contains('home'))).toHaveLength(2);
     expect(gameButtons.filter((button) => button.classList.contains('away'))).toHaveLength(1);
-    expect(gameButtons.find((button) => button.classList.contains('home'))).toHaveStyle(
-      '--calendar-primary: #123456',
-    );
+    expect(homeGameButton).toHaveStyle('--calendar-primary: #123456');
+    expect(homeGameButton).toHaveStyle('--calendar-logo-accent: #ffffff');
+    expect(awayGameButton).toHaveStyle('--calendar-logo-accent: #ffffff');
     expect(screen.getByText(monthLabel(currentMonth))).toBeInTheDocument();
-    await user.hover(screen.getByLabelText('Open game vs Away Team'));
+    await user.hover(homeGameButton);
 
     expect(container.querySelector('.tipVisible')).toHaveTextContent('Away Team');
     expect(screen.getByText('W 5-4 (OT)')).toBeInTheDocument();
@@ -392,11 +396,19 @@ describe('TeamGamesTab', () => {
       return element;
     });
 
-    renderTeamGamesTab();
+    const { container } = renderTeamGamesTab();
 
-    expect(screen.getByRole('button', { name: 'Download month image' })).toBeInTheDocument();
+    const downloadButton = screen.getByRole('button', { name: 'Download monthly schedule' });
 
-    await user.click(screen.getByRole('button', { name: 'Download month image' }));
+    expect(downloadButton).toBeInTheDocument();
+
+    await user.hover(downloadButton);
+    await waitFor(() =>
+      expect(container.querySelector('.tipVisible')).toHaveTextContent('Download monthly schedule'),
+    );
+    await user.unhover(downloadButton);
+
+    await user.click(downloadButton);
 
     await waitFor(() => expect(clickMock).toHaveBeenCalled());
     const capturedNode = mockToPng.mock.calls[0][0] as HTMLElement;
@@ -420,6 +432,7 @@ describe('TeamGamesTab', () => {
       }).format(currentDate)}.png`,
     );
     expect(createdAnchor?.href).toBe('data:image/png;base64,test');
+    expect(toast.success).toHaveBeenCalledWith('Monthly schedule downloaded!');
 
     createElementSpy.mockRestore();
   });
