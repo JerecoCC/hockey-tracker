@@ -75,6 +75,7 @@ interface UseLeaguePlayersOptions {
   search?: string;
   rookiesOnly?: boolean;
   includeRetired?: boolean;
+  includeProspects?: boolean;
 }
 
 interface PaginatedPlayersResponse {
@@ -105,6 +106,7 @@ const useLeaguePlayers = (
         search: options.search,
         rookies_only: options.rookiesOnly,
         include_retired: options.includeRetired,
+        include_prospects: options.includeProspects,
       },
     ],
     queryFn: async () => {
@@ -117,6 +119,7 @@ const useLeaguePlayers = (
         if (options.search !== undefined) params.search = options.search;
         if (options.rookiesOnly) params.rookies_only = 'true';
         if (options.includeRetired) params.include_retired = 'true';
+        if (options.includeProspects) params.include_prospects = 'true';
         const { data } = await axios.get<PlayerRecord[] | PaginatedPlayersResponse>(
           `${API}/admin/players`,
           { headers: authHeaders(), params: Object.keys(params).length ? params : undefined },

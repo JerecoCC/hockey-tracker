@@ -99,6 +99,7 @@ describe('useLeaguePlayers – fetch', () => {
           search: 'wayne',
           rookiesOnly: true,
           includeRetired: true,
+          includeProspects: true,
         }),
       { wrapper: createWrapper() },
     );
@@ -115,6 +116,7 @@ describe('useLeaguePlayers – fetch', () => {
           search: 'wayne',
           rookies_only: 'true',
           include_retired: 'true',
+          include_prospects: 'true',
         },
       }),
     );
@@ -291,4 +293,3 @@ describe('useLeaguePlayers – deletePlayer', () => {
     expect(toast.error).toHaveBeenCalled();
   });
 });
-

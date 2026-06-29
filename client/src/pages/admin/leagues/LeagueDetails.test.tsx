@@ -1132,6 +1132,7 @@ describe('LeagueDetailsPage – players tab', () => {
           search: '',
           rookiesOnly: false,
           includeRetired: false,
+          includeProspects: true,
         }),
       ),
     );
@@ -1150,6 +1151,7 @@ describe('LeagueDetailsPage – players tab', () => {
         expect.objectContaining({
           rookiesOnly: true,
           includeRetired: false,
+          includeProspects: true,
         }),
       ),
     );
@@ -1162,6 +1164,7 @@ describe('LeagueDetailsPage – players tab', () => {
         expect.objectContaining({
           rookiesOnly: true,
           includeRetired: true,
+          includeProspects: true,
         }),
       ),
     );

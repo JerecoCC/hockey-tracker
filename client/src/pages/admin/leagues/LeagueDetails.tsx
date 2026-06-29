@@ -159,6 +159,7 @@ const LeagueDetailsPage = () => {
     search: playersSearch,
     rookiesOnly: playersRookiesOnly,
     includeRetired: playersIncludeRetired,
+    includeProspects: true,
   });
   const leagueContextValue = useMemo(
     () =>
