@@ -8,6 +8,8 @@ export interface SegmentedControlOption {
   label: ReactNode;
   /** Accessible label for icon-only or otherwise non-text labels. */
   ariaLabel?: string;
+  /** Keeps icon-only buttons compact and close to square. Defaults to true when ariaLabel is provided. */
+  iconOnly?: boolean;
   /** When provided, replaces the default `.active` class when this option is selected. */
   activeClassName?: string;
   /** When provided, wraps the button in a Tooltip with this text. */
@@ -51,15 +53,19 @@ const SegmentedControl = ({
       .join(' ')}
   >
     {options.map((opt, i) => {
+      const isActive = value === opt.value;
+      const isIconOnly = opt.iconOnly ?? Boolean(opt.ariaLabel);
       const btn = (
         <button
           type="button"
           className={[
             styles.option,
-            value === opt.value ? (opt.activeClassName ?? styles.active) : '',
+            isActive ? (opt.activeClassName ?? styles.active) : '',
           ]
             .filter(Boolean)
             .join(' ')}
+          data-active={isActive ? 'true' : undefined}
+          data-icon-only={isIconOnly ? 'true' : undefined}
           disabled={disabled}
           onClick={() => onChange(opt.value)}
           aria-label={opt.ariaLabel}

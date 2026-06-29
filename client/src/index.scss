@@ -25,6 +25,7 @@ $color-bg: #fff;
   -moz-osx-font-smoothing: grayscale;
   color: $color-text;
   background-color: $color-bg;
+  --list-item-hover-bg: rgba(255, 255, 255, 0.04);
 }
 
 *,

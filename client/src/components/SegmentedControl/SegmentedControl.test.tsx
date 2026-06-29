@@ -35,4 +35,25 @@ describe('SegmentedControl', () => {
 
     expect(onChange).toHaveBeenCalledWith('forwards');
   });
+
+  it('marks aria-labelled options as icon-only unless overridden', () => {
+    render(
+      <SegmentedControl
+        value="list"
+        onChange={jest.fn()}
+        options={[
+          { value: 'list', label: 'List icon', ariaLabel: 'List view' },
+          { value: 'mixed', label: 'Mixed content', ariaLabel: 'Mixed view', iconOnly: false },
+        ]}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'List view' })).toHaveAttribute(
+      'data-icon-only',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Mixed view' })).not.toHaveAttribute(
+      'data-icon-only',
+    );
+  });
 });

@@ -5,6 +5,7 @@
   --segmented-control-border: #{$border};
   // Border-only surface: options are transparent; only the active one fills.
   --segmented-control-option-bg: transparent;
+  --segmented-control-option-hover-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
 
   display: flex;
   align-items: stretch;
@@ -47,7 +48,7 @@
 
   flex: 0 0 auto;
   // Separate pill with gap around it (matches the tab buttons).
-  padding: $space-sm $space-md;
+  padding: 0.375rem $space-md;
   background: var(--segmented-control-option-bg);
   border: none;
   border-radius: $radius-md;
@@ -69,7 +70,17 @@
     height: 1em;
   }
 
-  &:hover:not(.active):not(:disabled) {
+  &:not([data-icon-only='true']) {
+    margin-block: 0.125rem;
+  }
+
+  &[data-icon-only='true'] {
+    aspect-ratio: 1;
+    padding-inline: 0;
+  }
+
+  &:hover:not([data-active='true']):not(:disabled) {
+    background: var(--segmented-control-option-hover-bg);
     color: $text-body;
   }
 
