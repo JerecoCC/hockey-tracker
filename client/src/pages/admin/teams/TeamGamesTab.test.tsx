@@ -90,7 +90,7 @@ const games = [
     id: 'game-away',
     season_id: 'season-1',
     game_type: 'regular',
-    status: 'scheduled',
+    status: 'final',
     scheduled_at: currentMonthIso(12),
     scheduled_time: '19:30',
     venue: 'Road Arena',
@@ -114,8 +114,8 @@ const games = [
       secondary_color: '#000',
       text_color: '#ffffff',
     },
-    home_score: 0,
-    away_score: 0,
+    home_score: 2,
+    away_score: 4,
     overtime_periods: null,
     shootout: false,
     shootout_first_team_id: null,
@@ -332,8 +332,9 @@ describe('TeamGamesTab', () => {
     await user.hover(screen.getByLabelText('Open game vs Away Team'));
 
     expect(container.querySelector('.tipVisible')).toHaveTextContent('Away Team');
-    expect(screen.getByText('W 4 - 5 (OT)')).toBeInTheDocument();
-    expect(screen.getByText('W 2 - 3 (SO)')).toBeInTheDocument();
+    expect(screen.getByText('W 5-4 (OT)')).toBeInTheDocument();
+    expect(screen.getByText('W 4-2')).toBeInTheDocument();
+    expect(screen.getByText('W 3-2 (SO)')).toBeInTheDocument();
     expect(screen.queryByText('AWY')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Open game vs Second Opponent')).not.toBeInTheDocument();
 

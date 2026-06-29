@@ -63,6 +63,9 @@ const displayScore = (game: GameRecord) => {
   };
 };
 
+const formatWinnerFirstScore = (away: number, home: number) =>
+  `${Math.max(away, home)}-${Math.min(away, home)}`;
+
 type CalendarDayStyle = CSSProperties & {
   '--team-calendar-day-accent'?: string;
   '--team-calendar-day-text'?: string;
@@ -114,9 +117,9 @@ const TeamCalendarGame = ({
 
   const detail =
     game.status === 'final'
-      ? `${resultLabel} ${away} - ${home}${extraTimeLabel}`
+      ? `${resultLabel} ${formatWinnerFirstScore(away, home)}${extraTimeLabel}`
       : game.status === 'in_progress'
-        ? `LIVE ${away} - ${home}`
+        ? `LIVE ${formatWinnerFirstScore(away, home)}`
         : game.status === 'scheduled'
           ? game.scheduled_time
             ? formatTime(game.scheduled_time, game.scheduled_at)
