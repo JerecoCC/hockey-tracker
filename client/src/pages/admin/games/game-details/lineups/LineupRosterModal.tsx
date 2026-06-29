@@ -12,23 +12,13 @@ import Modal from '@/components/Modal/Modal';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import styles from './LineupRosterModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const apiError = (err: unknown, fallback: string): string =>
   (err as AxiosError<{ error: string }>).response?.data?.error ?? fallback;
-
-const POSITION_LABELS: Record<string, string> = {
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  F: 'Forward',
-  D: 'Defense',
-  LD: 'Left Defense',
-  RD: 'Right Defense',
-  G: 'Goalie',
-};
 
 const playerFullName = (player: Pick<TeamPlayerRecord, 'first_name' | 'last_name'>) =>
   `${player.first_name} ${player.last_name}`.trim();
@@ -372,7 +362,7 @@ const LineupRosterModal = ({
                 imageShape="square"
                 imagePrimaryColor={p.primary_color}
                 imageTextColor={p.text_color}
-                subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+                subtitle={formatPlayerPosition(p.position) ?? undefined}
                 name={`${p.last_name}, ${p.first_name}`}
                 rightContent={p.is_prospect ? <Tag label="Prospect" /> : undefined}
                 disabled={controlsDisabled}

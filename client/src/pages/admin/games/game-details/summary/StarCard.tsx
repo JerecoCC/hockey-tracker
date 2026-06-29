@@ -4,6 +4,7 @@ import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import Tooltip from '@/components/Tooltip/Tooltip';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import styles from './ThreeStarsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
 
@@ -41,7 +42,7 @@ const StarCard = ({
   const nameLabel = `${player.first_name} ${player.last_name}`;
   const subLabel = [
     player.jersey_number != null ? `#${player.jersey_number}` : null,
-    player.position ?? null,
+    formatPlayerPosition(player.position),
   ]
     .filter(Boolean)
     .join(' • ');

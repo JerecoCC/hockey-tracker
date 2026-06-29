@@ -6,6 +6,7 @@ import Modal from '@/components/Modal/Modal';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type LineupEntry, type LineupPositionSlot } from '@/hooks/useGameLineup';
 import { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import styles from './SetLineupModal.module.scss';
 
 interface Props {
@@ -37,17 +38,6 @@ const MAX_STARTERS = 6;
 const REQUIRED_SKATERS = 5;
 const REQUIRED_GOALIES = 1;
 const SKATER_SLOTS: LineupPositionSlot[] = ['F1', 'F2', 'F3', 'D1', 'D2'];
-
-const POSITION_LABELS: Record<string, string> = {
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  F: 'Forward',
-  D: 'Defense',
-  LD: 'Left Defense',
-  RD: 'Right Defense',
-  G: 'Goalie',
-};
 
 const playerFullName = (player: Pick<TeamPlayerRecord, 'first_name' | 'last_name'>) =>
   `${player.first_name} ${player.last_name}`.trim();
@@ -95,10 +85,7 @@ const SetLineupModal = ({
   const [saving, setSaving] = useState(false);
   const [jerseyNotice, setJerseyNotice] = useState<string | null>(null);
 
-  const sortedPlayers = useMemo(
-    () => [...players].sort(compareByRosterOrder),
-    [players],
-  );
+  const sortedPlayers = useMemo(() => [...players].sort(compareByRosterOrder), [players]);
 
   const selectedPlayers = useMemo(
     () => sortedPlayers.filter((player) => selected.has(player.id)),
@@ -137,14 +124,10 @@ const SetLineupModal = ({
     const savedEntries = teamEntries.filter((entry) => !entry.inherited);
     const initialEntries = savedEntries.length > 0 ? savedEntries : teamEntries;
     const initialSelected = new Set(
-      initialEntries
-        .map((entry) => entry.player_id)
-        .filter((playerId) => playerIds.has(playerId)),
+      initialEntries.map((entry) => entry.player_id).filter((playerId) => playerIds.has(playerId)),
     );
     const nextSavedSelected = new Set(
-      savedEntries
-        .map((entry) => entry.player_id)
-        .filter((playerId) => playerIds.has(playerId)),
+      savedEntries.map((entry) => entry.player_id).filter((playerId) => playerIds.has(playerId)),
     );
 
     setSelected(initialSelected);
@@ -358,7 +341,9 @@ const SetLineupModal = ({
 
         {filtered.length === 0 ? (
           <p className={styles.empty}>
-            {sortedPlayers.length === 0 ? 'No players are in this game lineup yet.' : `No players match "${query}".`}
+            {sortedPlayers.length === 0
+              ? 'No players are in this game lineup yet.'
+              : `No players match "${query}".`}
           </p>
         ) : (
           <ul className={styles.list}>
@@ -378,9 +363,7 @@ const SetLineupModal = ({
                   imageShape="square"
                   imagePrimaryColor={player.primary_color}
                   imageTextColor={player.text_color}
-                  subtitle={
-                    player.position ? (POSITION_LABELS[player.position] ?? player.position) : undefined
-                  }
+                  subtitle={formatPlayerPosition(player.position) ?? undefined}
                   name={`${player.last_name}, ${player.first_name}`}
                   disabled={disabled}
                 />

@@ -11,6 +11,7 @@ import SearchableList from '@/components/SearchableList/SearchableList';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import Tag from '@/components/Tag/Tag';
 import BreadcrumbContext, { type BreadcrumbConfig } from '@/context/BreadcrumbContext';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import { useState } from 'react';
 import {
   minLogo,
@@ -69,12 +70,15 @@ export const Lists = {
               leadingImagePrimaryColor={player.team.primary_color}
               leadingImageTextColor={player.team.text_color}
               image_shape="circle"
-              placeholder={player.name.split(' ').map((part) => part[0]).join('')}
+              placeholder={player.name
+                .split(' ')
+                .map((part) => part[0])
+                .join('')}
               primaryColor={player.team.primary_color}
               textColor={player.team.text_color}
               chip={{ label: player.jersey }}
               name={player.name}
-              subtitle={`${player.position} | ${player.team.code}`}
+              subtitle={`${formatPlayerPosition(player.position) ?? player.position} | ${player.team.code}`}
               rightContent={{ type: 'tag', label: 'Active', intent: 'success' }}
               actions={[
                 { icon: 'open_in_new', tooltip: 'Open player', onClick: noop },
@@ -102,12 +106,15 @@ export const Lists = {
                     }
                     leadingImage={player.team.logo}
                     imageShape="circle"
-                    imagePlaceholder={player.name.split(' ').map((part) => part[0]).join('')}
+                    imagePlaceholder={player.name
+                      .split(' ')
+                      .map((part) => part[0])
+                      .join('')}
                     imagePrimaryColor={player.team.primary_color}
                     imageTextColor={player.team.text_color}
                     chip={{ label: player.jersey }}
                     name={player.name}
-                    subtitle={`${player.position} | ${player.team.code}`}
+                    subtitle={`${formatPlayerPosition(player.position) ?? player.position} | ${player.team.code}`}
                   />
                 ))}
               </>
@@ -133,11 +140,14 @@ export const SearchAndDetails = {
                 <ListItem
                   key={player.id}
                   image_shape="circle"
-                  placeholder={player.name.split(' ').map((part) => part[0]).join('')}
+                  placeholder={player.name
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')}
                   primaryColor={player.team.primary_color}
                   textColor={player.team.text_color}
                   name={player.name}
-                  subtitle={player.position}
+                  subtitle={formatPlayerPosition(player.position) ?? player.position}
                   rightContent={{ type: 'code', value: player.team.code }}
                 />
               ))}
@@ -209,7 +219,12 @@ export const HeadersAndBreadcrumbs = {
         subtitle="Professional Women Hockey League"
         primaryColor={teams.montreal.primary_color}
         textColor={teams.montreal.text_color}
-        nameAccessory={<Tag label="Current" intent="success" />}
+        nameAccessory={
+          <Tag
+            label="Current"
+            intent="success"
+          />
+        }
         swatches={[
           { label: 'Primary', color: teams.montreal.primary_color },
           { label: 'Secondary', color: '#d1d5db' },

@@ -1,21 +1,10 @@
 import { Link } from 'react-router-dom';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import { formatPlayerPosition, PLAYER_POSITION_LABELS } from '@/lib/playerPosition';
 import styles from './PlayerCard.module.scss';
 
-export const PLAYER_POSITION_LABELS: Record<string, string> = {
-  F: 'Forward',
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  D: 'Defense',
-  LD: 'Left Defense',
-  RD: 'Right Defense',
-  G: 'Goalie',
-};
-
-export const formatPlayerPosition = (position?: string | null) =>
-  position ? (PLAYER_POSITION_LABELS[position] ?? position) : null;
+export { formatPlayerPosition, PLAYER_POSITION_LABELS };
 
 interface Props {
   name: string;
@@ -86,8 +75,9 @@ const PlayerCard = ({
     jerseyNumber != null ? <span>#{jerseyNumber}</span> : null,
     positionLabel ? <span>{positionLabel}</span> : null,
   ].filter((item): item is React.ReactElement => Boolean(item));
-  const renderedSubtitle = subtitle ?? (
-    metaItems.length > 0 ? (
+  const renderedSubtitle =
+    subtitle ??
+    (metaItems.length > 0 ? (
       <span className={styles.meta}>
         {metaItems.map((item, index) => (
           <span
@@ -106,8 +96,7 @@ const PlayerCard = ({
           </span>
         ))}
       </span>
-    ) : null
-  );
+    ) : null);
   const cardClassName = [
     styles.card,
     isList ? styles.list : '',

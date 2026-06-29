@@ -8,6 +8,7 @@ import {
   type PlayerStintRecord,
   type TeamPlayerRecord,
 } from '@/hooks/useTeamPlayers';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import { ACQUISITION_TYPE_LABELS, ACQUISITION_TYPE_OPTIONS } from '../players/StintEditModal';
 import styles from './MovePlayerModal.module.scss';
 
@@ -214,7 +215,9 @@ const MovePlayerModal = ({
                     {s.jersey_number != null && (
                       <span className={styles.stintJersey}>#{s.jersey_number}</span>
                     )}
-                    {s.position && <span className={styles.stintJersey}>{s.position}</span>}
+                    {s.position && (
+                      <span className={styles.stintJersey}>{formatPlayerPosition(s.position)}</span>
+                    )}
                     {s.acquisition_type && (
                       <span className={styles.stintJersey}>
                         {ACQUISITION_TYPE_LABELS[s.acquisition_type] ?? s.acquisition_type}

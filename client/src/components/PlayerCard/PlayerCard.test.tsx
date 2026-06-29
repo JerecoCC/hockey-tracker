@@ -6,6 +6,7 @@ describe('PlayerCard', () => {
   it('formats known position codes as full names', () => {
     expect(formatPlayerPosition('C')).toBe('Center');
     expect(formatPlayerPosition('LW')).toBe('Left Wing');
+    expect(formatPlayerPosition('F')).toBe('Forward');
     expect(formatPlayerPosition('G')).toBe('Goalie');
   });
 
@@ -33,10 +34,7 @@ describe('PlayerCard', () => {
     expect(metaItems[1]).toHaveTextContent('#19');
     expect(metaItems[2]).toHaveTextContent('Center');
     expect(screen.getByText('JS').parentElement).toHaveStyle(
-      [
-        'box-shadow: 0 0 0 3px #003e7e,',
-        '0 0 0 4px rgba(0, 0, 0, 0.45)',
-      ].join(' '),
+      ['box-shadow: 0 0 0 3px #003e7e,', '0 0 0 4px rgba(0, 0, 0, 0.45)'].join(' '),
     );
   });
 
@@ -65,10 +63,7 @@ describe('PlayerCard', () => {
     expect(metaItems[1]).toHaveTextContent('#27');
     expect(metaItems[2]).toHaveTextContent('Left Wing');
     expect(screen.getByText('JS').parentElement).toHaveStyle(
-      [
-        'box-shadow: 0 0 0 2px #fcb514,',
-        '0 0 0 3px rgba(0, 0, 0, 0.45)',
-      ].join(' '),
+      ['box-shadow: 0 0 0 2px #fcb514,', '0 0 0 3px rgba(0, 0, 0, 0.45)'].join(' '),
     );
   });
 

@@ -44,6 +44,7 @@ import {
 } from '@/hooks/useTeamPlayers';
 import { type CreatePlayerData } from '@/hooks/useLeaguePlayers';
 import useTabState from '@/hooks/useTabState';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import {
   buildGameDetailsPath,
   buildLeagueDetailsPath,
@@ -65,17 +66,6 @@ const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
 const GAME_LOG_PAGE_SIZE = 20;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const POSITION_LABELS: Record<string, string> = {
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  F: 'Forward',
-  D: 'Defense',
-  LD: 'Left Defense',
-  RD: 'Right Defense',
-  G: 'Goalie',
-};
 
 const formatHeight = (cm: number | null) => {
   if (!cm) return null;
@@ -640,9 +630,7 @@ const PlayerDetailsPage = () => {
         ]
       : []),
   ];
-  const positionLabel = effectivePosition
-    ? (POSITION_LABELS[effectivePosition] ?? effectivePosition)
-    : null;
+  const positionLabel = formatPlayerPosition(effectivePosition);
   const isGoalie = effectivePosition === 'G';
   const recentGameColumns: Column<PlayerLastFiveGameRecord>[] = [
     {
@@ -705,7 +693,8 @@ const PlayerDetailsPage = () => {
                 tooltip="Goals Against Average"
               />
             ),
-            render: (row: PlayerLastFiveGameRecord) => formatGaa(row.goals_against, row.time_on_ice),
+            render: (row: PlayerLastFiveGameRecord) =>
+              formatGaa(row.goals_against, row.time_on_ice),
             align: 'center' as const,
           },
           {

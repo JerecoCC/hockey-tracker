@@ -11,23 +11,13 @@ import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import useSeasons from '@/hooks/useSeasons';
 import useTeamPlayers, { type TeamPlayerRecord } from '@/hooks/useTeamPlayers';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import { buildPlayerDetailsPath } from '@/lib/routeSlugs';
 import LineupCreatePlayersModal from '../games/game-details/lineups/LineupCreatePlayersModal';
 import AddPlayersModal from './AddPlayersModal';
 import BulkTradeModal from './BulkTradeModal';
 import TeamPlayerEditModal from './TeamPlayerEditModal';
 import styles from './TeamDetails.module.scss';
-
-const POSITION_LABELS: Record<string, string> = {
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  F: 'Forward',
-  D: 'Defense',
-  LD: 'Left Defense',
-  RD: 'Right Defense',
-  G: 'Goalie',
-};
 
 const DEFENSE_POSITIONS = new Set(['D', 'LD', 'RD', 'D1', 'D2']);
 
@@ -221,7 +211,7 @@ const TeamPlayersTab = ({
         primaryColor={p.primary_color ?? undefined}
         textColor={p.text_color ?? undefined}
         chip={p.jersey_number != null ? { label: p.jersey_number } : null}
-        subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+        subtitle={formatPlayerPosition(p.position) ?? undefined}
         rightContent={
           isProspectsView
             ? { type: 'tag', label: 'Prospect', intent: 'neutral' }

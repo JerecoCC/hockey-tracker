@@ -7,19 +7,11 @@ import SearchField from '@/components/SearchField/SearchField';
 import SelectableListItem from '@/components/SelectableListItem/SelectableListItem';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { type PlayerRosterInput } from '@/hooks/useTeamPlayers';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import styles from './AddPlayersModal.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const authHeaders = () => ({ Authorization: `Bearer ${localStorage.getItem('token')}` });
-
-const POSITION_LABELS: Record<string, string> = {
-  F: 'Forward',
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  D: 'Defense',
-  G: 'Goalie',
-};
 
 interface Props {
   open: boolean;
@@ -174,7 +166,7 @@ const AddPlayersModal = ({
                 imagePrimaryColor={p.primary_color}
                 imageTextColor={p.text_color}
                 name={`${p.first_name} ${p.last_name}`}
-                subtitle={p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined}
+                subtitle={formatPlayerPosition(p.position) ?? undefined}
                 rightContent={
                   isChecked ? (
                     <div

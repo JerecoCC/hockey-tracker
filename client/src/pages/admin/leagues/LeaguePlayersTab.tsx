@@ -13,17 +13,10 @@ import Tag from '@/components/Tag/Tag';
 import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { type PlayerRecord } from '@/hooks/useLeaguePlayers';
 import { missingPlayerDataIndicator } from '@/lib/playerDataStatus';
+import { formatPlayerPosition } from '@/lib/playerPosition';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
 import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
-
-const POSITION_LABELS: Record<string, string> = {
-  C: 'Center',
-  LW: 'Left Wing',
-  RW: 'Right Wing',
-  D: 'Defense',
-  G: 'Goalie',
-};
 
 interface Props {
   className?: string;
@@ -299,9 +292,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
                           href={playerHref}
                           chip={p.jersey_number != null ? { label: p.jersey_number } : null}
                           variant="framed"
-                          subtitle={
-                            p.position ? (POSITION_LABELS[p.position] ?? p.position) : undefined
-                          }
+                          subtitle={formatPlayerPosition(p.position) ?? undefined}
                           rightContent={renderPlayerTags(p)}
                           actions={
                             [
