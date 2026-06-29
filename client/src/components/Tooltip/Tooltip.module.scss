@@ -14,8 +14,8 @@
 .tip {
   position: fixed;
   transform: translateY(4px); // default slide-in direction (above → down a little)
-  background: $border;
-  color: $text-bright;
+  background: var(--app-tooltip-bg, #{$border});
+  color: var(--app-text-strong, #{$text-bright});
   font-size: $font-xs;
   font-weight: 500;
   text-transform: none;
@@ -23,7 +23,8 @@
   white-space: nowrap;
   padding: $space-xs $space-sm;
   border-radius: $radius-md;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--app-tooltip-border, rgba(255, 255, 255, 0.08));
+  box-shadow: 0 8px 24px var(--app-shadow, rgba(0, 0, 0, 0.4));
   pointer-events: none;
   opacity: 0;
   transition:
@@ -39,7 +40,7 @@
     left: var(--arrow-left, 50%); // JS keeps this centred over the trigger
     transform: translateX(-50%);
     border: 5px solid transparent;
-    border-top-color: $border;
+    border-top-color: var(--app-tooltip-bg, #{$border});
   }
 }
 
@@ -84,6 +85,6 @@
     top: auto;
     bottom: 100%;
     border-top-color: transparent;
-    border-bottom-color: $border;
+    border-bottom-color: var(--app-tooltip-bg, #{$border});
   }
 }

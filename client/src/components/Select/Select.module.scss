@@ -19,9 +19,9 @@
   justify-content: space-between;
   gap: $space-xs;
   background: var(--filter-field-background, #{$bg-input});
-  border: 1px solid $border;
+  border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   font-size: $font-base;
   line-height: 1.4;
   height: 42px;
@@ -37,6 +37,11 @@
 
   &:focus {
     border-color: $accent;
+  }
+
+  &:hover:not(.triggerDisabled) {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
   }
 
   &.triggerOpen {
@@ -78,7 +83,7 @@
   background: transparent;
   border: none;
   outline: none;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   font-size: $font-base;
   font-family: inherit;
   line-height: 1.4;
@@ -86,7 +91,7 @@
   cursor: inherit;
 
   &::placeholder {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &:disabled {
@@ -97,13 +102,13 @@
 .placeholder {
   flex: 1 1 auto;
   min-width: 0;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-size: $font-base;
   line-height: 1.4;
 }
 
 .triggerDivider {
-  --divider-color: #{$border};
+  --divider-color: var(--app-field-border, #{$border});
 }
 
 .caretButton {
@@ -113,15 +118,15 @@
   justify-content: center;
   flex: 0 0 2rem;
   border-radius: $radius-md;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   transition:
     background $transition-fast,
     color $transition-fast;
 }
 
 .trigger:hover:not(.triggerDisabled) .caretButton {
-  color: $text-bright;
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--app-text-strong, #{$text-bright});
+  background: var(--app-hover-bg, rgba(255, 255, 255, 0.05));
 }
 
 .caret {
@@ -138,7 +143,7 @@
   // Positioned `fixed` with coordinates measured from the trigger so it overlays
   // instead of growing/clipping inside an overflow card or modal.
   position: fixed;
-  background: $bg-card;
+  background: var(--app-menu-bg, #{$bg-card});
   border: 1px solid $accent;
   border-radius: $radius-md;
   list-style: none;
@@ -147,14 +152,14 @@
   z-index: 200;
   max-height: 220px;
   overflow-y: auto;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 8px 24px var(--app-shadow, rgba(0, 0, 0, 0.4));
   display: flex;
   flex-direction: column;
   gap: 2px;
 
   // Custom scrollbar — always visible as a thin $border track
   scrollbar-width: thin;
-  scrollbar-color: $border transparent;
+  scrollbar-color: var(--app-field-border, #{$border}) transparent;
 
   &::-webkit-scrollbar {
     width: 4px;
@@ -165,7 +170,7 @@
   }
 
   &::-webkit-scrollbar-thumb {
-    background: $border;
+    background: var(--app-field-border, #{$border});
     border-radius: $radius-md;
   }
 }
@@ -178,13 +183,13 @@
 }
 
 .divider {
-  --divider-color: #{$text-dim};
+  --divider-color: var(--app-text-muted, #{$text-dim});
 }
 
 .emptyMessage {
   padding: $space-sm $space-md;
   font-size: $font-sm;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   font-style: italic;
   text-align: center;
   list-style: none;
@@ -201,7 +206,7 @@
   background: transparent;
   border: none;
   border-radius: $radius-sm;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   font-size: $font-base;
   line-height: 1.4;
   font-weight: 400;
@@ -215,7 +220,7 @@
 
   &.optionActive {
     background: rgba($accent, 0.2);
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     font-weight: 600;
   }
 
@@ -229,7 +234,7 @@
     font-size: $font-base;
     line-height: 1.4;
     font-weight: 400;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: none;
     letter-spacing: 0;
   }
@@ -272,11 +277,11 @@
     width: 20px;
     height: 20px;
     border-radius: $radius-sm;
-    background: $border;
+    background: var(--app-field-border, #{$border});
     flex-shrink: 0;
     font-size: $font-xs;
     font-weight: 700;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     text-transform: uppercase;
     letter-spacing: 0;
   }

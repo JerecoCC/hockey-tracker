@@ -23,9 +23,52 @@ $color-bg: #fff;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: $color-text;
-  background-color: $color-bg;
+  color: var(--app-text, $color-text);
+  background-color: var(--app-bg, $color-bg);
+  color-scheme: dark;
+  --app-bg: #0f172a;
+  --app-surface: #1e293b;
+  --app-surface-muted: #0f172a;
+  --app-field-bg: color-mix(in srgb, #0f172a 45%, #1e293b);
+  --app-field-bg-hover: color-mix(in srgb, #0f172a 30%, #1e293b);
+  --app-field-border: #334155;
+  --app-field-border-hover: #475569;
+  --app-menu-bg: #1e293b;
+  --app-border: #334155;
+  --app-text-muted: #64748b;
+  --app-text-subtle: #94a3b8;
+  --app-text: #e2e8f0;
+  --app-text-strong: #f8fafc;
+  --app-hover-bg: rgba(255, 255, 255, 0.06);
+  --app-shadow: rgba(0, 0, 0, 0.4);
+  --app-logo-shadow: rgba(255, 255, 255, 0.25);
+  --app-tooltip-bg: #334155;
+  --app-tooltip-border: rgba(255, 255, 255, 0.08);
+  --filter-field-background: var(--app-field-bg);
   --list-item-hover-bg: rgba(255, 255, 255, 0.04);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --app-bg: #f3f6fb;
+  --app-surface: #ffffff;
+  --app-surface-muted: #f8fafc;
+  --app-field-bg: #edf3fa;
+  --app-field-bg-hover: #e5edf7;
+  --app-field-border: #bfccd9;
+  --app-field-border-hover: #94a3b8;
+  --app-menu-bg: #ffffff;
+  --app-border: #cbd5e1;
+  --app-text-muted: #5b6778;
+  --app-text-subtle: #334155;
+  --app-text: #1f2937;
+  --app-text-strong: #0f172a;
+  --app-hover-bg: rgba(15, 23, 42, 0.06);
+  --app-shadow: rgba(15, 23, 42, 0.12);
+  --app-logo-shadow: rgba(15, 23, 42, 0.16);
+  --app-tooltip-bg: #ffffff;
+  --app-tooltip-border: #cbd5e1;
+  --list-item-hover-bg: rgba(37, 99, 235, 0.06);
 }
 
 *,
@@ -37,11 +80,13 @@ $color-bg: #fff;
 body {
   margin: 0;
   min-width: 320px;
+  background: var(--app-bg);
+  color: var(--app-text);
 }
 
 #root * {
   scrollbar-width: thin;
-  scrollbar-color: #334155 transparent;
+  scrollbar-color: var(--app-border) transparent;
 }
 
 #root *::-webkit-scrollbar {
@@ -57,12 +102,12 @@ body {
 #root *::-webkit-scrollbar-thumb {
   border: 0.125rem solid transparent;
   border-radius: 999px;
-  background: #334155;
+  background: var(--app-border);
   background-clip: content-box;
 }
 
 #root *::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--app-text-subtle);
   background-clip: content-box;
 }
 
@@ -94,13 +139,13 @@ svg[aria-hidden] {
 // $text-body: #e2e8f0  $text-bright: #f8fafc  $text-dim: #64748b
 
 .Toastify__toast {
-  background: #1e293b !important;
-  border: 1px solid #334155 !important;
+  background: var(--app-surface) !important;
+  border: 1px solid var(--app-border) !important;
   border-radius: 12px !important;
-  color: #e2e8f0 !important;
+  color: var(--app-text) !important;
   font-family: inherit !important;
   font-size: 0.875rem !important;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4) !important;
+  box-shadow: 0 8px 24px var(--app-shadow) !important;
   padding: 0.875rem 1rem !important;
 
   // Intent — left accent border
@@ -119,7 +164,7 @@ svg[aria-hidden] {
 }
 
 .Toastify__toast-body {
-  color: #e2e8f0 !important;
+  color: var(--app-text) !important;
   font-family: inherit !important;
   padding: 0 !important;
   gap: 0.625rem !important;
@@ -140,10 +185,10 @@ svg[aria-hidden] {
 }
 
 .Toastify__close-button {
-  color: #64748b !important;
+  color: var(--app-text-muted) !important;
   opacity: 1 !important;
 
   &:hover {
-    color: #e2e8f0 !important;
+    color: var(--app-text-strong) !important;
   }
 }

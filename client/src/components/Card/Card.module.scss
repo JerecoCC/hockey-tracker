@@ -7,17 +7,17 @@
 
 // Filled variant (card background, border)
 .filled {
-  background: $bg-card;
+  background: var(--app-surface, #{$bg-card});
   border-radius: $radius-lg;
   padding: $space-xl;
-  border: 1px solid $border;
+  border: 1px solid var(--app-border, #{$border});
 }
 
 .border {
   background: transparent;
   border-radius: $radius-lg;
   padding: $space-xl;
-  border: 1px solid $border;
+  border: 1px solid var(--app-border, #{$border});
 }
 
 // Light variant (white background, shadow)

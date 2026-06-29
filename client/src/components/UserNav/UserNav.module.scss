@@ -9,8 +9,8 @@ $nav-collapsed-width: 56px;
 .nav {
   width: $nav-width;
   height: 100%;
-  background: $bg-card;
-  border-right: 1px solid $border;
+  background: var(--app-surface, #{$bg-card});
+  border-right: 1px solid var(--app-border, #{$border});
   display: flex;
   flex-direction: column;
   padding: $space-2xl 0;
@@ -58,7 +58,7 @@ $nav-collapsed-width: 56px;
 
   font-size: $font-xl;
   font-weight: 700;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   white-space: nowrap;
   letter-spacing: 0.01em;
 }
@@ -83,7 +83,7 @@ $nav-collapsed-width: 56px;
   background: transparent;
   border: none;
   border-radius: 0;
-  color: $text-light;
+  color: var(--app-text-subtle, #{$text-light});
   font-size: $font-nav;
   font-weight: 500;
   cursor: pointer;
@@ -94,8 +94,8 @@ $nav-collapsed-width: 56px;
     color $transition-fast;
 
   &:hover {
-    background: $bg-page;
-    color: #e2e8f0;
+    background: var(--app-bg, #{$bg-page});
+    color: var(--app-text, #e2e8f0);
   }
 
   &.active {
@@ -115,7 +115,7 @@ $nav-collapsed-width: 56px;
 // ── Bottom section (switch panel) ──────────────────────────────────────
 .bottom {
   margin-top: auto;
-  border-top: 1px solid $border;
+  border-top: 1px solid var(--app-border, #{$border});
   padding-top: $space-sm;
 }
 
@@ -139,7 +139,7 @@ $nav-collapsed-width: 56px;
     transition-duration: $transition-layout;
     transition-timing-function: ease;
     border-right: none;
-    border-left: 1px solid $border;
+    border-left: 1px solid var(--app-border, #{$border});
   }
 
   .nav.mobileOpen {

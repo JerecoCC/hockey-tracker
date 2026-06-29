@@ -2,6 +2,8 @@ import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom'
 import { type ReactNode } from 'react';
 import { ToastContainer } from 'react-toastify';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { useTheme } from './context/ThemeContext';
+import { ThemeProvider } from './context/ThemeProvider';
 import LoginPage from './pages/login/Login';
 import SignupPage from './pages/signup/Signup';
 import AdminLayout from './components/AdminLayout/AdminLayout';
@@ -163,16 +165,26 @@ const router = createBrowserRouter([
   },
 ]);
 
+const AppShell = () => {
+  const { theme } = useTheme();
+
+  return (
+    <AuthProvider>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={4000}
+        hideProgressBar
+        theme={theme}
+      />
+      <RouterProvider router={router} />
+    </AuthProvider>
+  );
+};
+
 const App = () => (
-  <AuthProvider>
-    <ToastContainer
-      position="bottom-right"
-      autoClose={4000}
-      hideProgressBar
-      theme="dark"
-    />
-    <RouterProvider router={router} />
-  </AuthProvider>
+  <ThemeProvider>
+    <AppShell />
+  </ThemeProvider>
 );
 
 export default App;

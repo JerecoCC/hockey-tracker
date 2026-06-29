@@ -10,7 +10,7 @@
   gap: $space-sm;
   padding: 0 $space-md;
   background: var(--filter-field-background, #{$bg-filter-field});
-  border: 1px solid $border;
+  border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
   transition:
     border-color $transition-fast,
@@ -18,6 +18,11 @@
 
   &:focus-within {
     border-color: $accent;
+  }
+
+  &:hover:not(.disabled) {
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-filter-field}));
   }
 }
 
@@ -36,7 +41,7 @@
 
 .icon {
   flex-shrink: 0;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   pointer-events: none;
 }
 
@@ -49,10 +54,10 @@
   outline: none;
   font-size: $font-base;
   font-family: inherit;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
 
   &::placeholder {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &::-webkit-search-cancel-button {
@@ -71,14 +76,14 @@
   border-radius: $radius-sm;
   padding: 0;
   background: transparent;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   cursor: pointer;
   transition:
     background $transition-fast,
     color $transition-fast;
 
   &:hover {
-    color: $text-body;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--app-text, #{$text-body});
+    background: var(--app-hover-bg, rgba(255, 255, 255, 0.08));
   }
 }

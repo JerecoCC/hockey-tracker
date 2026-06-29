@@ -135,12 +135,16 @@
   }
 
   &Neutral {
-    background: $border;
-    color: $text-body;
-    border: 1px solid $border;
+    background: var(--app-border, #{$border});
+    color: var(--app-text, #{$text-body});
+    border: 1px solid var(--app-border, #{$border});
     &:hover:not(:disabled) {
-      background: $text-dim;
-      border-color: $text-dim;
+      background: color-mix(
+        in srgb,
+        var(--app-border, #{$border}) 72%,
+        var(--app-text-muted, #{$text-dim})
+      );
+      border-color: var(--app-text-muted, #{$text-dim});
     }
   }
 }
@@ -199,12 +203,12 @@
 
   &Neutral {
     background: transparent;
-    color: $text-light;
-    border: 1px solid $text-dim;
+    color: var(--app-text-subtle, #{$text-light});
+    border: 1px solid var(--app-text-muted, #{$text-dim});
     &:hover:not(:disabled) {
-      background: rgba($text-light, 0.15);
-      color: $text-bright;
-      border-color: $text-light;
+      background: var(--app-hover-bg, rgba($text-light, 0.15));
+      color: var(--app-text-strong, #{$text-bright});
+      border-color: var(--app-text-subtle, #{$text-light});
     }
   }
 }
@@ -258,11 +262,11 @@
 
   &Neutral {
     background: transparent;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     border: none;
     &:hover:not(:disabled) {
-      color: $text-bright;
-      background: rgba($border, 0.4);
+      color: var(--app-text-strong, #{$text-bright});
+      background: var(--app-hover-bg, rgba($border, 0.4));
     }
   }
 }

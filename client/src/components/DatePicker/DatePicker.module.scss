@@ -1,6 +1,5 @@
 @use "styles/colors" as *;
 @use "styles/mixins" as *;
-@use "sass:color";
 
 // ── Wrapper ─────────────────────────────────────────────────────────────
 .wrapper {
@@ -20,7 +19,7 @@
   gap: $space-sm;
   width: 100%;
   background: var(--filter-field-background, #{$bg-input});
-  border: 1px solid $border;
+  border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
   height: 42px;
   padding: 0 $space-lg;
@@ -31,7 +30,8 @@
   }
 
   &:hover {
-    border-color: color.adjust($border, $lightness: 10%);
+    border-color: var(--app-field-border-hover, #{$text-dim});
+    background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
   }
 }
 
@@ -49,16 +49,17 @@
     min-height: 42px;
     width: auto;
     background: var(--filter-field-background, #{$bg-input});
-    border: 1px solid $border;
+    border: 1px solid var(--app-field-border, #{$border});
     border-radius: $radius-md;
     padding: 0 $space-xl 0 $space-lg;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font: inherit;
     cursor: pointer;
     transition: border-color $transition-base;
 
     &:hover {
-      border-color: color.adjust($border, $lightness: 10%);
+      border-color: var(--app-field-border-hover, #{$text-dim});
+      background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
     }
 
     &:focus-visible {
@@ -99,7 +100,7 @@
     }
   }
 
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
 }
 
 // Inline text input for typing the date
@@ -111,26 +112,26 @@
   outline: none;
   font-size: $font-base;
   font-family: inherit;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   cursor: text;
 
   // Dim the YYYY/MM/DD placeholder text when no segment has been committed
   &[data-empty="true"] {
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 }
 
 .clear {
   display: flex;
   align-items: center;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   cursor: pointer;
   padding: 0 2px;
   border-radius: $radius-sm;
   transition: color $transition-fast;
 
   &:hover {
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 }
 
@@ -138,12 +139,12 @@
 .dropdown {
   position: fixed;
   z-index: 200;
-  background: $bg-card;
-  border: 1px solid $border;
+  background: var(--app-menu-bg, #{$bg-card});
+  border: 1px solid var(--app-border, #{$border});
   border-radius: $radius-lg;
   padding: $space-lg;
   min-width: 268px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 12px 40px var(--app-shadow, rgba(0, 0, 0, 0.6));
 }
 
 // ── Calendar header (prev / month-year / next) ────────────────────────────
@@ -160,7 +161,7 @@
   border: none;
   font-size: $font-base;
   font-weight: 600;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   font-family: inherit;
   cursor: pointer;
   padding: 2px $space-sm;
@@ -171,7 +172,7 @@
 
   &:hover {
     color: $accent-light;
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--app-hover-bg, rgba(255, 255, 255, 0.06));
   }
 }
 
@@ -181,7 +182,7 @@
   justify-content: center;
   background: none;
   border: none;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   cursor: pointer;
   width: 28px;
   height: 28px;
@@ -191,8 +192,8 @@
     background $transition-fast;
 
   &:hover {
-    color: $text-body;
-    background: rgba(255, 255, 255, 0.07);
+    color: var(--app-text, #{$text-body});
+    background: var(--app-hover-bg, rgba(255, 255, 255, 0.07));
   }
 }
 
@@ -207,7 +208,7 @@
   &Name {
     font-size: $font-xs;
     font-weight: 600;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
     text-align: center;
     padding: $space-xs 0 $space-sm;
     text-transform: uppercase;
@@ -216,7 +217,7 @@
 
   background: none;
   border: 1px solid transparent;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
   font-size: $font-base;
   font-family: inherit;
   border-radius: $radius-sm;
@@ -228,8 +229,8 @@
     color $transition-fast;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.07);
-    color: $text-bright;
+    background: var(--app-hover-bg, rgba(255, 255, 255, 0.07));
+    color: var(--app-text-strong, #{$text-bright});
   }
 }
 
@@ -261,7 +262,7 @@
   &Btn {
     background: none;
     border: 1px solid transparent;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-sm;
     font-family: inherit;
     border-radius: $radius-sm;
@@ -273,8 +274,8 @@
       color $transition-fast;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.07);
-      color: $text-bright;
+      background: var(--app-hover-bg, rgba(255, 255, 255, 0.07));
+      color: var(--app-text-strong, #{$text-bright});
     }
   }
 }
@@ -290,7 +291,7 @@
   &Btn {
     background: none;
     border: 1px solid transparent;
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     font-size: $font-sm;
     font-family: inherit;
     border-radius: $radius-sm;
@@ -302,8 +303,8 @@
       color $transition-fast;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.07);
-      color: $text-bright;
+      background: var(--app-hover-bg, rgba(255, 255, 255, 0.07));
+      color: var(--app-text-strong, #{$text-bright});
     }
   }
 }
@@ -315,12 +316,12 @@
   gap: $space-sm;
   margin-top: $space-md;
   padding-top: $space-md;
-  border-top: 1px solid $border;
+  border-top: 1px solid var(--app-border, #{$border});
 
   &Btn {
     background: none;
-    border: 1px solid $border;
-    color: $text-dim;
+    border: 1px solid var(--app-field-border, #{$border});
+    color: var(--app-text-muted, #{$text-dim});
     font-size: $font-sm;
     font-family: inherit;
     border-radius: $radius-sm;
@@ -332,7 +333,7 @@
       background $transition-fast;
 
     &:hover {
-      color: $text-bright;
+      color: var(--app-text-strong, #{$text-bright});
       border-color: $accent;
       background: rgba(37, 99, 235, 0.12);
     }

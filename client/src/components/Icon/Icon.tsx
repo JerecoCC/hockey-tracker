@@ -50,6 +50,7 @@ import {
   faList,
   faLocationDot,
   faMagnifyingGlass,
+  faMoon,
   faPen,
   faPeopleGroup,
   faPlay,
@@ -62,6 +63,7 @@ import {
   faSortDown,
   faSortUp,
   faStar,
+  faSun,
   faTableCells,
   faTrash,
   faTrophy,
@@ -183,6 +185,8 @@ const ICON_MAP: Record<string, IconDefinition> = {
 
   // swap / switch
   swap_horiz: faRightLeft,
+  dark_mode: faMoon,
+  light_mode: faSun,
 
   // decorative
   sports_hockey: faHockeyPuck,

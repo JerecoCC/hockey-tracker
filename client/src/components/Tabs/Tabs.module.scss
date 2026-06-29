@@ -15,8 +15,8 @@
   width: fit-content;
   gap: $space-xs;
   padding: $space-sm;
-  background: $bg-card;
-  border: 1px solid $border;
+  background: var(--filter-field-background, #{$bg-card});
+  border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-lg;
 
   &Disabled {
@@ -55,13 +55,13 @@
   padding: $space-sm $space-xl;
   font-size: $font-nav;
   font-weight: 400;
-  color: $text-light;
+  color: var(--app-text-subtle, #{$text-light});
   cursor: pointer;
   border-radius: $radius-md;
   transition: color $transition-fast;
 
   &:hover {
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 
   // Active tab text sits on the sliding accent indicator and is inert — no

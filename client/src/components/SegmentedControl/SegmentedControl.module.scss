@@ -2,7 +2,7 @@
 @use "styles/mixins" as *;
 
 .segmentedControl {
-  --segmented-control-border: #{$border};
+  --segmented-control-border: var(--app-field-border, #{$border});
   // Border-only surface: options are transparent; only the active one fills.
   --segmented-control-option-bg: transparent;
   --segmented-control-option-hover-bg: var(--list-item-hover-bg, rgba(255, 255, 255, 0.04));
@@ -53,7 +53,7 @@
   background: var(--segmented-control-option-bg);
   border: none;
   border-radius: $radius-md;
-  color: $text-light;
+  color: var(--app-text-subtle, #{$text-light});
   font-size: $font-nav;
   font-weight: 400;
   cursor: pointer;
@@ -82,7 +82,7 @@
 
   &:hover:not([data-active='true']):not(:disabled) {
     background: var(--segmented-control-option-hover-bg);
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
   }
 
   &:focus {

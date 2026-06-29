@@ -7,20 +7,28 @@
 }
 
 .inactive {
-  border-color: color-mix(in srgb, #{$text-dim} 42%, transparent) !important;
+  border-color: color-mix(
+    in srgb,
+    var(--app-text-muted, #{$text-dim}) 42%,
+    transparent
+  ) !important;
   background: var(
     --filter-field-background,
-    color-mix(in srgb, #{$border} 76%, #{$bg-input})
+    var(--app-field-bg, color-mix(in srgb, var(--app-field-border, #{$border}) 76%, #{$bg-input}))
   ) !important;
-  color: $text-body !important;
+  color: var(--app-text, #{$text-body}) !important;
 
   &:hover:not(:disabled) {
-    border-color: color-mix(in srgb, #{$text-light} 72%, transparent) !important;
+    border-color: color-mix(
+      in srgb,
+      var(--app-text-subtle, #{$text-light}) 72%,
+      transparent
+    ) !important;
     background: var(
       --filter-field-background,
-      color-mix(in srgb, #{$border} 86%, #{$bg-input})
+      var(--app-field-bg-hover, color-mix(in srgb, var(--app-field-border, #{$border}) 86%, #{$bg-input}))
     ) !important;
-    color: $text-bright !important;
+    color: var(--app-text-strong, #{$text-bright}) !important;
   }
 }
 
@@ -42,11 +50,11 @@
     height: var(--switch-track-height);
     flex: 0 0 auto;
     padding: 0;
-    border: 1px solid $border;
+    border: 1px solid var(--app-field-border, #{$border});
     border-radius: $radius-md;
     box-sizing: border-box;
     background: var(--filter-field-background, #{$bg-input});
-    color: $text-light;
+    color: var(--app-text-subtle, #{$text-light});
     font: inherit;
     cursor: pointer;
     transition:
@@ -54,8 +62,9 @@
       border-color $transition-fast;
 
     &:hover:not(:disabled) {
-      border-color: $text-light;
-      color: $text-bright;
+      border-color: var(--app-field-border-hover, #{$text-light});
+      background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
+      color: var(--app-text-strong, #{$text-bright});
     }
 
     &:focus-visible {
@@ -91,9 +100,9 @@
     width: var(--switch-thumb-size);
     height: var(--switch-thumb-size);
     border-radius: $radius-md;
-    background: $border;
-    color: $text-body;
-    border: 1px solid $border;
+    background: var(--app-field-border, #{$border});
+    color: var(--app-text, #{$text-body});
+    border: 1px solid var(--app-field-border, #{$border});
     transition:
       color $transition-fast,
       background $transition-fast,

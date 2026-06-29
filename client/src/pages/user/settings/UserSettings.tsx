@@ -7,7 +7,9 @@ import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import SearchField from '@/components/SearchField/SearchField';
 import Section from '@/components/Section/Section';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
+import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import useLeagues from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
@@ -54,6 +56,7 @@ const TeamCard = ({ team, favorited, showFavoriteIndicator = false, onToggle }: 
 
 const UserSettings = () => {
   const { user } = useAuth();
+  const { isDarkMode, toggleTheme } = useTheme();
   const { leagues, loading: leaguesLoading } = useLeagues();
   const { teams, loading: teamsLoading } = useTeams();
   const { isFavorite, toggle } = useFavoriteTeams();
@@ -113,6 +116,18 @@ const UserSettings = () => {
           <div className={styles.accountTitle}>
             <h2 className={styles.accountName}>{displayName}</h2>
             <span className={styles.accountBadge}>{accountCode}</span>
+          </div>
+          <div className={styles.themeControl}>
+            <span className={styles.themeLabel}>Dark mode</span>
+            <ToggleButton
+              variant="switch"
+              active={isDarkMode}
+              onClick={toggleTheme}
+              activeIcon="dark_mode"
+              inactiveIcon="light_mode"
+              activeTooltip="Switch to light mode"
+              inactiveTooltip="Switch to dark mode"
+            />
           </div>
         </div>
         <div className={styles.infoGrid}>

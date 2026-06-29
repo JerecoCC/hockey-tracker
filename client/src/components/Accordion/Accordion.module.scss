@@ -6,8 +6,8 @@
 .accordion {
   // CSS custom property so consumers can tint the header to match a coloured border
   // by overriding --accordion-header-bg on the root element via className.
-  --accordion-header-bg: #{$border};
-  --accordion-border-color: #{$border};
+  --accordion-header-bg: var(--app-border, #{$border});
+  --accordion-border-color: var(--app-border, #{$border});
 
   display: flex;
   flex-direction: column;
@@ -88,14 +88,14 @@
   height: auto;
   background: transparent;
   border: none;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   cursor: pointer;
   padding: 0;
   border-radius: 0;
   transition: color $transition-fast;
 
   &:hover {
-    color: $text-body;
+    color: var(--app-text, #{$text-body});
     background: transparent;
   }
 
@@ -135,7 +135,7 @@
   min-width: 0;
   font-size: $font-lg;
   font-weight: 500;
-  color: $text-body;
+  color: var(--app-text, #{$text-body});
 
   &Meta {
     display: inline-flex;

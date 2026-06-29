@@ -14,7 +14,7 @@
   justify-content: center;
   overflow: hidden;
   // Default background when no team color is provided
-  background: $border;
+  background: var(--app-border, #{$border});
 }
 
 // Photo fills the container exactly
@@ -44,6 +44,6 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0;
-  color: $text-dim; // fallback; overridden by inline style when team color is known
+  color: var(--app-text-muted, #{$text-dim}); // fallback; overridden by inline style when team color is known
   line-height: 1;
 }

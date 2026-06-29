@@ -10,7 +10,7 @@
   align-items: center;
   gap: $space-xs;
   padding: 0 $space-md;
-  background: $bg-card;
+  background: var(--app-surface, #{$bg-card});
   border-radius: 0 $radius-md $radius-md 0;
   opacity: 0;
   pointer-events: none;
@@ -24,7 +24,7 @@
     top: 0;
     bottom: 0;
     width: 3rem;
-    background: linear-gradient(to right, transparent, $bg-card);
+    background: linear-gradient(to right, transparent, var(--app-surface, #{$bg-card}));
     pointer-events: none;
   }
 }

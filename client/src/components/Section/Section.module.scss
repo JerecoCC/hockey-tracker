@@ -22,7 +22,7 @@
   gap: $space-md;
   font-size: $font-xl;
   font-weight: 700;
-  color: $text-bright;
+  color: var(--app-text-strong, #{$text-bright});
   margin: 0;
 }
 

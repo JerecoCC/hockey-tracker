@@ -14,13 +14,17 @@
   }
 
   &Hero {
+    position: relative;
     display: flex;
     align-items: center;
     gap: $space-lg;
     margin-bottom: $space-xl;
+    padding-right: 10rem;
 
     @container (max-width: 560px) {
       align-items: flex-start;
+      flex-wrap: wrap;
+      padding-right: 0;
     }
   }
 
@@ -41,7 +45,7 @@
     margin: 0;
     font-size: $font-2xl;
     line-height: 1.1;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     letter-spacing: 0;
   }
 
@@ -57,6 +61,34 @@
     padding: $space-xs $space-sm;
     text-transform: uppercase;
   }
+}
+
+.themeControl {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  color: var(--app-text-subtle, #{$text-light});
+  font-size: $font-xs;
+  font-weight: 700;
+  text-transform: uppercase;
+
+  @container (max-width: 560px) {
+    position: static;
+    margin-left: auto;
+  }
+
+  @container (max-width: 420px) {
+    width: 100%;
+    justify-content: space-between;
+    margin-left: 0;
+  }
+}
+
+.themeLabel {
+  white-space: nowrap;
 }
 
 .infoGrid {
@@ -90,7 +122,7 @@
 .empty {
   margin: 0;
   font-size: $font-base;
-  color: $text-dim;
+  color: var(--app-text-muted, #{$text-dim});
   padding: $space-lg 0;
 }
 
@@ -121,14 +153,14 @@
   &Name {
     font-size: $font-base;
     font-weight: 600;
-    color: $text-bright;
+    color: var(--app-text-strong, #{$text-bright});
     @include truncate;
   }
 
   &Code,
   &Count {
     font-size: $font-xs;
-    color: $text-dim;
+    color: var(--app-text-muted, #{$text-dim});
   }
 
   &Count {
