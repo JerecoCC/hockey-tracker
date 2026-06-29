@@ -2,6 +2,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import { Link } from 'react-router-dom';
 import Tag from '@/components/Tag/Tag';
 import Button from '@/components/Button/Button';
+import Chip from '@/components/Chip/Chip';
 import Section from '@/components/Section/Section';
 import InfoItem from '@/components/InfoItem/InfoItem';
 import Icon from '@/components/Icon/Icon';
@@ -1474,8 +1475,7 @@ const SeasonPlayoffsTab = ({
                       <ListItem
                         key={`${r.scope}-${r.method}-${r.count}-${i}`}
                         size="compact"
-                        hideImage
-                        chip={{ label: i + 1, size: 'small' }}
+                        preTextContent={<Chip size="small">{i + 1}</Chip>}
                         name={
                           r.method === 'top'
                             ? `Top ${r.count} team${r.count !== 1 ? 's' : ''}`

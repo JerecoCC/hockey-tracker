@@ -150,7 +150,7 @@
   border-radius: inherit;
 }
 
-// ── Clickable variant — show pointer cursor when href is provided ──────────────
+// ── Clickable variant — show pointer cursor when href or onClick is provided ──
 .itemClickable {
   cursor: pointer;
 }

@@ -47,79 +47,64 @@
   }
 }
 
-.entry {
+.leaderList {
   display: flex;
-  align-items: center;
-  gap: $space-sm;
-  padding: 7px $space-sm;
-  border-radius: $radius-sm;
-  transition: background $transition-fast;
-  cursor: pointer;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
 
-  &:hover {
-    background: rgba(255, 255, 255, 0.04);
-  }
-
-  &Button {
-    width: 100%;
-    background: none;
-    border: none;
-    font: inherit;
-    color: inherit;
-    text-align: left;
-
-    &:focus-visible {
-      outline: 2px solid $accent;
-      outline-offset: 2px;
-    }
+.leaderItem {
+  &:focus-visible {
+    outline: 2px solid $accent;
+    outline-offset: 2px;
   }
 
   &Active {
-    background: $accent;
+    background: rgba(37, 99, 235, 0.14);
+    border-color: rgba(147, 197, 253, 0.42);
 
     &:hover {
-      background: $accent;
+      background: rgba(37, 99, 235, 0.2);
+      border-color: rgba(147, 197, 253, 0.55);
     }
   }
 }
 
-.rank {
+.rankSlot {
+  display: inline-flex;
+  align-items: center;
   flex-shrink: 0;
-  min-width: 32px;
+  justify-content: flex-end;
+  gap: $space-sm;
+  width: 40px;
+}
+
+.rankText {
+  min-width: 20px;
   color: $text-dim;
   font-size: $font-sm;
   font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  line-height: 1;
   text-align: right;
-
-  .entryActive & {
-    color: rgba(255, 255, 255, 0.7);
-  }
 }
 
-.entry {
-  &Name {
-    flex: 1;
-    color: $text-body;
-    font-size: $font-sm;
-    font-weight: 500;
+.rankDivider {
+  width: 1px;
+  height: 18px;
+  background: $border;
+}
 
-    .entryActive & {
-      color: #fff;
-      font-weight: 600;
-    }
-  }
-
-  &Stat {
-    flex-shrink: 0;
-    color: $text-bright;
-    font-size: $font-sm;
-    font-variant-numeric: tabular-nums;
-    font-weight: 700;
-
-    .entryActive & {
-      color: #fff;
-    }
-  }
+.entryStat {
+  flex-shrink: 0;
+  color: $text-bright;
+  font-size: $font-sm;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .allLeaders {

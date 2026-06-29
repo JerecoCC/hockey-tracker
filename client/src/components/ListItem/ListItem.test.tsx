@@ -197,6 +197,52 @@ describe('ListItem - chip', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Custom right content
+// ---------------------------------------------------------------------------
+describe('ListItem - custom rightContent', () => {
+  it('renders custom right content', () => {
+    renderItem({
+      name: 'Leafs',
+      rightContent: <span data-testid="right-stat">99</span>,
+    });
+
+    expect(screen.getByTestId('right-stat')).toHaveTextContent('99');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Compact layout
+// ---------------------------------------------------------------------------
+describe('ListItem - compact layout', () => {
+  it('renders only pre-text content, main text, and right content', () => {
+    renderItem({
+      name: 'Leafs',
+      size: 'compact',
+      image: 'https://example.com/logo.png',
+      leadingImagePlaceholder: 'TOR',
+      eyebrow: 'Eyebrow',
+      subtitle: 'Subtitle',
+      note: 'Note',
+      preTextContent: <span data-testid="pre-text">1.</span>,
+      rightContent: <span data-testid="right-content">99</span>,
+      children: <span>Extra details</span>,
+      actions: [{ icon: 'edit', onClick: jest.fn() }],
+    });
+
+    expect(screen.getByTestId('pre-text')).toHaveTextContent('1.');
+    expect(screen.getByText('Leafs')).toBeInTheDocument();
+    expect(screen.getByTestId('right-content')).toHaveTextContent('99');
+    expect(screen.queryByAltText('')).not.toBeInTheDocument();
+    expect(screen.queryByText('TOR')).not.toBeInTheDocument();
+    expect(screen.queryByText('Eyebrow')).not.toBeInTheDocument();
+    expect(screen.queryByText('Subtitle')).not.toBeInTheDocument();
+    expect(screen.queryByText('Note')).not.toBeInTheDocument();
+    expect(screen.queryByText('Extra details')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Subtitle and note
 // ---------------------------------------------------------------------------
 describe('ListItem – subtitle and note', () => {
@@ -267,6 +313,27 @@ describe('ListItem – rightContent tag', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Interactive row
+// ---------------------------------------------------------------------------
+describe('ListItem - interactive row', () => {
+  it('calls onClick for mouse and keyboard activation', () => {
+    const onClick = jest.fn();
+    renderItem({
+      name: 'Leafs',
+      onClick,
+      ariaLabel: 'Open Leafs',
+    });
+
+    const row = screen.getByRole('button', { name: 'Open Leafs' });
+    fireEvent.click(row);
+    fireEvent.keyDown(row, { key: 'Enter' });
+    fireEvent.keyDown(row, { key: ' ' });
+
+    expect(onClick).toHaveBeenCalledTimes(3);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Actions
 // ---------------------------------------------------------------------------
 describe('ListItem – actions', () => {
@@ -284,6 +351,21 @@ describe('ListItem – actions', () => {
     renderItem({ name: 'Leafs', actions: [{ icon: 'edit', onClick: handleClick }] });
     fireEvent.click(screen.getByRole('button'));
     expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not trigger row onClick when an action button is clicked', () => {
+    const handleAction = jest.fn();
+    const handleRowClick = jest.fn();
+    renderItem({
+      name: 'Leafs',
+      onClick: handleRowClick,
+      actions: [{ icon: 'edit', onClick: handleAction }],
+    });
+
+    fireEvent.click(screen.getAllByRole('button')[1]);
+
+    expect(handleAction).toHaveBeenCalledTimes(1);
+    expect(handleRowClick).not.toHaveBeenCalled();
   });
 
   it('filters out falsy entries from the actions array', () => {

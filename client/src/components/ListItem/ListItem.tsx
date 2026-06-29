@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { KeyboardEvent, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Chip, { type ChipSize } from '../Chip/Chip';
@@ -28,6 +28,7 @@ export interface RightContentCode {
 }
 
 export type ListItemRightContent = RightContentTag | RightContentCode;
+export type ListItemRightSlot = ListItemRightContent | ReactNode;
 
 export interface ListItemChip {
   label: ReactNode;
@@ -35,6 +36,16 @@ export interface ListItemChip {
   primaryColor?: string | null;
   textColor?: string | null;
 }
+
+const isListItemRightContent = (
+  content: ListItemRightSlot | undefined,
+): content is ListItemRightContent =>
+  Boolean(
+    content &&
+      typeof content === 'object' &&
+      'type' in content &&
+      (content.type === 'tag' || content.type === 'code'),
+  );
 
 interface Props {
   /**
@@ -56,8 +67,10 @@ interface Props {
   name: string;
   /** Overrides the text shown inside the image placeholder (e.g. initials). Defaults to rightContent.value or name slice. */
   placeholder?: string;
-  /** Optional right-side content: a Tag pill or a plain code badge. */
-  rightContent?: ListItemRightContent;
+  /** Optional content rendered before the main text. */
+  preTextContent?: ReactNode;
+  /** Optional right-side content: a Tag pill, a plain code badge, or custom node. */
+  rightContent?: ListItemRightSlot;
   /** Team primary color — used as placeholder background when no image is set. */
   primaryColor?: string | null;
   /** Team text color — used as placeholder text color when no image is set. */
@@ -85,6 +98,10 @@ interface Props {
   actions?: (ListItemAction | false | null | undefined)[];
   /** When provided, the entire row becomes a stretched link (z-index 0) so action buttons (z-index 1) still intercept their own clicks. */
   href?: string;
+  onClick?: () => void;
+  onMouseEnter?: () => void;
+  onFocus?: () => void;
+  ariaLabel?: string;
   className?: string;
   /** Optional custom content rendered below the built-in text lines. */
   children?: ReactNode;
@@ -104,6 +121,7 @@ const ListItem = ({
   name,
   nameItalic = false,
   placeholder,
+  preTextContent,
   rightContent,
   primaryColor,
   textColor,
@@ -113,13 +131,25 @@ const ListItem = ({
   note,
   actions,
   href,
+  onClick,
+  onMouseEnter,
+  onFocus,
+  ariaLabel,
   className,
   children,
 }: Props) => {
-  const hasExtra = !!subtitle || !!note;
-  const visibleActions = actions?.filter((a): a is ListItemAction => Boolean(a)) ?? [];
+  const isCompact = size === 'compact';
+  const hasExtra = !isCompact && (!!subtitle || !!note);
+  const visibleActions = isCompact
+    ? []
+    : (actions?.filter((a): a is ListItemAction => Boolean(a)) ?? []);
   const isCircle = image_shape === 'circle';
-  const codeValue = rightContent?.type === 'code' ? rightContent.value : null;
+  const rightContentDescriptor = isListItemRightContent(rightContent)
+    ? rightContent
+    : undefined;
+  const codeValue = rightContentDescriptor?.type === 'code' ? rightContentDescriptor.value : null;
+  const hasRightContent = rightContent !== undefined && rightContent !== null && rightContent !== false;
+  const isButtonRow = Boolean(onClick) && !href;
   const imageLabel = placeholder ?? (codeValue ?? name ?? '').slice(0, 3);
   const imageSize = 48;
   const imageClassName = image
@@ -145,6 +175,23 @@ const ListItem = ({
       className={imageClassName}
     />
   );
+  const handleKeyDown = (event: KeyboardEvent<HTMLLIElement>) => {
+    if (!isButtonRow) return;
+    if (event.key !== 'Enter' && event.key !== ' ') return;
+    event.preventDefault();
+    onClick?.();
+  };
+  const renderedPreTextContent =
+    preTextContent ??
+    (chip ? (
+      <Chip
+        size={chip.size}
+        primaryColor={chip.primaryColor ?? primaryColor}
+        textColor={chip.textColor ?? textColor}
+      >
+        {chip.label}
+      </Chip>
+    ) : null);
 
   return (
     <li
@@ -152,14 +199,22 @@ const ListItem = ({
         styles.item,
         variant === 'plain' ? styles.itemPlain : '',
         size === 'compact' ? styles.itemCompact : '',
-        href ? styles.itemClickable : '',
+        href || isButtonRow ? styles.itemClickable : '',
         className,
       ]
         .filter(Boolean)
         .join(' ')}
+      role={isButtonRow ? 'button' : undefined}
+      tabIndex={isButtonRow ? 0 : undefined}
+      aria-label={ariaLabel}
+      onClick={isButtonRow ? onClick : undefined}
+      onKeyDown={handleKeyDown}
+      onMouseEnter={onMouseEnter}
+      onFocus={onFocus}
     >
       {/* Leading image (e.g. team logo shown to the left of a player photo) */}
-      {(leadingImage || leadingImagePlaceholder) &&
+      {!isCompact &&
+        (leadingImage || leadingImagePlaceholder) &&
         (leadingImage ? (
           <img
             src={leadingImage}
@@ -183,21 +238,13 @@ const ListItem = ({
         ))}
 
       {/* Image or color-branded placeholder */}
-      {!hideImage && (imageNode ?? defaultImageNode)}
+      {!isCompact && !hideImage && (imageNode ?? defaultImageNode)}
 
-      {chip && (
-        <Chip
-          size={chip.size}
-          primaryColor={chip.primaryColor ?? primaryColor}
-          textColor={chip.textColor ?? textColor}
-        >
-          {chip.label}
-        </Chip>
-      )}
+      {renderedPreTextContent}
 
       {/* Info column — always rendered so flex:1 pushes code/actions right */}
       <div className={styles.info}>
-        {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
+        {!isCompact && eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
         <span className={[styles.name, nameItalic && styles.nameItalic].filter(Boolean).join(' ')}>
           {name}
         </span>
@@ -207,18 +254,22 @@ const ListItem = ({
             {note && <span className={styles.note}>{note}</span>}
           </>
         )}
-        {children}
+        {!isCompact && children}
       </div>
 
-      {/* Right content — Tag or code badge */}
-      {rightContent ? (
-        rightContent.type === 'tag' ? (
-          <Tag
-            label={rightContent.label}
-            intent={rightContent.intent}
-          />
+      {/* Right content */}
+      {hasRightContent ? (
+        rightContentDescriptor ? (
+          rightContentDescriptor.type === 'tag' ? (
+            <Tag
+              label={rightContentDescriptor.label}
+              intent={rightContentDescriptor.intent}
+            />
+          ) : (
+            <span className={styles.code}>{rightContentDescriptor.value}</span>
+          )
         ) : (
-          <span className={styles.code}>{rightContent.value}</span>
+          rightContent
         )
       ) : null}
 
@@ -244,7 +295,10 @@ const ListItem = ({
               size="sm"
               tooltip={action.tooltip}
               disabled={action.disabled}
-              onClick={action.onClick}
+              onClick={(event) => {
+                event.stopPropagation();
+                action.onClick();
+              }}
             />
           ))}
         </ActionOverlay>

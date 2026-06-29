@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import StatsLeaderCard, { type StatsLeaderItem } from './StatsLeaderCard';
 
 const makePlayer = (overrides: Partial<StatsLeaderItem> = {}): StatsLeaderItem => ({
@@ -117,33 +117,50 @@ describe('StatsLeaderCard ranked list', () => {
     expect(screen.getByText('Bob Lee')).toBeInTheDocument();
   });
 
-  it('renders tie-rank prefixes with trailing dot', () => {
+  it('renders tie-rank prefixes without trailing dot', () => {
     render(<StatsLeaderCard {...defaultProps} />);
-    expect(screen.getByText('1.')).toBeInTheDocument();
-    expect(screen.getByText('2.')).toBeInTheDocument();
-    expect(screen.getByText('3.')).toBeInTheDocument();
+    expect(screen.getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('2')).toBeInTheDocument();
+    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.queryByText('1.')).not.toBeInTheDocument();
   });
 
-  it('renders tie prefix e.g. "T1." when tieRanks contains it', () => {
+  it('renders tie prefix e.g. "T1" when tieRanks contains it', () => {
     render(
       <StatsLeaderCard
         {...defaultProps}
         tieRanks={['T1', 'T1', '3']}
       />,
     );
-    expect(screen.getAllByText('T1.').length).toBe(2);
+    expect(screen.getAllByText('T1').length).toBe(2);
+  });
+
+  it('renders ranked players as compact list items', () => {
+    render(<StatsLeaderCard {...defaultProps} />);
+
+    const firstRankedItem = screen.getByText('1').closest('li');
+    expect(firstRankedItem).toHaveClass('itemCompact');
+    expect(firstRankedItem).not.toHaveClass('itemPlain');
+    expect(firstRankedItem).toHaveClass('leaderItem');
+    expect(firstRankedItem?.querySelector('.logoPlaceholder')).toBeNull();
+    expect(firstRankedItem?.querySelector('.subtitle')).toBeNull();
+    expect(screen.getByText('1')).toHaveClass('rankText');
+    expect(screen.getByText('1').parentElement).toHaveClass('rankSlot');
+    expect(firstRankedItem?.querySelector('.rankDivider')).toBeInTheDocument();
+    expect(screen.getByText('1')).not.toHaveAttribute('style');
+    expect(within(firstRankedItem as HTMLElement).queryByText('TOR')).not.toBeInTheDocument();
   });
 
   it('calls onHover with the correct index on mouseEnter', () => {
     const onHover = jest.fn();
-    const { container } = render(
+    render(
       <StatsLeaderCard
         {...defaultProps}
         onHover={onHover}
       />,
     );
-    const entryDivs = container.querySelectorAll('div.entry');
-    fireEvent.mouseEnter(entryDivs[1]);
+    const rankedItems = screen.getAllByRole('listitem');
+    fireEvent.mouseEnter(rankedItems[1]);
     expect(onHover).toHaveBeenCalledWith(1);
   });
 });

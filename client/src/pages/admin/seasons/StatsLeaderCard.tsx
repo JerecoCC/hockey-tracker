@@ -1,3 +1,4 @@
+import ListItem from '@/components/ListItem/ListItem';
 import PlayerCard from '@/components/PlayerCard/PlayerCard';
 import styles from './StatsLeaderCard.module.scss';
 
@@ -27,6 +28,11 @@ interface Props<T extends StatsLeaderItem> {
   onAllLeaders?: () => void;
 }
 
+const getPlayerName = (item: StatsLeaderItem) => `${item.first_name} ${item.last_name}`;
+
+const getPlayerInitials = (item: StatsLeaderItem) =>
+  `${item.first_name.charAt(0)}${item.last_name.charAt(0)}`;
+
 function StatsLeaderCard<T extends StatsLeaderItem>({
   items,
   featuredIdx,
@@ -41,8 +47,8 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
   if (items.length === 0) return null;
 
   const featured = items[featuredIdx];
-  const featuredName = `${featured.first_name} ${featured.last_name}`;
-  const featuredInitials = `${featured.first_name.charAt(0)}${featured.last_name.charAt(0)}`;
+  const featuredName = getPlayerName(featured);
+  const featuredInitials = getPlayerInitials(featured);
 
   return (
     <div className={styles.layout}>
@@ -66,57 +72,48 @@ function StatsLeaderCard<T extends StatsLeaderItem>({
         }
       />
 
-      <div>
+      <ul className={styles.leaderList}>
         {items.map((item, i) => {
-          const className = [
-            styles.entry,
-            i === featuredIdx ? styles.entryActive : '',
-            onSelectItem ? styles.entryButton : '',
-          ]
+          const playerName = getPlayerName(item);
+          const className = [styles.leaderItem, i === featuredIdx ? styles.leaderItemActive : '']
             .filter(Boolean)
             .join(' ');
 
-          return onSelectItem ? (
-            <button
+          return (
+            <ListItem
               key={item.player_id}
-              type="button"
               className={className}
+              size="compact"
+              preTextContent={
+                <span className={styles.rankSlot}>
+                  <span className={styles.rankText}>{tieRanks[i]}</span>
+                  <span
+                    className={styles.rankDivider}
+                    aria-hidden="true"
+                  />
+                </span>
+              }
+              name={playerName}
+              rightContent={<span className={styles.entryStat}>{getRowStat(item)}</span>}
               onMouseEnter={() => onHover(i)}
               onFocus={() => onHover(i)}
-              onClick={() => onSelectItem(item)}
-            >
-              <span className={styles.rank}>{tieRanks[i]}.</span>
-              <span className={styles.entryName}>
-                {item.first_name} {item.last_name}
-              </span>
-              <span className={styles.entryStat}>{getRowStat(item)}</span>
-            </button>
-          ) : (
-            <div
-              key={item.player_id}
-              className={className}
-              onMouseEnter={() => onHover(i)}
-            >
-              <span className={styles.rank}>{tieRanks[i]}.</span>
-              <span className={styles.entryName}>
-                {item.first_name} {item.last_name}
-              </span>
-              <span className={styles.entryStat}>{getRowStat(item)}</span>
-            </div>
+              onClick={onSelectItem ? () => onSelectItem(item) : undefined}
+              ariaLabel={onSelectItem ? `View ${playerName}` : undefined}
+            />
           );
         })}
 
         {onAllLeaders && (
-          <div className={styles.allLeadersRow}>
+          <li className={styles.allLeadersRow}>
             <button
               className={styles.allLeadersLink}
               onClick={onAllLeaders}
             >
               All Leaders
             </button>
-          </div>
+          </li>
         )}
-      </div>
+      </ul>
     </div>
   );
 }
