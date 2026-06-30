@@ -148,6 +148,22 @@ describe('GET /api/user/games', () => {
     expect(res.body[0].id).toBe('game-1');
   });
 
+  it('filters games by multiple selected teams', async () => {
+    sql.mockResolvedValueOnce([GAME]);
+
+    const firstTeamId = '00000000-0000-0000-0000-000000000001';
+    const secondTeamId = '00000000-0000-0000-0000-000000000002';
+    const res = await request(app).get(
+      `/api/user/games?team_ids=${firstTeamId},${secondTeamId}`,
+    );
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(sql.mock.calls[0].slice(1)).toContain(`{${firstTeamId},${secondTeamId}}`);
+    expect(queryText).toContain('g.home_team_id = ANY');
+    expect(queryText).toContain('g.away_team_id = ANY');
+  });
+
   it('filters games by week start using the effective user date', async () => {
     sql.mockResolvedValueOnce([GAME]);
 

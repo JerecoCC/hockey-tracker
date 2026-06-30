@@ -696,6 +696,8 @@ const UserGames = () => {
   const favoriteTeamIds = useMemo(() => favoriteTeamIdsData ?? [], [favoriteTeamIdsData]);
 
   const leagueSelected = leagueId !== 'all';
+  const selectedTeamIds = useMemo(() => [...teamFilter].sort(), [teamFilter]);
+  const selectedTeamIdsParam = selectedTeamIds.join(',');
 
   const { data: allTeams = [], isLoading: teamsLoading } = useQuery<UserTeamOptionRecord[]>({
     queryKey: ['user-teams'],
@@ -712,6 +714,7 @@ const UserGames = () => {
       'user-games',
       statusFilter,
       leagueId,
+      selectedTeamIdsParam,
       showSkippedGames,
       gamesPeriodParams.week ?? '',
       gamesPeriodParams.month ?? '',
@@ -720,6 +723,7 @@ const UserGames = () => {
       const params: Record<string, string> = {};
       if (statusFilter !== 'all') params.status = statusFilter;
       if (leagueSelected) params.league_id = leagueId;
+      if (selectedTeamIdsParam) params.team_ids = selectedTeamIdsParam;
       if (showSkippedGames) params.include_skipped = 'true';
       if (gamesPeriodParams.week) params.week = gamesPeriodParams.week;
       if (gamesPeriodParams.month) params.month = gamesPeriodParams.month;
@@ -779,13 +783,10 @@ const UserGames = () => {
     });
   }, [favoriteTeamIds, favoriteTeamIdsData, teamOptions, teamsLoading]);
 
-  const filteredGames = useMemo(() => {
-    const visibleGames = showSkippedGames ? games : games.filter((game) => !game.skipped_by_user);
-    if (teamFilter.length === 0) return visibleGames;
-    return visibleGames.filter(
-      (game) => teamFilter.includes(game.home_team.id) || teamFilter.includes(game.away_team.id),
-    );
-  }, [games, showSkippedGames, teamFilter]);
+  const filteredGames = useMemo(
+    () => (showSkippedGames ? games : games.filter((game) => !game.skipped_by_user)),
+    [games, showSkippedGames],
+  );
 
   const scheduledGames = useMemo(
     () => filteredGames.filter((game) => !!getEffectiveUserDateKey(game, tzPref)),

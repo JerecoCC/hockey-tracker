@@ -227,7 +227,7 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 
 // ---------------------------------------------------------------------------
 // GET /api/user/games  – read-only game list for authenticated users
-// Query params: season_id, league_id, team_id, game_type, status, include_skipped,
+// Query params: season_id, league_id, team_id/team_ids, game_type, status, include_skipped,
 // watched, date, week (YYYY-MM-DD week start), month (YYYY-MM)
 // `date` (YYYY-MM-DD) filters to games whose effective user date matches — the
 // user's personal scheduled_for if set, otherwise the game's Eastern-time date.
@@ -236,6 +236,20 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 router.get('/games', async (req, res) => {
   const userId = req.user.id;
   const { season_id, league_id, team_id, game_type, status } = req.query;
+  const rawTeamIds = [
+    ...(Array.isArray(req.query.team_id) ? req.query.team_id : [req.query.team_id]),
+    ...(Array.isArray(req.query.team_ids) ? req.query.team_ids : [req.query.team_ids]),
+  ];
+  const teamIds = [
+    ...new Set(
+      rawTeamIds
+        .filter((value) => typeof value === 'string')
+        .flatMap((value) => value.split(','))
+        .map((value) => value.trim())
+        .filter(Boolean),
+    ),
+  ];
+  const teamIdsParam = teamIds.length > 0 ? `{${teamIds.join(',')}}` : null;
   const includeSkipped = req.query.include_skipped === 'true' || req.query.include_skipped === '1';
   const watchedOnly = req.query.watched === 'true' || req.query.watched === '1';
   const week = req.query.week ?? req.query.week_start ?? null;
@@ -487,8 +501,8 @@ router.get('/games', async (req, res) => {
         AND
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${league_id ?? null}::uuid IS NULL OR l.id        = ${league_id ?? null}::uuid)
-        AND (${team_id   ?? null}::uuid IS NULL OR g.home_team_id = ${team_id ?? null}::uuid
-                                                OR g.away_team_id = ${team_id ?? null}::uuid)
+        AND (${teamIdsParam}::uuid[] IS NULL OR g.home_team_id = ANY(${teamIdsParam}::uuid[])
+                                           OR g.away_team_id = ANY(${teamIdsParam}::uuid[]))
         AND (${game_type ?? null}::text IS NULL OR g.game_type = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status    = ${status    ?? null})
         AND (

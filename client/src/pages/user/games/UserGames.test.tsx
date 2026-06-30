@@ -427,7 +427,7 @@ beforeEach(() => {
     if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
     if (queryKey[0] === 'user-teams') return { data: allTeams, isLoading: false };
     if (queryKey[0] === 'user-games')
-      return { data: queryKey[3] ? [...games, skippedGame] : games, isLoading: false };
+      return { data: queryKey[4] ? [...games, skippedGame] : games, isLoading: false };
     return { data: [], isLoading: false };
   });
 });
@@ -568,6 +568,7 @@ describe('UserGames schedule views', () => {
           'user-games',
           'all',
           'all',
+          'team-home,team-opp',
           true,
           '',
           `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
@@ -858,14 +859,40 @@ describe('UserGames schedule views', () => {
     }
   });
 
-  it('filters user games by the preselected favorite teams', async () => {
+  it('refetches user games when the selected teams change', async () => {
     const user = userEvent.setup();
     render(<UserGames />);
 
     await user.click(screen.getByRole('button', { name: 'Toggle Home Team' }));
 
-    expect(screen.queryByText('AWY')).not.toBeInTheDocument();
-    expect(screen.getAllByText('OPP').length).toBeGreaterThan(0);
+    const userGamesQueries = mockUseQuery.mock.calls
+      .map(([options]) => options)
+      .filter((options) => options.queryKey?.[0] === 'user-games');
+    const selectedTeamQuery = userGamesQueries[userGamesQueries.length - 1];
+
+    expect(selectedTeamQuery).toEqual(
+      expect.objectContaining({
+        queryKey: [
+          'user-games',
+          'all',
+          'all',
+          'team-opp',
+          false,
+          localDateString(0),
+          '',
+        ],
+      }),
+    );
+
+    mockAxios.get.mockResolvedValueOnce({ data: [] });
+    await selectedTeamQuery.queryFn();
+
+    expect(mockAxios.get).toHaveBeenCalledWith(
+      expect.stringContaining('/user/games'),
+      expect.objectContaining({
+        params: expect.objectContaining({ team_ids: 'team-opp' }),
+      }),
+    );
   });
 
   it('lets watched non-favorite teams be selected from the team filter', async () => {
@@ -915,7 +942,12 @@ describe('UserGames schedule views', () => {
           isLoading: false,
         };
       if (queryKey[0] === 'user-games')
-        return { data: [games[0], watchedNonFavoriteGame], isLoading: false };
+        return {
+          data: String(queryKey[3]).includes('team-extra-home')
+            ? [watchedNonFavoriteGame]
+            : [games[0]],
+          isLoading: false,
+        };
       return { data: [], isLoading: false };
     });
 
