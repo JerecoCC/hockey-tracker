@@ -39,11 +39,11 @@
   line-height: 1;
   text-decoration: none;
   transition:
-    padding-left $transition-fast ease,
     border-color $transition-fast ease,
     background $transition-fast ease;
 
   &:hover {
+    overflow: hidden;
     border-color: var(--calendar-game-card-hover-border);
     background: var(--calendar-game-card-hover-bg);
   }
@@ -145,7 +145,6 @@
     &:hover,
     &:focus-within {
       overflow: hidden;
-      padding-left: calc(#{$space-sm} + 0.75rem);
     }
 
     &:hover::before,
@@ -160,7 +159,6 @@
     opacity: 0.55;
     border-color: var(--calendar-game-card-hover-border);
     cursor: grabbing;
-    padding-left: calc(#{$space-sm} + 0.75rem);
 
     &::before {
       opacity: 1;
