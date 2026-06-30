@@ -305,6 +305,7 @@ router.get('/games', async (req, res) => {
         -- Season / league context
         s.name AS season_name,
         l.id   AS league_id,
+        l.code AS league_code,
         l.name AS league_name,
         l.primary_color AS league_primary_color,
         l.text_color AS league_text_color,
@@ -535,6 +536,88 @@ router.get('/games', async (req, res) => {
 });
 
 // ---------------------------------------------------------------------------
+// GET /api/user/games/route-lookup
+// Resolves /games/<MM-DD-YYYY>/<away-code>-vs-<home-code> to one visible game id.
+// The route date is the Eastern game date, independent of the user's UI timezone.
+// ---------------------------------------------------------------------------
+router.get('/games/route-lookup', async (req, res) => {
+  const userId = req.user.id;
+  const { game_date, game_slug } = req.query;
+  if (!game_date || !game_slug) {
+    return res.status(400).json({ error: 'game_date and game_slug are required' });
+  }
+  if (!/^\d{2}-\d{2}-\d{4}$/.test(String(game_date))) {
+    return res.status(400).json({ error: 'game_date must be MM-DD-YYYY' });
+  }
+
+  const [month, day, year] = String(game_date).split('-');
+  const gameDate = `${year}-${month}-${day}`;
+
+  try {
+    const rows = await sql`
+      SELECT g.id AS game_id
+      FROM games g
+      LEFT JOIN LATERAL (
+        SELECT code
+        FROM team_iterations
+        WHERE team_id = g.away_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) away_identity ON true
+      LEFT JOIN LATERAL (
+        SELECT code
+        FROM team_iterations
+        WHERE team_id = g.home_team_id
+        ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+        LIMIT 1
+      ) home_identity ON true
+      LEFT JOIN user_watched_games uwg
+        ON uwg.user_id = ${userId}
+       AND uwg.game_id = g.id
+      WHERE (
+          (g.scheduled_at AT TIME ZONE 'America/New_York')::date = ${gameDate}::date
+          OR (
+            g.scheduled_time IS NOT NULL
+            AND g.scheduled_time <> '00:00'
+            AND (g.scheduled_at AT TIME ZONE 'UTC')::time = TIME '00:00:00'
+            AND (g.scheduled_at AT TIME ZONE 'UTC')::date = ${gameDate}::date
+          )
+        )
+        AND CONCAT(
+          regexp_replace(
+            regexp_replace(lower(COALESCE(away_identity.code, '')), '[^a-z0-9]+', '-', 'g'),
+            '(^-+|-+$)',
+            '',
+            'g'
+          ),
+          '-vs-',
+          regexp_replace(
+            regexp_replace(lower(COALESCE(home_identity.code, '')), '[^a-z0-9]+', '-', 'g'),
+            '(^-+|-+$)',
+            '',
+            'g'
+          )
+        ) = ${game_slug}
+        AND EXISTS (
+          SELECT 1
+          FROM user_favorite_teams uft
+          WHERE uft.user_id = ${userId}
+            AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+        )
+        AND uwg.skipped_at IS NULL
+      ORDER BY g.scheduled_at DESC NULLS LAST, g.created_at DESC, g.id DESC
+      LIMIT 1
+    `;
+
+    if (rows.length === 0) return res.status(404).json({ error: 'Game route not found' });
+    return res.json(rows[0]);
+  } catch (err) {
+    console.error('user games route lookup error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ---------------------------------------------------------------------------
 // GET /api/user/games/:id  - read-only game detail for authenticated users
 // Scoped to games involving the user's favourite teams and not skipped.
 // ---------------------------------------------------------------------------
@@ -557,8 +640,8 @@ router.get('/games/:id', async (req, res) => {
         ps.away_team_id AS series_away_team_id,
         ps.home_wins AS series_home_wins,
         ps.away_wins AS series_away_wins,
-        NULL::int AS series_home_wins_at_game,
-        NULL::int AS series_away_wins_at_game,
+        series_progress.series_home_wins_at_game,
+        series_progress.series_away_wins_at_game,
         ps.games_to_win AS series_games_to_win,
         g.notes, g.current_period, g.created_at,
         g.star_1_id, g.star_2_id, g.star_3_id,
@@ -592,9 +675,9 @@ router.get('/games/:id', async (req, res) => {
         COALESCE(uwg.watched_on, uwg.watched_at::date) AS watched_on,
         uwg.scheduled_for,
         (uwg.game_id IS NOT NULL AND (uwg.watched_on IS NOT NULL OR uwg.watched_at IS NOT NULL)) AS watched_by_user,
-        '[]'::json AS home_last_five,
-        '[]'::json AS away_last_five,
-        '[]'::json AS previous_meetings
+        home_l5.home_last_five,
+        away_l5.away_last_five,
+        prev.previous_meetings
       FROM games g
       JOIN seasons s ON s.id = g.season_id
       JOIN leagues l ON l.id = s.league_id
@@ -684,6 +767,270 @@ router.get('/games/:id', async (req, res) => {
           ) so
         ) resolved ON true
       ) score ON true
+      LEFT JOIN LATERAL (
+        SELECT
+          COUNT(*) FILTER (WHERE sg_score.winner_team_id = ps.home_team_id)::int AS series_home_wins_at_game,
+          COUNT(*) FILTER (WHERE sg_score.winner_team_id = ps.away_team_id)::int AS series_away_wins_at_game
+        FROM games sg
+        LEFT JOIN LATERAL (
+          SELECT
+            CASE
+              WHEN sg.shootout OR sg_totals.so_home_goals > 0 OR sg_totals.so_away_goals > 0 THEN
+                CASE
+                  WHEN sg_so.home_goals > sg_so.away_goals THEN sg.home_team_id
+                  WHEN sg_so.away_goals > sg_so.home_goals THEN sg.away_team_id
+                  WHEN sg_totals.so_home_goals > sg_totals.so_away_goals THEN sg.home_team_id
+                  WHEN sg_totals.so_away_goals > sg_totals.so_home_goals THEN sg.away_team_id
+                  WHEN sg_totals.home_goals > sg_totals.away_goals THEN sg.home_team_id
+                  WHEN sg_totals.away_goals > sg_totals.home_goals THEN sg.away_team_id
+                  ELSE NULL
+                END
+              WHEN sg_totals.home_goals > sg_totals.away_goals THEN sg.home_team_id
+              WHEN sg_totals.away_goals > sg_totals.home_goals THEN sg.away_team_id
+              ELSE NULL
+            END AS winner_team_id
+          FROM (
+            SELECT
+              COUNT(*) FILTER (WHERE go.team_id = sg.home_team_id AND go.period <> 'SO')::int AS home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = sg.away_team_id AND go.period <> 'SO')::int AS away_goals,
+              COUNT(*) FILTER (WHERE go.team_id = sg.home_team_id AND go.period = 'SO')::int AS so_home_goals,
+              COUNT(*) FILTER (WHERE go.team_id = sg.away_team_id AND go.period = 'SO')::int AS so_away_goals
+            FROM goals go
+            WHERE go.game_id = sg.id
+          ) sg_totals
+          CROSS JOIN LATERAL (
+            SELECT
+              COUNT(*) FILTER (WHERE team_id = sg.home_team_id AND scored)::int AS home_goals,
+              COUNT(*) FILTER (WHERE team_id = sg.away_team_id AND scored)::int AS away_goals
+            FROM shootout_attempts
+            WHERE game_id = sg.id
+          ) sg_so
+        ) sg_score ON true
+        WHERE ps.id IS NOT NULL
+          AND sg.playoff_series_id = ps.id
+          AND sg.status = 'final'
+          AND ROW(
+            COALESCE(sg.game_number_in_series, sg.game_number, 2147483647),
+            COALESCE(sg.scheduled_at, 'infinity'::timestamptz),
+            sg.created_at,
+            sg.id::text
+          ) <= ROW(
+            COALESCE(g.game_number_in_series, g.game_number, 2147483647),
+            COALESCE(g.scheduled_at, 'infinity'::timestamptz),
+            g.created_at,
+            g.id::text
+          )
+      ) series_progress ON true
+      -- Last 5 final games for the home team within this season
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'game_id',          lg.id,
+              'scheduled_at',     lg.scheduled_at,
+              'home_score',       lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
+              'away_score',       lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
+              'overtime_periods', lg.overtime_periods,
+              'shootout',         lg.shootout,
+              'result', CASE
+                WHEN lg.shootout THEN
+                  CASE WHEN lg.so_winner_team_id = g.home_team_id THEN 'W' ELSE 'L' END
+                WHEN (lg.home_team_id = g.home_team_id AND lg.home_goals > lg.away_goals)
+                  OR (lg.away_team_id = g.home_team_id AND lg.away_goals > lg.home_goals) THEN 'W'
+                WHEN (lg.home_team_id = g.home_team_id AND lg.home_goals < lg.away_goals)
+                  OR (lg.away_team_id = g.home_team_id AND lg.away_goals < lg.home_goals) THEN 'L'
+                ELSE 'T'
+              END,
+              'opponent_team_id', CASE WHEN lg.home_team_id = g.home_team_id THEN lg.away_team_id ELSE lg.home_team_id END,
+              'opponent_name',    opp_ti.name,
+              'opponent_code',    opp_ti.code,
+              'opponent_logo',    opp_ti.logo,
+              'opponent_logo_dark', opp_ti.logo_dark,
+              'opponent_logo_light', opp_ti.logo_light,
+              'is_home',          (lg.home_team_id = g.home_team_id)
+            ) ORDER BY lg.scheduled_at DESC NULLS LAST, lg.created_at DESC
+          ),
+          '[]'::json
+        ) AS home_last_five
+        FROM (
+          SELECT
+            g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
+            g2.home_team_id, g2.away_team_id,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
+            CASE WHEN g2.shootout THEN (
+              SELECT CASE
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
+                THEN g2.home_team_id
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored)
+                THEN g2.away_team_id
+                ELSE NULL
+              END
+              FROM shootout_attempts WHERE game_id = g2.id
+            ) END AS so_winner_team_id
+          FROM games g2
+          WHERE g2.season_id = g.season_id
+            AND g2.id != g.id
+            AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND (g2.home_team_id = g.home_team_id OR g2.away_team_id = g.home_team_id)
+            AND g2.scheduled_at < g.scheduled_at
+          ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
+          LIMIT 5
+        ) lg
+        LEFT JOIN LATERAL (
+          SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+          WHERE team_id = CASE WHEN lg.home_team_id = g.home_team_id THEN lg.away_team_id ELSE lg.home_team_id END
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) opp_ti ON true
+      ) home_l5 ON true
+      -- Last 5 final games for the away team within this season
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'game_id',          lg.id,
+              'scheduled_at',     lg.scheduled_at,
+              'home_score',       lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
+              'away_score',       lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
+              'overtime_periods', lg.overtime_periods,
+              'shootout',         lg.shootout,
+              'result', CASE
+                WHEN lg.shootout THEN
+                  CASE WHEN lg.so_winner_team_id = g.away_team_id THEN 'W' ELSE 'L' END
+                WHEN (lg.home_team_id = g.away_team_id AND lg.home_goals > lg.away_goals)
+                  OR (lg.away_team_id = g.away_team_id AND lg.away_goals > lg.home_goals) THEN 'W'
+                WHEN (lg.home_team_id = g.away_team_id AND lg.home_goals < lg.away_goals)
+                  OR (lg.away_team_id = g.away_team_id AND lg.away_goals < lg.home_goals) THEN 'L'
+                ELSE 'T'
+              END,
+              'opponent_team_id', CASE WHEN lg.home_team_id = g.away_team_id THEN lg.away_team_id ELSE lg.home_team_id END,
+              'opponent_name',    opp_ti.name,
+              'opponent_code',    opp_ti.code,
+              'opponent_logo',    opp_ti.logo,
+              'opponent_logo_dark', opp_ti.logo_dark,
+              'opponent_logo_light', opp_ti.logo_light,
+              'is_home',          (lg.home_team_id = g.away_team_id)
+            ) ORDER BY lg.scheduled_at DESC NULLS LAST, lg.created_at DESC
+          ),
+          '[]'::json
+        ) AS away_last_five
+        FROM (
+          SELECT
+            g2.id, g2.scheduled_at, g2.created_at, g2.overtime_periods, g2.shootout,
+            g2.home_team_id, g2.away_team_id,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
+            CASE WHEN g2.shootout THEN (
+              SELECT CASE
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
+                THEN g2.home_team_id
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored)
+                THEN g2.away_team_id
+                ELSE NULL
+              END
+              FROM shootout_attempts WHERE game_id = g2.id
+            ) END AS so_winner_team_id
+          FROM games g2
+          WHERE g2.season_id = g.season_id
+            AND g2.id != g.id
+            AND g2.status = 'final'
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND (g2.home_team_id = g.away_team_id OR g2.away_team_id = g.away_team_id)
+            AND g2.scheduled_at < g.scheduled_at
+          ORDER BY g2.scheduled_at DESC NULLS LAST, g2.created_at DESC
+          LIMIT 5
+        ) lg
+        LEFT JOIN LATERAL (
+          SELECT name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+          WHERE team_id = CASE WHEN lg.home_team_id = g.away_team_id THEN lg.away_team_id ELSE lg.home_team_id END
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) opp_ti ON true
+      ) away_l5 ON true
+      -- All other meetings between home and away teams in the same season
+      LEFT JOIN LATERAL (
+        SELECT COALESCE(
+          json_agg(
+            json_build_object(
+              'game_id',               lg.id,
+              'scheduled_at',          lg.scheduled_at,
+              'created_at',            lg.created_at,
+              'status',                lg.status,
+              'current_home_was_home', (lg.home_team_id = g.home_team_id),
+              'home_team', json_build_object(
+                'id', lg.home_team_id,
+                'name', lg_home_ti.name, 'place_name', lg_home_ti.place_name, 'team_name', lg_home_ti.team_name, 'code', lg_home_ti.code,
+                'logo', lg_home_ti.logo, 'logo_dark', lg_home_ti.logo_dark, 'logo_light', lg_home_ti.logo_light,
+                'primary_color', lg_home_team.primary_color,
+                'secondary_color', lg_home_team.secondary_color,
+                'text_color', lg_home_team.text_color
+              ),
+              'away_team', json_build_object(
+                'id', lg.away_team_id,
+                'name', lg_away_ti.name, 'place_name', lg_away_ti.place_name, 'team_name', lg_away_ti.team_name, 'code', lg_away_ti.code,
+                'logo', lg_away_ti.logo, 'logo_dark', lg_away_ti.logo_dark, 'logo_light', lg_away_ti.logo_light,
+                'primary_color', lg_away_team.primary_color,
+                'secondary_color', lg_away_team.secondary_color,
+                'text_color', lg_away_team.text_color
+              ),
+              'home_score',            lg.home_goals + CASE WHEN lg.so_winner_team_id = lg.home_team_id THEN 1 ELSE 0 END,
+              'away_score',            lg.away_goals + CASE WHEN lg.so_winner_team_id = lg.away_team_id THEN 1 ELSE 0 END,
+              'overtime_periods',      lg.overtime_periods,
+              'shootout',              lg.shootout
+            ) ORDER BY lg.scheduled_at ASC NULLS LAST, lg.created_at ASC
+          ),
+          '[]'::json
+        ) AS previous_meetings
+        FROM (
+          SELECT
+            g2.id, g2.scheduled_at, g2.created_at, g2.status, g2.overtime_periods, g2.shootout,
+            g2.home_team_id, g2.away_team_id,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.home_team_id)::int AS home_goals,
+            (SELECT COUNT(*) FROM goals WHERE game_id = g2.id AND team_id = g2.away_team_id)::int AS away_goals,
+            CASE WHEN g2.shootout THEN (
+              SELECT CASE
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored)
+                THEN g2.home_team_id
+                WHEN COUNT(*) FILTER (WHERE team_id = g2.away_team_id AND scored) >
+                     COUNT(*) FILTER (WHERE team_id = g2.home_team_id AND scored)
+                THEN g2.away_team_id
+                ELSE NULL
+              END
+              FROM shootout_attempts WHERE game_id = g2.id
+            ) END AS so_winner_team_id
+          FROM games g2
+          WHERE g2.season_id = g.season_id
+            AND g2.id != g.id
+            AND (g.game_type != 'playoff' OR g2.game_type = 'playoff')
+            AND (
+              (g2.home_team_id = g.home_team_id AND g2.away_team_id = g.away_team_id)
+              OR
+              (g2.home_team_id = g.away_team_id AND g2.away_team_id = g.home_team_id)
+            )
+          ORDER BY g2.scheduled_at ASC NULLS LAST, g2.created_at ASC
+        ) lg
+        JOIN teams lg_home_team ON lg_home_team.id = lg.home_team_id
+        JOIN teams lg_away_team ON lg_away_team.id = lg.away_team_id
+        LEFT JOIN LATERAL (
+          SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+          WHERE team_id = lg.home_team_id
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) lg_home_ti ON true
+        LEFT JOIN LATERAL (
+          SELECT name, place_name, team_name, code, team_logo_default(logo_dark, logo_light) AS logo, team_logo_dark(logo_dark, logo_light) AS logo_dark, team_logo_light(logo_dark, logo_light) AS logo_light FROM team_iterations
+          WHERE team_id = lg.away_team_id
+          ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
+          LIMIT 1
+        ) lg_away_ti ON true
+      ) prev ON true
       LEFT JOIN user_watched_games uwg
         ON uwg.user_id = ${userId}
        AND uwg.game_id = g.id

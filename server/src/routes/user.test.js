@@ -56,6 +56,7 @@ const GAME = {
   away_team: { id: 'team-2', name: 'Away', code: 'AWY', logo: null, primary_color: '#333', secondary_color: '#444', text_color: '#fff' },
   season_name: '2024-25',
   league_id: 'league-1',
+  league_code: 'NHL',
   league_name: 'NHL',
   league_primary_color: '#0a4fa3',
   league_text_color: '#ffffff',
@@ -172,6 +173,46 @@ describe('GET /api/user/games', () => {
   });
 });
 
+describe('GET /api/user/games/route-lookup', () => {
+  it('resolves a visible slug game route to a game id', async () => {
+    sql.mockResolvedValueOnce([{ game_id: 'game-1' }]);
+
+    const res = await request(app)
+      .get('/api/user/games/route-lookup?game_date=10-10-2024&game_slug=awy-vs-hom');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ game_id: 'game-1' });
+    expect(sql.mock.calls[0].slice(1)).toContain('user-1');
+    expect(sql.mock.calls[0].slice(1)).toContain('2024-10-10');
+    expect(sql.mock.calls[0].slice(1)).toContain('awy-vs-hom');
+    expect(queryText).toContain("AT TIME ZONE 'America/New_York'");
+    expect(queryText).toContain("AT TIME ZONE 'UTC'");
+    expect(queryText).toContain("g.scheduled_time <> '00:00'");
+    expect(queryText).toContain('user_favorite_teams');
+    expect(queryText).toContain('uwg.skipped_at IS NULL');
+  });
+
+  it('rejects invalid route lookup dates', async () => {
+    const res = await request(app)
+      .get('/api/user/games/route-lookup?game_date=2024-10-10&game_slug=awy-vs-hom');
+
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/MM-DD-YYYY/);
+    expect(sql).not.toHaveBeenCalled();
+  });
+
+  it('returns 404 when no visible game matches the slug route', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app)
+      .get('/api/user/games/route-lookup?game_date=10-10-2024&game_slug=awy-vs-hom');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error).toMatch(/not found/i);
+  });
+});
+
 describe('GET /api/user/games/:id', () => {
   it('returns a single visible game for the authenticated user', async () => {
     sql.mockResolvedValueOnce([GAME]);
@@ -186,6 +227,12 @@ describe('GET /api/user/games/:id', () => {
     expect(sql.mock.calls[0].slice(1)).toContain('game-1');
     expect(queryText).toContain('user_favorite_teams');
     expect(queryText).toContain('uwg.skipped_at IS NULL');
+    expect(queryText).toContain('series_progress.series_home_wins_at_game');
+    expect(queryText).toContain('home_l5.home_last_five');
+    expect(queryText).toContain('away_l5.away_last_five');
+    expect(queryText).toContain('prev.previous_meetings');
+    expect(queryText).not.toContain('NULL::int AS series_home_wins_at_game');
+    expect(queryText).not.toContain("'[]'::json AS home_last_five");
   });
 
   it('returns 404 when the game is not visible to the authenticated user', async () => {
