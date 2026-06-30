@@ -8,7 +8,13 @@ const OPTIONS = [
   { value: 'team-2', label: 'Montreal Canadiens', code: 'MTL' },
 ];
 
-const MultiSelectHarness = ({ onChange }: { onChange: (values: string[]) => void }) => {
+const MultiSelectHarness = ({
+  onChange,
+  onExit,
+}: {
+  onChange: (values: string[]) => void;
+  onExit?: () => void;
+}) => {
   const [value, setValue] = useState<string[]>([]);
 
   return (
@@ -20,6 +26,7 @@ const MultiSelectHarness = ({ onChange }: { onChange: (values: string[]) => void
         setValue(nextValue);
         onChange(nextValue);
       }}
+      onExit={onExit}
       searchable
     />
   );
@@ -37,5 +44,22 @@ describe('MultiSelect', () => {
     await user.click(screen.getByRole('button', { name: /Montreal Canadiens/ }));
 
     expect(handleChange).toHaveBeenLastCalledWith(['team-1', 'team-2']);
+  });
+
+  it('reports when the control is closed', async () => {
+    const user = userEvent.setup();
+    const handleExit = jest.fn();
+
+    render(
+      <MultiSelectHarness
+        onChange={jest.fn()}
+        onExit={handleExit}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+    await user.keyboard('{Escape}');
+
+    expect(handleExit).toHaveBeenCalledTimes(1);
   });
 });

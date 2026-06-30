@@ -41,6 +41,8 @@ interface Props {
   searchable?: boolean;
   /** Moves focus to the trigger on mount. */
   autoFocus?: boolean;
+  /** Called when the user closes or leaves the control. */
+  onExit?: () => void;
 }
 
 const MultiSelect = ({
@@ -53,6 +55,7 @@ const MultiSelect = ({
   error = false,
   searchable = false,
   autoFocus = false,
+  onExit,
 }: Props) => {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
@@ -106,6 +109,7 @@ const MultiSelect = ({
     setOpen(false);
     setQuery('');
     setFocusedIdx(-1);
+    onExit?.();
   };
 
   const openMenu = () => {
@@ -235,7 +239,10 @@ const MultiSelect = ({
                 setFocusedIdx(-1);
               }}
               onClick={(e) => e.stopPropagation()}
-              onKeyDown={handleKeyDown}
+              onKeyDown={(e) => {
+                e.stopPropagation();
+                handleKeyDown(e);
+              }}
               disabled={disabled}
             />
           ) : selectedOptions.length === 0 ? (

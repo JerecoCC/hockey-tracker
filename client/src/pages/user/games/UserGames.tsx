@@ -67,6 +67,12 @@ const STATUS_OPTIONS: SelectOption[] = [
   { value: 'final', label: 'Final' },
 ];
 
+const sameStringArray = (a: string[], b: string[]) =>
+  a.length === b.length && a.every((value, index) => value === b[index]);
+
+const stableStringArray = (current: string[], next: string[]) =>
+  sameStringArray(current, next) ? current : next;
+
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
 const toDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -645,6 +651,7 @@ const UserGames = () => {
   const [showSkippedGames, setShowSkippedGames] = useState(false);
   const [leagueId, setLeagueId] = useState<string>('all');
   const [teamFilter, setTeamFilter] = useState<string[]>([]);
+  const [appliedTeamFilter, setAppliedTeamFilter] = useState<string[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const tzPref = USER_TIMEZONE;
   const [actionGameId, setActionGameId] = useState<string | null>(null);
@@ -696,7 +703,7 @@ const UserGames = () => {
   const favoriteTeamIds = useMemo(() => favoriteTeamIdsData ?? [], [favoriteTeamIdsData]);
 
   const leagueSelected = leagueId !== 'all';
-  const selectedTeamIds = useMemo(() => [...teamFilter].sort(), [teamFilter]);
+  const selectedTeamIds = useMemo(() => [...appliedTeamFilter].sort(), [appliedTeamFilter]);
   const selectedTeamIdsParam = selectedTeamIds.join(',');
 
   const { data: allTeams = [], isLoading: teamsLoading } = useQuery<UserTeamOptionRecord[]>({
@@ -772,16 +779,24 @@ const UserGames = () => {
 
     if (shouldSeedFavorites) hasSeededTeamFilterRef.current = true;
 
-    setTeamFilter((current) => {
-      const next = shouldSeedFavorites
+    const getNextTeamFilter = (current: string[]) =>
+      shouldSeedFavorites
         ? availableFavoriteIds
         : current.filter((teamId) => availableIds.has(teamId));
-      return next.length === current.length &&
-        next.every((teamId, index) => teamId === current[index])
-        ? current
-        : next;
+
+    setTeamFilter((current) => {
+      const next = getNextTeamFilter(current);
+      return stableStringArray(current, next);
+    });
+    setAppliedTeamFilter((current) => {
+      const next = getNextTeamFilter(current);
+      return stableStringArray(current, next);
     });
   }, [favoriteTeamIds, favoriteTeamIdsData, teamOptions, teamsLoading]);
+
+  const applyTeamFilter = () => {
+    setAppliedTeamFilter((current) => stableStringArray(current, teamFilter));
+  };
 
   const filteredGames = useMemo(
     () => (showSkippedGames ? games : games.filter((game) => !game.skipped_by_user)),
@@ -1276,6 +1291,7 @@ const UserGames = () => {
               placeholder="Teams"
               emptyMessage="No teams available"
               onChange={setTeamFilter}
+              onExit={applyTeamFilter}
               searchable
             />
           </ScheduleFilterSlot>

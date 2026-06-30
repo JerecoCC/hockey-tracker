@@ -137,7 +137,7 @@ jest.mock('@/components/Select/Select', () => ({
 }));
 jest.mock('@/components/MultiSelect/MultiSelect', () => ({
   __esModule: true,
-  default: ({ value, options, onChange, placeholder }: any) => (
+  default: ({ value, options, onChange, onExit, placeholder }: any) => (
     <div
       role="combobox"
       aria-label={placeholder ?? 'multi-select'}
@@ -158,6 +158,12 @@ jest.mock('@/components/MultiSelect/MultiSelect', () => ({
           Toggle {option.label}
         </button>
       ))}
+      <button
+        type="button"
+        onClick={onExit}
+      >
+        Exit {placeholder ?? 'multi-select'}
+      </button>
     </div>
   ),
 }));
@@ -470,12 +476,11 @@ describe('UserGames schedule views', () => {
     expect(within(teamFilter).getByRole('button', { name: 'Toggle Opponent' })).toBeInTheDocument();
     expect(within(teamFilter).getByRole('button', { name: 'Toggle Away Team' })).toBeInTheDocument();
     expect(within(teamFilter).getByRole('button', { name: 'Toggle Idle Team' })).toBeInTheDocument();
-    expect(within(teamFilter).getAllByRole('button').map((button) => button.textContent)).toEqual([
-      'Toggle Home Team',
-      'Toggle Opponent',
-      'Toggle Away Team',
-      'Toggle Idle Team',
-    ]);
+    expect(
+      within(teamFilter)
+        .getAllByRole('button', { name: /^Toggle/ })
+        .map((button) => button.textContent),
+    ).toEqual(['Toggle Home Team', 'Toggle Opponent', 'Toggle Away Team', 'Toggle Idle Team']);
 
     const firstGameCard = screen.getAllByText('AWY')[0].closest(`.${gameCardStyles.card}`);
     expect(firstGameCard).not.toBeNull();
@@ -865,6 +870,15 @@ describe('UserGames schedule views', () => {
 
     await user.click(screen.getByRole('button', { name: 'Toggle Home Team' }));
 
+    const userGamesQueriesBeforeExit = mockUseQuery.mock.calls
+      .map(([options]) => options)
+      .filter((options) => options.queryKey?.[0] === 'user-games');
+    const draftTeamQuery = userGamesQueriesBeforeExit[userGamesQueriesBeforeExit.length - 1];
+
+    expect(draftTeamQuery.queryKey[3]).toBe('team-home,team-opp');
+
+    await user.click(screen.getByRole('button', { name: 'Exit Teams' }));
+
     const userGamesQueries = mockUseQuery.mock.calls
       .map(([options]) => options)
       .filter((options) => options.queryKey?.[0] === 'user-games');
@@ -955,6 +969,7 @@ describe('UserGames schedule views', () => {
 
     expect(screen.queryByText('EXH')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Toggle Extra Home' }));
+    await user.click(screen.getByRole('button', { name: 'Exit Teams' }));
     expect(screen.getAllByText('EXH').length).toBeGreaterThan(0);
   });
 
