@@ -1269,6 +1269,8 @@ const ScoreImageModal = ({
                   value: t.id,
                   label: t.name,
                   logo: t.logo,
+                  logoDark: t.logo_dark,
+                  logoLight: t.logo_light,
                   code: t.code,
                 }));
                 return (

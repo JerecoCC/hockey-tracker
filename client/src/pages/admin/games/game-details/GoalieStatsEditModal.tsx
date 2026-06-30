@@ -222,12 +222,16 @@ const GoalieStatsEditModal = ({
       value: game.away_team.id,
       label: `${game.away_team.code} (Away)`,
       logo: game.away_team.logo,
+      logoDark: game.away_team.logo_dark,
+      logoLight: game.away_team.logo_light,
       code: game.away_team.code,
     },
     {
       value: game.home_team.id,
       label: `${game.home_team.code} (Home)`,
       logo: game.home_team.logo,
+      logoDark: game.home_team.logo_dark,
+      logoLight: game.home_team.logo_light,
       code: game.home_team.code,
     },
   ];

@@ -18,6 +18,8 @@ export interface GameFormTeam {
   name: string;
   code: string;
   logo: string | null;
+  logo_dark?: string | null;
+  logo_light?: string | null;
   home_arena: string | null;
 }
 
@@ -172,6 +174,8 @@ const GameFormModal = ({
     value: t.id,
     label: t.name,
     logo: t.logo,
+    logoDark: t.logo_dark,
+    logoLight: t.logo_light,
     code: t.code,
   }));
   const opponentOptions = teamContext

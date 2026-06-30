@@ -271,6 +271,8 @@ const PlayoffSeriesDetailsPage = () => {
     name: team.name,
     code: team.code,
     logo: team.logo,
+    logo_dark: team.logo_dark,
+    logo_light: team.logo_light,
     home_arena: null,
   }));
 

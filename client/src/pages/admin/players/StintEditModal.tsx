@@ -133,6 +133,8 @@ const StintEditModal = ({
           value: team.id,
           label: team.name,
           logo: team.logo ?? undefined,
+          logoDark: team.logo_dark ?? undefined,
+          logoLight: team.logo_light ?? undefined,
           code: team.code,
         })),
     [currentTeamId, leagueId, mode, teams],

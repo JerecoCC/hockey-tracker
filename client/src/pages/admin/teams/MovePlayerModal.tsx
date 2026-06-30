@@ -82,7 +82,14 @@ const MovePlayerModal = ({
 
   const teamOptions = teams
     .filter((t) => t.league_id === leagueId && t.id !== currentTeamId)
-    .map((t) => ({ value: t.id, label: t.name, logo: t.logo ?? undefined, code: t.code }));
+    .map((t) => ({
+      value: t.id,
+      label: t.name,
+      logo: t.logo ?? undefined,
+      logoDark: t.logo_dark ?? undefined,
+      logoLight: t.logo_light ?? undefined,
+      code: t.code,
+    }));
 
   const { stints } = usePlayerTradeHistory(player?.id ?? null, seasonId);
 

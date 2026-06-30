@@ -20,6 +20,8 @@ interface TeamMeta {
   id: string;
   code: string;
   logo: string | null;
+  logoDark?: string | null;
+  logoLight?: string | null;
   primaryColor: string;
   textColor: string;
 }
@@ -98,6 +100,8 @@ const ThreeStarsModal = ({
           ? `#${e.jersey_number} ${e.first_name} ${e.last_name}`
           : `${e.first_name} ${e.last_name}`,
       logo: team?.logo ?? undefined,
+      logoDark: team?.logoDark ?? undefined,
+      logoLight: team?.logoLight ?? undefined,
       code: team?.code,
     };
   });
