@@ -77,6 +77,21 @@
   }
 }
 
+:global(:root[data-theme='light']) {
+  .tab {
+    color: var(--app-text-muted, #{$text-dim});
+
+    &:hover {
+      color: var(--app-text, #{$text-body});
+    }
+
+    &Active,
+    &Active:hover {
+      color: #fff;
+    }
+  }
+}
+
 // ── Tab panel ─────────────────────────────────────────────────────────
 .tabPanel {
   // content fills available space naturally
