@@ -120,6 +120,52 @@
   );
 }
 
+.calendarDayDropTarget.calendarDayDropTarget {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    border-radius: inherit;
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, #{$accent-light} 22%, transparent),
+        color-mix(in srgb, #{$accent} 12%, transparent)
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, #{$accent-light} 26%, transparent) 0 6px,
+        transparent 6px 12px
+      );
+    box-shadow:
+      inset 0 0 0 2px color-mix(in srgb, #{$accent-light} 82%, transparent),
+      inset 0 0 0 999px color-mix(in srgb, #{$bg-page} 14%, transparent);
+    pointer-events: none;
+  }
+}
+
+:global(:root[data-theme='light']) .calendarDayDropTarget.calendarDayDropTarget {
+  &::before {
+    background:
+      linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--app-accent-light, #2563eb) 13%, transparent),
+        color-mix(in srgb, var(--app-accent-light, #2563eb) 7%, transparent)
+      ),
+      repeating-linear-gradient(
+        -45deg,
+        color-mix(in srgb, var(--app-accent-light, #2563eb) 18%, transparent) 0 6px,
+        transparent 6px 12px
+      );
+    box-shadow:
+      inset 0 0 0 2px color-mix(in srgb, var(--app-accent-light, #2563eb) 54%, transparent),
+      inset 0 0 0 999px rgba(255, 255, 255, 0.16);
+  }
+}
+
 .playoff {
   &Dots {
     display: inline-flex;

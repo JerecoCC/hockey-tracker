@@ -690,7 +690,7 @@ describe('UserGames schedule views', () => {
     }
   });
 
-  it('orders calendar day games by watched, scheduled watch, unwatched, then skipped', async () => {
+  it('orders calendar day games by watched scheduled, watched, scheduled watch, unwatched, then skipped', async () => {
     const user = userEvent.setup();
     const watchedSameDayGame = {
       ...games[1],
@@ -700,6 +700,17 @@ describe('UserGames schedule views', () => {
       watched_by_user: true,
       watched_on: watchedDate,
       scheduled_time: '22:00',
+    };
+    const watchedUnscheduledSameDayGame = {
+      ...games[1],
+      id: 'game-same-day-watched-unscheduled',
+      away_team: { ...games[1].away_team, name: 'Same Day Plain Watched', code: 'SDP' },
+      scheduled_for: null,
+      watched_by_user: true,
+      skipped_by_user: false,
+      watched_on: watchedDate,
+      scheduled_at: watchedDate,
+      scheduled_time: null,
     };
     const scheduledSameDayGame = {
       ...games[0],
@@ -743,6 +754,7 @@ describe('UserGames schedule views', () => {
             skippedSameDayGame,
             unwatchedSameDayGame,
             scheduledSameDayGame,
+            watchedUnscheduledSameDayGame,
             watchedSameDayGame,
           ],
           isLoading: false,
@@ -754,7 +766,7 @@ describe('UserGames schedule views', () => {
     await user.click(screen.getByRole('switch', { name: 'Show skipped games' }));
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    const orderedItems = ['SDW', 'SDS', 'SDA', 'SDK'].map(
+    const orderedItems = ['SDW', 'SDP', 'SDS', 'SDA', 'SDK'].map(
       (code) => screen.getByText(code).closest(`.${calendarItemStyles.item}`) as HTMLElement,
     );
     for (let index = 0; index < orderedItems.length - 1; index += 1) {
@@ -1045,10 +1057,14 @@ describe('UserGames schedule views', () => {
 
     expect(sourceCard).not.toBeNull();
     expect(targetCell).not.toBeNull();
+    expect(sourceCard).toHaveClass(calendarItemStyles.itemDraggable);
 
     fireEvent.dragStart(sourceCard as HTMLElement, { dataTransfer });
     fireEvent.dragOver(targetCell as Element, { dataTransfer });
+    expect(targetCell).not.toHaveClass(styles.calendarDayDropTarget);
+    expect(targetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).not.toBeNull();
     fireEvent.drop(targetCell as Element, { dataTransfer });
+    expect(targetCell?.querySelector(`.${styles.calendarDayDropTarget}`)).toBeNull();
     fireEvent.dragEnd(sourceCard as HTMLElement, { dataTransfer });
 
     await waitFor(() =>

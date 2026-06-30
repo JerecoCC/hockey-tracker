@@ -346,10 +346,12 @@ const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
 };
 
 const getCalendarDayGameSortRank = (game: GameRecord) => {
-  if (game.watched_by_user) return 0;
-  if (game.skipped_by_user) return 3;
-  if (getScheduledWatchDateKey(game.scheduled_for)) return 1;
-  return 2;
+  const hasScheduledWatchDate = !!getScheduledWatchDateKey(game.scheduled_for);
+  if (game.watched_by_user && hasScheduledWatchDate) return 0;
+  if (game.watched_by_user) return 1;
+  if (game.skipped_by_user) return 4;
+  if (hasScheduledWatchDate) return 2;
+  return 3;
 };
 
 const sortCalendarDayGames = (a: GameRecord, b: GameRecord) => {
@@ -676,6 +678,7 @@ const UserGames = () => {
   const tzPref = USER_TIMEZONE;
   const [actionGameId, setActionGameId] = useState<string | null>(null);
   const [dragGameId, setDragGameId] = useState<string | null>(null);
+  const [calendarDropDateKey, setCalendarDropDateKey] = useState<string | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
   const [scoreCardTarget, setScoreCardTarget] = useState<GameRecord | null>(null);
   const [scoreImageOpen, setScoreImageOpen] = useState(false);
@@ -1148,23 +1151,49 @@ const UserGames = () => {
 
   const handleCalendarDragEnd = () => {
     setDragGameId(null);
+    setCalendarDropDateKey(null);
   };
 
-  const handleCalendarDragOver = (event: DragEvent<HTMLDivElement>) => {
+  const getCalendarDraggedGame = (event: DragEvent<HTMLDivElement>) => {
     const draggedId = dragGameId || event.dataTransfer.getData('text/user-game-id');
-    if (!draggedId) return;
+    if (!draggedId) return null;
+    const draggedGame = games.find((game) => game.id === draggedId);
+    return draggedGame && !draggedGame.watched_by_user && !draggedGame.skipped_by_user
+      ? draggedGame
+      : null;
+  };
+
+  const setCalendarDropTarget = (dateKey: string, event: DragEvent<HTMLDivElement>) => {
+    const draggedGame = getCalendarDraggedGame(event);
+    if (!draggedGame) return null;
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
+    setCalendarDropDateKey((current) => (current === dateKey ? current : dateKey));
+    return draggedGame;
   };
 
-  const handleCalendarDrop = (dateKey: string) => async (event: DragEvent<HTMLDivElement>) => {
-    event.preventDefault();
-    const draggedId = dragGameId || event.dataTransfer.getData('text/user-game-id');
-    setDragGameId(null);
-    if (!draggedId) return;
+  const handleCalendarDragEnter =
+    (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+      setCalendarDropTarget(dateKey, event);
+    };
 
-    const draggedGame = games.find((game) => game.id === draggedId);
-    if (!draggedGame || draggedGame.watched_by_user) return;
+  const handleCalendarDragOver = (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+    setCalendarDropTarget(dateKey, event);
+  };
+
+  const handleCalendarDragLeave =
+    (dateKey: string) => (event: DragEvent<HTMLDivElement>) => {
+      const nextTarget = event.relatedTarget;
+      if (nextTarget instanceof Node && event.currentTarget.contains(nextTarget)) return;
+      setCalendarDropDateKey((current) => (current === dateKey ? null : current));
+    };
+
+  const handleCalendarDrop = (dateKey: string) => async (event: DragEvent<HTMLDivElement>) => {
+    const draggedGame = setCalendarDropTarget(dateKey, event);
+    setDragGameId(null);
+    setCalendarDropDateKey(null);
+    if (!draggedGame) return;
+
     const originalDateKey = getOriginalGameDateKey(draggedGame, tzPref);
     const normalizedScheduleDate = originalDateKey === dateKey ? null : dateKey;
     if (getScheduledWatchDateKey(draggedGame.scheduled_for) === normalizedScheduleDate) return;
@@ -1391,9 +1420,14 @@ const UserGames = () => {
               )}
               getDayProps={({ dateKey }) => ({
                 'data-date-key': dateKey,
-                onDragOver: handleCalendarDragOver,
+                onDragEnter: handleCalendarDragEnter(dateKey),
+                onDragOver: handleCalendarDragOver(dateKey),
+                onDragLeave: handleCalendarDragLeave(dateKey),
                 onDrop: handleCalendarDrop(dateKey),
               })}
+              getDayBodyClassName={({ dateKey }) =>
+                calendarDropDateKey === dateKey ? styles.calendarDayDropTarget : undefined
+              }
               renderDayContent={({ dateKey }) => {
                 const dayGames = gamesByCalendarDate.get(dateKey) ?? [];
                 return dayGames.length > 0 ? (
