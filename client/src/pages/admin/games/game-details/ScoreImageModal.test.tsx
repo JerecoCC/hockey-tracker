@@ -2,6 +2,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useQuery } from '@tanstack/react-query';
 import { toPng } from 'html-to-image';
+import { ThemeContext } from '@/context/ThemeContext';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues from '@/hooks/useLeagues';
 import useTeams from '@/hooks/useTeams';
@@ -105,53 +106,66 @@ describe('ScoreImageModal', () => {
     });
 
     render(
-      <ScoreImageModal
-        open
-        onClose={jest.fn()}
-        game={
-          {
-            away_team: {
-              id: 'team-away',
-              name: 'Away Bears',
-              place_name: 'Away',
-              team_name: 'Bears',
-              code: 'AWY',
-              logo: null,
-              primary_color: '#111111',
-              secondary_color: '#222222',
-              text_color: '#ffffff',
-            },
-            home_team: {
-              id: 'team-home',
-              name: 'Home Wolves',
-              place_name: 'Home',
-              team_name: 'Wolves',
-              code: 'HOM',
-              logo: null,
-              primary_color: '#333333',
-              secondary_color: '#444444',
-              text_color: '#ffffff',
-            },
-            scheduled_at: '2026-03-05T19:00:00Z',
-            league_code: 'HL',
-            league_name: 'Hockey League',
-            season_name: '2026 Season',
-            league_id: 'league-1',
-            league_primary_color: '#0055aa',
-            game_type: 'regular',
-            series_games_to_win: null,
-            series_home_wins: null,
-            series_away_wins: null,
-            series_home_team_id: null,
-            game_number_in_series: null,
-            playoff_round: null,
-            playoff_round_names: null,
-          } as Partial<GameRecord> as GameRecord
-        }
-        liveAwayScore={1}
-        liveHomeScore={2}
-        allowPreview
-      />,
+      <ThemeContext.Provider
+        value={{
+          theme: 'light',
+          isDarkMode: false,
+          setTheme: jest.fn(),
+          toggleTheme: jest.fn(),
+        }}
+      >
+        <ScoreImageModal
+          open
+          onClose={jest.fn()}
+          game={
+            {
+              away_team: {
+                id: 'team-away',
+                name: 'Away Bears',
+                place_name: 'Away',
+                team_name: 'Bears',
+                code: 'AWY',
+                logo: '/logos/away-default.png',
+                logo_dark: '/logos/away-dark.png',
+                logo_light: '/logos/away-light.png',
+                primary_color: '#111111',
+                secondary_color: '#222222',
+                text_color: '#ffffff',
+              },
+              home_team: {
+                id: 'team-home',
+                name: 'Home Wolves',
+                place_name: 'Home',
+                team_name: 'Wolves',
+                code: 'HOM',
+                logo: '/logos/home-default.png',
+                logo_dark: '/logos/home-dark.png',
+                logo_light: '/logos/home-light.png',
+                primary_color: '#333333',
+                secondary_color: '#444444',
+                text_color: '#ffffff',
+              },
+              scheduled_at: '2026-03-05T19:00:00Z',
+              league_code: 'HL',
+              league_name: 'Hockey League',
+              season_name: '2026 Season',
+              league_id: 'league-1',
+              league_primary_color: '#0055aa',
+              game_type: 'regular',
+              series_games_to_win: null,
+              series_home_wins: null,
+              series_away_wins: null,
+              series_home_team_id: null,
+              game_number_in_series: null,
+              playoff_round: null,
+              playoff_round_names: null,
+            } as Partial<GameRecord> as GameRecord
+          }
+          liveAwayScore={1}
+          liveHomeScore={2}
+          allowPreview
+        />
+      </ThemeContext.Provider>,
     );
 
     await user.click(screen.getByRole('button', { name: 'Preview Image' }));
@@ -176,10 +190,19 @@ describe('ScoreImageModal', () => {
       expect.objectContaining({
         width: 1440,
         height: 2560,
-        backgroundColor: '#f8fafc',
+        backgroundColor: '#0f172a',
       }),
     );
+    expect(mockToPng.mock.calls[0][0]).toHaveAttribute('data-theme', 'dark');
     expect(mockToPng.mock.calls[0][0]).toHaveStyle('--league-band: #003d7a');
+    const exportedImageSources = Array.from(document.querySelectorAll('img')).map((img) =>
+      img.getAttribute('src'),
+    );
+    expect(exportedImageSources).toEqual(
+      expect.arrayContaining(['/logos/away-dark.png', '/logos/home-dark.png']),
+    );
+    expect(exportedImageSources).not.toContain('/logos/away-light.png');
+    expect(exportedImageSources).not.toContain('/logos/home-light.png');
     expect(createdAnchor?.download).toBe('AWY vs HOM - 2026-03-05.png');
   });
 

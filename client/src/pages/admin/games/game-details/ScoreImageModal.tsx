@@ -2,7 +2,6 @@ import {
   type ChangeEvent,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -21,7 +20,6 @@ import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal'
 import Modal from '@/components/Modal/Modal';
 import SeasonSelect from '@/components/SeasonSelect/SeasonSelect';
 import Select, { type SelectOption } from '@/components/Select/Select';
-import { ThemeContext } from '@/context/ThemeContext';
 import type { GameRecord } from '@/hooks/useGames';
 import useLeagues, { type LeagueRecord } from '@/hooks/useLeagues';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
@@ -146,6 +144,11 @@ function darkenHexColor(hex: string, amount = 0.28): string {
       .toString(16)
       .padStart(2, '0');
   return `#${darken(h.slice(0, 2))}${darken(h.slice(2, 4))}${darken(h.slice(4, 6))}`;
+}
+
+function getDarkScoreCardLogo(team: DrawTeam | null) {
+  if (!team) return null;
+  return team.logo_dark ?? team.logo ?? team.logo_light;
 }
 
 /** Draw a logo image or a colored circle-placeholder fallback. */
@@ -280,15 +283,11 @@ const ScoreCardNumberField = ({ control, name, label, min, max }: ScoreCardNumbe
 };
 
 const ScoreCardTeamLogo = ({ team }: { team: DrawTeam | null }) => {
-  const themeContext = useContext(ThemeContext);
   if (!team) {
     return <div className={styles.scoreCardLogoPlaceholder}>TBD</div>;
   }
 
-  const logo =
-    themeContext?.theme === 'light'
-      ? (team.logo_light ?? team.logo ?? team.logo_dark)
-      : (team.logo ?? team.logo_dark ?? team.logo_light);
+  const logo = getDarkScoreCardLogo(team);
 
   if (logo) {
     return (
@@ -438,6 +437,8 @@ const ScoreImageModal = ({
         team_name: formAwayTeam.team_name,
         code: formAwayTeam.code,
         logo: formAwayTeam.logo,
+        logo_dark: formAwayTeam.logo_dark,
+        logo_light: formAwayTeam.logo_light,
         primary_color: formAwayTeam.primary_color,
         secondary_color: formAwayTeam.secondary_color,
         text_color: formAwayTeam.text_color,
@@ -449,6 +450,8 @@ const ScoreImageModal = ({
         team_name: formHomeTeam.team_name,
         code: formHomeTeam.code,
         logo: formHomeTeam.logo,
+        logo_dark: formHomeTeam.logo_dark,
+        logo_light: formHomeTeam.logo_light,
         primary_color: formHomeTeam.primary_color,
         secondary_color: formHomeTeam.secondary_color,
         text_color: formHomeTeam.text_color,
@@ -693,7 +696,7 @@ const ScoreImageModal = ({
     return toPng(scoreCardNode, {
       cacheBust: true,
       pixelRatio: 1,
-      backgroundColor: '#f8fafc',
+      backgroundColor: '#0f172a',
       width: W,
       height: H,
       style: {
@@ -737,10 +740,12 @@ const ScoreImageModal = ({
       const drawAwayScore = liveAwayScore ?? Number(numVals.awayScore);
       const drawHomeScore = liveHomeScore ?? Number(numVals.homeScore);
       const drawOvertimeSuffix = overtimeSuffix ?? '';
+      const awayLogo = getDarkScoreCardLogo(drawGame?.away_team ?? null);
+      const homeLogo = getDarkScoreCardLogo(drawGame?.home_team ?? null);
 
       const [awayImg, homeImg, heroImg] = await Promise.all([
-        drawGame?.away_team.logo ? loadImage(drawGame.away_team.logo) : Promise.resolve(null),
-        drawGame?.home_team.logo ? loadImage(drawGame.home_team.logo) : Promise.resolve(null),
+        awayLogo ? loadImage(awayLogo) : Promise.resolve(null),
+        homeLogo ? loadImage(homeLogo) : Promise.resolve(null),
         heroFile ? loadLocalImage(heroFile) : Promise.resolve(null),
       ]);
 
@@ -1408,6 +1413,7 @@ const ScoreImageModal = ({
         <div className={styles.scoreCardExportShell}>
           <div
             ref={scoreCardRef}
+            data-theme="dark"
             className={styles.scoreCardExport}
             style={
               {
