@@ -4,6 +4,7 @@ import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
 import Section from '@/components/Section/Section';
 import Field from '@/components/Field/Field';
+import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import Modal from '@/components/Modal/Modal';
 import SearchField from '@/components/SearchField/SearchField';
@@ -1475,27 +1476,24 @@ const SeasonAwardsTab = ({
           onSubmit={submitTeamSelection}
         >
           {TEAM_SELECTION_GROUPS.map((group) => (
-            <fieldset
+            <GroupedFields
               key={group.group}
-              className={styles.awardTeamSelectionFieldset}
+              legend={group.label}
             >
-              <legend>{group.label}</legend>
-              <div className={styles.awardTeamSelectionFields}>
-                {TEAM_SELECTION_SLOTS.filter((slot) => slot.group === group.group).map((slot) => (
-                  <Field
-                    key={slot.field}
-                    control={teamSelectionForm.control}
-                    name={slot.field}
-                    type="select"
-                    placeholder={slot.label}
-                    options={teamSelectionOptions[slot.group]}
-                    searchable
-                    required
-                    rules={{ required: `${slot.label} is required` }}
-                  />
-                ))}
-              </div>
-            </fieldset>
+              {TEAM_SELECTION_SLOTS.filter((slot) => slot.group === group.group).map((slot) => (
+                <Field
+                  key={slot.field}
+                  control={teamSelectionForm.control}
+                  name={slot.field}
+                  type="select"
+                  placeholder={slot.label}
+                  options={teamSelectionOptions[slot.group]}
+                  searchable
+                  required
+                  rules={{ required: `${slot.label} is required` }}
+                />
+              ))}
+            </GroupedFields>
           ))}
           {teamSelectionHasDuplicates && (
             <p className={styles.awardTeamSelectionError}>

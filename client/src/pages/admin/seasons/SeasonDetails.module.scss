@@ -607,7 +607,7 @@
       var(--award-divider-gap) - var(--award-scrollbar-lane-width)
     );
     // Header background comes from the Accordion `headerType="light"` prop.
-    --accordion-border-color: rgba(255, 255, 255, 0.08);
+    --accordion-border-color: var(--app-border, #{$border});
     --award-content-height: calc(
       var(--award-winner-card-height) + var(--award-player-row-height) +
         var(--award-scrollbar-lane-width) + (var(--award-divider-gap) * 2) +
@@ -763,22 +763,10 @@
     --player-card-min-height: var(--award-winner-card-height);
     --player-card-max-height: var(--award-winner-card-height);
 
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: $space-sm;
     flex: 1 1 0;
     min-width: 0;
-    min-height: var(--award-winner-card-height);
-    max-height: var(--award-winner-card-height);
-    padding: $space-md;
-    border: 1px solid $border;
-    border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.02);
-    overflow: hidden;
-    text-align: center;
+    min-height: var(--player-card-min-height);
+    max-height: var(--player-card-max-height);
   }
 
   &WinnerCardsMultiple &WinnerCard {
@@ -788,10 +776,29 @@
   }
 
   &WinnerCardEmpty {
+    display: flex;
+    align-items: center;
     justify-content: center;
+    padding: $space-md;
+    border: 1px solid var(--app-border, #{$border});
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+    text-align: center;
   }
 
   &WinnerSkeleton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: $space-sm;
+    padding: $space-md;
+    border: 1px solid var(--app-border, #{$border});
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.02);
+    overflow: hidden;
+    text-align: center;
     pointer-events: none;
   }
 
@@ -801,6 +808,11 @@
     align-items: center;
     gap: $space-xs;
     width: 100%;
+  }
+
+  :global(:root[data-theme='light']) &WinnerCardEmpty,
+  :global(:root[data-theme='light']) &WinnerSkeleton {
+    background: var(--app-field-bg, #edf3fa);
   }
 
   &PlayerList {
@@ -820,7 +832,7 @@
         (var(--award-divider-gap) * 2) + 1px
     );
     padding-top: var(--award-divider-gap);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--app-border, #{$border});
   }
 
   &PlayerListScroller {
@@ -915,32 +927,6 @@
   &TeamSelectionForm {
     display: flex;
     flex-direction: column;
-    gap: $space-md;
-  }
-
-  &TeamSelectionFieldset {
-    display: flex;
-    flex-direction: column;
-    gap: $space-md;
-    min-width: 0;
-    margin: 0;
-    padding: $space-md;
-    border: 1px solid $border;
-    border-radius: $radius-md;
-
-    legend {
-      padding: 0 $space-xs;
-      color: var(--app-text-muted, #{$text-dim});
-      font-size: $font-xs;
-      font-weight: 700;
-      letter-spacing: 0.05em;
-      text-transform: uppercase;
-    }
-  }
-
-  &TeamSelectionFields {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr);
     gap: $space-md;
   }
 

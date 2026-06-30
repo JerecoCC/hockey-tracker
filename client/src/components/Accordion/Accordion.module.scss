@@ -24,7 +24,7 @@
 
 // Faded overlay header — matches the season awards tab item headers.
 .headerLight {
-  --accordion-header-bg: #{rgba(#fff, 0.03)};
+  --accordion-header-bg: var(--app-surface-subtle, #{rgba(#fff, 0.03)});
 }
 
 // No header background.
