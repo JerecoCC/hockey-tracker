@@ -18,11 +18,14 @@ import {
 } from '@/hooks/useGameGoalieStats';
 import fieldStyles from '@/components/Field/Field.module.scss';
 import styles from './GameDetailsPage.module.scss';
-import { PERIOD } from './constants';
+import { PERIOD, PERIOD_ORDER } from './constants';
 import { compareGoalieStats } from './goalieStatsOrdering';
 
 const fmt = (first: string | null, last: string | null) =>
-  last ? `${first ? `${first.charAt(0)}. ` : ''}${last}` : '';
+  [first, last].filter(Boolean).join(' ');
+
+const jerseyChipLabel = (jerseyNumber: number | null) =>
+  jerseyNumber == null ? null : String(jerseyNumber).replace(/\D/g, '').slice(0, 2);
 
 const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.FIRST]: 'P1',
@@ -32,7 +35,85 @@ const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
 
-const PERIOD_OPTIONS = Object.entries(PERIOD_LABEL).map(([value, label]) => ({ value, label }));
+const PERIOD_ORDER_VALUES: readonly string[] = PERIOD_ORDER;
+
+const normalizeGamePeriodForStints = (period: string | null | undefined) => {
+  if (!period) return null;
+  const normalized = period.toUpperCase();
+  if (/^OT\d+$/.test(normalized)) return PERIOD.OVERTIME;
+  if (/^\d+$/.test(normalized) && Number(normalized) > 3) return PERIOD.OVERTIME;
+  return normalized;
+};
+
+const periodSortValue = (period: string) => {
+  const normalized = period.toUpperCase();
+  const standardIndex = PERIOD_ORDER_VALUES.indexOf(normalized);
+  if (standardIndex >= 0) return standardIndex;
+
+  const overtimeMatch = /^OT(\d+)$/.exec(normalized);
+  if (overtimeMatch) {
+    return PERIOD_ORDER_VALUES.indexOf(PERIOD.OVERTIME) + Number(overtimeMatch[1]) / 100;
+  }
+
+  return Number.MAX_SAFE_INTEGER;
+};
+
+const sortPeriods = (periods: Iterable<string>) =>
+  [...new Set([...periods].filter(Boolean))].sort(
+    (a, b) => periodSortValue(a) - periodSortValue(b) || a.localeCompare(b),
+  );
+
+const periodOptionLabel = (period: string) => PERIOD_LABEL[period.toUpperCase()] ?? period;
+
+const toPeriodOptions = (periods: Iterable<string>) =>
+  sortPeriods(periods).map((period) => ({ value: period, label: periodOptionLabel(period) }));
+
+const addPeriodsThrough = (periods: Set<string>, period: string | null | undefined) => {
+  const normalized = normalizeGamePeriodForStints(period);
+  const periodIndex = normalized ? PERIOD_ORDER_VALUES.indexOf(normalized) : -1;
+  const thirdPeriodIndex = PERIOD_ORDER_VALUES.indexOf(PERIOD.THIRD);
+  const lastRegulationIndex =
+    periodIndex >= 0 ? Math.min(periodIndex, thirdPeriodIndex) : 0;
+
+  for (let index = 0; index <= lastRegulationIndex; index += 1) {
+    const periodId = PERIOD_ORDER_VALUES[index];
+    if (periodId) periods.add(periodId);
+  }
+
+  if (normalized === PERIOD.OVERTIME || normalized === PERIOD.SHOOTOUT) {
+    periods.add(PERIOD.OVERTIME);
+  }
+  if (normalized === PERIOD.SHOOTOUT) {
+    periods.add(PERIOD.SHOOTOUT);
+  }
+};
+
+const gamePlayedPeriods = (game: GameRecord) => {
+  const periods = new Set<string>();
+
+  if (game.status === 'final') {
+    addPeriodsThrough(periods, PERIOD.THIRD);
+  } else {
+    addPeriodsThrough(periods, game.current_period ?? PERIOD.FIRST);
+  }
+
+  game.period_scores.forEach(({ period }) => addPeriodsThrough(periods, period));
+  game.period_shots.forEach(({ period }) => addPeriodsThrough(periods, period));
+
+  const hasShootout = game.shootout || game.current_period === PERIOD.SHOOTOUT;
+  const hasOvertime =
+    hasShootout ||
+    (game.overtime_periods ?? 0) > 0 ||
+    game.current_period === PERIOD.OVERTIME ||
+    periods.has(PERIOD.SHOOTOUT) ||
+    periods.has(PERIOD.OVERTIME);
+
+  if (hasOvertime) periods.add(PERIOD.OVERTIME);
+  if (hasShootout || periods.has(PERIOD.SHOOTOUT)) periods.add(PERIOD.SHOOTOUT);
+  if (periods.size === 0) periods.add(PERIOD.FIRST);
+
+  return sortPeriods(periods);
+};
 
 const numericString = (value: string) => value.replace(/[^0-9]/g, '');
 
@@ -91,6 +172,20 @@ interface GoalieStatsFormValues {
   addDraft: AddStintDraft;
 }
 
+const lastStintForRow = (row: GoalieEditRow) => row.stints[row.stints.length - 1];
+
+const addStintBlockReason = (row: GoalieEditRow) => {
+  const incompleteExit = row.stints.find(
+    (stint) => !stint.exited_period || !stint.exited_time,
+  );
+  if (!incompleteExit) return null;
+  return incompleteExit.exited_period
+    ? 'Set an exit time before adding another stint'
+    : 'Set an exit period before adding another stint';
+};
+
+const EMPTY_ROWS: GoalieEditRow[] = [];
+
 interface Props {
   open: boolean;
   game: GameRecord;
@@ -137,7 +232,7 @@ const GoalieStatsEditModal = ({
     },
     mode: 'onChange',
   });
-  const rows = watch('rows') ?? [];
+  const rows = watch('rows') ?? EMPTY_ROWS;
   const addDraft = watch('addDraft') ?? defaultStintDraft();
 
   const allGoalies = useMemo(
@@ -235,6 +330,22 @@ const GoalieStatsEditModal = ({
       goalie.jersey_number != null ? ` (#${goalie.jersey_number})` : ''
     }`,
   }));
+
+  const periodOptions = useMemo(() => {
+    const periods = new Set(gamePlayedPeriods(game));
+    rows.forEach((row) =>
+      row.stints.forEach((stint) => {
+        if (stint.entered_period) periods.add(stint.entered_period);
+        if (stint.exited_period) periods.add(stint.exited_period);
+      }),
+    );
+    return toPeriodOptions(periods);
+  }, [game, rows]);
+  const exitPeriodOptions = useMemo(
+    () => [{ value: '', label: 'End' }, ...periodOptions],
+    [periodOptions],
+  );
+  const defaultEnteredPeriod = periodOptions[0]?.value ?? PERIOD.FIRST;
 
   const setAddDraftField = (field: keyof AddStintDraft, value: string) => {
     const prev = getValues('addDraft');
@@ -442,12 +553,12 @@ const GoalieStatsEditModal = ({
     }
   };
 
-  const buildPendingStintRow = (): StintRow => {
+  const buildPendingStintRow = (previousStint?: StintRow): StintRow => {
     pendingStintIdRef.current += 1;
     return {
       id: `${PENDING_ID_PREFIX}stint-${pendingStintIdRef.current}`,
-      entered_period: PERIOD.FIRST,
-      entered_time: '',
+      entered_period: previousStint?.exited_period || defaultEnteredPeriod,
+      entered_time: previousStint?.exited_time || '',
       exited_period: '',
       exited_time: '',
       shots_against: '0',
@@ -489,9 +600,15 @@ const GoalieStatsEditModal = ({
 
   const addPendingStintForGoalie = (row: GoalieEditRow) => {
     const currentRows = getValues('rows');
+    const targetRow = currentRows.find(
+      (currentRow) => currentRow.rosterEntry.player_id === row.rosterEntry.player_id,
+    );
+    if (!targetRow || addStintBlockReason(targetRow)) return;
+    const lastStint = lastStintForRow(targetRow);
+
     const nextRows = currentRows.map((currentRow) =>
       currentRow.rosterEntry.player_id === row.rosterEntry.player_id
-        ? { ...currentRow, stints: [...currentRow.stints, buildPendingStintRow()] }
+        ? { ...currentRow, stints: [...currentRow.stints, buildPendingStintRow(lastStint)] }
         : currentRow,
     );
     setValue('rows', nextRows, { shouldDirty: true, shouldValidate: true });
@@ -558,6 +675,7 @@ const GoalieStatsEditModal = ({
           const text = isAway ? game.away_team.text_color : game.home_team.text_color;
           const totals = rowTotals(row);
           const goalieName = fmt(goalie.first_name, goalie.last_name);
+          const jerseyLabel = jerseyChipLabel(goalie.jersey_number);
           const teamGoalieCount = rows.filter(
             ({ rosterEntry }) => rosterEntry.team_id === goalie.team_id,
           ).length;
@@ -566,6 +684,7 @@ const GoalieStatsEditModal = ({
               !isPendingId(stint.id) && isStartingWindow(stint.entered_period, stint.entered_time),
           );
           const canRemoveGoalie = teamGoalieCount > 1 && !goalieHasStarterStint;
+          const stintAddBlockReason = addStintBlockReason(row);
 
           return (
             <Accordion
@@ -595,19 +714,20 @@ const GoalieStatsEditModal = ({
                     initials={goalie.last_name?.charAt(0) ?? '?'}
                     primaryColor={primary}
                     textColor={text}
-                    size={34}
+                    size={30}
                   />
-                  <div className={styles.goalInfo}>
-                    {goalie.jersey_number != null && (
-                      <span className={styles.goalAssists}>#{goalie.jersey_number}</span>
-                    )}
-                    <span className={`${styles.goalScorer} ${styles.goalieStatsEditorNameLine}`}>
-                      <span className={styles.goalieStatsEditorPlayerName}>{goalieName}</span>
+                  {jerseyLabel && (
+                    <span
+                      className={styles.goalieStatsEditorJerseyChip}
+                      aria-label={`Jersey ${jerseyLabel}`}
+                    >
+                      {jerseyLabel}
                     </span>
-                  </div>
+                  )}
+                  <span className={styles.goalieStatsEditorPlayerName}>{goalieName}</span>
                 </span>
               }
-              labelMeta={
+              headerRight={
                 <div className={styles.goalieStatsEditorTotals}>
                   <span className={styles.goalieStatsEditorTotalPill}>
                     <b>{totals.shots}</b>
@@ -626,8 +746,9 @@ const GoalieStatsEditModal = ({
               hoverActions={[
                 {
                   icon: 'add',
-                  tooltip: 'Add stint for this goalie',
-                  disabled: busy,
+                  intent: 'accent',
+                  tooltip: stintAddBlockReason ?? 'Add stint for this goalie',
+                  disabled: busy || !!stintAddBlockReason,
                   onClick: () => addPendingStintForGoalie(row),
                 },
                 ...(canRemoveGoalie
@@ -681,7 +802,7 @@ const GoalieStatsEditModal = ({
                             <span>Enter</span>
                             <Select
                               value={stintRow.entered_period}
-                              options={PERIOD_OPTIONS}
+                              options={periodOptions}
                               width="content"
                               disabled={busy || isStarter}
                               onChange={(value) =>
@@ -707,7 +828,7 @@ const GoalieStatsEditModal = ({
                             <span>Exit</span>
                             <Select
                               value={stintRow.exited_period}
-                              options={[{ value: '', label: 'End' }, ...PERIOD_OPTIONS]}
+                              options={exitPeriodOptions}
                               width="content"
                               disabled={busy}
                               onChange={(value) =>
@@ -762,7 +883,7 @@ const GoalieStatsEditModal = ({
                       </span>
                       {canRemoveStint && (
                         <Button
-                          variant="ghost"
+                          variant="outlined"
                           intent="danger"
                           icon="delete"
                           size="sm"

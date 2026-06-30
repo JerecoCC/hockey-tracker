@@ -35,13 +35,14 @@
   }
 }
 
-// Flex row: team logo + player photo + info column
+// Flex row: team logo + player photo + jersey chip + player name
 .goalieNameCell {
   display: flex;
   align-items: center;
   gap: $space-sm;
   flex: 1;
   min-width: 0;
+  white-space: nowrap;
 }
 
 // Text column: scorer name + assists
@@ -962,6 +963,34 @@
 }
 
 .goalieStatsEditor {
+  --goalie-stats-editor-border: color-mix(
+    in srgb,
+    var(--app-border, #{$border}) 78%,
+    transparent
+  );
+  --goalie-stats-editor-chip-bg: color-mix(
+    in srgb,
+    var(--app-surface, #{$bg-card}) 84%,
+    var(--app-bg, #{$bg-page})
+  );
+  --goalie-stats-editor-chip-border: color-mix(
+    in srgb,
+    var(--app-text-subtle, #{$text-light}) 42%,
+    transparent
+  );
+  --goalie-stats-editor-chip-text: var(--app-text-subtle, #{$text-light});
+  --goalie-stats-editor-pill-bg: color-mix(
+    in srgb,
+    var(--app-surface, #{$bg-card}) 72%,
+    transparent
+  );
+  --goalie-stats-editor-pill-border: color-mix(
+    in srgb,
+    var(--app-text-subtle, #{$text-light}) 44%,
+    transparent
+  );
+  --goalie-stats-editor-stint-bg: var(--app-surface, #{$bg-card});
+
   display: flex;
   flex-direction: column;
   gap: $space-md;
@@ -1052,21 +1081,39 @@
     --accordion-header-bg: #{rgba($info, 0.12)};
   }
 
-  // Padding around the stint table inside each goalie Accordion body.
+  // Keep the stint table flush inside each goalie Accordion body.
   &Body {
-    padding: $space-md;
-  }
-
-  &NameLine {
-    display: inline-flex;
-    align-items: center;
-    max-width: 100%;
+    padding: 0;
   }
 
   &PlayerName {
     min-width: 0;
+    color: var(--app-text, #{$text-body});
+    font-size: $font-sm;
+    font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &JerseyChip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 30px;
+    height: 30px;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 1px solid var(--goalie-stats-editor-chip-border);
+    border-radius: $radius-sm;
+    background: var(--goalie-stats-editor-chip-bg);
+    color: var(--goalie-stats-editor-chip-text);
+    font-size: $font-sm;
+    font-weight: 800;
+    line-height: 1;
+    overflow: hidden;
   }
 
   &Totals {
@@ -1088,8 +1135,9 @@
     min-width: 48px;
     justify-content: center;
     padding: 4px $space-sm;
-    border: 1px solid $border;
+    border: 1px solid var(--goalie-stats-editor-pill-border);
     border-radius: $radius-sm;
+    background: var(--goalie-stats-editor-pill-bg);
     color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 700;
@@ -1098,17 +1146,27 @@
   &Table {
     display: flex;
     flex-direction: column;
-    border: 1px solid $border;
-    border-radius: $radius-sm;
-    background: $bg-card;
+    border: 1px solid var(--goalie-stats-editor-border);
+    border-radius: 0 0 $radius-md $radius-md;
+    background: var(--app-surface, #{$bg-card});
     overflow: hidden;
   }
+}
+
+:global(:root[data-theme='light']) .goalieStatsEditor {
+  --goalie-stats-editor-border: #e2e8f0;
+  --goalie-stats-editor-chip-bg: #f8fafc;
+  --goalie-stats-editor-chip-border: #dbe3ee;
+  --goalie-stats-editor-chip-text: #64748b;
+  --goalie-stats-editor-pill-bg: #f8fafc;
+  --goalie-stats-editor-pill-border: #dbe3ee;
+  --goalie-stats-editor-stint-bg: #ffffff;
 }
 
 .goalieStatsEditorHead,
 .goalieStatsEditorStint {
   display: grid;
-  grid-template-columns: minmax(240px, 1fr) 72px 108px 56px 56px 76px;
+  grid-template-columns: minmax(240px, 1fr) 72px 108px 56px 56px 40px;
   gap: $space-sm;
   align-items: center;
 }
@@ -1139,7 +1197,8 @@
 .goalieStatsEditor {
   &Head {
     padding: $space-xs $space-sm;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid var(--goalie-stats-editor-border);
+    background: var(--goalie-stats-editor-stint-bg);
     color: var(--app-text-muted, #{$text-dim});
     font-size: $font-xs;
     font-weight: 700;
@@ -1153,9 +1212,10 @@
   &Stint {
     min-height: 48px;
     padding: $space-xs $space-sm;
+    background: var(--goalie-stats-editor-stint-bg);
 
     + .goalieStatsEditorStint {
-      border-top: 1px solid $border;
+      border-top: 1px solid var(--goalie-stats-editor-border);
     }
 
     label {
