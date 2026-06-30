@@ -2,10 +2,46 @@
 @use "styles/mixins" as *;
 
 .grid {
+  --month-calendar-cell-border: var(--app-border, #{$border});
+  --month-calendar-cell-bg: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
+  --month-calendar-header-bg: var(--month-calendar-cell-border);
+  --month-calendar-header-hover-bg: color-mix(
+    in srgb,
+    var(--month-calendar-header-bg),
+    white 6%
+  );
+  --month-calendar-empty-bg: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
+  --month-calendar-empty-border: var(--app-border, #{$border});
+  --month-calendar-scrollbar-thumb: var(--app-border, #{$border});
+  --month-calendar-day-number-color: var(--app-text-strong, #{$text-bright});
+
   display: grid;
   grid-template-columns: repeat(7, minmax(0, 1fr));
   gap: $space-sm;
   min-width: 840px;
+}
+
+:global(:root[data-theme='light']) .grid {
+  --month-calendar-cell-border: var(--app-border, #cbd5e1);
+  --month-calendar-cell-bg: var(--app-surface, #fff);
+  --month-calendar-header-bg: var(--month-calendar-cell-border);
+  --month-calendar-header-hover-bg: color-mix(
+    in srgb,
+    var(--month-calendar-header-bg),
+    var(--app-text-strong, #0f172a) 5%
+  );
+  --month-calendar-empty-bg: color-mix(
+    in srgb,
+    var(--app-surface-muted, #f8fafc) 70%,
+    var(--app-bg, #f3f6fb)
+  );
+  --month-calendar-empty-border: color-mix(
+    in srgb,
+    var(--app-border, #cbd5e1) 72%,
+    transparent
+  );
+  --month-calendar-scrollbar-thumb: var(--app-field-border, #bfccd9);
+  --month-calendar-day-number-color: var(--app-text-strong, #0f172a);
 }
 
 .dayName {
@@ -30,23 +66,29 @@
 }
 
 .dayCell {
-  border: 2px solid $border;
+  border: 2px solid var(--month-calendar-cell-border);
 }
 
 .emptyCell {
-  background: color-mix(in srgb, #{$bg-page} 72%, #{$bg-card});
-  border: 1px solid $border;
+  background: var(--month-calendar-empty-bg);
+  border: 1px solid var(--month-calendar-empty-border);
   border-style: dashed;
   opacity: 0.55;
 }
 
 .day {
   &Cell {
-    --month-calendar-day-bg: color-mix(in srgb, #{$bg-card}, #{$bg-page} 22%);
+    --accordion-header-bg: var(--month-calendar-header-bg);
+    --accordion-border-color: var(--month-calendar-cell-border);
 
-    background: var(--month-calendar-day-bg);
+    background: var(--month-calendar-cell-bg);
     color: var(--app-text, #{$text-body});
     overflow: hidden;
+
+    &:hover,
+    &:focus-within {
+      --accordion-header-bg: var(--month-calendar-header-hover-bg);
+    }
   }
 
   &Header {
@@ -67,7 +109,7 @@
     overflow-y: auto;
     padding: var(--month-calendar-cell-padding);
     box-sizing: border-box;
-    scrollbar-color: $border transparent;
+    scrollbar-color: var(--month-calendar-scrollbar-thumb) transparent;
     scrollbar-gutter: auto;
     scrollbar-width: thin;
 
@@ -80,7 +122,7 @@
     }
 
     &::-webkit-scrollbar-thumb {
-      background: $border;
+      background: var(--month-calendar-scrollbar-thumb);
       background-clip: content-box;
       border: var(--month-calendar-scrollbar-thumb-inset) solid transparent;
       border-radius: $radius-md;
@@ -113,7 +155,7 @@
   }
 
   &Number {
-    color: var(--month-calendar-day-number-color, #{$text-bright});
+    color: var(--month-calendar-day-number-color);
     font-size: $font-sm;
     font-weight: 700;
     line-height: 1;
