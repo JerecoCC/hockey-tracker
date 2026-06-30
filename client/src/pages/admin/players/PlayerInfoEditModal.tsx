@@ -1,5 +1,6 @@
 import { useCallback, useLayoutEffect, useMemo, type FocusEvent } from 'react';
 import { Controller, useForm } from 'react-hook-form';
+import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
 import Modal from '@/components/Modal/Modal';
 import SegmentedControl from '@/components/SegmentedControl/SegmentedControl';
@@ -230,14 +231,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
         <div className={styles.playerInfoVitalsRow}>
           <div className={styles.heightGroup}>
             <span className={styles.heightGroupLabel}>Height</span>
-            <div
-              className={[
-                styles.heightSegmentedField,
-                isSubmitting ? styles.heightSegmentedFieldDisabled : '',
-              ]
-                .filter(Boolean)
-                .join(' ')}
-            >
+            <div className={styles.heightUnitFields}>
               <Controller
                 control={control}
                 name="height_ft"
@@ -245,8 +239,9 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                 render={({ field, fieldState }) => (
                   <label
                     className={[
-                      styles.heightSegment,
-                      fieldState.error ? styles.heightSegmentError : '',
+                      styles.unitField,
+                      fieldState.error ? styles.unitFieldError : '',
+                      isSubmitting ? styles.unitFieldDisabled : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -257,6 +252,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                       min={0}
                       placeholder="6"
                       disabled={isSubmitting}
+                      aria-label="Height feet"
                       aria-invalid={fieldState.invalid}
                       onChange={(event) => {
                         if (isWholeNumberInput(event.target.value)) {
@@ -264,7 +260,11 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                         }
                       }}
                     />
-                    <span>FT</span>
+                    <Divider
+                      variant="vertical"
+                      className={styles.unitDivider}
+                    />
+                    <span className={styles.unitSuffix}>ft</span>
                   </label>
                 )}
               />
@@ -275,8 +275,9 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                 render={({ field, fieldState }) => (
                   <label
                     className={[
-                      styles.heightSegment,
-                      fieldState.error ? styles.heightSegmentError : '',
+                      styles.unitField,
+                      fieldState.error ? styles.unitFieldError : '',
+                      isSubmitting ? styles.unitFieldDisabled : '',
                     ]
                       .filter(Boolean)
                       .join(' ')}
@@ -288,6 +289,7 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                       max={11}
                       placeholder="0"
                       disabled={isSubmitting}
+                      aria-label="Height inches"
                       aria-invalid={fieldState.invalid}
                       onChange={(event) => {
                         const { value } = event.target;
@@ -296,23 +298,50 @@ const PlayerInfoEditModal = ({ open, player, seasons, onClose, updatePlayer }: P
                         }
                       }}
                     />
-                    <span>IN</span>
+                    <Divider
+                      variant="vertical"
+                      className={styles.unitDivider}
+                    />
+                    <span className={styles.unitSuffix}>in</span>
                   </label>
                 )}
               />
             </div>
           </div>
-          <Field
-            type="number"
-            label="Weight"
-            suffix="lbs"
-            control={control}
-            name="weight_lbs"
-            placeholder="e.g. 193"
-            min={0}
-            disabled={isSubmitting}
-            rules={{ validate: (v) => !v || Number(v) >= 0 }}
-          />
+          <div className={styles.heightGroup}>
+            <span className={styles.heightGroupLabel}>Weight</span>
+            <Controller
+              control={control}
+              name="weight_lbs"
+              rules={{ validate: (v) => !v || Number(v) >= 0 || 'Weight must be 0 or greater' }}
+              render={({ field, fieldState }) => (
+                <label
+                  className={[
+                    styles.unitField,
+                    fieldState.error ? styles.unitFieldError : '',
+                    isSubmitting ? styles.unitFieldDisabled : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                >
+                  <input
+                    {...field}
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 193"
+                    disabled={isSubmitting}
+                    aria-label="Weight"
+                    aria-invalid={fieldState.invalid}
+                  />
+                  <Divider
+                    variant="vertical"
+                    className={styles.unitDivider}
+                  />
+                  <span className={styles.unitSuffix}>lbs</span>
+                </label>
+              )}
+            />
+          </div>
         </div>
         <div className={styles.fullRow}>
           <div className={styles.segmentedField}>
