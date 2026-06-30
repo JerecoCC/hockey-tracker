@@ -1,6 +1,7 @@
 const { neon } = require('@neondatabase/serverless');
 const { drizzle } = require('drizzle-orm/neon-http');
 const schema = require('./schema');
+const { backfillAllSeasonStatsSnapshots } = require('./lib/gameStatsSnapshots');
 
 const rawUrl = process.env.POSTGRES_URL;
 
@@ -1757,6 +1758,63 @@ async function initSchema() {
     )
   `;
 
+  // Derived stat snapshots. These are rebuilt from game source data whenever a
+  // final game changes, then read by standings/player stat pages.
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_team_stats (
+      game_id                 UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      season_id               UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      game_type               TEXT NOT NULL,
+      team_id                 UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      opponent_team_id        UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      is_home                 BOOLEAN NOT NULL,
+      goals_for               INT NOT NULL DEFAULT 0,
+      goals_against           INT NOT NULL DEFAULT 0,
+      shootout_goals_for      INT NOT NULL DEFAULT 0,
+      shootout_goals_against  INT NOT NULL DEFAULT 0,
+      shots_for               INT NOT NULL DEFAULT 0,
+      shots_against           INT NOT NULL DEFAULT 0,
+      is_extra_time           BOOLEAN NOT NULL DEFAULT FALSE,
+      is_shootout             BOOLEAN NOT NULL DEFAULT FALSE,
+      won                     BOOLEAN NOT NULL DEFAULT FALSE,
+      lost                    BOOLEAN NOT NULL DEFAULT FALSE,
+      reg_win                 BOOLEAN NOT NULL DEFAULT FALSE,
+      ot_win                  BOOLEAN NOT NULL DEFAULT FALSE,
+      otl                     BOOLEAN NOT NULL DEFAULT FALSE,
+      reg_loss                BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at              TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (game_id, team_id)
+    )
+  `;
+  await sql`
+    CREATE TABLE IF NOT EXISTS game_player_stats (
+      game_id           UUID NOT NULL REFERENCES games(id)   ON DELETE CASCADE,
+      season_id         UUID NOT NULL REFERENCES seasons(id) ON DELETE CASCADE,
+      game_type         TEXT NOT NULL,
+      team_id           UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      opponent_team_id  UUID NOT NULL REFERENCES teams(id)   ON DELETE CASCADE,
+      player_id         UUID NOT NULL REFERENCES players(id) ON DELETE CASCADE,
+      position          TEXT,
+      is_goalie         BOOLEAN NOT NULL DEFAULT FALSE,
+      is_home           BOOLEAN NOT NULL,
+      goals             INT NOT NULL DEFAULT 0,
+      assists           INT NOT NULL DEFAULT 0,
+      points            INT NOT NULL DEFAULT 0,
+      shots_against     INT NOT NULL DEFAULT 0,
+      goals_against     INT NOT NULL DEFAULT 0,
+      saves             INT NOT NULL DEFAULT 0,
+      time_on_ice       INT NOT NULL DEFAULT 0,
+      goalie_started    BOOLEAN NOT NULL DEFAULT FALSE,
+      goalie_win        BOOLEAN NOT NULL DEFAULT FALSE,
+      shootout_win      BOOLEAN NOT NULL DEFAULT FALSE,
+      shutout           BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (game_id, team_id, player_id)
+    )
+  `;
+
   // Game-data query indexes. Keep this set intentionally small: these support
   // the highest-volume reads without turning index storage into its own issue.
   await sql`
@@ -1787,6 +1845,28 @@ async function initSchema() {
     CREATE INDEX IF NOT EXISTS shootout_attempts_game_order_idx
       ON shootout_attempts(game_id, attempt_order)
   `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_team_stats_season_type_team_idx
+      ON game_team_stats(season_id, game_type, team_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_team_stats_team_season_idx
+      ON game_team_stats(team_id, season_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_player_stats_season_type_player_idx
+      ON game_player_stats(season_id, game_type, player_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_player_stats_player_season_idx
+      ON game_player_stats(player_id, season_id)
+  `;
+  await sql`
+    CREATE INDEX IF NOT EXISTS game_player_stats_season_type_goalie_idx
+      ON game_player_stats(season_id, game_type, is_goalie)
+  `;
+
+  await backfillAllSeasonStatsSnapshots(sql);
 
   // ── Megan Carter jersey-number migration ──────────────────────────────────
   // If her jersey change (23 → 27) was recorded as two separate stints on the

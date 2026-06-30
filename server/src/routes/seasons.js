@@ -1509,96 +1509,24 @@ router.get('/:id/standings', async (req, res) => {
         WHERE season_id = ${id}
           AND (SELECT group_alignment_set_id FROM season_info) IS NULL
       ),
-      season_games AS (
-        SELECT
-          g.id,
-          g.home_team_id,
-          g.away_team_id,
-          g.overtime_periods,
-          g.shootout,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id AND period <> 'SO')::int AS home_goals,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id AND period <> 'SO')::int AS away_goals,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id AND period = 'OT')::int AS home_ot_goals,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id AND period = 'OT')::int AS away_ot_goals,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.home_team_id AND period = 'SO')::int AS home_so_goals,
-          (SELECT COUNT(*) FROM goals WHERE game_id = g.id AND team_id = g.away_team_id AND period = 'SO')::int AS away_so_goals,
-          (SELECT COUNT(*) FROM shootout_attempts WHERE game_id = g.id AND team_id = g.home_team_id AND scored)::int AS home_so_attempt_goals,
-          (SELECT COUNT(*) FROM shootout_attempts WHERE game_id = g.id AND team_id = g.away_team_id AND scored)::int AS away_so_attempt_goals
-        FROM games g
-        WHERE g.season_id = ${id}
-          AND g.status    = 'final'
-          AND g.game_type = 'regular'
-          AND g.home_team_id IN (SELECT team_id FROM participant_teams)
-          AND g.away_team_id IN (SELECT team_id FROM participant_teams)
-      ),
-      game_results AS (
-        SELECT
-          home_team_id,
-          away_team_id,
-          (
-            COALESCE(overtime_periods, 0) > 0
-            OR shootout
-            OR home_ot_goals > 0
-            OR away_ot_goals > 0
-            OR home_so_goals > 0
-            OR away_so_goals > 0
-          )                                                         AS is_extra_time,
-          CASE
-            WHEN shootout OR home_so_attempt_goals > 0 OR away_so_attempt_goals > 0 OR home_so_goals > 0 OR away_so_goals > 0 THEN
-              CASE
-                WHEN home_so_attempt_goals > away_so_attempt_goals THEN home_team_id
-                WHEN away_so_attempt_goals > home_so_attempt_goals THEN away_team_id
-                WHEN home_so_goals > away_so_goals THEN home_team_id
-                WHEN away_so_goals > home_so_goals THEN away_team_id
-                WHEN home_goals > away_goals THEN home_team_id
-                WHEN away_goals > home_goals THEN away_team_id
-                ELSE NULL
-              END
-            WHEN home_goals > away_goals THEN home_team_id
-            WHEN away_goals > home_goals THEN away_team_id
-            ELSE NULL
-          END                                                       AS winner_id,
-          home_goals,
-          away_goals
-        FROM season_games
-      ),
-      -- Expand each game into two rows: one per team
-      team_game AS (
-        SELECT
-          home_team_id                                              AS team_id,
-          CASE WHEN winner_id = home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
-          CASE WHEN winner_id = home_team_id AND is_extra_time     THEN 1 ELSE 0 END AS ot_win,
-          CASE WHEN winner_id != home_team_id AND is_extra_time    THEN 1 ELSE 0 END AS otl,
-          CASE WHEN winner_id != home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss,
-          home_goals                                                AS goals_for,
-          away_goals                                                AS goals_against
-        FROM game_results
-        WHERE winner_id IS NOT NULL
-        UNION ALL
-        SELECT
-          away_team_id                                              AS team_id,
-          CASE WHEN winner_id = away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
-          CASE WHEN winner_id = away_team_id AND is_extra_time     THEN 1 ELSE 0 END AS ot_win,
-          CASE WHEN winner_id != away_team_id AND is_extra_time    THEN 1 ELSE 0 END AS otl,
-          CASE WHEN winner_id != away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS loss,
-          away_goals                                                AS goals_for,
-          home_goals                                                AS goals_against
-        FROM game_results
-        WHERE winner_id IS NOT NULL
-      ),
       aggregated AS (
         SELECT
-          team_id,
-          COUNT(*)::int                     AS gp,
-          SUM(reg_win + ot_win)::int        AS wins,
-          SUM(reg_win)::int                 AS reg_wins,
-          SUM(ot_win)::int                  AS ot_wins,
-          SUM(otl)::int                     AS otl,
-          SUM(loss)::int                    AS losses,
-          SUM(goals_for)::int               AS goals_for,
-          SUM(goals_against)::int           AS goals_against
-        FROM team_game
-        GROUP BY team_id
+          gts.team_id,
+          COUNT(*)::int AS gp,
+          SUM(CASE WHEN gts.won THEN 1 ELSE 0 END)::int AS wins,
+          SUM(CASE WHEN gts.reg_win THEN 1 ELSE 0 END)::int AS reg_wins,
+          SUM(CASE WHEN gts.ot_win THEN 1 ELSE 0 END)::int AS ot_wins,
+          SUM(CASE WHEN gts.otl THEN 1 ELSE 0 END)::int AS otl,
+          SUM(CASE WHEN gts.reg_loss THEN 1 ELSE 0 END)::int AS losses,
+          SUM(gts.goals_for)::int AS goals_for,
+          SUM(gts.goals_against)::int AS goals_against
+        FROM game_team_stats gts
+        WHERE gts.season_id = ${id}
+          AND gts.game_type = 'regular'
+          AND gts.team_id IN (SELECT team_id FROM participant_teams)
+          AND gts.opponent_team_id IN (SELECT team_id FROM participant_teams)
+          AND (gts.won OR gts.lost)
+        GROUP BY gts.team_id
       )
       SELECT
         t.id                               AS team_id,
@@ -1664,31 +1592,18 @@ router.get('/:id/stats', async (req, res) => {
     if (group === 'forwards' || group === 'defense') {
       const positions = group === 'forwards' ? ['C', 'LW', 'RW'] : ['D', 'LD', 'RD'];
       const rows = await sql`
-        WITH season_games AS (
-          SELECT id FROM games WHERE season_id = ${id} AND status = 'final' AND game_type = ${gameType}
-        ),
-        player_gp AS (
-          SELECT gr.player_id, COUNT(DISTINCT gr.game_id) AS gp
-          FROM game_rosters gr
-          WHERE gr.game_id IN (SELECT id FROM season_games)
-          GROUP BY gr.player_id
-        ),
-        player_goals_agg AS (
-          SELECT scorer_id AS player_id, COUNT(*) AS goals
-          FROM goals
-          WHERE game_id IN (SELECT id FROM season_games) AND goal_type != 'own'
-          GROUP BY scorer_id
-        ),
-        player_assists_agg AS (
-          SELECT player_id, COUNT(*) AS assists
-          FROM (
-            SELECT assist_1_id AS player_id FROM goals
-              WHERE game_id IN (SELECT id FROM season_games) AND assist_1_id IS NOT NULL
-            UNION ALL
-            SELECT assist_2_id AS player_id FROM goals
-              WHERE game_id IN (SELECT id FROM season_games) AND assist_2_id IS NOT NULL
-          ) a
-          GROUP BY player_id
+        WITH stat_agg AS (
+          SELECT
+            gps.player_id,
+            COUNT(*)::int AS gp,
+            SUM(gps.goals)::int AS goals,
+            SUM(gps.assists)::int AS assists,
+            SUM(gps.points)::int AS points
+          FROM game_player_stats gps
+          WHERE gps.season_id = ${id}
+            AND gps.game_type = ${gameType}
+            AND gps.is_goalie = false
+          GROUP BY gps.player_id
         ),
         player_team AS (
           SELECT DISTINCT ON (pt.player_id)
@@ -1717,12 +1632,12 @@ router.get('/:id/stats', async (req, res) => {
             ti.logo_light                                 AS team_logo_light,
             t.primary_color                               AS team_primary_color,
             t.text_color                                  AS team_text_color,
-            pgp.gp::int                                   AS gp,
-            COALESCE(pg.goals,   0)::int                  AS goals,
-            COALESCE(pa.assists, 0)::int                  AS assists,
-            (COALESCE(pg.goals, 0) + COALESCE(pa.assists, 0))::int AS points
-          FROM player_gp pgp
-          JOIN players  p   ON p.id   = pgp.player_id
+            agg.gp,
+            agg.goals,
+            agg.assists,
+            agg.points
+          FROM stat_agg agg
+          JOIN players  p   ON p.id   = agg.player_id
           LEFT JOIN player_team        ptr ON ptr.player_id = p.id
           LEFT JOIN teams              t   ON t.id          = ptr.team_id
           LEFT JOIN LATERAL (
@@ -1731,8 +1646,6 @@ router.get('/:id/stats', async (req, res) => {
             ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
             LIMIT 1
           ) ti ON true
-          LEFT JOIN player_goals_agg   pg  ON pg.player_id  = p.id
-          LEFT JOIN player_assists_agg pa  ON pa.player_id  = p.id
           WHERE p.position = ANY(${positions})
         )
         SELECT stats.*, COUNT(*) OVER()::int AS total
@@ -1758,148 +1671,28 @@ router.get('/:id/stats', async (req, res) => {
 
     if (group === 'goalies') {
       const rows = await sql`
-        WITH period_vals (p, v) AS (
-          VALUES ('1',1),('2',2),('3',3),('OT',4),('SO',5)
-        ),
-        player_team AS (
+        WITH player_team AS (
           SELECT DISTINCT ON (pt.player_id)
             pt.player_id, pt.team_id, pt.jersey_number, pt.photo
           FROM player_teams pt
           WHERE pt.season_id = ${id}
           ORDER BY pt.player_id, pt.end_date DESC NULLS FIRST
         ),
-        stint_ranges AS (
-          SELECT
-            st.id, st.game_id, g.season_id, g.scheduled_at, st.team_id, st.goalie_id, st.stint_ord,
-            st.shots_against,
-            st.goals_against AS goals_against_override,
-            st.exited_period,
-            pv_in.v * 100000
-              + COALESCE(
-                  SPLIT_PART(st.entered_time, ':', 1)::int * 60
-                  + SPLIT_PART(st.entered_time, ':', 2)::int,
-                  0
-                ) AS from_pos,
-            CASE
-              WHEN st.exited_period IS NULL THEN NULL
-              ELSE pv_out.v * 100000
-                + COALESCE(
-                    SPLIT_PART(st.exited_time, ':', 1)::int * 60
-                    + SPLIT_PART(st.exited_time, ':', 2)::int,
-                    0
-                  )
-            END AS until_pos,
-            st.time_on_ice,
-            -- Real elapsed game time (seconds) the stint started, for time-on-ice.
-            CASE st.entered_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
-              + COALESCE(SPLIT_PART(st.entered_time, ':', 1)::int * 60 + SPLIT_PART(st.entered_time, ':', 2)::int, 0) AS start_abs,
-            CASE
-              WHEN st.exited_period IS NULL THEN NULL
-              ELSE CASE st.exited_period WHEN '1' THEN 0 WHEN '2' THEN 1200 WHEN '3' THEN 2400 WHEN 'OT' THEN 3600 ELSE 6000 END
-                + COALESCE(SPLIT_PART(st.exited_time, ':', 1)::int * 60 + SPLIT_PART(st.exited_time, ':', 2)::int, 0)
-            END AS exited_abs,
-            -- Game end (seconds): regulation 3600, + OT length (OT-goal time, or full 300 on a shootout).
-            CASE
-              WHEN g.shootout THEN 3900
-              WHEN EXISTS (SELECT 1 FROM goals og WHERE og.game_id = g.id AND og.period = 'OT')
-                THEN 3600 + COALESCE((
-                  SELECT MAX(SPLIT_PART(og.period_time, ':', 1)::int * 60 + SPLIT_PART(og.period_time, ':', 2)::int)
-                  FROM goals og WHERE og.game_id = g.id AND og.period = 'OT'), 0)
-              ELSE 3600
-            END AS game_end_abs
-          FROM game_goalie_stints st
-          JOIN games g ON g.id = st.game_id AND g.season_id = ${id} AND g.status = 'final' AND g.game_type = ${gameType}
-          JOIN      period_vals pv_in  ON pv_in.p  = st.entered_period
-          LEFT JOIN period_vals pv_out ON pv_out.p = st.exited_period
-        ),
-        stint_ga_derived AS (
-          SELECT
-            sr.id AS stint_id,
-            COUNT(*)::int AS ga,
-            COUNT(*) FILTER (WHERE gl.goal_type = 'own' OR own_goal.is_own_goal)::int AS own_goal_ga,
-            COUNT(*) FILTER (
-              WHERE gl.goal_type != 'own' AND own_goal.is_own_goal IS NULL
-            )::int AS save_ga
-          FROM stint_ranges sr
-          JOIN goals gl
-            ON gl.game_id   = sr.game_id
-           AND gl.team_id  != sr.team_id
-           AND gl.empty_net = false
-          JOIN period_vals pv ON pv.p = gl.period
-          LEFT JOIN LATERAL (
-            SELECT true AS is_own_goal
-            FROM player_teams pt
-            WHERE pt.player_id = gl.scorer_id
-              AND pt.team_id = sr.team_id
-              AND pt.season_id = sr.season_id
-              AND (pt.start_date IS NULL OR pt.start_date <= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
-              AND (pt.end_date IS NULL OR pt.end_date >= COALESCE(sr.scheduled_at::date, CURRENT_DATE))
-            LIMIT 1
-          ) own_goal ON true
-          WHERE (pv.v * 100000
-                 + COALESCE(
-                     SPLIT_PART(gl.period_time, ':', 1)::int * 60
-                     + SPLIT_PART(gl.period_time, ':', 2)::int,
-                     0
-                   )) >= sr.from_pos
-            AND (sr.until_pos IS NULL
-                 OR (pv.v * 100000
-                     + COALESCE(
-                         SPLIT_PART(gl.period_time, ':', 1)::int * 60
-                         + SPLIT_PART(gl.period_time, ':', 2)::int,
-                         0
-                       )) < sr.until_pos)
-          GROUP BY sr.id
-        ),
-        stints_resolved AS (
-          SELECT
-            sr.*,
-            COALESCE(sr.goals_against_override, sgd.ga, 0)::int AS resolved_ga,
-            CASE
-              WHEN sr.goals_against_override IS NULL
-                THEN COALESCE(sgd.save_ga, 0)::int
-              ELSE GREATEST(sr.goals_against_override - COALESCE(sgd.own_goal_ga, 0), 0)::int
-            END AS resolved_save_ga,
-            COALESCE(sr.time_on_ice, GREATEST(COALESCE(sr.exited_abs, sr.game_end_abs) - sr.start_abs, 0))::int AS toi
-          FROM stint_ranges sr
-          LEFT JOIN stint_ga_derived sgd ON sgd.stint_id = sr.id
-        ),
-        goalie_game AS (
-          SELECT
-            game_id, goalie_id, team_id,
-            MIN(from_pos)           AS first_from_pos,
-            SUM(shots_against)::int AS shots_against,
-            SUM(resolved_ga)::int   AS goals_against,
-            SUM(resolved_save_ga)::int AS save_goals_against,
-            SUM(toi)::int           AS toi
-          FROM stints_resolved
-          GROUP BY game_id, goalie_id, team_id
-        ),
-        team_game_last_goalie AS (
-          SELECT DISTINCT ON (game_id, team_id)
-            game_id, team_id, goalie_id
-          FROM stints_resolved
-          ORDER BY game_id, team_id, stint_ord DESC
-        ),
         goalie_game_agg AS (
           SELECT
-            gg.goalie_id,
-            gg.team_id,
-            COUNT(*)::int                                          AS gp,
-            SUM(gg.shots_against)::int                            AS shots_against,
-            SUM(gg.goals_against)::int                            AS goals_against,
-            (SUM(gg.shots_against) - SUM(gg.save_goals_against))::int AS saves,
-            SUM(gg.toi)::int                                       AS toi,
-            COUNT(*) FILTER (
-              WHERE gg.shots_against > 0
-                AND gg.goals_against = 0
-                AND gg.first_from_pos = 100000
-                AND tgl.goalie_id = gg.goalie_id
-            )::int                                                 AS shutouts
-          FROM goalie_game gg
-          JOIN team_game_last_goalie tgl
-            ON tgl.game_id = gg.game_id AND tgl.team_id = gg.team_id
-          GROUP BY gg.goalie_id, gg.team_id
+            gps.player_id AS goalie_id,
+            gps.team_id,
+            COUNT(*)::int AS gp,
+            SUM(gps.shots_against)::int AS shots_against,
+            SUM(gps.goals_against)::int AS goals_against,
+            SUM(gps.saves)::int AS saves,
+            SUM(gps.time_on_ice)::int AS toi,
+            SUM(CASE WHEN gps.shutout THEN 1 ELSE 0 END)::int AS shutouts
+          FROM game_player_stats gps
+          WHERE gps.season_id = ${id}
+            AND gps.game_type = ${gameType}
+            AND gps.is_goalie = true
+          GROUP BY gps.player_id, gps.team_id
         ),
         stats AS (
           SELECT
@@ -1971,31 +1764,18 @@ router.get('/:id/stats', async (req, res) => {
     }
 
     const skaters = await sql`
-      WITH season_games AS (
-        SELECT id FROM games WHERE season_id = ${id} AND status = 'final' AND game_type = ${gameType}
-      ),
-      player_gp AS (
-        SELECT gr.player_id, COUNT(DISTINCT gr.game_id) AS gp
-        FROM game_rosters gr
-        WHERE gr.game_id IN (SELECT id FROM season_games)
-        GROUP BY gr.player_id
-      ),
-      player_goals_agg AS (
-        SELECT scorer_id AS player_id, COUNT(*) AS goals
-        FROM goals
-        WHERE game_id IN (SELECT id FROM season_games) AND goal_type != 'own'
-        GROUP BY scorer_id
-      ),
-      player_assists_agg AS (
-        SELECT player_id, COUNT(*) AS assists
-        FROM (
-          SELECT assist_1_id AS player_id FROM goals
-            WHERE game_id IN (SELECT id FROM season_games) AND assist_1_id IS NOT NULL
-          UNION ALL
-          SELECT assist_2_id AS player_id FROM goals
-            WHERE game_id IN (SELECT id FROM season_games) AND assist_2_id IS NOT NULL
-        ) a
-        GROUP BY player_id
+      WITH stat_agg AS (
+        SELECT
+          gps.player_id,
+          COUNT(*)::int AS gp,
+          SUM(gps.goals)::int AS goals,
+          SUM(gps.assists)::int AS assists,
+          SUM(gps.points)::int AS points
+        FROM game_player_stats gps
+        WHERE gps.season_id = ${id}
+          AND gps.game_type = ${gameType}
+          AND gps.is_goalie = false
+        GROUP BY gps.player_id
       ),
       player_team AS (
         SELECT DISTINCT ON (pt.player_id)
@@ -2024,12 +1804,12 @@ router.get('/:id/stats', async (req, res) => {
         ti.logo_light                                 AS team_logo_light,
         t.primary_color                               AS team_primary_color,
         t.text_color                                  AS team_text_color,
-        pgp.gp::int                                   AS gp,
-        COALESCE(pg.goals,   0)::int                  AS goals,
-        COALESCE(pa.assists, 0)::int                  AS assists,
-        (COALESCE(pg.goals, 0) + COALESCE(pa.assists, 0))::int AS points
-      FROM player_gp pgp
-      JOIN players  p   ON p.id   = pgp.player_id
+        agg.gp,
+        agg.goals,
+        agg.assists,
+        agg.points
+      FROM stat_agg agg
+      JOIN players  p   ON p.id   = agg.player_id
       LEFT JOIN player_team        ptr ON ptr.player_id = p.id
       LEFT JOIN teams              t   ON t.id          = ptr.team_id
       LEFT JOIN LATERAL (
@@ -2038,10 +1818,8 @@ router.get('/:id/stats', async (req, res) => {
         ORDER BY CASE WHEN season_id IS NULL THEN 0 ELSE 1 END, recorded_at DESC
         LIMIT 1
       ) ti ON true
-      LEFT JOIN player_goals_agg   pg  ON pg.player_id  = p.id
-      LEFT JOIN player_assists_agg pa  ON pa.player_id  = p.id
       WHERE p.position != 'G'
-      ORDER BY points DESC, goals DESC, assists DESC, pgp.gp DESC
+      ORDER BY points DESC, goals DESC, assists DESC, gp DESC
     `;
 
     const goalies = await sql`
@@ -2175,26 +1953,22 @@ router.get('/:id/stats', async (req, res) => {
       ),
       goalie_game_agg AS (
         SELECT
-          gg.goalie_id,
-          gg.team_id,
-          COUNT(*)::int                                          AS gp,
-          SUM(gg.shots_against)::int                            AS shots_against,
-          SUM(gg.goals_against)::int                            AS goals_against,
-          (SUM(gg.shots_against) - SUM(gg.save_goals_against))::int AS saves,
-          SUM(gg.toi)::int                                       AS toi,
+          gps.player_id AS goalie_id,
+          gps.team_id,
+          COUNT(*)::int AS gp,
+          SUM(gps.shots_against)::int AS shots_against,
+          SUM(gps.goals_against)::int AS goals_against,
+          SUM(gps.saves)::int AS saves,
+          SUM(gps.time_on_ice)::int AS toi,
           -- Shutout: goalie started at game start (period 1, 0:00 → from_pos = 100000),
           -- was never replaced (last goalie for the team in that game),
           -- faced at least one shot, and allowed zero goals.
-          COUNT(*) FILTER (
-            WHERE gg.shots_against > 0
-              AND gg.goals_against = 0
-              AND gg.first_from_pos = 100000
-              AND tgl.goalie_id = gg.goalie_id
-          )::int                                                 AS shutouts
-        FROM goalie_game gg
-        JOIN team_game_last_goalie tgl
-          ON tgl.game_id = gg.game_id AND tgl.team_id = gg.team_id
-        GROUP BY gg.goalie_id, gg.team_id
+          SUM(CASE WHEN gps.shutout THEN 1 ELSE 0 END)::int AS shutouts
+        FROM game_player_stats gps
+        WHERE gps.season_id = ${id}
+          AND gps.game_type = ${gameType}
+          AND gps.is_goalie = true
+        GROUP BY gps.player_id, gps.team_id
       )
       SELECT
         p.id                                                   AS player_id,

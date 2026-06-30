@@ -374,6 +374,60 @@ const shootoutAttempts = pgTable('shootout_attempts', {
   createdAt: createdAt(),
 });
 
+const gameTeamStats = pgTable('game_team_stats', {
+  gameId: uuid('game_id').notNull().references(() => games.id, { onDelete: 'cascade' }),
+  seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
+  gameType: text('game_type').notNull(),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  opponentTeamId: uuid('opponent_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  isHome: boolean('is_home').notNull(),
+  goalsFor: integer('goals_for').notNull().default(0),
+  goalsAgainst: integer('goals_against').notNull().default(0),
+  shootoutGoalsFor: integer('shootout_goals_for').notNull().default(0),
+  shootoutGoalsAgainst: integer('shootout_goals_against').notNull().default(0),
+  shotsFor: integer('shots_for').notNull().default(0),
+  shotsAgainst: integer('shots_against').notNull().default(0),
+  isExtraTime: boolean('is_extra_time').notNull().default(false),
+  isShootout: boolean('is_shootout').notNull().default(false),
+  won: boolean('won').notNull().default(false),
+  lost: boolean('lost').notNull().default(false),
+  regWin: boolean('reg_win').notNull().default(false),
+  otWin: boolean('ot_win').notNull().default(false),
+  otl: boolean('otl').notNull().default(false),
+  regLoss: boolean('reg_loss').notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.gameId, table.teamId] }),
+}));
+
+const gamePlayerStats = pgTable('game_player_stats', {
+  gameId: uuid('game_id').notNull().references(() => games.id, { onDelete: 'cascade' }),
+  seasonId: uuid('season_id').notNull().references(() => seasons.id, { onDelete: 'cascade' }),
+  gameType: text('game_type').notNull(),
+  teamId: uuid('team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  opponentTeamId: uuid('opponent_team_id').notNull().references(() => teams.id, { onDelete: 'cascade' }),
+  playerId: uuid('player_id').notNull().references(() => players.id, { onDelete: 'cascade' }),
+  position: text('position'),
+  isGoalie: boolean('is_goalie').notNull().default(false),
+  isHome: boolean('is_home').notNull(),
+  goals: integer('goals').notNull().default(0),
+  assists: integer('assists').notNull().default(0),
+  points: integer('points').notNull().default(0),
+  shotsAgainst: integer('shots_against').notNull().default(0),
+  goalsAgainst: integer('goals_against').notNull().default(0),
+  saves: integer('saves').notNull().default(0),
+  timeOnIce: integer('time_on_ice').notNull().default(0),
+  goalieStarted: boolean('goalie_started').notNull().default(false),
+  goalieWin: boolean('goalie_win').notNull().default(false),
+  shootoutWin: boolean('shootout_win').notNull().default(false),
+  shutout: boolean('shutout').notNull().default(false),
+  createdAt: createdAt(),
+  updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.gameId, table.teamId, table.playerId] }),
+}));
+
 const bracketSlotRules = pgTable('bracket_slot_rules', {
   id: id(),
   ruleSetId: uuid('rule_set_id').notNull().references(() => bracketRuleSets.id, { onDelete: 'cascade' }),
@@ -419,5 +473,7 @@ module.exports = {
   games,
   goals,
   shootoutAttempts,
+  gameTeamStats,
+  gamePlayerStats,
   bracketSlotRules,
 };

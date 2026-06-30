@@ -6,6 +6,7 @@ const { sql, db, schema } = require('../db');
 const { and, eq, or, sql: ormSql } = require('drizzle-orm');
 const { alias } = require('drizzle-orm/pg-core');
 const { normalizeSeasonBracketSlotKeys } = require('../lib/playoffBracketSlots');
+const { rebuildGameStats } = require('../lib/gameStatsSnapshots');
 
 router.use(requireAdmin);
 
@@ -21,6 +22,7 @@ const awayTeam = alias(teams, 't_away');
 
 const resultRows = (result) => (Array.isArray(result) ? result : result?.rows ?? []);
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const refreshGameStatSnapshots = (gameId) => rebuildGameStats(sql, gameId);
 
 const normalizeAdminScheduledAt = (value) => {
   if (typeof value !== 'string') return value ?? null;
@@ -42,60 +44,21 @@ const seasonStandingsOrder = async (seasonId) => {
   `;
   const scoringSystem = info?.scoring_system ?? '2-1-0';
   const rows = await sql`
-    WITH season_games AS (
-      SELECT g.id, g.home_team_id, g.away_team_id, g.overtime_periods, g.shootout,
-        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.home_team_id AND period<>'SO')::int AS home_goals,
-        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.away_team_id AND period<>'SO')::int AS away_goals,
-        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.home_team_id AND period='OT')::int AS home_ot_goals,
-        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.away_team_id AND period='OT')::int AS away_ot_goals,
-        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.home_team_id AND period='SO')::int AS home_so_goals,
-        (SELECT COUNT(*) FROM goals WHERE game_id=g.id AND team_id=g.away_team_id AND period='SO')::int AS away_so_goals,
-        (SELECT COUNT(*) FROM shootout_attempts WHERE game_id=g.id AND team_id=g.home_team_id AND scored)::int AS home_so_attempt_goals,
-        (SELECT COUNT(*) FROM shootout_attempts WHERE game_id=g.id AND team_id=g.away_team_id AND scored)::int AS away_so_attempt_goals
-      FROM games g
-      WHERE g.season_id=${seasonId} AND g.status='final' AND g.game_type='regular'
-    ),
-    game_results AS (
-      SELECT home_team_id, away_team_id, home_goals, away_goals,
-        (COALESCE(overtime_periods,0)>0 OR shootout OR home_ot_goals>0 OR away_ot_goals>0
-          OR home_so_goals>0 OR away_so_goals>0) AS is_extra_time,
-        CASE
-          WHEN shootout OR home_so_attempt_goals>0 OR away_so_attempt_goals>0 OR home_so_goals>0 OR away_so_goals>0 THEN
-            CASE
-              WHEN home_so_attempt_goals>away_so_attempt_goals THEN home_team_id
-              WHEN away_so_attempt_goals>home_so_attempt_goals THEN away_team_id
-              WHEN home_so_goals>away_so_goals THEN home_team_id
-              WHEN away_so_goals>home_so_goals THEN away_team_id
-              WHEN home_goals>away_goals THEN home_team_id
-              WHEN away_goals>home_goals THEN away_team_id
-              ELSE NULL
-            END
-          WHEN home_goals>away_goals THEN home_team_id
-          WHEN away_goals>home_goals THEN away_team_id
-          ELSE NULL
-        END AS winner_id
-      FROM season_games
-    ),
-    team_game AS (
-      SELECT home_team_id AS team_id,
-        CASE WHEN winner_id=home_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
-        CASE WHEN winner_id=home_team_id AND is_extra_time THEN 1 ELSE 0 END AS ot_win,
-        CASE WHEN winner_id<>home_team_id AND is_extra_time THEN 1 ELSE 0 END AS otl,
-        home_goals AS goals_for, away_goals AS goals_against
-      FROM game_results WHERE winner_id IS NOT NULL
-      UNION ALL
-      SELECT away_team_id AS team_id,
-        CASE WHEN winner_id=away_team_id AND NOT is_extra_time THEN 1 ELSE 0 END AS reg_win,
-        CASE WHEN winner_id=away_team_id AND is_extra_time THEN 1 ELSE 0 END AS ot_win,
-        CASE WHEN winner_id<>away_team_id AND is_extra_time THEN 1 ELSE 0 END AS otl,
-        away_goals AS goals_for, home_goals AS goals_against
-      FROM game_results WHERE winner_id IS NOT NULL
-    ),
-    aggregated AS (
-      SELECT team_id, COUNT(*)::int AS gp,
-        SUM(reg_win+ot_win)::int AS wins, SUM(reg_win)::int AS reg_wins, SUM(ot_win)::int AS ot_wins,
-        SUM(otl)::int AS otl, SUM(goals_for)::int AS goals_for, SUM(goals_against)::int AS goals_against
-      FROM team_game GROUP BY team_id
+    WITH aggregated AS (
+      SELECT
+        gts.team_id,
+        COUNT(*)::int AS gp,
+        SUM(CASE WHEN gts.won THEN 1 ELSE 0 END)::int AS wins,
+        SUM(CASE WHEN gts.reg_win THEN 1 ELSE 0 END)::int AS reg_wins,
+        SUM(CASE WHEN gts.ot_win THEN 1 ELSE 0 END)::int AS ot_wins,
+        SUM(CASE WHEN gts.otl THEN 1 ELSE 0 END)::int AS otl,
+        SUM(gts.goals_for)::int AS goals_for,
+        SUM(gts.goals_against)::int AS goals_against
+      FROM game_team_stats gts
+      WHERE gts.season_id = ${seasonId}
+        AND gts.game_type = 'regular'
+        AND (gts.won OR gts.lost)
+      GROUP BY gts.team_id
     )
     SELECT team_id,
       CASE ${scoringSystem}
@@ -1623,6 +1586,7 @@ router.post('/', async (req, res) => {
       )
       RETURNING id
     `;
+    await refreshGameStatSnapshots(rows[0].id);
     const game = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
@@ -2084,6 +2048,8 @@ router.patch('/:id', async (req, res) => {
       }
     }
 
+    await refreshGameStatSnapshots(id);
+
     const updated = await sql`
       SELECT
         g.id, g.season_id, g.game_type, g.status,
@@ -2342,6 +2308,7 @@ router.put('/:id/lineup', async (req, res) => {
         WHERE game_id = ${id}
           AND team_id = ${team_id}
       `;
+      await refreshGameStatSnapshots(id);
       const rows = await selectInheritedLineupRows(id, team_id, hasAcquisitionType);
       return res.json(rows);
     }
@@ -2360,6 +2327,7 @@ router.put('/:id/lineup', async (req, res) => {
         defense_2_id  = EXCLUDED.defense_2_id,
         goalie_id     = EXCLUDED.goalie_id
     `;
+    await refreshGameStatSnapshots(id);
 
     // Return the saved slots in unpivoted LineupEntry shape.
     const rows = await selectSavedLineupRows(id, hasAcquisitionType, team_id);
@@ -2383,6 +2351,7 @@ router.delete('/:id/lineup/:teamId', async (req, res) => {
       RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Lineup not found' });
+    await refreshGameStatSnapshots(id);
     return res.status(204).send();
   } catch (err) {
     console.error('lineup delete error:', err);
@@ -2585,6 +2554,7 @@ router.post('/:id/roster', async (req, res) => {
       WHERE gr.game_id = ${id} AND gr.team_id = ${team_id}
       ORDER BY COALESCE(pt_jnh.jersey_number, pt.jersey_number) ASC NULLS LAST, p.last_name ASC
     `;
+    await refreshGameStatSnapshots(id);
     return res.status(201).json(rows);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or player_id' });
@@ -2603,6 +2573,7 @@ router.delete('/:id/roster/:rosterId', async (req, res) => {
       DELETE FROM game_rosters WHERE id = ${rosterId} AND game_id = ${id} RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Roster entry not found' });
+    await refreshGameStatSnapshots(id);
     return res.status(204).send();
   } catch (err) {
     console.error('game roster delete error:', err);
@@ -2903,6 +2874,7 @@ router.post('/:id/goals', async (req, res) => {
       ) ti ON true
       WHERE go.id = ${goal.id}
     `;
+    await refreshGameStatSnapshots(id);
     return res.status(201).json(full);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or player_id' });
@@ -3080,6 +3052,7 @@ router.put('/:id/goals/:goalId', async (req, res) => {
       ) ti ON true
       WHERE go.id = ${rows[0].id}
     `;
+    await refreshGameStatSnapshots(id);
     return res.json(full);
   } catch (err) {
     console.error('goals update error:', err);
@@ -3097,6 +3070,7 @@ router.delete('/:id/goals/:goalId', async (req, res) => {
       DELETE FROM goals WHERE id = ${goalId} AND game_id = ${id} RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Goal not found' });
+    await refreshGameStatSnapshots(id);
     return res.status(204).send();
   } catch (err) {
     console.error('goals delete error:', err);
@@ -3154,6 +3128,7 @@ router.patch('/:id/shots', async (req, res) => {
       RETURNING period_shots
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Game not found' });
+    await refreshGameStatSnapshots(id);
     return res.json({ period_shots: rows[0].period_shots });
   } catch (err) {
     console.error('shots upsert error:', err);
@@ -3566,6 +3541,7 @@ router.post('/:id/goalie-stints', async (req, res) => {
       )
     `;
     const rows = await fetchGoalieStatsForGame(id);
+    await refreshGameStatSnapshots(id);
     return res.json(rows);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or goalie_id' });
@@ -3644,6 +3620,7 @@ router.put('/:id/goalie-stints/:stintId', async (req, res) => {
       return res.status(400).json({ error: 'exited point must be at or after entered point' });
     }
     const rows = await fetchGoalieStatsForGame(id);
+    await refreshGameStatSnapshots(id);
     return res.json(rows);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid team_id or goalie_id' });
@@ -3687,6 +3664,7 @@ router.delete('/:id/goalie-stints/:stintId', async (req, res) => {
       WHERE t.id = r.id
     `;
     const rows = await fetchGoalieStatsForGame(id);
+    await refreshGameStatSnapshots(id);
     return res.json(rows);
   } catch (err) {
     console.error('goalie stints delete error:', err);
@@ -3800,6 +3778,7 @@ router.post('/:id/shootout-attempts', async (req, res) => {
 
     const all = await fetchAttempts(id);
     const full = all.find((r) => r.id === attempt.id);
+    await refreshGameStatSnapshots(id);
     return res.status(201).json(full);
   } catch (err) {
     if (err.code === '23503') return res.status(400).json({ error: 'Invalid game_id, team_id, or player_id' });
@@ -3830,6 +3809,7 @@ router.put('/:id/shootout-attempts/:attemptId', async (req, res) => {
 
     const all = await fetchAttempts(id);
     const updated = all.find((r) => r.id === attemptId);
+    await refreshGameStatSnapshots(id);
     return res.json(updated);
   } catch (err) {
     console.error('shootout attempts put error:', err);
@@ -3849,6 +3829,7 @@ router.delete('/:id/shootout-attempts/:attemptId', async (req, res) => {
       RETURNING id
     `;
     if (rows.length === 0) return res.status(404).json({ error: 'Attempt not found' });
+    await refreshGameStatSnapshots(id);
     return res.status(204).send();
   } catch (err) {
     console.error('shootout attempts delete error:', err);

@@ -8,10 +8,14 @@ jest.mock('../db', () => ({
 jest.mock('../middleware/auth', () => ({
   requireAdmin: (req, res, next) => { req.user = { id: 'admin-1', role: 'admin' }; next(); },
 }));
+jest.mock('../lib/gameStatsSnapshots', () => ({
+  rebuildGameStats: jest.fn(() => Promise.resolve()),
+}));
 
 const request     = require('supertest');
 const express     = require('express');
 const { sql, db } = require('../db');
+const { rebuildGameStats } = require('../lib/gameStatsSnapshots');
 const gamesRouter = require('./games');
 
 const app = express();
@@ -78,6 +82,7 @@ beforeEach(() => {
   sql.mockReset();
   db.execute.mockReset();
   db.select.mockReset();
+  rebuildGameStats.mockClear();
   selectRows = [];
   selectError = null;
   db.select.mockImplementation(() => makeSelectChain());
@@ -724,7 +729,7 @@ describe('PUT /api/admin/games/:id/goals/:goalId', () => {
     expect(sql).not.toHaveBeenCalled();
   });
 
-  it('updates a goal and returns the full goal record', async () => {
+  it('updates a goal, returns the full goal record, and refreshes cached stats', async () => {
     sql
       .mockResolvedValueOnce([{ id: 'goal-1' }])
       .mockResolvedValueOnce([GOAL]);
@@ -735,6 +740,7 @@ describe('PUT /api/admin/games/:id/goals/:goalId', () => {
     expect(res.status).toBe(200);
     expect(res.body.id).toBe('goal-1');
     expect(res.body.scorer_prior_goals).toBe(2);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
 
   it('returns 404 when goal not found', async () => {
@@ -942,6 +948,7 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     expect(queries[2]).toMatch(/player_team_stints/);
     expect(queries[2]).toMatch(/COALESCE\(pts\.start_date, pt\.start_date\) AS start_date/);
     expect(queries[2]).toMatch(/acquisition_type/);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
   });
 
   it('does not save a consecutive unchanged starting lineup', async () => {
@@ -974,6 +981,27 @@ describe('PUT /api/admin/games/:id/lineup', () => {
     const queries = sql.mock.calls.map((call) => call[0].join(' '));
     expect(queries[1]).toMatch(/DELETE FROM game_starting_lineup/);
     expect(queries.join(' ')).not.toMatch(/INSERT INTO game_starting_lineup/);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
+  });
+});
+
+describe('DELETE /api/admin/games/:id/lineup/:teamId', () => {
+  it('clears a lineup and refreshes cached stats', async () => {
+    sql.mockResolvedValueOnce([{ id: 'lineup-1' }]);
+
+    const res = await request(app).delete('/api/admin/games/game-1/lineup/team-1');
+
+    expect(res.status).toBe(204);
+    expect(rebuildGameStats).toHaveBeenCalledWith(sql, 'game-1');
+  });
+
+  it('returns 404 when lineup not found', async () => {
+    sql.mockResolvedValueOnce([]);
+
+    const res = await request(app).delete('/api/admin/games/game-1/lineup/team-1');
+
+    expect(res.status).toBe(404);
+    expect(rebuildGameStats).not.toHaveBeenCalled();
   });
 });
 

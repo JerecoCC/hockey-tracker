@@ -160,7 +160,7 @@ describe('GET /api/admin/seasons/:id/awards', () => {
 // GET /api/admin/seasons/:id/standings
 // ---------------------------------------------------------------------------
 describe('GET /api/admin/seasons/:id/standings', () => {
-  it('uses season participants and shootout attempts to build standings', async () => {
+  it('uses season participants and cached team stats to build standings', async () => {
     sql.mockResolvedValueOnce([
       {
         team_id: 'team-1',
@@ -180,7 +180,7 @@ describe('GET /api/admin/seasons/:id/standings', () => {
     expect(queryText).toContain('group_alignment_set_teams');
     expect(queryText).toContain('group_alignment_teams');
     expect(queryText).toContain('season_alignment_group_teams');
-    expect(queryText).toContain('shootout_attempts');
+    expect(queryText).toContain('game_team_stats');
   });
 });
 

@@ -731,42 +731,26 @@ router.get('/:id/stats', async (req, res) => {
   const { id } = req.params;
   try {
     const rows = await sql`
-      WITH gp_counts AS (
-        SELECT ga.season_id, gr.team_id, COUNT(DISTINCT gr.game_id) AS gp
-        FROM game_rosters gr
-        JOIN games ga ON ga.id = gr.game_id
-        WHERE gr.player_id = ${id}
-        GROUP BY ga.season_id, gr.team_id
-      ),
-      goal_counts AS (
-        SELECT ga.season_id, gl.team_id, COUNT(*) AS goals
-        FROM goals gl
-        JOIN games ga ON ga.id = gl.game_id
-        WHERE gl.scorer_id = ${id}
-        GROUP BY ga.season_id, gl.team_id
-      ),
-      assist_counts AS (
-        SELECT ga.season_id, gl.team_id, COUNT(*) AS assists
-        FROM goals gl
-        JOIN games ga ON ga.id = gl.game_id
-        WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id}
-        GROUP BY ga.season_id, gl.team_id
-      ),
       stat_rows AS (
-        SELECT season_id, team_id FROM gp_counts
-        UNION
-        SELECT season_id, team_id FROM goal_counts
-        UNION
-        SELECT season_id, team_id FROM assist_counts
+        SELECT
+          gps.season_id,
+          gps.team_id,
+          COUNT(*)::int AS gp,
+          SUM(gps.goals)::int AS goals,
+          SUM(gps.assists)::int AS assists,
+          SUM(gps.points)::int AS points
+        FROM game_player_stats gps
+        WHERE gps.player_id = ${id}
+        GROUP BY gps.season_id, gps.team_id
       )
       SELECT
         s.id         AS season_id,
         s.name       AS season_name,
         ptr.jersey_number,
-        COALESCE(gc.gp, 0)      AS gp,
-        COALESCE(gl.goals, 0)   AS goals,
-        COALESCE(ac.assists, 0) AS assists,
-        COALESCE(gl.goals, 0) + COALESCE(ac.assists, 0) AS points,
+        COALESCE(sr.gp, 0)      AS gp,
+        COALESCE(sr.goals, 0)   AS goals,
+        COALESCE(sr.assists, 0) AS assists,
+        COALESCE(sr.points, 0)  AS points,
         sr.team_id,
         ti.name  AS team_name,
         ti.logo  AS team_logo,
@@ -776,9 +760,6 @@ router.get('/:id/stats', async (req, res) => {
         t.text_color
       FROM stat_rows sr
       JOIN seasons s ON s.id = sr.season_id
-      LEFT JOIN gp_counts gc ON gc.season_id = sr.season_id AND gc.team_id = sr.team_id
-      LEFT JOIN goal_counts gl ON gl.season_id = sr.season_id AND gl.team_id = sr.team_id
-      LEFT JOIN assist_counts ac ON ac.season_id = sr.season_id AND ac.team_id = sr.team_id
       LEFT JOIN LATERAL (
         SELECT
           pt.jersey_number,
@@ -1012,25 +993,10 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
       WITH player_info AS (
         SELECT position FROM players WHERE id = ${id}
       ),
-      skater_seasons AS (
-        SELECT DISTINCT g.season_id
-        FROM game_rosters gr
-        JOIN games g ON g.id = gr.game_id
-          AND g.status = 'final'
-        WHERE gr.player_id = ${id}
-          AND COALESCE((SELECT position FROM player_info), '') <> 'G'
-      ),
-      goalie_seasons AS (
-        SELECT DISTINCT g.season_id
-        FROM game_goalie_stints st
-        JOIN games g ON g.id = st.game_id
-          AND g.status = 'final'
-        WHERE st.goalie_id = ${id}
-      ),
       played_seasons AS (
-        SELECT season_id FROM skater_seasons
-        UNION
-        SELECT season_id FROM goalie_seasons
+        SELECT DISTINCT season_id
+        FROM game_player_stats
+        WHERE player_id = ${id}
       )
       SELECT
         s.id AS season_id,
@@ -1046,42 +1012,17 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
 
     // 2. Skater stats (GP / goals / assists) per game_type
     const skaterRows = await sql`
-      WITH gp_agg AS (
-        SELECT g.game_type, COUNT(DISTINCT g.id)::int AS gp
-        FROM game_rosters gr
-        JOIN games g ON g.id = gr.game_id
-          AND g.season_id = ${season_id}
-          AND g.status    = 'final'
-        WHERE gr.player_id = ${id}
-        GROUP BY g.game_type
-      ),
-      goal_agg AS (
-        SELECT g.game_type, COUNT(*)::int AS goals
-        FROM goals gl
-        JOIN games g ON g.id = gl.game_id
-          AND g.season_id = ${season_id}
-          AND g.status    = 'final'
-        WHERE gl.scorer_id = ${id}
-        GROUP BY g.game_type
-      ),
-      assist_agg AS (
-        SELECT g.game_type, COUNT(*)::int AS assists
-        FROM goals gl
-        JOIN games g ON g.id = gl.game_id
-          AND g.season_id = ${season_id}
-          AND g.status    = 'final'
-        WHERE gl.assist_1_id = ${id} OR gl.assist_2_id = ${id}
-        GROUP BY g.game_type
-      )
       SELECT
-        COALESCE(gp.game_type, gl.game_type, ast.game_type) AS game_type,
-        COALESCE(gp.gp,       0) AS gp,
-        COALESCE(gl.goals,    0) AS goals,
-        COALESCE(ast.assists, 0) AS assists,
-        COALESCE(gl.goals, 0) + COALESCE(ast.assists, 0) AS points
-      FROM gp_agg gp
-      FULL OUTER JOIN goal_agg   gl  ON gl.game_type  = gp.game_type
-      FULL OUTER JOIN assist_agg ast ON ast.game_type = COALESCE(gp.game_type, gl.game_type)
+        gps.game_type,
+        COUNT(*)::int AS gp,
+        SUM(gps.goals)::int AS goals,
+        SUM(gps.assists)::int AS assists,
+        SUM(gps.points)::int AS points
+      FROM game_player_stats gps
+      WHERE gps.player_id = ${id}
+        AND gps.season_id = ${season_id}
+        AND gps.is_goalie = false
+      GROUP BY gps.game_type
     `;
 
     // 3. Goalie stats (wins / GA / SA) per game_type – same stint-based attribution
@@ -1244,26 +1185,19 @@ router.get(['/:id/current-season-stats', '/:id/latest-season-stats'], async (req
       ),
       goalie_agg AS (
         SELECT
-          gg.game_type,
-          COUNT(*)::int                      AS gp,
-          SUM(gg.shots_against)::int         AS shots_against,
-          SUM(gg.goals_against)::int         AS goals_against,
-          (SUM(gg.shots_against) - SUM(gg.save_goals_against))::int AS saves,
-          SUM(gg.toi)::int                   AS time_on_ice,
-          COUNT(*) FILTER (
-            WHERE gw.winner_team_id = gg.team_id
-              AND tgl.goalie_id     = ${id}
-          )::int                             AS wins,
-          COUNT(*) FILTER (
-            WHERE gw.winner_team_id = gg.team_id
-              AND tgl.goalie_id     = ${id}
-              AND gg.shootout       = true
-          )::int                             AS shootout_wins
-        FROM goalie_game gg
-        JOIN team_game_last_goalie tgl
-          ON tgl.game_id = gg.game_id AND tgl.team_id = gg.team_id
-        JOIN game_winner gw ON gw.game_id = gg.game_id
-        GROUP BY gg.game_type
+          gps.game_type,
+          COUNT(*)::int AS gp,
+          SUM(gps.shots_against)::int AS shots_against,
+          SUM(gps.goals_against)::int AS goals_against,
+          SUM(gps.saves)::int AS saves,
+          SUM(gps.time_on_ice)::int AS time_on_ice,
+          SUM(CASE WHEN gps.goalie_win THEN 1 ELSE 0 END)::int AS wins,
+          SUM(CASE WHEN gps.shootout_win THEN 1 ELSE 0 END)::int AS shootout_wins
+        FROM game_player_stats gps
+        WHERE gps.player_id = ${id}
+          AND gps.season_id = ${season_id}
+          AND gps.is_goalie = true
+        GROUP BY gps.game_type
       )
       SELECT game_type, gp, shots_against, goals_against, saves, time_on_ice, wins, shootout_wins
       FROM goalie_agg
@@ -1559,9 +1493,28 @@ router.get('/:id/last-five-games', async (req, res) => {
         GROUP BY sr.game_id, sr.season_id, sr.scheduled_at, sr.game_type, sr.team_id, sr.opponent_team_id, sr.is_home
       ),
       combined_games AS (
-        SELECT * FROM skater_games
-        UNION ALL
-        SELECT * FROM goalie_games
+        SELECT
+          gps.game_id,
+          gps.season_id,
+          g.scheduled_at,
+          gps.game_type,
+          gps.team_id,
+          gps.opponent_team_id,
+          gps.is_home,
+          gps.goals,
+          gps.assists,
+          CASE WHEN gps.is_goalie THEN gps.goalie_started ELSE NULL::boolean END AS goalie_started,
+          CASE WHEN gps.is_goalie THEN gps.shots_against ELSE NULL::int END AS shots_against,
+          CASE WHEN gps.is_goalie THEN gps.goals_against ELSE NULL::int END AS goals_against,
+          CASE
+            WHEN gps.is_goalie AND gps.shots_against > 0
+              THEN ROUND(gps.saves::numeric / gps.shots_against, 3)::float
+            ELSE NULL::float
+          END AS save_pct,
+          CASE WHEN gps.is_goalie THEN gps.time_on_ice ELSE NULL::int END AS time_on_ice
+        FROM game_player_stats gps
+        JOIN games g ON g.id = gps.game_id
+        WHERE gps.player_id = ${id}
       ),
       recent_games AS (
         SELECT *
@@ -1822,9 +1775,32 @@ router.get('/:id/game-logs', async (req, res) => {
         GROUP BY sr.game_id, sr.season_id, sr.season_name, sr.scheduled_at, sr.game_type, sr.team_id, sr.opponent_team_id, sr.is_home
       ),
       combined_games AS (
-        SELECT * FROM skater_games
-        UNION ALL
-        SELECT * FROM goalie_games
+        SELECT
+          gps.game_id,
+          gps.season_id,
+          s.name AS season_name,
+          g.scheduled_at,
+          gps.game_type,
+          gps.team_id,
+          gps.opponent_team_id,
+          gps.is_home,
+          gps.goals,
+          gps.assists,
+          CASE WHEN gps.is_goalie THEN gps.goalie_started ELSE NULL::boolean END AS goalie_started,
+          CASE WHEN gps.is_goalie THEN gps.shots_against ELSE NULL::int END AS shots_against,
+          CASE WHEN gps.is_goalie THEN gps.goals_against ELSE NULL::int END AS goals_against,
+          CASE
+            WHEN gps.is_goalie AND gps.shots_against > 0
+              THEN ROUND(gps.saves::numeric / gps.shots_against, 3)::float
+            ELSE NULL::float
+          END AS save_pct,
+          CASE WHEN gps.is_goalie THEN gps.time_on_ice ELSE NULL::int END AS time_on_ice
+        FROM game_player_stats gps
+        JOIN games g ON g.id = gps.game_id
+        JOIN seasons s ON s.id = gps.season_id
+        WHERE gps.player_id = ${id}
+          AND (${seasonId}::uuid IS NULL OR gps.season_id = ${seasonId}::uuid)
+          AND (${gameType}::text IS NULL OR gps.game_type = ${gameType}::text)
       ),
       counted_games AS (
         SELECT *, COUNT(*) OVER ()::int AS total_count
