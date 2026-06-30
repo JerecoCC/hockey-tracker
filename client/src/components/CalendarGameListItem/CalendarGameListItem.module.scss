@@ -7,6 +7,15 @@
 }
 
 .item {
+  --calendar-game-card-bg: #222d3f;
+  --calendar-game-card-border: #{$border};
+  --calendar-game-card-hover-bg: rgba(37, 99, 235, 0.08);
+  --calendar-game-card-hover-border: rgba(37, 99, 235, 0.6);
+  --calendar-game-card-divider: #{$border};
+  --calendar-game-score-bg: color-mix(in srgb, #{$bg-card} 70%, #{$bg-page});
+  --calendar-game-score-border: #{$border};
+  --calendar-game-score-missing-bg: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
+
   position: relative;
   display: flex;
   flex: 0 0 auto;
@@ -14,9 +23,9 @@
   width: 100%;
   min-height: 1.9rem;
   padding: $space-sm;
-  border: 1px solid $border;
+  border: 1px solid var(--calendar-game-card-border);
   border-radius: $radius-sm;
-  background: #222d3f;
+  background: var(--calendar-game-card-bg);
   color: var(--app-text, #{$text-body});
   font-size: $font-sm;
   line-height: 1;
@@ -26,8 +35,8 @@
     background $transition-fast ease;
 
   &:hover {
-    border-color: rgba($accent, 0.6);
-    background: rgba($accent, 0.08);
+    border-color: var(--calendar-game-card-hover-border);
+    background: var(--calendar-game-card-hover-bg);
   }
 
   &:focus-visible {
@@ -72,11 +81,34 @@
   }
 }
 
+:global(:root[data-theme='light']) .item {
+  --calendar-game-card-bg: var(--app-surface, #fff);
+  --calendar-game-card-border: var(--app-border, #cbd5e1);
+  --calendar-game-card-hover-bg: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 8%,
+    var(--app-surface, #fff)
+  );
+  --calendar-game-card-hover-border: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 46%,
+    var(--app-border, #cbd5e1)
+  );
+  --calendar-game-card-divider: var(--app-border, #cbd5e1);
+  --calendar-game-score-bg: var(--app-surface-muted, #f8fafc);
+  --calendar-game-score-border: var(--app-field-border, #bfccd9);
+  --calendar-game-score-missing-bg: color-mix(
+    in srgb,
+    var(--app-surface-muted, #f8fafc) 76%,
+    var(--app-bg, #f3f6fb)
+  );
+}
+
 .topLabel {
   width: 100%;
   margin-bottom: $space-xs;
   padding-bottom: $space-xs;
-  border-bottom: 1px solid $border;
+  border-bottom: 1px solid var(--calendar-game-card-divider);
   color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   letter-spacing: 0.04em;
@@ -87,7 +119,7 @@
   width: 100%;
   margin-top: $space-xs;
   padding-top: $space-xs;
-  border-top: 1px solid $border;
+  border-top: 1px solid var(--calendar-game-card-divider);
   color: var(--app-text-muted, #{$text-dim});
   font-size: $font-sm;
   letter-spacing: 0.04em;
@@ -135,9 +167,9 @@
   min-width: 1.4rem;
   height: 26px;
   padding: 0 $space-xs;
-  border: 1px solid $border;
+  border: 1px solid var(--calendar-game-score-border);
   border-radius: 2px;
-  background: color-mix(in srgb, #{$bg-card} 70%, #{$bg-page});
+  background: var(--calendar-game-score-bg);
   color: var(--app-text, #{$text-body});
   font-variant-numeric: tabular-nums;
   text-align: center;
@@ -158,12 +190,16 @@
   &Lose {
     border-color: rgba($danger, 0.38);
     background: rgba($danger, 0.12);
-    color: color-mix(in srgb, #{$text-body} 72%, transparent);
+    color: color-mix(in srgb, var(--app-text, #{$text-body}) 72%, transparent);
   }
 
   &Missing {
-    border-color: color-mix(in srgb, #{$text-dim} 46%, #{$border});
-    background: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
+    border-color: color-mix(
+      in srgb,
+      var(--app-text-muted, #{$text-dim}) 46%,
+      var(--calendar-game-score-border)
+    );
+    background: var(--calendar-game-score-missing-bg);
     color: var(--app-text-muted, #{$text-dim});
   }
 }

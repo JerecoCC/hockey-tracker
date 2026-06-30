@@ -7,10 +7,20 @@
 }
 
 .card {
+  --team-calendar-away-bg: #fff;
+  --team-calendar-away-border: color-mix(in srgb, #{$border}, black 20%);
+  --team-calendar-away-text: #14181f;
+  --team-calendar-away-logo-bg:
+    radial-gradient(circle, rgba(15, 23, 42, 0.12) 0 42%, rgba(15, 23, 42, 0.05) 64%, rgba(15, 23, 42, 0.02) 100%);
+  --team-calendar-away-logo-border: rgba(15, 23, 42, 0.1);
+  --team-calendar-transparent-away-logo-bg: rgba(255, 255, 255, 0.16);
+  --team-calendar-transparent-away-logo-border: rgba(255, 255, 255, 0.22);
+  --team-calendar-transparent-away-logo-shadow: 0 0 16px rgba(255, 255, 255, 0.08);
+
   width: 84px;
   min-height: 108px;
   border-radius: $radius-sm;
-  border: 1px solid $border;
+  border: 1px solid var(--app-border, #{$border});
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -29,6 +39,27 @@
   }
 }
 
+:global(:root[data-theme='light']) .card {
+  --team-calendar-away-bg: var(--app-surface, #fff);
+  --team-calendar-away-border: var(--app-border, #cbd5e1);
+  --team-calendar-away-text: var(--app-text-strong, #0f172a);
+  --team-calendar-away-logo-bg:
+    radial-gradient(
+      circle,
+      rgba(37, 99, 235, 0.1) 0 42%,
+      rgba(37, 99, 235, 0.05) 64%,
+      rgba(37, 99, 235, 0.02) 100%
+    );
+  --team-calendar-away-logo-border: rgba(15, 23, 42, 0.08);
+  --team-calendar-transparent-away-logo-bg: color-mix(
+    in srgb,
+    var(--app-surface-muted, #f8fafc) 82%,
+    transparent
+  );
+  --team-calendar-transparent-away-logo-border: var(--app-border, #cbd5e1);
+  --team-calendar-transparent-away-logo-shadow: 0 0 16px rgba(15, 23, 42, 0.08);
+}
+
 .fill {
   width: 100%;
   min-height: 160px;
@@ -43,9 +74,9 @@
 }
 
 .away {
-  background: #ffffff;
-  border-color: color-mix(in srgb, #{$border}, black 20%);
-  color: #14181f;
+  background: var(--team-calendar-away-bg);
+  border-color: var(--team-calendar-away-border);
+  color: var(--team-calendar-away-text);
 }
 
 .home {
@@ -116,9 +147,8 @@
 }
 
 .away .logoWrap {
-  background:
-    radial-gradient(circle, rgba(15, 23, 42, 0.12) 0 42%, rgba(15, 23, 42, 0.05) 64%, rgba(15, 23, 42, 0.02) 100%);
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  background: var(--team-calendar-away-logo-bg);
+  border: 1px solid var(--team-calendar-away-logo-border);
 }
 
 .transparent.home .logoWrap {
@@ -134,9 +164,9 @@
 }
 
 .transparent.away .logoWrap {
-  background: rgba(255, 255, 255, 0.16);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  box-shadow: 0 0 16px rgba(255, 255, 255, 0.08);
+  background: var(--team-calendar-transparent-away-logo-bg);
+  border: 1px solid var(--team-calendar-transparent-away-logo-border);
+  box-shadow: var(--team-calendar-transparent-away-logo-shadow);
 }
 
 .detail {

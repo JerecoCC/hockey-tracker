@@ -5,13 +5,23 @@
 // the radius, padding and outline. GameCard only layers a subtle translucent
 // white fill plus its own layout, state and hover treatments on top.
 .card {
+  --game-card-bg: #222d3f;
+  --game-card-hover-bg: rgba(37, 99, 235, 0.06);
+  --game-card-hover-border: rgba(37, 99, 235, 0.6);
+  --game-card-actions-bg: rgba(15, 23, 42, 0.9);
+  --game-card-divider: var(--app-border, #{$border});
+  --game-card-league-bg-base: #{$bg-card};
+  --game-card-league-border-base: #{$border};
+  --game-card-league-meta-base: #{$text-bright};
+  --game-card-league-text-base: #{$text-body};
+
   position: relative;
   display: flex;
   flex-direction: column;
   gap: $space-md;
   min-height: 176px;
   overflow: hidden;
-  background: #222d3f;
+  background: var(--game-card-bg);
   color: var(--app-text, #{$text-body});
   transition:
     border-color $transition-fast,
@@ -19,8 +29,8 @@
 
   &:hover,
   &:focus-within {
-    border-color: rgba($accent, 0.6);
-    background: rgba($accent, 0.06);
+    border-color: var(--game-card-hover-border);
+    background: var(--game-card-hover-bg);
 
     .gameActions {
       opacity: 1;
@@ -30,18 +40,38 @@
 }
 
 .leagueColors {
-  border-color: color-mix(in srgb, var(--game-league-primary, #334155) 44%, #{$border});
-  background: color-mix(in srgb, var(--game-league-primary, #334155) 16%, #{$bg-card});
+  border-color: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 44%,
+    var(--game-card-league-border-base)
+  );
+  background: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 16%,
+    var(--game-card-league-bg-base)
+  );
 
   &:hover,
   &:focus-within {
-    border-color: color-mix(in srgb, var(--game-league-primary, #334155) 68%, #{$border});
-    background: color-mix(in srgb, var(--game-league-primary, #334155) 22%, #{$bg-card});
+    border-color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 68%,
+      var(--game-card-league-border-base)
+    );
+    background: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 22%,
+      var(--game-card-league-bg-base)
+    );
   }
 
   .gameMeta,
   .gameFooter {
-    color: color-mix(in srgb, var(--game-league-primary, #334155) 74%, #{$text-bright});
+    color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 74%,
+      var(--game-card-league-meta-base)
+    );
   }
 
   &.clickable:focus-visible {
@@ -49,9 +79,36 @@
   }
 
   .bottomLabel {
-    border-top-color: color-mix(in srgb, var(--game-league-primary, #334155) 18%, #{$border});
-    color: color-mix(in srgb, var(--game-league-primary, #334155) 76%, #{$text-body});
+    border-top-color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 18%,
+      var(--game-card-league-border-base)
+    );
+    color: color-mix(
+      in srgb,
+      var(--game-league-primary, #334155) 76%,
+      var(--game-card-league-text-base)
+    );
   }
+}
+
+:global(:root[data-theme='light']) .card {
+  --game-card-bg: var(--app-surface, #fff);
+  --game-card-hover-bg: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 8%,
+    var(--app-surface, #fff)
+  );
+  --game-card-hover-border: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 46%,
+    var(--app-border, #cbd5e1)
+  );
+  --game-card-actions-bg: rgba(255, 255, 255, 0.94);
+  --game-card-league-bg-base: var(--app-surface, #fff);
+  --game-card-league-border-base: var(--app-border, #cbd5e1);
+  --game-card-league-meta-base: var(--app-text-strong, #0f172a);
+  --game-card-league-text-base: var(--app-text, #1f2937);
 }
 
 // ── Game type — full-height left accent bar ──────────────────────────────────
@@ -142,7 +199,8 @@
   flex-wrap: wrap;
   gap: $space-xs;
   border-radius: inherit;
-  background: rgba(15, 23, 42, 0.9);
+  background: var(--game-card-actions-bg);
+  box-shadow: inset 0 0 0 1px var(--app-border, #{$border});
   opacity: 0;
   pointer-events: none;
   transition: opacity $transition-fast;
@@ -192,7 +250,7 @@
 .bottomLabel {
   align-self: stretch;
   padding-top: $space-sm;
-  border-top: 1px solid $border;
+  border-top: 1px solid var(--game-card-divider);
   font-size: $font-base;
   font-weight: 700;
   letter-spacing: 0.04em;
