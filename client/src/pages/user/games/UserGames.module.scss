@@ -92,6 +92,34 @@
   );
 }
 
+:global(:root[data-theme='light']) .calendarGameLeagueTint.calendarGameLeagueTint {
+  --calendar-game-card-bg: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 30%,
+    var(--calendar-game-card-league-bg-base)
+  );
+  --calendar-game-card-border: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 62%,
+    var(--calendar-game-card-league-border-base)
+  );
+  --calendar-game-card-divider: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 34%,
+    var(--calendar-game-card-league-border-base)
+  );
+  --calendar-game-card-hover-bg: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 38%,
+    var(--calendar-game-card-league-bg-base)
+  );
+  --calendar-game-card-hover-border: color-mix(
+    in srgb,
+    var(--game-league-primary, #334155) 78%,
+    var(--calendar-game-card-league-border-base)
+  );
+}
+
 .playoff {
   &Dots {
     display: inline-flex;
