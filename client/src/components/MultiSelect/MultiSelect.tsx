@@ -4,6 +4,7 @@ import {
   useEffect,
   useId,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -122,10 +123,20 @@ const MultiSelect = ({
     onChange(value.includes(optValue) ? value.filter((v) => v !== optValue) : [...value, optValue]);
   };
 
-  const visibleOptions =
-    searchable && query
-      ? options.filter((o) => o.label.toLowerCase().includes(query.toLowerCase()))
-      : options;
+  const selectedValueSet = useMemo(() => new Set(value), [value]);
+  const visibleOptions = useMemo(() => {
+    const normalizedQuery = query.toLowerCase();
+    const filteredOptions =
+      searchable && query
+        ? options.filter((option) => option.label.toLowerCase().includes(normalizedQuery))
+        : options;
+
+    return filteredOptions.slice().sort((a, b) => {
+      const selectedDiff =
+        Number(selectedValueSet.has(b.value)) - Number(selectedValueSet.has(a.value));
+      return selectedDiff;
+    });
+  }, [options, query, searchable, selectedValueSet]);
 
   const handleKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'Escape') {

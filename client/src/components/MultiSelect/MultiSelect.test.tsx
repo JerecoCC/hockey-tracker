@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import MultiSelect from './MultiSelect';
@@ -6,6 +6,7 @@ import MultiSelect from './MultiSelect';
 const OPTIONS = [
   { value: 'team-1', label: 'Toronto Maple Leafs', code: 'TOR' },
   { value: 'team-2', label: 'Montreal Canadiens', code: 'MTL' },
+  { value: 'team-3', label: 'Boston Bruins', code: 'BOS' },
 ];
 
 const MultiSelectHarness = ({
@@ -61,5 +62,25 @@ describe('MultiSelect', () => {
     await user.keyboard('{Escape}');
 
     expect(handleExit).toHaveBeenCalledTimes(1);
+  });
+
+  it('places selected options at the top of the menu', async () => {
+    const user = userEvent.setup();
+
+    render(
+      <MultiSelect
+        value={['team-2', 'team-3']}
+        options={OPTIONS}
+        placeholder="All Teams"
+        onChange={jest.fn()}
+      />,
+    );
+
+    await user.click(screen.getByRole('combobox'));
+
+    const menuOptions = within(screen.getByRole('listbox')).getAllByRole('option');
+    expect(menuOptions[0]).toHaveTextContent('Montreal Canadiens');
+    expect(menuOptions[1]).toHaveTextContent('Boston Bruins');
+    expect(menuOptions[2]).toHaveTextContent('Toronto Maple Leafs');
   });
 });
