@@ -12,6 +12,8 @@ import styles from './UserGames.module.scss';
 const mockNavigate = jest.fn();
 const mockInvalidateQueries = jest.fn();
 const mockSetQueriesData = jest.fn();
+const mockSetQueryData = jest.fn();
+const mockFindAllQueries = jest.fn();
 
 jest.mock('react-router-dom', () => ({
   Link: ({ to, children, ...props }: any) => (
@@ -427,9 +429,18 @@ beforeEach(() => {
     'user-games-calendar-month',
     `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`,
   );
+  mockFindAllQueries.mockReturnValue([
+    {
+      queryKey: ['user-games', 'all', 'all', 'team-home,team-opp', false, localDateString(0), ''],
+    },
+  ]);
   mockUseQueryClient.mockReturnValue({
     invalidateQueries: mockInvalidateQueries,
     setQueriesData: mockSetQueriesData,
+    setQueryData: mockSetQueryData,
+    getQueryCache: () => ({
+      findAll: mockFindAllQueries,
+    }),
   });
   mockAxios.post.mockResolvedValue({ data: {} } as any);
   mockAxios.delete.mockResolvedValue({ data: {} } as any);
@@ -1075,12 +1086,12 @@ describe('UserGames schedule views', () => {
       ),
     );
 
-    expect(mockSetQueriesData).toHaveBeenCalledWith(
-      { queryKey: ['user-games'] },
+    expect(mockSetQueryData).toHaveBeenCalledWith(
+      ['user-games', 'all', 'all', 'team-home,team-opp', false, localDateString(0), ''],
       expect.any(Function),
     );
 
-    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueryData.mock.calls.at(-1)?.[1];
     expect(updater(games)[0]).toEqual(
       expect.objectContaining({
         id: 'game-1',
@@ -1127,7 +1138,7 @@ describe('UserGames schedule views', () => {
       ),
     );
 
-    const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
+    const updater = mockSetQueryData.mock.calls.at(-1)?.[1];
     expect(updater(games)[0]).toEqual(
       expect.objectContaining({
         id: 'game-1',
@@ -1266,11 +1277,67 @@ describe('UserGames schedule views', () => {
       { scheduled_for: targetDate },
       expect.objectContaining({ headers: expect.any(Object) }),
     );
-    expect(mockSetQueriesData).toHaveBeenCalledWith(
-      { queryKey: ['user-games'] },
+    expect(mockSetQueryData).toHaveBeenCalledWith(
+      ['user-games', 'all', 'all', 'team-home,team-opp', false, localDateString(0), ''],
       expect.any(Function),
     );
     expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for May 18, 2026');
+    expect(mockInvalidateQueries).not.toHaveBeenCalled();
+  });
+
+  it('moves a scheduled game into an already cached target month', async () => {
+    const user = userEvent.setup();
+    const targetDate = localDateString(35);
+    const currentMonth = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
+    const targetMonth = targetDate.slice(0, 7);
+    const currentMonthKey = [
+      'user-games',
+      'all',
+      'all',
+      'team-home,team-opp',
+      false,
+      '',
+      currentMonth,
+    ];
+    const targetMonthKey = [
+      'user-games',
+      'all',
+      'all',
+      'team-home,team-opp',
+      false,
+      '',
+      targetMonth,
+    ];
+
+    mockFindAllQueries.mockReturnValue([
+      { queryKey: currentMonthKey },
+      { queryKey: targetMonthKey },
+    ]);
+
+    render(<UserGames />);
+
+    await user.click(screen.getAllByRole('button', { name: 'Edit watch schedule' })[0]);
+    const input = screen.getByLabelText('Watch date');
+    await user.clear(input);
+    await user.type(input, targetDate);
+    await user.click(screen.getByRole('button', { name: 'Save Schedule' }));
+
+    const currentMonthUpdater = mockSetQueryData.mock.calls.find(
+      ([queryKey]) => JSON.stringify(queryKey) === JSON.stringify(currentMonthKey),
+    )?.[1];
+    const targetMonthUpdater = mockSetQueryData.mock.calls.find(
+      ([queryKey]) => JSON.stringify(queryKey) === JSON.stringify(targetMonthKey),
+    )?.[1];
+
+    expect(currentMonthUpdater([games[0], games[1]])).toEqual([games[1]]);
+    expect(targetMonthUpdater([])).toEqual([
+      expect.objectContaining({
+        id: 'game-1',
+        scheduled_for: targetDate,
+        skipped_by_user: false,
+      }),
+    ]);
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for Jun 19, 2026');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 

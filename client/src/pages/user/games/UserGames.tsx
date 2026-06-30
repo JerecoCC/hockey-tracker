@@ -297,6 +297,101 @@ const getScheduledWatchDateKey = (value: string | null | undefined) => {
 const getEffectiveUserDateKey = (game: GameRecord, tzPref: TzPref) =>
   getScheduledWatchDateKey(game.scheduled_for) ?? getOriginalGameDateKey(game, tzPref);
 
+interface UserGamesCacheQuery {
+  statusFilter: string;
+  leagueId: string;
+  teamIds: Set<string>;
+  includeSkipped: boolean;
+  week: string;
+  month: string;
+}
+
+const parseUserGamesCacheQuery = (queryKey: readonly unknown[]): UserGamesCacheQuery | null => {
+  if (queryKey[0] !== 'user-games') return null;
+  const teamIdsParam = typeof queryKey[3] === 'string' ? queryKey[3] : '';
+  return {
+    statusFilter: typeof queryKey[1] === 'string' ? queryKey[1] : 'all',
+    leagueId: typeof queryKey[2] === 'string' ? queryKey[2] : 'all',
+    teamIds: new Set(teamIdsParam ? teamIdsParam.split(',').filter(Boolean) : []),
+    includeSkipped: queryKey[4] === true,
+    week: typeof queryKey[5] === 'string' ? queryKey[5] : '',
+    month: typeof queryKey[6] === 'string' ? queryKey[6] : '',
+  };
+};
+
+const isDateKeyInWeek = (dateKey: string, weekStartKey: string) => {
+  if (!DATE_ONLY_RE.test(dateKey) || !DATE_ONLY_RE.test(weekStartKey)) return false;
+  const weekStart = dateKeyToDate(weekStartKey);
+  const weekEnd = addDays(weekStart, 6);
+  const date = dateKeyToDate(dateKey);
+  return date >= weekStart && date <= weekEnd;
+};
+
+const userGameMatchesCachedQuery = (
+  game: GameRecord,
+  query: UserGamesCacheQuery,
+  tzPref: TzPref,
+) => {
+  if (query.statusFilter !== 'all' && game.status !== query.statusFilter) return false;
+  if (query.leagueId !== 'all' && game.league_id !== query.leagueId) return false;
+  if (!query.includeSkipped && game.skipped_by_user) return false;
+  if (
+    query.teamIds.size > 0 &&
+    !query.teamIds.has(game.home_team.id) &&
+    !query.teamIds.has(game.away_team.id)
+  ) {
+    return false;
+  }
+
+  const dateKey = getEffectiveUserDateKey(game, tzPref);
+  if (query.week) return !!dateKey && isDateKeyInWeek(dateKey, query.week);
+  if (query.month) return !!dateKey && dateKey.slice(0, 7) === query.month;
+  return true;
+};
+
+const updateScheduledGameCache = (
+  existing: GameRecord[] | undefined,
+  queryKey: readonly unknown[],
+  updatedGame: GameRecord,
+  tzPref: TzPref,
+) => {
+  if (!Array.isArray(existing)) return existing;
+
+  const parsedQuery = parseUserGamesCacheQuery(queryKey);
+  const shouldInclude =
+    parsedQuery == null || userGameMatchesCachedQuery(updatedGame, parsedQuery, tzPref);
+  let found = false;
+  let changed = false;
+
+  const nextGames = existing.reduce<GameRecord[]>((next, cachedGame) => {
+    if (cachedGame.id !== updatedGame.id) {
+      next.push(cachedGame);
+      return next;
+    }
+
+    found = true;
+    if (!shouldInclude) {
+      changed = true;
+      return next;
+    }
+
+    changed = true;
+    next.push({
+      ...cachedGame,
+      scheduled_for: updatedGame.scheduled_for,
+      skipped_by_user: updatedGame.skipped_by_user,
+    });
+    return next;
+  }, []);
+
+  if (shouldInclude && !found) {
+    changed = true;
+    nextGames.push(updatedGame);
+  }
+
+  return changed ? nextGames : existing;
+};
+
 const getPlayoffRoundShortLabel = (game: GameRecord) => {
   if (game.game_type !== 'playoff' || game.playoff_round == null) return null;
   const customLabel = game.playoff_round_names?.[game.playoff_round] ?? null;
@@ -1007,17 +1102,16 @@ const UserGames = () => {
         { scheduled_for: scheduledFor },
         { headers: authHeaders() },
       );
-      queryClient.setQueriesData(
-        { queryKey: ['user-games'] },
-        (existing: GameRecord[] | undefined) => {
-          if (!Array.isArray(existing)) return existing;
-          return existing.map((game) =>
-            game.id === gameId
-              ? { ...game, scheduled_for: scheduledFor, skipped_by_user: false }
-              : game,
-          );
-        },
-      );
+      const updatedGame = { ...game, scheduled_for: scheduledFor, skipped_by_user: false };
+      const userGameQueries = queryClient
+        .getQueryCache()
+        .findAll({ predicate: (query) => query.queryKey[0] === 'user-games' });
+
+      for (const query of userGameQueries) {
+        queryClient.setQueryData<GameRecord[]>(query.queryKey, (existing) =>
+          updateScheduledGameCache(existing, query.queryKey, updatedGame, tzPref),
+        );
+      }
       toast.success(
         scheduledFor
           ? `${getGameActionLabel(game)} scheduled for ${formatScheduleToastDate(scheduledFor)}`
