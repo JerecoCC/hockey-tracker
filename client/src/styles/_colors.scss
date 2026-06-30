@@ -6,7 +6,7 @@
 // ── Primary accent (blue) ─────────────────────────────────────────────
 $accent: #2563eb; // blue-600  — primary CTA, active states
 $accent-hover: #1d4ed8; // blue-700  — hover / pressed
-$accent-light: #93c5fd; // blue-300  — badges, active text
+$accent-light: var(--app-accent-light, #93c5fd); // theme-aware blue highlight
 
 // ── Info / secondary blue ─────────────────────────────────────────────
 $info: #0369a1; // sky-700   — demote badge background
@@ -28,7 +28,7 @@ $danger-light: #fb7185; // rose-400
 
 // ── Edit / action blue (icon buttons) ────────────────────────────────
 $edit: #1d4ed8; // blue-700
-$edit-light: #93c5fd; // blue-300
+$edit-light: var(--app-edit-light, #93c5fd); // theme-aware edit highlight
 
 // ── Dark admin — backgrounds ──────────────────────────────────────────
 $bg-page: #0f172a; // slate-900 — outermost page background
