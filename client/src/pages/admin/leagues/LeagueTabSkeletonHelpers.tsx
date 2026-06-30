@@ -13,9 +13,6 @@ export const TabActionSkeleton = ({ width = '112px' }: { width?: string }) => (
 );
 
 export const LeagueListRowSkeleton = ({
-  image = false,
-  code = false,
-  tag = false,
   bordered = false,
 }: {
   image?: boolean;
@@ -23,28 +20,10 @@ export const LeagueListRowSkeleton = ({
   tag?: boolean;
   bordered?: boolean;
 }) => (
-  <li
+  <Skeleton
+    as="li"
     className={[styles.tabSkeletonRow, bordered ? styles.tabSkeletonRowBordered : '']
       .filter(Boolean)
       .join(' ')}
-  >
-    {image && <Skeleton type="picture" />}
-    <span className={styles.tabSkeletonTextStack}>
-      <Skeleton
-        type="subtitle"
-        className={styles.tabSkeletonEyebrow}
-      />
-      <Skeleton
-        type="text"
-        className={styles.tabSkeletonName}
-      />
-    </span>
-    {code && <Skeleton type="code" />}
-    {tag && (
-      <Skeleton
-        type="tag"
-        className={styles.tabSkeletonTag}
-      />
-    )}
-  </li>
+  />
 );

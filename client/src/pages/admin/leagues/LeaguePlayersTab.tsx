@@ -24,30 +24,28 @@ interface Props {
 }
 
 const PLAYER_SKELETON_ROW_COUNT = 15;
+const PLAYER_SEARCH_DEBOUNCE_MS = 350;
+const PLAYER_SEARCH_MIN_LENGTH = 3;
+
+const buildFilterFetchKey = ({
+  search,
+  rookiesOnly,
+  includeRetiredPlayers,
+}: {
+  search: string;
+  rookiesOnly: boolean;
+  includeRetiredPlayers: boolean;
+}) =>
+  `${search}|${rookiesOnly ? 'rookies' : 'all'}|${
+    includeRetiredPlayers ? 'retired' : 'active'
+  }`;
 
 const playerSkeletonRow = (key: number) => (
-  <li
+  <Skeleton
+    as="li"
     key={key}
     className={[styles.tabSkeletonRow, styles.tabSkeletonRowBordered].join(' ')}
-  >
-    <Skeleton className={styles.tabSkeletonLeadingLogo} />
-    <Skeleton type="avatar" />
-    <Skeleton className={styles.tabSkeletonJersey} />
-    <span className={styles.tabSkeletonTextStack}>
-      <Skeleton
-        type="text"
-        className={styles.tabSkeletonName}
-      />
-      <Skeleton
-        type="subtitle"
-        className={styles.tabSkeletonEyebrow}
-      />
-    </span>
-    <Skeleton
-      type="tag"
-      className={styles.tabSkeletonTag}
-    />
-  </li>
+  />
 );
 
 const LeaguePlayerRowsSkeleton = ({
@@ -89,8 +87,10 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [paginationFetchPage, setPaginationFetchPage] = useState<number | null>(null);
   const [seasonFetchId, setSeasonFetchId] = useState<string | null>(null);
+  const [filterFetchKey, setFilterFetchKey] = useState<string | null>(null);
   const paginationFetchStartedRef = useRef(false);
   const seasonFetchStartedRef = useRef(false);
+  const filterFetchStartedRef = useRef(false);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
   const emptyMessage = rookiesOnly
     ? 'No rookies for this season.'
@@ -100,7 +100,14 @@ const LeaguePlayersTab = ({ className }: Props) => {
   const showPaginationSkeleton = fetching && paginationFetchPage === page;
   const showSeasonSkeleton =
     fetching && seasonFetchId !== null && seasonFetchId === selectedSeasonId;
-  const showListSkeleton = showPaginationSkeleton || showSeasonSkeleton;
+  const currentFilterFetchKey = buildFilterFetchKey({
+    search,
+    rookiesOnly,
+    includeRetiredPlayers,
+  });
+  const showFilterSkeleton =
+    fetching && filterFetchKey !== null && filterFetchKey === currentFilterFetchKey;
+  const showListSkeleton = showPaginationSkeleton || showSeasonSkeleton || showFilterSkeleton;
   const playerDataIndicator = (player: PlayerRecord) => {
     const hasMissingData = !player.date_of_birth || !player.start_date || !player.acquisition_type;
     const hasSingleSeasonPoint = player.season_points === 1;
@@ -153,6 +160,18 @@ const LeaguePlayersTab = ({ className }: Props) => {
     }
   }, [fetching, showSeasonSkeleton]);
 
+  useEffect(() => {
+    if (showFilterSkeleton) {
+      filterFetchStartedRef.current = true;
+      return;
+    }
+
+    if (!fetching && filterFetchStartedRef.current) {
+      filterFetchStartedRef.current = false;
+      setFilterFetchKey(null);
+    }
+  }, [fetching, showFilterSkeleton]);
+
   const handlePageChange = (nextPage: number) => {
     if (nextPage !== page) setPaginationFetchPage(nextPage);
     onPageChange(nextPage);
@@ -163,12 +182,42 @@ const LeaguePlayersTab = ({ className }: Props) => {
     onSeasonChange(seasonId);
   };
 
+  const handleSearchChange = (query: string) => {
+    if (query !== search) {
+      setFilterFetchKey(
+        buildFilterFetchKey({
+          search: query,
+          rookiesOnly,
+          includeRetiredPlayers,
+        }),
+      );
+    }
+
+    onSearchChange(query);
+  };
+
   const handleRookiesOnlyToggle = () => {
-    onRookiesOnlyChange(!rookiesOnly);
+    const nextRookiesOnly = !rookiesOnly;
+    setFilterFetchKey(
+      buildFilterFetchKey({
+        search,
+        rookiesOnly: nextRookiesOnly,
+        includeRetiredPlayers,
+      }),
+    );
+    onRookiesOnlyChange(nextRookiesOnly);
   };
 
   const handleIncludeRetiredToggle = () => {
-    onIncludeRetiredPlayersChange(!includeRetiredPlayers);
+    const nextIncludeRetiredPlayers = !includeRetiredPlayers;
+    setFilterFetchKey(
+      buildFilterFetchKey({
+        search,
+        rookiesOnly,
+        includeRetiredPlayers: nextIncludeRetiredPlayers,
+      }),
+    );
+    onIncludeRetiredPlayersChange(nextIncludeRetiredPlayers);
   };
 
   const handleConfirmDelete = async () => {
@@ -240,20 +289,6 @@ const LeaguePlayersTab = ({ className }: Props) => {
               );
             }}
             renderItems={(filtered) => {
-              if (showListSkeleton) {
-                return (
-                  <>
-                    <LeaguePlayerRowsSkeleton />
-                    <Pagination
-                      page={page}
-                      pageSize={pageSize}
-                      total={total}
-                      onPageChange={handlePageChange}
-                    />
-                  </>
-                );
-              }
-
               return (
                 <>
                   <ul className={styles.rosterList}>
@@ -328,9 +363,20 @@ const LeaguePlayersTab = ({ className }: Props) => {
               );
             }}
             placeholder="Search players…"
-            query={search}
-            onQueryChange={onSearchChange}
+            onQueryChange={handleSearchChange}
+            searchDebounceMs={PLAYER_SEARCH_DEBOUNCE_MS}
+            minSearchLength={PLAYER_SEARCH_MIN_LENGTH}
             disableClientFilter
+            loading={showListSkeleton}
+            loadingRowCount={PLAYER_SKELETON_ROW_COUNT}
+            loadingFooter={
+              <Pagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                onPageChange={handlePageChange}
+              />
+            }
             actions={
               <div className={styles.playerFilterToggles}>
                 <ToggleButton

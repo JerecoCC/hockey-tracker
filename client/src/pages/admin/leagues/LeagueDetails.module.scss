@@ -364,18 +364,14 @@ $league-tab-list-gap: $space-md;
   }
 
   &Row {
-    display: flex;
-    align-items: center;
-    gap: $space-md;
-    min-height: 72px;
-    padding: $space-md;
+    display: block;
+    height: calc(48px + #{$space-md * 2} + 2px);
     border-radius: $radius-md;
     opacity: 0.65;
   }
 
   &RowBordered {
-    border: 1px solid $border;
-    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--app-border, #{$border});
   }
 
   &TextStack {
@@ -1182,8 +1178,7 @@ $league-tab-list-gap: $space-md;
     width: 24px;
     height: 24px;
     object-fit: contain;
-    border-radius: $radius-sm;
-    filter: drop-shadow(0 1px 2px rgba(255, 255, 255, 0.2));
+    filter: drop-shadow(0 1px 2px var(--app-logo-shadow, rgba(255, 255, 255, 0.1)));
   }
 
   &TeamDot {

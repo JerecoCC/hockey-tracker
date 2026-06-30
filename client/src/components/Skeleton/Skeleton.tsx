@@ -1,4 +1,4 @@
-import type { CSSProperties, HTMLAttributes } from 'react';
+import type { CSSProperties, ElementType, HTMLAttributes } from 'react';
 import styles from './Skeleton.module.scss';
 
 export type SkeletonType =
@@ -13,14 +13,23 @@ export type SkeletonType =
   | 'code'
   | 'tag';
 
-interface Props extends HTMLAttributes<HTMLSpanElement> {
+interface Props extends HTMLAttributes<HTMLElement> {
+  as?: ElementType;
   type?: SkeletonType;
   width?: CSSProperties['width'];
   height?: CSSProperties['height'];
 }
 
-const Skeleton = ({ type = 'block', width, height, className, style, ...rest }: Props) => (
-  <span
+const Skeleton = ({
+  as: Component = 'span',
+  type = 'block',
+  width,
+  height,
+  className,
+  style,
+  ...rest
+}: Props) => (
+  <Component
     className={[styles.root, styles[type], className].filter(Boolean).join(' ')}
     style={{ width, height, ...style }}
     aria-hidden="true"

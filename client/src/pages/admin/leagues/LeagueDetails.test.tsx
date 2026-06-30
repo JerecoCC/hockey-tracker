@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import BreadcrumbTitleRow from '@/components/Breadcrumbs/BreadcrumbTitleRow';
@@ -1194,6 +1194,113 @@ describe('LeagueDetailsPage – players tab', () => {
     );
   });
 
+  it('debounces player search and requires at least 3 characters for search requests', async () => {
+    jest.useFakeTimers();
+    try {
+      setup({ league: mockLeague });
+      clickPlayersTab();
+
+      const searchInput = screen.getByPlaceholderText(/search players/i);
+
+      fireEvent.change(searchInput, { target: { value: 'ab' } });
+      await act(async () => {
+        jest.advanceTimersByTime(350);
+      });
+
+      expect(searchInput).toHaveValue('ab');
+      expect(useLeaguePlayers).not.toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        expect.objectContaining({ search: 'ab' }),
+      );
+      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
+        undefined,
+        undefined,
+        expect.objectContaining({ search: '' }),
+      );
+
+      fireEvent.change(searchInput, { target: { value: 'abc' } });
+      await act(async () => {
+        jest.advanceTimersByTime(349);
+      });
+
+      expect(useLeaguePlayers).not.toHaveBeenCalledWith(
+        undefined,
+        undefined,
+        expect.objectContaining({ search: 'abc' }),
+      );
+
+      await act(async () => {
+        jest.advanceTimersByTime(1);
+      });
+
+      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
+        undefined,
+        undefined,
+        expect.objectContaining({ search: 'abc' }),
+      );
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('shows player row skeletons while filters are fetching', async () => {
+    const seasons = [
+      {
+        id: 'season-1',
+        name: 'Spring 2024',
+        league_id: 'lg1',
+        start_date: '2024-01-01',
+        end_date: '2024-03-31',
+        is_current: true,
+        is_ended: false,
+        created_at: '',
+      },
+    ];
+    const players = [
+      {
+        id: 'player-1',
+        first_name: 'John',
+        last_name: 'Smith',
+        photo: null,
+        date_of_birth: null,
+        birth_city: null,
+        birth_country: null,
+        height_cm: null,
+        weight_lbs: null,
+        position: 'C' as const,
+        shoots: 'L' as const,
+        rookie_season_id: null,
+        is_active: true,
+        created_at: '',
+        start_date: null,
+        acquisition_type: null,
+        season_points: null,
+      },
+    ];
+
+    const { container } = setup({ league: mockLeague, seasons }, {}, null, {
+      players,
+      total: 1,
+      fetching: true,
+    });
+    clickPlayersTab();
+
+    await waitFor(() =>
+      expect(useLeaguePlayers).toHaveBeenLastCalledWith(
+        undefined,
+        'season-1',
+        expect.objectContaining({ rookiesOnly: false }),
+      ),
+    );
+    expect(container.querySelector('.loadingList')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Rookies only' }));
+
+    expect(container.querySelector('.loadingList')).toBeInTheDocument();
+    expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
+  });
+
   it('renders player rows as links to player details', () => {
     setup({ league: mockLeague }, {}, null, {
       players: [
@@ -1312,13 +1419,13 @@ describe('LeagueDetailsPage – players tab', () => {
     clickPlayersTab();
 
     expect(screen.getByText('John Smith')).toBeInTheDocument();
-    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(0);
+    expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
 
     const nextTooltip = screen.getByRole('tooltip', { name: /next page/i });
     fireEvent.click(nextTooltip.previousElementSibling as HTMLElement);
 
     expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(15);
+    expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
     expect(screen.getByText('16-21 of 21')).toBeInTheDocument();
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
@@ -1372,14 +1479,14 @@ describe('LeagueDetailsPage – players tab', () => {
     clickPlayersTab();
 
     expect(screen.getByText('John Smith')).toBeInTheDocument();
-    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(0);
+    expect(container.querySelectorAll('.loadingRow')).toHaveLength(0);
 
     await waitFor(() => expect(screen.getByRole('combobox')).toHaveTextContent('Spring 2024'));
     fireEvent.click(screen.getByRole('combobox'));
     fireEvent.click(screen.getByRole('button', { name: 'Winter 2025' }));
 
     expect(screen.queryByText('John Smith')).not.toBeInTheDocument();
-    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(15);
+    expect(container.querySelectorAll('.loadingRow')).toHaveLength(15);
     expect(screen.queryByLabelText('Loading players')).not.toBeInTheDocument();
   });
 
