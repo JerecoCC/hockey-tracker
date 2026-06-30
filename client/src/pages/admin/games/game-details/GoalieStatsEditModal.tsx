@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Accordion from '@/components/Accordion/Accordion';
 import Button from '@/components/Button/Button';
@@ -44,6 +44,9 @@ const parseNumber = (value: string) => {
 const isStartingWindow = (period: string, time?: string | null) =>
   period === PERIOD.FIRST && (!time || time === '00:00');
 
+const PENDING_ID_PREFIX = 'pending-';
+const isPendingId = (id: string) => id.startsWith(PENDING_ID_PREFIX);
+
 const defaultStintDraft = (teamId = '', goalieId = ''): AddStintDraft => ({
   team_id: teamId,
   goalie_id: goalieId,
@@ -86,7 +89,6 @@ interface AddStintDraft {
 interface GoalieStatsFormValues {
   rows: GoalieEditRow[];
   addDraft: AddStintDraft;
-  stintDraft: AddStintDraft;
 }
 
 interface Props {
@@ -118,26 +120,25 @@ const GoalieStatsEditModal = ({
   removeGoalieStat,
 }: Props) => {
   const [submitting, setSubmitting] = useState(false);
-  const [removing, setRemoving] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
-  const [addingStintFor, setAddingStintFor] = useState<string | null>(null);
+  const [removedGoalieIds, setRemovedGoalieIds] = useState<string[]>([]);
+  const [removedStintIds, setRemovedStintIds] = useState<string[]>([]);
+  const pendingStintIdRef = useRef(0);
   const {
     reset,
     getValues,
     setValue,
     watch,
-    formState: { isDirty, isValid },
+    formState: { isValid },
   } = useForm<GoalieStatsFormValues>({
     defaultValues: {
       rows: [],
       addDraft: defaultStintDraft(),
-      stintDraft: defaultStintDraft(),
     },
     mode: 'onChange',
   });
   const rows = watch('rows') ?? [];
   const addDraft = watch('addDraft') ?? defaultStintDraft();
-  const stintDraft = watch('stintDraft') ?? defaultStintDraft();
 
   const allGoalies = useMemo(
     () => [...awayRoster, ...homeRoster].filter((entry) => entry.position === 'G'),
@@ -171,27 +172,20 @@ const GoalieStatsEditModal = ({
             exited_time: stint.exited_time ?? '',
             shots_against: String(stint.shots_against),
             goals_against:
-              stint.goals_against_override != null
-                ? String(stint.goals_against_override)
-                : '',
+              stint.goals_against_override != null ? String(stint.goals_against_override) : '',
             base_saves: (stat.stints ?? []).length === 1 ? stat.saves : stint.saves,
           })),
         };
       })
       .filter((row): row is GoalieEditRow => row !== null)
-      .sort(
-        (a, b) =>
-          compareGoalieStats(
-            a.stat,
-            a.rosterEntry,
-            b.stat,
-            b.rosterEntry,
-            game.away_team.id,
-          ),
+      .sort((a, b) =>
+        compareGoalieStats(a.stat, a.rosterEntry, b.stat, b.rosterEntry, game.away_team.id),
       );
 
     setAdding(false);
-    setAddingStintFor(null);
+    setRemovedGoalieIds([]);
+    setRemovedStintIds([]);
+    pendingStintIdRef.current = 0;
     reset({
       rows: built,
       addDraft: {
@@ -204,9 +198,8 @@ const GoalieStatsEditModal = ({
         shots_against: '0',
         goals_against: '',
       },
-      stintDraft: defaultStintDraft(),
     });
-  }, [open, game.away_team.id, goalieStats, rosterByPlayerId, reset, allGoalies]);
+  }, [open, game.away_team.id, goalieStats, rosterByPlayerId, reset]);
 
   const addGoalieOptions = allGoalies.filter(
     (goalie) =>
@@ -243,13 +236,6 @@ const GoalieStatsEditModal = ({
     }`,
   }));
 
-  const addPreviewGa =
-    stintDraft.goals_against === '' ? 'Auto' : parseNumber(stintDraft.goals_against);
-  const addPreviewSv =
-    stintDraft.goals_against === ''
-      ? '-'
-      : Math.max(0, parseNumber(stintDraft.shots_against) - parseNumber(stintDraft.goals_against));
-
   const setAddDraftField = (field: keyof AddStintDraft, value: string) => {
     const prev = getValues('addDraft');
     const nextValue =
@@ -259,16 +245,6 @@ const GoalieStatsEditModal = ({
         ? { ...prev, team_id: value, goalie_id: '' }
         : { ...prev, [field]: nextValue };
     setValue('addDraft', next, { shouldDirty: true, shouldValidate: true });
-  };
-
-  const setStintDraftField = (field: keyof AddStintDraft, value: string) => {
-    const nextValue =
-      field === 'shots_against' || field === 'goals_against' ? numericString(value) : value;
-    setValue(
-      'stintDraft',
-      { ...getValues('stintDraft'), [field]: nextValue },
-      { shouldDirty: true, shouldValidate: true },
-    );
   };
 
   const setStintField = (
@@ -310,16 +286,24 @@ const GoalieStatsEditModal = ({
 
   const saveGoalsAgainst = (stintRow: StintRow, originalStint?: GoalieStintRecord) => {
     if (stintRow.goals_against === '') return shotGoalsAgainst(stintRow, originalStint);
-    return Math.max(0, parseNumber(stintRow.goals_against) - ownGoalAgainst(stintRow, originalStint));
+    return Math.max(
+      0,
+      parseNumber(stintRow.goals_against) - ownGoalAgainst(stintRow, originalStint),
+    );
   };
 
   const stintSaves = (stintRow: StintRow, originalStint?: GoalieStintRecord) =>
     Math.max(0, parseNumber(stintRow.shots_against) - saveGoalsAgainst(stintRow, originalStint));
 
+  const originalStintForRow = (row: GoalieEditRow, stintRow: StintRow) =>
+    isPendingId(stintRow.id)
+      ? undefined
+      : row.stat.stints?.find((stint) => stint.id === stintRow.id);
+
   const rowTotals = (row: GoalieEditRow) =>
     row.stints.reduce(
-      (totals, stintRow, index) => {
-        const originalStint = row.stat.stints?.[index];
+      (totals, stintRow) => {
+        const originalStint = originalStintForRow(row, stintRow);
         const shots = parseNumber(stintRow.shots_against);
         const ga = resolvedGa(stintRow, originalStint);
         return {
@@ -331,32 +315,59 @@ const GoalieStatsEditModal = ({
       { shots: 0, saves: 0, goals: 0 },
     );
 
-  const hasChanges = rows.some((row) =>
-    row.stints.some((stintRow, index) => {
-      const originalStint = row.stat.stints?.[index];
-      if (!originalStint) return false;
-      const shots = parseNumber(stintRow.shots_against);
-      const override =
-        stintRow.goals_against === '' ? null : parseNumber(stintRow.goals_against);
-      return (
-        stintRow.entered_period !== originalStint.entered_period ||
-        (stintRow.entered_time || null) !== originalStint.entered_time ||
-        (stintRow.exited_period || null) !== originalStint.exited_period ||
-        (stintRow.exited_time || null) !== originalStint.exited_time ||
-        shots !== originalStint.shots_against ||
-        override !== originalStint.goals_against_override
-      );
-    }),
-  );
+  const hasChanges =
+    removedGoalieIds.length > 0 ||
+    removedStintIds.length > 0 ||
+    rows.some((row) =>
+      row.stints.some((stintRow) => {
+        const originalStint = originalStintForRow(row, stintRow);
+        if (!originalStint) return !!stintRow.entered_period;
+        const shots = parseNumber(stintRow.shots_against);
+        const override = stintRow.goals_against === '' ? null : parseNumber(stintRow.goals_against);
+        return (
+          stintRow.entered_period !== originalStint.entered_period ||
+          (stintRow.entered_time || null) !== originalStint.entered_time ||
+          (stintRow.exited_period || null) !== originalStint.exited_period ||
+          (stintRow.exited_time || null) !== originalStint.exited_time ||
+          shots !== originalStint.shots_against ||
+          override !== originalStint.goals_against_override
+        );
+      }),
+    );
+
+  const buildGoalieSwitchData = (row: GoalieEditRow, stintRow: StintRow): GoalieSwitchData => ({
+    team_id: row.rosterEntry.team_id,
+    goalie_id: row.rosterEntry.player_id,
+    entered_period: stintRow.entered_period,
+    entered_time: stintRow.entered_time || null,
+    exited_period: stintRow.exited_period || null,
+    exited_time: stintRow.exited_time || null,
+    shots_against: parseNumber(stintRow.shots_against),
+    goals_against: stintRow.goals_against === '' ? null : parseNumber(stintRow.goals_against),
+  });
 
   const handleSave = async () => {
     setSubmitting(true);
     try {
+      for (const goalieId of removedGoalieIds) {
+        const ok = await removeGoalieStat(goalieId);
+        if (!ok) return;
+      }
+
+      for (const stintId of removedStintIds) {
+        const ok = await removeGoalieStint(stintId);
+        if (!ok) return;
+      }
+
       for (const row of getValues('rows')) {
         for (let index = 0; index < row.stints.length; index += 1) {
           const stintRow = row.stints[index];
-          const originalStint = row.stat.stints?.[index];
-          if (!originalStint) continue;
+          const originalStint = originalStintForRow(row, stintRow);
+          if (!originalStint) {
+            const rows = await addGoalieStint(buildGoalieSwitchData(row, stintRow));
+            if (!rows) return;
+            continue;
+          }
 
           const patch: UpdateGoalieStintData = {};
           if (stintRow.entered_period !== originalStint.entered_period) {
@@ -384,7 +395,8 @@ const GoalieStatsEditModal = ({
           }
 
           if (Object.keys(patch).length > 0) {
-            await updateGoalieStint(stintRow.id, patch);
+            const rows = await updateGoalieStint(stintRow.id, patch);
+            if (!rows) return;
           }
         }
       }
@@ -394,22 +406,54 @@ const GoalieStatsEditModal = ({
     }
   };
 
-  const handleRemoveStint = async (stintId: string) => {
-    setRemoving(stintId);
-    try {
-      await removeGoalieStint(stintId);
-    } finally {
-      setRemoving(null);
+  const handleRemoveStint = (goalieIdx: number, stintId: string) => {
+    const currentRows = getValues('rows');
+    const row = currentRows[goalieIdx];
+    const stint = row?.stints.find((currentStint) => currentStint.id === stintId);
+    if (!row || !stint) return;
+
+    const nextStints = row.stints.filter((currentStint) => currentStint.id !== stintId);
+    const nextRows =
+      nextStints.length === 0 && isPendingId(row.stat.id)
+        ? currentRows.filter((_, index) => index !== goalieIdx)
+        : currentRows.map((currentRow, index) =>
+            index === goalieIdx ? { ...currentRow, stints: nextStints } : currentRow,
+          );
+
+    setValue('rows', nextRows, { shouldDirty: true, shouldValidate: true });
+    if (!isPendingId(stint.id)) {
+      setRemovedStintIds((prev) => (prev.includes(stint.id) ? prev : [...prev, stint.id]));
     }
   };
 
-  const handleRemoveGoalie = async (goalieId: string) => {
-    setRemoving(goalieId);
-    try {
-      await removeGoalieStat(goalieId);
-    } finally {
-      setRemoving(null);
+  const handleRemoveGoalie = (goalieId: string) => {
+    const currentRows = getValues('rows');
+    const row = currentRows.find((currentRow) => currentRow.rosterEntry.player_id === goalieId);
+    const removedIds = new Set(row?.stints.map((stint) => stint.id) ?? []);
+
+    setValue(
+      'rows',
+      currentRows.filter((currentRow) => currentRow.rosterEntry.player_id !== goalieId),
+      { shouldDirty: true, shouldValidate: true },
+    );
+    setRemovedStintIds((prev) => prev.filter((stintId) => !removedIds.has(stintId)));
+    if (row && !isPendingId(row.stat.id)) {
+      setRemovedGoalieIds((prev) => (prev.includes(goalieId) ? prev : [...prev, goalieId]));
     }
+  };
+
+  const buildPendingStintRow = (): StintRow => {
+    pendingStintIdRef.current += 1;
+    return {
+      id: `${PENDING_ID_PREFIX}stint-${pendingStintIdRef.current}`,
+      entered_period: PERIOD.FIRST,
+      entered_time: '',
+      exited_period: '',
+      exited_time: '',
+      shots_against: '0',
+      goals_against: '',
+      base_saves: 0,
+    };
   };
 
   const buildEmptyGoalieRow = (goalie: GameRosterEntry): GoalieEditRow => {
@@ -443,36 +487,28 @@ const GoalieStatsEditModal = ({
     };
   };
 
-  const openAddStintForGoalie = (row: GoalieEditRow) => {
-    setAddingStintFor(row.rosterEntry.player_id);
-    setValue('stintDraft', defaultStintDraft(row.rosterEntry.team_id, row.rosterEntry.player_id), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
+  const addPendingStintForGoalie = (row: GoalieEditRow) => {
+    const currentRows = getValues('rows');
+    const nextRows = currentRows.map((currentRow) =>
+      currentRow.rosterEntry.player_id === row.rosterEntry.player_id
+        ? { ...currentRow, stints: [...currentRow.stints, buildPendingStintRow()] }
+        : currentRow,
+    );
+    setValue('rows', nextRows, { shouldDirty: true, shouldValidate: true });
   };
 
   const handleAddGoalie = () => {
     const goalie = addGoalieOptions.find((entry) => entry.player_id === addDraft.goalie_id);
     if (!goalie) return;
     const currentRows = getValues('rows');
+    const newGoalieRow = buildEmptyGoalieRow(goalie);
     const nextRows = currentRows.some((row) => row.rosterEntry.player_id === goalie.player_id)
       ? currentRows
-      : [...currentRows, buildEmptyGoalieRow(goalie)].sort((a, b) =>
-          compareGoalieStats(
-            a.stat,
-            a.rosterEntry,
-            b.stat,
-            b.rosterEntry,
-            game.away_team.id,
-          ),
+      : [{ ...newGoalieRow, stints: [buildPendingStintRow()] }, ...currentRows].sort((a, b) =>
+          compareGoalieStats(a.stat, a.rosterEntry, b.stat, b.rosterEntry, game.away_team.id),
         );
     setValue('rows', nextRows, { shouldDirty: true, shouldValidate: true });
     setAdding(false);
-    setAddingStintFor(goalie.player_id);
-    setValue('stintDraft', defaultStintDraft(goalie.team_id, goalie.player_id), {
-      shouldDirty: true,
-      shouldValidate: true,
-    });
     setValue(
       'addDraft',
       { ...getValues('addDraft'), goalie_id: '' },
@@ -480,43 +516,17 @@ const GoalieStatsEditModal = ({
     );
   };
 
-  const handleAddStint = async () => {
-    if (!stintDraft.team_id || !stintDraft.goalie_id || !stintDraft.entered_period) return;
-    setSubmitting(true);
-    try {
-      const rows = await addGoalieStint({
-        team_id: stintDraft.team_id,
-        goalie_id: stintDraft.goalie_id,
-        entered_period: stintDraft.entered_period,
-        entered_time: stintDraft.entered_time || null,
-        exited_period: stintDraft.exited_period || null,
-        exited_time: stintDraft.exited_time || null,
-        shots_against: parseNumber(stintDraft.shots_against),
-        goals_against:
-          stintDraft.goals_against === '' ? null : parseNumber(stintDraft.goals_against),
-      });
-      if (rows) {
-        setAddingStintFor(null);
-        setValue('stintDraft', defaultStintDraft(), {
-          shouldDirty: true,
-          shouldValidate: true,
-        });
-      }
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const busy = submitting || !!removing;
+  const busy = submitting;
 
   return (
     <Modal
       open={open}
       title="Edit Goalie Stats"
       onClose={onClose}
+      disableBackdropClose
       confirmLabel={submitting ? 'Saving...' : 'Save'}
       onConfirm={handleSave}
-      confirmDisabled={busy || !hasChanges || !isDirty || !isValid}
+      confirmDisabled={busy || !hasChanges || !isValid}
       busy={submitting}
       size="lg"
       footerStart={
@@ -535,9 +545,7 @@ const GoalieStatsEditModal = ({
       }
     >
       <div className={styles.goalieStatsEditor}>
-        {rows.length === 0 && (
-          <p className={styles.noGoalsText}>No goalie stints recorded.</p>
-        )}
+        {rows.length === 0 && <p className={styles.noGoalsText}>No goalie stints recorded.</p>}
 
         {rows.map((row, goalieIdx) => {
           const { stat, rosterEntry: goalie } = row;
@@ -553,8 +561,9 @@ const GoalieStatsEditModal = ({
           const teamGoalieCount = rows.filter(
             ({ rosterEntry }) => rosterEntry.team_id === goalie.team_id,
           ).length;
-          const goalieHasStarterStint = row.stints.some((stint) =>
-            isStartingWindow(stint.entered_period, stint.entered_time),
+          const goalieHasStarterStint = row.stints.some(
+            (stint) =>
+              !isPendingId(stint.id) && isStartingWindow(stint.entered_period, stint.entered_time),
           );
           const canRemoveGoalie = teamGoalieCount > 1 && !goalieHasStarterStint;
 
@@ -619,7 +628,7 @@ const GoalieStatsEditModal = ({
                   icon: 'add',
                   tooltip: 'Add stint for this goalie',
                   disabled: busy,
-                  onClick: () => openAddStintForGoalie(row),
+                  onClick: () => addPendingStintForGoalie(row),
                 },
                 ...(canRemoveGoalie
                   ? [
@@ -652,107 +661,14 @@ const GoalieStatsEditModal = ({
                   <span />
                 </div>
 
-                {addingStintFor === goalie.player_id && (
-                  <div className={styles.goalieStatsEditorStint}>
-                    <div className={styles.goalieStatsEditorWindowFields}>
-                      <div className={styles.goalieStatsEditorWindowRow}>
-                        <div className={styles.goalieStatsEditorAddField}>
-                          <span>Enter</span>
-                          <Select
-                            value={stintDraft.entered_period}
-                            options={PERIOD_OPTIONS}
-                            disabled={busy}
-                            onChange={(value) => setStintDraftField('entered_period', value)}
-                          />
-                        </div>
-                        <div className={styles.goalieStatsEditorAddField}>
-                          <span>Time</span>
-                          <TimePicker
-                            value={stintDraft.entered_time}
-                            placeholder="MM:SS"
-                            mode="duration"
-                            disabled={busy}
-                            onChange={(value) => setStintDraftField('entered_time', value)}
-                          />
-                        </div>
-                      </div>
-                      <div className={styles.goalieStatsEditorWindowRow}>
-                        <div className={styles.goalieStatsEditorAddField}>
-                          <span>Exit</span>
-                          <Select
-                            value={stintDraft.exited_period}
-                            options={[{ value: '', label: 'End' }, ...PERIOD_OPTIONS]}
-                            disabled={busy}
-                            onChange={(value) => setStintDraftField('exited_period', value)}
-                          />
-                        </div>
-                        <div className={styles.goalieStatsEditorAddField}>
-                          <span>Time</span>
-                          <TimePicker
-                            value={stintDraft.exited_time}
-                            placeholder="MM:SS"
-                            mode="duration"
-                            disabled={busy || !stintDraft.exited_period}
-                            onChange={(value) => setStintDraftField('exited_time', value)}
-                          />
-                        </div>
-                      </div>
-                    </div>
-                    <label>
-                      <input
-                        className={fieldStyles.field}
-                        type="number"
-                        min={0}
-                        aria-label={`${goalieName} new stint shots against`}
-                        value={stintDraft.shots_against}
-                        disabled={busy}
-                        onChange={(e) => setStintDraftField('shots_against', e.target.value)}
-                      />
-                    </label>
-                    <label className={styles.goalieStatsEditorGaOverrideField}>
-                      <input
-                        className={fieldStyles.field}
-                        type="text"
-                        inputMode="numeric"
-                        placeholder="Auto"
-                        aria-label={`${goalieName} new stint goals against override`}
-                        value={stintDraft.goals_against}
-                        disabled={busy}
-                        onChange={(e) => setStintDraftField('goals_against', e.target.value)}
-                      />
-                    </label>
-                    <span className={styles.goalieStatsEditorValue}>{addPreviewGa}</span>
-                    <span className={styles.goalieStatsEditorValue}>{addPreviewSv}</span>
-                    <div className={styles.goalieStatsEditorAddButtons}>
-                      <Button
-                        variant="filled"
-                        intent="accent"
-                        icon="add"
-                        size="sm"
-                        tooltip="Add stint"
-                        disabled={busy}
-                        onClick={handleAddStint}
-                      />
-                      <Button
-                        variant="ghost"
-                        intent="neutral"
-                        icon="close"
-                        size="sm"
-                        tooltip="Cancel"
-                        disabled={busy}
-                        onClick={() => setAddingStintFor(null)}
-                      />
-                    </div>
-                  </div>
-                )}
-
                 {row.stints.map((stintRow, stintIdx) => {
-                  const originalStint = stat.stints?.[stintIdx];
+                  const originalStint = originalStintForRow(row, stintRow);
                   const ga = resolvedGa(stintRow, originalStint);
-                  const isStarter = isStartingWindow(
-                    stintRow.entered_period,
-                    stintRow.entered_time,
-                  );
+                  const isStarter =
+                    !!originalStint &&
+                    isStartingWindow(stintRow.entered_period, stintRow.entered_time);
+                  const canRemoveStint =
+                    isPendingId(stintRow.id) || (row.stints.length > 1 && !isStarter);
 
                   return (
                     <div
@@ -766,6 +682,7 @@ const GoalieStatsEditModal = ({
                             <Select
                               value={stintRow.entered_period}
                               options={PERIOD_OPTIONS}
+                              width="content"
                               disabled={busy || isStarter}
                               onChange={(value) =>
                                 setStintField(goalieIdx, stintIdx, 'entered_period', value)
@@ -791,6 +708,7 @@ const GoalieStatsEditModal = ({
                             <Select
                               value={stintRow.exited_period}
                               options={[{ value: '', label: 'End' }, ...PERIOD_OPTIONS]}
+                              width="content"
                               disabled={busy}
                               onChange={(value) =>
                                 setStintField(goalieIdx, stintIdx, 'exited_period', value)
@@ -842,22 +760,24 @@ const GoalieStatsEditModal = ({
                       <span className={styles.goalieStatsEditorValue}>
                         {stintSaves(stintRow, originalStint)}
                       </span>
-                      {row.stints.length > 1 && !isStarter && (
+                      {canRemoveStint && (
                         <Button
                           variant="ghost"
                           intent="danger"
                           icon="delete"
                           size="sm"
-                          tooltip="Remove this stint"
+                          tooltip={
+                            isPendingId(stintRow.id) ? 'Discard this stint' : 'Remove this stint'
+                          }
                           disabled={busy}
-                          onClick={() => handleRemoveStint(stintRow.id)}
+                          onClick={() => handleRemoveStint(goalieIdx, stintRow.id)}
                         />
                       )}
                     </div>
                   );
                 })}
 
-                {row.stints.length === 0 && addingStintFor !== goalie.player_id && (
+                {row.stints.length === 0 && (
                   <p className={styles.noGoalsText}>No stints for this goalie.</p>
                 )}
               </div>
