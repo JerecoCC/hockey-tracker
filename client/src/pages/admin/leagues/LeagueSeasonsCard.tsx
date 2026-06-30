@@ -62,7 +62,7 @@ const LeagueSeasonsCard = (props: Props) => {
                 [
                   {
                     icon: 'edit',
-                    intent: 'accent',
+                    intent: 'neutral',
                     tooltip: 'Edit',
                     disabled: busy === s.id,
                     onClick: () => onEditSeason(s),

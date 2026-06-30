@@ -277,14 +277,14 @@
     }
 
     &Neutral {
-      background: color-mix(in srgb, var(--app-border, #{$border}) 28%, transparent);
-      color: var(--app-text, #{$text-body});
-      border-color: var(--app-border, #{$border});
+      background: transparent;
+      color: var(--app-text-muted, #{$text-dim});
+      border-color: currentColor;
 
       &:hover:not(:disabled) {
-        background: var(--app-border, #{$border});
-        color: var(--app-text-strong, #{$text-bright});
-        border-color: var(--app-border, #{$border});
+        background: var(--app-hover-bg, rgba($text-light, 0.15));
+        color: var(--app-text-muted, #{$text-dim});
+        border-color: currentColor;
       }
     }
   }
