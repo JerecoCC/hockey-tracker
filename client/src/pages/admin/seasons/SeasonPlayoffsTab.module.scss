@@ -3,7 +3,14 @@
 
 // Brightened slate derived from the border colour — used for bracket connector
 // lines and the series matchup box outlines.
-$bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
+$theme-border: var(--app-border, #{$border});
+$theme-surface: var(--app-surface, #{$bg-card});
+$theme-modal-field-bg: var(--app-modal-field-bg, #{$bg-page});
+$bracket-line: color-mix(
+  in srgb,
+  var(--app-border, #{$border}) 45%,
+  var(--app-text-subtle, #{$text-light})
+);
 
 // ── Playoffs-started callout banner ──────────────────────────────────────────
 
@@ -176,9 +183,9 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     width: 100%;
     min-width: 0;
     padding: 0 $space-lg;
-    border: 1px solid rgba($text-dim, 0.2);
+    border: 1px solid var(--app-field-border, #{$border});
     border-radius: $radius-sm;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--app-field-bg, rgba(255, 255, 255, 0.03));
     color: var(--app-text-muted, #{$text-dim});
     font-size: $font-base;
     line-height: 1.4;
@@ -259,7 +266,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     min-height: 0;
     overflow: hidden;
     padding-left: $space-sm;
-    border-left: 1px solid rgba($border, 0.55);
+    border-left: 1px solid color-mix(in srgb, #{$theme-border} 55%, transparent);
   }
 
   &RulesRound {
@@ -311,7 +318,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     padding: 0 0 $space-md;
 
     &:not(:last-child) {
-      border-bottom: 1px solid rgba($border, 0.4);
+      border-bottom: 1px solid color-mix(in srgb, #{$theme-border} 40%, transparent);
     }
   }
 
@@ -412,7 +419,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     align-items: center;
     gap: $space-md;
     background: transparent;
-    border: 1px solid $border;
+    border: 1px solid $theme-border;
     border-radius: $radius-md;
     padding: $space-sm $space-md;
   }
@@ -466,7 +473,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     align-items: center;
     gap: $space-sm;
     background: transparent;
-    border: 1px solid $border;
+    border: 1px solid $theme-border;
     border-radius: $radius-md;
     padding: 6px $space-sm;
   }
@@ -517,7 +524,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     grid-template-columns: 1fr 1fr 5rem 2rem;
     gap: $space-md;
     padding: 0 0 $space-xs;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid $theme-border;
     margin-bottom: $space-xs;
   }
 
@@ -541,7 +548,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     margin-right: -#{$space-xs};
 
     &:hover {
-      scrollbar-color: $border transparent;
+      scrollbar-color: $theme-border transparent;
     }
   }
 
@@ -553,7 +560,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     padding: $space-xs 0;
 
     &:not(:last-child) {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      border-bottom: 1px solid color-mix(in srgb, #{$theme-border} 35%, transparent);
     }
   }
 
@@ -587,7 +594,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
 
   &AddRow {
     padding-top: $space-md;
-    border-top: 1px solid $border;
+    border-top: 1px solid $theme-border;
     margin-top: $space-xs;
   }
 }
@@ -602,10 +609,10 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     overflow-y: hidden;
     padding-bottom: $space-xs;
     scrollbar-width: thin;
-    scrollbar-color: $border transparent;
+    scrollbar-color: $theme-border transparent;
 
     &:hover {
-      scrollbar-color: $border transparent;
+      scrollbar-color: $theme-border transparent;
     }
   }
 
@@ -636,7 +643,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     letter-spacing: 0.07em;
     text-align: center;
     padding-bottom: $space-sm;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid $theme-border;
     margin-bottom: $space-sm;
     flex-shrink: 0;
   }
@@ -688,7 +695,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
 
   &ConnectorPath {
     fill: none;
-    stroke: $border;
+    stroke: $theme-border;
     stroke-width: 1; // match the 1px series box border
     stroke-linecap: round;
     stroke-linejoin: round;
@@ -709,8 +716,12 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
 // Empty matchup: same card structure as filled, but dashed border and TBD rows
 .slot {
   &EmptyMatchup {
-    background: color-mix(in srgb, #{$bg-card} 82%, #{$border});
-    border-color: color-mix(in srgb, #{$border} 78%, #{$text-light});
+    background: color-mix(in srgb, #{$theme-surface} 82%, #{$theme-border});
+    border-color: color-mix(
+      in srgb,
+      #{$theme-border} 78%,
+      var(--app-text-subtle, #{$text-light})
+    );
     border-style: dashed;
     cursor: pointer;
     transition:
@@ -718,7 +729,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
       border-color $transition-fast;
 
     &:hover {
-      background: color-mix(in srgb, #{$bg-card} 76%, #{$border});
+      background: color-mix(in srgb, #{$theme-surface} 76%, #{$theme-border});
       border-color: $accent;
 
       .slotTeamTbd .slotTeamName {
@@ -738,7 +749,11 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     cursor: default;
 
     .slotTeamTbd .slotTeamName {
-      color: color-mix(in srgb, #{$text-dim} 82%, #{$text-body});
+      color: color-mix(
+        in srgb,
+        var(--app-text-muted, #{$text-dim}) 82%,
+        var(--app-text, #{$text-body})
+      );
     }
   }
 
@@ -751,10 +766,10 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
 
   &Filled {
     position: relative;
-    background: $bg-card;
+    background: $theme-surface;
     // Dim card border by default; a real series upgrades to the bright
     // bracket-line border via .slotSeries below.
-    border: 1px solid $border;
+    border: 1px solid $theme-border;
     display: flex;
     flex-direction: column;
     transition:
@@ -810,12 +825,12 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
   // lift/glow + clickable. (Partial series have .slotSeries but not
   // .slotInteractive, so they keep the card background and stay static.)
   &Filled.slotInteractive {
-    background: #222d3f;
+    background: color-mix(in srgb, #{$theme-surface} 92%, #{$accent});
 
     &:hover,
     &:focus-within {
-      background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
-      border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
+      background: color-mix(in srgb, #{$theme-surface} 84%, #{$accent});
+      border-color: color-mix(in srgb, #{$accent} 62%, #{$theme-border});
       box-shadow: 0 8px 20px rgba($accent, 0.12);
       // Lift via `top` (not `transform`): a transformed ancestor becomes the
       // containing block for the action buttons' position:fixed tooltips and
@@ -858,8 +873,8 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     width: 20px;
     height: 20px;
     border-radius: $radius-sm;
-    background: color-mix(in srgb, #{$bg-card} 70%, #{$border});
-    border: 1px solid $border;
+    background: color-mix(in srgb, #{$theme-surface} 70%, #{$theme-border});
+    border: 1px solid $theme-border;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -885,7 +900,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     min-width: 28px;
     margin-left: $space-xs;
     padding-left: $space-sm;
-    border-left: 1px solid color-mix(in srgb, #{$border} 78%, transparent);
+    border-left: 1px solid color-mix(in srgb, #{$theme-border} 78%, transparent);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -924,7 +939,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     z-index: 1;
     pointer-events: none;
     height: 1px;
-    background: $border;
+    background: $theme-border;
     margin: 0 $space-sm;
   }
 }
@@ -956,7 +971,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     align-items: center;
     gap: $space-md;
     background: transparent;
-    border: 1px solid $border;
+    border: 1px solid $theme-border;
     border-radius: $radius-md;
     padding: $space-sm $space-md;
     transition:
@@ -967,8 +982,8 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
 
     &:hover,
     &:focus-within {
-      background: color-mix(in srgb, #{$bg-card} 84%, #{$accent});
-      border-color: color-mix(in srgb, #{$accent} 62%, #{$border});
+      background: color-mix(in srgb, #{$theme-surface} 84%, #{$accent});
+      border-color: color-mix(in srgb, #{$accent} 62%, #{$theme-border});
       box-shadow: 0 8px 20px rgba($accent, 0.12);
       // Lift via `top` (not `transform`) so the row action button's
       // position:fixed tooltip isn't reparented off-screen.
@@ -1070,8 +1085,8 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
 .formSelect,
 .formInput {
   height: 42px;
-  background: $bg-page;
-  border: 1px solid $border;
+  background: $theme-modal-field-bg;
+  border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-sm;
   color: var(--app-text, #{$text-body});
   font-size: $font-sm;
