@@ -79,6 +79,19 @@
   gap: $space-xl;
 }
 
+.leagueInfoValue {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+  min-width: 0;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-body;
+}
+
+.leagueInfoLogo {
+  filter: drop-shadow(0 1px 2px var(--app-logo-shadow, rgba(255, 255, 255, 0.1)));
+}
+
 // ── Groups tree ────────────────────────────────────────────────────────────────
 .groupList {
   list-style: none;

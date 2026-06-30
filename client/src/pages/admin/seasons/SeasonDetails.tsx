@@ -855,7 +855,6 @@ const SeasonDetailsPage = () => {
                   subtitle={formatDateRange(season.start_date, season.end_date, season.is_current)}
                   primaryColor="#334155"
                   textColor="#ffffff"
-                  onEdit={() => setShowEditModal(true)}
                   nameAccessory={
                     <>
                       {season.is_current && !season.playoffs_started && (
@@ -914,19 +913,47 @@ const SeasonDetailsPage = () => {
                           ]
                         : []),
                     ];
-                    return moreItems.length > 0 ? (
-                      <MoreActionsMenu
-                        variant="ghost"
-                        items={moreItems}
-                      />
-                    ) : null;
+                    return (
+                      <>
+                        <Button
+                          type="button"
+                          variant="outlined"
+                          intent="neutral"
+                          icon="edit"
+                          iconHeight="button"
+                          tooltip="Edit season"
+                          aria-label="Edit season"
+                          onClick={() => setShowEditModal(true)}
+                        />
+                        {moreItems.length > 0 && (
+                          <MoreActionsMenu
+                            variant="ghost"
+                            items={moreItems}
+                          />
+                        )}
+                      </>
+                    );
                   })()}
                 />
                 <div className={styles.infoGrid}>
                   <InfoItem
                     label="League"
-                    data={season.league_name}
-                  />
+                    type="custom"
+                  >
+                    <span className={styles.leagueInfoValue}>
+                      <TeamLogo
+                        logo={season.league_logo}
+                        code={season.league_code}
+                        alt={`${season.league_name} logo`}
+                        primaryColor="#334155"
+                        textColor="#ffffff"
+                        size={28}
+                        shape="square"
+                        className={styles.leagueInfoLogo}
+                      />
+                      <span>{season.league_name}</span>
+                    </span>
+                  </InfoItem>
                   <InfoItem
                     label="Games Per Season"
                     data={season.games_per_season != null ? String(season.games_per_season) : null}
