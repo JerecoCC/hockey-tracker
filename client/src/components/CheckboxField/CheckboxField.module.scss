@@ -1,0 +1,94 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.field {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: $space-xs;
+  box-sizing: border-box;
+  padding: $space-xs $space-lg $space-xs $space-xs;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  border: 1px solid var(--app-field-border, #{$border});
+  border-radius: $radius-md;
+  color: var(--app-text, #{$text-body});
+  cursor: pointer;
+  font: inherit;
+  outline: none;
+  text-align: left;
+  transition:
+    background $transition-fast,
+    border-color $transition-base;
+
+  &:focus-visible {
+    border-color: $accent;
+  }
+
+  &:hover:not(:disabled) {
+    background: var(--app-field-bg-hover, var(--filter-field-background, var(--app-field-bg, #{$bg-input})));
+    border-color: var(--app-field-border-hover, #{$text-dim});
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+}
+
+.checkRegion {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2rem;
+}
+
+.checkBox {
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  border: 2px solid var(--app-field-border, #{$border});
+  border-radius: $radius-sm;
+  color: #fff;
+  transition:
+    background $transition-fast,
+    border-color $transition-base;
+}
+
+.checked .checkBox {
+  background: $accent;
+  border-color: $accent;
+}
+
+.field:hover:not(:disabled) .checkBox {
+  background: var(--app-field-bg-hover, var(--filter-field-background, var(--app-field-bg, #{$bg-input})));
+  border-color: var(--app-field-border-hover, #{$text-dim});
+}
+
+.field.checked:hover:not(:disabled) .checkBox {
+  background: $accent-hover;
+  border-color: $accent-hover;
+}
+
+.divider {
+  --divider-color: var(--app-field-border, #{$border});
+}
+
+.label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--app-text, #{$text-body});
+  font-size: $font-base;
+  font-weight: 400;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: $space-xs;
+}

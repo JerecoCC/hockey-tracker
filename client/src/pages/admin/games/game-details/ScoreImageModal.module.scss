@@ -800,23 +800,6 @@
     gap: $space-md;
   }
 
-  &CheckboxRow {
-    display: inline-flex;
-    align-items: center;
-    gap: $space-sm;
-    cursor: pointer;
-    width: fit-content;
-
-    &:hover .formCheckboxLabel {
-      color: var(--app-text-strong, #{$text-bright});
-    }
-  }
-
-  &CheckboxLabel {
-    font-size: $font-base;
-    color: var(--app-text, #{$text-body});
-    user-select: none;
-  }
 }
 
 .playoff {

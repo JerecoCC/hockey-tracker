@@ -1368,17 +1368,6 @@ $league-tab-list-gap: $space-md;
     }
   }
 
-  &Checkbox {
-    display: flex;
-    align-items: center;
-    gap: $space-sm;
-    min-height: 42px;
-    color: var(--app-text, #{$text-body});
-    cursor: pointer;
-    font-size: $font-sm;
-    user-select: none;
-  }
-
   &CheckboxGrid {
     display: grid;
     grid-template-columns: 1fr 1fr;

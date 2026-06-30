@@ -4,7 +4,6 @@ import {
   type PointerEvent as ReactPointerEvent,
   useContext,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -15,7 +14,7 @@ import axios from 'axios';
 import { toPng } from 'html-to-image';
 import { toast } from 'react-toastify';
 import Button from '@/components/Button/Button';
-import Checkbox from '@/components/Checkbox/Checkbox';
+import CheckboxField from '@/components/CheckboxField/CheckboxField';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import Icon from '@/components/Icon/Icon';
 import ImagePreviewModal from '@/components/ImagePreviewModal/ImagePreviewModal';
@@ -340,7 +339,6 @@ const ScoreImageModal = ({
   const scoreCardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
-  const playoffGameLabelId = useId();
 
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
@@ -1357,22 +1355,11 @@ const ScoreImageModal = ({
                     </div>
 
                     {/* Playoff checkbox */}
-                    <div
-                      className={styles.formCheckboxRow}
-                      onClick={() => setFormIsPlayoff((value) => !value)}
-                    >
-                      <Checkbox
-                        checked={formIsPlayoff}
-                        onChange={() => setFormIsPlayoff((value) => !value)}
-                        ariaLabelledBy={playoffGameLabelId}
-                      />
-                      <span
-                        id={playoffGameLabelId}
-                        className={styles.formCheckboxLabel}
-                      >
-                        Playoff Game
-                      </span>
-                    </div>
+                    <CheckboxField
+                      checked={formIsPlayoff}
+                      label="Playoff Game"
+                      onChange={setFormIsPlayoff}
+                    />
 
                     {/* Playoff sub-section */}
                     {formIsPlayoff && (

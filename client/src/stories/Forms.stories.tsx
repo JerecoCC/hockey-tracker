@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import CheckboxField from '@/components/CheckboxField/CheckboxField';
 import DatePicker from '@/components/DatePicker/DatePicker';
 import DescriptionEditor from '@/components/DescriptionEditor/DescriptionEditor';
 import LogoUpload from '@/components/LogoUpload/LogoUpload';
@@ -107,6 +108,15 @@ export const FieldGallery = {
                   options={multiTeamOptions}
                   onChange={setValue}
                   searchable
+                />
+              )}
+            </Stateful>
+            <Stateful initial={true}>
+              {(checked, setChecked) => (
+                <CheckboxField
+                  checked={checked}
+                  label="Lock until playoffs start"
+                  onChange={setChecked}
                 />
               )}
             </Stateful>

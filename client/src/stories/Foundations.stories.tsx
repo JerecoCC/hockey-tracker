@@ -1,6 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite';
 import Button from '@/components/Button/Button';
-import Checkbox from '@/components/Checkbox/Checkbox';
 import ColorSwatch from '@/components/ColorSwatch/ColorSwatch';
 import GoogleButton from '@/components/GoogleButton/GoogleButton';
 import GroupTeamCount from '@/components/GroupTeamCount/GroupTeamCount';
@@ -105,7 +104,7 @@ export const ControlsAndStatus = {
         </StoryPanel>
       </StorySection>
 
-      <StorySection title="ToggleButton and Checkbox">
+      <StorySection title="ToggleButton">
         <StoryGrid>
           <StoryPanel>
             <Stateful initial={true}>
@@ -127,26 +126,6 @@ export const ControlsAndStatus = {
                     activeIcon="check"
                     inactiveIcon="close"
                   />
-                </div>
-              )}
-            </Stateful>
-          </StoryPanel>
-          <StoryPanel>
-            <Stateful initial={true}>
-              {(checked, setChecked) => (
-                <div className="storybook-row">
-                  <Checkbox
-                    checked={checked}
-                    onChange={() => setChecked(!checked)}
-                    ariaLabelledBy="story-checkbox-selected-label"
-                  />
-                  <span id="story-checkbox-selected-label">Selected</span>
-                  <Checkbox
-                    checked={false}
-                    disabled
-                    ariaLabelledBy="story-checkbox-disabled-label"
-                  />
-                  <span id="story-checkbox-disabled-label">Disabled</span>
                 </div>
               )}
             </Stateful>

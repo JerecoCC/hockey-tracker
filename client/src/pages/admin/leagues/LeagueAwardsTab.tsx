@@ -1,7 +1,7 @@
-import { useId, useState } from 'react';
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
-import Checkbox from '@/components/Checkbox/Checkbox';
+import CheckboxField from '@/components/CheckboxField/CheckboxField';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
@@ -106,10 +106,6 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
   const [editTarget, setEditTarget] = useState<LeagueAwardRecord | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<LeagueAwardRecord | null>(null);
   const form = useForm<FormValues>({ defaultValues: emptyValues, mode: 'onChange' });
-  const awardedAfterPlayoffsLabelId = useId();
-  const usesNomineesLabelId = useId();
-  const allowMultipleWinnersLabelId = useId();
-  const usesTeamSelectionLabelId = useId();
 
   const openCreate = () => {
     setEditTarget(null);
@@ -344,51 +340,27 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
             label="Description"
             rows={3}
           />
-          <div
-            className={styles.awardDefinitionCheckbox}
-            onClick={() => toggleBooleanField('awarded_after_playoffs')}
-          >
-            <Checkbox
-              checked={awardedAfterPlayoffs}
-              onChange={() => toggleBooleanField('awarded_after_playoffs')}
-              ariaLabelledBy={awardedAfterPlayoffsLabelId}
-            />
-            <span id={awardedAfterPlayoffsLabelId}>Lock until playoffs start</span>
-          </div>
+          <CheckboxField
+            checked={awardedAfterPlayoffs}
+            label="Lock until playoffs start"
+            onChange={() => toggleBooleanField('awarded_after_playoffs')}
+          />
           <div className={styles.awardDefinitionCheckboxGrid}>
-            <div
-              className={styles.awardDefinitionCheckbox}
-              onClick={() => toggleBooleanField('uses_nominees')}
-            >
-              <Checkbox
-                checked={usesNominees}
-                onChange={() => toggleBooleanField('uses_nominees')}
-                ariaLabelledBy={usesNomineesLabelId}
-              />
-              <span id={usesNomineesLabelId}>Uses nominees</span>
-            </div>
-            <div
-              className={styles.awardDefinitionCheckbox}
-              onClick={() => toggleBooleanField('allow_multiple_winners')}
-            >
-              <Checkbox
-                checked={allowMultipleWinners}
-                onChange={() => toggleBooleanField('allow_multiple_winners')}
-                ariaLabelledBy={allowMultipleWinnersLabelId}
-              />
-              <span id={allowMultipleWinnersLabelId}>Multiple winners</span>
-            </div>
-            <div
-              className={styles.awardDefinitionCheckbox}
-              onClick={() => toggleBooleanField('uses_team_selection')}
-            >
-              <Checkbox
-                checked={usesTeamSelection}
-                onChange={() => toggleBooleanField('uses_team_selection')}
-                ariaLabelledBy={usesTeamSelectionLabelId}
-              />
-              <span id={usesTeamSelectionLabelId}>Team selection</span>
-            </div>
+            <CheckboxField
+              checked={usesNominees}
+              label="Uses nominees"
+              onChange={() => toggleBooleanField('uses_nominees')}
+            />
+            <CheckboxField
+              checked={allowMultipleWinners}
+              label="Multiple winners"
+              onChange={() => toggleBooleanField('allow_multiple_winners')}
+            />
+            <CheckboxField
+              checked={usesTeamSelection}
+              label="Team selection"
+              onChange={() => toggleBooleanField('uses_team_selection')}
+            />
           </div>
         </form>
       </Modal>
