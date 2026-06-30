@@ -69,16 +69,26 @@ const formatWinnerFirstScore = (away: number, home: number) =>
 type CalendarDayStyle = CSSProperties & {
   '--team-calendar-day-accent'?: string;
   '--team-calendar-day-text'?: string;
+  '--team-calendar-card-text'?: string;
 };
 
 const getTeamCalendarDayStyle = (game: GameRecord, teamId: string): CalendarDayStyle => {
   const isHomeGame = game.home_team.id === teamId;
+  const homeTextColor = game.home_team.text_color || '#ffffff';
+  const dayAccent = isHomeGame
+    ? game.home_team.primary_color || '#334155'
+    : 'var(--team-calendar-away-day-accent, #ffffff)';
 
   return {
-    '--team-calendar-day-accent': isHomeGame
-      ? game.home_team.primary_color || '#334155'
-      : '#ffffff',
-    '--team-calendar-day-text': isHomeGame ? game.home_team.text_color || '#ffffff' : '#14181f',
+    '--team-calendar-day-accent': dayAccent,
+    '--team-calendar-day-text': isHomeGame
+      ? homeTextColor
+      : 'var(--team-calendar-away-day-text, #14181f)',
+    ...(isHomeGame
+      ? {
+          '--team-calendar-card-text': `var(--team-calendar-home-card-text, ${homeTextColor})`,
+        }
+      : {}),
   };
 };
 
@@ -289,6 +299,7 @@ const TeamGamesTab = ({
             ref={calendarGridRef}
             month={calendarMonth}
             loading={loading}
+            dayBodyClassName={styles.calendarDayBody}
             getDayClassName={({ dateKey }) =>
               gamesByDate.has(dateKey) ? styles.calendarDayGameCell : undefined
             }

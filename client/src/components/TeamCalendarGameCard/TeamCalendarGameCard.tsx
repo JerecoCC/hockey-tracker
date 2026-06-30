@@ -52,6 +52,7 @@ const TeamCalendarGameCard = ({
     '--calendar-primary': homePrimaryColor ?? '#334155',
     '--calendar-logo-accent':
       logoAccentColor ?? homePrimaryColor ?? opponent.primaryColor ?? '#334155',
+    '--calendar-home-text': logoAccentColor ?? '#ffffff',
   } as CSSProperties;
 
   return (

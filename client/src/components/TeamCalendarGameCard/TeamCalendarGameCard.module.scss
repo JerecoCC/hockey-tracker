@@ -16,6 +16,17 @@
   --team-calendar-transparent-away-logo-bg: rgba(255, 255, 255, 0.16);
   --team-calendar-transparent-away-logo-border: rgba(255, 255, 255, 0.22);
   --team-calendar-transparent-away-logo-shadow: 0 0 16px rgba(255, 255, 255, 0.08);
+  --team-calendar-transparent-home-logo-bg: color-mix(
+    in srgb,
+    var(--calendar-logo-accent) 22%,
+    var(--month-calendar-day-bg, var(--app-surface, #{$bg-card}))
+  );
+  --team-calendar-transparent-home-logo-border: color-mix(
+    in srgb,
+    var(--calendar-logo-accent) 38%,
+    rgba(255, 255, 255, 0.22)
+  );
+  --team-calendar-transparent-home-logo-shadow: 0 0 16px rgba(255, 255, 255, 0.08);
 
   width: 84px;
   min-height: 108px;
@@ -58,6 +69,17 @@
   );
   --team-calendar-transparent-away-logo-border: var(--app-border, #cbd5e1);
   --team-calendar-transparent-away-logo-shadow: 0 0 16px rgba(15, 23, 42, 0.08);
+  --team-calendar-transparent-home-logo-bg: color-mix(
+    in srgb,
+    var(--calendar-logo-accent) 20%,
+    var(--app-surface-muted, #f8fafc)
+  );
+  --team-calendar-transparent-home-logo-border: color-mix(
+    in srgb,
+    var(--calendar-logo-accent) 34%,
+    var(--app-border, #cbd5e1)
+  );
+  --team-calendar-transparent-home-logo-shadow: 0 0 16px rgba(15, 23, 42, 0.08);
 }
 
 .fill {
@@ -82,7 +104,7 @@
 .home {
   background: var(--calendar-primary);
   border-color: var(--calendar-primary);
-  color: #ffffff;
+  color: var(--calendar-home-text, #ffffff);
 }
 
 .transparent {
@@ -91,6 +113,17 @@
 
 .away.transparent {
   color: var(--app-text, #{$text-body});
+}
+
+.home.transparent {
+  color: var(
+    --team-calendar-card-text,
+    var(--month-calendar-day-number-color, var(--calendar-home-text, #ffffff))
+  );
+}
+
+.home.transparent .detail {
+  color: var(--calendar-home-text, currentColor);
 }
 
 .live {
@@ -152,15 +185,9 @@
 }
 
 .transparent.home .logoWrap {
-  background:
-    radial-gradient(
-      circle,
-      color-mix(in srgb, var(--calendar-logo-accent) 36%, transparent) 0 44%,
-      color-mix(in srgb, var(--calendar-logo-accent) 22%, transparent) 68%,
-      color-mix(in srgb, var(--calendar-logo-accent) 12%, transparent) 100%
-    );
-  border: 1px solid color-mix(in srgb, var(--calendar-logo-accent) 42%, transparent);
-  box-shadow: 0 0 18px color-mix(in srgb, var(--calendar-logo-accent) 18%, transparent);
+  background: var(--team-calendar-transparent-home-logo-bg);
+  border: 1px solid var(--team-calendar-transparent-home-logo-border);
+  box-shadow: var(--team-calendar-transparent-home-logo-shadow);
 }
 
 .transparent.away .logoWrap {

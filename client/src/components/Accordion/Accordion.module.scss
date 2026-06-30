@@ -45,8 +45,6 @@
   padding: $space-sm $space-md;
   background: var(--accordion-current-header-bg);
   border-bottom: 1px solid var(--accordion-border-color);
-  transition: background $transition-fast;
-
   &.rowCollapsed {
     border-bottom: none;
   }
@@ -54,8 +52,6 @@
   &WithActions {
     &:hover,
     &:focus-within {
-      --accordion-current-header-bg: color-mix(in srgb, var(--accordion-header-bg), white 6%);
-
       .hoverActions {
         opacity: 1;
         pointer-events: auto;
@@ -67,10 +63,6 @@
 // Static variant — no hover highlight since there is no toggle to interact with.
 .rowStatic {
   cursor: default;
-
-  &:hover {
-    --accordion-current-header-bg: var(--accordion-header-bg);
-  }
 }
 
 // By default a static accordion shows its actions permanently (there is no
