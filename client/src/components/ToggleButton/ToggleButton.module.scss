@@ -3,15 +3,27 @@
 
 // Applied when active=true for the original outlined button variant.
 .active {
-  background: #1e3a8a !important;
+  background: color-mix(
+    in srgb,
+    #{$accent} 30%,
+    var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+  ) !important;
+  border-color: $accent !important;
+  color: var(--app-accent-light, #{$accent-light}) !important;
+
+  &:hover:not(:disabled) {
+    background: color-mix(
+      in srgb,
+      #{$accent} 38%,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    ) !important;
+    border-color: $accent-hover !important;
+    color: var(--app-accent-light, #{$accent-light}) !important;
+  }
 }
 
 .inactive {
-  border-color: color-mix(
-    in srgb,
-    var(--app-text-muted, #{$text-dim}) 42%,
-    transparent
-  ) !important;
+  border-color: var(--app-field-border, #{$border}) !important;
   background: var(
     --filter-field-background,
     var(--app-field-bg, color-mix(in srgb, var(--app-field-border, #{$border}) 76%, #{$bg-input}))
@@ -19,16 +31,26 @@
   color: var(--app-text, #{$text-body}) !important;
 
   &:hover:not(:disabled) {
-    border-color: color-mix(
-      in srgb,
-      var(--app-text-subtle, #{$text-light}) 72%,
-      transparent
-    ) !important;
+    border-color: var(--app-field-border-hover, #{$text-dim}) !important;
     background: var(
-      --filter-field-background,
-      var(--app-field-bg-hover, color-mix(in srgb, var(--app-field-border, #{$border}) 86%, #{$bg-input}))
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
     ) !important;
     color: var(--app-text-strong, #{$text-bright}) !important;
+  }
+}
+
+:global(:root[data-theme='light']) {
+  .active {
+    background: rgba($accent, 0.1) !important;
+    border-color: $accent !important;
+    color: $accent !important;
+
+    &:hover:not(:disabled) {
+      background: rgba($accent, 0.16) !important;
+      border-color: $accent-hover !important;
+      color: $accent-hover !important;
+    }
   }
 }
 

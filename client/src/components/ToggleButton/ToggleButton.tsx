@@ -124,6 +124,7 @@ const ToggleButton = ({
       tooltip={active ? activeTooltip : inactiveTooltip}
       onClick={onClick}
       disabled={disabled}
+      aria-pressed={active}
       className={[active ? styles.active : styles.inactive, className].filter(Boolean).join(' ')}
     >
       {children}
