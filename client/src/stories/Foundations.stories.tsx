@@ -138,13 +138,15 @@ export const ControlsAndStatus = {
                   <Checkbox
                     checked={checked}
                     onChange={() => setChecked(!checked)}
-                    ariaLabel="Story checkbox"
+                    ariaLabelledBy="story-checkbox-selected-label"
                   />
+                  <span id="story-checkbox-selected-label">Selected</span>
                   <Checkbox
                     checked={false}
                     disabled
-                    ariaLabel="Disabled checkbox"
+                    ariaLabelledBy="story-checkbox-disabled-label"
                   />
+                  <span id="story-checkbox-disabled-label">Disabled</span>
                 </div>
               )}
             </Stateful>

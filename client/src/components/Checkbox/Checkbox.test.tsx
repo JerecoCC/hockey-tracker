@@ -1,14 +1,21 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import { type ComponentProps } from 'react';
 import Checkbox from './Checkbox';
 
 describe('Checkbox', () => {
-  it('renders a checked checkbox state', () => {
+  const renderCheckbox = (props: Omit<ComponentProps<typeof Checkbox>, 'ariaLabelledBy'>) =>
     render(
-      <Checkbox
-        checked
-        ariaLabel="Selected"
-      />,
+      <>
+        <span id="selected-checkbox-label">Selected</span>
+        <Checkbox
+          {...props}
+          ariaLabelledBy="selected-checkbox-label"
+        />
+      </>,
     );
+
+  it('renders a checked checkbox state', () => {
+    renderCheckbox({ checked: true });
 
     expect(screen.getByRole('checkbox', { name: 'Selected' })).toHaveAttribute(
       'aria-checked',
@@ -18,13 +25,10 @@ describe('Checkbox', () => {
 
   it('calls onChange when clicked', () => {
     const handleChange = jest.fn();
-    render(
-      <Checkbox
-        checked={false}
-        onChange={handleChange}
-        ariaLabel="Selected"
-      />,
-    );
+    renderCheckbox({
+      checked: false,
+      onChange: handleChange,
+    });
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Selected' }));
     expect(handleChange).toHaveBeenCalledTimes(1);
@@ -32,13 +36,10 @@ describe('Checkbox', () => {
 
   it('calls onChange from keyboard activation', () => {
     const handleChange = jest.fn();
-    render(
-      <Checkbox
-        checked={false}
-        onChange={handleChange}
-        ariaLabel="Selected"
-      />,
-    );
+    renderCheckbox({
+      checked: false,
+      onChange: handleChange,
+    });
 
     const checkbox = screen.getByRole('checkbox', { name: 'Selected' });
     fireEvent.keyDown(checkbox, { key: ' ' });
@@ -49,14 +50,11 @@ describe('Checkbox', () => {
 
   it('does not toggle when disabled', () => {
     const handleChange = jest.fn();
-    render(
-      <Checkbox
-        checked={false}
-        onChange={handleChange}
-        disabled
-        ariaLabel="Selected"
-      />,
-    );
+    renderCheckbox({
+      checked: false,
+      onChange: handleChange,
+      disabled: true,
+    });
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Selected' }));
     expect(handleChange).not.toHaveBeenCalled();

@@ -4,6 +4,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   useContext,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -339,6 +340,7 @@ const ScoreImageModal = ({
   const scoreCardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+  const playoffGameLabelId = useId();
 
   const [heroFile, setHeroFile] = useState<File | null>(null);
   const [heroPreviewUrl, setHeroPreviewUrl] = useState<string | null>(null);
@@ -1362,8 +1364,14 @@ const ScoreImageModal = ({
                       <Checkbox
                         checked={formIsPlayoff}
                         onChange={() => setFormIsPlayoff((value) => !value)}
+                        ariaLabelledBy={playoffGameLabelId}
                       />
-                      <span className={styles.formCheckboxLabel}>Playoff Game</span>
+                      <span
+                        id={playoffGameLabelId}
+                        className={styles.formCheckboxLabel}
+                      >
+                        Playoff Game
+                      </span>
                     </div>
 
                     {/* Playoff sub-section */}

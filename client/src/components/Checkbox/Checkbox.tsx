@@ -7,8 +7,7 @@ interface CheckboxProps {
   onChange?: () => void;
   className?: string;
   disabled?: boolean;
-  ariaLabel?: string;
-  ariaLabelledBy?: string;
+  ariaLabelledBy: string;
 }
 
 const Checkbox = ({
@@ -16,7 +15,6 @@ const Checkbox = ({
   onChange,
   className,
   disabled = false,
-  ariaLabel,
   ariaLabelledBy,
 }: CheckboxProps) => (
   <span
@@ -26,7 +24,6 @@ const Checkbox = ({
     role="checkbox"
     aria-checked={checked}
     aria-disabled={disabled}
-    aria-label={ariaLabel}
     aria-labelledby={ariaLabelledBy}
     tabIndex={disabled ? undefined : 0}
     onClick={(e) => {
@@ -42,7 +39,7 @@ const Checkbox = ({
       onChange?.();
     }}
   >
-    {checked && <Icon name="check" size="0.875rem" />}
+    {checked && <Icon name="check" size="0.75rem" />}
   </span>
 );
 

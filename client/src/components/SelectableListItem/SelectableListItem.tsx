@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import ActionOverlay from '../ActionOverlay/ActionOverlay';
 import Button, { type ButtonIntent } from '../Button/Button';
 import Checkbox from '../Checkbox/Checkbox';
@@ -88,6 +88,7 @@ const SelectableListItem = ({
   disabled = false,
 }: SelectableListItemProps) => {
   const visibleActions = actions?.filter((a): a is SelectableListItemAction => Boolean(a)) ?? [];
+  const labelId = useId();
 
   return (
     <li
@@ -101,6 +102,7 @@ const SelectableListItem = ({
         checked={checked}
         onChange={onToggle}
         disabled={disabled}
+        ariaLabelledBy={labelId}
       />
 
       {(leadingImage || leadingImagePlaceholder) &&
@@ -192,7 +194,12 @@ const SelectableListItem = ({
 
       <div className={styles.info}>
         {eyebrow && <span className={styles.eyebrow}>{eyebrow}</span>}
-        <div className={styles.name}>{name}</div>
+        <div
+          id={labelId}
+          className={styles.name}
+        >
+          {name}
+        </div>
         {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
       </div>
 

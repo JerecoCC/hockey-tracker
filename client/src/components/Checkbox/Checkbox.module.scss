@@ -5,23 +5,45 @@
   width: 22px;
   height: 22px;
   flex-shrink: 0;
-  border: 2px solid $border;
-  border-radius: $radius-sm;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
+  border: 2px solid var(--app-field-border, #{$border});
+  border-radius: $radius-sm;
   color: #fff;
+  cursor: pointer;
+  outline: none;
   transition:
     background $transition-fast,
-    border-color $transition-fast;
+    border-color $transition-base,
+    box-shadow $transition-fast;
 
   &:focus-visible {
-    outline: 2px solid $accent-light;
-    outline-offset: 2px;
+    border-color: $accent;
+    box-shadow: 0 0 0 2px color-mix(in srgb, #{$accent} 25%, transparent);
+  }
+
+  &:hover:not([aria-disabled="true"]) {
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
+    border-color: var(--app-field-border-hover, #{$text-dim});
+  }
+
+  &[aria-disabled="true"] {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 
   &.checked {
     background: $accent;
     border-color: $accent;
+
+    &:hover:not([aria-disabled="true"]) {
+      background: $accent-hover;
+      border-color: $accent-hover;
+    }
   }
 }
