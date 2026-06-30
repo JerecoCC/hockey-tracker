@@ -914,24 +914,31 @@ $league-tab-list-gap: $space-md;
   }
 
   &StructureSegmented {
+    --divider-vertical-margin-block: 0.375rem;
+
     > button,
-    > span {
+    > span:not([aria-hidden='true']) {
       flex: 1;
       min-width: 0;
       height: 100%;
     }
 
-    > span {
+    > span:not([aria-hidden='true']) {
       display: flex;
     }
 
     > button,
-    > span > button {
+    > span:not([aria-hidden='true']) > button {
       min-height: 0;
       height: 100%;
       width: 100%;
       padding-top: 0;
       padding-bottom: 0;
+    }
+
+    > span[aria-hidden='true'] {
+      flex: 0 0 auto;
+      height: auto;
     }
   }
 
