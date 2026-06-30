@@ -7,7 +7,7 @@
 }
 
 // ── Table ──────────────────────────────────────────────────────────────
-table {
+.tableWrapper table {
   width: 100%;
   border-collapse: collapse;
   font-size: $font-base;
@@ -19,7 +19,7 @@ table {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid var(--divider-color, var(--app-border, #{$border}));
   }
 
   tbody {
@@ -147,5 +147,17 @@ table {
     text-transform: uppercase;
     cursor: auto;
     user-select: none;
+  }
+}
+
+:global(:root[data-theme='light']) {
+  .tableWrapper {
+    table {
+      tbody {
+        tr {
+          border-bottom: none;
+        }
+      }
+    }
   }
 }

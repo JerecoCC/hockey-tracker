@@ -73,7 +73,7 @@ $_active-period-color: color.mix($accent, $bg-card, 50%);
     align-items: center;
     gap: $space-sm;
     padding: $space-sm $space-md;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid var(--app-border, #{$border});
 
     &:last-child {
       border-bottom: none;

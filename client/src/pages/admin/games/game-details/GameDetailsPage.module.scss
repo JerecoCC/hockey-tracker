@@ -392,6 +392,10 @@
   width: 100%;
   border-collapse: collapse;
   font-size: $font-sm;
+
+  thead th {
+    border-bottom: 1px solid var(--divider-color, var(--app-border, #{$border}));
+  }
 }
 
 .thTeam,
@@ -464,7 +468,7 @@
 }
 
 .trShots:first-of-type td {
-  border-top: 1px solid $border;
+  border-top: 1px solid var(--app-border, #{$border});
   padding-top: $space-sm;
 }
 
