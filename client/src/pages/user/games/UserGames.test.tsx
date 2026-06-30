@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import axios from 'axios';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-toastify';
 import calendarItemStyles from '@/components/CalendarGameListItem/CalendarGameListItem.module.scss';
 import gameCardStyles from '@/components/GameCard/GameCard.module.scss';
 import scheduleLayoutStyles from '@/components/ScheduleGamesLayout/ScheduleGamesLayout.module.scss';
@@ -25,6 +26,12 @@ jest.mock('react-router-dom', () => ({
 }));
 jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
+jest.mock('react-toastify', () => ({
+  toast: {
+    success: jest.fn(),
+    error: jest.fn(),
+  },
+}));
 jest.mock(
   '@/components/Modal/Modal',
   () =>
@@ -1022,6 +1029,7 @@ describe('UserGames schedule views', () => {
         scheduled_for: targetDate,
       }),
     );
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for May 18, 2026');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -1068,6 +1076,7 @@ describe('UserGames schedule views', () => {
         scheduled_for: null,
       }),
     );
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM watch schedule cleared');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -1095,6 +1104,7 @@ describe('UserGames schedule views', () => {
         scheduled_for: scheduledWatchDate,
       }),
     );
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM marked as watched');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -1118,6 +1128,7 @@ describe('UserGames schedule views', () => {
 
     const updater = mockSetQueriesData.mock.calls.at(-1)?.[1];
     expect(updater(games)).toEqual([games[1]]);
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM skipped');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -1146,6 +1157,7 @@ describe('UserGames schedule views', () => {
         skipped_by_user: false,
       }),
     );
+    expect(toast.success).toHaveBeenCalledWith('SKP @ HOM restored');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -1173,6 +1185,7 @@ describe('UserGames schedule views', () => {
         scheduled_for: null,
       }),
     );
+    expect(toast.success).toHaveBeenCalledWith('OPP @ HOM marked as unwatched');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 
@@ -1199,6 +1212,7 @@ describe('UserGames schedule views', () => {
       { queryKey: ['user-games'] },
       expect.any(Function),
     );
+    expect(toast.success).toHaveBeenCalledWith('AWY @ HOM scheduled for May 18, 2026');
     expect(mockInvalidateQueries).not.toHaveBeenCalled();
   });
 

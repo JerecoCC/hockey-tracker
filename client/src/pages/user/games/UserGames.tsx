@@ -386,6 +386,16 @@ const getScoreCardGame = (game: GameRecord): GameRecord => ({
   series_away_wins: game.series_away_wins_at_game ?? null,
 });
 
+const SCHEDULE_TOAST_DATE_FMT = new Intl.DateTimeFormat('en-US', {
+  month: 'short',
+  day: 'numeric',
+  year: 'numeric',
+});
+
+const getGameActionLabel = (game: GameRecord) => `${game.away_team.code} @ ${game.home_team.code}`;
+const formatScheduleToastDate = (dateKey: string) =>
+  SCHEDULE_TOAST_DATE_FMT.format(dateKeyToDate(dateKey));
+
 // ── Playoff series markers ───────────────────────────────────────────────────
 
 const PlayoffSeriesDots = ({ wins, total }: { wins: number; total: number }) => (
@@ -995,6 +1005,11 @@ const UserGames = () => {
           );
         },
       );
+      toast.success(
+        scheduledFor
+          ? `${getGameActionLabel(game)} scheduled for ${formatScheduleToastDate(scheduledFor)}`
+          : `${getGameActionLabel(game)} watch schedule cleared`,
+      );
       return true;
     } catch {
       toast.error('Failed to save watch schedule');
@@ -1004,7 +1019,8 @@ const UserGames = () => {
     }
   };
 
-  const markGameWatched = async (gameId: string) => {
+  const markGameWatched = async (game: GameRecord) => {
+    const gameId = game.id;
     if (actionGameId === gameId) return;
     setActionGameId(gameId);
     try {
@@ -1025,6 +1041,7 @@ const UserGames = () => {
           );
         },
       );
+      toast.success(`${getGameActionLabel(game)} marked as watched`);
     } catch {
       toast.error('Failed to mark game as watched');
     } finally {
@@ -1032,7 +1049,8 @@ const UserGames = () => {
     }
   };
 
-  const skipGame = async (gameId: string) => {
+  const skipGame = async (game: GameRecord) => {
+    const gameId = game.id;
     if (actionGameId === gameId) return;
     setActionGameId(gameId);
     try {
@@ -1056,6 +1074,7 @@ const UserGames = () => {
             : existing.filter((game) => game.id !== gameId);
         },
       );
+      toast.success(`${getGameActionLabel(game)} skipped`);
     } catch {
       toast.error('Failed to skip game');
     } finally {
@@ -1063,7 +1082,8 @@ const UserGames = () => {
     }
   };
 
-  const unwatchGame = async (gameId: string) => {
+  const unwatchGame = async (game: GameRecord, action: 'unwatch' | 'undo-skip') => {
+    const gameId = game.id;
     if (actionGameId === gameId) return;
     setActionGameId(gameId);
     try {
@@ -1084,8 +1104,13 @@ const UserGames = () => {
           );
         },
       );
+      toast.success(
+        action === 'undo-skip'
+          ? `${getGameActionLabel(game)} restored`
+          : `${getGameActionLabel(game)} marked as unwatched`,
+      );
     } catch {
-      toast.error('Failed to unwatch game');
+      toast.error(action === 'undo-skip' ? 'Failed to undo skip' : 'Failed to unwatch game');
     } finally {
       setActionGameId(null);
     }
@@ -1186,11 +1211,11 @@ const UserGames = () => {
             busy={busy}
             onView={() => openGame(game)}
             onDownloadScoreCard={() => openScoreCardModal(game)}
-            onMarkWatched={() => markGameWatched(game.id)}
-            onUnwatch={() => unwatchGame(game.id)}
-            onUndoSkip={() => unwatchGame(game.id)}
+            onMarkWatched={() => markGameWatched(game)}
+            onUnwatch={() => unwatchGame(game, 'unwatch')}
+            onUndoSkip={() => unwatchGame(game, 'undo-skip')}
             onSchedule={() => openScheduleModal(game)}
-            onSkip={() => skipGame(game.id)}
+            onSkip={() => skipGame(game)}
           />
         }
       />
@@ -1370,10 +1395,12 @@ const UserGames = () => {
                         tzPref={tzPref}
                         onOpen={() => openGame(game)}
                         onDownloadScoreCard={() => openScoreCardModal(game)}
-                        onMarkWatched={() => markGameWatched(game.id)}
-                        onUnwatch={() => unwatchGame(game.id)}
+                        onMarkWatched={() => markGameWatched(game)}
+                        onUnwatch={() =>
+                          unwatchGame(game, game.skipped_by_user ? 'undo-skip' : 'unwatch')
+                        }
                         onSchedule={() => openScheduleModal(game)}
-                        onSkip={() => skipGame(game.id)}
+                        onSkip={() => skipGame(game)}
                         onDragStart={handleCalendarDragStart(game)}
                         onDragEnd={handleCalendarDragEnd}
                         draggable={
