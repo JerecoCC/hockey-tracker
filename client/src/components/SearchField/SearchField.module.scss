@@ -82,24 +82,20 @@
 }
 
 .clear {
-  flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 24px;
-  height: 24px;
+  flex: 0 0 auto;
   border: 0;
-  border-radius: $radius-sm;
   padding: 0;
   background: transparent;
   color: var(--app-text-muted, #{$text-dim});
+  line-height: 1;
   cursor: pointer;
-  transition:
-    background $transition-fast,
-    color $transition-fast;
+  margin-right: calc((2rem - 0.75rem) / 2);
+  transition: color $transition-fast;
 
   &:hover {
     color: var(--app-text, #{$text-body});
-    background: var(--app-hover-bg, rgba(255, 255, 255, 0.08));
   }
 }

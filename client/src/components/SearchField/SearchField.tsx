@@ -88,7 +88,7 @@ const SearchField = forwardRef<HTMLInputElement, Props>(
           >
             <Icon
               name="close"
-              size="0.8em"
+              size="0.75rem"
             />
           </button>
         )}
