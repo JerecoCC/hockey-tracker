@@ -624,7 +624,13 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(screen.getByText('Uses groups?')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create group/i })).toBeInTheDocument();
     expect(container.querySelector('.alignmentEditNameRow')).toBeInTheDocument();
-    expect(container.querySelector('.alignmentEditControlsRow')).toBeInTheDocument();
+    const controlsRow = container.querySelector('.alignmentEditControlsRow');
+    const structureField = controlsRow?.querySelector('.alignmentStructureField');
+    expect(controlsRow).toBeInTheDocument();
+    expect(structureField).toBeInTheDocument();
+    expect(structureField?.querySelector('.segmentedControl.field')).toBeInTheDocument();
+    expect(structureField?.querySelector('.alignmentBooleanField')).not.toBeInTheDocument();
+    expect(structureField?.querySelector('.alignmentStructureSegmented')).not.toBeInTheDocument();
     expect(container.querySelector('.alignmentCardExpanded')).not.toBeInTheDocument();
     expect(container.querySelector('.modalXl')).not.toBeInTheDocument();
     await waitFor(() => expect(fetchAlignmentSet).toHaveBeenCalledWith('align-1'));
@@ -666,11 +672,17 @@ describe('LeagueDetailsPage – tabs', () => {
       ).toBeEnabled(),
     );
     expect(screen.getByRole('button', { name: /create group/i })).toBeInTheDocument();
+    const controlsRow = container.querySelector('.alignmentEditControlsRow');
+    const structureField = controlsRow?.querySelector('.alignmentStructureField');
+    expect(controlsRow).toBeInTheDocument();
+    expect(structureField).toBeInTheDocument();
+    expect(structureField?.querySelector('.segmentedControl.field')).toBeInTheDocument();
+    expect(structureField?.querySelector('.alignmentBooleanField')).not.toBeInTheDocument();
+    expect(structureField?.querySelector('.alignmentStructureSegmented')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /create group/i }));
     expect(await screen.findByRole('heading', { name: 'Create Group' })).toBeInTheDocument();
     expect(container.querySelector('.alignmentEditRow')).toBeInTheDocument();
     expect(container.querySelector('.alignmentEditNameRow')).toBeInTheDocument();
-    expect(container.querySelector('.alignmentEditControlsRow')).toBeInTheDocument();
     expect(container.querySelector('.modalXl')).not.toBeInTheDocument();
   });
 

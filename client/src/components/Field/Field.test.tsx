@@ -46,6 +46,19 @@ const TextField = () => {
   );
 };
 
+const WrappedTextField = () => {
+  const { control } = useForm({ defaultValues: { username: '' } });
+  return (
+    <Field
+      label="Username"
+      name="username"
+      type="text"
+      control={control}
+      wrapperClassName="customWrapper"
+    />
+  );
+};
+
 describe('Field – password type', () => {
   it('renders the input with type="password" initially', () => {
     render(<PasswordField />);
@@ -143,5 +156,13 @@ describe('Field – non-password types', () => {
     fireEvent.click(screen.getByText('Username'));
 
     expect(input).not.toHaveFocus();
+  });
+
+  it('applies wrapperClassName to the field wrapper only', () => {
+    render(<WrappedTextField />);
+
+    const input = screen.getByLabelText('Username');
+    expect(input.parentElement).toHaveClass('customWrapper');
+    expect(input).not.toHaveAttribute('wrapperClassName');
   });
 });

@@ -20,6 +20,7 @@ import styles from './Field.module.scss';
 type BaseProps = {
   label?: string;
   required?: boolean;
+  wrapperClassName?: string;
   // typed as unknown so any Control<TFieldValues> can be passed without variance errors
   control: unknown;
   name: string;
@@ -87,7 +88,7 @@ export type FieldProps =
   | ColorProps;
 
 const Field = (props: FieldProps) => {
-  const { label, required, control, name, rules } = props;
+  const { label, required, control, name, rules, wrapperClassName } = props;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const ctrl = control as Control<any>;
   const [showPassword, setShowPassword] = useState(false);
@@ -115,6 +116,7 @@ const Field = (props: FieldProps) => {
               name: _n,
               rules: _ru,
               type: _t,
+              wrapperClassName: _w,
               transform,
               className,
               ...rest
@@ -234,6 +236,7 @@ const Field = (props: FieldProps) => {
               name: _n,
               rules: _ru,
               type: _t,
+              wrapperClassName: _w,
               transform,
               suffix,
               className,
@@ -309,7 +312,7 @@ const Field = (props: FieldProps) => {
         };
 
         return (
-          <div className={styles.label}>
+          <div className={cn(styles.label, wrapperClassName)}>
             {label && (
               <span
                 id={labelId}

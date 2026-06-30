@@ -183,21 +183,19 @@ const AlignmentStructureField = ({
       control={control}
       name="structure_type"
       required={required}
+      wrapperClassName={styles.alignmentStructureField}
       rules={required ? { required: 'Choose whether this alignment uses groups' } : undefined}
     >
-      <div className={styles.alignmentBooleanField}>
-        <SegmentedControl
-          className={styles.alignmentStructureSegmented}
-          variant="field"
-          value={value}
-          options={[
-            { value: 'groups', label: 'Yes', tooltip: 'Organize teams into groups' },
-            { value: 'league', label: 'No', tooltip: 'Use one league-wide team list' },
-          ]}
-          disabled={disabled}
-          onChange={(next) => onChange(next as GroupAlignmentStructureType)}
-        />
-      </div>
+      <SegmentedControl
+        variant="field"
+        value={value}
+        options={[
+          { value: 'groups', label: 'Yes', tooltip: 'Organize teams into groups' },
+          { value: 'league', label: 'No', tooltip: 'Use one league-wide team list' },
+        ]}
+        disabled={disabled}
+        onChange={(next) => onChange(next as GroupAlignmentStructureType)}
+      />
     </Field>
   );
 };
