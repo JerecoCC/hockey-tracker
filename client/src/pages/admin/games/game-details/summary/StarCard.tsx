@@ -1,10 +1,6 @@
-import { Link } from 'react-router-dom';
 import Icon from '@/components/Icon/Icon';
-import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
-import TeamLogo from '@/components/TeamLogo/TeamLogo';
-import Tooltip from '@/components/Tooltip/Tooltip';
+import PlayerCard from '@/components/PlayerCard/PlayerCard';
 import type { GameRosterEntry } from '@/hooks/useGameRoster';
-import { formatPlayerPosition } from '@/lib/playerPosition';
 import styles from './ThreeStarsCard.module.scss';
 import { playerDataComplete } from '../gameUtils';
 
@@ -26,6 +22,32 @@ interface Props {
   showPlayerDataStatus?: boolean;
 }
 
+interface StarStat {
+  label: string;
+  value: number | string;
+}
+
+const formatSavePct = (saves: number | null | undefined, shotsAgainst: number | null | undefined) =>
+  saves != null && shotsAgainst != null && shotsAgainst > 0
+    ? (saves / shotsAgainst).toFixed(3).replace(/^0/, '')
+    : '—';
+
+const StarStats = ({ stats }: { stats: StarStat[] }) => (
+  <div className={styles.starStatsGrid}>
+    {stats.map((stat) => (
+      <span
+        key={stat.label}
+        className={styles.starStatCell}
+      >
+        <span className={styles.starStatLabel}>{stat.label}</span>
+        <span className={stat.value === '—' ? styles.starStatMuted : styles.starStatValue}>
+          {stat.value}
+        </span>
+      </span>
+    ))}
+  </div>
+);
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const StarCard = ({
@@ -38,83 +60,65 @@ const StarCard = ({
   teamLogo,
   teamLogoDark,
   teamLogoLight,
-  teamName,
   stats,
   goalieStatRecord,
   showPlayerDataStatus = false,
 }: Props) => {
   const nameLabel = `${player.first_name} ${player.last_name}`;
-  const subLabel = [
-    player.jersey_number != null ? `#${player.jersey_number}` : null,
-    formatPlayerPosition(player.position),
-  ]
-    .filter(Boolean)
-    .join(' • ');
+  const initials = `${player.first_name[0]}${player.last_name[0]}`;
+  const starIcons = (
+    <span className={styles.starIcons}>
+      {Array.from({ length: starCount }).map((_, i) => (
+        <Icon
+          key={i}
+          name="stars"
+        />
+      ))}
+    </span>
+  );
+  const statItems =
+    player.position === 'G'
+      ? [
+          { label: 'SA', value: goalieStatRecord?.shots_against ?? '—' },
+          { label: 'SV', value: goalieStatRecord?.saves ?? '—' },
+          {
+            label: 'SV%',
+            value: formatSavePct(goalieStatRecord?.saves, goalieStatRecord?.shots_against),
+          },
+        ]
+      : [
+          { label: 'G', value: stats.goals },
+          { label: 'A', value: stats.assists },
+          { label: 'P', value: stats.goals + stats.assists },
+        ];
 
   return (
     <div className={styles.starItem}>
-      <PlayerAvatar
+      <PlayerCard
+        compact
+        className={styles.starPlayerCard}
+        topContent={starIcons}
+        name={nameLabel}
+        nameSuffix={playerDataComplete(
+          player.date_of_birth,
+          player.start_date,
+          player.acquisition_type,
+          showPlayerDataStatus,
+        )}
         photo={player.photo}
-        initials={`${player.first_name[0]}${player.last_name[0]}`}
-        primaryColor={primaryColor}
-        textColor={textColor}
-        ringColor={primaryColor}
-        size={80}
+        initials={initials}
+        href={playerHref}
+        teamLogo={teamLogo}
+        teamLogoDark={teamLogoDark}
+        teamLogoLight={teamLogoLight}
+        teamCode={teamCode}
+        teamPrimaryColor={primaryColor}
+        teamTextColor={textColor}
+        jerseyNumber={player.jersey_number}
+        position={player.position}
+        imageSize={72}
+        footer={<StarStats stats={statItems} />}
       />
-      <span className={styles.starIcons}>
-        {Array.from({ length: starCount }).map((_, i) => (
-          <Icon
-            key={i}
-            name="stars"
-          />
-        ))}
-      </span>
-
-      {playerHref ? (
-        <Link
-          to={playerHref}
-          className={`${styles.starName} ${styles.playerLink}`}
-        >
-          {nameLabel}
-          {playerDataComplete(
-            player.date_of_birth,
-            player.start_date,
-            player.acquisition_type,
-            showPlayerDataStatus,
-          )}
-        </Link>
-      ) : (
-        <span className={styles.starName}>{nameLabel}</span>
-      )}
-
-      <span className={styles.starTeam}>
-        <Tooltip text={teamName ?? teamCode}>
-          <TeamLogo
-            logo={teamLogo}
-            logoDark={teamLogoDark}
-            logoLight={teamLogoLight}
-            code={teamCode}
-            primaryColor={primaryColor}
-            textColor={textColor}
-            size={20}
-          />
-        </Tooltip>
-        {' • '}
-        {subLabel && <span>{subLabel}</span>}
-      </span>
-
-      {player.position === 'G' ? (
-        goalieStatRecord ? (
-          <span className={styles.starStats}>
-            SA: {goalieStatRecord.shots_against} | SV: {goalieStatRecord.saves} | SV%:{' '}
-            {(goalieStatRecord.saves / goalieStatRecord.shots_against).toFixed(3).replace(/^0/, '')}
-          </span>
-        ) : null
-      ) : (
-        <span className={styles.starStats}>
-          G: {stats.goals} | A: {stats.assists} | P: {stats.goals + stats.assists}
-        </span>
-      )}
     </div>
   );
 };

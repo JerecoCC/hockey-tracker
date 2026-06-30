@@ -86,4 +86,20 @@ describe('PlayerCard', () => {
     );
     expect(screen.getByText('Champion')).toBeInTheDocument();
   });
+
+  it('renders top content above the centered player content with a divider', () => {
+    const { container } = render(
+      <PlayerCard
+        name="John Smith"
+        initials="JS"
+        topContent={<span>First Star</span>}
+        footer={<span>3 PTS</span>}
+      />,
+    );
+
+    expect(screen.getByText('First Star')).toBeInTheDocument();
+    expect(screen.getByText('3 PTS')).toBeInTheDocument();
+    expect(container.querySelector('.topContent .divider.horizontal')).toBeInTheDocument();
+    expect(container.querySelector('.content .profile')).toBeInTheDocument();
+  });
 });

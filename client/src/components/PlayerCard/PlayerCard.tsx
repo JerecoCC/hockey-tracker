@@ -1,4 +1,6 @@
 import { Link } from 'react-router-dom';
+import type { ReactElement, ReactNode } from 'react';
+import Divider from '@/components/Divider/Divider';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
 import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import { formatPlayerPosition, PLAYER_POSITION_LABELS } from '@/lib/playerPosition';
@@ -20,12 +22,14 @@ interface Props {
   teamTextColor?: string | null;
   jerseyNumber?: number | null;
   position?: string | null;
-  subtitle?: React.ReactNode;
+  topContent?: ReactNode;
+  nameSuffix?: ReactNode;
+  subtitle?: ReactNode;
   imageSize?: number;
   compact?: boolean;
   href?: string;
   onClick?: () => void;
-  footer?: React.ReactNode;
+  footer?: ReactNode;
   className?: string;
   as?: 'div' | 'li';
 }
@@ -49,6 +53,8 @@ const PlayerCard = ({
   teamTextColor,
   jerseyNumber,
   position,
+  topContent,
+  nameSuffix,
   subtitle,
   imageSize,
   compact = false,
@@ -80,7 +86,7 @@ const PlayerCard = ({
     ) : null,
     jerseyNumber != null ? <span>#{jerseyNumber}</span> : null,
     positionLabel ? <span>{positionLabel}</span> : null,
-  ].filter((item): item is React.ReactElement => Boolean(item));
+  ].filter((item): item is ReactElement => Boolean(item));
   const renderedSubtitle =
     subtitle ??
     (metaItems.length > 0 ? (
@@ -123,38 +129,52 @@ const PlayerCard = ({
         />
       )}
 
-      <div className={styles.imageWrap}>
-        {isTeam ? (
-          <TeamLogo
-            logo={teamLogo}
-            logoDark={teamLogoDark}
-            logoLight={teamLogoLight}
-            code={teamCode ?? 'T'}
-            primaryColor={teamPrimaryColor}
-            textColor={teamTextColor}
-            size={resolvedImageSize}
-            className={styles.teamLogo}
-          />
-        ) : (
-          <PlayerAvatar
-            photo={photo}
-            initials={initials ?? fallbackInitials(name)}
-            primaryColor={teamPrimaryColor}
-            textColor={teamTextColor}
-            ringColor={teamPrimaryColor}
-            ringWidth={isList ? 2 : 3}
-            ringContrast
-            size={resolvedImageSize}
-          />
-        )}
-      </div>
+      {topContent && (
+        <div className={styles.topContent}>
+          {topContent}
+          <Divider className={styles.topDivider} />
+        </div>
+      )}
 
-      <div className={styles.info}>
-        <strong>{name}</strong>
-        {renderedSubtitle && <span className={styles.subtitle}>{renderedSubtitle}</span>}
-      </div>
+      <div className={styles.content}>
+        <div className={styles.profile}>
+          <div className={styles.imageWrap}>
+            {isTeam ? (
+              <TeamLogo
+                logo={teamLogo}
+                logoDark={teamLogoDark}
+                logoLight={teamLogoLight}
+                code={teamCode ?? 'T'}
+                primaryColor={teamPrimaryColor}
+                textColor={teamTextColor}
+                size={resolvedImageSize}
+                className={styles.teamLogo}
+              />
+            ) : (
+              <PlayerAvatar
+                photo={photo}
+                initials={initials ?? fallbackInitials(name)}
+                primaryColor={teamPrimaryColor}
+                textColor={teamTextColor}
+                ringColor={teamPrimaryColor}
+                ringWidth={isList ? 2 : 3}
+                ringContrast
+                size={resolvedImageSize}
+              />
+            )}
+          </div>
 
-      {footer}
+          <div className={styles.info}>
+            <strong>
+              {name}
+              {nameSuffix && <span className={styles.nameSuffix}>{nameSuffix}</span>}
+            </strong>
+            {renderedSubtitle && <span className={styles.subtitle}>{renderedSubtitle}</span>}
+          </div>
+        </div>
+
+        {footer}
+      </div>
     </>
   );
 
