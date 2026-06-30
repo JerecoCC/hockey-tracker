@@ -940,19 +940,7 @@ const SeasonDetailsPage = () => {
                     label="League"
                     type="custom"
                   >
-                    <span className={styles.leagueInfoValue}>
-                      <TeamLogo
-                        logo={season.league_logo}
-                        code={season.league_code}
-                        alt={`${season.league_name} logo`}
-                        primaryColor="#334155"
-                        textColor="#ffffff"
-                        size={28}
-                        shape="square"
-                        className={styles.leagueInfoLogo}
-                      />
-                      <span>{season.league_name}</span>
-                    </span>
+                    <span className={styles.leagueInfoValue}>{season.league_name}</span>
                   </InfoItem>
                   <InfoItem
                     label="Games Per Season"
