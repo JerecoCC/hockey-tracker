@@ -12,6 +12,10 @@
 }
 
 .modal {
+  --app-field-bg: var(--app-modal-field-bg, #0b1120);
+  --app-field-bg-hover: var(--app-modal-field-bg-hover, #111827);
+  --filter-field-background: var(--app-modal-field-bg, #0b1120);
+
   background: var(--app-surface, #{$bg-card});
   border: 1px solid var(--app-border, #{$border});
   border-radius: $radius-xl;
