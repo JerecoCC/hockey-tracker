@@ -7,6 +7,7 @@ import {
 } from 'react';
 import cn from 'classnames';
 import Icon from '../Icon/Icon';
+import Divider from '../Divider/Divider';
 import styles from './SearchField.module.scss';
 
 type Props = Omit<InputHTMLAttributes<HTMLInputElement>, 'type' | 'value' | 'onChange'> & {
@@ -50,10 +51,19 @@ const SearchField = forwardRef<HTMLInputElement, Props>(
           className,
         )}
       >
-        <Icon
-          name="search"
-          size="1em"
-          className={cn(styles.icon, iconClassName)}
+        <span
+          className={styles.iconRegion}
+          aria-hidden="true"
+        >
+          <Icon
+            name="search"
+            size="1em"
+            className={cn(styles.icon, iconClassName)}
+          />
+        </span>
+        <Divider
+          variant="vertical"
+          className={styles.divider}
         />
         <input
           ref={inputRef}

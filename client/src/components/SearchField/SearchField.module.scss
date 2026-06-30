@@ -4,11 +4,12 @@
 .searchField {
   flex: 1;
   min-width: 0;
-  min-height: 42px;
+  height: 42px;
   display: flex;
   align-items: center;
-  gap: $space-sm;
-  padding: 0 $space-md;
+  gap: $space-xs;
+  box-sizing: border-box;
+  padding: $space-xs $space-xs $space-xs $space-xs;
   background: var(--filter-field-background, var(--app-field-bg, #{$bg-filter-field}));
   border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
@@ -42,16 +43,28 @@
   border-color: $danger-light;
 }
 
-.icon {
-  flex-shrink: 0;
+.iconRegion {
+  display: inline-flex;
+  align-self: stretch;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 2rem;
   color: var(--app-text-muted, #{$text-dim});
   pointer-events: none;
+}
+
+.icon {
+  color: currentColor;
+}
+
+.divider {
+  --divider-color: var(--app-field-border, #{$border});
 }
 
 .input {
   flex: 1;
   min-width: 0;
-  padding: 0;
+  padding: 0 0 0 $space-xs;
   background: transparent;
   border: none;
   outline: none;
