@@ -345,9 +345,16 @@ const sortGamesByTime = (a: GameRecord, b: GameRecord) => {
   return a.scheduled_time.localeCompare(b.scheduled_time);
 };
 
+const getCalendarDayGameSortRank = (game: GameRecord) => {
+  if (game.watched_by_user) return 0;
+  if (game.skipped_by_user) return 3;
+  if (getScheduledWatchDateKey(game.scheduled_for)) return 1;
+  return 2;
+};
+
 const sortCalendarDayGames = (a: GameRecord, b: GameRecord) => {
-  const watchedDiff = Number(!!b.watched_by_user) - Number(!!a.watched_by_user);
-  if (watchedDiff !== 0) return watchedDiff;
+  const rankDiff = getCalendarDayGameSortRank(a) - getCalendarDayGameSortRank(b);
+  if (rankDiff !== 0) return rankDiff;
   return sortGamesByTime(a, b);
 };
 

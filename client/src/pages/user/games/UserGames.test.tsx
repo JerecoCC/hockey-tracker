@@ -690,16 +690,8 @@ describe('UserGames schedule views', () => {
     }
   });
 
-  it('puts watched games first within each calendar day list', async () => {
+  it('orders calendar day games by watched, scheduled watch, unwatched, then skipped', async () => {
     const user = userEvent.setup();
-    const unwatchedSameDayGame = {
-      ...games[0],
-      id: 'game-same-day-unwatched',
-      away_team: { ...games[0].away_team, name: 'Same Day Away', code: 'SDA' },
-      scheduled_for: watchedDate,
-      watched_by_user: false,
-      watched_on: null,
-    };
     const watchedSameDayGame = {
       ...games[1],
       id: 'game-same-day-watched',
@@ -707,6 +699,38 @@ describe('UserGames schedule views', () => {
       scheduled_for: watchedDate,
       watched_by_user: true,
       watched_on: watchedDate,
+      scheduled_time: '22:00',
+    };
+    const scheduledSameDayGame = {
+      ...games[0],
+      id: 'game-same-day-scheduled',
+      away_team: { ...games[0].away_team, name: 'Same Day Scheduled', code: 'SDS' },
+      scheduled_for: watchedDate,
+      watched_by_user: false,
+      skipped_by_user: false,
+      watched_on: null,
+      scheduled_time: '18:00',
+    };
+    const unwatchedSameDayGame = {
+      ...games[0],
+      id: 'game-same-day-unwatched',
+      away_team: { ...games[0].away_team, name: 'Same Day Away', code: 'SDA' },
+      scheduled_for: null,
+      watched_by_user: false,
+      skipped_by_user: false,
+      watched_on: null,
+      scheduled_at: watchedDate,
+      scheduled_time: null,
+    };
+    const skippedSameDayGame = {
+      ...games[0],
+      id: 'game-same-day-skipped',
+      away_team: { ...games[0].away_team, name: 'Same Day Skipped', code: 'SDK' },
+      scheduled_for: watchedDate,
+      watched_by_user: false,
+      skipped_by_user: true,
+      watched_on: null,
+      scheduled_time: '16:00',
     };
 
     mockUseQuery.mockImplementation(({ queryKey }: any) => {
@@ -714,18 +738,30 @@ describe('UserGames schedule views', () => {
         return { data: [{ id: 'league-1', name: 'NHL', code: 'NHL', logo: null }] };
       if (queryKey[0] === 'user-favorites') return { data: ['team-home', 'team-opp'] };
       if (queryKey[0] === 'user-games')
-        return { data: [unwatchedSameDayGame, watchedSameDayGame], isLoading: false };
+        return {
+          data: [
+            skippedSameDayGame,
+            unwatchedSameDayGame,
+            scheduledSameDayGame,
+            watchedSameDayGame,
+          ],
+          isLoading: false,
+        };
       return { data: [], isLoading: false };
     });
 
     render(<UserGames />);
+    await user.click(screen.getByRole('switch', { name: 'Show skipped games' }));
     await user.click(screen.getByRole('button', { name: 'Month view' }));
 
-    const watchedItem = screen.getByText('SDW').closest(`.${calendarItemStyles.item}`);
-    const unwatchedItem = screen.getByText('SDA').closest(`.${calendarItemStyles.item}`);
-    expect(watchedItem?.compareDocumentPosition(unwatchedItem as Node)).toBe(
-      Node.DOCUMENT_POSITION_FOLLOWING,
+    const orderedItems = ['SDW', 'SDS', 'SDA', 'SDK'].map(
+      (code) => screen.getByText(code).closest(`.${calendarItemStyles.item}`) as HTMLElement,
     );
+    for (let index = 0; index < orderedItems.length - 1; index += 1) {
+      expect(orderedItems[index].compareDocumentPosition(orderedItems[index + 1])).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING,
+      );
+    }
   });
 
   it('opens the score image form from the games toolbar', async () => {
