@@ -28,31 +28,11 @@ const SHOOTS_OPTIONS = [
 
 const NO_ROOKIE_SEASON = 'none';
 
-// ── Height conversion helpers ────────────────────────────────────────────
-const cmToFtIn = (cm: number) => {
-  const totalInches = cm / 2.54;
-  let ft = Math.floor(totalInches / 12);
-  let inches = Math.round(totalInches % 12);
-  if (inches === 12) {
-    ft++;
-    inches = 0;
-  }
-  return { ft, inches };
-};
-
-const ftInToCm = (ft: number, inches: number) => Math.round((ft * 12 + inches) * 2.54);
-
 interface FormValues {
   first_name: string;
   last_name: string;
   position: PlayerPosition | null;
   shoots: PlayerShoots | null;
-  date_of_birth: string;
-  birth_city: string;
-  birth_country: string;
-  height_ft: string;
-  height_in: string;
-  weight_lbs: string;
   rookie_season_id: string;
   jersey_number: string;
 }
@@ -84,21 +64,11 @@ const PlayerFormModal = ({
   updateJerseyNumber,
 }: Props) => {
   const formValues = useMemo<FormValues>(() => {
-    const { ft, inches } =
-      editTarget?.height_cm != null
-        ? cmToFtIn(editTarget.height_cm)
-        : { ft: null as null, inches: null as null };
     return {
       first_name: editTarget?.first_name ?? '',
       last_name: editTarget?.last_name ?? '',
       position: editTarget?.position ?? null,
       shoots: editTarget?.shoots ?? null,
-      date_of_birth: editTarget?.date_of_birth ?? '',
-      birth_city: editTarget?.birth_city ?? '',
-      birth_country: editTarget?.birth_country ?? '',
-      height_ft: ft != null ? String(ft) : '',
-      height_in: inches != null ? String(inches) : '',
-      weight_lbs: editTarget?.weight_lbs != null ? String(editTarget.weight_lbs) : '',
       rookie_season_id: editTarget?.rookie_season_id ?? NO_ROOKIE_SEASON,
       jersey_number: editTarget?.jersey_number != null ? String(editTarget.jersey_number) : '',
     };
@@ -133,22 +103,11 @@ const PlayerFormModal = ({
   }, [formValues, onClose, reset]);
 
   const onSubmit = handleSubmit(async (data) => {
-    const hasFt = data.height_ft !== '';
-    const hasIn = data.height_in !== '';
-    const height_cm =
-      hasFt || hasIn
-        ? ftInToCm(hasFt ? Number(data.height_ft) : 0, hasIn ? Number(data.height_in) : 0)
-        : null;
     const payload: CreatePlayerData = {
       first_name: data.first_name,
       last_name: data.last_name,
       position: data.position || null,
       shoots: data.shoots || null,
-      date_of_birth: data.date_of_birth || null,
-      birth_city: data.birth_city || null,
-      birth_country: data.birth_country || null,
-      height_cm,
-      weight_lbs: data.weight_lbs ? Number(data.weight_lbs) : null,
       ...(seasons.length > 0
         ? {
             rookie_season_id:
@@ -258,74 +217,6 @@ const PlayerFormModal = ({
             />
           </div>
         )}
-        <div className={styles.row}>
-          <Field
-            type="datepicker"
-            label="Date of Birth"
-            control={control}
-            name="date_of_birth"
-            placeholder="YYYY-MM-DD"
-            disabled={isSubmitting}
-          />
-          <Field
-            label="Birth City"
-            control={control}
-            name="birth_city"
-            placeholder="e.g. Edmonton"
-            disabled={isSubmitting}
-          />
-        </div>
-        <div className={styles.row}>
-          <Field
-            label="Birth Country"
-            control={control}
-            name="birth_country"
-            placeholder="e.g. CAN"
-            disabled={isSubmitting}
-          />
-        </div>
-        <div className={styles.row}>
-          <div className={styles.heightGroup}>
-            <span className={styles.heightGroupLabel}>Height</span>
-            <div className={styles.heightInputs}>
-              <Field
-                type="number"
-                suffix="ft"
-                control={control}
-                name="height_ft"
-                placeholder="6"
-                min={0}
-                disabled={isSubmitting}
-                rules={{ validate: (v) => !v || (Number(v) >= 0 && Number.isInteger(Number(v))) }}
-              />
-              <Field
-                type="number"
-                suffix="in"
-                control={control}
-                name="height_in"
-                placeholder="0"
-                min={0}
-                max={11}
-                disabled={isSubmitting}
-                rules={{
-                  validate: (v) =>
-                    !v || (Number(v) >= 0 && Number(v) <= 11 && Number.isInteger(Number(v))),
-                }}
-              />
-            </div>
-          </div>
-          <Field
-            type="number"
-            label="Weight"
-            suffix="lbs"
-            control={control}
-            name="weight_lbs"
-            placeholder="e.g. 193"
-            min={0}
-            disabled={isSubmitting}
-            rules={{ validate: (v) => !v || Number(v) >= 0 }}
-          />
-        </div>
       </form>
     </Modal>
   );
