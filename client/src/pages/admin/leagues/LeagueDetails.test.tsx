@@ -883,8 +883,15 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(groupSection?.querySelector('.alignmentParentGroupHeader')).toHaveTextContent(
       'Eastern Conference (1 team)',
     );
+    expect(
+      groupSection?.querySelector(
+        '.alignmentParentGroupHeader .alignmentParentGroupHeaderDivider.divider.horizontal',
+      ),
+    ).toBeInTheDocument();
     expect(groupSection?.querySelectorAll('.alignmentGroupFieldset')).toHaveLength(1);
-    expect(groupSection?.querySelector('.alignmentGroupFieldsetNested')).toBeInTheDocument();
+    expect(
+      groupSection?.querySelector('.alignmentGroupFieldsetNested.borderedFieldset'),
+    ).toBeInTheDocument();
     expect(
       groupSection?.querySelector('.alignmentGroupLegend .alignmentGroupActions'),
     ).toBeInTheDocument();
@@ -897,7 +904,9 @@ describe('LeagueDetailsPage – tabs', () => {
     expect(
       groupSection?.querySelector('.alignmentGroupLegend .alignmentGroupLegendTitle'),
     ).toHaveTextContent('Metro Division (1 team)');
-    expect(groupSection?.querySelector('.alignmentGroupLegendRule')).toBeInTheDocument();
+    expect(
+      groupSection?.querySelector('.alignmentGroupLegendRule.divider.horizontal'),
+    ).toBeInTheDocument();
     expect(groupSection?.querySelector('.alignmentGroupBorderActions')).not.toBeInTheDocument();
     expect(groupSection?.querySelector('.alignmentGroupSummary')).not.toBeInTheDocument();
     expect(groupSection?.querySelectorAll('.alignmentGroupNameCount')).toHaveLength(2);

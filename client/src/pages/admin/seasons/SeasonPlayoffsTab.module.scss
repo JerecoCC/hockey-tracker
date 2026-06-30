@@ -292,10 +292,6 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     display: flex;
     flex-direction: column;
     gap: $space-md;
-    margin: 0;
-    background: transparent;
-    border: 1px solid var(--app-border, #{$border});
-    border-radius: $radius-md;
     padding: $space-md;
   }
 

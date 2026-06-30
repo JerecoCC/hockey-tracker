@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import BorderedFieldset from '@/components/BorderedFieldset/BorderedFieldset';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ListItem from '@/components/ListItem/ListItem';
@@ -638,11 +640,12 @@ const AlignmentGroupNode = ({
               </span>
             </div>
             {groupActions}
+            <Divider className={styles.alignmentParentGroupHeaderDivider} />
           </div>
           <div className={styles.alignmentParentGroupBody}>{groupBody}</div>
         </div>
       ) : (
-        <fieldset
+        <BorderedFieldset
           className={[
             styles.alignmentGroupFieldset,
             depth > 0 ? styles.alignmentGroupFieldsetNested : '',
@@ -656,14 +659,11 @@ const AlignmentGroupNode = ({
               {' '}
               <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
             </span>
-            <span
-              className={styles.alignmentGroupLegendRule}
-              aria-hidden="true"
-            />
+            <Divider className={styles.alignmentGroupLegendRule} />
             {groupActions}
           </legend>
           {groupBody}
-        </fieldset>
+        </BorderedFieldset>
       )}
       {isLeaf && (
         <TeamSelectionModal

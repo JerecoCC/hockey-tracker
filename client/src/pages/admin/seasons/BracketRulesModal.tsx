@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import BorderedFieldset from '@/components/BorderedFieldset/BorderedFieldset';
 import Button from '@/components/Button/Button';
 import Field from '@/components/Field/Field';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
@@ -833,7 +834,7 @@ const BracketRulesModal = ({
               </div>
               <div className={styles.bracketRulesMatchups}>
                 {Array.from({ length: round1.series }, (_, mi) => (
-                  <fieldset
+                  <BorderedFieldset
                     key={mi}
                     className={styles.bracketRulesMatchup}
                   >
@@ -858,7 +859,7 @@ const BracketRulesModal = ({
                       choiceSlotOptions={choiceSlotOptions}
                       prevRoundMatchupOptions={[]}
                     />
-                  </fieldset>
+                  </BorderedFieldset>
                 ))}
               </div>
             </div>

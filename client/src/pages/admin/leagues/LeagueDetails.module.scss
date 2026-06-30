@@ -691,18 +691,25 @@ $league-tab-list-gap: $space-md;
   }
 
   &ParentGroupHeader {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: $space-md;
     min-width: 0;
     padding-bottom: $space-xs;
-    border-bottom: 1px solid $border;
 
     @media (max-width: 640px) {
       align-items: flex-start;
       flex-direction: column;
     }
+  }
+
+  &ParentGroupHeaderDivider {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
   }
 
   &ParentGroupTitle {
@@ -739,17 +746,18 @@ $league-tab-list-gap: $space-md;
     flex-direction: column;
     gap: $space-md;
     min-width: 0;
-    margin: 0;
     padding: $space-md;
-    border: 1px solid $border;
-    border-radius: $radius-md;
-    background: transparent;
   }
 
   &GroupFieldsetNested {
+    --bordered-fieldset-border-color: color-mix(
+      in srgb,
+      var(--app-border, #{$border}) 55%,
+      transparent
+    );
+
     gap: $space-sm;
     padding: $space-sm;
-    border-color: rgba($border, 0.55);
   }
 
   &GroupLegend {
@@ -777,8 +785,9 @@ $league-tab-list-gap: $space-md;
   }
 
   &GroupLegendRule {
+    --divider-color: color-mix(in srgb, var(--app-border, #{$border}) 55%, transparent);
+
     min-width: $space-md;
-    border-top: 1px solid rgba($border, 0.55);
   }
 
   &GroupNameCount {
