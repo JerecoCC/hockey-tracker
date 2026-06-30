@@ -228,7 +228,7 @@
     grid-template-columns: 2.5rem 1fr 1fr;
     align-items: center;
     border-top: 2px solid var(--app-border, #{$border});
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--app-surface-subtle);
   }
 
   &TotalsLabel {

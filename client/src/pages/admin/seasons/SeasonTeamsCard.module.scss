@@ -29,9 +29,9 @@
     width: 100%;
     min-width: 0;
     padding: 0 $space-lg;
-    border: 1px solid rgba($text-dim, 0.2);
+    border: 1px solid var(--app-field-border, #{$border});
     border-radius: $radius-sm;
-    background: rgba(255, 255, 255, 0.03);
+    background: var(--app-field-bg, var(--app-surface-subtle));
     color: var(--app-text-muted, #{$text-dim});
     font-size: $font-base;
     line-height: 1.4;

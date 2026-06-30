@@ -29,6 +29,7 @@ $color-bg: #fff;
   --app-bg: #0f172a;
   --app-surface: #1e293b;
   --app-surface-muted: #0f172a;
+  --app-surface-subtle: color-mix(in srgb, var(--app-surface) 97%, var(--app-text-strong));
   --app-field-bg: color-mix(in srgb, #0f172a 45%, #1e293b);
   --app-field-bg-hover: color-mix(in srgb, #0f172a 30%, #1e293b);
   --app-modal-field-bg: #0b1120;

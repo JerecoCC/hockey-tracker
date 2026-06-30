@@ -808,7 +808,7 @@
     flex-direction: column;
     gap: $space-md;
     padding: $space-md;
-    background: var(--app-surface-muted, rgba(255, 255, 255, 0.03));
+    background: var(--app-surface-muted, var(--app-surface-subtle));
     border: 1px solid var(--app-border, #{$border});
     border-radius: $radius-md;
   }
