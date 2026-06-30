@@ -60,13 +60,20 @@ const TeamLogo = ({
         : isLightLogoPreferred
           ? (lightLogo ?? primaryLogo ?? darkLogo)
           : (primaryLogo ?? darkLogo ?? lightLogo);
+  const hasLogo = Boolean(selectedLogo);
   const fontSize = Math.round(size * 0.32);
   const shapeClass = shape === 'circle' ? styles.circle : styles.square;
 
   return (
     <span
       className={[styles.wrapper, shapeClass, className].filter(Boolean).join(' ')}
-      style={{ width: size, height: size, background: selectedLogo ? 'none' : (primaryColor ?? undefined) }}
+      style={{
+        width: size,
+        height: size,
+        background: hasLogo ? 'none' : (primaryColor ?? undefined),
+        borderRadius: hasLogo ? 0 : undefined,
+        overflow: hasLogo ? 'visible' : undefined,
+      }}
     >
       {selectedLogo ? (
         <img

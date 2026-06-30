@@ -20,7 +20,6 @@
     width: 80px;
     height: 80px;
     border-radius: $radius-lg;
-    overflow: hidden;
   }
 
   &Button {
@@ -47,7 +46,7 @@
   height: 80px;
   object-fit: contain;
   display: block;
-  filter: drop-shadow(0 2px 6px rgba(255, 255, 255, 0.15));
+  filter: drop-shadow(0 1px 3px var(--app-logo-shadow, rgba(255, 255, 255, 0.1)));
 
   &Placeholder {
     width: 80px;

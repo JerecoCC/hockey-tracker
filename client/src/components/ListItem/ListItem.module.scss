@@ -44,7 +44,6 @@
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
-  filter: drop-shadow(0 1px 2px var(--app-logo-shadow, rgba(255, 255, 255, 0.2)));
 
   &Placeholder {
     display: inline-flex;
@@ -69,7 +68,6 @@
   object-fit: contain;
   border-radius: $radius-sm;
   flex-shrink: 0;
-  filter: drop-shadow(0 1px 3px var(--app-logo-shadow, rgba(255, 255, 255, 0.25)));
 
   &Circle {
     object-fit: cover;

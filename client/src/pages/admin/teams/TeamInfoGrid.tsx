@@ -1,5 +1,6 @@
 import { type TeamDetailRecord } from '@/hooks/useTeamDetails';
 import InfoItem from '@/components/InfoItem/InfoItem';
+import TeamLogo from '@/components/TeamLogo/TeamLogo';
 import styles from './TeamDetails.module.scss';
 
 export interface SeasonOption {
@@ -38,27 +39,16 @@ const LeagueBadge = ({ team }: { team: TeamDetailRecord }) => (
   >
     {team.league_id ? (
       <div className={styles.leagueBadge}>
-        {team.league_logo ? (
-          <img
-            src={team.league_logo}
-            alt={team.league_name ?? ''}
-            className={styles.leagueLogo}
-          />
-        ) : (
-          <span
-            className={styles.leagueLogoPlaceholder}
-            style={
-              team.league_primary_color
-                ? {
-                    background: team.league_primary_color,
-                    color: team.league_text_color ?? undefined,
-                  }
-                : undefined
-            }
-          >
-            {team.league_code?.slice(0, 3)}
-          </span>
-        )}
+        <TeamLogo
+          logo={team.league_logo}
+          code={team.league_code ?? ''}
+          alt={team.league_name ?? team.league_code ?? ''}
+          primaryColor={team.league_primary_color}
+          textColor={team.league_text_color}
+          size={28}
+          shape="square"
+          className={styles.leagueLogo}
+        />
         <span className={styles.infoValue}>{team.league_name}</span>
       </div>
     ) : (

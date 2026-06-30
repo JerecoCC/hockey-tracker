@@ -234,7 +234,7 @@
     height: 36px;
     object-fit: contain;
     flex-shrink: 0;
-    filter: drop-shadow(0 1px 3px rgba(255, 255, 255, 0.15));
+    filter: drop-shadow(0 1px 2px var(--app-logo-shadow, rgba(255, 255, 255, 0.1)));
   }
 
   &LogoPlaceholder {

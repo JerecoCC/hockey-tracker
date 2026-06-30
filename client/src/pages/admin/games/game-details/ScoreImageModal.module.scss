@@ -315,7 +315,7 @@
       height: 100%;
       max-width: none;
       opacity: 0.22;
-      filter: saturate(0.85) contrast(1.08) drop-shadow(0 34px 54px rgba(0, 0, 0, 0.28));
+      filter: saturate(0.85) contrast(1.08) drop-shadow(0 24px 40px rgba(0, 0, 0, 0.16));
       mix-blend-mode: screen;
       transform: translateY(-50%);
     }
@@ -432,7 +432,7 @@
   width: 250px;
   height: 250px;
   object-fit: contain;
-  filter: drop-shadow(0 18px 18px rgba(0, 0, 0, 0.34));
+  filter: drop-shadow(0 10px 14px rgba(0, 0, 0, 0.22));
 }
 
 .scoreCard {
@@ -713,7 +713,7 @@
     width: 196px;
     height: 126px;
     object-fit: contain;
-    filter: drop-shadow(0 12px 12px rgba(15, 23, 42, 0.16));
+    filter: drop-shadow(0 6px 10px rgba(15, 23, 42, 0.1));
   }
 }
 
