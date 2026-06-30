@@ -208,6 +208,32 @@
   }
 }
 
+.itemPlainScores {
+  .score {
+    min-width: 1.05rem;
+    height: auto;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    line-height: 1;
+  }
+
+  .scoreWin {
+    color: var(--app-text-strong, #{$text-bright});
+  }
+
+  .scoreLose {
+    background: transparent;
+    color: var(--app-text, #{$text-body});
+    opacity: 0.55;
+  }
+
+  .scoreMissing {
+    background: transparent;
+    color: var(--app-text-muted, #{$text-dim});
+  }
+}
+
 .center {
   grid-column: 3;
   display: inline-flex;

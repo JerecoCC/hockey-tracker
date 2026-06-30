@@ -584,6 +584,7 @@ const CalendarGameCard = ({
         .join(' ')}
       style={getLeagueStyle(game)}
       showScore={showScore}
+      scorePresentation="plain"
       live={game.status === 'in_progress'}
       dragging={dragging}
       draggable={draggable}
@@ -600,6 +601,7 @@ const CalendarGameCard = ({
         textColor: game.away_team.text_color,
         score: showMissingScore ? '-' : away,
         scoreStatus: awayGameStatus,
+        dimmed: awayGameStatus === 'lose',
         meta: showAwaySeriesDots ? (
           <PlayoffSeriesDots
             wins={awaySeriesWins || 0}
@@ -616,6 +618,7 @@ const CalendarGameCard = ({
         textColor: game.home_team.text_color,
         score: showMissingScore ? '-' : home,
         scoreStatus: homeGameStatus,
+        dimmed: homeGameStatus === 'lose',
         meta: showHomeSeriesDots ? (
           <PlayoffSeriesDots
             wins={homeSeriesWins || 0}

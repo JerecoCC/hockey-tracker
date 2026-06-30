@@ -643,12 +643,17 @@ describe('UserGames schedule views', () => {
     const loserScore = within(watchedCard as HTMLElement)
       .getByText('1')
       .closest(`.${calendarItemStyles.score}`);
+    const loserLogoSlot = within(watchedCard as HTMLElement)
+      .getByText('OPP')
+      .closest(`.${calendarItemStyles.logoSlot}`);
 
+    expect(watchedCard).toHaveClass(calendarItemStyles.itemPlainScores);
     expect(winnerScore).toHaveClass(calendarItemStyles.scoreWin);
     expect(loserScore).toHaveClass(calendarItemStyles.scoreLose);
+    expect(loserLogoSlot).toHaveClass(calendarItemStyles.logoSlotDimmed);
   });
 
-  it('shows muted dash score boxes for watched games without recorded scores', async () => {
+  it('shows muted plain dash scores for watched games without recorded scores', async () => {
     const user = userEvent.setup();
     const watchedMissingScoreGame = {
       ...games[0],
@@ -678,6 +683,7 @@ describe('UserGames schedule views', () => {
       .getAllByText('-')
       .map((score) => score.closest(`.${calendarItemStyles.score}`));
 
+    expect(watchedCard).toHaveClass(calendarItemStyles.itemPlainScores);
     expect(missingScores).toHaveLength(2);
     for (const score of missingScores) {
       expect(score).toHaveClass(calendarItemStyles.scoreMissing);

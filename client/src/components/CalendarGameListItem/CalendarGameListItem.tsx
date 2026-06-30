@@ -6,6 +6,7 @@ import type { GameType } from '@/hooks/useGames';
 import styles from './CalendarGameListItem.module.scss';
 
 type ScoreStatus = 'pending' | 'win' | 'lose' | 'missing';
+type ScorePresentation = 'boxed' | 'plain';
 
 const GAME_TYPE_CLASS: Record<GameType, string> = {
   preseason: styles.typePreseason,
@@ -30,6 +31,7 @@ interface Props {
   awayTeam: CalendarGameListItemTeam;
   homeTeam: CalendarGameListItemTeam;
   showScore?: boolean;
+  scorePresentation?: ScorePresentation;
   /** Renders a left accent stripe coloured by game type. */
   gameType?: GameType;
   href?: string;
@@ -71,6 +73,7 @@ const CalendarGameListItem = ({
   awayTeam,
   homeTeam,
   showScore = false,
+  scorePresentation = 'boxed',
   gameType,
   href,
   tooltip,
@@ -89,6 +92,7 @@ const CalendarGameListItem = ({
   const scoreVisible = showScore && awayTeam.score != null && homeTeam.score != null;
   const itemClassName = [
     styles.item,
+    scorePresentation === 'plain' ? styles.itemPlainScores : '',
     gameType ? GAME_TYPE_CLASS[gameType] : '',
     live ? styles.itemLive : '',
     dragging ? styles.itemDragging : '',
