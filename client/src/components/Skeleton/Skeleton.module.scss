@@ -1,6 +1,5 @@
 @use 'styles/colors' as *;
 @use 'styles/mixins' as *;
-@use 'sass:color';
 
 @keyframes shimmer {
   0% {
@@ -18,9 +17,9 @@
   border-radius: $radius-sm;
   background: linear-gradient(
     90deg,
-    $border 25%,
-    color.adjust($border, $lightness: 6%) 50%,
-    $border 75%
+    var(--app-skeleton-base, #{$border}) 25%,
+    var(--app-skeleton-highlight, #475569) 50%,
+    var(--app-skeleton-base, #{$border}) 75%
   );
   background-size: 800px 100%;
   animation: shimmer 1.4s ease-in-out infinite;
