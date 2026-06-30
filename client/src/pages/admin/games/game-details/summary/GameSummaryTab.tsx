@@ -35,6 +35,7 @@ import LinescoreCard from './LinescoreCard';
 import styles from '../GameDetailsPage.module.scss';
 import { PERIOD, PERIOD_TITLE_LABEL, otPeriodId } from '../constants';
 import { formatPlayerName } from '../formatUtils';
+import { sumVisiblePeriodShots } from '../shotPeriods';
 import { buildSeasonDetailsPath } from '@/lib/routeSlugs';
 import GoalieSwitchReportCard from './GoalieSwitchReportCard';
 import type { NhlAutofillProgress } from '../nhlGameAutofill';
@@ -762,9 +763,10 @@ const GameSummaryTab = ({
                           );
                         })}
                         <td className={styles.tdTotal}>
-                          {game.period_shots.reduce(
-                            (sum, ps) => sum + (row.isAway ? ps.away_shots : ps.home_shots),
-                            0,
+                          {sumVisiblePeriodShots(
+                            shotsPeriods,
+                            game.period_shots,
+                            row.isAway ? 'away' : 'home',
                           ) || '—'}
                         </td>
                       </tr>

@@ -3271,8 +3271,16 @@ const goalieStintsCTE = (gameId) => sql`
   period_shots_by_game AS (
     SELECT
       ps.game_id,
-      COALESCE(SUM((shot->>'away_shots')::int), 0)::int AS away_shots,
-      COALESCE(SUM((shot->>'home_shots')::int), 0)::int AS home_shots
+      COALESCE(
+        SUM((shot->>'away_shots')::int)
+          FILTER (WHERE (shot->>'period') ~ '^(1|2|3|OT|OT[1-9][0-9]*)$'),
+        0
+      )::int AS away_shots,
+      COALESCE(
+        SUM((shot->>'home_shots')::int)
+          FILTER (WHERE (shot->>'period') ~ '^(1|2|3|OT|OT[1-9][0-9]*)$'),
+        0
+      )::int AS home_shots
     FROM (
       SELECT DISTINCT game_id, period_shots
       FROM stint_ranges

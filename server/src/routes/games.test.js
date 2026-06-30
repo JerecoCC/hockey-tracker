@@ -998,6 +998,17 @@ describe('GET /api/admin/games/:id/goalie-stints', () => {
     expect(queries[1]).toMatch(/total_save_ga/);
   });
 
+  it('excludes shootout rows from automatic shots against totals', async () => {
+    mockSqlFragments(1); // goalieStintsCTE(id)
+    sql.mockResolvedValueOnce([]);
+    await request(app).get('/api/admin/games/game-1/goalie-stints');
+
+    const queries = sql.mock.calls.map((call) => call[0].join(' '));
+    expect(queries[0]).toContain(
+      "FILTER (WHERE (shot->>'period') ~ '^(1|2|3|OT|OT[1-9][0-9]*)$')",
+    );
+  });
+
   it('returns an empty array when no goalie stats exist', async () => {
     mockSqlFragments(1); // goalieStintsCTE(id)
     sql.mockResolvedValueOnce([]);

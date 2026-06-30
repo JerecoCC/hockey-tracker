@@ -20,9 +20,10 @@ import {
 import { type GoalRecord } from '@/hooks/useGameGoals';
 import fieldStyles from '@/components/Field/Field.module.scss';
 import styles from './GameDetailsPage.module.scss';
-import { PERIOD, PERIOD_ORDER, PERIOD_TITLE_LABEL } from './constants';
+import { PERIOD, PERIOD_TITLE_LABEL } from './constants';
 import { etHHMMtoISO, isoToETDate, isoToETHHMM, nextETDate } from './formatUtils';
 import { defaultStintToi, parseToiInput, secondsToMMSS } from './goalieTimeOnIce';
+import { shotPeriodOrdinal } from './shotPeriods';
 
 export type ShotsNextAction =
   | { type: 'advance'; label: string; next: CurrentPeriod }
@@ -42,8 +43,6 @@ const PERIOD_LABEL: Record<string, string> = {
   [PERIOD.OVERTIME]: PERIOD.OVERTIME,
   [PERIOD.SHOOTOUT]: PERIOD.SHOOTOUT,
 };
-
-const periodIdx = (p: string) => PERIOD_ORDER.indexOf(p);
 
 /**
  * Computes the expected shots-against for a goalie in a game:
@@ -76,11 +75,15 @@ export const computeAutoSA = (
   if (stints && stints.length > 0) {
     // Phase 2+: derive from stint windows
     playedPeriod = (p: string) => {
-      const pOrd = periodIdx(p);
+      const pOrd = shotPeriodOrdinal(p);
+      if (pOrd == null) return false;
+
       return stints.some((st) => {
-        const enterOrd = periodIdx(st.entered_period);
-        const exitOrd = st.exited_period != null ? periodIdx(st.exited_period) : Infinity;
-        return pOrd >= enterOrd && pOrd < exitOrd;
+        const enterOrd = shotPeriodOrdinal(st.entered_period);
+        const exitOrd =
+          st.exited_period != null ? shotPeriodOrdinal(st.exited_period) : null;
+        if (enterOrd == null) return false;
+        return pOrd >= enterOrd && (exitOrd == null || pOrd < exitOrd);
       });
     };
   } else {
@@ -93,8 +96,19 @@ export const computeAutoSA = (
         gs.entered_period !== null,
     );
     playedPeriod = (p: string) => {
-      if (enteredPeriod !== null) return periodIdx(p) >= periodIdx(enteredPeriod);
-      if (subStat) return periodIdx(p) < periodIdx(subStat.entered_period!);
+      const pOrd = shotPeriodOrdinal(p);
+      if (pOrd == null) return false;
+
+      if (enteredPeriod !== null) {
+        const enteredOrd = shotPeriodOrdinal(enteredPeriod);
+        return enteredOrd != null && pOrd >= enteredOrd;
+      }
+
+      if (subStat) {
+        const subOrd = shotPeriodOrdinal(subStat.entered_period!);
+        return subOrd != null && pOrd < subOrd;
+      }
+
       return true;
     };
   }
