@@ -107,6 +107,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/dashboard', element: <UserDashboard /> },
       { path: '/games', element: <UserGames /> },
+      { path: '/games/:gameDateSlug/:gameSlug', element: <UserGameDetailsPage /> },
       { path: '/games/:id', element: <UserGameDetailsPage /> },
       { path: '/settings', element: <UserSettings /> },
     ],

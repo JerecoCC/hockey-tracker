@@ -216,8 +216,28 @@ describe('GameDetailsPage', () => {
       gameDateSlug: '10-10-2024',
       gameSlug: 'awy-vs-hom',
       enabled: true,
+      mode: 'admin',
     });
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
+  });
+
+  it('resolves slug game routes through the user API in user mode', () => {
+    mockUseParams.mockReturnValue({
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'awy-vs-hom',
+    });
+    mockUseGameRouteLookup.mockReturnValue({ gameId: 'game-1', loading: false });
+
+    render(<GameDetailsPage mode="user" />);
+
+    expect(mockUseGameRouteLookup).toHaveBeenCalledWith({
+      seasonId: undefined,
+      gameDateSlug: '10-10-2024',
+      gameSlug: 'awy-vs-hom',
+      enabled: true,
+      mode: 'user',
+    });
+    expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'user' });
   });
 
   it('keeps dated slug routes in the loading state until route lookup resolves', () => {
@@ -295,6 +315,7 @@ describe('GameDetailsPage', () => {
       gameDateSlug: undefined,
       gameSlug: 'game-1',
       enabled: false,
+      mode: 'admin',
     });
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
   });
@@ -314,6 +335,7 @@ describe('GameDetailsPage', () => {
       gameDateSlug: '10-10-2024',
       gameSlug: 'game-1',
       enabled: false,
+      mode: 'admin',
     });
     expect(mockUseGameDetails).toHaveBeenCalledWith('game-1', { mode: 'admin' });
   });

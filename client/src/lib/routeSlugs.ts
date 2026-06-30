@@ -11,6 +11,8 @@ export const UUID_PATTERN =
 const slugOrId = (value: string | null | undefined, fallbackId?: string | null) =>
   toRouteSlug(value) || fallbackId || '';
 
+const ISO_MIDNIGHT_RE = /T00:00(?::00(?:\.0+)?)?(?:Z|[+-][0-9]{2}:[0-9]{2})$/;
+
 export const playerRouteSlug = (
   firstName: string | null | undefined,
   lastName: string | null | undefined,
@@ -78,10 +80,16 @@ export const playoffSeriesRouteSlug = ({
   seriesId: string;
 }) => gameRouteSlug({ awayTeamCode, homeTeamCode }) || seriesId;
 
-const easternDatePart = (value: string | null | undefined) => {
+const easternDatePart = (
+  value: string | null | undefined,
+  scheduledTime?: string | null,
+) => {
   if (!value) return null;
   const rawDate = value.slice(0, 10);
   if (!value.includes('T')) return rawDate;
+  if (scheduledTime && scheduledTime !== '00:00' && ISO_MIDNIGHT_RE.test(value)) {
+    return rawDate;
+  }
 
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return rawDate;
@@ -100,11 +108,15 @@ const easternDatePart = (value: string | null | undefined) => {
 
 export const gameDateRouteSlug = (
   scheduledAt: string | null | undefined,
-  options: { leagueCode?: string | null } = {},
+  options: {
+    leagueCode?: string | null;
+    forceEastern?: boolean;
+    scheduledTime?: string | null;
+  } = {},
 ) => {
   const datePart =
-    toRouteSlug(options.leagueCode) === 'nhl'
-      ? easternDatePart(scheduledAt)
+    options.forceEastern || toRouteSlug(options.leagueCode) === 'nhl'
+      ? easternDatePart(scheduledAt, options.scheduledTime)
       : scheduledAt?.slice(0, 10);
   const [year, month, day] = datePart?.split('-') ?? [];
   if (!year || !month || !day) return '';
@@ -120,6 +132,7 @@ export const buildGameDetailsPath = ({
   awayTeamCode,
   homeTeamCode,
   scheduledAt,
+  scheduledTime,
 }: {
   leagueCode: string | null | undefined;
   leagueId?: string | null;
@@ -129,12 +142,31 @@ export const buildGameDetailsPath = ({
   awayTeamCode?: string | null;
   homeTeamCode?: string | null;
   scheduledAt?: string | null;
+  scheduledTime?: string | null;
 }) => {
-  const dateSlug = gameDateRouteSlug(scheduledAt, { leagueCode });
+  const dateSlug = gameDateRouteSlug(scheduledAt, { leagueCode, scheduledTime });
   const matchupSlug = gameRouteSlug({ awayTeamCode, homeTeamCode });
   return `${buildSeasonDetailsPath({ leagueCode, leagueId, seasonName, seasonId })}/games/${
     dateSlug && matchupSlug ? `${dateSlug}/${matchupSlug}` : gameId
   }`;
+};
+
+export const buildUserGameDetailsPath = ({
+  gameId,
+  awayTeamCode,
+  homeTeamCode,
+  scheduledAt,
+  scheduledTime,
+}: {
+  gameId: string;
+  awayTeamCode?: string | null;
+  homeTeamCode?: string | null;
+  scheduledAt?: string | null;
+  scheduledTime?: string | null;
+}) => {
+  const dateSlug = gameDateRouteSlug(scheduledAt, { forceEastern: true, scheduledTime });
+  const matchupSlug = gameRouteSlug({ awayTeamCode, homeTeamCode });
+  return `/games/${dateSlug && matchupSlug ? `${dateSlug}/${matchupSlug}` : gameId}`;
 };
 
 export const buildPlayoffSeriesDetailsPath = ({

@@ -24,6 +24,7 @@ import {
   buildLeagueDetailsPath,
   buildPlayerDetailsPath,
   buildSeasonDetailsPath,
+  buildUserGameDetailsPath,
   gameDateRouteSlug,
   gameRouteSlug,
   UUID_PATTERN,
@@ -101,7 +102,10 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     : routeSeasons.find((item) => toRouteSlug(item.name) === seasonSlug);
   const routeSeasonId = isLegacySeasonRoute ? seasonSlug : routeSeason?.id;
   const shouldResolveGameRoute =
-    isAdminView && isDatedGameRoute && !isLegacyGameRoute && !!routeSeasonId && !!gameSlug;
+    isDatedGameRoute &&
+    !isLegacyGameRoute &&
+    !!gameSlug &&
+    (isAdminView ? !!routeSeasonId : true);
   const {
     gameId: routeGameId,
     loading: routeGameLookupLoading,
@@ -112,6 +116,7 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
     gameDateSlug,
     gameSlug,
     enabled: shouldResolveGameRoute,
+    mode,
   });
   const gameId = isLegacyGameRoute ? gameSlug : (routeGameId ?? undefined);
   const {
@@ -340,9 +345,11 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
   const canonicalDateSlug = game
     ? gameDateRouteSlug(game.scheduled_at, {
         leagueCode: game.league_code,
+        forceEastern: !isAdminView,
+        scheduledTime: game.scheduled_time,
       })
     : '';
-  const canonicalPath =
+  const adminCanonicalPath =
     game && gameId
       ? buildGameDetailsPath({
           leagueCode: game.league_code,
@@ -353,17 +360,36 @@ const GameDetailsPage = ({ mode = 'admin' }: Props) => {
           awayTeamCode: game.away_team.code,
           homeTeamCode: game.home_team.code,
           scheduledAt: game.scheduled_at,
+          scheduledTime: game.scheduled_time,
         })
       : '';
-  const needsCanonicalRedirect =
+  const userCanonicalPath =
+    game && gameId
+      ? buildUserGameDetailsPath({
+          gameId,
+          awayTeamCode: game.away_team.code,
+          homeTeamCode: game.home_team.code,
+          scheduledAt: game.scheduled_at,
+          scheduledTime: game.scheduled_time,
+        })
+      : '';
+  const canonicalPath = isAdminView ? adminCanonicalPath : userCanonicalPath;
+  const needsAdminCanonicalRedirect =
     isAdminView &&
     !!game &&
     !!gameId &&
-    !!canonicalPath &&
+    !!adminCanonicalPath &&
     (leagueSlug !== toRouteSlug(game.league_code) ||
       seasonSlug !== toRouteSlug(game.season_name) ||
       gameSlug !== canonicalGameSlug ||
       gameDateSlug !== canonicalDateSlug);
+  const needsUserCanonicalRedirect =
+    !isAdminView &&
+    !!game &&
+    !!gameId &&
+    !!userCanonicalPath &&
+    (!isDatedGameRoute || gameSlug !== canonicalGameSlug || gameDateSlug !== canonicalDateSlug);
+  const needsCanonicalRedirect = needsAdminCanonicalRedirect || needsUserCanonicalRedirect;
   const suppressCanonicalRedirectFrame =
     needsCanonicalRedirect && !isLegacyLeagueRoute && !isLegacySeasonRoute && isDatedGameRoute;
   const pageLoading = loading || suppressCanonicalRedirectFrame;

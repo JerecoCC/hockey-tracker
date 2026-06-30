@@ -231,6 +231,7 @@ interface GameRouteLookupInput {
   gameDateSlug?: string;
   gameSlug?: string;
   enabled?: boolean;
+  mode?: 'admin' | 'user';
 }
 
 interface GameRouteLookupResponse {
@@ -394,23 +395,28 @@ export const useGameRouteLookup = ({
   gameDateSlug,
   gameSlug,
   enabled = true,
+  mode = 'admin',
 }: GameRouteLookupInput) => {
+  const canLookup =
+    !!gameDateSlug &&
+    !!gameSlug &&
+    (mode === 'user' || !!seasonId);
   const {
     data = null,
     isLoading: loading,
     error,
     isError,
   } = useQuery<GameRouteLookupResponse | null, AxiosError<{ error?: string }>>({
-    queryKey: ['game-route-lookup', { seasonId, gameDateSlug, gameSlug }],
-    enabled: enabled && !!seasonId && !!gameDateSlug && !!gameSlug,
+    queryKey: ['game-route-lookup', { mode, seasonId, gameDateSlug, gameSlug }],
+    enabled: enabled && canLookup,
     queryFn: async () => {
       try {
         const { data } = await axios.get<GameRouteLookupResponse>(
-          `${API}/admin/games/route-lookup`,
+          `${API}/${mode}/games/route-lookup`,
           {
             headers: authHeaders(),
             params: {
-              season_id: seasonId,
+              ...(seasonId ? { season_id: seasonId } : {}),
               game_date: gameDateSlug,
               game_slug: gameSlug,
             },

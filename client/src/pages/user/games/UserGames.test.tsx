@@ -1276,7 +1276,7 @@ describe('UserGames schedule views', () => {
 
     await user.click(screen.getAllByRole('button', { name: 'View game details' })[0]);
 
-    expect(mockNavigate).toHaveBeenCalledWith('/games/game-2');
+    expect(mockNavigate).toHaveBeenCalledWith('/games/05-15-2026/opp-vs-hom');
   });
 
   it('uses local date placement for timezone-sensitive games', async () => {

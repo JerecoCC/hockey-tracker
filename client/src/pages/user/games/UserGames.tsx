@@ -33,6 +33,7 @@ import ToggleButton from '@/components/ToggleButton/ToggleButton';
 import PeriodPicker from '@/components/PeriodPicker/PeriodPicker';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import { type GameRecord } from '@/hooks/useGames';
+import { buildUserGameDetailsPath } from '@/lib/routeSlugs';
 import styles from './UserGames.module.scss';
 
 const API = import.meta.env.VITE_API_URL || '/api';
@@ -937,7 +938,16 @@ const UserGames = () => {
     ...leagues.map((l) => ({ value: l.id, label: l.code, logo: l.logo })),
   ];
 
-  const openGame = (gameId: string) => navigate(`/games/${gameId}`);
+  const openGame = (game: GameRecord) =>
+    navigate(
+      buildUserGameDetailsPath({
+        gameId: game.id,
+        awayTeamCode: game.away_team.code,
+        homeTeamCode: game.home_team.code,
+        scheduledAt: game.scheduled_at,
+        scheduledTime: game.scheduled_time,
+      }),
+    );
   const openScoreCardModal = (game: GameRecord) => setScoreCardTarget(getScoreCardGame(game));
   const openScheduleModal = (game: GameRecord) => {
     setScheduleTarget(game);
@@ -1151,14 +1161,14 @@ const UserGames = () => {
         tzPref={tzPref}
         canOpen={canOpen}
         useLeagueColors
-        onOpen={() => openGame(game.id)}
+        onOpen={() => openGame(game)}
         actions={
           <UserGameActions
             watched={watched}
             skipped={skipped}
             scheduled={!!game.scheduled_for}
             busy={busy}
-            onView={() => openGame(game.id)}
+            onView={() => openGame(game)}
             onDownloadScoreCard={() => openScoreCardModal(game)}
             onMarkWatched={() => markGameWatched(game.id)}
             onUnwatch={() => unwatchGame(game.id)}
@@ -1341,7 +1351,7 @@ const UserGames = () => {
                         key={game.id}
                         game={game}
                         tzPref={tzPref}
-                        onOpen={() => openGame(game.id)}
+                        onOpen={() => openGame(game)}
                         onDownloadScoreCard={() => openScoreCardModal(game)}
                         onMarkWatched={() => markGameWatched(game.id)}
                         onUnwatch={() => unwatchGame(game.id)}
