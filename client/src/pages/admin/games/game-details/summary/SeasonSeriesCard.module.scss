@@ -10,6 +10,10 @@
 
 .prev {
   &MeetingsRows {
+    --season-series-row-border: #334155;
+    --season-series-row-hover-bg: rgba(255, 255, 255, 0.04);
+    --season-series-row-hover-border: #334155;
+
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: $space-xs 0;
@@ -24,7 +28,7 @@
     display: flex;
     flex-direction: column;
     padding: $space-md;
-    border: 1px solid #334155;
+    border: 1px solid var(--season-series-row-border);
     border-radius: $radius-sm;
     color: var(--app-text-strong, #{$text-bright});
     gap: $space-xs;
@@ -32,12 +36,29 @@
 
   &MeetingRowClickable {
     cursor: pointer;
-    transition: background $transition-fast;
+    transition:
+      background $transition-fast,
+      border-color $transition-fast;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.04);
+      background: var(--season-series-row-hover-bg);
+      border-color: var(--season-series-row-hover-border);
     }
   }
+}
+
+:global(:root[data-theme='light']) .prevMeetingsRows {
+  --season-series-row-border: var(--app-border, #cbd5e1);
+  --season-series-row-hover-bg: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 8%,
+    var(--app-surface, #fff)
+  );
+  --season-series-row-hover-border: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 36%,
+    var(--app-border, #cbd5e1)
+  );
 }
 
 .teamInfo {

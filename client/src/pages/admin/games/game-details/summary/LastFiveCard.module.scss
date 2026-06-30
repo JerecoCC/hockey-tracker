@@ -65,9 +65,27 @@
 
 // Container for list-mode rows inside the accordion body
 .lastFiveListRows {
+  --last-five-list-row-hover-bg: rgba(255, 255, 255, 0.04);
+  --last-five-list-logo-bg: color-mix(in srgb, #{$bg-card}, white 10%);
+  --last-five-list-logo-border: #{$border};
+
   display: flex;
   flex-direction: column;
   padding: $space-xs 0;
+}
+
+:global(:root[data-theme='light']) .lastFiveListRows {
+  --last-five-list-row-hover-bg: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 8%,
+    var(--app-surface, #fff)
+  );
+  --last-five-list-logo-bg: var(--app-field-bg, #edf3fa);
+  --last-five-list-logo-border: color-mix(
+    in srgb,
+    var(--app-accent-light, #2563eb) 18%,
+    var(--app-border, #cbd5e1)
+  );
 }
 
 // Individual game row
@@ -81,7 +99,7 @@
   transition: background $transition-base;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--last-five-list-row-hover-bg);
   }
 }
 
@@ -112,13 +130,13 @@
   height: 36px;
   border-radius: 999px;
   padding: 5px;
-  border: 1px solid $border;
+  border: 1px solid var(--last-five-list-logo-border);
   box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: color-mix(in srgb, #{$bg-card}, white 10%);
+  background: var(--last-five-list-logo-bg);
   overflow: hidden;
 
   &Img {
