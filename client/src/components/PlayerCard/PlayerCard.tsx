@@ -156,9 +156,6 @@ const PlayerCard = ({
                 initials={initials ?? fallbackInitials(name)}
                 primaryColor={teamPrimaryColor}
                 textColor={teamTextColor}
-                ringColor={teamPrimaryColor}
-                ringWidth={isList ? 2 : 3}
-                ringContrast
                 size={resolvedImageSize}
               />
             )}

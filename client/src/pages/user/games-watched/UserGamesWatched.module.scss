@@ -1,0 +1,55 @@
+@use "styles/colors" as *;
+@use "styles/mixins" as *;
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: $page-section-gap;
+}
+
+.yearFilter {
+  display: inline-flex;
+  align-items: center;
+  gap: $space-sm;
+}
+
+.yearLabel {
+  font-size: $font-xs;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--app-text-muted, #{$text-dim});
+  white-space: nowrap;
+}
+
+.empty {
+  margin: 0;
+  font-size: $font-base;
+  color: var(--app-text-muted, #{$text-dim});
+  padding: $space-lg 0;
+}
+
+.watchList {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: $space-md;
+  padding: 0;
+}
+
+.watchCount {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  color: var(--app-text-muted, #{$text-dim});
+  font-size: $font-xs;
+  line-height: 1;
+  white-space: nowrap;
+
+  strong {
+    color: var(--app-text-strong, #{$text-bright});
+    font-size: $font-lg;
+    line-height: 1;
+  }
+}

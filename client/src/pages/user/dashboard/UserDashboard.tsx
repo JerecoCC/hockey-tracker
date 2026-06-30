@@ -15,6 +15,7 @@ import { useAuth } from '@/context/AuthContext';
 import useFavoriteTeams from '@/hooks/useFavoriteTeams';
 import { type GameRecord } from '@/hooks/useGames';
 import useTeams, { type TeamRecord } from '@/hooks/useTeams';
+import { getWatchedTeamSummaries, type TeamWatchSummary } from '@/lib/watchedTeams';
 import ScoreImageModal from '@/pages/admin/games/game-details/ScoreImageModal';
 import styles from './UserDashboard.module.scss';
 
@@ -59,7 +60,17 @@ const fmtDayHeading = (key: string) => {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    year: 'numeric',
   });
+};
+
+const fmtNumericDate = (key: string) => {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Intl.DateTimeFormat('en-US', {
+    month: '2-digit',
+    day: '2-digit',
+    year: 'numeric',
+  }).format(new Date(year, month - 1, day));
 };
 
 const getEtAbbrForDateKey = (dateKey: string): string =>
@@ -153,26 +164,59 @@ const getScoreCardGame = (game: GameRecord): GameRecord => ({
   series_away_wins: game.series_away_wins_at_game ?? null,
 });
 
-const TeamChip = ({ team }: { team: TeamRecord }) => (
-  <ListItem
-    className={styles.favoriteTeam}
-    image={team.logo}
-    imageDark={team.logo_dark}
-    imageLight={team.logo_light}
-    eyebrow={team.place_name || undefined}
-    name={team.team_name || team.name}
-    rightContent={{ type: 'code', value: team.code }}
-    primaryColor={team.primary_color}
-    textColor={team.text_color}
-  />
-);
+const sortWatchedTeamSummaries = (a: TeamWatchSummary, b: TeamWatchSummary) => {
+  if (b.count !== a.count) return b.count - a.count;
+  return (a.team.team_name || a.team.name).localeCompare(b.team.team_name || b.team.name);
+};
+
+const getFavoriteTeamSummaries = (
+  teams: TeamRecord[],
+  favoriteTeamIds: string[],
+  watchedCounts: Map<string, number>,
+): TeamWatchSummary[] => {
+  const favoriteSet = new Set(favoriteTeamIds);
+
+  return teams
+    .filter((team) => favoriteSet.has(team.id))
+    .map((team) => ({
+      team,
+      count: watchedCounts.get(team.id) ?? 0,
+    }))
+    .sort(sortWatchedTeamSummaries);
+};
+
+const WatchedTeamItem = ({ summary }: { summary: TeamWatchSummary }) => {
+  const { team, count } = summary;
+  const teamName = team.team_name || team.name;
+
+  return (
+    <ListItem
+      image={team.logo}
+      imageDark={team.logo_dark}
+      imageLight={team.logo_light}
+      eyebrow={team.place_name || undefined}
+      name={teamName}
+      rightContent={
+        <span
+          className={styles.watchCount}
+          aria-label={`${count} watched ${count === 1 ? 'game' : 'games'}`}
+        >
+          <strong>{count}</strong>
+          <span>{count === 1 ? 'game' : 'games'}</span>
+        </span>
+      }
+      primaryColor={team.primary_color}
+      textColor={team.text_color}
+    />
+  );
+};
 
 const UserDashboard = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { teams, loading: teamsLoading } = useTeams();
   const { favorites } = useFavoriteTeams();
+  const { teams, loading: teamsLoading } = useTeams();
   const [actionGameId, setActionGameId] = useState<string | null>(null);
   const [confirmSkipGame, setConfirmSkipGame] = useState<GameRecord | null>(null);
   const [scheduleTarget, setScheduleTarget] = useState<GameRecord | null>(null);
@@ -192,6 +236,7 @@ const UserDashboard = () => {
   };
   const todayKey = isAdmin && dateOverride ? dateOverride : dateToISO(new Date());
   const tzPref = USER_TIMEZONE;
+  const displayName = user?.display_name ?? user?.displayName ?? 'Player';
 
   const { data: games = [], isLoading: gamesLoading } = useQuery<GameRecord[]>({
     queryKey: ['user-dashboard-games', todayKey],
@@ -204,22 +249,42 @@ const UserDashboard = () => {
     },
   });
 
-  const favoriteTeams = useMemo(() => {
-    const favoriteSet = new Set(favorites);
-    return teams
-      .filter((team) => favoriteSet.has(team.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-  }, [favorites, teams]);
+  const { data: watchedGames = [], isLoading: watchedGamesLoading } = useQuery<GameRecord[]>({
+    queryKey: ['user-dashboard-watched-games'],
+    queryFn: async () => {
+      const { data } = await axios.get<GameRecord[]>(`${API}/user/games`, {
+        headers: authHeaders(),
+        params: { watched: true },
+      });
+      return data;
+    },
+  });
 
   // The API already returns only games for `todayKey` (effective date filter),
   // so just order them for display.
   const todayGames = useMemo(() => [...games].sort(sortGamesByTime), [games]);
+  const watchedTeamCounts = useMemo(
+    () =>
+      new Map(
+        getWatchedTeamSummaries(watchedGames, favorites).map((summary) => [
+          summary.team.id,
+          summary.count,
+        ]),
+      ),
+    [favorites, watchedGames],
+  );
+  const watchedTeamSummaries = useMemo(
+    () => getFavoriteTeamSummaries(teams, favorites, watchedTeamCounts),
+    [favorites, teams, watchedTeamCounts],
+  );
+  const watchedTeamsLoading = watchedGamesLoading || teamsLoading;
 
   const setDashboardGames = (updater: (games: GameRecord[]) => GameRecord[]) => {
     queryClient.setQueryData<GameRecord[]>(['user-dashboard-games', todayKey], (existing) =>
       Array.isArray(existing) ? updater(existing) : existing,
     );
     void queryClient.invalidateQueries({ queryKey: ['user-games'] });
+    void queryClient.invalidateQueries({ queryKey: ['user-dashboard-watched-games'] });
   };
 
   const saveScheduleForGame = async (game: GameRecord, scheduledFor: string | null) => {
@@ -352,97 +417,114 @@ const UserDashboard = () => {
           />
         )}
         <div>
-          <h2 className={styles.welcomeName}>
-            Welcome, {user?.display_name ?? user?.displayName ?? 'Player'}!
-          </h2>
+          <h2 className={styles.welcomeName}>Welcome, {displayName}!</h2>
           <p className={styles.welcomeEmail}>{user?.email}</p>
         </div>
       </div>
 
-      <Section title="Favorite Teams">
-        {teamsLoading ? (
-          <p className={styles.empty}>Loading...</p>
-        ) : favoriteTeams.length === 0 ? (
-          <p className={styles.empty}>No favorite teams yet.</p>
-        ) : (
-          <ul className={styles.favoriteScroller}>
-            {favoriteTeams.map((team) => (
-              <TeamChip
-                key={team.id}
-                team={team}
-              />
-            ))}
-          </ul>
-        )}
-      </Section>
-
-      <Section
-        title={fmtDayHeading(todayKey)}
-        action={
-          isAdmin ? (
-            <div className={styles.testDateControl}>
-              <span className={styles.testDateLabel}>Test date</span>
-              <DatePicker
-                value={dateOverride}
-                onChange={updateDateOverride}
-                granularity="day"
-                placeholder="Today"
-                triggerLabel={dateOverride ? fmtDayHeading(dateOverride) : 'Today'}
-                triggerAriaLabel="Override the dashboard date for testing"
-              />
-              {dateOverride && (
-                <Button
-                  variant="ghost"
-                  intent="neutral"
-                  size="sm"
-                  icon="close"
-                  tooltip="Reset to today"
-                  aria-label="Reset dashboard date to today"
-                  onClick={() => updateDateOverride('')}
-                />
-              )}
-            </div>
-          ) : undefined
-        }
-      >
-        {gamesLoading ? (
-          <p className={styles.empty}>Loading...</p>
-        ) : todayGames.length === 0 ? (
-          <p className={styles.empty}>No games scheduled for today.</p>
-        ) : (
-          <div className={styles.todayGamesGrid}>
-            {todayGames.map((game) => {
-              const watched = !!game.watched_by_user;
-              const skipped = !!game.skipped_by_user;
-              const busy = actionGameId === game.id;
-              return (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  tzPref={tzPref}
-                  useLeagueColors
-                  onOpen={() => navigate(`/games/${game.id}`)}
-                  actions={
-                    <UserGameActions
-                      watched={watched}
-                      skipped={skipped}
-                      scheduled={!!game.scheduled_for}
-                      busy={busy}
-                      onView={() => navigate(`/games/${game.id}`)}
-                      onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
-                      onMarkWatched={() => markGameWatched(game.id)}
-                      onUnwatch={() => unwatchGame(game.id)}
-                      onUndoSkip={() => unwatchGame(game.id)}
-                      onSchedule={() => openScheduleModal(game)}
-                      onSkip={() => setConfirmSkipGame(game)}
+      <div className={styles.contentGrid}>
+        <div className={styles.mainColumn}>
+          <Section
+            title={fmtDayHeading(todayKey)}
+            action={
+              isAdmin ? (
+                <div className={styles.testDateControl}>
+                  <span className={styles.testDateLabel}>Test date</span>
+                  <DatePicker
+                    value={dateOverride}
+                    onChange={updateDateOverride}
+                    granularity="day"
+                    placeholder="MM/DD/YYYY"
+                    triggerLabel={dateOverride ? fmtNumericDate(dateOverride) : 'MM/DD/YYYY'}
+                    triggerAriaLabel="Override the dashboard date for testing"
+                  />
+                  {dateOverride && (
+                    <Button
+                      variant="ghost"
+                      intent="neutral"
+                      size="sm"
+                      icon="close"
+                      tooltip="Reset to today"
+                      aria-label="Reset dashboard date to today"
+                      onClick={() => updateDateOverride('')}
                     />
-                  }
-                />
-              );
-            })}
-          </div>
-        )}
-      </Section>
+                  )}
+                </div>
+              ) : undefined
+            }
+          >
+            {gamesLoading ? (
+              <p className={styles.empty}>Loading...</p>
+            ) : todayGames.length === 0 ? (
+              <p className={styles.empty}>No games scheduled for today.</p>
+            ) : (
+              <div className={styles.todayGamesGrid}>
+                {todayGames.map((game) => {
+                  const watched = !!game.watched_by_user;
+                  const skipped = !!game.skipped_by_user;
+                  const busy = actionGameId === game.id;
+                  return (
+                    <GameCard
+                      key={game.id}
+                      game={game}
+                      tzPref={tzPref}
+                      useLeagueColors
+                      onOpen={() => navigate(`/games/${game.id}`)}
+                      actions={
+                        <UserGameActions
+                          watched={watched}
+                          skipped={skipped}
+                          scheduled={!!game.scheduled_for}
+                          busy={busy}
+                          onView={() => navigate(`/games/${game.id}`)}
+                          onDownloadScoreCard={() => setScoreCardTarget(getScoreCardGame(game))}
+                          onMarkWatched={() => markGameWatched(game.id)}
+                          onUnwatch={() => unwatchGame(game.id)}
+                          onUndoSkip={() => unwatchGame(game.id)}
+                          onSchedule={() => openScheduleModal(game)}
+                          onSkip={() => setConfirmSkipGame(game)}
+                        />
+                      }
+                    />
+                  );
+                })}
+              </div>
+            )}
+          </Section>
+        </div>
+
+        <aside className={styles.sideColumn}>
+          <Section
+            title="Games Watched"
+            action={
+              <Button
+                variant="outlined"
+                intent="neutral"
+                size="sm"
+                icon="open_in_new"
+                onClick={() => navigate('/games/watched')}
+              >
+                View All
+              </Button>
+            }
+          >
+            {watchedTeamsLoading ? (
+              <p className={styles.empty}>Loading...</p>
+            ) : watchedTeamSummaries.length === 0 ? (
+              <p className={styles.empty}>No favorite teams yet.</p>
+            ) : (
+              <ul className={styles.watchList}>
+                {watchedTeamSummaries.map((summary) => (
+                  <WatchedTeamItem
+                    key={summary.team.id}
+                    summary={summary}
+                  />
+                ))}
+              </ul>
+            )}
+          </Section>
+        </aside>
+      </div>
 
       <Modal
         open={!!scheduleTarget}

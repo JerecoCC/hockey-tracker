@@ -125,6 +125,19 @@ describe('GET /api/user/games', () => {
     expect(queryText).toContain('OR uwg.skipped_at IS NULL');
   });
 
+  it('can filter to watched games when requested', async () => {
+    sql.mockResolvedValueOnce([{ ...GAME, watched_by_user: true, watched_on: '2024-10-12' }]);
+
+    const res = await request(app).get('/api/user/games?watched=true');
+    const queryText = sql.mock.calls[0][0].join(' ');
+
+    expect(res.status).toBe(200);
+    expect(res.body[0].watched_by_user).toBe(true);
+    expect(sql.mock.calls[0].slice(1)).toContain(true);
+    expect(queryText).toContain('uwg.watched_on IS NOT NULL');
+    expect(queryText).toContain('uwg.watched_at IS NOT NULL');
+  });
+
   it('keeps league and status filters working on top of favorite-team scoping', async () => {
     sql.mockResolvedValueOnce([GAME]);
 

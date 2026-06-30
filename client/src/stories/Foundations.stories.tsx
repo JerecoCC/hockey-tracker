@@ -192,7 +192,6 @@ export const ControlsAndStatus = {
                 initials="TH"
                 primaryColor={teams.minnesota.primary_color}
                 textColor={teams.minnesota.text_color}
-                ringColor={teams.minnesota.primary_color}
                 size={64}
               />
             </div>

@@ -1,45 +1,31 @@
 @use "styles/colors" as *;
 
-// Circular container — carries the background tint so transparent images
+// Circular container: carries the background tint so transparent images
 // blend against the team's primary color.
 .wrapper {
   position: relative;
-  // isolation: isolate ensures z-index: -1 on ::before is contained within
-  // the wrapper's stacking context and doesn't escape to the parent.
-  isolation: isolate;
   border-radius: 50%;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
-  // Default background when no team color is provided
+  overflow: visible;
+  // Default background when no team color is provided.
   background: var(--app-border, #{$border});
 }
 
-// Photo fills the container exactly
+// Photo fills the container exactly and uses the same theme-aware shadow as logos.
 .img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   object-position: top;
-  display: block;
-}
-
-// Inner shadow — visible through transparent PNG cutouts on photos,
-// and also applied to the initials placeholder for a consistent look.
-// z-index: -1 places it above the wrapper background but below the img.
-.wrapper::before {
-  content: "";
-  position: absolute;
-  inset: 0;
   border-radius: inherit;
-  z-index: -1;
-  box-shadow: inset 0 calc(var(--avatar-size) * 0.23px) calc(var(--avatar-size) * 0.32px) rgba(0, 0, 0, 0.35);
-  pointer-events: none;
+  display: block;
+  filter: drop-shadow(0 1px 3px var(--app-logo-shadow, rgba(255, 255, 255, 0.1)));
 }
 
-// Initials text — color is applied via inline style
+// Initials text: color is applied via inline style.
 .initials {
   font-weight: 700;
   text-transform: uppercase;

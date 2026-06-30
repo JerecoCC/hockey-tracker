@@ -6,18 +6,17 @@ import UserDashboard from './UserDashboard';
 const mockNavigate = jest.fn();
 const mockSetQueryData = jest.fn();
 const mockInvalidateQueries = jest.fn();
+let mockAuthUser: any = {
+  display_name: 'Taylor',
+  email: 'taylor@example.com',
+  photo: null,
+};
 
 jest.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
 jest.mock('axios');
 jest.mock('@tanstack/react-query', () => ({ useQuery: jest.fn(), useQueryClient: jest.fn() }));
 jest.mock('@/context/AuthContext', () => ({
-  useAuth: () => ({
-    user: {
-      display_name: 'Taylor',
-      email: 'taylor@example.com',
-      photo: null,
-    },
-  }),
+  useAuth: () => ({ user: mockAuthUser }),
 }));
 jest.mock('@/hooks/useTeams', () => ({
   __esModule: true,
@@ -75,7 +74,7 @@ jest.mock(
         type="button"
         onClick={onClick}
         disabled={disabled}
-        aria-label={tooltip ?? icon}
+        aria-label={tooltip ?? (children ? undefined : icon)}
       >
         {children ?? tooltip ?? icon}
       </button>
@@ -123,13 +122,22 @@ jest.mock(
         </div>
       ) : null,
 );
-jest.mock('@/components/DatePicker/DatePicker', () => ({ value, onChange, placeholder }: any) => (
-  <input
-    aria-label={placeholder}
-    value={value}
-    onChange={(e) => onChange(e.target.value)}
-  />
-));
+jest.mock('@/components/DatePicker/DatePicker', () => (props: any) =>
+  props.triggerLabel ? (
+    <button
+      type="button"
+      aria-label={props.triggerAriaLabel ?? props.triggerLabel}
+    >
+      {props.triggerLabel}
+    </button>
+  ) : (
+    <input
+      aria-label={props.placeholder}
+      value={props.value}
+      onChange={(e) => props.onChange(e.target.value)}
+    />
+  ),
+);
 jest.mock('@/pages/admin/games/game-details/ScoreImageModal', () => ({
   __esModule: true,
   default: ({ open, game, onClose }: any) =>
@@ -212,6 +220,59 @@ const makeGame = (overrides: Partial<any> = {}) => ({
 const toLocalDateKey = (date: Date) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 
+const mockDashboardQueries = ({
+  todayGames = [makeGame()],
+  watchedGames = [
+    makeGame({
+      id: 'watched-game-1',
+      status: 'final',
+      watched_by_user: true,
+      watched_on: '2026-06-20',
+      away_team: {
+        id: 'team-other',
+        name: 'New York Rangers',
+        code: 'NYR',
+        logo: null,
+        primary_color: '#0038a8',
+        secondary_color: '#ffffff',
+        text_color: '#ffffff',
+      },
+    }),
+    makeGame({
+      id: 'watched-game-2',
+      status: 'final',
+      watched_by_user: true,
+      watched_on: '2026-06-20',
+      away_team: {
+        id: 'team-other',
+        name: 'New York Rangers',
+        code: 'NYR',
+        logo: null,
+        primary_color: '#0038a8',
+        secondary_color: '#ffffff',
+        text_color: '#ffffff',
+      },
+    }),
+  ],
+}: {
+  todayGames?: any[];
+  watchedGames?: any[];
+} = {}) => {
+  mockUseQuery.mockImplementation(({ queryKey }: any) => {
+    if (Array.isArray(queryKey) && queryKey[0] === 'user-dashboard-watched-games') {
+      return {
+        data: watchedGames,
+        isLoading: false,
+      };
+    }
+
+    return {
+      data: todayGames,
+      isLoading: false,
+    };
+  });
+};
+
 describe('UserDashboard', () => {
   beforeAll(() => {
     jest.useFakeTimers();
@@ -224,28 +285,34 @@ describe('UserDashboard', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockAuthUser = {
+      display_name: 'Taylor',
+      email: 'taylor@example.com',
+      photo: null,
+    };
     localStorage.clear();
     mockUseQueryClient.mockReturnValue({
       setQueryData: mockSetQueryData,
       invalidateQueries: mockInvalidateQueries,
     });
-    // The dashboard now filters by date on the server, so the query returns
-    // only the effective date's games.
-    mockUseQuery.mockReturnValue({
-      data: [makeGame()],
-      isLoading: false,
-    });
+    // The dashboard filters today's games separately from the watched-team summary.
+    mockDashboardQueries();
   });
 
-  it('shows favorite teams and only current-day games', () => {
+  it('shows dashboard stats, watched teams, and only current-day games', () => {
     render(<UserDashboard />);
 
     expect(screen.getByText('Welcome, Taylor!')).toBeInTheDocument();
-    expect(screen.getByText('Favorite Teams')).toBeInTheDocument();
+    expect(screen.getByText('Games Watched')).toBeInTheDocument();
+    expect(screen.getByText('Boston')).toBeInTheDocument();
     expect(screen.getByText('Bruins')).toBeInTheDocument();
+    expect(screen.getByText('Toronto')).toBeInTheDocument();
     expect(screen.getByText('Maple Leafs')).toBeInTheDocument();
+    expect(screen.getByLabelText('2 watched games')).toBeInTheDocument();
+    expect(screen.getByLabelText('0 watched games')).toBeInTheDocument();
     expect(screen.queryByText('Rangers')).not.toBeInTheDocument();
-    expect(screen.getByText('Sunday, June 21')).toBeInTheDocument();
+    expect(screen.queryByText(/Last watched/)).not.toBeInTheDocument();
+    expect(screen.getByText('Sunday, June 21, 2026')).toBeInTheDocument();
     expect(
       screen.getByText(
         new Date('2026-06-21T19:00:00-04:00').toLocaleTimeString('en-US', {
@@ -254,6 +321,26 @@ describe('UserDashboard', () => {
         }),
       ),
     ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'View All' }));
+    expect(mockNavigate).toHaveBeenCalledWith('/games/watched');
+  });
+
+  it('shows the admin test date field in numeric format in the day section header', () => {
+    mockAuthUser = {
+      display_name: 'Taylor',
+      email: 'taylor@example.com',
+      photo: null,
+      role: 'admin',
+    };
+    localStorage.setItem('admin-dashboard-date-override', '2026-06-22');
+
+    render(<UserDashboard />);
+
+    expect(
+      screen.getByRole('button', { name: 'Override the dashboard date for testing' }),
+    ).toHaveTextContent('06/22/2026');
+    expect(screen.getByText('Monday, June 22, 2026')).toBeInTheDocument();
   });
 
   it('marks a dashboard game as watched', async () => {
@@ -274,6 +361,9 @@ describe('UserDashboard', () => {
       expect.any(Function),
     );
     expect(mockInvalidateQueries).toHaveBeenCalledWith({ queryKey: ['user-games'] });
+    expect(mockInvalidateQueries).toHaveBeenCalledWith({
+      queryKey: ['user-dashboard-watched-games'],
+    });
   });
 
   it('prevents scheduling a watch on or before the local game date', async () => {
@@ -302,10 +392,7 @@ describe('UserDashboard', () => {
       hour: 'numeric',
       minute: '2-digit',
     });
-    mockUseQuery.mockReturnValue({
-      data: [makeGame({ scheduled_for: '2026-06-23' })],
-      isLoading: false,
-    });
+    mockDashboardQueries({ todayGames: [makeGame({ scheduled_for: '2026-06-23' })] });
 
     render(<UserDashboard />);
 
@@ -313,8 +400,8 @@ describe('UserDashboard', () => {
   });
 
   it('shows playoff metadata in the season label slot', () => {
-    mockUseQuery.mockReturnValue({
-      data: [
+    mockDashboardQueries({
+      todayGames: [
         makeGame({
           game_type: 'playoff',
           playoff_round: 2,
@@ -322,7 +409,6 @@ describe('UserDashboard', () => {
           playoff_round_names: { 2: 'Round 2' },
         }),
       ],
-      isLoading: false,
     });
 
     render(<UserDashboard />);
@@ -332,9 +418,10 @@ describe('UserDashboard', () => {
   });
 
   it('opens watched-game hover actions for details and score image', () => {
-    mockUseQuery.mockReturnValue({
-      data: [makeGame({ status: 'final', watched_by_user: true, home_score: 4, away_score: 2 })],
-      isLoading: false,
+    mockDashboardQueries({
+      todayGames: [
+        makeGame({ status: 'final', watched_by_user: true, home_score: 4, away_score: 2 }),
+      ],
     });
 
     render(<UserDashboard />);
