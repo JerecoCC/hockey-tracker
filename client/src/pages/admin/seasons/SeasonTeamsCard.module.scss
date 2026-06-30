@@ -76,40 +76,20 @@
 }
 
 .skeleton {
-  &TeamList {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: $space-xs;
-  }
-
-  &TeamItem {
-    display: block;
-    min-height: 74px;
-    opacity: 0.55;
-  }
-
-  &GroupList {
+  &List {
     list-style: none;
     margin: 0;
     padding: 0;
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: $space-md;
-
-    @media (max-width: 900px) {
-      grid-template-columns: 1fr;
-    }
   }
 
-  &GroupItem {
+  &Item {
     display: block;
-    min-height: 50px;
-    border: 1px solid $border;
+    height: calc(48px + #{$space-md * 2} + 2px);
     border-radius: $radius-md;
-    opacity: 0.55;
+    opacity: 0.65;
   }
 }
 
@@ -128,7 +108,7 @@
   }
 
   &NestedList {
-    padding: $space-sm $space-md $space-md;
+    padding: 0;
 
     > .groupList {
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -138,6 +118,27 @@
   &Item {
     display: flex;
     flex-direction: column;
+  }
+
+  &Accordion {
+    --accordion-border-color: var(--app-border, #{$border});
+  }
+
+  &Header {
+    box-sizing: border-box;
+    gap: $space-md;
+    min-height: 52px;
+    align-items: center;
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+
+  &Body {
+    padding: $space-md;
+
+    .emptyMsg {
+      margin: 0;
+    }
   }
 
   &Label {
@@ -154,29 +155,5 @@
     font-weight: 600;
     color: var(--app-text-muted, #{$text-dim});
     white-space: nowrap;
-  }
-
-  &RoleBadge {
-    display: inline-block;
-    flex-shrink: 0;
-    padding: 1px 7px;
-    border-radius: $radius-sm;
-    font-size: $font-xs;
-    font-weight: 600;
-    letter-spacing: 0.04em;
-    line-height: 1.6;
-    text-transform: uppercase;
-  }
-
-  &RoleBadge_conference {
-    background: rgba($accent, 0.18);
-    color: $accent-light;
-    border: 1px solid rgba($accent, 0.3);
-  }
-
-  &RoleBadge_division {
-    background: rgba($success, 0.18);
-    color: $success-light;
-    border: 1px solid rgba($success, 0.3);
   }
 }

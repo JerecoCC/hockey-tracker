@@ -6,6 +6,7 @@ import Section from '@/components/Section/Section';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Select from '@/components/Select/Select';
 import Skeleton from '@/components/Skeleton/Skeleton';
+import Tag from '@/components/Tag/Tag';
 import { type AlignmentGroupRecord, type GroupAlignmentSet } from '@/hooks/useGroupAlignmentSets';
 import { type GroupTeamRecord } from '@/hooks/useLeagueGroups';
 import { type SeasonGroupRecord, type SeasonTeam } from '@/hooks/useSeasonDetails';
@@ -47,6 +48,10 @@ const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: Group
   return (
     <li className={styles.groupItem}>
       <Accordion
+        headerType="light"
+        className={styles.groupAccordion}
+        rowClassName={styles.groupHeader}
+        bodyClassName={styles.groupBody}
         label={<span className={styles.groupLabel}>{group.name}</span>}
         labelMeta={
           <span
@@ -58,9 +63,10 @@ const GroupNode = ({ group, allGroups, leagueCode, seasonId, seasonName }: Group
         }
         headerRight={
           roleLabel ? (
-            <span className={`${styles.groupRoleBadge} ${styles[`groupRoleBadge_${group.role}`]}`}>
-              {roleLabel}
-            </span>
+            <Tag
+              label={roleLabel}
+              intent={group.role === 'division' ? 'success' : 'accent'}
+            />
           ) : null
         }
       >
@@ -190,41 +196,21 @@ const TeamList = ({ teams, leagueCode, leagueId, seasonId, seasonName }: TeamLis
   );
 };
 
-const SeasonTeamsSkeleton = ({ variant }: { variant: 'groups' | 'teams' }) => {
-  if (variant === 'groups') {
-    return (
-      <ul
-        className={styles.skeletonGroupList}
-        aria-hidden="true"
-      >
-        {Array.from({ length: 4 }, (_, index) => (
-          <Skeleton
-            as="li"
-            key={index}
-            type="card"
-            className={styles.skeletonGroupItem}
-          />
-        ))}
-      </ul>
-    );
-  }
-
-  return (
-    <ul
-      className={styles.skeletonTeamList}
-      aria-hidden="true"
-    >
-      {Array.from({ length: 6 }, (_, index) => (
-        <Skeleton
-          as="li"
-          key={index}
-          type="card"
-          className={styles.skeletonTeamItem}
-        />
-      ))}
-    </ul>
-  );
-};
+const SeasonTeamsSkeleton = () => (
+  <ul
+    className={styles.skeletonList}
+    aria-hidden="true"
+  >
+    {Array.from({ length: 5 }, (_, index) => (
+      <Skeleton
+        as="li"
+        key={index}
+        type="card"
+        className={styles.skeletonItem}
+      />
+    ))}
+  </ul>
+);
 
 interface Props {
   seasonId: string;
@@ -384,9 +370,7 @@ const SeasonTeamsCard = ({
       action={alignmentControl}
     >
       {loading || (showPreview && previewLoading) ? (
-        <SeasonTeamsSkeleton
-          variant={draftAlignment?.structure_type === 'groups' ? 'groups' : 'teams'}
-        />
+        <SeasonTeamsSkeleton />
       ) : userRoots.length > 0 ? (
         <ul className={styles.groupList}>
           {userRoots.map((group) => (
