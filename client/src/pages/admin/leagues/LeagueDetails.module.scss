@@ -95,54 +95,6 @@ $league-tab-list-gap: $space-md;
   }
 }
 
-@keyframes shimmer {
-  0% {
-    background-position: -400px 0;
-  }
-  100% {
-    background-position: 400px 0;
-  }
-}
-
-.skeletonTeamItem {
-  display: flex;
-  align-items: center;
-  gap: $space-md;
-  padding: $space-sm $space-md;
-  border-radius: $radius-md;
-  opacity: 0.55;
-
-  .skeletonBone {
-    background: linear-gradient(
-      90deg,
-      var(--app-skeleton-base, #{$border}) 25%,
-      var(--app-skeleton-highlight, #475569) 50%,
-      var(--app-skeleton-base, #{$border}) 75%
-    );
-    background-size: 800px 100%;
-    animation: shimmer 1.4s ease-in-out infinite;
-    border-radius: $radius-sm;
-  }
-
-  .skeletonLogo {
-    width: 40px;
-    height: 40px;
-    flex-shrink: 0;
-  }
-
-  .skeletonName {
-    height: 14px;
-    width: 120px;
-  }
-
-  .skeletonCode {
-    height: 12px;
-    width: 48px;
-    margin-left: auto;
-    margin-right: $space-md;
-  }
-}
-
 // ── Info grid ──────────────────────────────────────────────────────────
 .infoGrid {
   display: grid;
@@ -368,10 +320,6 @@ $league-tab-list-gap: $space-md;
     height: calc(48px + #{$space-md * 2} + 2px);
     border-radius: $radius-md;
     opacity: 0.65;
-  }
-
-  &RowBordered {
-    border: 1px solid var(--app-border, #{$border});
   }
 
   &TextStack {

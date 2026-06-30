@@ -115,12 +115,7 @@ export const LeagueTeamsTabSkeleton = ({ className }: TabSkeletonProps) => (
       </div>
       <ul className={styles.tabSkeletonGrid}>
         {Array.from({ length: 5 }, (_, index) => (
-          <LeagueListRowSkeleton
-            key={index}
-            image
-            code
-            bordered
-          />
+          <LeagueListRowSkeleton key={index} />
         ))}
       </ul>
     </Section>

@@ -1572,23 +1572,11 @@ const AwardWinnerList = ({ recipients, empty, subtitle, getRecipientHref }: Winn
 
 const AwardWinnerListSkeleton = () => (
   <ul className={styles.awardWinnerCards}>
-    <li className={[styles.awardWinnerCard, styles.awardWinnerSkeleton].join(' ')}>
-      <Skeleton
-        type="circle"
-        width={88}
-        height={88}
-      />
-      <div className={styles.awardWinnerSkeletonInfo}>
-        <Skeleton
-          type="text"
-          width="68%"
-        />
-        <Skeleton
-          type="subtitle"
-          width="48%"
-        />
-      </div>
-    </li>
+    <Skeleton
+      as="li"
+      type="card"
+      className={[styles.awardWinnerCard, styles.awardWinnerSkeleton].join(' ')}
+    />
   </ul>
 );
 

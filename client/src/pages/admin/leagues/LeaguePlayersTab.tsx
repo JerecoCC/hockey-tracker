@@ -44,7 +44,8 @@ const playerSkeletonRow = (key: number) => (
   <Skeleton
     as="li"
     key={key}
-    className={[styles.tabSkeletonRow, styles.tabSkeletonRowBordered].join(' ')}
+    type="card"
+    className={styles.tabSkeletonRow}
   />
 );
 

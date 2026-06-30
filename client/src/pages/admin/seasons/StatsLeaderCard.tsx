@@ -3,6 +3,7 @@ import Divider from '@/components/Divider/Divider';
 import ListItem from '@/components/ListItem/ListItem';
 import PlayerCard from '@/components/PlayerCard/PlayerCard';
 import Skeleton from '@/components/Skeleton/Skeleton';
+import type { ReactNode } from 'react';
 import styles from './StatsLeaderCard.module.scss';
 
 export interface StatsLeaderItem {
@@ -27,8 +28,8 @@ interface Props<T extends StatsLeaderItem> {
   onHover: (idx: number) => void;
   tieRanks: string[];
   statLabel: string;
-  getFeaturedStat: (item: T) => React.ReactNode;
-  getRowStat: (item: T) => React.ReactNode;
+  getFeaturedStat: (item: T) => ReactNode;
+  getRowStat: (item: T) => ReactNode;
   onSelectItem?: (item: T) => void;
 }
 

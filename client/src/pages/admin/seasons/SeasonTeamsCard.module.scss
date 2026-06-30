@@ -86,30 +86,9 @@
   }
 
   &TeamItem {
-    display: flex;
-    align-items: center;
-    gap: $space-md;
-    padding: $space-md;
+    display: block;
     min-height: 74px;
     opacity: 0.55;
-  }
-
-  &TextStack {
-    display: flex;
-    flex: 1;
-    min-width: 0;
-    flex-direction: column;
-    gap: $space-xs;
-  }
-
-  &Eyebrow {
-    width: min(92px, 35%);
-    height: 10px;
-  }
-
-  &Name {
-    width: min(180px, 65%);
-    height: 14px;
   }
 
   &GroupList {
@@ -126,21 +105,11 @@
   }
 
   &GroupItem {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: $space-md;
+    display: block;
     min-height: 50px;
-    padding: $space-sm $space-md;
     border: 1px solid $border;
     border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.02);
     opacity: 0.55;
-  }
-
-  &GroupTitle {
-    width: min(180px, 70%);
-    height: 14px;
   }
 }
 

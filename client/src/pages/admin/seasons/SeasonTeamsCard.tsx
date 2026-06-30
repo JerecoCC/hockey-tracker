@@ -198,16 +198,12 @@ const SeasonTeamsSkeleton = ({ variant }: { variant: 'groups' | 'teams' }) => {
         aria-hidden="true"
       >
         {Array.from({ length: 4 }, (_, index) => (
-          <li
+          <Skeleton
+            as="li"
             key={index}
+            type="card"
             className={styles.skeletonGroupItem}
-          >
-            <Skeleton
-              type="text"
-              className={styles.skeletonGroupTitle}
-            />
-            <Skeleton type="circle" />
-          </li>
+          />
         ))}
       </ul>
     );
@@ -219,23 +215,12 @@ const SeasonTeamsSkeleton = ({ variant }: { variant: 'groups' | 'teams' }) => {
       aria-hidden="true"
     >
       {Array.from({ length: 6 }, (_, index) => (
-        <li
+        <Skeleton
+          as="li"
           key={index}
+          type="card"
           className={styles.skeletonTeamItem}
-        >
-          <Skeleton type="picture" />
-          <span className={styles.skeletonTextStack}>
-            <Skeleton
-              type="subtitle"
-              className={styles.skeletonEyebrow}
-            />
-            <Skeleton
-              type="text"
-              className={styles.skeletonName}
-            />
-          </span>
-          <Skeleton type="code" />
-        </li>
+        />
       ))}
     </ul>
   );

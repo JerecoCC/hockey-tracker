@@ -295,20 +295,20 @@ describe('LeagueDetailsPage – loading', () => {
     expect(screen.getByRole('heading', { name: 'Teams' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading teams/i })).toBeInTheDocument();
     expect(container.querySelector('.tabSkeletonSearchFull')).toBeInTheDocument();
-    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(5);
+    expect(container.querySelectorAll('.tabSkeletonRow')).toHaveLength(5);
     expect(
       screen.queryByRole('status', { name: /loading league information/i }),
     ).not.toBeInTheDocument();
   });
 
-  it('renders bordered season list skeletons while loading the Seasons tab', () => {
+  it('renders season list skeletons while loading the Seasons tab', () => {
     sessionStorage.setItem('tab:league-details', '1');
     const { container } = setup({ loading: true });
 
     expect(screen.getByRole('tab', { name: 'Seasons' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Seasons' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading seasons/i })).toBeInTheDocument();
-    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(5);
+    expect(container.querySelectorAll('.tabSkeletonRow')).toHaveLength(5);
   });
 
   it('renders fifteen player row skeletons while loading the Players tab', () => {
@@ -318,7 +318,7 @@ describe('LeagueDetailsPage – loading', () => {
     expect(screen.getByRole('tab', { name: 'Players' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: 'Players' })).toBeInTheDocument();
     expect(screen.getByRole('status', { name: /loading players/i })).toBeInTheDocument();
-    expect(container.querySelectorAll('.tabSkeletonRowBordered')).toHaveLength(15);
+    expect(container.querySelectorAll('.tabSkeletonRow')).toHaveLength(15);
   });
 
   it('keeps the static Alignments header visible while loading', () => {

@@ -22,7 +22,11 @@ import useGroupAlignmentSets, {
 import { type SeasonGroupRecord } from '@/hooks/useSeasonDetails';
 import { type TeamRecord } from '@/hooks/useTeams';
 import { useLeagueDetailsContext } from './LeagueDetailsContext';
-import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
+import {
+  LeagueListRowSkeleton,
+  TabActionSkeleton,
+  type TabSkeletonProps,
+} from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -1661,23 +1665,7 @@ export const LeagueAlignmentsTabSkeleton = ({ className }: TabSkeletonProps) => 
       >
         <ul className={styles.alignmentSetStack}>
           {Array.from({ length: 5 }, (_, index) => (
-            <li
-              key={index}
-              className={styles.alignmentCard}
-            >
-              <div className={styles.alignmentCardHeader}>
-                <span className={styles.ruleSetName}>
-                  <Skeleton
-                    type="text"
-                    className={styles.tabSkeletonName}
-                  />
-                  <Skeleton
-                    type="text"
-                    className={styles.tabSkeletonMetaLine}
-                  />
-                </span>
-              </div>
-            </li>
+            <LeagueListRowSkeleton key={index} />
           ))}
         </ul>
       </Section>

@@ -99,6 +99,7 @@ function SearchableList<T>({
             <Skeleton
               as="li"
               key={index}
+              type="card"
               className={styles.loadingRow}
             />
           ))}

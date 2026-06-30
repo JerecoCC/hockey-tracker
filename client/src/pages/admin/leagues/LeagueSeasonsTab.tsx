@@ -28,11 +28,7 @@ export const LeagueSeasonsTabSkeleton = () => (
     >
       <ul className={styles.tabSkeletonStack}>
         {Array.from({ length: 5 }, (_, index) => (
-          <LeagueListRowSkeleton
-            key={index}
-            tag={index === 0}
-            bordered
-          />
+          <LeagueListRowSkeleton key={index} />
         ))}
       </ul>
     </Section>

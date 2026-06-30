@@ -3,7 +3,6 @@ import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Section from '@/components/Section/Section';
-import Skeleton from '@/components/Skeleton/Skeleton';
 import useBracketRuleSets, { type BracketRuleSet } from '@/hooks/useBracketRuleSets';
 import useLeagueGroups from '@/hooks/useLeagueGroups';
 import usePlayoffQualificationFormats, {
@@ -11,7 +10,11 @@ import usePlayoffQualificationFormats, {
 } from '@/hooks/usePlayoffQualificationFormats';
 import BracketRulesModal from '../seasons/BracketRulesModal';
 import PlayoffQualificationFormatModal from '../seasons/PlayoffQualificationFormatModal';
-import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
+import {
+  LeagueListRowSkeleton,
+  TabActionSkeleton,
+  type TabSkeletonProps,
+} from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 interface Props {
@@ -276,21 +279,7 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
     >
       <ul className={styles.ruleSetList}>
         {Array.from({ length: 5 }, (_, index) => (
-          <li
-            key={index}
-            className={styles.ruleSetItem}
-          >
-            <span className={styles.ruleSetName}>
-              <Skeleton
-                type="text"
-                className={styles.tabSkeletonName}
-              />
-              <Skeleton
-                type="text"
-                className={styles.tabSkeletonMetaLine}
-              />
-            </span>
-          </li>
+          <LeagueListRowSkeleton key={index} />
         ))}
       </ul>
     </Section>
@@ -304,21 +293,7 @@ export const LeaguePlayoffsTabSkeleton = ({ className }: TabSkeletonProps) => (
     >
       <ul className={styles.ruleSetList}>
         {Array.from({ length: 3 }, (_, index) => (
-          <li
-            key={index}
-            className={styles.ruleSetItem}
-          >
-            <span className={styles.ruleSetName}>
-              <Skeleton
-                type="text"
-                className={styles.tabSkeletonName}
-              />
-              <Skeleton
-                type="text"
-                className={styles.tabSkeletonMetaLine}
-              />
-            </span>
-          </li>
+          <LeagueListRowSkeleton key={index} />
         ))}
       </ul>
     </Section>

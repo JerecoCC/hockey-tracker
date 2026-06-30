@@ -8,7 +8,6 @@ import Field from '@/components/Field/Field';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
 import Section from '@/components/Section/Section';
-import Skeleton from '@/components/Skeleton/Skeleton';
 import Tag from '@/components/Tag/Tag';
 import useLeagueAwards, {
   type LeagueAwardPayload,
@@ -22,7 +21,11 @@ import {
   getAwardSelectionSource,
   getAwardWinnerMode,
 } from '@/lib/awardDefinitions';
-import { TabActionSkeleton, type TabSkeletonProps } from './LeagueTabSkeletonHelpers';
+import {
+  LeagueListRowSkeleton,
+  TabActionSkeleton,
+  type TabSkeletonProps,
+} from './LeagueTabSkeletonHelpers';
 import styles from './LeagueDetails.module.scss';
 
 const METHOD_OPTIONS = [
@@ -398,34 +401,7 @@ export const LeagueAwardsTabSkeleton = ({ className }: TabSkeletonProps) => (
     >
       <ul className={styles.awardDefinitionList}>
         {Array.from({ length: 5 }, (_, index) => (
-          <li
-            key={index}
-            className={styles.awardDefinitionItem}
-          >
-            <div className={styles.awardDefinitionMain}>
-              <Skeleton
-                type="text"
-                className={styles.tabSkeletonAwardName}
-              />
-              <div className={styles.tabSkeletonChipRow}>
-                {Array.from({ length: 3 }, (_, chipIndex) => (
-                  <Skeleton
-                    key={chipIndex}
-                    type="tag"
-                    className={styles.tabSkeletonChip}
-                  />
-                ))}
-              </div>
-              <Skeleton
-                type="text"
-                className={styles.tabSkeletonDescription}
-              />
-            </div>
-            <span className={styles.tabSkeletonActions}>
-              <Skeleton type="circle" />
-              <Skeleton type="circle" />
-            </span>
-          </li>
+          <LeagueListRowSkeleton key={index} />
         ))}
       </ul>
     </Section>

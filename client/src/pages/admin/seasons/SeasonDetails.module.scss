@@ -788,30 +788,14 @@
   }
 
   &WinnerSkeleton {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: $space-sm;
-    padding: $space-md;
+    display: block;
     border: 1px solid var(--app-border, #{$border});
     border-radius: $radius-md;
-    background: rgba(255, 255, 255, 0.02);
     overflow: hidden;
-    text-align: center;
     pointer-events: none;
   }
 
-  &WinnerSkeletonInfo {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: $space-xs;
-    width: 100%;
-  }
-
-  :global(:root[data-theme='light']) &WinnerCardEmpty,
-  :global(:root[data-theme='light']) &WinnerSkeleton {
+  :global(:root[data-theme='light']) &WinnerCardEmpty {
     background: var(--app-field-bg, #edf3fa);
   }
 

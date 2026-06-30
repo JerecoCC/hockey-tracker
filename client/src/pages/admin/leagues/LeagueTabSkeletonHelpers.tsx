@@ -12,18 +12,10 @@ export const TabActionSkeleton = ({ width = '112px' }: { width?: string }) => (
   />
 );
 
-export const LeagueListRowSkeleton = ({
-  bordered = false,
-}: {
-  image?: boolean;
-  code?: boolean;
-  tag?: boolean;
-  bordered?: boolean;
-}) => (
+export const LeagueListRowSkeleton = () => (
   <Skeleton
     as="li"
-    className={[styles.tabSkeletonRow, bordered ? styles.tabSkeletonRowBordered : '']
-      .filter(Boolean)
-      .join(' ')}
+    type="card"
+    className={styles.tabSkeletonRow}
   />
 );
