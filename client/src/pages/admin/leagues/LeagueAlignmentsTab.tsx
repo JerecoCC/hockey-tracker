@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import BorderedFieldset from '@/components/BorderedFieldset/BorderedFieldset';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
 import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
+import GroupedFields from '@/components/GroupedFields/GroupedFields';
 import InfoTooltip from '@/components/InfoTooltip/InfoTooltip';
 import ListItem from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
@@ -645,25 +645,28 @@ const AlignmentGroupNode = ({
           <div className={styles.alignmentParentGroupBody}>{groupBody}</div>
         </div>
       ) : (
-        <BorderedFieldset
+        <GroupedFields
           className={[
             styles.alignmentGroupFieldset,
             depth > 0 ? styles.alignmentGroupFieldsetNested : '',
           ]
             .filter(Boolean)
             .join(' ')}
+          legend={
+            <>
+              <span className={styles.alignmentGroupLegendTitle}>
+                <span>{groupName}</span>
+                {' '}
+                <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
+              </span>
+              <Divider className={styles.alignmentGroupLegendRule} />
+              {groupActions}
+            </>
+          }
+          legendClassName={styles.alignmentGroupLegend}
         >
-          <legend className={styles.alignmentGroupLegend}>
-            <span className={styles.alignmentGroupLegendTitle}>
-              <span>{groupName}</span>
-              {' '}
-              <span className={styles.alignmentGroupNameCount}>{groupCountLabel}</span>
-            </span>
-            <Divider className={styles.alignmentGroupLegendRule} />
-            {groupActions}
-          </legend>
           {groupBody}
-        </BorderedFieldset>
+        </GroupedFields>
       )}
       {isLeaf && (
         <TeamSelectionModal
