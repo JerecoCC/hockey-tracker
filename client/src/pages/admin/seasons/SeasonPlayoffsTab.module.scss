@@ -279,7 +279,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     text-transform: uppercase;
     letter-spacing: 0.07em;
     padding-bottom: $space-xs;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid var(--app-border, #{$border});
   }
 
   &RulesMatchups {
@@ -294,7 +294,7 @@ $bracket-line: color-mix(in srgb, #{$border} 45%, #{$text-light});
     gap: $space-md;
     margin: 0;
     background: transparent;
-    border: 1px solid $border;
+    border: 1px solid var(--app-border, #{$border});
     border-radius: $radius-md;
     padding: $space-md;
   }

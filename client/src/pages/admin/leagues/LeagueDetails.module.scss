@@ -80,13 +80,6 @@ $league-tab-list-gap: $space-md;
   min-width: 0;
 }
 
-.playerHeaderDivider {
-  width: 1px;
-  height: 32px;
-  background: $border;
-  flex-shrink: 0;
-}
-
 .playerHeaderSeasonSelect {
   --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
@@ -1351,8 +1344,10 @@ $league-tab-list-gap: $space-md;
     gap: $space-sm;
     width: 100%;
     margin-top: $space-sm;
-    padding-top: $space-sm;
-    border-top: 1px solid rgba($border, 0.72);
+  }
+
+  &Divider {
+    width: 100%;
   }
 
   &Main {

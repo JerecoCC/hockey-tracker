@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form';
 import Button from '@/components/Button/Button';
 import Checkbox from '@/components/Checkbox/Checkbox';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Divider from '@/components/Divider/Divider';
 import Field from '@/components/Field/Field';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Modal from '@/components/Modal/Modal';
@@ -218,6 +219,10 @@ const LeagueAwardsTab = ({ leagueId, className }: Props) => {
                     }
                   >
                     <div className={styles.awardDefinitionDetails}>
+                      <Divider
+                        variant="horizontal"
+                        className={styles.awardDefinitionDivider}
+                      />
                       <div
                         className={styles.awardDefinitionMeta}
                         aria-label="Award details"

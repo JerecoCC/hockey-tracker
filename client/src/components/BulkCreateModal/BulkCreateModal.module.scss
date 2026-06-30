@@ -24,7 +24,7 @@
     display: grid;
     gap: $space-md;
     padding: 0 0 $space-xs;
-    border-bottom: 1px solid $border;
+    border-bottom: 1px solid var(--app-border, #{$border});
     margin-bottom: $space-xs;
   }
 

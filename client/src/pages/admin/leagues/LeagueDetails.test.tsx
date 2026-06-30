@@ -436,11 +436,12 @@ describe('LeagueDetailsPage – loading', () => {
         created_at: '2024-01-01T00:00:00Z',
       },
     ];
-    setup({ league: mockLeague }, {}, null, {}, {}, { awards });
+    const { container } = setup({ league: mockLeague }, {}, null, {}, {}, { awards });
 
     expect(screen.getByText('Automatic')).toBeInTheDocument();
     expect(screen.getByText('Player Points')).toBeInTheDocument();
     expect(screen.getByText('Playoff award')).toBeInTheDocument();
+    expect(container.querySelector('.awardDefinitionDivider.divider.horizontal')).toBeInTheDocument();
     expect(screen.queryByText('Regular season')).not.toBeInTheDocument();
   });
 
@@ -1119,8 +1120,10 @@ describe('LeagueDetailsPage – players tab', () => {
       },
     ];
 
-    setup({ league: mockLeague, seasons });
+    const { container } = setup({ league: mockLeague, seasons });
     clickPlayersTab();
+
+    expect(container.querySelector('.playerHeaderSeasonGroup .divider.vertical')).toBeInTheDocument();
 
     await waitFor(() =>
       expect(useLeaguePlayers).toHaveBeenLastCalledWith(

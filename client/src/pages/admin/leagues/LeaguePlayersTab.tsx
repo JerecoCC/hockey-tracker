@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import Button from '@/components/Button/Button';
 import ConfirmModal from '@/components/ConfirmModal/ConfirmModal';
+import Divider from '@/components/Divider/Divider';
 import ListItem, { type ListItemAction } from '@/components/ListItem/ListItem';
 import Pagination from '@/components/Pagination/Pagination';
 import PlayerAvatar from '@/components/PlayerAvatar/PlayerAvatar';
@@ -189,10 +190,7 @@ const LeaguePlayersTab = ({ className }: Props) => {
           titleAccessory={
             seasons.length > 0 ? (
               <div className={styles.playerHeaderSeasonGroup}>
-                <span
-                  className={styles.playerHeaderDivider}
-                  aria-hidden="true"
-                />
+                <Divider variant="vertical" />
                 <div className={styles.playerHeaderSeasonSelect}>
                   <Select
                     value={selectedSeasonId}
@@ -395,10 +393,7 @@ export const LeaguePlayersTabSkeleton = ({ className }: TabSkeletonProps) => (
       title="Players"
       titleAccessory={
         <div className={styles.playerHeaderSeasonGroup}>
-          <span
-            className={styles.playerHeaderDivider}
-            aria-hidden="true"
-          />
+          <Divider variant="vertical" />
           <TabActionSkeleton width="148px" />
         </div>
       }
