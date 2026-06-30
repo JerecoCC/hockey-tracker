@@ -12,6 +12,8 @@
   --calendar-game-card-hover-bg: rgba(37, 99, 235, 0.08);
   --calendar-game-card-hover-border: rgba(37, 99, 235, 0.6);
   --calendar-game-card-divider: #{$border};
+  --calendar-game-card-league-bg-base: #{$bg-card};
+  --calendar-game-card-league-border-base: #{$border};
   --calendar-game-score-bg: color-mix(in srgb, #{$bg-card} 70%, #{$bg-page});
   --calendar-game-score-border: #{$border};
   --calendar-game-score-missing-bg: color-mix(in srgb, #{$bg-card} 72%, #{$bg-page});
@@ -95,6 +97,8 @@
     var(--app-border, #cbd5e1)
   );
   --calendar-game-card-divider: var(--app-border, #cbd5e1);
+  --calendar-game-card-league-bg-base: var(--app-surface, #fff);
+  --calendar-game-card-league-border-base: var(--app-border, #cbd5e1);
   --calendar-game-score-bg: var(--app-surface-muted, #f8fafc);
   --calendar-game-score-border: var(--app-field-border, #bfccd9);
   --calendar-game-score-missing-bg: color-mix(

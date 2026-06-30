@@ -110,6 +110,8 @@ describe('GET /api/user/games', () => {
     expect(res.body[0].scheduled_for).toBe('2024-10-12');
     expect(res.body[0]).toMatchObject({ home_score: 0, away_score: 0, winner_team_id: null });
     expect(sql.mock.calls[0].slice(1)).toContain('user-1');
+    expect(queryText).toContain('user_favorite_teams');
+    expect(queryText).toContain('::uuid[] IS NULL');
     expect(queryText).toContain('uwg.skipped_at IS NULL');
   });
 
@@ -160,6 +162,7 @@ describe('GET /api/user/games', () => {
 
     expect(res.status).toBe(200);
     expect(sql.mock.calls[0].slice(1)).toContain(`{${firstTeamId},${secondTeamId}}`);
+    expect(queryText).toContain('::uuid[] IS NOT NULL');
     expect(queryText).toContain('g.home_team_id = ANY');
     expect(queryText).toContain('g.away_team_id = ANY');
   });

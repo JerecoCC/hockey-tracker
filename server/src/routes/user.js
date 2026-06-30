@@ -231,7 +231,7 @@ router.post('/watched-games/:gameId/skip', async (req, res) => {
 // watched, date, week (YYYY-MM-DD week start), month (YYYY-MM)
 // `date` (YYYY-MM-DD) filters to games whose effective user date matches — the
 // user's personal scheduled_for if set, otherwise the game's Eastern-time date.
-// Results are scoped to games involving the user's favourite teams.
+// Results default to the user's favourite teams; selected team filters override that scope.
 // ---------------------------------------------------------------------------
 router.get('/games', async (req, res) => {
   const userId = req.user.id;
@@ -487,11 +487,23 @@ router.get('/games', async (req, res) => {
         ON uwg.user_id = ${userId}
        AND uwg.game_id = g.id
       WHERE
-        EXISTS (
-          SELECT 1
-          FROM user_favorite_teams uft
-          WHERE uft.user_id = ${userId}
-            AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+        (
+          (
+            ${teamIdsParam}::uuid[] IS NOT NULL
+            AND (
+              g.home_team_id = ANY(${teamIdsParam}::uuid[])
+              OR g.away_team_id = ANY(${teamIdsParam}::uuid[])
+            )
+          )
+          OR (
+            ${teamIdsParam}::uuid[] IS NULL
+            AND EXISTS (
+              SELECT 1
+              FROM user_favorite_teams uft
+              WHERE uft.user_id = ${userId}
+                AND (uft.team_id = g.home_team_id OR uft.team_id = g.away_team_id)
+            )
+          )
         )
         AND (${includeSkipped}::boolean OR uwg.skipped_at IS NULL)
         AND (
@@ -501,8 +513,6 @@ router.get('/games', async (req, res) => {
         AND
         (${season_id ?? null}::uuid IS NULL OR g.season_id    = ${season_id ?? null}::uuid)
         AND (${league_id ?? null}::uuid IS NULL OR l.id        = ${league_id ?? null}::uuid)
-        AND (${teamIdsParam}::uuid[] IS NULL OR g.home_team_id = ANY(${teamIdsParam}::uuid[])
-                                           OR g.away_team_id = ANY(${teamIdsParam}::uuid[]))
         AND (${game_type ?? null}::text IS NULL OR g.game_type = ${game_type ?? null})
         AND (${status    ?? null}::text IS NULL OR g.status    = ${status    ?? null})
         AND (
