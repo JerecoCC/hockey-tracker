@@ -9,7 +9,7 @@
   align-items: center;
   gap: $space-sm;
   padding: 0 $space-md;
-  background: var(--filter-field-background, #{$bg-filter-field});
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-filter-field}));
   border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
   transition:
@@ -22,7 +22,10 @@
 
   &:hover:not(.disabled) {
     border-color: var(--app-field-border-hover, #{$text-dim});
-    background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-filter-field}));
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-filter-field}))
+    );
   }
 }
 

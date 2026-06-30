@@ -23,9 +23,12 @@
 }
 
 .field {
-  --segmented-control-option-bg: var(--filter-field-background, #{$bg-input});
+  --segmented-control-option-bg: var(
+    --filter-field-background,
+    var(--app-field-bg, #{$bg-input})
+  );
 
-  background: var(--filter-field-background, #{$bg-input});
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
   // Form-field usage fills the available width.
   width: 100%;
 }

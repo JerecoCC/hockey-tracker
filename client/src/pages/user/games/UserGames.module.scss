@@ -24,7 +24,7 @@
 // ── Week navigation (prev btn + date picker + next btn) ───────────────
 // ── Filter row (league · favorite teams · status · timezone) ──────────
 .filterVisibilitySwitch {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   align-self: center;
 }

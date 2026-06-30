@@ -118,7 +118,7 @@
 
 .testDate {
   &Control {
-    --filter-field-background: #{$bg-filter-field};
+    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
     display: flex;
     align-items: center;

@@ -18,7 +18,7 @@
   align-items: center;
   gap: $space-sm;
   width: 100%;
-  background: var(--filter-field-background, #{$bg-input});
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
   border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
   height: 42px;
@@ -31,7 +31,10 @@
 
   &:hover {
     border-color: var(--app-field-border-hover, #{$text-dim});
-    background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
   }
 }
 
@@ -48,7 +51,7 @@
     gap: $space-sm;
     min-height: 42px;
     width: auto;
-    background: var(--filter-field-background, #{$bg-input});
+    background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
     border: 1px solid var(--app-field-border, #{$border});
     border-radius: $radius-md;
     padding: 0 $space-xl 0 $space-lg;
@@ -59,7 +62,10 @@
 
     &:hover {
       border-color: var(--app-field-border-hover, #{$text-dim});
-      background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
+      background: var(
+        --app-field-bg-hover,
+        var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+      );
     }
 
     &:focus-visible {

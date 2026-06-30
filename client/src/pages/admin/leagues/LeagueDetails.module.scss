@@ -70,7 +70,7 @@ $league-tab-list-gap: $space-md;
 }
 
 .playerFilterToggles {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   margin-left: auto;
 }
@@ -88,7 +88,7 @@ $league-tab-list-gap: $space-md;
 }
 
 .playerHeaderSeasonSelect {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   width: fit-content;
   max-width: 100%;

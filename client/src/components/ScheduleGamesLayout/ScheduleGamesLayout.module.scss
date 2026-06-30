@@ -2,7 +2,7 @@
 @use "styles/mixins" as *;
 
 .weekNav {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   display: inline-flex;
   align-items: center;
@@ -21,14 +21,14 @@
 }
 
 .viewSegmentedControl.viewSegmentedControl {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   flex: 0 0 auto;
   width: fit-content;
 }
 
 .filters {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   display: flex;
   flex-wrap: wrap;

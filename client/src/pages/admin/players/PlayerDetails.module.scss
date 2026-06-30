@@ -284,7 +284,7 @@
   }
 
   &SeasonSelect {
-    --filter-field-background: #{$bg-filter-field};
+    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
     width: 180px;
   }
@@ -329,7 +329,7 @@
 
 .gameLog {
   &Filters {
-    --filter-field-background: #{$bg-filter-field};
+    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
     display: flex;
     align-items: center;

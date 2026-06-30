@@ -231,7 +231,7 @@
   }
 
   &SeasonSelect {
-    --filter-field-background: #{$bg-filter-field};
+    --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
     width: fit-content;
     max-width: 100%;
@@ -246,7 +246,7 @@
 }
 
 .playerViewSegmentedControl.playerViewSegmentedControl {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   width: 210px;
 }

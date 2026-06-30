@@ -434,7 +434,7 @@
 
 // SegmentedControl inside a card header — shrink to content width
 .statsSegmentedControl {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   width: fit-content;
 }
@@ -449,7 +449,7 @@
 }
 
 .statsFilterField {
-  --filter-field-background: #{$bg-filter-field};
+  --filter-field-background: var(--app-field-bg, #{$bg-filter-field});
 
   width: 14rem;
   max-width: 100%;

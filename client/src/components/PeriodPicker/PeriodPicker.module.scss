@@ -11,7 +11,7 @@
   gap: $space-xs;
   border: 1px solid var(--app-field-border, #{$border});
   border-radius: $radius-md;
-  background: var(--filter-field-background, #{$bg-input});
+  background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
   color: var(--app-text, #{$text-body});
   transition:
     border-color $transition-base,
@@ -19,7 +19,10 @@
 
   &:hover {
     border-color: var(--app-field-border-hover, #{$text-dim});
-    background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
+    background: var(
+      --app-field-bg-hover,
+      var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+    );
   }
 
   &:focus-within {

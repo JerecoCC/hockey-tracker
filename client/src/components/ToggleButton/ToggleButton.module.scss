@@ -53,7 +53,7 @@
     border: 1px solid var(--app-field-border, #{$border});
     border-radius: $radius-md;
     box-sizing: border-box;
-    background: var(--filter-field-background, #{$bg-input});
+    background: var(--filter-field-background, var(--app-field-bg, #{$bg-input}));
     color: var(--app-text-subtle, #{$text-light});
     font: inherit;
     cursor: pointer;
@@ -63,7 +63,10 @@
 
     &:hover:not(:disabled) {
       border-color: var(--app-field-border-hover, #{$text-light});
-      background: var(--app-field-bg-hover, var(--filter-field-background, #{$bg-input}));
+      background: var(
+        --app-field-bg-hover,
+        var(--filter-field-background, var(--app-field-bg, #{$bg-input}))
+      );
       color: var(--app-text-strong, #{$text-bright});
     }
 
